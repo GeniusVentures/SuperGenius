@@ -4,6 +4,18 @@
 
 SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
 
+## Current Milestone: v1.1 Multi-Signature Secure CRDT Storage
+
+**Goal:** Add a decoupled multi-signature component and a secure CRDT storage layer so specific CRDT-backed values can only be created/updated when signed by a quorum of authorized peers — applied first to a new `TrustedPeerRegistry` (genesis-seeded, quorum-updatable) and to make `BURN_BASIS_POINTS` a quorum-signed, live-updatable CRDT value instead of a hardcoded constant.
+
+**Target features:**
+- `ISignedCRDTData`-style interface: per-type classes implement `Verify()`/`Apply()`, reusing `ConsensusAuth`'s signing-bytes/SHA-256/`VerifySignature` primitives (not `ConsensusManager`'s proposal/vote/certificate machinery)
+- Static topic/regex → policy registry (signer-set source + quorum rule + payload codec) declared in code
+- Propose/sign/quorum flow transported entirely over CRDT itself (pending-value + signature entries, filter-callback pattern like `ValidatorRegistry`), no new networking/RPC
+- New `TrustedPeerRegistry`: genesis-seeded initial set (hardcoded in genesis config), N-of-M configurable quorum from CURRENT members to add/remove/replace a member
+- `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value; `TransactionManager` caches it and refreshes via CRDT-change callback (no live CRDT read per `PayEscrow` call)
+- `ValidatorRegistry` migrated onto the new `ISignedCRDTData` interface (reusing the abstraction, not just `BURN_BASIS_POINTS`)
+
 This milestone is an **interface refactor of `GeniusNode`** — not new product capability. It cleans up the node construction API and moves runtime knobs into configuration files where they belong.
 
 ## Core Value
@@ -31,34 +43,34 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ### Active
 
-<!-- This milestone's scope. Hypotheses until shipped. — All v1 requirements VALIDATED (Phases 1-3). -->
+<!-- v1.1 milestone scope. Hypotheses until shipped. -->
 
-- [x] `autodht` and `base_port` are read from `network_config.json` (in `InitNetwork`), not passed as constructor/factory params
-- [x] `node_type` ("Full" / "Light" / "Archive") is read from `sgns_config.json` (in `LoadSgnsConfig`); a `NodeType` enum is introduced
-- [x] `GeniusNode::is_full_node_` becomes a **derived** bool (Full/Archive → true, Light → false), sourced from `node_type`; downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) keep the existing bool, unchanged
-- [x] Three factories (`New`, `NewFromPrivateKey`, `NewFromMnemonic`) collapse into a single `New(dev_config, AccountSource)` where `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`
-- [x] `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option (watch-only / read-only)
-- [x] All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/`, 17 across `test/src/{account,node,blockchain,transaction_sync,processing_multi,processing_nodes,multiaccount}/`) migrate to the new `New()` API
-- [x] Each migrated test writes its `autodht` / `base_port` / `node_type` into the appropriate config file (the `sgns_config.json` write pattern is already established in tests)
-- [x] Existing config files without the new keys keep working via sensible defaults (`autodht=true`, `base_port=40001`, `node_type=Light`)
-- [x] Full build passes and existing tests remain green after the refactor
+- [ ] `ISignedCRDTData`-style interface exists: per-type classes implement `Verify()`/`Apply()`, reusing `ConsensusAuth`'s signing-bytes/SHA-256/`VerifySignature` primitives
+- [ ] Static topic/regex → policy registry (signer-set source + quorum rule + payload codec) declared in code
+- [ ] Propose/sign/quorum flow transported entirely over CRDT (pending-value + signature entries, filter-callback pattern like `ValidatorRegistry`) — no new networking/RPC
+- [ ] New `TrustedPeerRegistry`: genesis-seeded initial set (hardcoded in genesis config), N-of-M configurable quorum from CURRENT members to add/remove/replace a member
+- [ ] `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value; `TransactionManager` caches it and refreshes via CRDT-change callback (no live CRDT read per `PayEscrow` call)
+- [ ] `ValidatorRegistry` migrated onto the new `ISignedCRDTData` interface
 
 ### Out of Scope
 
 <!-- Explicit boundaries to prevent scope creep. -->
 
-- Propagating the `NodeType` enum into `TransactionManager` (60+ `full_node_m` refs), `UTXOManager`, `MigrationManager` — deferred; the derived bool stays this milestone
-- Distinct runtime behavior between `Archive` and `Full` — both map to `is_full_node_=true` for now; the `Archive` value exists for forward compatibility only
-- Any change to consensus, processing grid, EVM bridge, or API transport logic
+- `ConsensusManager` changes / pluggable voter sources — CRDT itself carries propose/sign/quorum messages, no consensus proposal/vote/certificate lifecycle involved
+- Any new pubsub/RPC transport — reuse existing CRDT put/filter-callback machinery
+- Unrelated consensus refactors
+- Propagating the `NodeType` enum into `TransactionManager` (60+ `full_node_m` refs), `UTXOManager`, `MigrationManager` — deferred from v1.0; still out of scope
+- Distinct runtime behavior between `Archive` and `Full` — deferred from v1.0; still out of scope
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
-- Rewriting `DevConfig` or the dev-config plumbing — only the `GeniusNode` construction surface changes
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
 
 ## Context
 
 **Current State (v1.0 — shipped 2026-07-03):** The GeniusNode construction-refactor milestone is complete. `New(dev_config, AccountSource)` is the sole public factory; `auto_dht`/`port_seed`/`node_type` are config-driven; `is_full_node_` is derived from `NodeType` in a reordered ctor (init-order hinge fixed); all ~25 call sites migrated; old factories deleted. Full build + CTest green; no behavior change for default/pre-existing configs. GSD subagent runtime was broken this milestone — all plan/execute/verify ran inline via the workflow's documented fallbacks.
 
-**Next Milestone Goals:** TBD — run `/gsd-new-milestone`. Candidate work (deferred to v2, see `.planning/milestones/v1.0-REQUIREMENTS.md`): `NodeType` downstream propagation (PROP-01), distinct Archive-vs-Full runtime behavior (PROP-02), `pubsub_port` numeric cleanup (HARD-01), config schema versioning (HARD-02). Also consider restoring the GSD subagent runtime before the next milestone.
+**Note:** Between v1.0 and v1.1, a substantial body of bridge-relayer work (RPC endpoint wiring, burn detection, conflict/replay hardening, E2E integration, P2P burn-event gossip, deferred validation lifecycle — `.planning/phases/01` through `07`) was planned and executed directly without being tracked as a formal GSD milestone. `PROJECT.md`/`MILESTONES.md` were not reconciled against that work before starting v1.1; this is a known documentation gap, not a description of v1.1's own scope.
+
+**v1.1 Goal:** Add a decoupled multi-signature component and secure CRDT storage layer so specific CRDT-backed values require quorum signatures to create/update — first applied to a new `TrustedPeerRegistry` and to `BURN_BASIS_POINTS` (currently a hardcoded constant in `TransactionManager.hpp:52`, with a comment already anticipating this: "Eventually settable via multisig CRDT config; hardcoded default until then"). Existing precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives. Key design decision from milestone questioning: do NOT route through `ConsensusManager` (voter/weight source is hardwired to a single `ValidatorRegistry` instance, not pluggable per proposal kind) — instead use CRDT's own put/filter-callback mechanism as the transport for proposals and signatures, same pattern `ValidatorRegistry` already uses.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -73,22 +85,27 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ## Constraints
 
-- **Tech stack**: C++17, CMake, RapidJSON, Boost, libp2p, git submodules — no new dependencies this milestone (use existing `std::variant` + RapidJSON).
+- **Tech stack**: C++17, CMake, RapidJSON, Boost, libp2p, git submodules — no new dependencies this milestone.
 - **Compatibility**: deployed nodes have `network_config.json` / `sgns_config.json` **without** the new keys — they must keep working via defaults; no hard-fail on missing keys.
-- **Non-functional**: no behavior change for existing configurations — pure interface/config-location refactor. Tests stay green.
-- **Scope boundary**: the `NodeType` enum stops at the `GeniusNode` boundary this milestone (derived bool passed downstream).
+- **Non-functional**: no behavior change for existing configurations from earlier milestones.
+- **Scope boundary (v1.1)**: no `ConsensusManager` changes; no new pubsub/RPC transport — CRDT put/filter-callback is the only transport for proposals/signatures.
+- **Scope boundary (v1.0, still holds)**: the `NodeType` enum stops at the `GeniusNode` boundary (derived bool passed downstream).
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
-| `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`). Factory params still exist (additive) — collapse deferred to Phase 2/3 |
-| Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor. Enum introduced at the boundary now, deep migration later | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
-| Single `New(dev_config, AccountSource)` with `std::variant` | One entry point, self-documenting, forward-compatible for new account sources; eliminates 3 near-duplicate factories | Phase 2 ✓ (canonical factory + variant added; old factories retained until Phase 3 deletion per D-01) |
-| No compatibility shim — migrate all 18 call sites directly | Only this repo consumes the factory; a shim would just delay the cleanup. Tests already write `sgns_config.json`, so the config-write pattern is established | Phase 3 ✓ (all ~25 call sites migrated + old factories deleted) |
-| `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
-| Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ (all three defaults verified: `auto_dht=true`/`port_seed=40001` Phase 1, `node_type=Light` Phase 2) |
+| v1.1: Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle | `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance per manager, not pluggable per proposal kind — extending it is bigger scope than needed | — Pending |
+| v1.1: Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks), no new networking | `ValidatorRegistry` already proves this pattern works for signature+quorum-gated CRDT updates; avoids building new RPC/gossip machinery | — Pending |
+| v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | — Pending |
+| v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | — Pending |
+| v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | — Pending |
+| v1.0: `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
+| v1.0: `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`) |
+| v1.0: Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
+| v1.0: Single `New(dev_config, AccountSource)` with `std::variant` | One entry point, self-documenting, forward-compatible for new account sources; eliminates 3 near-duplicate factories | Phase 2 ✓ (canonical factory + variant added; old factories deleted Phase 3) |
+| v1.0: `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
+| v1.0: Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ |
 
 ## Evolution
 
@@ -108,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after Phase 3 completion (milestone v1 complete — all 3 phases shipped green)*
+*Last updated: 2026-07-20 — milestone v1.1 (Multi-Signature Secure CRDT Storage) started*

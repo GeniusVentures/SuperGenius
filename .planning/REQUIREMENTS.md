@@ -1,5 +1,62 @@
 # Requirements
 
+## Milestone v1.1: Multi-Signature Secure CRDT Storage
+
+### Active
+
+**MultiSig — decoupled multi-signature primitive**
+- [ ] **MSIG-01:** A component computes canonical signing-bytes for an arbitrary payload and verifies signatures against it, reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives
+- [ ] **MSIG-02:** The component supports N-of-M quorum evaluation given a signer set and a required threshold (no hardcoded N)
+- [ ] **MSIG-03:** The component is usable independently of CRDT (importable/testable without a running node)
+
+**SecureCRDT — secure CRDT storage layer**
+- [ ] **SCRDT-01:** An `ISignedCRDTData` interface exists: implementers provide payload codec, `Verify()`, `Apply()`
+- [ ] **SCRDT-02:** A static registry maps a topic/key pattern to {signer-set source, quorum rule, `ISignedCRDTData` type}, declared in code at startup
+- [ ] **SCRDT-03:** Writing/updating a registered CRDT key requires quorum-verified signatures; unsigned or under-signed writes are rejected locally before being applied
+- [ ] **SCRDT-04:** Propose/sign/quorum flow works entirely via CRDT puts + filter callbacks (pending-value + signature entries) — no new networking/RPC
+
+**TrustedPeerRegistry — new component**
+- [ ] **TPR-01:** Genesis node seeds an initial trusted-peer set from a hardcoded genesis config entry
+- [ ] **TPR-02:** Adding/removing/replacing a member requires a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set
+- [ ] **TPR-03:** `TrustedPeerRegistry` is implemented via `ISignedCRDTData`/SecureCRDT (SCRDT-01..04), not bespoke logic
+
+**BurnConfig — applying it to BURN_BASIS_POINTS**
+- [ ] **BURN-01:** `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value instead of a compile-time constant
+- [ ] **BURN-02:** `TransactionManager` caches the current value and refreshes it via a CRDT-change callback (no CRDT read per `PayEscrow` call)
+- [ ] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
+
+**Migration**
+- [ ] **MIG-05:** `ValidatorRegistry` is migrated onto the `ISignedCRDTData` interface (reusing SecureCRDT, not just `BURN_BASIS_POINTS`)
+- [ ] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
+
+### Out of Scope
+
+- `ConsensusManager` changes / pluggable voter sources — CRDT itself carries propose/sign/quorum messages
+- Any new pubsub/RPC transport — reuse existing CRDT put/filter-callback machinery
+- Unrelated consensus refactors
+
+### Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MSIG-01 | Phase 8 | Pending |
+| MSIG-02 | Phase 8 | Pending |
+| MSIG-03 | Phase 8 | Pending |
+| SCRDT-01 | Phase 9 | Pending |
+| SCRDT-02 | Phase 9 | Pending |
+| SCRDT-03 | Phase 9 | Pending |
+| SCRDT-04 | Phase 9 | Pending |
+| TPR-01 | Phase 10 | Pending |
+| TPR-02 | Phase 10 | Pending |
+| TPR-03 | Phase 10 | Pending |
+| BURN-01 | Phase 11 | Pending |
+| BURN-02 | Phase 11 | Pending |
+| BURN-03 | Phase 11 | Pending |
+| MIG-05 | Phase 12 | Pending |
+| MIG-06 | Phase 12 | Pending |
+
+Coverage: 15/15 v1.1 requirements mapped.
+
 ## Slot-Based Network Voting (Phase 6)
 
 ### Active

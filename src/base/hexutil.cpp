@@ -1,5 +1,6 @@
 #include "base/hexutil.hpp"
 
+#include <algorithm>
 #include <boost/algorithm/hex.hpp>
 #include <gsl/span>
 
@@ -31,6 +32,18 @@ namespace sgns::base {
     std::string res(bytes.size() * 2, '\x00');
     boost::algorithm::hex_lower(bytes.begin(), bytes.end(), res.begin());
     return res;
+  }
+
+  bool IsHexAddress(std::string_view address) noexcept {
+    constexpr size_t kAddressHexLength = 128;
+    if (address.size() != kAddressHexLength) {
+      return false;
+    }
+
+    return std::all_of(address.begin(), address.end(), [](char character) {
+      return (character >= '0' && character <= '9') ||
+             (character >= 'a' && character <= 'f');
+    });
   }
 
   outcome::result<std::vector<uint8_t>> unhex(std::string_view hex) {

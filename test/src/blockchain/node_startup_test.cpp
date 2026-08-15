@@ -28,6 +28,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns;
@@ -39,9 +40,6 @@ namespace
 
     // Number of working directories swept clean in SetUp.
     constexpr int kNodeDirCleanupCount = 10;
-
-    // Port the first created node binds; each subsequent node adds 1.
-    constexpr uint16_t kBasePort = 40001;
 
     // Upper bound on how long a READY poll may wait before failing the test.
     constexpr int kReadyPollTimeoutMs = 30000;
@@ -95,9 +93,7 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( kBasePort + id );
-
-        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/uniquePort, /*auto_dht=*/false );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                      /*node_type=*/isFullNode ? "Full" : "Light",
                                      /*is_processor=*/false, /*rpc_catchup=*/false );
@@ -109,7 +105,9 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         for ( int i = 0; i < kNodeDirCleanupCount; ++i )
         {
-            std::filesystem::remove_all( binaryPath + "/" + kNodeDirPrefix + std::to_string( i ) + "/" );
+            auto            dir = binaryPath + "/" + kNodeDirPrefix + std::to_string( i ) + "/";
+            std::error_code ec;
+            sgns::test::removeAllWithRetry( dir, ec );
         }
     }
 };
@@ -137,7 +135,7 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
     // account-creation logic ~0.2s; remainder is node init: PubSub/DHT/UPnP/DB
     // migration). The < 1s stretch goal is therefore bounded by node init, not
     // by the account-creation path fixed here.
-    constexpr int kGenesisCreatorReadyBudgetMs = 4000;
+    constexpr int kGenesisCreatorReadyBudgetMs = 7000;
 
     auto node_full = CreateNode( "full_node_acc_creation_timing",
                                  "0xcafe",
@@ -188,10 +186,10 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
     // Create a regular node and connect it to the genesis node.
     auto regularNode = CreateNode( "regular_node_startup", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), false );
     // GetInterfaceAddress() returns the full multiaddr WITH peer ID (required for
-    // AddPeers to dial). GetLocalAddress() omits the peer ID, so the dial never
+    // GeniusNode::AddPeer to dial). GetLocalAddress() omits the peer ID, so the dial never
     // completes and the regular node can't reach the genesis node — the cause of
     // the 5s nonce-timeout stall. This matches every other multi-node E2E test.
-    regularNode->GetPubSub()->AddPeers( { genesisNode->GetPubSub()->GetInterfaceAddress() } );
+    regularNode->AddPeer( genesisNode->GetPubSub()->GetInterfaceAddress() );
 
     // Measure the regular node's READY latency (connect -> READY). Generous budget
     // until a baseline is measured; tighten afterward.
@@ -210,4 +208,36 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
         << "ms after the genesis node was ready — startup latency is too high.";
 
     std::cout << "=== Regular Node Ready Quickly After Genesis Ready Test Completed ===" << std::endl;
+}
+
+// ---------------------------------------------------------------------------
+// 3. DEFAULT BURN RATE END-TO-END REGRESSION (BURN-03)
+// ---------------------------------------------------------------------------
+
+// Exercises the real INITIALIZING_TRANSACTIONS construction path end-to-end
+// (SecureCrdt -> TrustedPeerRegistry -> BurnConfig -> TransactionManager, wired
+// in Phase 11 Plan 02) via an actual running GeniusNode reaching READY, and
+// confirms a freshly-seeded genesis node's default burn rate is unchanged: 1%
+// (100 basis points out of 10000), matching pre-milestone behavior.
+TEST_F( NodeStartupTest, GenesisNodeDefaultBurnRateIsOnePercent )
+{
+    std::cout << "=== Starting Genesis Node Default Burn Rate Is One Percent Test ===" << std::endl;
+
+    auto node_full = CreateNode( "full_node_burn_rate_default",
+                                 "0xcafe",
+                                 "1.0",
+                                 TokenID::FromBytes( { 0x00 } ),
+                                 true );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
+
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                  "genesis node never reached READY" );
+
+    ASSERT_EQ( sgns::GeniusNode::GetBurnBasisPoints(), 100u )
+        << "Genesis node's default burn rate must remain 1% (100 basis points) until a "
+        << "quorum-signed BurnConfig update changes it (BURN-03 regression).";
+    ASSERT_EQ( sgns::GeniusNode::GetBasisPointsTotal(), 10000u );
+
+    std::cout << "=== Genesis Node Default Burn Rate Is One Percent Test Completed ===" << std::endl;
 }

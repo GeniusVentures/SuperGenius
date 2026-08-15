@@ -27,6 +27,8 @@
 #include <utility>
 
 #include <spdlog/spdlog.h>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/process.hpp>
 
 #include "base/util.hpp"
@@ -51,6 +53,9 @@ namespace sgns::test::anvil
 
     /** @brief High port used by the test Anvil instance to avoid default-8545 collisions (D-15). */
     inline constexpr unsigned int kAnvilStartPort = 18545u;
+
+    /** @brief Number of consecutive ports considered when the preferred Anvil port is occupied. */
+    inline constexpr unsigned int kAnvilPortSearchSpan = 100u;
 
     /** @brief Readiness poll budget for the Anvil JSON-RPC endpoint (D-04). */
     inline constexpr unsigned int kAnvilReadyTimeoutMs = 15000u;
@@ -582,7 +587,8 @@ namespace sgns::test::anvil
         /**
          * @brief Starts the Anvil subprocess forking Sepolia state (D-01).
          * @param[in] fork_url       Sepolia RPC URL passed to `--fork-url`.
-         * @param[in] preferred_port  TCP port for Anvil's JSON-RPC server (default kAnvilStartPort).
+         * @param[in] preferred_port  First TCP port considered for Anvil's JSON-RPC server
+         *                            (default kAnvilStartPort).
          * @return true if the Anvil child spawned successfully; false if `anvil` is not on PATH or spawn failed.
          */
         bool Start( const std::string &fork_url, unsigned int preferred_port = kAnvilStartPort )
@@ -592,7 +598,20 @@ namespace sgns::test::anvil
                 spdlog::warn( "anvil_fixture: Start() called on already-started AnvilProcess" );
                 return false;
             }
-            port_     = preferred_port;
+
+            port_ = FindAvailablePort( preferred_port );
+            if ( port_ == 0u )
+            {
+                spdlog::error( "anvil_fixture: no available TCP port in range {}-{}",
+                               preferred_port,
+                               preferred_port + kAnvilPortSearchSpan - 1u );
+                return false;
+            }
+            if ( port_ != preferred_port )
+            {
+                spdlog::warn( "anvil_fixture: preferred port {} is occupied; using {}", preferred_port, port_ );
+            }
+
             rpc_url_  = "http://127.0.0.1:" + std::to_string( port_ );
             port_str_ = std::to_string( port_ );
 
@@ -647,12 +666,22 @@ namespace sgns::test::anvil
             // the lambda) ever throws.
             std::string     ready;
             bool            result = waitForCondition(
-                [&cmd, &ready]()
+                [this, &cmd, &ready]()
                 {
+                    std::error_code child_ec;
+                    if ( !anvil_child_ || !anvil_child_->running( child_ec ) || child_ec )
+                    {
+                        return false;
+                    }
+
                     int         exit_code = -1;
                     std::string out       = RunShellCapture( cmd, exit_code );
                     if ( exit_code == 0 && !out.empty() )
                     {
+                        if ( !anvil_child_->running( child_ec ) || child_ec )
+                        {
+                            return false;
+                        }
                         ready = std::move( out );
                         return true;
                     }
@@ -714,6 +743,44 @@ namespace sgns::test::anvil
         }
 
     private:
+        /**
+         * @brief Finds a bindable TCP port without reusing an existing listener.
+         *
+         * Checking the port before spawning prevents WaitForReady() from accepting a
+         * stale Anvil process left on the fixture's preferred port. The child-liveness
+         * checks in WaitForReady() cover the remaining bind/spawn race.
+         */
+        static unsigned int FindAvailablePort( unsigned int preferred_port )
+        {
+            static constexpr unsigned int kMaxTcpPort = 65535u;
+
+            for ( unsigned int offset = 0u; offset < kAnvilPortSearchSpan; ++offset )
+            {
+                if ( preferred_port > kMaxTcpPort - offset )
+                {
+                    break;
+                }
+
+                const unsigned int candidate = preferred_port + offset;
+                boost::asio::io_context io_context;
+                boost::asio::ip::tcp::acceptor acceptor( io_context );
+                boost::system::error_code ec;
+
+                acceptor.open( boost::asio::ip::tcp::v4(), ec );
+                if ( ec )
+                {
+                    continue;
+                }
+                acceptor.bind( { boost::asio::ip::tcp::v4(), static_cast<unsigned short>( candidate ) }, ec );
+                if ( !ec )
+                {
+                    acceptor.close( ec );
+                    return candidate;
+                }
+            }
+            return 0u;
+        }
+
         std::unique_ptr<bp::child> anvil_child_;        ///< boost::process child handle, null when not running.
         unsigned int               port_      = 0u;      ///< Anvil TCP port.
         std::string                rpc_url_;             ///< "http://127.0.0.1:<port>".

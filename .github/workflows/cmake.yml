@@ -434,6 +434,7 @@ jobs:
             IS_TAG=false
           else
             CURRENT_BRANCH=${{ github.ref_name }}
+            CURRENT_BRANCH=${{ github.ref_name }}
             IS_TAG=false
           fi
           echo "Identified current branch/tag as ${CURRENT_BRANCH}"
@@ -729,10 +730,79 @@ jobs:
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
             ctest . -j -C ${{ matrix.build-type }} --output-on-failure'
 
+      - name: Mark macOS diagnostic start
+        if: ${{ matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/macos-crash-reports"
+          touch "$RUNNER_TEMP/macos-tests-started"
+
       - name: Run tests (OSX)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.target == 'OSX' }}
-        run: ctest . --verbose -j -C ${{ matrix.build-type }}
+        # Network-heavy integration tests create several threaded nodes each.
+        # Keep macOS runner pressure bounded while teardown races are exercised.
+        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
+
+      - name: Collect macOS crash diagnostics
+        id: collect_macos_crash_diagnostics
+        if: ${{ failure() && matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        shell: bash
+        run: |
+          marker="$RUNNER_TEMP/macos-tests-started"
+          output_dir="$RUNNER_TEMP/macos-crash-reports"
+          report_list="$RUNNER_TEMP/macos-crash-report-list.txt"
+          echo "reports_found=false" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f "$marker" ]; then
+            exit 0
+          fi
+
+          find_reports() {
+            for report_dir in \
+              "$HOME/Library/Logs/DiagnosticReports" \
+              "/Library/Logs/DiagnosticReports"
+            do
+              [ -d "$report_dir" ] || continue
+
+              find "$report_dir" \
+                -type f \
+                -newer "$marker" \
+                \( -name '*.ips' -o -name '*.crash' \) \
+                -print \
+                2>/dev/null || true
+            done
+          }
+
+          # ReportCrash/osanalyticshelper may write the file asynchronously.
+          for attempt in $(seq 1 30); do
+            find_reports > "$report_list"
+            [ -s "$report_list" ] && break
+            sleep 1
+          done
+
+          if [ ! -s "$report_list" ]; then
+            exit 0
+          fi
+
+          echo "reports_found=true" >> "$GITHUB_OUTPUT"
+
+          while IFS= read -r report; do
+            report_name="$(basename "$report")"
+            cp "$report" "$output_dir/$report_name"
+
+            echo "::group::macOS crash report: $report_name"
+            cat "$report"
+            echo "::endgroup::"
+          done < "$report_list"
+
+      - name: Upload macOS crash diagnostics
+        if: ${{ failure() && steps.collect_macos_crash_diagnostics.outputs.reports_found == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-crash-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/macos-crash-reports/
+          retention-days: 14
 
       - name: Report GPU-gated render test skips (Windows)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}

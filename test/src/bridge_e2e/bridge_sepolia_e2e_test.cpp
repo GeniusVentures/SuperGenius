@@ -29,6 +29,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp" // CastAvailable, RunShellCapture, ParseTxHashFromCastJson, kSepoliaChainId
@@ -129,17 +130,15 @@ protected:
     static inline constexpr std::chrono::milliseconds kMintTimeout{ 10000 };
     static inline constexpr std::chrono::milliseconds kNodeReadyTimeout{ 60000 };
     static inline constexpr uint64_t kMintAmount = 1u;
-    static inline constexpr unsigned int kBasePort = 40021u;
-
     static void SetUpTestSuite();
     static void TearDownTestSuite();
 };
 
 std::array<std::shared_ptr<GeniusNode>, BridgeSepoliaE2ETest::kNodeCount> BridgeSepoliaE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeSepoliaE2ETest::kNodeCount>                BridgeSepoliaE2ETest::s_configs = { {
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node0" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node1" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node2" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node0" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node1" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node2" },
 } };
 std::string BridgeSepoliaE2ETest::s_eth_private_key;
 
@@ -175,9 +174,10 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
     const std::string binary_path = boost::dll::program_location().parent_path().string();
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        s_configs[i].BaseWritePath = binary_path + "/sepolia_node" + std::to_string( i ) + "/";
+        s_configs[i].BaseWritePath = binary_path + "/bridge_sepolia_node" + std::to_string( i ) + "/";
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
         std::filesystem::create_directories( s_configs[i].BaseWritePath );
-        sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, kBasePort + i, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath, ( i == 0u ) ? "Full" : "Light", /*is_processor=*/false );
     }
 
@@ -203,7 +203,7 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
         {
             if ( j != i ) { peers.push_back( s_nodes[j]->GetPubSub()->GetLocalAddress() ); }
         }
-        s_nodes[i]->GetPubSub()->AddPeers( peers );
+        s_nodes[i]->AddPeers( peers );
     }
 
     ASSERT_WAIT_FOR_CONDITION(
@@ -246,7 +246,7 @@ void BridgeSepoliaE2ETest::TearDownTestSuite()
     for ( auto &node : s_nodes ) { node.reset(); }
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
     }
 }
 

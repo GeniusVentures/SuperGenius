@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <mutex>
 #include <unordered_set>
 
 #include <boost/asio/io_context.hpp>
@@ -59,7 +60,7 @@ namespace sgns::crdt
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
-            BackupOptions                                                         backup_options = BackupOptions{ false, 15, 12, true } );
+            BackupOptions backup_options = BackupOptions{ false, 15, 12, true } );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -160,8 +161,8 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
-        void                  AddTopicName( const std::string &topicName );
-        void                  AddListenTopic( const std::string &topicName );
+        void                  AddTopicName( std::string topicName );
+        void                  AddListenTopic( std::string topicName );
 
         void PrintDataStore();
 
@@ -199,7 +200,7 @@ namespace sgns::crdt
          * @brief Unregisters the new element callback for a pattern.
          * @param pattern The pattern to unregister the new element callback for.
          */
-        
+
         void UnregisterNewElementCallback( const std::string &pattern );
         /**
          * @brief Unregisters the deleted element callback for a pattern.
@@ -255,7 +256,7 @@ namespace sgns::crdt
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
 
-        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetCIDContent(
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
     private:
@@ -316,15 +317,19 @@ namespace sgns::crdt
         int obsAddrRetries = 0;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
+        mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.
+
+        std::shared_ptr<CrdtDatastore>        ActiveCRDTDataStore() const;
+        std::shared_ptr<PubSubBroadcasterExt> ActiveBroadcaster() const;
 
         /** @brief Resolves the backup directory path based on the database path. */
         std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;
         /** @brief Creates a backup immediately. */
-        void        CreateBackupNow();
+        void CreateBackupNow();
         /** @brief Starts the backup loop in a separate thread. */
-        void        StartBackupLoop();
+        void StartBackupLoop();
         /** @brief Stops the backup loop and waits for the thread to finish. */
-        void        StopBackupLoop();
+        void StopBackupLoop();
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };

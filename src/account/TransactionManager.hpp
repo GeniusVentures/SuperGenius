@@ -11,11 +11,15 @@
 #include <deque>
 #include <cstdint>
 #include <chrono>
+#include <functional>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <optional>
 
+#include <boost/asio/steady_timer.hpp>
 #include <boost/format.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
@@ -31,6 +35,11 @@
 #include "blockchain/Blockchain.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
+
+namespace sgns::account
+{
+    class BurnConfig;
+} // namespace sgns::account
 
 namespace sgns
 {
@@ -61,9 +70,10 @@ namespace sgns
         static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
-        /// Eventually settable via multisig CRDT config; hardcoded default until then.
-        static constexpr uint64_t BURN_BASIS_POINTS  = 100; // 1%
-        static constexpr uint64_t BASIS_POINTS_TOTAL = 10000;
+        /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
+        /// and refreshed via BurnConfig's quorum-signed CRDT value (BURN-02, BURN-03).
+        static constexpr uint64_t BURN_BASIS_POINTS_DEFAULT = 100; // 1%
+        static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
 
         /**
          * @brief State of the Transaction Manager
@@ -96,6 +106,22 @@ namespace sgns
         };
 
         /**
+         * @brief Value delivered when an asynchronous outgoing-transaction wait completes.
+         *
+         * A terminal transaction status has an empty @ref error. Timeouts and manager
+         * shutdown report `timed_out` and `operation_aborted`, respectively.
+         */
+        struct TransactionCompletion
+        {
+            std::string               transaction_id;
+            TransactionStatus         status{ TransactionStatus::INVALID };
+            std::chrono::milliseconds elapsed{};
+            boost::system::error_code error;
+        };
+
+        using TransactionCompletionCallback = std::function<void( TransactionCompletion )>;
+
+        /**
          * @brief Factory constructor of the TransactionManager
          *
          * @param[in] processing_db Database of the CRDT
@@ -117,7 +143,9 @@ namespace sgns
             bool                                     full_node           = false,
             uint16_t                                 subnet_id           = 0,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ),
+            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::shared_ptr<sgns::account::BurnConfig> burn_config             = nullptr );
 
         ~TransactionManager();
 
@@ -294,9 +322,29 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
-                                                const SGProcessing::TaskResult          &task_result,
-                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
+                                                                           const SGProcessing::TaskResult          &task_result,
+                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+
+        /**
+         * @brief Submits an escrow payout and observes it without blocking for confirmation.
+         *
+         * Transaction construction is performed during initiation; confirmation is event-driven
+         * on the manager io_context. Pending observations are cancelled by @ref Stop. The callback
+         * must not own the GeniusNode; capture immutable context or a weak observer instead.
+         */
+        void AsyncPayEscrow( std::string                              escrow_path,
+                             SGProcessing::TaskResult                 task_result,
+                             std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+                             std::chrono::milliseconds                timeout,
+                             TransactionCompletionCallback            callback );
+
+        /**
+         * @brief Asynchronously observes an already-tracked outgoing transaction.
+         */
+        void AsyncWaitForTransactionOutgoing( std::string                   tx_id,
+                                              std::chrono::milliseconds     timeout,
+                                              TransactionCompletionCallback callback );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -335,10 +383,9 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
         /**
-         * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
-         * @return The conflicting transaction, or failure if none exists.
+         * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
          */
-        outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
+        std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
             const GeniusTransaction &element ) const;
 
         /**
@@ -417,6 +464,26 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
+        struct PendingTransactionWait
+        {
+            PendingTransactionWait( boost::asio::io_context              &context,
+                                    std::string                           id,
+                                    TransactionCompletionCallback         completion_callback,
+                                    std::chrono::steady_clock::time_point start_time ) :
+                timer( context ),
+                tx_id( std::move( id ) ),
+                callback( std::move( completion_callback ) ),
+                started_at( start_time )
+            {
+            }
+
+            boost::asio::steady_timer             timer;
+            std::string                           tx_id;
+            TransactionCompletionCallback         callback;
+            std::chrono::steady_clock::time_point started_at;
+            std::atomic_bool                      completed{ false };
+        };
+
         struct TrackedTx
         {
             std::shared_ptr<GeniusTransaction> tx;
@@ -451,7 +518,9 @@ namespace sgns
                             bool                                     full_node,
                             uint16_t                                 subnet_id,
                             std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
+                            std::chrono::milliseconds                mutability_window,
+                            uint64_t                                 initial_burn_basis_points,
+                            std::shared_ptr<sgns::account::BurnConfig> burn_config );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
@@ -584,13 +653,17 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
-        std::shared_ptr<GeniusTransaction> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                            const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
         TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
         bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
+        static bool       IsTerminalTransactionStatus( TransactionStatus status );
+        void              NotifyTransactionStatusChanged( const std::string &tx_id );
+        void              CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
+                                                   TransactionStatus                              status,
+                                                   boost::system::error_code                      error = {} );
+        void              CancelPendingTransactionWaits();
 
         /**
          * @brief Single iteration of the main processing loop.
@@ -648,9 +721,12 @@ namespace sgns
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                       task_m;
         std::atomic<bool>                                           stopped_{ false };
-        std::chrono::milliseconds                                   timestamp_tolerance_m;
-        std::chrono::milliseconds                                   mutability_window_m;
-        uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
+        std::mutex                                                  payout_submission_mutex_;
+        std::mutex                                                  transaction_waits_mutex_;
+        std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> transaction_waits_;
+        std::chrono::milliseconds                                                             timestamp_tolerance_m;
+        std::chrono::milliseconds                                                             mutability_window_m;
+        uint64_t nonce_window_m = DEFAULT_NONCE_WINDOW;
 
         // METRICS-01: Operational metrics counters
         // Atomic counters tracking vote rates, validation breakdown, and transaction lifecycle.
@@ -662,6 +738,10 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
+
+        /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
+        ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
+        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
@@ -757,10 +837,8 @@ namespace sgns
          * @brief CRDT element filter for incoming transactions.
          *
          * Deserializes the element, verifies its signature,
-         * and checks for nonce conflicts. When a conflict exists, applies
-         * ShouldReplaceTransaction to decide whether the new or existing
-         * transaction survives. Rejected elements are returned as tombstones
-         * together with their associated proof key.
+         * and checks for nonce conflicts. Rejected elements are returned as
+         * tombstones together with their associated proof key.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */

@@ -15,6 +15,7 @@
 #include "account/GeniusNode.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
@@ -40,12 +41,12 @@ namespace sgns
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash1" };
+                                               "./transaction_crash_node1" };
         static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash2" };
+                                               "./transaction_crash_node2" };
 
         // Constants for iterations
         static constexpr int TOTAL_TRANSFERS        = 20;
@@ -62,16 +63,19 @@ namespace sgns
 
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
-            CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
-            CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
+            CONFIG1.BaseWritePath = ( binary_path + "/transaction_crash_node1/" );
+            CONFIG2.BaseWritePath = ( binary_path + "/transaction_crash_node2/" );
+
+            test::removeAllWithRetry( CONFIG1.BaseWritePath );
+            test::removeAllWithRetry( CONFIG2.BaseWritePath );
 
             // All nodes in this test are non-processors.
             // is_processor is now read exclusively from sgns_config.json (defaults to true).
             std::filesystem::create_directories( CONFIG1.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( CONFIG1.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG1.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( CONFIG1.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
             std::filesystem::create_directories( CONFIG2.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
             node1 = sgns::GeniusNode::New( CONFIG1,
@@ -147,8 +151,8 @@ namespace sgns
         }
 
         std::cout << "Reconnecting nodes for transaction propagation" << std::endl;
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout << "Waiting for the first batch of incoming transactions" << std::endl;
         for ( int i = 0; i < INITIAL_WAIT_TRANSFERS; i++ )
@@ -161,8 +165,8 @@ namespace sgns
 
         std::cout << "Simulating crash and recovery" << std::endl;
         RestartNode2();
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout
             << "****************************Waiting for the remaining transactions after recovery****************************"

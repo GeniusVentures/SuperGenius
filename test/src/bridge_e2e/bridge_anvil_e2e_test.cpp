@@ -32,6 +32,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp"
@@ -203,9 +204,6 @@ protected:
     /** @brief Replay-dedup assertion timeout (D-18). */
     static inline constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
 
-    /** @brief Base port for PubSub — node i listens on kBasePort + i. */
-    static inline constexpr unsigned int kBasePort = 40011u;
-
     /** @brief Anvil deterministic account private keys (hex, no 0x prefix) — public test values.
      *         Each index gets a distinct key so every node occupies a separate validator slot. */
     static inline constexpr const char *kAnvilAccountHexKeys[] = {
@@ -239,9 +237,9 @@ protected:
 
 std::array<std::shared_ptr<GeniusNode>, BridgeAnvilE2ETest::kNodeCount> BridgeAnvilE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeAnvilE2ETest::kNodeCount>            BridgeAnvilE2ETest::s_configs = { {
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node0" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node0" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node1" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node2" },
 } };
 sgns::test::anvil::AnvilProcess                                         BridgeAnvilE2ETest::s_anvil;
 
@@ -324,9 +322,10 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     const std::string binary_path = boost::dll::program_location().parent_path().string();
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        s_configs[i].BaseWritePath = binary_path + "/node" + std::to_string( i ) + "/";
+        s_configs[i].BaseWritePath = binary_path + "/bridge_anvil_node" + std::to_string( i ) + "/";
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
-        sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, kBasePort + i, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath,
                                            ( i == 0u ) ? "Full" : "Light",
                                            /*is_processor=*/false );
@@ -384,7 +383,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
                 peers.push_back( s_nodes[j]->GetPubSub()->GetLocalAddress() );
             }
         }
-        s_nodes[i]->GetPubSub()->AddPeers( peers );
+        s_nodes[i]->AddPeers( peers );
     }
 
     // Wait for all processor nodes to sync and reach READY.
@@ -446,7 +445,7 @@ void BridgeAnvilE2ETest::TearDownTestSuite()
     s_anvil.Stop();
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
     }
 }
 

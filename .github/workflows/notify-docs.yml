@@ -1,0 +1,16 @@
+name: Notify docs site
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger documentation rebuild
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          repository: GeniusVentures/documentation
+          event-type: supergenius-updated

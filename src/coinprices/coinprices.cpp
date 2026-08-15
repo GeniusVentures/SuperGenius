@@ -118,8 +118,30 @@ namespace sgns
         return ss.str();
     }
 
-    // Get current price with boost::outcome
     outcome::result<std::map<std::string, double>> CoinGeckoPriceRetriever::getCurrentPrices(
+        const std::vector<std::string> &tokenIds )
+    {
+        static constexpr int kMaxAttempts = 3;
+        for ( int attempt = 1; attempt <= kMaxAttempts; ++attempt )
+        {
+            auto result = getCurrentPricesOnce( tokenIds );
+            if ( result || attempt == kMaxAttempts )
+            {
+                return result;
+            }
+
+            const auto delay = std::chrono::milliseconds( 250 * attempt );
+            m_logger->warn( "Current price request attempt {}/{} failed: {}; retrying in {} ms",
+                            attempt,
+                            kMaxAttempts,
+                            result.error().message(),
+                            delay.count() );
+            std::this_thread::sleep_for( delay );
+        }
+        return outcome::failure( PriceError::NetworkError );
+    }
+
+    outcome::result<std::map<std::string, double>> CoinGeckoPriceRetriever::getCurrentPricesOnce(
         const std::vector<std::string> &tokenIds )
     {
         std::map<std::string, double> prices;
@@ -159,7 +181,8 @@ namespace sgns
                 false,
                 ioc,
                 [this,
-                 &res]( outcome::result<
+                 &res,
+                 &requestSucceeded]( outcome::result<
                         std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
                 {
                     if ( buffers )
@@ -168,6 +191,7 @@ namespace sgns
                     }
                     else
                     {
+                        requestSucceeded = false;
                         m_logger->error( "Failed to get coin price: {}", buffers.error().message() );
                     }
                 },
@@ -284,7 +308,8 @@ namespace sgns
                         false,
                         ioc,
                         [this,
-                         &res]( outcome::result<std::shared_ptr<
+                         &res,
+                         &requestSucceeded]( outcome::result<std::shared_ptr<
                                     std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
                         {
                             if ( buffers )
@@ -294,6 +319,7 @@ namespace sgns
                             }
                             else
                             {
+                                requestSucceeded = false;
                                 m_logger->error( "Failed to get coin historical price: {}", buffers.error().message() );
                             }
                         },
@@ -430,7 +456,7 @@ namespace sgns
                     false,
                     false,
                     ioc,
-                    [this, &res]( outcome::result<std::shared_ptr<
+                    [this, &res, &requestSucceeded]( outcome::result<std::shared_ptr<
                                       std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
                     {
                         if ( buffers )
@@ -439,6 +465,7 @@ namespace sgns
                         }
                         else
                         {
+                            requestSucceeded = false;
                             m_logger->error( "Failed to get historical range coin price: {}",
                                              buffers.error().message() );
                         }

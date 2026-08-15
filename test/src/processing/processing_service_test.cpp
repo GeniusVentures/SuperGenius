@@ -205,46 +205,21 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
     {
         auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( config ) );
 
-        // Add some diagnostic logging for port binding
-        int port = 40001 + i;
-        Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
+        Color::PrintInfo( "Attempting to start PubSub node ", i, " on an OS-assigned port" );
         for ( auto node : bootstrap_nodes )
         {
             Color::PrintInfo( "  with bootstrap node: ", node );
         }
 
         // Start the node and wait for it to complete before getting its address
-        m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( port, bootstrap_nodes ) );
+        m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( 0, bootstrap_nodes ) );
 
-        // Wait for this node to start before using it as a bootstrap for the next
-        std::chrono::milliseconds nodeStartTime;
-        ASSERT_WAIT_FOR_CONDITION(
-            [&]()
-            {
-                auto &pubs_future = m_pubsub_futures[i];
-                if ( pubs_future.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready )
-                {
-                    try
-                    {
-                        if ( auto result = pubs_future.get(); result )
-                        {
-                            Color::PrintError( "PubSub node ", i, " failed to start: ", result.message() );
-                            return false;
-                        }
-                        Color::PrintInfo( "PubSub node ", i, " started successfully" );
-                        return true;
-                    }
-                    catch ( const std::exception &e )
-                    {
-                        Color::PrintError( "PubSub node ", i, " start exception: ", e.what() );
-                        return false;
-                    }
-                }
-                return false;
-            },
-            std::chrono::milliseconds( 5000 ),
-            "PubSub node startup failed",
-            &nodeStartTime );
+        if ( auto result = m_pubsub_futures.back().get(); result )
+        {
+            throw std::runtime_error( "PubSub node " + std::to_string( i ) + " failed to start: " +
+                                      result.message() );
+        }
+        Color::PrintInfo( "PubSub node ", i, " started successfully" );
 
         // Now it's safe to get the interface address and use it as bootstrap
         if ( i == 0 )
@@ -254,10 +229,6 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
             bootstrap_nodes = { interfaceAddr };
         }
     }
-
-    std::chrono::milliseconds resultTime;
-
-    Color::PrintInfo( "Waited ", resultTime.count(), " ms for pubsub node initialization" );
 
     for ( size_t i = 0; i < numNodes; ++i )
     {

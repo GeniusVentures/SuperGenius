@@ -18,6 +18,7 @@
 #include <atomic>
 #include <optional>
 #include <unordered_map>
+
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
@@ -122,7 +123,7 @@ namespace sgns
          * @brief Get the current authorized full node public address
          * @return The authorized full node public address
          */
-        static const std::string &GetAuthorizedFullNodeAddress();
+        static std::string GetAuthorizedFullNodeAddress();
 
         /**
          * @brief Registers additional validator addresses to include in the genesis registry.
@@ -137,7 +138,7 @@ namespace sgns
          * @brief Returns additional genesis validator addresses previously set.
          * @return Vector of additional genesis validator public addresses.
          */
-        static const std::vector<std::string> &GetAdditionalGenesisValidatorAddresses();
+        static std::vector<std::string> GetAdditionalGenesisValidatorAddresses();
 
         /**
          * @brief Returns the stored CID of the selected genesis block.
@@ -293,18 +294,20 @@ namespace sgns
          */
         outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
             const std::string &subject_hash ) const;
+
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.
          * @return Reference to selected hash.
          */
-        const std::string &BestHash( const std::string &a, const std::string &b ) const;
+        static const std::string &BestHash( const std::string &a, const std::string &b );
 
     protected:
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
+        friend class CertificateFallbackTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
@@ -474,6 +477,7 @@ namespace sgns
          * @return outcome::success when registry is ready, otherwise an error.
          */
         outcome::result<void> EnsureValidatorRegistry() const;
+        void                  RequestValidatorRegistry();
 
         static constexpr std::string_view BLOCKCHAIN_TOPIC =
             "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
@@ -561,13 +565,12 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
-        bool              created_successfully_ = false; ///< Indicates successful initialization/creation flow.
-        bool              filters_registered_   = false; ///< Indicates CRDT filters were registered.
-        bool              callbacks_registered_ = false; ///< Indicates CRDT callbacks were registered.
+        std::atomic<bool> stop_started_{ false };                   ///< Makes account-bound teardown one-shot.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
-        std::atomic<bool> start_deferred_{ false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
-        bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
-        bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
+        std::atomic<bool> start_deferred_{
+            false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
+        bool genesis_ready_          = false; ///< Indicates genesis block is ready.
+        bool account_creation_ready_ = false; ///< Indicates account-creation block is ready.
 
         std::shared_ptr<ConsensusManager> consensus_manager_; ///< Consensus manager used for proposals/certificates.
     };

@@ -29,6 +29,7 @@
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -87,7 +88,7 @@ public:
             const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
             const std::string binaryPath = boost::dll::program_location().parent_path().string();
             const std::string basePath   = binaryPath + "/" + dbName + "_" + testName;
-            boost::filesystem::remove_all( basePath );
+            sgns::test::removeAllWithRetry( basePath );
             boost::filesystem::create_directories( basePath );
 
             sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
@@ -167,6 +168,10 @@ public:
         {
             for ( auto &node : nodes_ )
             {
+                if ( node.db )
+                {
+                    node.db->ShutdownNow();
+                }
                 if ( node.io )
                 {
                     node.io->stop();
@@ -210,6 +215,28 @@ public:
         loggerDataStore->set_level( spdlog::level::off );
     }
 };
+
+TEST_F( GlobalDBIntegrationTest, OperationsAreRejectedAfterShutdown )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_shutdown_node" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+
+    auto db = testNodes->getNodes().front().db;
+    ASSERT_NE( db, nullptr );
+    db->ShutdownNow();
+
+    sgns::base::Buffer value;
+    value.put( "value" );
+    const sgns::crdt::HierarchicalKey key( "/shutdown/rejected" );
+
+    EXPECT_TRUE( db->Put( key, value, {} ).has_error() );
+    EXPECT_TRUE( db->Get( key ).has_error() );
+    EXPECT_TRUE( db->QueryKeyValues( "/shutdown" ).has_error() );
+    EXPECT_EQ( db->BeginTransaction(), nullptr );
+    EXPECT_EQ( db->GetCRDTDataStore(), nullptr );
+    EXPECT_EQ( db->GetBroadcaster(), nullptr );
+}
 
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
@@ -352,8 +379,8 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     {
         const auto resA = testNodes->getNodes()[2].db->Get( keyA );
         const auto resB = testNodes->getNodes()[2].db->Get( keyB );
-        EXPECT_TRUE( resA.has_value() );
-        EXPECT_TRUE( resB.has_value() );
+        ASSERT_TRUE( resA.has_value() );
+        ASSERT_TRUE( resB.has_value() );
         EXPECT_EQ( resA.value().toString(), "Data from topic A" );
         EXPECT_EQ( resB.value().toString(), "Data from topic B" );
     }

@@ -23,6 +23,7 @@
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
@@ -436,7 +437,7 @@ namespace
 
                 // Proposal ID: sha256 of the signing bytes with proposal_id itself still empty
                 // (mirrors ConsensusManager::CreateProposalId's private implementation).
-                auto id_signing_bytes = ConsensusManager::ProposalSigningBytes( proposal );
+                auto id_signing_bytes = ProposalSigningBytes( proposal );
                 EXPECT_TRUE( id_signing_bytes.has_value() ) << "ProposalSigningBytes (for ID) should succeed";
                 if ( id_signing_bytes.has_value() )
                 {
@@ -445,7 +446,7 @@ namespace
                         base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
                 }
 
-                auto signing_bytes = ConsensusManager::ProposalSigningBytes( proposal );
+                auto signing_bytes = ProposalSigningBytes( proposal );
                 EXPECT_TRUE( signing_bytes.has_value() ) << "ProposalSigningBytes should succeed";
                 if ( signing_bytes.has_value() )
                 {

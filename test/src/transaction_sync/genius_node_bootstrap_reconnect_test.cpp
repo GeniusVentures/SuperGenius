@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 
 #include <boost/dll.hpp>
 #include <gtest/gtest.h>
@@ -13,6 +14,7 @@
 #include "account/GeniusNode.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace sgns
@@ -35,10 +37,10 @@ namespace sgns
             full_config_.BaseWritePath   = binary_path + "/bootstrap_reconnect_full/";
             client_config_.BaseWritePath = binary_path + "/bootstrap_reconnect_client/";
 
-            std::filesystem::remove_all( full_config_.BaseWritePath );
-            std::filesystem::remove_all( client_config_.BaseWritePath );
+            test::removeAllWithRetry( full_config_.BaseWritePath );
+            test::removeAllWithRetry( client_config_.BaseWritePath );
 
-            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 51000, false ).has_value() );
+            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 0, false ).has_value() );
             ASSERT_TRUE( GeniusNode::WriteSgnsConfig( full_config_.BaseWritePath, "Full", false ).has_value() );
             {
                 std::ofstream config( full_config_.BaseWritePath + "bridge_chains_config.json" );
@@ -57,6 +59,14 @@ namespace sgns
 
             bootstrap_address_ = full_node_->GetPubSub()->GetInterfaceAddress();
             ASSERT_FALSE( bootstrap_address_.empty() );
+            ASSERT_NE( full_node_->GetPubsubPort(), 0u );
+            {
+                std::ofstream config( full_config_.BaseWritePath + "network_config.json" );
+                ASSERT_TRUE( config.good() );
+                config << "{ \"pubsub_port\": \"" << full_node_->GetPubsubPort()
+                       << "\", \"auto_dht\": false, \"upnp_enabled\": false }";
+            }
+            full_node_.reset();
 
             std::filesystem::create_directories( client_config_.BaseWritePath );
             {
@@ -73,7 +83,7 @@ namespace sgns
             {
                 std::ofstream config( client_config_.BaseWritePath + "network_config.json" );
                 ASSERT_TRUE( config.good() );
-                config << "{ \"port_seed\": 51500, \"auto_dht\": false, \"upnp_enabled\": false, "
+                config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
                           "\"bootstrap_reconnect_base_delay_sec\": 1, \"bootstrap_reconnect_max_delay_sec\": 1, "
                           "\"bootstrap_health_check_interval_sec\": 1, "
                           "\"bootstrap_health_check_disconnected_interval_sec\": 1 }";
@@ -87,8 +97,6 @@ namespace sgns
         {
             client_node_.reset();
             full_node_.reset();
-            std::filesystem::remove_all( client_config_.BaseWritePath );
-            std::filesystem::remove_all( full_config_.BaseWritePath );
         }
 
         DevConfig                   full_config_   = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), {} };
@@ -98,7 +106,7 @@ namespace sgns
         std::string                 bootstrap_address_;
     };
 
-    TEST_F( GeniusNodeBootstrapReconnectTest, ReconnectsToConfiguredBootstrapAfterRestart )
+    TEST_F( GeniusNodeBootstrapReconnectTest, ConnectsWhenConfiguredBootstrapStartsLateAndReconnectsAfterRestart )
     {
         auto multiaddress_result = libp2p::multi::Multiaddress::create( bootstrap_address_ );
         ASSERT_TRUE( multiaddress_result.has_value() );
@@ -110,6 +118,21 @@ namespace sgns
         ASSERT_TRUE( peer_id_result.has_value() );
         const libp2p::peer::PeerInfo bootstrap_peer{ peer_id_result.value(), { multiaddress } };
 
+        // Leave the configured bootstrap offline long enough for the initial transport dial
+        // to fail. The client must retry without first handing that failure to GossipSub,
+        // which bans failed peers for one minute.
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+        EXPECT_NE( client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ),
+                   libp2p::Host::Connectedness::CONNECTED );
+
+        full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
+        ASSERT_TRUE( full_node_ );
+        Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
+
+        ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
+            [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
+            std::chrono::seconds( 50 ),
+            "late bootstrap full node did not become ready" ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]() { return client_node_->GetState() == GeniusNode::NodeState::READY; },
             std::chrono::seconds( 50 ),
@@ -123,10 +146,7 @@ namespace sgns
             std::chrono::seconds( 20 ),
             "client did not connect to its configured bootstrap full node" ) );
 
-        // Explicitly close the connection from the bootstrap side before tearing it down.
-        // GeniusNode shutdown closes its listener, but libp2p does not synchronously publish
-        // that remote disconnect to an in-process peer.
-        full_node_->GetPubSub()->GetHost()->disconnect( client_node_->GetPubSub()->GetHost()->getId() );
+        full_node_.reset();
 
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
@@ -136,8 +156,6 @@ namespace sgns
             },
             std::chrono::seconds( 20 ),
             "client did not observe the configured bootstrap going offline" ) );
-
-        full_node_.reset();
 
         full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
         ASSERT_TRUE( full_node_ );

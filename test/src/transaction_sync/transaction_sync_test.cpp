@@ -24,6 +24,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "proof/TransferProof.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -39,20 +40,20 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
         static inline GeniusNodeConfig DEV_CONFIG  = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node10" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./transaction_sync_node1" };
         static inline GeniusNodeConfig DEV_CONFIG2 = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node20" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./transaction_sync_node2" };
         static inline GeniusNodeConfig DEV_CONFIG3 = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node_full" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./transaction_sync_full_node" };
 
         static inline std::string binary_path = "";
 
@@ -63,15 +64,15 @@ namespace sgns
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
             std::string binary_path   = boost::dll::program_location().parent_path().string();
-            DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
-            DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";
-            DEV_CONFIG3.BaseWritePath = binary_path + "/node_full/";
+            DEV_CONFIG.BaseWritePath  = binary_path + "/transaction_sync_node1/";
+            DEV_CONFIG2.BaseWritePath = binary_path + "/transaction_sync_node2/";
+            DEV_CONFIG3.BaseWritePath = binary_path + "/transaction_sync_full_node/";
 
             try
             {
-                std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
-                std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
-                std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG2.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG3.BaseWritePath );
             }
             catch ( ... )
             {
@@ -79,19 +80,19 @@ namespace sgns
 
             // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
             std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath,
                                                /*node_type=*/"Full",
                                                /*is_processor=*/false,
                                                /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
                                                /*node_type=*/"Light",
                                                /*is_processor=*/false,
                                                /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath,
                                                /*node_type=*/"Light",
                                                /*is_processor=*/false,
@@ -108,9 +109,9 @@ namespace sgns
                 DEV_CONFIG2,
                 sgns::FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
 
-            node_proc1->GetPubSub()->AddPeers(
+            node_proc1->AddPeers(
                 { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
-            node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+            node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 50000 ),
@@ -492,9 +493,9 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
         tx1_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_EQ( node_proc2->WaitForTransactionIncoming(
-                   tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ(
+        node_proc2->WaitForTransactionIncoming( tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+        TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
     auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(), tx1_id );
@@ -549,7 +550,7 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
         DEV_CONFIG2,
         FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
     ASSERT_TRUE( node_proc2 );
-    node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+    node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

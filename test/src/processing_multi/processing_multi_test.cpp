@@ -67,18 +67,18 @@ protected:
 
         // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
@@ -88,13 +88,13 @@ protected:
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
                                       node_proc2->GetPubSub()->GetLocalAddress() };
-        node_main->GetPubSub()->AddPeers( bootstrappers );
+        node_main->AddPeers( bootstrappers );
 
         bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
-        node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        node_proc1->AddPeers( bootstrappers );
 
         // bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
-        // node_proc2->GetPubSub()->AddPeers( bootstrappers );
+        // node_proc2->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
@@ -349,7 +349,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     node_proc2->StartProcessing();
     std::vector bootstrappers = { node_main->GetPubSub()->GetLocalAddress(),
                                   node_proc1->GetPubSub()->GetLocalAddress() };
-    node_proc2->GetPubSub()->AddPeers( bootstrappers );
+    node_proc2->AddPeers( bootstrappers );
     node_main->ProcessImage( json_data );
     //node_main->ProcessImage(json_data);
 

@@ -2,7 +2,6 @@
 #include <boost/dll.hpp>
 #include <thread>
 #include <cstring>
-#include <atomic>
 #include <cstdio>
 #include <iostream>
 #include <filesystem>
@@ -12,6 +11,7 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -34,8 +34,6 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
                                                        const std::string &folderName,
                                                        const std::string &privKey )
 {
-    static std::atomic<int> nodeCounter{ 0 };
-    int                     id         = nodeCounter.fetch_add( 1 );
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
@@ -43,15 +41,14 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
-    std::filesystem::remove_all( devConfig.BaseWritePath );
+    sgns::test::removeAllWithRetry( devConfig.BaseWritePath );
     std::filesystem::create_directories( devConfig.BaseWritePath );
     {
         std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
         bridgeConfigFile << "{}";
     }
 
-    uint16_t port = static_cast<uint16_t>( 40001 + id );
-    GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
+    GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
@@ -83,7 +80,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             false,
                                             "fnt_original",
                                             sharedKey );
-    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
+    originalNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -117,7 +114,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             false,
                                             "fnt_recovery",
                                             sharedKey );
-    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
+    recoveryNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },

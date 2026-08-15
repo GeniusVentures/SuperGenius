@@ -123,21 +123,47 @@ namespace sgns::crdt
         //SetIncomingBroadcastEnabled( false );
         StopBackupLoop();
 
-        if ( m_broadcaster )
+        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
+        std::shared_ptr<CrdtDatastore>        crdt_datastore;
         {
-            m_broadcaster->Stop();
+            std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+            broadcaster    = std::move( m_broadcaster );
+            crdt_datastore = std::move( m_crdtDatastore );
+            m_datastore.reset();
         }
 
-        if ( m_crdtDatastore )
+        if ( broadcaster )
         {
-            m_crdtDatastore->CancelAndCloseNow();
+            broadcaster->Stop();
         }
-        m_broadcaster.reset();
-        m_crdtDatastore.reset();
-        m_datastore.reset();
+
+        if ( crdt_datastore )
+        {
+            crdt_datastore->CancelAndCloseNow();
+        }
 
         started_.store( false );
         m_logger->info( "GlobalDB shutdown finished" );
+    }
+
+    std::shared_ptr<CrdtDatastore> GlobalDB::ActiveCRDTDataStore() const
+    {
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return nullptr;
+        }
+        return m_crdtDatastore;
+    }
+
+    std::shared_ptr<PubSubBroadcasterExt> GlobalDB::ActiveBroadcaster() const
+    {
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return nullptr;
+        }
+        return m_broadcaster;
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -299,11 +325,12 @@ namespace sgns::crdt
         }
         std::shared_ptr<libp2p::Host> host = m_pubsub->GetHost();
 
+        // Run Graphsync response handling on the executor that owns the pubsub host's stream queues.
         auto graphsync = std::make_shared<GraphsyncImpl>( host,
                                                           std::move( scheduler ),
                                                           graphsyncnetwork,
                                                           generator,
-                                                          m_context );
+                                                          m_pubsub->GetAsioContext() );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
         // Start DagSyner listener
@@ -458,7 +485,12 @@ namespace sgns::crdt
         {
             return;
         }
-        m_broadcaster->Start();
+        auto broadcaster = ActiveBroadcaster();
+        if ( !broadcaster )
+        {
+            return;
+        }
+        broadcaster->Start();
         cid_receiving_started_ = true;
     }
 
@@ -468,7 +500,12 @@ namespace sgns::crdt
         {
             return;
         }
-        m_crdtDatastore->StartCIDProcessing();
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return;
+        }
+        crdt_datastore->StartCIDProcessing();
         cid_sync_started_ = true;
     }
 
@@ -478,7 +515,12 @@ namespace sgns::crdt
         {
             return;
         }
-        m_crdtDatastore->StartRebroadcastHeads();
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return;
+        }
+        crdt_datastore->StartRebroadcastHeads();
         head_broadcasting_started_ = true;
     }
 
@@ -486,13 +528,23 @@ namespace sgns::crdt
                                         const Buffer                          &value,
                                         const std::unordered_set<std::string> &topics )
     {
-        return m_crdtDatastore->PutKey( key, value, topics );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->PutKey( key, value, topics );
     }
 
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
-        AtomicTransaction batch( m_crdtDatastore );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        AtomicTransaction batch( std::move( crdt_datastore ) );
 
         for ( auto &data : data_vector )
         {
@@ -509,31 +561,56 @@ namespace sgns::crdt
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
-        return m_crdtDatastore->GetKey( key );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetKey( key );
     }
 
     outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
-        return m_crdtDatastore->DeleteKey( key, topics );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->DeleteKey( key, topics );
     }
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( std::string_view keyPrefix )
     {
-        return m_crdtDatastore->QueryKeyValues( keyPrefix );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->QueryKeyValues( keyPrefix );
     }
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &prefix_base,
                                                                      const std::string &middle_part,
                                                                      const std::string &remainder_prefix )
     {
-        return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
     }
 
     outcome::result<std::string> GlobalDB::KeyToString( const Buffer &key ) const
     {
         // @todo cache the prefix and suffix
-        auto keysPrefix  = m_crdtDatastore->GetKeysPrefix();
-        auto valueSuffix = m_crdtDatastore->GetValueSuffix();
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        auto keysPrefix  = crdt_datastore->GetKeysPrefix();
+        auto valueSuffix = crdt_datastore->GetValueSuffix();
 
         auto sKey = std::string( key.toString() );
 
@@ -555,52 +632,68 @@ namespace sgns::crdt
 
     void GlobalDB::PrintDataStore()
     {
-        m_crdtDatastore->PrintDataStore();
+        if ( auto crdt_datastore = ActiveCRDTDataStore() )
+        {
+            crdt_datastore->PrintDataStore();
+        }
     }
 
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
-        return std::make_shared<AtomicTransaction>( m_crdtDatastore );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        return crdt_datastore ? std::make_shared<AtomicTransaction>( std::move( crdt_datastore ) ) : nullptr;
     }
 
     outcome::result<void> GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        return m_broadcaster->AddBroadcastTopic( topicName );
+        auto broadcaster = ActiveBroadcaster();
+        if ( !broadcaster )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return broadcaster->AddBroadcastTopic( topicName );
     }
 
-    void GlobalDB::AddTopicName( const std::string &topicName )
+    void GlobalDB::AddTopicName( std::string topicName )
     {
-        m_crdtDatastore->AddTopicName( topicName );
+        if ( auto crdt_datastore = ActiveCRDTDataStore() )
+        {
+            crdt_datastore->AddTopicName( topicName );
+        }
     }
 
-    void GlobalDB::AddListenTopic( const std::string &topicName )
+    void GlobalDB::AddListenTopic( std::string topicName )
     {
-        m_broadcaster->AddListenTopic( topicName );
-        AddTopicName( topicName );
+        auto broadcaster    = ActiveBroadcaster();
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( broadcaster && crdt_datastore )
+        {
+            broadcaster->AddListenTopic( topicName );
+            crdt_datastore->AddTopicName( std::move(topicName) );
+        }
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
     {
-        return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        return crdt_datastore && crdt_datastore->RegisterElementFilter( pattern, std::move( filter ) );
     }
 
     bool GlobalDB::RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback )
     {
-        return m_crdtDatastore->RegisterNewElementCallback( pattern, std::move( callback ) );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        return crdt_datastore && crdt_datastore->RegisterNewElementCallback( pattern, std::move( callback ) );
     }
 
     bool GlobalDB::RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback )
     {
-        return m_crdtDatastore->RegisterDeletedElementCallback( pattern, std::move( callback ) );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        return crdt_datastore && crdt_datastore->RegisterDeletedElementCallback( pattern, std::move( callback ) );
     }
 
     void GlobalDB::UnregisterElementFilter( const std::string &pattern )
     {
-        if ( shutdown_started_.load() )
-        {
-            return;
-        }
-        auto crdt_datastore = m_crdtDatastore;
+        auto crdt_datastore = ActiveCRDTDataStore();
         if ( crdt_datastore )
         {
             crdt_datastore->UnregisterElementFilter( pattern );
@@ -609,11 +702,7 @@ namespace sgns::crdt
 
     void GlobalDB::UnregisterNewElementCallback( const std::string &pattern )
     {
-        if ( shutdown_started_.load() )
-        {
-            return;
-        }
-        auto crdt_datastore = m_crdtDatastore;
+        auto crdt_datastore = ActiveCRDTDataStore();
         if ( crdt_datastore )
         {
             crdt_datastore->UnregisterNewElementCallback( pattern );
@@ -622,11 +711,7 @@ namespace sgns::crdt
 
     void GlobalDB::UnregisterDeletedElementCallback( const std::string &pattern )
     {
-        if ( shutdown_started_.load() )
-        {
-            return;
-        }
-        auto crdt_datastore = m_crdtDatastore;
+        auto crdt_datastore = ActiveCRDTDataStore();
         if ( crdt_datastore )
         {
             crdt_datastore->UnregisterDeletedElementCallback( pattern );
@@ -635,51 +720,75 @@ namespace sgns::crdt
 
     std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()
     {
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
         return m_datastore;
     }
 
     std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const
     {
-        return m_crdtDatastore ? m_crdtDatastore->GetWorkJournal() : nullptr;
+        auto crdt_datastore = ActiveCRDTDataStore();
+        return crdt_datastore ? crdt_datastore->GetWorkJournal() : nullptr;
     }
 
     outcome::result<GlobalDB::CRDTHeadListResult> GlobalDB::GetCRDTHeadList()
     {
-        return m_crdtDatastore->GetHeadList();
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetHeadList();
     }
 
     outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
     {
-        return m_crdtDatastore->GetHeadHeight( aCid, topic );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetHeadHeight( aCid, topic );
     }
 
     outcome::result<void> GlobalDB::CRDTHeadRemove( const CID &aCid, const std::string &topic )
     {
-        return m_crdtDatastore->RemoveHead( aCid, topic );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->RemoveHead( aCid, topic );
     }
 
     outcome::result<void> GlobalDB::CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority )
     {
-        return m_crdtDatastore->AddHead( aCid, topic, priority );
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->AddHead( aCid, topic, priority );
     }
 
     std::shared_ptr<PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
     {
-        return m_broadcaster;
+        return ActiveBroadcaster();
     }
 
     outcome::result<CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
     {
-        if ( !m_crdtDatastore )
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
         {
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        return m_crdtDatastore->GetJobStatus( cid );
+        return crdt_datastore->GetJobStatus( cid );
     }
 
     outcome::result<void> GlobalDB::RequestHeadBroadcast( const std::set<std::string> &topics )
     {
-        if ( !m_crdtDatastore )
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
         {
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
@@ -702,34 +811,36 @@ namespace sgns::crdt
         }
 
         m_logger->debug( "{}: Forwarding request for {} topics", __func__, topics.size() );
-        return m_crdtDatastore->BroadcastHeadsForTopics( topics );
+        return crdt_datastore->BroadcastHeadsForTopics( topics );
     }
 
     outcome::result<std::unordered_set<std::string>> GlobalDB::GetMonitoredTopics() const
     {
-        if ( !m_crdtDatastore )
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
         {
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
         m_logger->debug( "{}: Forwarding request for topics", __func__ );
-        return m_crdtDatastore->GetTopicNames();
+        return crdt_datastore->GetTopicNames();
     }
 
     std::shared_ptr<crdt::CrdtDatastore> GlobalDB::GetCRDTDataStore()
     {
-        return m_crdtDatastore;
+        return ActiveCRDTDataStore();
     }
 
-    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GlobalDB::GetCIDContent(
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GlobalDB::GetLocalDeltaKeyValues(
         const std::string &cid_string )
     {
-        if ( !m_crdtDatastore )
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
         {
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        return m_crdtDatastore->GetILPDNodeContent( cid_string );
+        return crdt_datastore->GetLocalDeltaKeyValues( cid_string );
     }
 
 }

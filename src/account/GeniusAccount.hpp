@@ -25,9 +25,8 @@
 #include <boost/filesystem/path.hpp>
 #include <WalletCore/PrivateKey.h>
 
-#include <ProofSystem/EthereumKeyGenerator.hpp>
-
 #include "account/TokenID.hpp"
+#include "account/GeniusSigner.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
@@ -45,7 +44,7 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, ethereum::EthereumKeyGenerator>;
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, GeniusSigner::PrivateKey>;
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
@@ -83,6 +82,14 @@ namespace sgns
         static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
+
+        /**
+         * @brief Create a fresh account whose key exists only in memory.
+         *
+         * This path keeps storage in memory and does not persist key material
+         * or update the account index.
+         */
+        static std::shared_ptr<GeniusAccount> NewEphemeral( TokenID token_id, bool full_node = false );
 
         /**
          * @brief       Creates an account from an Ethereum private key
@@ -206,6 +213,17 @@ namespace sgns
          */
         static bool VerifySignature( const std::string          &address,
                                      std::string_view            sig,
+                                     const std::vector<uint8_t> &data );
+
+        /**
+         * @brief       Verify a byte-vector signature using the Genius account's public key.
+         * @param[in]   address public address to verify the signature
+         * @param[in]   sig signature bytes to be verified
+         * @param[in]   data data to be verified
+         * @return      true if the signature is valid, false otherwise
+         */
+        static bool VerifySignature( const std::string          &address,
+                                     const std::vector<uint8_t> &sig,
                                      const std::vector<uint8_t> &data );
 
         /**
@@ -373,7 +391,6 @@ namespace sgns
             std::string hash;
         };
 
-        static constexpr size_t SIGNATURE_EXP_SIZE               = 64; ///< Expected size of the signature in bytes
         static constexpr size_t LOCAL_CONFIRMED_TX_HISTORY_LIMIT = 5;
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
@@ -388,14 +405,14 @@ namespace sgns
         std::shared_ptr<ISecureStorage> storage_;      ///< Secure storage instance
         bool                            is_full_node_; ///< Whether this account is a full node
 
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
-        std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
-        mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
-        std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
-        std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
-        std::deque<ConfirmedTxRecord>                   local_confirmed_transactions_; ///< Recent local confirmed txs
-        std::shared_ptr<AccountMessenger>               messenger_;                    ///< Messenger instance
-        UTXOManager                                     utxo_manager_;
+        GeniusSigner                              signer_;                ///< In-memory signing identity
+        std::unordered_map<std::string, uint64_t> confirmed_nonces_;      ///< Map of the confirmed nonces from peers
+        mutable std::shared_mutex                 nonce_mutex_;           ///< Mutex for the nonce map
+        std::set<uint64_t>                        pending_nonces_;        ///< Reserved but not confirmed nonces
+        std::optional<uint64_t>                   local_confirmed_nonce_; ///< Highest locally confirmed nonce
+        std::deque<ConfirmedTxRecord>             local_confirmed_transactions_; ///< Recent local confirmed txs
+        std::shared_ptr<AccountMessenger>         messenger_;                    ///< Messenger instance
+        UTXOManager                               utxo_manager_;
 
         // Nonce request tracking
         mutable std::mutex              nonce_request_mutex_; ///< Mutex for nonce request tracking
@@ -432,14 +449,12 @@ namespace sgns
 
         /**
          * @brief       Private constructor for a new GeniusAccount.
+         * @param[in]   signer In-memory signing identity.
          * @param[in]   token_id Token ID for the account.
          * @param[in]   storage Secure storage instance.
          * @param[in]   full_node Whether this account is a full node.
          */
-        GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
-                       TokenID                                         token_id,
-                       std::shared_ptr<ISecureStorage>                 storage,
-                       bool                                            full_node );
+        GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
     };
 }
 

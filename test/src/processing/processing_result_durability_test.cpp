@@ -26,6 +26,7 @@
 #include <bitswap.hpp>
 
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
 
@@ -226,7 +227,7 @@ public:
 
         // Clean up temp cache.
         std::error_code ec;
-        fs::remove_all( temp_cache_dir_, ec );
+        sgns::test::removeAllWithRetry( temp_cache_dir_, ec );
 
         // Destroy per-test objects (engines, accessors, managers, channels, cores)
         // but NOT the pubsub nodes — they live in s_pubsub_nodes across tests.

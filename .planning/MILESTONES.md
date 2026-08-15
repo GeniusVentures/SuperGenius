@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.1 Multi-Signature Secure CRDT Storage (Shipped: 2026-07-29)
+
+**Phases completed:** 2 phases (08-multisig-primitive, 09-securecrdt-layer), 4 plans
+
+**Key accomplishments:**
+
+- `MultiSig` library: canonical signing-bytes + N-of-M quorum evaluation (dedup + verify loop) reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives, usable independently of CRDT (Phase 08-multisig-primitive — MSIG-01/02/03)
+- `ISignedCRDTData` interface + `SecureCrdtRegistry`: static topic/key-pattern → {signer-set source, quorum rule, type} registry declared in code (Phase 09-securecrdt-layer — SCRDT-01/02)
+- `SecureCrdt` wrapper: local-write gate rejecting unsigned/under-signed writes before apply, plus read-path quorum re-derivation; propose/sign/quorum flow transported entirely over CRDT put + filter-callback, no new networking/RPC (Phase 09-securecrdt-layer — SCRDT-03/04)
+- Full build + CTest green, including an end-to-end propose/sign/quorum handoff-contract test
+
+**Note:** This milestone's branch (`gsd/phase-09-securecrdt-layer`) numbered its own phases 8-9 independently of the `v2.0` roadmap's phases 8-9 (unrelated topics — burn/mint datapath robustness vs. multisig/SecureCRDT). Rebased onto `develop` on 2026-07-29 after `v2.0` phase 8 had already merged; `v2.0` was kept as the current milestone in `PROJECT.md`/`STATE.md` throughout.
+
+**Deferred to a future milestone:** `TrustedPeerRegistry` (TPR-01/02/03), `BURN_BASIS_POINTS` as a quorum-signed CRDT value (BURN-01/02/03), and `ValidatorRegistry` migration onto `ISignedCRDTData` (MIG-05/06) — these were in the original v1.1 requirements but not implemented in phases 08-09.
+
+---
+
 ## v1.0 GeniusNode Construction Refactor (Shipped: 2026-07-03)
 
 **Phases completed:** 3 phases, 5 plans, 0 tasks

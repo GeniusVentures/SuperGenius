@@ -41,10 +41,11 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 
 namespace sgns::crdt
 {
-    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
-        dagService_( std::make_shared<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl>( std::move( service ) ) ),
+        dagService_(
+            std::make_shared<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl>( std::move( block_datastore ) ) ),
         graphsync_( std::move( graphsync ) ),
         host_( std::move( host ) )
     {
@@ -97,10 +98,10 @@ namespace sgns::crdt
         }
 
         BOOST_OUTCOME_TRY( host_->listen( listen_to ) );
+        BOOST_OUTCOME_TRY( this->StartSync() );
+        host_->start();
 
-        auto startResult = this->StartSync();
-
-        return startResult;
+        return outcome::success();
     }
 
     outcome::result<ipfs_lite::ipfs::graphsync::Subscription> GraphsyncDAGSyncer::RequestNode(
@@ -132,7 +133,7 @@ namespace sgns::crdt
             root_cid,
             {},
             extensions,
-            [weakptr = weak_from_this(), root_cid]( const ResponseStatusCode code,
+            [weakptr = weak_from_this(), root_cid]( const ResponseStatusCode      code,
                                                     const std::vector<Extension> &extensions )
             {
                 if ( auto self = weakptr.lock() )
@@ -219,9 +220,7 @@ namespace sgns::crdt
 
             if ( IsOnBlackList( peerID ) )
             {
-                logger_->debug( "Skipping blacklisted peer {} for CID {}",
-                                peerID.toBase58(),
-                                cid.toString().value() );
+                logger_->debug( "Skipping blacklisted peer {} for CID {}", peerID.toBase58(), cid.toString().value() );
                 continue;
             }
 
@@ -277,7 +276,7 @@ namespace sgns::crdt
                     logger_->error( "Request state not found for CID {} from peer {}",
                                     cid.toString().value(),
                                     peerID.toBase58() );
-                    (void)BlackListPeer( peerID );
+                    (void) BlackListPeer( peerID );
                     ClearRequestStatus( cid );
                     try_next_peer = true;
                 }
@@ -334,7 +333,7 @@ namespace sgns::crdt
                                            cid.toString().value(),
                                            peerID.toBase58(),
                                            statusCodeToString( *status ) );
-                            (void)BlackListPeer( peerID );
+                            (void) BlackListPeer( peerID );
                         }
                         else
                         {
@@ -486,8 +485,6 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        host_->start();
-
         started_ = true;
 
         return outcome::success();
@@ -498,10 +495,6 @@ namespace sgns::crdt
         if ( graphsync_ != nullptr )
         {
             graphsync_->stop();
-        }
-        if ( host_ != nullptr )
-        {
-            host_->stop();
         }
         started_ = false;
     }

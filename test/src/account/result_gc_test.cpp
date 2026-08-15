@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "testutil/remove_all.hpp"
+
 namespace fs = std::filesystem;
 
 /// @brief Mirrors the core logic of GeniusNode::RunResultGC() in isolation.
@@ -139,7 +141,7 @@ public:
     void TearDown() override
     {
         std::error_code ec;
-        fs::remove_all( tempDir_, ec );
+        sgns::test::removeAllWithRetry( tempDir_, ec );
     }
 
     fs::path tempDir_;

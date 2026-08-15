@@ -36,9 +36,11 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 
 using namespace sgns;
 
@@ -72,19 +74,20 @@ namespace sgns
             return true;
         }
 
-        static bool RemoveRegistryPersistence( const std::shared_ptr<GeniusNode> &node,
-                                               std::vector<uint8_t>               registry_block_key )
+        static inline std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
         {
-            if ( !node || !node->tx_globaldb_ )
-            {
-                return false;
-            }
+            return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
+        }
 
-            auto datastore = node->tx_globaldb_->GetDataStore();
-            if ( !datastore )
+        static bool RemoveRegistryPersistence( const std::string &database_path,
+                                               std::vector<uint8_t> registry_block_key )
+        {
+            auto datastore_result = storage::rocksdb::create( database_path );
+            if ( datastore_result.has_error() )
             {
                 return false;
             }
+            auto datastore = std::move( datastore_result.value() );
 
             base::Buffer registry_cid_key;
             registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
@@ -113,7 +116,6 @@ protected:
     {
         static std::atomic<int> nodeCounter{ 0 };
         const bool              reuseStorage = !existingBasePath.empty();
-        uint16_t                portSeed     = 0;
         std::string             outPathStr   = std::move( existingBasePath );
         if ( outPathStr.empty() )
         {
@@ -121,7 +123,6 @@ protected:
             const auto binaryPath = boost::dll::program_location().parent_path();
             const auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
             outPathStr            = outPath.generic_string() + '/';
-            portSeed              = static_cast<uint16_t>( 40041 + id );
         }
         else if ( outPathStr.back() != '/' )
         {
@@ -132,7 +133,7 @@ protected:
 
         if ( !reuseStorage )
         {
-            std::filesystem::remove_all( devConfig.BaseWritePath );
+            sgns::test::removeAllWithRetry( devConfig.BaseWritePath );
             std::filesystem::create_directories( devConfig.BaseWritePath );
             {
                 std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
@@ -161,7 +162,7 @@ protected:
 
         if ( !reuseStorage )
         {
-            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, portSeed, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                                isFullNode ? "Full" : "Light",
                                                /*is_processor=*/isProcessor,
@@ -211,29 +212,6 @@ protected:
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-        // Helper to remove directory with retry on Windows (file locks may not be immediately released)
-        auto removeWithRetry = []( const std::string &path )
-        {
-            std::error_code ec;
-            std::filesystem::remove_all( path, ec );
-
-            // On Windows, retry if removal fails due to file locks
-            if ( ec && std::filesystem::exists( path ) )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-                ec.clear();
-                std::filesystem::remove_all( path, ec );
-
-                // Final attempt after longer delay
-                if ( ec && std::filesystem::exists( path ) )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-                    ec.clear();
-                    std::filesystem::remove_all( path, ec );
-                }
-            }
-        };
-
         auto binaryPath = boost::dll::program_location().parent_path();
 
         // Clean up any previous test runs
@@ -241,7 +219,8 @@ protected:
         {
             if ( entry.is_directory() && entry.path().filename().string().find( FILE_PREFIX ) != std::string::npos )
             {
-                removeWithRetry( entry.path().string() );
+                std::error_code ec;
+                sgns::test::removeAllWithRetry( entry.path().string(), ec );
             }
         }
     }
@@ -257,7 +236,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
 {
     auto node_full   = CreateNode( "registry_cid_full", true, true, true );
     auto node_client = CreateNode( "registry_cid_client" );
-    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_full );
     WaitForReady( node_client );
 
@@ -300,21 +279,22 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     ASSERT_TRUE( cid_bytes.has_value() );
 
     const auto client_base_path = GetBaseWritePath( node_client );
-    ASSERT_TRUE(
-        sgns::MultiAccountTestAccess::RemoveRegistryPersistence( node_client, std::move( cid_bytes.value() ) ) );
+    const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
 
-    const auto client_port  = node_client->GetPubsubPort();
+    client_registry.reset();
+    node_client.reset();
+
+    ASSERT_TRUE( sgns::MultiAccountTestAccess::RemoveRegistryPersistence( client_database_path,
+                                                                          std::move( cid_bytes.value() ) ) );
+
     const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
     {
         std::ofstream network_config( client_base_path + "network_config.json" );
         ASSERT_TRUE( network_config.good() );
-        network_config << "{ \"port_seed\": " << client_port
-                       << ", \"auto_dht\": false, \"upnp_enabled\": false, \"bootstrap_addresses\": [\"" << full_address
+        network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
+                          "\"bootstrap_addresses\": [\"" << full_address
                        << "\"] }";
     }
-
-    client_registry.reset();
-    node_client.reset();
 
     node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
     ASSERT_TRUE( node_client );
@@ -338,7 +318,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     // Create nodes dynamically
     auto node_full     = CreateNode( "node_multi_full", true, true, true );
     auto node_original = CreateNode( "node_multi_1" );
-    node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_original->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_full );
     WaitForReady( node_original );
 
@@ -371,7 +351,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     std::cout << " 3 mint transactions on original node completed, Creating duplicated node..." << std::endl;
 
     auto node_duplicated = CreateNode( "node_multi_1", false, true );
-    node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_duplicated->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_duplicated );
 
     mint_result = node_duplicated->MintTokens( 60000,
@@ -394,15 +374,15 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     ASSERT_EQ( node_duplicated->GetBalance(), node_original->GetBalance() );
 }
 
-TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
+TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
 {
     // Create 3 nodes - 2 with the same address, 1 different (full node for network)
     auto node_full        = CreateNode( "full_node_address_unique", true, true, true );
     auto node_same_addr_1 = CreateNode( "duplicate_address_12345" );
-    node_same_addr_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_1->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     auto node_same_addr_2 = CreateNode( "duplicate_address_12345", false, true );
-    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     WaitForReady( node_full );
     WaitForReady( node_same_addr_1 );
@@ -486,7 +466,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     ASSERT_TRUE( transfer2_res.has_value() ) << "Transfer 2 failed on node_same_addr_2";
 
     // Add peers to each node
-    node_same_addr_2->GetPubSub()->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
 
     auto tx1_received = node_full->WaitForTransactionIncoming(
         transfer1_res.value(),
@@ -494,7 +474,14 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
     fmt::println( "Waiting for the conflict resolution" );
 
-    uint64_t correct_tokens_transferred = 0;
+    // Both transfers claim the same address+nonce, so exactly one can be certified. The
+    // losing peer must learn that from the winner's certificate and fail its own
+    // transaction, rather than sitting in VERIFYING until the proposal TTL expires.
+    const auto conflict_start = std::chrono::steady_clock::now();
+
+    uint64_t           correct_tokens_transferred = 0;
+    sgns::GeniusNode  *losing_node                = nullptr;
+    std::string        losing_tx;
     sgns::test::assertWaitForCondition(
         [&]()
         {
@@ -502,6 +489,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
             if ( status1 == TransactionManager::TransactionStatus::CONFIRMED )
             {
                 correct_tokens_transferred = 10000000000;
+                losing_node                = node_same_addr_2.get();
+                losing_tx                  = transfer2_res.value();
                 return true;
             }
 
@@ -509,6 +498,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
             if ( status2 == TransactionManager::TransactionStatus::CONFIRMED )
             {
                 correct_tokens_transferred = 13000000000;
+                losing_node                = node_same_addr_1.get();
+                losing_tx                  = transfer1_res.value();
                 return true;
             }
 
@@ -516,6 +507,27 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
         },
         std::chrono::milliseconds( 50000 ),
         "Neither transfer was confirmed" );
+
+    ASSERT_NE( losing_node, nullptr );
+
+    // The whole point of the fix: the loser fails off the winner's certificate. The bound
+    // is deliberately far below ConsensusManager::PendingLifecycleConfig::pending_ttl
+    // (3 minutes), so a regression to "wait for the TTL" fails this test instead of
+    // merely slowing it down.
+    static constexpr auto kFailFastBudget = std::chrono::seconds( 60 );
+    static_assert( kFailFastBudget < std::chrono::minutes( 3 ), "budget must beat the proposal TTL" );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        { return losing_node->GetTransactionStatus( losing_tx ) == TransactionManager::TransactionStatus::FAILED; },
+        kFailFastBudget,
+        "Losing transaction did not fail after the winner's certificate arrived" );
+
+    const auto conflict_elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - conflict_start );
+    fmt::println( "Losing transaction {} failed {} ms after the conflict started", losing_tx, conflict_elapsed.count() );
+    EXPECT_LT( conflict_elapsed, std::chrono::minutes( 3 ) )
+        << "loser only resolved around the proposal TTL -- the certificate shortcut did not work";
 
     sgns::test::assertWaitForCondition(
         [&]() { return node_same_addr_1->GetBalance() == ( balance_node1_after_mint - correct_tokens_transferred ); },
@@ -571,7 +583,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
     for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        nodes[i]->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     }
     for ( const auto &node : nodes )
     {
@@ -744,7 +756,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
     const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
     for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        nodes[i]->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     }
     for ( const auto &node : nodes )
     {

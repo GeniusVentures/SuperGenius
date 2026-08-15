@@ -5,6 +5,7 @@
 
 #include <boost/json.hpp>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 namespace sgns::test
@@ -35,10 +36,23 @@ constexpr const char *kBridgeEventTopic0 =
 
 /// @brief Extract the transaction hash (hex string) from an eth_getTransactionReceipt JSON-RPC request.
 /// The request has shape: {"method":"eth_getTransactionReceipt","params":["0x..."],"id":N}
-std::string ExtractTxHash(const boost::json::object &request)
+/// Returns std::nullopt (rather than throwing) for any request that doesn't match this
+/// shape — e.g. eth_blockNumber (no "params" key), eth_getLogs (object-shaped "params"),
+/// or an empty params array — so non-receipt requests reaching this mock never crash the
+/// caller with an uncaught boost::json exception.
+std::optional<std::string> ExtractTxHash(const boost::json::object &request)
 {
-    const auto &params = request.at("params").as_array();
-    return params.at(0).as_string().c_str();
+    const auto params_it = request.find("params");
+    if (params_it == request.end() || !params_it->value().is_array())
+    {
+        return std::nullopt;
+    }
+    const auto &params = params_it->value().as_array();
+    if (params.empty() || !params.at(0).is_string())
+    {
+        return std::nullopt;
+    }
+    return std::string(params.at(0).as_string().c_str());
 }
 
 /// @brief Build a valid receipt JSON string with the given tx_hash, status, log address, and topic0.
@@ -131,7 +145,15 @@ MockRpcTransport::MockRpcTransport(const MockEndpointConfig &config) : config_(c
 std::optional<std::string> MockRpcTransport::call(const boost::json::object &request)
 {
     ++call_count_;
-    const std::string tx_hash = ExtractTxHash(request);
+    const std::optional<std::string> maybe_tx_hash = ExtractTxHash(request);
+    if (!maybe_tx_hash.has_value())
+    {
+        // Non-receipt request (e.g. eth_blockNumber, eth_getLogs) — this mock only
+        // models eth_getTransactionReceipt-shaped calls; return nullopt rather than
+        // guessing at a response for a request shape it doesn't understand.
+        return std::nullopt;
+    }
+    const std::string &tx_hash = *maybe_tx_hash;
 
     switch (config_.behavior)
     {
@@ -281,6 +303,18 @@ std::vector<MockEndpointConfig> LoadMockConfig(const std::filesystem::path &conf
     }
 
     return result;
+}
+
+std::array<MockEndpointConfig, 3> BuildDivergentSlotConfigs(
+    MockBehavior direct_behavior,
+    MockBehavior public1_behavior,
+    MockBehavior public2_behavior)
+{
+    return {
+        MockEndpointConfig{"mock://direct", direct_behavior, {}},
+        MockEndpointConfig{"mock://public1", public1_behavior, {}},
+        MockEndpointConfig{"mock://public2", public2_behavior, {}},
+    };
 }
 
 } // namespace sgns::test

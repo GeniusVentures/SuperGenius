@@ -53,6 +53,22 @@ namespace sgns::ipfs_bitswap
     class Bitswap;
 }
 
+// Forward declarations for BURN-02/BURN-03 quorum-wiring types (full includes live in GeniusNode.cpp).
+namespace sgns::securecrdt
+{
+    class SecureCrdt;
+}
+
+namespace sgns::trustedpeer
+{
+    class TrustedPeerRegistry;
+}
+
+namespace sgns::account
+{
+    class BurnConfig;
+}
+
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
  */
@@ -344,7 +360,7 @@ namespace sgns
          */
         static constexpr uint64_t GetBurnBasisPoints()
         {
-            return TransactionManager::BURN_BASIS_POINTS;
+            return TransactionManager::BURN_BASIS_POINTS_DEFAULT;
         }
 
         /**
@@ -413,10 +429,16 @@ namespace sgns
                                                                       std::chrono::milliseconds timeout );
 
         /**
-         * @brief Adds a peer address to the underlying PubSub service.
-         * @param[in] peer Peer multiaddress to add.
+         * @brief Adds a peer to PubSub and starts connecting to it.
+         * @param[in] peer Peer multiaddress to connect to.
          */
         void AddPeer( const std::string &peer );
+
+        /**
+         * @brief Adds peers to PubSub and starts connecting to them.
+         * @param[in] peers Peer multiaddresses to connect to.
+         */
+        void AddPeers( const std::vector<std::string> &peers );
 
         /**
          * @brief Starts or restarts the background UPnP port refresh thread.
@@ -841,8 +863,10 @@ namespace sgns
          *
          * @param[in] chain_id  Numeric EVM chain ID as a string (e.g. "11155111" for Sepolia).
          * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
+         * @return True when the endpoints were configured; false when the transaction
+         *         manager is absent or not READY.
          */
-        void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+        bool ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
         /**
          * @brief Injects a custom chainlist fetcher for RPC endpoint discovery (test injection point).
@@ -867,7 +891,7 @@ namespace sgns
          * @brief Gets the current authorized full-node public address.
          * @return Public address authorized to create genesis blocks.
          */
-        const std::string &GetAuthorizedFullNodeAddress() const;
+        std::string GetAuthorizedFullNodeAddress() const;
 
         /**
          * @brief Returns the current GeniusNode lifecycle state.
@@ -882,6 +906,7 @@ namespace sgns
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
         friend class ChildRegTestAccess;
+        friend class GeniusNodeTestAccess;
 
         /**
          * @brief Enqueues a transaction and its proof directly through the transaction manager.
@@ -898,7 +923,6 @@ namespace sgns
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
                                                      io_work_guard_;     ///< Keeps @ref io_ alive.
         std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>              job_globaldb_;      ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
@@ -950,14 +974,25 @@ namespace sgns
         /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
         bool rpc_catchup_ = true;
 
-        std::vector<std::string>                 bootstrap_peers_;
-        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<std::string> bootstrap_peers_;
+        std::vector<std::string> bootstrap_fullnodes_;
+        std::vector<std::string> trusted_peers_genesis_;     ///< Genesis trusted-peer list (BURN-02/BURN-03).
+        std::string              bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
+        /// Quorum threshold for TrustedPeerRegistry membership changes; 0 = unset (defaulted to the
+        /// majority floor for the parsed genesis peer count in LoadSgnsConfig()).
+        uint64_t trusted_peer_quorum_threshold_ = 0;
+        /// Quorum threshold for BurnConfig updates; 0 = unset (defaulted the same way).
+        uint64_t                                 burn_config_quorum_threshold_ = 0;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
+
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
 
         std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
@@ -1018,7 +1053,8 @@ namespace sgns
         /**
          * @brief Initializes PubSub, GraphSync networking, and optional DHT discovery.
          * @param[in] port_seed Deterministic per-address port seed used to derive the node
-         *            listening port when @c pubsub_port is not set. Fallback when the
+         *            listening port when @c pubsub_port is not set; zero requests an
+         *            OS-assigned ephemeral port. Fallback when the
          *            @c port_seed key is absent from @c network_config.json; overridable by
          *            that key when present (config wins, param is fallback).
          * @param[in] is_full_node Whether to use full-node connection limits.
@@ -1030,7 +1066,8 @@ namespace sgns
          *      priority when present and non-empty.
          *   2. Otherwise @c port_seed (the constructor param, or the @c port_seed key from
          *      @c network_config.json when present) derives the port via
-         *      @c GenerateRandomPort(port_seed, account_address).
+         *      @c GenerateRandomPort(port_seed, account_address), except zero which first
+         *      resolves an OS-selected ephemeral port.
          */
         bool InitNetwork( uint16_t port_seed, bool is_full_node );
 
@@ -1116,8 +1153,22 @@ namespace sgns
         /**
          * @brief Stops account-bound runtime services in dependency order.
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
+         * @param[in] release_members Whether to release service owners immediately after stopping them.
          */
-        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account );
+        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
+
+        /**
+         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         */
+        void ResetQuorumMembers();
+
+        /**
+         * @brief Releases the runtime object graph after all node I/O threads have stopped.
+         *
+         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
+         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         */
+        void ReleaseRuntimeMembersAfterIoStopped();
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
@@ -1132,6 +1183,11 @@ namespace sgns
          * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
          */
         static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Connect to a peer on the PubSub I/O thread, retrying transient failures.
+         */
+        void ConnectPeer( std::string peer, libp2p::peer::PeerInfo peer_info, unsigned attempt );
 
         /**
          * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
@@ -1177,8 +1233,8 @@ namespace sgns
         static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;        ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false }; ///< UPnP thread stop flag.
+        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
+        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
         std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
@@ -1204,20 +1260,6 @@ namespace sgns
         std::mutex                                         reconnect_mutex_;
 
         crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
-
-        /**
-         * @brief Submits an escrow payout transaction and waits for confirmation.
-         * @param[in] escrow_path Escrow address/path associated with the completed task.
-         * @param[in] taskresult Processing task result that defines payout recipients.
-         * @param[in] crdt_transaction Atomic CRDT transaction that marks task completion.
-         * @param[in] timeout Maximum time to wait for escrow payout confirmation.
-         * @return Pair of payout transaction hash and elapsed milliseconds, or a payout/timeout error.
-         */
-        outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
-            const std::string                       &escrow_path,
-            const SGProcessing::TaskResult          &taskresult,
-            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
-            std::chrono::milliseconds                timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
 
         /**
          * @brief Handles successful processing completion and triggers escrow payout.

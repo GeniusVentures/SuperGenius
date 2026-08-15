@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <gtest/gtest.h>
 
@@ -18,7 +19,7 @@ TEST( GeniusNode, InitializationProgress )
 
     try
     {
-        boost::filesystem::remove_all( path );
+        sgns::test::removeAllWithRetry( path.string() );
     }
     catch ( ... ) //NOLINT(bugprone-empty-catch)
     {
@@ -28,7 +29,7 @@ TEST( GeniusNode, InitializationProgress )
                                             { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
     const auto base_write_path = path.generic_string() + '/';
-    sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/40069, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/0, /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
     auto node = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },

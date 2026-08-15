@@ -6,10 +6,12 @@
  */
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <fstream>
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "account/ChainRpcEndpointProvider.hpp"
@@ -316,29 +318,93 @@ TEST( ChainRpcEndpointProviderTest, CancelledInitDoesNotRegisterOrNotify )
     fs::remove( tmpfile, ec );
 }
 
-// ─── Test: validator self-deregisters; stale destruction can't clobber newer ─
+// ─── Tests: synchronized, insert-only validator registration ──────────────
 
-TEST( ChainRpcEndpointProviderTest, ValidatorSelfDeregistersWithoutClobberingNewerRegistration )
+TEST( ChainRpcEndpointProviderTest, ExistingValidatorMustBeRemovedBeforeReplacementCanRegister )
 {
-    // A validator must remove itself from the global IInputValidator registry on
-    // destruction (compare-and-remove), so a stale validator released after an
-    // account switch can never leave a dangling pointer — nor remove a newer
-    // account's registration that overwrote its entry.
     const std::string cid = "7777777";
 
     auto a = std::make_unique<PublicChainInputValidator>();
-    a->RegisterForChain( cid );
+    ASSERT_TRUE( a->RegisterForChain( cid ) );
     ASSERT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( a.get() ) );
 
     auto b = std::make_unique<PublicChainInputValidator>();
-    b->RegisterForChain( cid ); // overwrites -> registry now &b
-    ASSERT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( b.get() ) );
+    EXPECT_FALSE( b->RegisterForChain( cid ) );
+    EXPECT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( a.get() ) )
+        << "A second registration must not overwrite the current owner";
+    IInputValidator::UnregisterIf( cid, b.get() );
+    EXPECT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( a.get() ) )
+        << "A non-owner must not remove the current registration";
 
-    a.reset(); // stale 'a' destroyed; must NOT remove cid (it points to b)
+    a.reset();
+    ASSERT_EQ( IInputValidator::Get( cid ), nullptr );
+
+    ASSERT_TRUE( b->RegisterForChain( cid ) );
     EXPECT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( b.get() ) )
-        << "Destroying a stale validator must not clobber the newer registration";
+        << "A new validator may claim the chain after the old owner unregisters";
 
-    b.reset(); // 'b' destroyed; self-deregisters cid
+    b.reset();
     EXPECT_EQ( IInputValidator::Get( cid ), nullptr )
         << "A validator must self-deregister on destruction (no dangling pointer)";
+}
+
+TEST( ChainRpcEndpointProviderTest, ConcurrentRegistrationSelectsExactlyOneOwner )
+{
+    const std::string cid          = "8888888";
+    constexpr size_t  kContenders = 16u;
+
+    std::vector<std::unique_ptr<PublicChainInputValidator>> validators;
+    validators.reserve( kContenders );
+    for ( size_t i = 0u; i < kContenders; ++i )
+    {
+        validators.push_back( std::make_unique<PublicChainInputValidator>() );
+    }
+
+    std::atomic<size_t> ready{ 0u };
+    std::atomic<size_t> registered{ 0u };
+    std::atomic<bool>   start{ false };
+    std::vector<std::thread> contenders;
+    contenders.reserve( kContenders );
+
+    for ( size_t i = 0u; i < kContenders; ++i )
+    {
+        contenders.emplace_back(
+            [&, i]()
+            {
+                ready.fetch_add( 1u, std::memory_order_release );
+                while ( !start.load( std::memory_order_acquire ) )
+                {
+                    std::this_thread::yield();
+                }
+                if ( validators[i]->RegisterForChain( cid ) )
+                {
+                    registered.fetch_add( 1u, std::memory_order_relaxed );
+                }
+            } );
+    }
+
+    while ( ready.load( std::memory_order_acquire ) != kContenders )
+    {
+        std::this_thread::yield();
+    }
+    start.store( true, std::memory_order_release );
+
+    for ( auto &contender : contenders )
+    {
+        contender.join();
+    }
+
+    EXPECT_EQ( registered.load( std::memory_order_relaxed ), 1u );
+    const auto *owner = IInputValidator::Get( cid );
+    ASSERT_NE( owner, nullptr );
+
+    size_t owner_matches = 0u;
+    for ( const auto &validator : validators )
+    {
+        owner_matches += ( owner == validator.get() ) ? 1u : 0u;
+    }
+    EXPECT_EQ( owner_matches, 1u );
+
+    validators.clear();
+    EXPECT_EQ( IInputValidator::Get( cid ), nullptr );
 }

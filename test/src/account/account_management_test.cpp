@@ -11,6 +11,7 @@
 #include "account/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
@@ -28,14 +29,14 @@ public:
     {
         try
         {
-            boost::filesystem::remove_all( path );
+            test::removeAllWithRetry( path.string() );
         }
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
         }
 
         boost::filesystem::create_directories( path );
-        sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/40069, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
                                            /*node_type=*/"Full",
                                            /*is_processor=*/true,
@@ -113,8 +114,8 @@ TEST_F( AccountManagement, SetPayoutAddress )
 
     try
     {
-        boost::filesystem::remove_all( path_requester );
-        boost::filesystem::remove_all( path_receiver );
+        test::removeAllWithRetry( path_requester.string() );
+        test::removeAllWithRetry( path_receiver.string() );
     }
     catch ( ... )
     {
@@ -124,7 +125,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
     boost::filesystem::create_directories( path_receiver );
     sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/',
-                                          /*port_seed=*/40001,
+                                          /*port_seed=*/0,
                                           /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( path_receiver.generic_string() + '/',
                                        /*node_type=*/"Light",
@@ -132,7 +133,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                        /*rpc_catchup=*/false );
     boost::filesystem::create_directories( path_requester );
     sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/',
-                                          /*port_seed=*/40001,
+                                          /*port_seed=*/0,
                                           /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( path_requester.generic_string() + '/',
                                        /*node_type=*/"Light",
@@ -146,9 +147,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
 
-    node_->GetPubSub()->AddPeers(
+    node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
-    node_receiver->GetPubSub()->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
+    node_receiver->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

@@ -1,4 +1,5 @@
 #include "testutil/storage/base_fs_test.hpp"
+#include "testutil/remove_all.hpp"
 
 namespace test
 {
@@ -20,7 +21,8 @@ namespace test
     {
         if ( fs::exists( base_path ) )
         {
-            fs::remove_all( base_path );
+            std::error_code ec;
+            sgns::test::removeAllWithRetry( base_path.string(), ec );
         }
     }
 }

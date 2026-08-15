@@ -16,9 +16,11 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <future>
 #include "crdt/proto/bcast.pb.h"
 #include "crdt_mirror_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
+#include "testutil/remove_all.hpp"
 
 namespace sgns::crdt
 {
@@ -45,7 +47,7 @@ namespace sgns::crdt
 
         void SetUp() override
         {
-            fs::remove_all( databasePath );
+            test::removeAllWithRetry( databasePath );
             // Create new database
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
@@ -83,7 +85,7 @@ namespace sgns::crdt
                                     const std::shared_ptr<InMemoryDatastore> &ipfsDataStore )
         {
             // Create new database
-            fs::remove_all( base_path );
+            test::removeAllWithRetry( base_path );
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
             auto result               = rocksdb::create( base_path, options );
@@ -277,10 +279,15 @@ namespace sgns::crdt
 
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
+        std::promise<void> filters_complete;
+        auto filters_complete_future = filters_complete.get_future();
 
         auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
-            filter_called_count++;
+            if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
+            {
+                filters_complete.set_value();
+            }
 
             // Check if any element has the rejected key
 
@@ -318,40 +325,24 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
 
-        std::chrono::milliseconds resultTime;
-
-        test::assertWaitForCondition( [&filter_called_count]() { return filter_called_count == 4; },
-                                      std::chrono::milliseconds( 15000 ),
-                                      "NO FILTER RAN",
-                                      &resultTime );
-
-        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        filters_complete_future.wait();
+        while ( true )
         {
-            auto ret_has_key = second_crdt->HasKey( { key } );
-            if ( ret_has_key.has_value() && ret_has_key.value() )
+            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+            if ( head_height.has_value() && head_height.value() > 0 )
             {
-                return true;
+                break;
             }
-            return false;
-        };
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key1",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key3" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key3",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key4",
-                                      &resultTime );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
 
-        // Test with accepted key (should be stored)
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key3" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key4" } ), true );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
@@ -366,10 +357,15 @@ namespace sgns::crdt
 
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
+        std::promise<void> filters_complete;
+        auto filters_complete_future = filters_complete.get_future();
 
         auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
-            filter_called_count++;
+            if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
+            {
+                filters_complete.set_value();
+            }
 
             // Check if any element has the rejected key
 
@@ -407,33 +403,23 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
 
-        std::chrono::milliseconds resultTime;
-
-        test::assertWaitForCondition( [&filter_called_count]() { return filter_called_count == 4; },
-                                      std::chrono::milliseconds( 15000 ),
-                                      "NO FILTER RAN",
-                                      &resultTime );
-
-        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        filters_complete_future.wait();
+        while ( true )
         {
-            auto ret_has_key = second_crdt->HasKey( { key } );
-            if ( ret_has_key.has_value() && ret_has_key.value() )
+            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+            if ( head_height.has_value() && head_height.value() > 0 )
             {
-                return true;
+                break;
             }
-            return false;
-        };
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key4",
-                                      &resultTime );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
 
-        // Test with accepted key (should be stored)
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), false );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key3" } ), false );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key4" } ), true );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
@@ -448,10 +434,15 @@ namespace sgns::crdt
 
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
+        std::promise<void> filters_complete;
+        auto filters_complete_future = filters_complete.get_future();
 
         auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
-            filter_called_count++;
+            if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
+            {
+                filters_complete.set_value();
+            }
 
             // Check if any element has the rejected key
 
@@ -499,36 +490,22 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, { "topic" } ) );
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, { "topic" } ) );
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta4, { "topic" } ) );
 
-        std::chrono::milliseconds resultTime;
-
-        test::assertWaitForCondition( [&filter_called_count]() { return filter_called_count == 4; },
-                                      std::chrono::milliseconds( 15000 ),
-                                      "NO FILTER RAN",
-                                      &resultTime );
-
-        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        filters_complete_future.wait();
+        while ( true )
         {
-            auto ret_has_key = second_crdt->HasKey( { key } );
-            if ( ret_has_key.has_value() && ret_has_key.value() )
+            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+            if ( head_height.has_value() && head_height.value() > 0 )
             {
-                return true;
+                break;
             }
-            return false;
-        };
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key1",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key3" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key3",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key4",
-                                      &resultTime );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key3" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key4" } ), true );
 
         // Test with accepted key (should be stored)
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
@@ -547,6 +524,15 @@ namespace sgns::crdt
 
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
+        std::promise<void> filters_complete;
+        auto filters_complete_future = filters_complete.get_future();
+        auto record_filter_call = [&]()
+        {
+            if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
+            {
+                filters_complete.set_value();
+            }
+        };
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 
@@ -557,7 +543,7 @@ namespace sgns::crdt
         second_crdt->RegisterElementFilter( "Key.*",
                                             [&]( const Element &element ) -> std::optional<std::vector<Element>>
                                             {
-                                                filter_called_count++;
+                                                record_filter_call();
 
                                                 // Check if any element has the rejected key
                                                 return std::nullopt; // Accept this delta
@@ -567,7 +553,7 @@ namespace sgns::crdt
         second_crdt->RegisterElementFilter( "OtherKey.*",
                                             [&]( const Element &element ) -> std::optional<std::vector<Element>>
                                             {
-                                                filter_called_count++;
+                                                record_filter_call();
 
                                                 if ( element.value() == rejectedKey )
                                                 {
@@ -606,36 +592,22 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, { "topic" } ) );
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, { "topic" } ) );
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta4, { "topic" } ) );
 
-        std::chrono::milliseconds resultTime;
-
-        test::assertWaitForCondition( [&filter_called_count]() { return filter_called_count == 4; },
-                                      std::chrono::milliseconds( 15000 ),
-                                      "NO FILTER RAN",
-                                      &resultTime );
-
-        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        filters_complete_future.wait();
+        while ( true )
         {
-            auto ret_has_key = second_crdt->HasKey( { key } );
-            if ( ret_has_key.has_value() && ret_has_key.value() )
+            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+            if ( head_height.has_value() && head_height.value() > 0 )
             {
-                return true;
+                break;
             }
-            return false;
-        };
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key1",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key2" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No Key2",
-                                      &resultTime );
-        test::assertWaitForCondition( [&]() { return wait_key_lambda( "OtherKeySomething" ); },
-                                      std::chrono::milliseconds( 10000 ),
-                                      "No OtherKeySomething",
-                                      &resultTime );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "OtherKeySomething" } ), true );
 
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "OtherKey1" } ), true );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "OtherKey1" } ), false );

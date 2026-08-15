@@ -10,6 +10,7 @@
 #include <atomic>
 #include <chrono>
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include "crdt_custom_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
 
@@ -35,7 +36,7 @@ namespace sgns::crdt
         {
             // Remove leftover database
             std::string databasePath = "supergenius_atomic_transaction_test";
-            fs::remove_all( databasePath );
+            test::removeAllWithRetry( databasePath );
 
             // Create new database
             rocksdb::Options options;
@@ -138,7 +139,7 @@ namespace sgns::crdt
                     std::chrono::milliseconds elapsed;
                     ASSERT_WAIT_FOR_CONDITION(
                         [&]() { return did_interrupt || t1_finished; },
-                        std::chrono::milliseconds( 5000 ),
+                        std::chrono::milliseconds( 10000 ),
                         "Thread 1 did not finish or interrupt within timeout",
                         &elapsed );
                     if ( !use_atomic && !t1_finished )

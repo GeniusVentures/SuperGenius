@@ -35,6 +35,7 @@
 #include "eth/eth_watch_service.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp"
@@ -223,9 +224,9 @@ std::shared_ptr<GeniusNode> BridgeRlpxE2ETest::node_proc2 = nullptr;
 
 std::string BridgeRlpxE2ETest::s_eth_private_key;
 
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node4/" };
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node5/" };
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node6/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node1/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node2/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node3/" };
 
 std::shared_ptr<eth::EthWatchService> BridgeRlpxE2ETest::rlpx_service_main  = nullptr;
 std::shared_ptr<eth::EthWatchService> BridgeRlpxE2ETest::rlpx_service_proc1 = nullptr;
@@ -313,14 +314,17 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
 
     // Set per-node BaseWritePath
     std::string binary_path = boost::dll::program_location().parent_path().string();
-    gGeniusNodeConfig.BaseWritePath  = binary_path + "/node4/";
-    gGeniusNodeConfig2.BaseWritePath = binary_path + "/node5/";
-    gGeniusNodeConfig3.BaseWritePath = binary_path + "/node6/";
+    gGeniusNodeConfig.BaseWritePath  = binary_path + "/bridge_rlpx_node1/";
+    gGeniusNodeConfig2.BaseWritePath = binary_path + "/bridge_rlpx_node2/";
+    gGeniusNodeConfig3.BaseWritePath = binary_path + "/bridge_rlpx_node3/";
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig2.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig3.BaseWritePath );
 
     spdlog::info( "rlpx_e2e: creating 3-node cluster for RLPx E2E test" );
 
     // Create the full node FIRST — it creates the genesis block.
-    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig.BaseWritePath, /*port_seed=*/40021, /*auto_dht=*/false );
+    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( gGeniusNodeConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
     node_main = GeniusNode::New( gGeniusNodeConfig, sgns::FromPrivateKey{ s_eth_private_key } );
 
@@ -347,18 +351,18 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     spdlog::info( "rlpx_e2e: node_main READY, creating processor nodes" );
 
     // Create processor nodes
-    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig2.BaseWritePath, /*port_seed=*/40022, /*auto_dht=*/false );
+    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( gGeniusNodeConfig2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
     node_proc1 = GeniusNode::New( gGeniusNodeConfig2, sgns::FromPrivateKey{ s_eth_private_key } );
 
-    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig3.BaseWritePath, /*port_seed=*/40023, /*auto_dht=*/false );
+    GeniusNode::WriteNetworkConfig( gGeniusNodeConfig3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( gGeniusNodeConfig3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
     node_proc2 = GeniusNode::New( gGeniusNodeConfig3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub
-    node_proc1->GetPubSub()->AddPeers(
+    node_proc1->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY (polling only, no thread sleep)
     {
@@ -549,9 +553,9 @@ void BridgeRlpxE2ETest::TearDownTestSuite()
     node_proc2.reset();
 
     // Remove test data directories (NOT the RLPx services — intentionally leaked per live-test pattern)
-    std::filesystem::remove_all( gGeniusNodeConfig.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig2.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig3.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig2.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig3.BaseWritePath );
 
     spdlog::info( "rlpx_e2e: teardown complete" );
 }

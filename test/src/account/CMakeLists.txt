@@ -65,7 +65,26 @@ addtest(account_signature_test
 target_link_libraries(account_signature_test
     sgns_genius_account
     json_secure_storage
+    # Kept only so this test can cross-check the crypto3-free implementation
+    # against the legacy crypto3/ProofSystem derivation.
+    ProofSystem
 )
+
+addtest(burnconfig_test
+    burnconfig_test.cpp
+)
+
+target_link_libraries(burnconfig_test
+    burnconfig
+    trustedpeer
+    securecrdt
+    multisig
+    crdt_globaldb
+    sgns_genius_account
+    json_secure_storage
+    libsecp256k1::secp256k1
+)
+target_include_directories(burnconfig_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
@@ -169,6 +188,27 @@ else()
     target_link_options(${TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET}_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+addtest(transaction_manager_certificate_fallback_test
+    transaction_manager_certificate_fallback_test.cpp
+)
+
+target_link_libraries(transaction_manager_certificate_fallback_test
+    genius_node
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"
     )
 endif()

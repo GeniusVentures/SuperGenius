@@ -1,11 +1,4 @@
-// Keep these include files here to prevent errors within crypto3's headers
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-
 #include "GeniusAccount.hpp"
-
-#include <secp256k1.h>
 
 #include <fmt/std.h>
 #include <fmt/ranges.h>
@@ -26,6 +19,7 @@
 
 #include "base/hexutil.hpp"
 #include "local_secure_storage/impl/JSONBackend.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
@@ -48,6 +42,34 @@ namespace
         return base::createLogger( "GeniusAccount" );
     }
 
+    /// Order of the secp256k1 group. A key seed is a raw 256-bit number, so it
+    /// must be reduced into the scalar field before it is a usable secret key
+    /// (this is what the crypto3 scalar-field conversion used to do implicitly).
+    const uint256_t SECP256K1_CURVE_ORDER( "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141" );
+
+    /// Re-encode a stored key seed as the big-endian 32-byte secret key
+    /// libsecp256k1 (and therefore GeniusSigner) expects.
+    GeniusSigner::PrivateKey KeySeedToPrivateKey( const uint256_t &key_seed )
+    {
+        uint256_t reduced = key_seed % SECP256K1_CURVE_ORDER;
+
+        GeniusSigner::PrivateKey secret_key{};
+        for ( size_t i = secret_key.size(); i-- > 0; )
+        {
+            secret_key[i]  = static_cast<uint8_t>( reduced & 0xFFu );
+            reduced      >>= 8;
+        }
+        return secret_key;
+    }
+
+    /// Interpret a hash as a key seed, most significant byte first.
+    uint256_t KeySeedFromBytes( const std::vector<uint8_t> &bytes )
+    {
+        uint256_t key_seed;
+        boost::multiprecision::import_bits( key_seed, bytes.begin(), bytes.end(), 8 );
+        return key_seed;
+    }
+
     boost::filesystem::path SetupStoragePath( const boost::filesystem::path &base_path )
     {
         constexpr std::string_view FILE_NAME = "secure_storage_id";
@@ -57,19 +79,6 @@ namespace
 
     /// Global factory override (null = use default SecureStorageImpl)
     GeniusAccount::SecureStorageFactory g_storage_factory;
-
-    const secp256k1_context *GetSecp256k1Context()
-    {
-        using Context = std::unique_ptr<secp256k1_context, decltype( &secp256k1_context_destroy )>;
-        static const Context context( secp256k1_context_create( SECP256K1_CONTEXT_NONE ),
-                                      &secp256k1_context_destroy );
-        if ( context == nullptr )
-        {
-            genius_account_logger()->critical( "Could not create the secp256k1 context" );
-            std::abort();
-        }
-        return context.get();
-    }
 
     outcome::result<std::shared_ptr<JSONBackend>> CreateSecureStorage( std::string_view public_key_hex )
     {
@@ -223,9 +232,8 @@ namespace
             return std::errc::bad_message;
         }
 
-        nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
-        ethereum::EthereumKeyGenerator          eth_key( key_seed );
-        auto                                    pub_key = eth_key.GetEntirePubValue();
+        uint256_t key_seed( maybe_key->value.GetString() );
+        auto      pub_key = GeniusSigner( KeySeedToPrivateKey( key_seed ) ).GetAddress();
 
         BOOST_OUTCOME_TRY( auto secure_storage, CreateSecureStorage( pub_key ) );
 
@@ -249,20 +257,20 @@ namespace
             return std::errc::no_such_file_or_directory;
         }
 
-        auto key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+        auto key_seed = uint256_t( load_res.value() );
         genius_account_logger()->info( "Successfully loaded key_seed from storage" );
 
+        auto private_key = KeySeedToPrivateKey( key_seed );
+
         // Validate loaded key_seed matches the expected public key
-        if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+        if ( GeniusSigner( private_key ).GetAddress() != public_key )
         {
             genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
             return std::errc::bad_message;
         }
         genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
 
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-
-        return std::make_pair( std::move( storage ), std::move( eth_key ) );
+        return std::make_pair( std::move( storage ), private_key );
     }
 }
 
@@ -299,13 +307,10 @@ namespace sgns
                                                                               StorageWithAddress response_value,
                                                                               bool               full_node )
     {
-        auto [storage, eth_address] = std::move( response_value );
+        auto [storage, private_key] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( std::make_shared<ethereum::EthereumKeyGenerator>( std::move( eth_address ) ),
-                               token_id,
-                               std::move( storage ),
-                               full_node ) );
+            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ), full_node ) );
 
         return instance;
     }
@@ -324,6 +329,14 @@ namespace sgns
             "Could not find existing Genius address, generating one from a random mnemonic" );
 
         return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+    }
+
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id, bool full_node )
+    {
+        auto signer  = GeniusSigner::Generate();
+        auto storage = std::make_shared<MemorySecureStorage>( "ephemeral:" + signer.GetAddress() );
+        return std::shared_ptr<GeniusAccount>(
+            new GeniusAccount( std::move( signer ), token_id, std::move( storage ), full_node ) );
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPrivateKey( TokenID                        token_id,
@@ -537,18 +550,18 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto key_seed = nil::crypto3::multiprecision::uint256_t( TW::Hash::sha256( signed_secret ) );
+        auto key_seed = KeySeedFromBytes( TW::Hash::sha256( signed_secret ) );
 
         // Create storage and keys
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-        auto                           pub_key = eth_key.GetEntirePubValue();
+        auto sgns_private_key = KeySeedToPrivateKey( key_seed );
+        auto pub_key          = GeniusSigner( sgns_private_key ).GetAddress();
 
         BOOST_OUTCOME_TRY( auto storage, CreateSecureStorage( pub_key ) );
         BOOST_OUTCOME_TRY( storage->Save( "sgns_key", key_seed.str() ) );
 
         BOOST_OUTCOME_TRY( AppendPublicKeyToFile( base_path, pub_key ) );
 
-        return std::make_pair( std::move( storage ), std::move( eth_key ) );
+        return std::make_pair( std::move( storage ), sgns_private_key );
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
@@ -662,9 +675,7 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
-        messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
-                                            std::move( pubsub ),
-                                            std::move( methods ) );
+        messenger_ = AccountMessenger::New( signer_.GetAddress(), std::move( pubsub ), std::move( methods ) );
 
         if ( messenger_ )
         {
@@ -724,12 +735,8 @@ namespace sgns
                         {
                             return outcome::failure( std::errc::no_such_device );
                         }
-                        auto has_block = dag_syncer->HasBlock( cid_result.value() );
-                        if ( has_block.has_error() )
-                        {
-                            return outcome::failure( has_block.error() );
-                        }
-                        return has_block.value();
+                        BOOST_OUTCOME_TRY( auto has_block, dag_syncer->HasBlock( cid_result.value() ) );
+                        return has_block;
                     }
                     return outcome::failure( std::errc::owner_dead );
                 } );
@@ -753,33 +760,31 @@ namespace sgns
         genius_account_logger()->debug( "Cleared database dependency handlers" );
     }
 
-    GeniusAccount::GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
-                                  TokenID                                         token_id,
-                                  std::shared_ptr<ISecureStorage>                 storage,
-                                  bool                                            full_node ) :
+    GeniusAccount::GeniusAccount( GeniusSigner                    signer,
+                                  TokenID                         token_id,
+                                  std::shared_ptr<ISecureStorage> storage,
+                                  bool                            full_node ) :
         token( token_id ),
-        is_full_node_( full_node ),
-        eth_keypair_( std::move( eth_keypair ) ),
         storage_( std::move( storage ) ),
+        is_full_node_( full_node ),
+        signer_( std::move( signer ) ),
         utxo_manager_(
             GetAddress(),
             [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
             []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
-                return GeniusAccount::VerifySignature( address,
-                                                       std::string( signature.begin(), signature.end() ),
-                                                       data );
-            } ),
+            { return GeniusAccount::VerifySignature( address, signature, data ); } ),
         nonce_request_in_progress_( false ),
         cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
     {
     }
 
-    GeniusAccount::~GeniusAccount() {}
+    GeniusAccount::~GeniusAccount()
+    {
+    }
 
     std::string GeniusAccount::GetAddress() const
     {
-        return eth_keypair_->GetEntirePubValue();
+        return signer_.GetAddress();
     }
 
     TokenID GeniusAccount::GetToken() const
@@ -791,87 +796,19 @@ namespace sgns
                                          std::string_view            sig,
                                          const std::vector<uint8_t> &data )
     {
-        if ( sig.size() != SIGNATURE_EXP_SIZE )
-        {
-            genius_account_logger()->error( "Incorrect signature size {}, expected {}",
-                                            sig.size(),
-                                            SIGNATURE_EXP_SIZE );
-            return false;
-        }
+        return GeniusSigner::VerifySignature( address, sig, data );
+    }
 
-        auto public_key_bytes = base::unhex( address );
-        if ( public_key_bytes.has_error() || public_key_bytes.value().size() != PUBLIC_KEY_HEX_LENGTH / 2 )
-        {
-            return false;
-        }
-
-        const auto *context = GetSecp256k1Context();
-
-        std::array<uint8_t, 65> uncompressed_public_key{};
-        uncompressed_public_key.front() = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
-        std::copy( public_key_bytes.value().begin(),
-                   public_key_bytes.value().end(),
-                   uncompressed_public_key.begin() + 1 );
-
-        secp256k1_pubkey public_key;
-        if ( secp256k1_ec_pubkey_parse( context,
-                                        &public_key,
-                                        uncompressed_public_key.data(),
-                                        uncompressed_public_key.size() ) == 0 )
-        {
-            return false;
-        }
-
-        // Genius signatures store each scalar least-significant byte first; libsecp256k1 uses big endian.
-        std::array<uint8_t, SIGNATURE_EXP_SIZE> compact_signature{};
-        std::reverse_copy( sig.begin(), sig.begin() + 32, compact_signature.begin() );
-        std::reverse_copy( sig.begin() + 32, sig.end(), compact_signature.begin() + 32 );
-
-        secp256k1_ecdsa_signature signature;
-        if ( secp256k1_ecdsa_signature_parse_compact( context, &signature, compact_signature.data() ) == 0 )
-        {
-            return false;
-        }
-        secp256k1_ecdsa_signature_normalize( context, &signature, &signature );
-
-        // Keep the historical SHA256(SHA256(data)) signing protocol used by Crypto3's EMSA1 wrapper.
-        const std::array<uint8_t, 32> first_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-        const std::array<uint8_t, 32> message_hash =
-            nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
-
-        return secp256k1_ecdsa_verify( context, &signature, message_hash.data(), &public_key ) == 1;
+    bool GeniusAccount::VerifySignature( const std::string          &address,
+                                         const std::vector<uint8_t> &sig,
+                                         const std::vector<uint8_t> &data )
+    {
+        return GeniusSigner::VerifySignature( address, sig, data );
     }
 
     std::vector<uint8_t> GeniusAccount::Sign( const std::vector<uint8_t> &data ) const
     {
-        const auto *context = GetSecp256k1Context();
-
-        std::array<uint8_t, 32> secret_key{};
-        const auto              private_key = eth_keypair_->get_private_key();
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::array<uint8_t, 32>::iterator>( private_key.private_key_data(), secret_key.begin(), secret_key.end() );
-        std::reverse( secret_key.begin(), secret_key.end() );
-
-        // Keep the historical SHA256(SHA256(data)) signing protocol used by Crypto3's EMSA1 wrapper.
-        const std::array<uint8_t, 32> first_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-        const std::array<uint8_t, 32> message_hash =
-            nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
-
-        secp256k1_ecdsa_signature signature;
-        if ( secp256k1_ecdsa_sign(
-                 context, &signature, message_hash.data(), secret_key.data(), nullptr, nullptr ) == 0 )
-        {
-            genius_account_logger()->error( "Could not sign data with the account key" );
-            return {};
-        }
-
-        std::array<uint8_t, SIGNATURE_EXP_SIZE> compact_signature{};
-        secp256k1_ecdsa_signature_serialize_compact( context, compact_signature.data(), &signature );
-
-        std::vector<uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
-        std::reverse_copy( compact_signature.begin(), compact_signature.begin() + 32, signed_vector.begin() );
-        std::reverse_copy( compact_signature.begin() + 32, compact_signature.end(), signed_vector.begin() + 32 );
-        return signed_vector;
+        return signer_.Sign( data );
     }
 
     std::vector<InputUTXOInfo> GeniusAccount::CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const
@@ -903,7 +840,7 @@ namespace sgns
         auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
         confirmed_nonces_[address] = updated_nonce;
 
-        if ( address == eth_keypair_->GetEntirePubValue() )
+        if ( address == signer_.GetAddress() )
         {
             if ( !local_confirmed_nonce_ || updated_nonce > local_confirmed_nonce_.value() )
             {
@@ -952,7 +889,7 @@ namespace sgns
             should_persist = true;
         }
 
-        if ( address == eth_keypair_->GetEntirePubValue() )
+        if ( address == signer_.GetAddress() )
         {
             if ( local_confirmed_nonce_.has_value() && ( nonce == local_confirmed_nonce_.value() ) )
             {
@@ -971,7 +908,7 @@ namespace sgns
         }
 
         const auto     final_it        = confirmed_nonces_.find( address );
-        const uint64_t persisted_nonce = address == eth_keypair_->GetEntirePubValue()
+        const uint64_t persisted_nonce = address == signer_.GetAddress()
                                              ? local_confirmed_nonce_.value_or( 0 )
                                              : ( final_it != confirmed_nonces_.end() ? final_it->second : 0 );
 
@@ -1029,7 +966,7 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
     {
-        return GetPeerNonce( eth_keypair_->GetEntirePubValue() );
+        return GetPeerNonce( signer_.GetAddress() );
     }
 
     outcome::result<std::string> GeniusAccount::GetLocalConfirmedTxHash( uint64_t nonce ) const
@@ -1327,7 +1264,7 @@ namespace sgns
             return;
         }
 
-        const auto self_address = eth_keypair_->GetEntirePubValue();
+        const auto self_address = signer_.GetAddress();
 
         base::Buffer prefix;
         prefix.put( std::string( NONCE_KEY_PREFIX ) );
@@ -1415,7 +1352,7 @@ namespace sgns
             genius_account_logger()->error( "Failed to persist nonce for {:.8}", address );
         }
 
-        if ( address != eth_keypair_->GetEntirePubValue() )
+        if ( address != signer_.GetAddress() )
         {
             return;
         }

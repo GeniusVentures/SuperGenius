@@ -436,3 +436,101 @@ Plans:
 | B. Consensus | 2. Conflict and Replay Hardening | Complete | impl verified 2026-06-09 |
 | B. Consensus | 3. Network Hardening | Complete | impl verified 2026-06-09 |
 | B. Consensus | 7. Deferred Validation Lifecycle | Not started | - |
+
+---
+
+## Milestone v1.1: Multi-Signature Secure CRDT Storage
+
+**Goal:** Add a decoupled multi-signature primitive and a secure CRDT storage layer so specific CRDT-backed values require quorum signatures to create/update — applied first to a new `TrustedPeerRegistry` and to `BURN_BASIS_POINTS`; `ValidatorRegistry` migrated onto the same interface.
+
+### Phases
+
+- [x] **Phase 8: MultiSig Primitive** - Standalone N-of-M signature/quorum component reusing `ConsensusAuth` primitives (completed 2026-07-23)
+- [x] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow (completed 2026-07-23)
+- [x] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT (completed 2026-07-24)
+- [x] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager` (completed 2026-07-27)
+- [x] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved (completed 2026-07-27)
+
+## Phase Details
+
+### Phase 8: MultiSig Primitive
+
+**Goal**: A standalone, node-independent component can compute canonical signing-bytes for an arbitrary payload, verify signatures against it, and evaluate N-of-M quorum for a given signer set and threshold.
+**Depends on**: Nothing (first phase of this milestone)
+**Requirements**: MSIG-01, MSIG-02, MSIG-03
+**Success Criteria** (what must be TRUE):
+  1. Given a payload, the component produces canonical signing-bytes and verifies a valid signature against them using `ConsensusAuth`'s SHA-256/`VerifySignature` primitives, rejecting invalid/tampered signatures.
+  2. Given a signer set and a required threshold (N-of-M, no hardcoded N), the component correctly reports quorum-met/quorum-not-met for varying valid-signature counts, including boundary cases (exactly N, N-1, all M).
+  3. The component can be constructed, exercised, and unit-tested with no running node, no CRDT store, and no network dependency.
+**Plans**: 1 plan
+
+Plans:
+- [x] 08-01-PLAN.md — MultiSig library (VerifyPayloadSignature + EvaluateQuorum) + CMake wiring + tests (MSIG-01, MSIG-02, MSIG-03)
+
+### Phase 9: SecureCRDT Layer
+
+**Goal**: Registered CRDT keys can only be created/updated when accompanied by quorum-verified signatures, using CRDT's own put/filter-callback mechanism as the sole transport — no unsigned or under-signed write is ever applied.
+**Depends on**: Phase 8
+**Requirements**: SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04
+**Success Criteria** (what must be TRUE):
+  1. An `ISignedCRDTData` interface exists; a concrete implementer can supply a payload codec plus `Verify()`/`Apply()`, and the interface compiles/links independent of any specific data type.
+  2. A static, code-declared registry maps topic/key patterns to {signer-set source, quorum rule, `ISignedCRDTData` type}, resolvable at startup for a given key.
+  3. A propose+sign+quorum sequence for a registered key — driven entirely by CRDT puts and filter callbacks (pending-value entry + signature entries) — results in the value being applied only after quorum is reached, with no new networking/RPC code path introduced.
+  4. An unsigned or under-signed write attempt to a registered key is rejected locally (never applied) before quorum is reached, verified by an automated test.
+**Plans**: 2 plans
+
+Plans:
+- [x] 09-01-PLAN.md — ISignedCRDTData interface + SecureCrdtRegistry static registry + Wave-0 tests (SCRDT-01, SCRDT-02)
+- [x] 09-02-PLAN.md — SecureCrdt wrapper (local-write gate + filter registration + read-path quorum re-derivation) + quorum-gate/propose-sign-quorum tests (SCRDT-03, SCRDT-04)
+
+### Phase 10: TrustedPeerRegistry
+
+**Goal**: A new `TrustedPeerRegistry` component maintains a genesis-seeded, quorum-updatable set of trusted peers, implemented entirely via the SecureCRDT abstraction rather than bespoke signature-checking logic.
+**Depends on**: Phase 9
+**Requirements**: TPR-01, TPR-02, TPR-03
+**Success Criteria** (what must be TRUE):
+  1. A freshly-initialized genesis node's `TrustedPeerRegistry` contains exactly the initial trusted-peer set hardcoded in genesis config, with no manual bootstrapping step required.
+  2. Adding, removing, or replacing a trusted-peer member succeeds only when a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set is presented; a sub-quorum attempt is rejected and the membership set is unchanged.
+  3. `TrustedPeerRegistry`'s implementation is a consumer of `ISignedCRDTData`/SecureCRDT (registered via the Phase 9 policy registry) — code inspection confirms no parallel/duplicate signature-verification logic exists outside SecureCRDT.
+**Plans**: 2 plans
+
+Plans:
+- [x] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
+- [x] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
+
+### Phase 11: BurnConfig Quorum Wiring
+
+**Goal**: `BURN_BASIS_POINTS` is a live, quorum-signed CRDT value gated by `TrustedPeerRegistry` membership instead of a compile-time constant, and `TransactionManager` reads a cached value refreshed via callback rather than performing a CRDT read on every `PayEscrow` call.
+**Depends on**: Phase 10
+**Requirements**: BURN-01, BURN-02, BURN-03
+**Success Criteria** (what must be TRUE):
+  1. `BURN_BASIS_POINTS` is stored and updated as a `TrustedPeerRegistry`-quorum-signed CRDT value (via the Phase 9/10 SecureCRDT machinery), not a hardcoded constant in `TransactionManager.hpp`.
+  2. `TransactionManager::PayEscrow` uses a cached in-memory value for the burn rate; no CRDT read occurs on the `PayEscrow` call path, and the cache updates automatically via a CRDT-change callback when a quorum-signed update lands.
+  3. A freshly-seeded genesis node burns exactly 1% (`BURN_BASIS_POINTS=100`) on `PayEscrow` by default, matching pre-milestone behavior, until a quorum-signed update changes the value.
+**Plans**: 2 plans
+
+Plans:
+- [x] 11-01-PLAN.md — Majority-floor quorum validation (D-07) + TrustedPeerRegistry::New breaking-change retrofit + BurnConfigPayload/BurnConfig core (genesis auto-seed, signer-set-source, cache-refresh) + tests (BURN-01)
+- [x] 11-02-PLAN.md — TransactionManager cached burn-rate + GeniusNode INITIALIZING_TRANSACTIONS wiring (SecureCrdt/TrustedPeerRegistry/BurnConfig construction) + config fields + CMake linkage (BURN-02, BURN-03)
+
+### Phase 12: ValidatorRegistry Migration
+
+**Goal**: `ValidatorRegistry`'s genesis-path signature verification is migrated from `GeniusAccount::VerifySignature` onto the shared `multisig::VerifyPayloadSignature` primitive (Phase 8), narrowed per 12-CONTEXT.md D-01/D-03 to signature-verification-only reuse — `ValidatorRegistry` does not adopt `ISignedCRDTData`/`SecureCrdt` (its weighted-quorum/certificate machinery is structurally incompatible), with zero regression in existing behavior or tests.
+**Depends on**: Phase 8
+**Requirements**: MIG-05, MIG-06
+**Success Criteria** (what must be TRUE):
+  1. `VerifyUpdate`'s genesis-path signature check calls `multisig::VerifyPayloadSignature` instead of `GeniusAccount::VerifySignature`; `blockchain_genesis` links `multisig` directly.
+  2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged, with no behavioral regression in genesis-signature verification, and the D-05 `multi_account_test` exit gate (5-10 consecutive clean runs) is satisfied.
+**Plans:** 1/1 plans complete
+Plans:
+- [x] 12-01-PLAN.md — Migrate genesis-path signature verification onto multisig::VerifyPayloadSignature, wire CMake link, run D-05 exit gate
+
+### Progress Table (v1.1)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|-----------------|--------|-----------|
+| 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
+| 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
+| 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
+| 11. BurnConfig Quorum Wiring | 2/2 | Complete   | 2026-07-27 |
+| 12. ValidatorRegistry Migration | 1/1 | Complete   | 2026-07-27 |

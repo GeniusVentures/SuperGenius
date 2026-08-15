@@ -52,6 +52,7 @@
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 
 #include "anvil_fixture.hpp"
 
@@ -193,11 +194,6 @@ protected:
     static inline constexpr const char *kNode1Dir = "/catchup_node1/";
     static inline constexpr const char *kNode2Dir = "/catchup_node2/";
     static inline constexpr const char *kNode3Dir = "/catchup_node3/";
-
-    /** @brief PubSub port base for the catch-up fixture (Plan 04.1-01 used 40011..40013). */
-    static inline constexpr unsigned int kNodeMainPort = 40031u;
-    static inline constexpr unsigned int kNodeProc1Port = 40032u;
-    static inline constexpr unsigned int kNodeProc2Port = 40033u;
 
     /** @brief Per-node bridge config filename (must match ResolveBridgeChainsConfigPath priority 1). */
     static inline constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
@@ -375,6 +371,7 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // priority 1 and OnRpcEndpointsReady populates catchup_chains_.
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
     }
 
@@ -392,19 +389,18 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // genesis validators are registered so the catch-up scan discovers the
     // burns when it fires at READY.
     const char *kWNodeType[] = { "Full", "Light", "Light" };
-    const unsigned int kPorts[] = { kNodeMainPort, kNodeProc1Port, kNodeProc2Port };
 
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, kPorts[0], /*auto_dht=*/true );
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
     node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
     node_main->SetChainlistFetcher( chainlist_fetcher );
 
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, kPorts[1], /*auto_dht=*/true );
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
     node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
     node_proc1->SetChainlistFetcher( chainlist_fetcher );
 
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, kPorts[2], /*auto_dht=*/true );
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, kWNodeType[2], /*is_processor=*/false );
     node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
     node_proc2->SetChainlistFetcher( chainlist_fetcher );
@@ -420,9 +416,9 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
                   node_main->GetAddress().substr( 0, 16 ) );
 
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
-    node_proc1->GetPubSub()->AddPeers(
+    node_proc1->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for the full node to reach READY. The BridgeCatchupWatcher polls
     // eth_getLogs independently on its own thread — no state machine coupling.
@@ -486,7 +482,7 @@ void BridgeAnvilCatchupE2ETest::TearDownTestSuite()
     std::error_code ec;
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath, ec );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath, ec );
     }
 }
 

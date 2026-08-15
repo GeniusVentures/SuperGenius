@@ -62,7 +62,7 @@ namespace sgns::crdt
             }
         };
 
-        GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+        GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                             std::shared_ptr<Graphsync>     graphsync,
                             std::shared_ptr<libp2p::Host>  host );
 

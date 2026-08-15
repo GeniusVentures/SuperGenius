@@ -25,7 +25,7 @@ namespace sgns
 
 namespace
 {
-    constexpr const char *kAccountId = "gnus-test-account";
+    constexpr const char *kAccountId         = "gnus-test-account";
     constexpr const char *kBridgeSubjectType = "gnus.bridge_event.v1";
 
     std::vector<uint8_t> BridgePayload()
@@ -57,17 +57,16 @@ namespace
     void RefreshPayloadHash( sgns::ConsensusSubject &subject )
     {
         auto payload_hash = sgns::crypto::sha2_256(
-            gsl::span<const uint8_t>(
-                reinterpret_cast<const uint8_t *>( subject.payload().data() ),
-                subject.payload().size() ) );
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( subject.payload().data() ),
+                                      subject.payload().size() ) );
         subject.set_payload_hash( payload_hash.data(), payload_hash.size() );
     }
 }
 
 TEST( ConsensusSubjectTest, ComputesSubjectTypeHashFromString )
 {
-    const auto first = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
-    const auto second = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
+    const auto first     = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
+    const auto second    = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
     const auto different = sgns::ConsensusManager::ComputeSubjectTypeHash( "gnus.other.v1" );
 
     ASSERT_TRUE( first.has_value() );
@@ -85,11 +84,8 @@ TEST( ConsensusSubjectTest, RejectsEmptySubjectTypeHashInput )
 
 TEST( ConsensusSubjectTest, CreatesGenericSubject )
 {
-    const auto payload = BridgePayload();
-    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject(
-        kAccountId,
-        kBridgeSubjectType,
-        payload );
+    const auto payload        = BridgePayload();
+    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject( kAccountId, kBridgeSubjectType, payload );
 
     ASSERT_TRUE( subject_result.has_value() );
     const auto &subject = subject_result.value();
@@ -99,7 +95,7 @@ TEST( ConsensusSubjectTest, CreatesGenericSubject )
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
     ASSERT_TRUE( type_hash.has_value() );
-    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value() );
+    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value().toString() );
 
     const auto computed_id = sgns::ConsensusManager::ComputeSubjectId( subject );
     ASSERT_TRUE( computed_id.has_value() );
@@ -114,19 +110,15 @@ TEST( ConsensusSubjectTest, CreateGenericSubjectRejectsEmptyInputs )
 
     EXPECT_TRUE( sgns::ConsensusManager::CreateGenericSubject( "", kBridgeSubjectType, payload ).has_error() );
     EXPECT_TRUE( sgns::ConsensusManager::CreateGenericSubject( kAccountId, "", payload ).has_error() );
-    EXPECT_TRUE( sgns::ConsensusManager::CreateGenericSubject(
-                     kAccountId,
-                     kBridgeSubjectType,
-                     std::vector<uint8_t>{} )
+    EXPECT_TRUE( sgns::ConsensusManager::CreateGenericSubject( kAccountId, kBridgeSubjectType, std::vector<uint8_t>{} )
                      .has_error() );
 }
 
 TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsTamperedPayloadHash )
 {
-    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject(
-        kAccountId,
-        kBridgeSubjectType,
-        BridgePayload() );
+    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject( kAccountId,
+                                                                              kBridgeSubjectType,
+                                                                              BridgePayload() );
     ASSERT_TRUE( subject_result.has_value() );
 
     auto subject = subject_result.value();
@@ -139,10 +131,9 @@ TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsTamperedPayloadHash )
 
 TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsEmptySubjectTypeHash )
 {
-    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject(
-        kAccountId,
-        kBridgeSubjectType,
-        BridgePayload() );
+    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject( kAccountId,
+                                                                              kBridgeSubjectType,
+                                                                              BridgePayload() );
     ASSERT_TRUE( subject_result.has_value() );
 
     auto subject = subject_result.value();
@@ -153,26 +144,39 @@ TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsEmptySubjectTypeHash )
     EXPECT_FALSE( sgns::ConsensusManagerTestAccess::CheckSubject( subject ) );
 }
 
+TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsWrongSizedSubjectTypeHash )
+{
+    const auto subject_result = sgns::ConsensusManager::CreateGenericSubject( kAccountId,
+                                                                              kBridgeSubjectType,
+                                                                              BridgePayload() );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto subject = subject_result.value();
+    subject.mutable_subject_type_hash()->set_hash( std::string( sgns::base::Hash256::size() - 1, 'x' ) );
+
+    EXPECT_FALSE( sgns::ConsensusManagerTestAccess::ValidateSubject( subject ) );
+    EXPECT_FALSE( sgns::ConsensusManagerTestAccess::CheckSubject( subject ) );
+}
+
 TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
 {
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            7,
+                                                                            "tx-hash",
+                                                                            sgns::EmbeddedTransaction{},
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto &subject = subject_result.value();
-    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+    const auto  nonce   = sgns::ConsensusManager::DecodeNonceSubject( subject );
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_EQ( nonce.value().nonce(), 7U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::NONCE_SUBJECT_TYPE );
     ASSERT_TRUE( type_hash.has_value() );
-    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value() );
+    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value().toString() );
 
     EXPECT_TRUE( sgns::ConsensusManagerTestAccess::ValidateSubject( subject ) );
     EXPECT_TRUE( sgns::ConsensusManagerTestAccess::CheckSubject( subject ) );
@@ -180,13 +184,12 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
 
 TEST( ConsensusSubjectTest, RejectsMalformedNoncePayload )
 {
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                      7,
+                                                                      "tx-hash",
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      std::nullopt,
+                                                                      std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     auto subject = subject_result.value();
@@ -200,16 +203,15 @@ TEST( ConsensusSubjectTest, RejectsMalformedNoncePayload )
 
 TEST( ConsensusSubjectTest, RejectsNonceHashWithTaskResultPayload )
 {
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                      7,
+                                                                      "tx-hash",
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      std::nullopt,
+                                                                      std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
-    auto subject = subject_result.value();
+    auto       subject      = subject_result.value();
     const auto task_payload = SerializedTaskResultPayload();
     subject.set_payload( task_payload.data(), task_payload.size() );
     RefreshPayloadHash( subject );
@@ -221,16 +223,15 @@ TEST( ConsensusSubjectTest, RejectsNonceHashWithTaskResultPayload )
 
 TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
 {
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                      7,
+                                                                      "tx-hash",
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      std::nullopt,
+                                                                      std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
-    auto subject = subject_result.value();
+    auto       subject   = subject_result.value();
     const auto task_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::TASK_RESULT_SUBJECT_TYPE );
     ASSERT_TRUE( task_hash.has_value() );
     subject.mutable_subject_type_hash()->set_hash( task_hash.value().data(), task_hash.value().size() );
@@ -246,13 +247,12 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataRoundTrip )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: CreateNonceSubject embeds the transaction in the subject
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        42,
-        "tx-hash-embedded",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            42,
+                                                                            "tx-hash-embedded",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: DecodeNonceSubject retrieves the embedded transaction
@@ -267,13 +267,12 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
 {
     // Given: NonceSubject created with empty EmbeddedTransaction
     // (default values when transaction data is not available — e.g., test paths or legacy)
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            7,
+                                                                            "tx-hash",
+                                                                            sgns::EmbeddedTransaction{},
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
@@ -289,13 +288,12 @@ TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: NonceSubject is created with embedded transaction
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        999,
-        "tx-hash-large",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            999,
+                                                                            "tx-hash-large",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: Decoded subject preserves the embedded transaction oneof case
@@ -311,8 +309,7 @@ TEST( ConsensusSubjectTest, Sanitization_Blake2bHashOfKnownDataMatches )
     // Given: Known input bytes and their expected blake2b_256 hash
     const std::vector<uint8_t> input = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
     // When: Computing blake2b_256 of the known bytes
-    const auto hash = sgns::crypto::blake2b_256(
-        gsl::span<const uint8_t>( input.data(), input.size() ) );
+    const auto hash = sgns::crypto::blake2b_256( gsl::span<const uint8_t>( input.data(), input.size() ) );
 
     // Then: Hash has correct size (32 bytes)
     EXPECT_EQ( hash.size(), 32U );
@@ -329,13 +326,12 @@ TEST( ConsensusSubjectTest, Sanitization_TransactionDataOverSizeCap64KB )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: Subject is created (proto layer accepts any size — handler enforces cap)
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-oversized",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-oversized",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: Proto level preserves the embedded transaction (handler rejects oversized)
@@ -349,13 +345,12 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
     // Given: A NonceSubject with known embedded transaction
     const auto embedded = MakeTestEmbeddedTransfer();
 
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-data-tampered",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-data-tampered",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // When: transaction is retrieved
@@ -369,10 +364,9 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
 TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
 {
     // Given: An embedded transaction and a mismatched tx_hash (simulating tampering)
-    const auto embedded = MakeTestEmbeddedTransfer();
+    const auto embedded               = MakeTestEmbeddedTransfer();
     const auto hash_of_different_data = sgns::crypto::blake2b_256(
-        gsl::span<const uint8_t>(
-            reinterpret_cast<const uint8_t*>( "wrong data" ), 10 ) );
+        gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( "wrong data" ), 10 ) );
 
     // When: Subject created with mismatched tx_hash vs embedded transaction
     const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
@@ -395,8 +389,7 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
 
 // --- Phase 01 Plan 02: Commitment-Tx Binding tests (BIND-01) ---
 
-sgns::UTXOTransitionCommitment MakeTestCommitment( const std::string &consumed_root,
-                                                    const std::string &produced_root )
+sgns::UTXOTransitionCommitment MakeTestCommitment( const std::string &consumed_root, const std::string &produced_root )
 {
     sgns::UTXOTransitionCommitment commitment;
     commitment.set_consumed_outpoints_root( consumed_root.data(), consumed_root.size() );
@@ -409,16 +402,15 @@ TEST( ConsensusSubjectTest, Binding_CommitmentRoundTrip_PreservesRoots )
     // Given: A commitment with known consumed and produced roots
     const std::string consumed_root( 32, '\x01' );
     const std::string produced_root( 32, '\x02' );
-    auto commitment = MakeTestCommitment( consumed_root, produced_root );
+    auto              commitment = MakeTestCommitment( consumed_root, produced_root );
 
     // When: NonceSubject is created with the commitment
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-binding",
-        MakeTestEmbeddedTransfer(),
-        commitment,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-binding",
+                                                                            MakeTestEmbeddedTransfer(),
+                                                                            commitment,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: Decoded subject preserves commitment roots
@@ -466,13 +458,12 @@ TEST( ConsensusSubjectTest, Binding_SubjectNoCommitment_TxNoUTXO_ValidPath )
     // Given: A NonceSubject WITHOUT utxo_commitment and WITHOUT transaction_data
     // that would deserialize to a non-UTXO tx — this is a valid path for
     // transactions that don't involve UTXO state (e.g., registry operations).
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-no-commitment",
-        MakeTestEmbeddedTransfer(),
-        std::nullopt,   // no commitment
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-no-commitment",
+                                                                            MakeTestEmbeddedTransfer(),
+                                                                            std::nullopt, // no commitment
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: No commitment claim — handler should proceed without cross-check
@@ -534,13 +525,12 @@ TEST( ConsensusSubjectTest, WitnessHardening_NoCommitmentNoUTXOParams_StillValid
 {
     // Given: A subject WITHOUT commitment and transaction_data for non-UTXO tx
     // This is a valid path that should remain VALID
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-no-commit",
-        MakeTestEmbeddedTransfer(),
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-no-commit",
+                                                                            MakeTestEmbeddedTransfer(),
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     // Then: No commitment → ValidateWitnessForConsensus should return VALID
@@ -558,13 +548,12 @@ TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
     // that would reach Check::Approve in the handler — temp VERIFYING entry persisted
     const auto embedded = MakeTestEmbeddedTransfer();
 
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        42,
-        "tx-hash-approve",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            42,
+                                                                            "tx-hash-approve",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
@@ -580,13 +569,12 @@ TEST( ConsensusSubjectTest, Tracking_RejectClearsTempEntryState )
 {
     // Given: A NonceSubject that would trigger reject (empty EmbeddedTransaction)
     // Handler must remove temp VERIFYING entry before returning Reject
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        7,
-        "tx-hash",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            7,
+                                                                            "tx-hash",
+                                                                            sgns::EmbeddedTransaction{},
+                                                                            std::nullopt,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
@@ -605,13 +593,12 @@ TEST( ConsensusSubjectTest, Tracking_CertificatePromotesConfirmedState )
     const std::string produced_root( 32, '\x02' );
     auto              commitment = MakeTestCommitment( consumed_root, produced_root );
 
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        42,
-        "tx-hash-certificate",
-        MakeTestEmbeddedTransfer(),
-        commitment,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            42,
+                                                                            "tx-hash-certificate",
+                                                                            MakeTestEmbeddedTransfer(),
+                                                                            commitment,
+                                                                            std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
@@ -659,13 +646,12 @@ TEST( ConsensusSubjectTest, SizeGate_OversizedTransactionRejected )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: CreateNonceSubject with embedded transaction
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        1,
-        "tx-hash-oversize",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            1,
+                                                                            "tx-hash-oversize",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
 
     // Then: Subject creation succeeds (gate is in SendTransactionItem, not here)
     // The size gate rejects at SendTransactionItem before PubSub publish.
@@ -682,13 +668,12 @@ TEST( ConsensusSubjectTest, SizeGate_NormalTransactionPasses )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: CreateNonceSubject with normal-sized embedded transaction
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        2,
-        "tx-hash-normal",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            2,
+                                                                            "tx-hash-normal",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
 
     // Then: Subject creation succeeds — size well under the 64KB limit
     ASSERT_TRUE( subject_result.has_value() );
@@ -705,13 +690,12 @@ TEST( ConsensusSubjectTest, SizeGate_ExactBoundary )
     const auto embedded = MakeTestEmbeddedTransfer();
 
     // When: CreateNonceSubject with embedded transaction
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        3,
-        "tx-hash-boundary",
-        embedded,
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            3,
+                                                                            "tx-hash-boundary",
+                                                                            embedded,
+                                                                            std::nullopt,
+                                                                            std::nullopt );
 
     // Then: Subject creation succeeds — 64KB is allowed (not > the limit)
     ASSERT_TRUE( subject_result.has_value() );
@@ -726,13 +710,12 @@ TEST( ConsensusSubjectTest, SizeGate_EmptyTransactionPasses )
     // The size gate should pass empty payloads — validation happens downstream
 
     // When: CreateNonceSubject with empty EmbeddedTransaction
-    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kAccountId,
-        4,
-        "tx-hash-empty",
-        sgns::EmbeddedTransaction{},
-        std::nullopt,
-        std::nullopt );
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kAccountId,
+                                                                            4,
+                                                                            "tx-hash-empty",
+                                                                            sgns::EmbeddedTransaction{},
+                                                                            std::nullopt,
+                                                                            std::nullopt );
 
     // Then: Subject creation succeeds — empty data passes size gate (validation downstream)
     ASSERT_TRUE( subject_result.has_value() );
@@ -748,7 +731,7 @@ TEST( ConsensusSubjectTest, TimestampTolerance_DefaultIsFiveMinutes )
     // Given: The default timestamp tolerance is 300000ms (5 minutes)
     // TS-01 per D-05: default ±5 minutes preserved
     static constexpr uint64_t DEFAULT_TOLERANCE_MS = 300000;
-    static constexpr uint64_t FIVE_MINUTES_MS = 5 * 60 * 1000;
+    static constexpr uint64_t FIVE_MINUTES_MS      = 5 * 60 * 1000;
 
     // Then: Default tolerance equals 5 minutes in milliseconds
     EXPECT_EQ( DEFAULT_TOLERANCE_MS, FIVE_MINUTES_MS );
@@ -774,7 +757,7 @@ TEST( ConsensusSubjectTest, TimestampTolerance_TimestampWithinTolerancePasses )
     // Given: Timestamp tolerance window of 300000ms (5 minutes)
     // TS-01: Transactions within tolerance should pass CheckTransactionTimestamp
     static constexpr int64_t TOLERANCE_MS = 300000;
-    const int64_t elapsed_ms = 4 * 60 * 1000; // 4 minutes in future
+    const int64_t            elapsed_ms   = 4 * 60 * 1000; // 4 minutes in future
 
     // When: Checking drift (elapsed ≤ tolerance)
     const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
@@ -789,7 +772,7 @@ TEST( ConsensusSubjectTest, TimestampTolerance_TimestampOutsideToleranceFails )
     // Given: Timestamp tolerance window of 300000ms (5 minutes)
     // TS-01: Transactions outside tolerance should be rejected
     static constexpr int64_t TOLERANCE_MS = 300000;
-    const int64_t elapsed_ms = 6 * 60 * 1000; // 6 minutes in future
+    const int64_t            elapsed_ms   = 6 * 60 * 1000; // 6 minutes in future
 
     // When: Checking drift (elapsed > tolerance)
     const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
@@ -804,7 +787,7 @@ TEST( ConsensusSubjectTest, TimestampTolerance_NegativeElapsedBounded )
     // Given: Timestamp tolerance window of 300000ms (5 minutes)
     // TS-01: Negative elapsed (tx from the past) bounded by abs() — within tolerance
     static constexpr int64_t TOLERANCE_MS = 300000;
-    const int64_t elapsed_ms = -3 * 60 * 1000; // 3 minutes in past
+    const int64_t            elapsed_ms   = -3 * 60 * 1000; // 3 minutes in past
 
     // When: Using absolute drift value (same as CheckTransactionTimestamp logic)
     const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
@@ -846,8 +829,8 @@ TEST( ConsensusSubjectTest, Metrics_ValidationRejectLoggedAtInfoLevel )
 {
     // Given: HandleNonceConsensusSubject validation returns Check::Reject with reason
     // METRICS-01: validation_reject_ incremented + rejection reason logged at info level
-    uint64_t validation_reject = 0;
-    const char *reject_reason = "witness validation failed";
+    uint64_t    validation_reject = 0;
+    const char *reject_reason     = "witness validation failed";
 
     // When: Handler returns Check::Reject with specific reason
     ++validation_reject;
@@ -861,8 +844,8 @@ TEST( ConsensusSubjectTest, Metrics_TrackingInsertLogged )
 {
     // Given: Temp VERIFYING entry emplaced in tx_processed_m (embedded tx path)
     // METRICS-01: tracking_insert_ incremented + info log with tx_hash
-    uint64_t tracking_insert = 0;
-    std::string tx_hash = "tx-hash-tracked-insert";
+    uint64_t    tracking_insert = 0;
+    std::string tx_hash         = "tx-hash-tracked-insert";
 
     // When: Temp VERIFYING entry created → counter incremented
     ++tracking_insert;
@@ -878,11 +861,11 @@ TEST( ConsensusSubjectTest, Metrics_CountersFlushedOnDestruction )
     // METRICS-01: All counters logged via TransactionManagerLogger()->info on destruction
     uint64_t cert_fallback_success = 5;
     uint64_t cert_fallback_failure = 2;
-    uint64_t validation_approve = 42;
-    uint64_t validation_reject = 7;
-    uint64_t tracking_insert = 50;
-    uint64_t tracking_confirm = 38;
-    uint64_t tracking_fail = 12;
+    uint64_t validation_approve    = 42;
+    uint64_t validation_reject     = 7;
+    uint64_t tracking_insert       = 50;
+    uint64_t tracking_confirm      = 38;
+    uint64_t tracking_fail         = 12;
 
     // When: ~TransactionManager() destructor logs all counter values
     // Then: All counter values are non-negative (valid state)
@@ -904,8 +887,8 @@ TEST( ConsensusSubjectTest, Metrics_TrackingConfirmLogged )
 {
     // Given: VERIFYING entry promoted to CONFIRMED via ChangeTransactionState
     // METRICS-01: tracking_confirm_ incremented + info log at promotion
-    uint64_t tracking_confirm = 0;
-    std::string tx_hash = "tx-hash-tracked-confirm";
+    uint64_t    tracking_confirm = 0;
+    std::string tx_hash          = "tx-hash-tracked-confirm";
 
     // When: VERIFYING → CONFIRMED transition occurs
     ++tracking_confirm;
@@ -919,8 +902,8 @@ TEST( ConsensusSubjectTest, Metrics_TrackingFailLogged )
 {
     // Given: Entry transitions to FAILED via ChangeTransactionState
     // METRICS-01: tracking_fail_ incremented + info log at transition
-    uint64_t tracking_fail = 0;
-    std::string tx_hash = "tx-hash-tracked-fail";
+    uint64_t    tracking_fail = 0;
+    std::string tx_hash       = "tx-hash-tracked-fail";
 
     // When: Entry transitions to FAILED
     ++tracking_fail;
@@ -944,13 +927,13 @@ namespace
             CONFIRMED,
             FAILED
         };
-        Status    status{ Status::VERIFYING };
-        uint64_t  nonce{ 0 };
+        Status   status{ Status::VERIFYING };
+        uint64_t nonce{ 0 };
     };
 
     /// @brief Simulated tracking map keyed by tx_hash.
     using TestTrackingMap = std::unordered_map<std::string, TestTrackingEntry>;
-}  // anonymous namespace
+} // anonymous namespace
 
 /**
  * CLEAN-01 / D-09: A ProposalCleanupHandler that transitions a VERIFYING entry
@@ -964,13 +947,12 @@ namespace
 TEST( ConsensusSubjectTest, CleanupCallback_VerifyingEntryTransitionsToFailed )
 {
     // Given: A test tracking map with a VERIFYING entry
-    TestTrackingMap tracking;
+    TestTrackingMap   tracking;
     const std::string tx_hash = "tx-cleanup-01";
-    tracking[tx_hash] = TestTrackingEntry{ TestTrackingEntry::Status::VERIFYING, 42 };
+    tracking[tx_hash]         = TestTrackingEntry{ TestTrackingEntry::Status::VERIFYING, 42 };
 
     // Create a ProposalCleanupHandler that mimics OnProposalTimeoutCleanup logic
-    sgns::ConsensusManager::ProposalCleanupHandler handler =
-        [&tracking]( const std::string &hash )
+    sgns::ConsensusManager::ProposalCleanupHandler handler = [&tracking]( const std::string &hash )
     {
         auto it = tracking.find( hash );
         if ( it != tracking.end() && it->second.status == TestTrackingEntry::Status::VERIFYING )
@@ -997,13 +979,12 @@ TEST( ConsensusSubjectTest, CleanupCallback_VerifyingEntryTransitionsToFailed )
 TEST( ConsensusSubjectTest, CleanupCallback_ConfirmedEntryUnaffected )
 {
     // Given: A test tracking map with a CONFIRMED entry
-    TestTrackingMap tracking;
+    TestTrackingMap   tracking;
     const std::string tx_hash = "tx-cleanup-02";
-    tracking[tx_hash] = TestTrackingEntry{ TestTrackingEntry::Status::CONFIRMED, 7 };
+    tracking[tx_hash]         = TestTrackingEntry{ TestTrackingEntry::Status::CONFIRMED, 7 };
 
     // Create a handler that only acts on VERIFYING entries (matches D-10)
-    sgns::ConsensusManager::ProposalCleanupHandler handler =
-        [&tracking]( const std::string &hash )
+    sgns::ConsensusManager::ProposalCleanupHandler handler = [&tracking]( const std::string &hash )
     {
         auto it = tracking.find( hash );
         if ( it != tracking.end() && it->second.status == TestTrackingEntry::Status::VERIFYING )
@@ -1031,13 +1012,12 @@ TEST( ConsensusSubjectTest, CleanupCallback_ConfirmedEntryUnaffected )
 TEST( ConsensusSubjectTest, CleanupCallback_EntriesNotFoundSkipSilently )
 {
     // Given: An empty tracking map with no entries
-    TestTrackingMap tracking;
+    TestTrackingMap   tracking;
     const std::string unknown_hash = "tx-nonexistent-03";
 
     // Create the cleanup handler — it checks for existence before acting
-    bool handler_crashed = false;
-    sgns::ConsensusManager::ProposalCleanupHandler handler =
-        [&tracking, &handler_crashed]( const std::string &hash )
+    bool                                           handler_crashed = false;
+    sgns::ConsensusManager::ProposalCleanupHandler handler = [&tracking, &handler_crashed]( const std::string &hash )
     {
         auto it = tracking.find( hash );
         if ( it != tracking.end() )
@@ -1071,13 +1051,13 @@ TEST( ConsensusSubjectTest, CleanupCallback_RegisterAndUnregisterHandler )
     const std::string subject_type_hash = "test-subject-hash-04";
     const std::string tx_hash           = "tx-cleanup-04";
 
-    int invocation_count = 0;
-    auto test_handler    = sgns::ConsensusManager::ProposalCleanupHandler(
+    int  invocation_count = 0;
+    auto test_handler     = sgns::ConsensusManager::ProposalCleanupHandler(
         [&invocation_count]( const std::string &hash )
-    {
-        EXPECT_EQ( hash, "tx-cleanup-04" );
-        ++invocation_count;
-    } );
+        {
+            EXPECT_EQ( hash, "tx-cleanup-04" );
+            ++invocation_count;
+        } );
 
     // When: Register the handler
     handlers[subject_type_hash].push_back( test_handler );
@@ -1119,11 +1099,8 @@ TEST( ConsensusSubjectTest, CleanupCallback_NotFiredFromCertificatePath )
         CERTIFICATE_CALLER // line 1912: certificate arrival (must NOT trigger cleanup)
     };
 
-    Caller caller = Caller::NONE;
-    auto   fire_cleanup_callbacks = [&caller]( const std::string &tx_hash, Caller c )
-    {
-        caller = c;
-    };
+    Caller caller                 = Caller::NONE;
+    auto   fire_cleanup_callbacks = [&caller]( const std::string &tx_hash, Caller c ) { caller = c; };
 
     // When: Timeout caller #1 (line 1392) fires cleanup
     fire_cleanup_callbacks( "tx-timeout-1", Caller::TIMEOUT_CALLER_1 );
@@ -1143,7 +1120,7 @@ TEST( ConsensusSubjectTest, CleanupCallback_NotFiredFromCertificatePath )
         // ClearProposalSlot body (line 1984) does NOT call FireProposalCleanupCallbacks
         // per D-08 and D-11
     };
-    clear_slot();  // No cleanup fired
+    clear_slot(); // No cleanup fired
 
     // Then: Cleanup was NOT triggered from the certificate path
     EXPECT_EQ( caller, Caller::NONE );
@@ -1168,10 +1145,8 @@ TEST( ConsensusSubjectTest, CleanupCallback_MultipleHandlersFired )
     int handler1_count = 0;
     int handler2_count = 0;
 
-    handlers[subject_type_hash].push_back(
-        [&handler1_count]( const std::string &hash ) { ++handler1_count; } );
-    handlers[subject_type_hash].push_back(
-        [&handler2_count]( const std::string &hash ) { ++handler2_count; } );
+    handlers[subject_type_hash].push_back( [&handler1_count]( const std::string &hash ) { ++handler1_count; } );
+    handlers[subject_type_hash].push_back( [&handler2_count]( const std::string &hash ) { ++handler2_count; } );
 
     // When: FireProposalCleanupCallbacks dispatches to all registered handlers
     // (copy vector under shared_lock, then iterate outside lock per D-12)

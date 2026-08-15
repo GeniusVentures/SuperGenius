@@ -55,10 +55,10 @@ namespace
     {
         auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
 
-        auto future = pubs1->Start( 40081, {} );
+        auto future = pubs1->Start( 0, {} );
         future.wait();
         auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-        pubs2->Start( 40002, {} );
+        pubs2->Start( 0, {} );
 
         pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
         pubs2->AddPeers( { pubs1->GetInterfaceAddress() } );
