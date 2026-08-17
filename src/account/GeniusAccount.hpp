@@ -166,6 +166,11 @@ namespace sgns
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
+         * @brief Stops the account request worker before its PubSub dependency is torn down.
+         */
+        void StopMessenger();
+
+        /**
          * @brief       Configures database dependencies: nonce store, block response handler,
          *              head request handler, and block CID lookup method.
          * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.

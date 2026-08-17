@@ -1889,6 +1889,14 @@ namespace sgns
             tx_globaldb_->ShutdownNow();
         }
 
+        // AccountMessenger owns a dedicated worker thread that can publish
+        // independently of this node's io_context. Join it before PubSub is
+        // stopped in the destructor body.
+        if ( account_ )
+        {
+            account_->StopMessenger();
+        }
+
         if ( graphsyncnetwork_ )
         {
             node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );

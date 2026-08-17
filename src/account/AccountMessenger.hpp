@@ -104,6 +104,10 @@ namespace sgns
          */
         ~AccountMessenger();
         /**
+         * @brief Stops the request worker while its PubSub dependency is still alive.
+         */
+        void Stop();
+        /**
          * @brief       Get the Latest Nonce from the network
          * @param[in]   timeout_ms Timeout in miliseconds to get the latest nonce 
          * @param[in]   silent_time_ms Time tyo wait for subsequential nonce responses after first was received

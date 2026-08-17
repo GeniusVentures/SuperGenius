@@ -439,8 +439,7 @@ namespace sgns
             const auto digest = base::hex_lower(
                 gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
             std::optional<ConsensusStateStore::BurnOutpoint> burn_outpoint;
-            if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
-                 SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+            if ( GetBuiltinSubjectKind( normalized.certificate.proposal().subject() ) == BuiltinSubjectKind::Nonce )
             {
                 auto decoded = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
                 if ( decoded.has_value() ) burn_outpoint = decoded.value();
@@ -2519,15 +2518,6 @@ namespace sgns
                 return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
-            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
-            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
-            {
-                ConsensusManagerLogger()->error( "{}: failed: voter is not an active registry validator voter_id={}",
-                                                 __func__,
-                                                 vote.voter_id() );
-                return outcome::failure( CertificateStoreError::InvalidCertificate );
-            }
-
             auto signing_bytes = sgns::VoteSigningBytes( vote );
             if ( signing_bytes.has_error() )
             {
@@ -3089,8 +3079,7 @@ namespace sgns
         if ( finalization_stage_observer_ )
             finalization_stage_observer_( "authority-established" );
 
-        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
-             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+        if ( GetBuiltinSubjectKind( normalized.certificate.proposal().subject() ) == BuiltinSubjectKind::Nonce )
         {
             auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
             if ( !nonce ) return FinalizeResult::StorageFailure;
@@ -3196,8 +3185,7 @@ namespace sgns
                 current.generation(), current.certificate_digest(), current.proposal_id(),
                 current.winner_id() );
         };
-        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
-             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+        if ( GetBuiltinSubjectKind( normalized.certificate.proposal().subject() ) == BuiltinSubjectKind::Nonce )
         {
             auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
             if ( !nonce ) return FinalizeResult::StorageFailure;
@@ -3244,12 +3232,13 @@ namespace sgns
 
         CertificateSubjectHandler handler;
         CertificateApplicationHandler application_handler;
+        const auto type_hash = ParseSubjectTypeHash( normalized.certificate.proposal().subject() );
+        if ( !type_hash ) return FinalizeResult::Invalid;
         {
             std::shared_lock lock( certificate_handlers_mutex_ );
-            const auto &type_hash = normalized.certificate.proposal().subject().subject_type_hash().hash();
-            auto typed = certificate_application_handlers_.find( type_hash );
+            auto typed = certificate_application_handlers_.find( type_hash.value() );
             if ( typed != certificate_application_handlers_.end() ) application_handler = typed->second;
-            auto legacy = certificate_subject_handlers_.find( type_hash );
+            auto legacy = certificate_subject_handlers_.find( type_hash.value() );
             if ( legacy != certificate_subject_handlers_.end() ) handler = legacy->second;
             if ( !application_handler && !handler ) return FinalizeResult::PendingApplication;
         }
@@ -5023,14 +5012,15 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_SLOT_KEY_PATTERN,
+        const std::regex slot_pattern{ std::string( CERT_SLOT_KEY_PATTERN ) };
+        auto recovered = certificate_work_journal_->RecoverStaleProcessing( slot_pattern,
                                                                             std::chrono::seconds( 15 ) );
         if ( recovered > 0 )
         {
             ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
         }
 
-        auto       unfinished = certificate_work_journal_->ListUnfinished( CERT_SLOT_KEY_PATTERN );
+        auto       unfinished = certificate_work_journal_->ListUnfinished( slot_pattern );
         const auto now_ms     = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );

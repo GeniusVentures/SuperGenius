@@ -1005,6 +1005,7 @@ namespace sgns
          * @brief Recovers unfinished certificate-processing work from journal.
          */
         void RecoverPendingCertificateWork();
+        void UpdateCertificatesPending();
         /**
          * @brief Rejects incompatible certificate state before startup side effects.
          */
@@ -1105,7 +1106,7 @@ namespace sgns
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
         std::unordered_map<base::Hash256, CertificateSubjectHandler>
                                   certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
-        std::unordered_map<std::string, CertificateApplicationHandler>
+        std::unordered_map<base::Hash256, CertificateApplicationHandler>
                                   certificate_application_handlers_; ///< Typed application handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
         std::unordered_map<base::Hash256, std::vector<ProposalCleanupHandler>>

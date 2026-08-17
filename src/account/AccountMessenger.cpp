@@ -108,6 +108,11 @@ namespace sgns
 
     AccountMessenger::~AccountMessenger()
     {
+        Stop();
+    }
+
+    void AccountMessenger::Stop()
+    {
         stop_worker_.store( true );
         queue_cv_.notify_one();
         if ( worker_thread_.joinable() )

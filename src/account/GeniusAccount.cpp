@@ -685,6 +685,14 @@ namespace sgns
         return ret;
     }
 
+    void GeniusAccount::StopMessenger()
+    {
+        if ( messenger_ )
+        {
+            messenger_->Stop();
+        }
+    }
+
     bool GeniusAccount::ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db )
     {
         bool ret = false;

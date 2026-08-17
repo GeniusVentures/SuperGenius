@@ -10,6 +10,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -1062,7 +1063,7 @@ namespace sgns::test
         unknown_vote->set_voter_id( outsider->GetAddress() );
         unknown_vote->set_approve( true );
         unknown_vote->set_timestamp( unknown_voter.timestamp() );
-        auto unknown_signing = ConsensusManager::VoteSigningBytes( *unknown_vote );
+        auto unknown_signing = sgns::VoteSigningBytes( *unknown_vote );
         ASSERT_TRUE( unknown_signing.has_value() );
         auto unknown_signature = outsider->Sign( unknown_signing.value() );
         unknown_vote->set_signature( unknown_signature.data(), unknown_signature.size() );
