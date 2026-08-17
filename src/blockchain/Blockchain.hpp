@@ -196,6 +196,12 @@ namespace sgns
                                              ConsensusManager::ProposalCleanupHandler handler );
 
         /**
+         * @brief Unregisters all proposal cleanup handlers for a canonical subject type.
+         * @param[in] subject_type Canonical subject type to remove.
+         */
+        void UnregisterProposalCleanupHandler( std::string_view subject_type );
+
+        /**
          * @brief Registers a slot key handler for a specific embedded transaction oneof case.
          * @param[in] transaction_case EmbeddedTransaction oneof case number (e.g. kMintV2).
          * @param[in] handler Callback that produces a deterministic slot key for proposals
