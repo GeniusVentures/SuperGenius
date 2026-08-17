@@ -2853,6 +2853,7 @@ namespace sgns
         auto activity = BeginActivity();
         if ( !activity ) return FinalizeResult::StorageFailure;
         auto normalized = NormalizeCertificateStructural( certificate );
+        if ( normalized.check == Check::Stalled ) return FinalizeResult::StorageFailure;
         if ( normalized.check != Check::Approve ) return FinalizeResult::Invalid;
 
         auto slot_result = GetSlotKey( normalized.certificate.proposal() );
@@ -3699,6 +3700,32 @@ namespace sgns
         }
     }
 
+    void ConsensusManager::UpdateCertificatesPending()
+    {
+        bool has_pending = false;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( const auto &kv : proposals_ )
+            {
+                if ( kv.second.quorum_reached )
+                {
+                    has_pending = true;
+                    break;
+                }
+            }
+        }
+        if ( !has_pending )
+        {
+            std::lock_guard lock( certificate_retry_mutex_ );
+            has_pending = !pending_certificate_retries_.empty();
+        }
+        certificates_pending_.store( has_pending );
+        if ( !has_pending )
+        {
+            timer_cv_.notify_all();
+        }
+    }
+
     bool ConsensusManager::RegisterCertificateFilter()
     {
         auto weak_self = weak_from_this();
@@ -4330,7 +4357,43 @@ namespace sgns
 
     void ConsensusManager::HandleCertificate( const Certificate &certificate )
     {
-        (void) FinalizeSlot( certificate, DeliverySource::PubSub );
+        const auto result = FinalizeSlot( certificate, DeliverySource::PubSub );
+        const auto retryable = result == FinalizeResult::PendingApplication ||
+                               result == FinalizeResult::StorageFailure;
+        {
+            std::lock_guard lock( certificate_retry_mutex_ );
+            if ( retryable )
+            {
+                // PubSub delivery is one-shot. Keep a bounded copy until the
+                // transient datastore/application race clears; CRDT delivery
+                // has its own durable work journal for restart recovery.
+                constexpr std::size_t MAX_PENDING_CERTIFICATE_RETRIES = 1024;
+                auto [it, inserted] = pending_certificate_retries_.try_emplace(
+                    certificate.proposal_id(), certificate );
+                if ( !inserted )
+                    it->second = certificate;
+                else if ( pending_certificate_retries_.size() > MAX_PENDING_CERTIFICATE_RETRIES )
+                {
+                    pending_certificate_retries_.erase( it );
+                    ConsensusManagerLogger()->warn(
+                        "{}: retry queue full; dropping proposal_id={}",
+                        __func__, certificate.proposal_id().substr( 0, 8 ) );
+                    return;
+                }
+            }
+            else
+            {
+                pending_certificate_retries_.erase( certificate.proposal_id() );
+            }
+        }
+        if ( retryable )
+        {
+            ConsensusManagerLogger()->debug(
+                "{}: queued retryable certificate result={} proposal_id={}",
+                __func__, static_cast<int>( result ), certificate.proposal_id().substr( 0, 8 ) );
+            certificates_pending_.store( true );
+            timer_cv_.notify_all();
+        }
     }
 
     outcome::result<ConsensusManager::ProposalState> ConsensusManager::FetchProposalState(
@@ -4994,6 +5057,25 @@ namespace sgns
             Certificate certificate;
             if ( certificate.ParseFromArray( value.value().data(), value.value().size() ) )
                 (void) FinalizeSlot( certificate, DeliverySource::Recovery );
+        }
+
+        std::vector<Certificate> pubsub_retries;
+        {
+            std::lock_guard lock( certificate_retry_mutex_ );
+            pubsub_retries.reserve( pending_certificate_retries_.size() );
+            for ( const auto &[unused_proposal_id, certificate] : pending_certificate_retries_ )
+            {
+                (void) unused_proposal_id;
+                pubsub_retries.push_back( certificate );
+            }
+        }
+        for ( const auto &certificate : pubsub_retries )
+        {
+            const auto result = FinalizeSlot( certificate, DeliverySource::Recovery );
+            if ( result == FinalizeResult::PendingApplication || result == FinalizeResult::StorageFailure )
+                continue;
+            std::lock_guard lock( certificate_retry_mutex_ );
+            pending_certificate_retries_.erase( certificate.proposal_id() );
         }
     }
 

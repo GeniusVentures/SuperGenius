@@ -1145,6 +1145,9 @@ namespace sgns
         std::unordered_set<std::string> restored_final_slots_; ///< Slots with authoritative finality.
         std::unordered_set<std::string> restored_safety_slots_; ///< Slots stopped by SafetyViolation.
         std::unordered_set<std::string> restored_safety_proposal_ids_; ///< Proposal ids bound to stopped slots.
+        std::unordered_map<std::string, Certificate>
+            pending_certificate_retries_; ///< Valid PubSub certificates awaiting retryable local finalization.
+        mutable std::mutex certificate_retry_mutex_; ///< Guards `pending_certificate_retries_`.
         std::atomic<uint64_t> certificate_conflict_unique_pairs_{ 0 }; ///< Unique canonical digest pairs observed.
         static inline std::function<void( std::string_view )> startup_event_observer_;
         static inline std::function<outcome::result<void>( std::string_view )> raw_publish_override_;

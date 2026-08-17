@@ -66,6 +66,23 @@ namespace sgns
             manager->certificate_publish_observer_ = std::move( observer );
         }
 
+        static void HandleCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                       const ConsensusManager::Certificate     &certificate )
+        {
+            manager->HandleCertificate( certificate );
+        }
+
+        static void RecoverPendingCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->RecoverPendingCertificateWork();
+        }
+
+        static std::size_t PendingCertificateRetries( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->certificate_retry_mutex_ );
+            return manager->pending_certificate_retries_.size();
+        }
+
         static std::vector<ConsensusStateStore::ConflictRecord> Conflicts(
             const std::shared_ptr<ConsensusManager> &manager )
         {
@@ -634,6 +651,54 @@ namespace sgns::test
             }
         }
 
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, PubSubCertificateRetriesAfterTransientPreflightFailure )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        ASSERT_OUTCOME_SUCCESS( certificate, MakeCertificate( manager, registry, account, account ) );
+
+        std::atomic<int> callbacks{ 0 };
+        ASSERT_TRUE( manager->RegisterCertificateHandler(
+            NONCE_SUBJECT_TYPE,
+            [&callbacks]( const std::string &, const ConsensusManager::Certificate & )
+            {
+                ++callbacks;
+                return outcome::success( ConsensusManager::Check::Approve );
+            } ) );
+
+        ConsensusManagerTestAccess::SetCertificateReader(
+            manager,
+            []( const crdt::HierarchicalKey & ) -> outcome::result<crdt::GlobalDB::Buffer>
+            { return outcome::failure( storage::DatabaseError::IO_ERROR ); } );
+
+        ConsensusManagerTestAccess::HandleCertificate( manager, certificate );
+        EXPECT_EQ( callbacks.load(), 0 );
+        EXPECT_EQ( ConsensusManagerTestAccess::PendingCertificateRetries( manager ), 1U );
+
+        ConsensusManagerTestAccess::ResetCertificateReader( manager );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]()
+            {
+                // GlobalDB::Put commits through the CRDT worker. Model the
+                // owned timer's repeated recovery turns instead of assuming
+                // the first turn can immediately read its asynchronous write.
+                ConsensusManagerTestAccess::RecoverPendingCertificateWork( manager );
+                return callbacks.load() == 1 &&
+                       ConsensusManagerTestAccess::PendingCertificateRetries( manager ) == 0U;
+            },
+            std::chrono::milliseconds( 2000 ),
+            "PubSub certificate retry did not finalize after storage recovered",
+            nullptr );
+        EXPECT_EQ( callbacks.load(), 1 );
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate ).value();
+        EXPECT_TRUE( db_->Get( { "/cert/v2/slot/" + slot } ).has_value() );
+        EXPECT_TRUE( db_->Get( { "/cert/v2/tx/" + winner } ).has_value() );
         manager->Close();
     }
 
