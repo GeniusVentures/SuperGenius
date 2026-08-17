@@ -1818,6 +1818,11 @@ namespace sgns
             node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
 
+        // FileManager is a process-wide singleton holding a copy of bitswap_ (set in
+        // InitNetwork). Implicit destruction cannot reach it, so drop that copy here
+        // or the service outlives this node.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
     }
 
@@ -3281,7 +3286,7 @@ namespace sgns
                 }
             };
 
-            catchup_watcher_ = std::make_shared<evmwatcher::BridgeCatchupWatcher>(
+            catchup_watcher_ = std::make_unique<evmwatcher::BridgeCatchupWatcher>(
                 catchup_config,
                 nullptr, // no raw message callback needed
                 std::move( chains_provider ),
@@ -3413,7 +3418,7 @@ namespace sgns
                             result_retention_hours_,
                             result_retention_max_mb_ );
 
-        gc_timer_                          = std::make_shared<boost::asio::steady_timer>( *io_ );
+        gc_timer_                          = std::make_unique<boost::asio::steady_timer>( *io_ );
         std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
 
         auto schedule = [this, weakSelf, intervalHours]()
@@ -3794,7 +3799,7 @@ namespace sgns
 
         node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
 
-        auto weak_self = weak_from_this();
+        auto weak_self   = weak_from_this();
         auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
         auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
         libp2p::network::RouteHelper::SourceAddresses source_addresses{ std::move( ipv4_source ),
