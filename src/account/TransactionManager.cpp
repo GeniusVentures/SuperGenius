@@ -204,9 +204,12 @@ namespace sgns
         auto monitored_networks = GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
         {
-            std::string blockchain_base            = GetBlockChainBase( network_id );
-            bool        crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
-                "^/?" + blockchain_base + "tx/[^/]+",
+            std::string       blockchain_base = GetBlockChainBase( network_id );
+            const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
+            const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
+
+            const bool tx_filter_registered = instance->globaldb_m->RegisterElementFilter(
+                tx_pattern,
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                     const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
                 {
@@ -216,9 +219,14 @@ namespace sgns
                     }
                     return std::nullopt;
                 } );
+            if ( !tx_filter_registered )
+            {
+                instance->m_logger->error( "Failed to register transaction element filter for pattern {}",
+                                           tx_pattern );
+            }
 
-            bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
-                "^/?" + blockchain_base + "proof/[^/]+",
+            const bool proof_filter_registered = instance->globaldb_m->RegisterElementFilter(
+                proof_pattern,
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                     const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
                 {
@@ -228,9 +236,13 @@ namespace sgns
                     }
                     return std::nullopt;
                 } );
+            if ( !proof_filter_registered )
+            {
+                instance->m_logger->error( "Failed to register proof element filter for pattern {}", proof_pattern );
+            }
 
-            (void) instance->globaldb_m->RegisterNewElementCallback(
-                "^/?" + blockchain_base + "tx/[^/]+",
+            instance->globaldb_m->RegisterNewElementCallback(
+                tx_pattern,
                 [weak_ptr( std::weak_ptr<TransactionManager>(
                     instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
                 {
@@ -239,8 +251,8 @@ namespace sgns
                         strong->NewElementCallback( std::move( new_data ), cid );
                     }
                 } );
-            (void) instance->globaldb_m->RegisterDeletedElementCallback(
-                "^/?" + blockchain_base + "tx/[^/]+",
+            instance->globaldb_m->RegisterDeletedElementCallback(
+                tx_pattern,
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string        deleted_key,
                                                                              const std::string &cid )
                 {
@@ -306,12 +318,52 @@ namespace sgns
     TransactionManager::~TransactionManager()
     {
         m_logger->debug( "~TransactionManager CALLED" );
+
+        Stop();
+
+        // METRICS-01: Flush all operational metrics counters on destruction (per D-14)
+        m_logger->debug(
+            "~TransactionManager: Metrics — cert_fallback(success={} failure={}) "
+            "validation(approve={} reject={}) tracking(insert={} confirm={} fail={})",
+            metrics_cert_fallback_success_.load(),
+            metrics_cert_fallback_failure_.load(),
+            metrics_validation_approve_.load(),
+            metrics_validation_reject_.load(),
+            metrics_tracking_insert_.load(),
+            metrics_tracking_confirm_.load(),
+            metrics_tracking_fail_.load() );
+    }
+
+    void TransactionManager::Stop()
+    {
+        if ( stopped_.exchange( true ) )
+        {
+            return; // idempotent — also the one-shot guard for the deregistration below
+        }
+
+        // Let an escrow transaction that already entered its short submission section
+        // finish before account/CRDT dependencies are torn down. This must stay ahead
+        // of deregistration so the in-flight submission still sees a wired manager.
+        {
+            std::lock_guard submission_lock( payout_submission_mutex_ );
+        }
+
+        // Detach from GlobalDB. Deregistering here rather than in the destructor makes
+        // teardown deterministic instead of refcount-timed: GlobalDB filters are keyed
+        // by pattern and registration REPLACES by pattern, so a manager destroyed late
+        // (e.g. one kept alive by a queued handler across an account switch) would
+        // otherwise tear down its successor's registrations. The stopped_ exchange
+        // above guarantees this runs exactly once.
+        //
+        // The patterns are recomputed rather than stored: they derive only from
+        // version::GetNetworkID(), which is set once in GeniusNode's constructor
+        // before any TransactionManager exists, so this reproduces exactly what
+        // New() registered.
         if ( globaldb_m )
         {
-            auto monitored_networks = GetMonitoredNetworkIDs();
-            for ( auto network_id : monitored_networks )
+            for ( auto network_id : GetMonitoredNetworkIDs() )
             {
-                std::string       blockchain_base = GetBlockChainBase( network_id );
+                const std::string blockchain_base = GetBlockChainBase( network_id );
                 const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
                 const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
 
@@ -321,37 +373,23 @@ namespace sgns
                 globaldb_m->UnregisterElementFilter( proof_pattern );
             }
         }
-        account_m->ClearGetTransactionCIDMethod();
 
-        // METRICS-01: Flush all operational metrics counters on destruction (per D-14)
-        TransactionManagerLogger()->info(
-            "[{} - full: {}] ~TransactionManager: Metrics — cert_fallback(success={} failure={}) "
-            "validation(approve={} reject={}) tracking(insert={} confirm={} fail={})",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            metrics_cert_fallback_success_.load(),
-            metrics_cert_fallback_failure_.load(),
-            metrics_validation_approve_.load(),
-            metrics_validation_reject_.load(),
-            metrics_tracking_insert_.load(),
-            metrics_tracking_confirm_.load(),
-            metrics_tracking_fail_.load() );
-
-        Stop();
-    }
-
-    void TransactionManager::Stop()
-    {
-        if ( stopped_.exchange( true ) )
+        // Detach from consensus. All four are keyed on NONCE_SUBJECT_TYPE.
+        if ( blockchain_ )
         {
-            return; // idempotent
+            blockchain_->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
+            blockchain_->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
+            blockchain_->UnregisterProposalCleanupHandler( NONCE_SUBJECT_TYPE );
+            blockchain_->UnregisterSlotKeyHandler( NONCE_SUBJECT_TYPE );
         }
 
-        // Let an escrow transaction that already entered its short submission section
-        // finish before account/CRDT dependencies are torn down.
+        // Detach from the account while it is still guaranteed alive: GeniusNode calls
+        // Stop() before DeconfigureDatabaseDependencies() and before releasing account_.
+        if ( account_m )
         {
-            std::lock_guard submission_lock( payout_submission_mutex_ );
+            account_m->ClearGetTransactionCIDMethod();
         }
+
         CancelPendingTransactionWaits();
         cv_.notify_all();
     }
@@ -413,8 +451,17 @@ namespace sgns
 
         InitializeUTXOs();
 
-        // First kick: keep self alive during the first dispatch only
-        boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
+        // First kick. Capture weakly, like the recurring post in TickOnce(): a strong
+        // self-capture lets the manager outlive GeniusNode's reset during an account
+        // switch, which tears down the account and Blockchain this handler dereferences.
+        boost::asio::post( *ctx_m,
+                           [weak_instance = weak_from_this()]
+                           {
+                               if ( auto instance = weak_instance.lock(); instance && !instance->stopped_.load() )
+                               {
+                                   instance->TickOnce();
+                               }
+                           } );
     }
 
     void TransactionManager::TickOnce()
@@ -572,7 +619,9 @@ namespace sgns
                                                                     std::string destination,
                                                                     TokenID     token_id )
     {
-        if ( GetState() != State::READY )
+        // stopped_ is checked separately from the state: Stop() detaches from GlobalDB,
+        // Blockchain and the account without moving state_m out of READY.
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -599,7 +648,7 @@ namespace sgns
                                                                 TokenID     tokenid,
                                                                 std::string destination )
     {
-        if ( GetState() != State::READY )
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -731,7 +780,7 @@ namespace sgns
                                                                      TokenID     tokenid,
                                                                      std::string destination )
     {
-        if ( GetState() != State::READY )
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -753,7 +802,7 @@ namespace sgns
                                                                                             uint64_t peers_cut,
                                                                                             const std::string &job_id )
     {
-        if ( GetState() != State::READY )
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -787,6 +836,11 @@ namespace sgns
         const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
+        // Dereferences globaldb_m and account_m below; Stop() has already detached from both.
+        if ( stopped_.load() )
+        {
+            return std::errc::operation_canceled;
+        }
         const auto &subtask_results = task_result.subtask_results();
         if ( subtask_results.empty() )
         {
