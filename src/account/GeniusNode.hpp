@@ -772,8 +772,7 @@ namespace sgns
          */
         void SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
 
-        std::string                    write_base_path_; ///< Base path for node databases, logs, and account storage.
-        std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
+        std::string write_base_path_; ///< Base path for node databases, logs, and account storage.
 
     private:
         // ─────────────────────────────────────────────────────────────────────────────
@@ -1058,14 +1057,6 @@ namespace sgns
          * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
          */
         void ResetQuorumMembers();
-
-        /**
-         * @brief Releases the runtime object graph after all node I/O threads have stopped.
-         *
-         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
-         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
-         */
-        void ReleaseRuntimeMembersAfterIoStopped();
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
