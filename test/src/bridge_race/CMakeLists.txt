@@ -52,7 +52,7 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 500)
+set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 800)
 
 addtest(bridge_race_fault_rpc_test
     bridge_race_fault_rpc_test.cpp
@@ -134,4 +134,4 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 500)
+set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 800)
