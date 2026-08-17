@@ -1763,70 +1763,6 @@ namespace sgns
         secure_crdt_.reset();
     }
 
-    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
-    {
-        // The timer's completion handler captures a scheduling closure associated
-        // with this node. Destroy it while the io_context is still alive.
-        if ( gc_timer_ )
-        {
-            boost::system::error_code ignored;
-            gc_timer_->cancel( ignored );
-            gc_timer_.reset();
-        }
-
-        // Account-bound services depend on GlobalDB, which in turn depends on
-        // GraphSync, the scheduler, PubSub, and the io_context.
-        ResetProcessingMembers();
-        transaction_manager_.reset();
-        ResetQuorumMembers();
-        bridge_relayer_.reset();
-        eth_watch_service_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
-        blockchain_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
-
-        {
-            std::lock_guard<std::mutex> lock( migration_mutex_ );
-            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
-                                 migration_manager_.use_count() );
-            migration_manager_.reset();
-        }
-
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
-                             tx_globaldb_.use_count() );
-        tx_globaldb_.reset();
-
-        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
-        // PubSub host and scheduler. Release dependents before their providers.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
-                             bitswap_.use_count() );
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
-                             bitswap_.use_count() );
-        bitswap_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
-                             bitswap_event_bus_.use_count() );
-        bitswap_event_bus_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
-                             graphsyncnetwork_.use_count() );
-        graphsyncnetwork_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
-                             generator_.use_count() );
-        generator_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
-                             scheduler_.use_count() );
-        scheduler_.reset();
-
-        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
-        // account_ is declared before io_, so relying on implicit destruction
-        // would otherwise destroy its messenger after the io_context.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
-        account_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
-        pubsub_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
-    }
-
     void GeniusNode::ShutdownForDestruction()
     {
         bool expected = false;
@@ -1895,10 +1831,9 @@ namespace sgns
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
         // to both objects, so keep the context alive until GraphSync releases
         // the last host reference and destroys those sockets.
-        std::shared_ptr<boost::asio::io_context> pubsub_context_keepalive;
         if ( pubsub_ )
         {
-            pubsub_context_keepalive = pubsub_->GetAsioContext();
+            pubsub_context_keepalive_ = pubsub_->GetAsioContext();
         }
 
         // Signal PubSub to stop, but do not destroy it yet: the io_context threads
@@ -1945,12 +1880,10 @@ namespace sgns
             }
         }
 
-        // Destroy the complete runtime graph in dependency order while io_ is
-        // still alive. This also tears down AccountMessenger subscriptions before
-        // the io_context is implicitly destroyed with the remaining members.
-        ReleaseRuntimeMembersAfterIoStopped();
-        pubsub_context_keepalive.reset();
-
+        // The runtime graph is now destroyed implicitly, in reverse declaration
+        // order, after this body returns. See the ownership-order block in the
+        // header: members are declared provider-first, so reverse destruction
+        // tears down borrowers before the things they borrow.
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
@@ -3864,8 +3797,10 @@ namespace sgns
         auto weak_self = weak_from_this();
         auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
         auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
-        libp2p::network::RouteHelper::SourceAddresses source_addresses{
-            std::move( ipv4_source ), std::move( ipv6_source ), true, true };
+        libp2p::network::RouteHelper::SourceAddresses source_addresses{ std::move( ipv4_source ),
+                                                                        std::move( ipv6_source ),
+                                                                        true,
+                                                                        true };
 
         pubsub_->GetHost()->getNetwork().getDialer().dial(
             *peer_info_ptr,
