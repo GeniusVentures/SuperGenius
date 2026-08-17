@@ -1,0 +1,61 @@
+{
+  "name": "render-pass-legacy-hlsl",
+  "version": "1.0.0",
+  "gnus_spec_version": 1,
+  "inputs": [
+    {
+      "name": "renderInput",
+      "source_uri_param": "file://processing_dispatch/missing-render-input.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [],
+  "passes": [
+    {
+      "name": "renderPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "hlsl",
+            "source": "file://processing_dispatch/dummy_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/dummy_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ]
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "clear_depth": 1
+      },
+      "vertex_buffer": {
+        "source": "input:renderInput"
+      },
+      "vertex_layout": [
+        {
+          "name": "inPosition",
+          "format": "FLOAT32",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

@@ -275,6 +275,13 @@ namespace sgns
          */
         bool CheckCertificate( const std::string &subject_hash ) const;
         /**
+         * @brief Looks up the certified parent (main) address for a registered child.
+         * @param[in] child_addr Child address whose `reg/` record should be resolved.
+         * @return The certified main address, or `std::nullopt` when the child is unregistered,
+         *         malformed, or not yet certified (D-26).
+         */
+        std::optional<std::string> CheckCertifiedParent( const std::string &child_addr ) const;
+        /**
          * @brief Performs strict certificate check for a specific subject object.
          * @param[in] subject Subject to evaluate.
          * @return `true` when certificate exists and matches strictly.

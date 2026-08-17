@@ -1,0 +1,79 @@
+{
+  "name": "volume-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for volume input using a tiny 3D conv model",
+  "tags": ["volume", "float32", "test"],
+
+  "inputs": [
+    {
+      "name": "inputVolume",
+      "source_uri_param": "file://processing_datatypes/volume_input.raw",
+      "type": "volume",
+      "description": "Input float32 3D volume",
+      "dimensions": {
+        "width": 16,
+        "height": 16,
+        "chunk_count": 16,
+        "chunk_subchunk_width": 16,
+        "chunk_subchunk_height": 16,
+        "block_len": 16
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "volumeOutput",
+      "source_uri_param": "file://processing_datatypes/volume_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from volume model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/volume_tiny.mnn",
+      "description": "URI to the volume MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "volume_inference",
+      "type": "inference",
+      "description": "Volume model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/volume_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVolume",
+            "shape": [1, 1, 16, 16, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:volumeOutput",
+            "shape": [1, 1, 16, 16, 16]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-08-05",
+    "framework": "MNN",
+    "test_case": "volume_datatype"
+  }
+}

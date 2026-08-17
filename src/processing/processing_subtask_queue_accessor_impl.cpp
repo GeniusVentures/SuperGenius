@@ -7,6 +7,10 @@
 #include "base/sgns_version.hpp"
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <bitswap.hpp>
+#include <nlohmann/json.hpp>
+#include <SgnsProcessing.hpp>
+#include <Generators.hpp>
+#include "FileManager.hpp"
 
 namespace sgns::processing
 {
@@ -15,12 +19,14 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-        std::function<void( const std::string & )>              processingErrorSink ) :
+        std::function<void( const std::string & )>              processingErrorSink,
+        std::shared_ptr<ProcessingCore>                         processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_processingCore( std::move( processingCore ) )
     {
         m_localContext = std::make_shared<boost::asio::io_context>();
         m_localWorkGuard.emplace( m_localContext->get_executor() );
@@ -324,7 +330,96 @@ namespace sgns::processing
         const SGProcessing::SubTaskCollection &subTasks,
         std::set<std::string>                 &invalidSubTaskIds )
     {
-        auto validate_res = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        // Real job-parameter resolution (D-03/D-04): look up the originating Task via the SAME
+        // ProcessingTaskQueue mechanism ProcessingCoreImpl::ProcessSubTask already uses
+        // (task_queue_->GetTask(subTask.ipfsblock())), then parse its json_data() for a
+        // schema-declared quantScale/byteQuantMode. Declared here (not in a narrower scope) so the
+        // pointer passed to ValidateResults stays valid for the duration of that call.
+        sgns::SgnsProcessing                parsedProcessing;
+        std::vector<sgns::Parameter>        jobParametersStorage;
+        const std::vector<sgns::Parameter> *jobParameters = nullptr;
+
+        if ( m_processingCore && subTasks.items_size() > 0 )
+        {
+            auto taskQueue = m_processingCore->GetTaskQueue();
+            if ( taskQueue )
+            {
+                auto taskResult = taskQueue->GetTask( subTasks.items( 0 ).ipfsblock() );
+                if ( taskResult.has_value() )
+                {
+                    try
+                    {
+                        auto json = nlohmann::json::parse( taskResult.value().json_data() );
+                        sgns::from_json( json, parsedProcessing );
+                        auto params = parsedProcessing.get_parameters();
+                        if ( params )
+                        {
+                            jobParametersStorage = params.value();
+                            jobParameters        = &jobParametersStorage;
+                        }
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        // T-15-08: malformed/adversarial Task.json_data() must never crash the
+                        // validating node -- log and fall through to jobParameters == nullptr,
+                        // which ValidateResults treats as D-04's fixed-constant fallback.
+                        m_logger->warn( "FinalizeQueueProcessing: failed to resolve job parameters from "
+                                        "Task.json_data(): {}",
+                                        e.what() );
+                        jobParametersStorage.clear();
+                        jobParameters = nullptr;
+                    }
+                }
+            }
+        }
+
+        // Real fetchOutputData capability (D-01): FileManager::LoadASync on a fresh, call-scoped
+        // io_context -- deliberately NOT m_localContext, which already has a permanently-running
+        // background thread (m_localWorkGuard/m_localThread); reusing it here would risk
+        // reset()/run() reentrancy with that already-running loop (T-15-10). Mirrors
+        // ProcessingManager::GetSubCidForProc's exact LoadASync callback shape.
+        auto fetchOutputData =
+            [this]( const std::string &outputUri ) -> outcome::result<std::vector<uint8_t>>
+        {
+            auto        freshContext = std::make_shared<boost::asio::io_context>();
+            std::vector<char> collected;
+            bool        fetchSucceeded = false;
+
+            FileManager::GetInstance().LoadASync(
+                outputUri,
+                false,
+                false,
+                freshContext,
+                [this, &collected, &fetchSucceeded, &outputUri]( FileManager::ResultType buffers )
+                {
+                    if ( buffers )
+                    {
+                        collected.insert( collected.end(),
+                                          buffers.value()->second[0].begin(),
+                                          buffers.value()->second[0].end() );
+                        fetchSucceeded = true;
+                    }
+                    else
+                    {
+                        m_logger->error( "FinalizeQueueProcessing fetchOutputData: failed to obtain {}: {}",
+                                          outputUri,
+                                          buffers.error().message() );
+                    }
+                },
+                "file" );
+
+            // No reset() needed -- this context is used exactly once (fresh per call).
+            freshContext->run();
+
+            if ( !fetchSucceeded || collected.empty() )
+            {
+                return outcome::failure( std::make_error_code( std::errc::io_error ) );
+            }
+            return std::vector<uint8_t>( collected.begin(), collected.end() );
+        };
+
+        auto validate_res =
+            m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds, jobParameters, fetchOutputData );
         bool valid        = !validate_res.has_error();
 
         FinalizationRetVal finalization_ret = FinalizationRetVal::NOT_FINALIZED;

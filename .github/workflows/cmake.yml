@@ -804,6 +804,51 @@ jobs:
           path: ${{ runner.temp }}/macos-crash-reports/
           retention-days: 14
 
+      - name: Report GPU-gated render test skips (Windows)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ matrix.build-type == 'Release' && matrix.target == 'Windows' }}
+        shell: bash
+        run: |
+          if grep -rl "No usable Vulkan device" xunit/*.xml >/dev/null 2>&1; then
+            {
+              echo "## GPU-gated render test skip (${{ matrix.target }}/${{ matrix.build-type }})"
+              echo
+              echo "GPU-gated render tests were SKIPPED (not failed, not silently passed) on this runner:"
+              echo "no usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) was found by the runtime probe."
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Report GPU-gated render test skips (Linux)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ matrix.target == 'Linux' }}
+        shell: bash
+        run: |
+          if grep -rl "No usable Vulkan device" xunit/*.xml >/dev/null 2>&1; then
+            {
+              echo "## GPU-gated render test skip (${{ matrix.target }}/${{ matrix.build-type }})"
+              echo
+              echo "GPU-gated render tests were SKIPPED (not failed, not silently passed) on this runner:"
+              echo "no usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) was found by the runtime probe."
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Report GPU-gated render test skips (OSX)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ matrix.target == 'OSX' }}
+        shell: bash
+        run: |
+          if grep -rl "No usable Vulkan device" xunit/*.xml >/dev/null 2>&1; then
+            {
+              echo "## GPU-gated render test skip (${{ matrix.target }}/${{ matrix.build-type }})"
+              echo
+              echo "GPU-gated render tests were SKIPPED (not failed, not silently passed) on this runner:"
+              echo "no usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) was found by the runtime probe."
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Save CTest cost data
         if: ${{ (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.build-type == 'Release' && matrix.target == 'Windows')) && (success() || failure()) }}
         uses: actions/cache/save@v6

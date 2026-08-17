@@ -1,0 +1,27 @@
+{
+  "name": "regression-d-unsupported-passtype",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "description": "Regression Bug D: unsupported pass type silently falling through — a job definition referencing an unregistered PassType enum value",
+  "inputs": [
+    {
+      "name": "dummyInput",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "tensor",
+      "format": "FLOAT32"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "dummyOutput",
+      "source_uri_param": "file://processing_datatypes/regression_d_output.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "unsupported_fallthrough",
+      "type": "UNSUPPORTED_TYPE"
+    }
+  ]
+}

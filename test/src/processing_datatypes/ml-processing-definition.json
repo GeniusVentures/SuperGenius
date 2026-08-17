@@ -1,0 +1,76 @@
+{
+  "name": "ml-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for ML input using a tiny MLP model",
+  "tags": ["ml", "float32", "test"],
+
+  "inputs": [
+    {
+      "name": "inputML",
+      "source_uri_param": "file://processing_datatypes/ml_input.raw",
+      "type": "ml",
+      "description": "Input float32 ML feature vector",
+      "dimensions": {
+        "width": 64,
+        "block_len": 64,
+        "chunk_stride": 64
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "mlOutput",
+      "source_uri_param": "file://processing_datatypes/ml_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from ML model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/ml_tiny.mnn",
+      "description": "URI to the ML MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ml_inference",
+      "type": "inference",
+      "description": "ML model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/ml_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputML",
+            "shape": [1, 64]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:mlOutput",
+            "shape": [1, 64]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-08-05",
+    "framework": "MNN",
+    "test_case": "ml_datatype"
+  }
+}

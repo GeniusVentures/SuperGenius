@@ -23,6 +23,9 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
+#include "account/TokenAmount.hpp"
+#include <boost/algorithm/hex.hpp>
+#include <array>
 #include <thread>
 #include <chrono>
 
@@ -163,6 +166,17 @@ static bool check_arg_count_min( const std::vector<std::string> &args, size_t mi
     return true;
 }
 
+static bool check_arg_count_range( const std::vector<std::string> &args, size_t min, size_t max,
+                                    const std::string &usage )
+{
+    if ( args.size() < min || args.size() > max )
+    {
+        logger->error( "Usage: {}", usage );
+        return false;
+    }
+    return true;
+}
+
 static constexpr const char *POSENET_JSON = R"({
   "name": "posenet-inference",
   "version": "1.0.0",
@@ -245,6 +259,33 @@ static constexpr const char *POSENET_JSON = R"({
   ]
 })";
 
+static bool parse_token_id( const std::string &hex_str, sgns::TokenID &out_token_id )
+{
+    std::string hex = hex_str;
+    if ( hex.size() >= 2 && ( hex.rfind( "0x", 0 ) == 0 || hex.rfind( "0X", 0 ) == 0 ) )
+    {
+        hex = hex.substr( 2 );
+    }
+
+    if ( hex.size() != 64 )
+    {
+        return false;
+    }
+
+    std::array<uint8_t, 32> buf;
+    try
+    {
+        boost::algorithm::unhex( hex.begin(), hex.end(), buf.begin() );
+    }
+    catch ( ... )
+    {
+        return false;
+    }
+
+    out_token_id = sgns::TokenID::FromBytes( buf.data(), buf.size() );
+    return true;
+}
+
 static void cmd_info( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
     if ( !check_arg_count( args, 1, "info" ) )
@@ -261,6 +302,94 @@ static void cmd_balance( const std::vector<std::string> &args, std::shared_ptr<s
         return;
     }
     logger->info( "Balance: {}", node->GetBalance( args[1] ) );
+}
+
+static void cmd_childbalance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count_range( args, 2, 3, "childbalance <child_address> [token_id]" ) )
+    {
+        return;
+    }
+
+    if ( args.size() == 2 )
+    {
+        logger->info( "Child balance: {}", node->GetChildBalance( args[1] ) );
+        return;
+    }
+
+    sgns::TokenID token_id;
+    if ( !parse_token_id( args[2], token_id ) )
+    {
+        logger->error( "Invalid token_id: '{}' — must be 64 hex digits (optionally 0x-prefixed).", args[2] );
+        return;
+    }
+
+    logger->info( "Child balance: {}", node->GetChildBalance( args[1], token_id ) );
+}
+
+static void cmd_listchildren( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count_range( args, 1, 2, "listchildren [main_address]" ) )
+    {
+        return;
+    }
+
+    std::string main_address = ( args.size() == 2 ) ? args[1] : node->GetAddress();
+
+    auto result = node->GetRegistrationsForMain( main_address );
+    if ( !result )
+    {
+        logger->error( "Failed to list children for main address '{}': {}", main_address, result.error().message() );
+        return;
+    }
+
+    if ( result.value().empty() )
+    {
+        logger->info( "No children registered to '{}'.", main_address );
+        return;
+    }
+
+    for ( const auto &entry : result.value() )
+    {
+        logger->info( "Child: {}  Balance: {}", entry.child_addr, node->GetChildBalance( entry.child_addr ) );
+    }
+}
+
+static void cmd_registerchild( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "registerchild <main_address>" ) )
+    {
+        return;
+    }
+
+    auto one_scale = sgns::TokenAmount::ParseMinions( "1.0" );
+    if ( !one_scale )
+    {
+        logger->error( "Failed to parse peers_cut scale '1.0': {}", one_scale.error().message() );
+        return;
+    }
+
+    auto dev_cut = sgns::TokenAmount::ParseMinions( DEV_CONFIG.Cut );
+    if ( !dev_cut )
+    {
+        logger->error( "Failed to parse DEV_CONFIG.Cut '{}': {}", DEV_CONFIG.Cut, dev_cut.error().message() );
+        return;
+    }
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_dev_wallet( DEV_CONFIG.Addr );
+    metadata.set_peers_cut( one_scale.value() - dev_cut.value() );
+    metadata.set_game_id( "mock_game_id" );
+    metadata.set_publisher_id( "mock_publisher_id" );
+
+    auto result = node->RegisterChild( args[1], metadata );
+    if ( !result )
+    {
+        logger->error( "Failed to register child under main address '{}': {}", args[1], result.error().message() );
+        return;
+    }
+
+    logger->info( "Registered child under main address '{}'. Transaction hash: {}", args[1], result.value() );
 }
 
 static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
@@ -358,6 +487,9 @@ static const std::map<std::string, CmdFunc> COMMANDS = {
     { "?", cmd_help },
     { "info", cmd_info },
     { "balance", cmd_balance },
+    { "childbalance", cmd_childbalance },
+    { "listchildren", cmd_listchildren },
+    { "registerchild", cmd_registerchild },
     { "ds", cmd_ds },
     { "mint", cmd_mint },
     { "transfer", cmd_transfer },
@@ -374,6 +506,9 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  help, ?                  Show this help\n"
               << "  info                     Display account balance\n"
               << "  balance <token_id>       Display balance for a specific token\n"
+              << "  childbalance <addr> [id]  Query a child wallet's balance\n"
+              << "  listchildren [addr]      List children registered to <addr> (default: own address), with balances\n"
+              << "  registerchild <addr>     Register this node as a child of <addr>\n"
               << "  ds                       Print the data store\n"
               << "  mint <amount>            Mint tokens\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
@@ -467,7 +602,7 @@ static void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
 static std::string generate_eth_private_key()
 {
     std::random_device                      rd;
-    std::mt19937                            gen( 42 );
+    std::mt19937                            gen( rd() );
     std::uniform_int_distribution<uint16_t> dist( 0, 255 );
 
     std::ostringstream oss;
@@ -520,13 +655,26 @@ int main( int argc, char *argv[] )
         logger->info( "Using custom path: {}", path_override );
     }
 
-    std::string eth_private_key = generate_eth_private_key();
-    logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
+    // Check whether an identity already exists on disk (secure_storage_id).
+    // If so, load it; otherwise generate a fresh Ethereum private key and persist it.
+    auto available_accounts = sgns::GeniusAccount::GetAvailableAccounts( DEV_CONFIG.BaseWritePath );
 
-    // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
-    // the shipped network_config.json (both operator-managed, like a real deployment).
-    auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
+    std::shared_ptr<sgns::GeniusNode> node_instance;
+
+    if ( !available_accounts.empty() )
+    {
+        logger->info( "Found existing account on disk ({} stored), loading...", available_accounts.size() );
+        node_instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::NewAccount{} );
+    }
+    else
+    {
+        std::string eth_private_key = generate_eth_private_key();
+        logger->info( "No existing account found — generated new Ethereum Private Key: {}", eth_private_key );
+
+        // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
+        // the shipped network_config.json (both operator-managed, like a real deployment).
+        node_instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
+    }
 
     std::thread status_thread;
 
