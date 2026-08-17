@@ -4,6 +4,7 @@
 #include <fstream>
 #include <memory>
 #include <iostream>
+#include <numeric>
 #include <cstdio>
 
 #ifdef _WIN32
@@ -244,6 +245,8 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> mint_amounts = { 10000000000, 20000000000 };
+    const auto total_minted = std::accumulate( mint_amounts.begin(), mint_amounts.end(), uint64_t{ 0 } );
+    constexpr uint64_t transfer_amount = 10000000000;
 
     for ( auto amount : mint_amounts )
     {
@@ -277,11 +280,11 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 30000000000 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + total_minted ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + total_minted ) << "Correct Balance of outgoing transactions";
 
     // Transfer funds
-    auto transfer_result1 = node_proc1->TransferFunds( 10000000000,
+    auto transfer_result1 = node_proc1->TransferFunds( transfer_amount,
                                                        node_proc2->GetAddress(),
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -300,8 +303,10 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     std::cout << "node2 Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     // Verify balances after transfers
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 20000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + total_minted - transfer_amount )
+        << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + total_minted + transfer_amount )
+        << "Correct Balance of outgoing transactions";
 }
 
 TEST_F( TransactionSyncTest, TransactionTransferSync )
@@ -537,11 +542,21 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
     const auto         balance_before = node_proc2->GetBalance();
 
     // Keep node_proc2's datastore, but take the node offline while the CRDT head is published.
+    // Reuse its listening port on restart so surviving peers' address books still point to
+    // the correct endpoint for this peer ID.
+    const auto node2_pubsub_port = node_proc2->GetPubsubPort();
+    ASSERT_NE( node2_pubsub_port, 0u );
+    {
+        std::ofstream config( DEV_CONFIG2.BaseWritePath + "network_config.json" );
+        ASSERT_TRUE( config.good() );
+        config << "{ \"pubsub_port\": \"" << node2_pubsub_port
+               << "\", \"auto_dht\": false, \"upnp_enabled\": false }";
+    }
     node_proc2.reset();
 
     auto mint_result = node_proc1->MintTokens( amount,
                                                sgns::test::NextMintSourceHash(),
-                                               "test", 0u,
+                                               sgns::test::kTestMintChainId, 0u,
                                                TokenID::FromBytes( { 0x00 } ),
                                                "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -554,15 +569,29 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
     ASSERT_TRUE( transfer_result.has_value() );
     const auto &transaction_id = transfer_result.value().first;
 
+    // Restart the serving peer as well so its GossipSub state does not retain
+    // the departed instance under node_proc2's reused peer ID.
+    full_node.reset();
+    full_node = GeniusNode::New(
+        DEV_CONFIG3,
+        FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
+    ASSERT_TRUE( full_node );
+    Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
+    ASSERT_NO_FATAL_FAILURE(
+        test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 50000 ),
+                                      "restarted full node did not become ready" ) );
+
     node_proc2 = GeniusNode::New(
         DEV_CONFIG2,
         FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
     ASSERT_TRUE( node_proc2 );
     node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "reconnected node did not finish recovery" );
+    ASSERT_NO_FATAL_FAILURE(
+        test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 50000 ),
+                                      "reconnected node did not finish recovery" ) );
 
     EXPECT_EQ( node_proc2->WaitForTransactionIncoming( transaction_id,
                                                        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),

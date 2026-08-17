@@ -42,12 +42,13 @@ static constexpr const char *kSepoliaRpcUrls[] = {
 
 /// @brief Sepolia GNUS bridge contract address (checksummed).
 static constexpr const char *kSepoliaContract = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
+// Canonical big-endian secp256k1 public key for private key = 1 (even Y).
 static constexpr const char *kDestination =
-    "9817f8165b81f259d928ce2ddbfc9b02070b87ce9562a055acbbdcf97e66be79"
-    "b8d410fb8fd0479c195485a648b417fda808110efcfba45d65c4a32677da3a48";
-// bytes32 bridge payload stores the X coordinate in contract (little-endian) order.
+    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+    "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
+// ABI bytes32 stores the X coordinate in the same canonical big-endian order.
 static constexpr const char *kDestinationX =
-    "9817f8165b81f259d928ce2ddbfc9b02070b87ce9562a055acbbdcf97e66be79";
+    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
 
 /// @brief Chainlist.org-format JSON (array) containing real Sepolia endpoints.
 static const std::string kChainlistJson = R"([
