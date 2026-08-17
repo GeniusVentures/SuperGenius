@@ -133,11 +133,14 @@ namespace sgns
         std::string writeBasePath_;                                                 ///< Base path for versioned DBs.
         std::string base58key_;                                                     ///< Node key suffix for DB paths.
 
+        /// The account must outlive Blockchain and TransactionManager, which both
+        /// borrow it during teardown (~TransactionManager clears the account's CID method;
+        /// Blockchain::Stop reads its address).
+        std::shared_ptr<GeniusAccount>      account_;             ///< Local account being migrated.
         std::shared_ptr<crdt::GlobalDB>     db_3_6_0_;            ///< Legacy 3.6.0 database.
         std::shared_ptr<crdt::GlobalDB>     db_3_7_0_;            ///< Target 3.7.0 database.
         std::shared_ptr<Blockchain>         blockchain_;          ///< Blockchain instance used during migration.
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction manager used for the migration claim.
-        std::shared_ptr<GeniusAccount>      account_;             ///< Local account being migrated.
         bool                                is_full_node_ = false; ///< Whether this node is a full node.
         std::atomic<Status>                 blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };

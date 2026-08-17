@@ -776,29 +776,80 @@ namespace sgns
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
 
     private:
+        // ─────────────────────────────────────────────────────────────────────────────
+        // Runtime object graph — OWNERSHIP ORDER.
+        //
+        // The chain, provider first:
+        //   io_context -> PubSub -> GeniusAccount (its AccountMessenger owns PubSub
+        //   subscriptions) -> scheduler/generator/GraphSync -> Bitswap -> GlobalDB
+        //   -> Blockchain -> bridge -> quorum -> TransactionManager -> processing
+        //   -> timers and observers.
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        std::shared_ptr<soralog::LoggingSystem>
+            logging_system_; ///< libp2p logging system; outlives everything that logs.
+
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                     io_work_guard_;     ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
+            io_work_guard_; ///< Keeps @ref io_ alive.
+
+        /// PubSub's own io_context, retained across teardown.
+        /// It must outlive @ref graphsyncnetwork_, hence the declaration here, above it.
+        std::shared_ptr<boost::asio::io_context>   pubsub_context_keepalive_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_; ///< PubSub networking service.
+
+    protected:
+        /// Active account used by node services. Declared after @ref pubsub_ because
+        /// GeniusAccount owns an AccountMessenger holding PubSub subscriptions.
+        std::shared_ptr<GeniusAccount> account_;
+
+    private:
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_; ///< GraphSync network.
+
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
-        std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap; borrows the PubSub host and the bus.
+
+        std::shared_ptr<crdt::GlobalDB>   tx_globaldb_;       ///< Transaction/global state CRDT DB.
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
-        std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
-        std::shared_ptr<BridgeRelayer>                   bridge_relayer_;    ///< Bridge burn→mint relayer.
-        std::shared_ptr<processing::ProcessingTaskQueue> task_queue_;        ///< Processing task queue.
+
+        /// Declared before @ref transaction_manager_, which borrows it.
+        std::shared_ptr<Blockchain>           blockchain_;        ///< Blockchain service.
+        std::shared_ptr<eth::EthWatchService> eth_watch_service_; ///< Shared EVM event watcher.
+        std::shared_ptr<BridgeRelayer>        bridge_relayer_;    ///< Bridge burn→mint relayer.
+
+        /// Quorum trio. ~BurnConfig and ~TrustedPeerRegistry each call Unregister(),
+        /// which needs SecureCrdt alive — hence SecureCrdt is declared first and so
+        /// destroyed last. On the teardown path this is the only thing that
+        /// unregisters them; ShutdownAccountBoundServices(_, release_members=false)
+        /// deliberately does not.
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
+
+        std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction service.
+
+        std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
+        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
+        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
+        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
+
+        std::shared_ptr<ChainRpcEndpointProvider>
+            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
+        std::unique_ptr<evmwatcher::BridgeCatchupWatcher>
+            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns.
+        std::unique_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
+
+        // ───────────────────────────── end ownership order ────────────────────────────
+
         std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
         static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
-        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
-        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
-        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
-        std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
-        bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
-        bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
-        NodeType node_type_ =
+        bool                     autodht_;                 ///< Whether DHT discovery is enabled.
+        bool                     isprocessor_;             ///< Whether processing service should run.
+        bool                     is_full_node_ = false;    ///< Whether this node runs in full-node mode.
+        NodeType                 node_type_ =
             NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger     node_logger_;                            ///< Main node logger.
         GeniusNodeConfig dev_config_;                             ///< Runtime node configuration.
@@ -813,10 +864,6 @@ namespace sgns
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex catchup_mutex_;
-        std::shared_ptr<ChainRpcEndpointProvider>
-            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
-        std::shared_ptr<evmwatcher::BridgeCatchupWatcher>
-            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns (replaces PerformStartupCatchupScan).
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
         /// Generation token for async bridge init. Incremented on account
@@ -845,13 +892,6 @@ namespace sgns
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
-        std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
-
-        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
-        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
-        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
-
-        std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1087,15 +1127,12 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{}; ///< Last external price API call time.
         static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 }; ///< Minimum price API interval.
 
-        static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
-        size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
-        std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
-        std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
-        std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_; ///< GraphSync network.
+        static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
+        size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
+        std::vector<std::thread> io_threads_;                            ///< Threads running @ref io_.
+        std::thread              upnp_thread;                            ///< Background UPnP refresh thread.
+        std::atomic<bool>        stop_upnp{ false };                     ///< UPnP thread stop flag.
+        std::string              base58key_;                             ///< Base58 key suffix for DB paths.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
