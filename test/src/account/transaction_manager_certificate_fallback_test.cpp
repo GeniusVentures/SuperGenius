@@ -51,9 +51,10 @@ namespace sgns
             return tm.DeSerializeEmbeddedTransaction( embedded );
         }
 
-        static outcome::result<ConsensusManager::Check> OnConsensusCertificate( TransactionManager         &tm,
-                                                                                const std::string          &tx_hash,
-                                                                                const ConsensusCertificate &cert )
+        static outcome::result<ConsensusManager::ApplicationDisposition> OnConsensusCertificate(
+            TransactionManager         &tm,
+            const std::string          &tx_hash,
+            const ConsensusCertificate &cert )
         {
             return tm.OnConsensusCertificate( tx_hash, cert );
         }
@@ -393,7 +394,7 @@ TEST_F( CertificateFallbackTest, HappyPath_FallbackDeserializesStoresAndConfirms
 
     const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
     ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+    EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
 
     // After: the tx was reconstructed into the local store and confirmed.
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
@@ -424,7 +425,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_UndecodableSubjectsAreApprovedWithoutP
             "fake-hash-empty",
             BuildCertificate( subject, "proposal-empty-01" ) );
         ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+        EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     }
 
     // 2. Subject of a different type entirely -- DecodeNonceSubject fails.
@@ -437,7 +438,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_UndecodableSubjectsAreApprovedWithoutP
             "fake-hash-generic",
             BuildCertificate( subject, "proposal-generic-01" ) );
         ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+        EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     }
 }
 
@@ -462,7 +463,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_HashBindingFailureApprovesWithoutProce
             mismatched_hash,
             BuildCertificate( subject, "proposal-mismatch-01" ) );
         ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+        EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     }
 
     // 2. Subject carries the real hash but the parameter does not.
@@ -474,7 +475,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_HashBindingFailureApprovesWithoutProce
             wrong_param_hash,
             BuildCertificate( subject, "proposal-param-diff-01" ) );
         ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+        EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     }
 
     // Neither attempt stored the embedded transaction.
@@ -500,7 +501,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
         tx_hash,
         BuildCertificate( subject_a, "proposal-multi-a" ) );
     ASSERT_TRUE( result_a.has_value() );
-    EXPECT_EQ( result_a.value(), ConsensusManager::Check::Approve );
+    EXPECT_EQ( result_a.value(), ConsensusManager::ApplicationDisposition::Applied );
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
 
     // Second cert for the same tx: existing path.
@@ -510,7 +511,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
         tx_hash,
         BuildCertificate( subject_b, "proposal-multi-b" ) );
     ASSERT_TRUE( result_b.has_value() );
-    EXPECT_EQ( result_b.value(), ConsensusManager::Check::Approve );
+    EXPECT_EQ( result_b.value(), ConsensusManager::ApplicationDisposition::Applied );
 
     // Still exactly one healthy, confirmed entry.
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
@@ -557,7 +558,7 @@ TEST_F( CertificateFallbackTest, CertifiedWinnerImmediatelyFailsVerifyingTransac
         BuildCertificate( subject, "proposal-slot-winner-unknown" ) );
 
     ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+    EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser_a->GetHash() )->status,
                TransactionManager::TransactionStatus::FAILED );
     EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser_b->GetHash() )->status,
@@ -634,7 +635,7 @@ TEST_F( CertificateFallbackTest, ConflictIsSupersededAcrossLoserStatesAndTrackin
                                     " winner_tracking=" + std::to_string( static_cast<int>( winner_tracking ) );
 
         ASSERT_TRUE( result.has_value() ) << context;
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve ) << context;
+        EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied ) << context;
         EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() )->status,
                    TransactionManager::TransactionStatus::FAILED )
             << context;
@@ -673,7 +674,7 @@ TEST_F( CertificateFallbackTest, ConfirmedConflictStallsContradictoryCertificate
         BuildCertificate( subject, "proposal-contradictory-finality" ) );
 
     ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Stalled );
+    EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Irreconcilable );
     EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, existing->GetHash() )->status,
                TransactionManager::TransactionStatus::CONFIRMED );
     EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_hash ).has_value() );
@@ -727,7 +728,7 @@ TEST_F( CertificateFallbackTest, FailingLocalLoserReleasesReservedInputs )
         BuildCertificate( subject, "proposal-local-loser-utxo" ) );
 
     ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+    EXPECT_EQ( result.value(), ConsensusManager::ApplicationDisposition::Applied );
     EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() )->status,
                TransactionManager::TransactionStatus::FAILED );
 
