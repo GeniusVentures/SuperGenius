@@ -123,16 +123,16 @@ namespace sgns
          * @note timestamp_tolerance must be smaller than mutability_window
          */
         static std::shared_ptr<TransactionManager> New(
-            std::shared_ptr<crdt::GlobalDB>          processing_db,
-            std::shared_ptr<boost::asio::io_context> ctx,
-            std::shared_ptr<GeniusAccount>           account,
-            std::shared_ptr<Blockchain>              blockchain,
-            bool                                     full_node           = false,
-            uint16_t                                 subnet_id           = 0,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ),
-            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
-            std::shared_ptr<sgns::account::BurnConfig> burn_config             = nullptr );
+            std::shared_ptr<crdt::GlobalDB>            processing_db,
+            std::shared_ptr<boost::asio::io_context>   ctx,
+            std::shared_ptr<GeniusAccount>             account,
+            std::shared_ptr<Blockchain>                blockchain,
+            bool                                       full_node                 = false,
+            uint16_t                                   subnet_id                 = 0,
+            std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
+            std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
+            uint64_t                                   initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::shared_ptr<sgns::account::BurnConfig> burn_config               = nullptr );
 
         ~TransactionManager();
 
@@ -198,9 +198,10 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         /**
          * @brief Submits an escrow payout and observes it without blocking for confirmation.
@@ -377,23 +378,15 @@ namespace sgns
             bool          initialized{ false };
         };
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            uint16_t                                 subnet_id,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window,
-                            uint64_t                                 initial_burn_basis_points,
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>            processing_db,
+                            std::shared_ptr<boost::asio::io_context>   ctx,
+                            std::shared_ptr<GeniusAccount>             account,
+                            std::shared_ptr<Blockchain>                blockchain,
+                            bool                                       full_node,
+                            uint16_t                                   subnet_id,
+                            std::chrono::milliseconds                  timestamp_tolerance,
+                            std::chrono::milliseconds                  mutability_window,
+                            uint64_t                                   initial_burn_basis_points,
                             std::shared_ptr<sgns::account::BurnConfig> burn_config );
 
         // Parser function pointer alias: returns a set of topic strings or an error

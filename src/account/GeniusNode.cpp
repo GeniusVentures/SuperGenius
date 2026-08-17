@@ -261,16 +261,16 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
+        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         autodht_( true ),
         isprocessor_( true ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
-        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL ),
-        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
-            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
-            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
-        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() )
+        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL )
     {
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
@@ -467,8 +467,7 @@ namespace sgns
         }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)).
-        const auto majority_floor =
-            static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        const auto majority_floor = static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
         if ( trusted_peer_quorum_threshold_ == 0 )
         {
             trusted_peer_quorum_threshold_ = majority_floor;
@@ -1420,7 +1419,7 @@ namespace sgns
 
             gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
                                       base58key_;
-            auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
+            auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
 
             //Set a pubsub config, use no signing because we can verify with proof and dag structure
             libp2p::protocol::gossip::Config config;
@@ -1699,8 +1698,7 @@ namespace sgns
         return logger;
     }
 
-    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account,
-                                                                    bool release_members )
+    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account, bool release_members )
     {
         if ( processing_service_ )
         {
@@ -1765,70 +1763,6 @@ namespace sgns
         secure_crdt_.reset();
     }
 
-    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
-    {
-        // The timer's completion handler captures a scheduling closure associated
-        // with this node. Destroy it while the io_context is still alive.
-        if ( gc_timer_ )
-        {
-            boost::system::error_code ignored;
-            gc_timer_->cancel( ignored );
-            gc_timer_.reset();
-        }
-
-        // Account-bound services depend on GlobalDB, which in turn depends on
-        // GraphSync, the scheduler, PubSub, and the io_context.
-        ResetProcessingMembers();
-        transaction_manager_.reset();
-        ResetQuorumMembers();
-        bridge_relayer_.reset();
-        eth_watch_service_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
-        blockchain_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
-
-        {
-            std::lock_guard<std::mutex> lock( migration_mutex_ );
-            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
-                                 migration_manager_.use_count() );
-            migration_manager_.reset();
-        }
-
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
-                             tx_globaldb_.use_count() );
-        tx_globaldb_.reset();
-
-        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
-        // PubSub host and scheduler. Release dependents before their providers.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
-                             bitswap_.use_count() );
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
-                             bitswap_.use_count() );
-        bitswap_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
-                             bitswap_event_bus_.use_count() );
-        bitswap_event_bus_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
-                             graphsyncnetwork_.use_count() );
-        graphsyncnetwork_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
-                             generator_.use_count() );
-        generator_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
-                             scheduler_.use_count() );
-        scheduler_.reset();
-
-        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
-        // account_ is declared before io_, so relying on implicit destruction
-        // would otherwise destroy its messenger after the io_context.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
-        account_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
-        pubsub_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
-    }
-
     void GeniusNode::ShutdownForDestruction()
     {
         bool expected = false;
@@ -1839,18 +1773,17 @@ namespace sgns
 
         node_logger_->info( "GeniusNode shutdown start" );
 
-        // Stop the catch-up watcher before tearing down account-bound services
+        // Stop the catch-up watcher before tearing down account-bound services.
+        // Only stop it here — destruction is implicit, in declaration order.
         if ( catchup_watcher_ )
         {
             catchup_watcher_->stopWatching();
-            catchup_watcher_.reset();
         }
 
         // Cancel bootstrap health check timer
         if ( health_check_handle_ )
         {
             health_check_handle_->cancel();
-            health_check_handle_.reset();
         }
 
         if ( gc_timer_ )
@@ -1863,7 +1796,6 @@ namespace sgns
         if ( bootstrap_disconnect_subscription_ )
         {
             bootstrap_disconnect_subscription_->unsubscribe();
-            bootstrap_disconnect_subscription_.reset();
         }
 
         // Stop and unregister account-bound work, but retain the owning objects
@@ -1886,6 +1818,11 @@ namespace sgns
             node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
 
+        // FileManager is a process-wide singleton holding a copy of bitswap_ (set in
+        // InitNetwork). Implicit destruction cannot reach it, so drop that copy here
+        // or the service outlives this node.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
     }
 
@@ -1899,10 +1836,9 @@ namespace sgns
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
         // to both objects, so keep the context alive until GraphSync releases
         // the last host reference and destroys those sockets.
-        std::shared_ptr<boost::asio::io_context> pubsub_context_keepalive;
         if ( pubsub_ )
         {
-            pubsub_context_keepalive = pubsub_->GetAsioContext();
+            pubsub_context_keepalive_ = pubsub_->GetAsioContext();
         }
 
         // Signal PubSub to stop, but do not destroy it yet: the io_context threads
@@ -1949,12 +1885,10 @@ namespace sgns
             }
         }
 
-        // Destroy the complete runtime graph in dependency order while io_ is
-        // still alive. This also tears down AccountMessenger subscriptions before
-        // the io_context is implicitly destroyed with the remaining members.
-        ReleaseRuntimeMembersAfterIoStopped();
-        pubsub_context_keepalive.reset();
-
+        // The runtime graph is now destroyed implicitly, in reverse declaration
+        // order, after this body returns. See the ownership-order block in the
+        // header: members are declared provider-first, so reverse destruction
+        // tears down borrowers before the things they borrow.
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
@@ -2063,9 +1997,8 @@ namespace sgns
                         }
 
                         const auto retry_attempt = std::min( attempt, 10u );
-                        auto       delay_sec =
-                            strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
-                        delay_sec = std::min<uint64_t>(
+                        auto       delay_sec = strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
+                        delay_sec            = std::min<uint64_t>(
                             delay_sec,
                             static_cast<uint64_t>( strong->reconnect_config_.max_delay.count() ) );
                         const auto delay = std::chrono::seconds( delay_sec );
@@ -2076,9 +2009,9 @@ namespace sgns
                                                     delay.count() );
                         strong->scheduler_->schedule(
                             [weak_self,
-                             peer = std::move( peer ),
+                             peer      = std::move( peer ),
                              peer_info = std::move( peer_info ),
-                             attempt = retry_attempt + 1]() mutable
+                             attempt   = retry_attempt + 1]() mutable
                             {
                                 if ( auto strong = weak_self.lock() )
                                 {
@@ -3353,7 +3286,7 @@ namespace sgns
                 }
             };
 
-            catchup_watcher_ = std::make_shared<evmwatcher::BridgeCatchupWatcher>(
+            catchup_watcher_ = std::make_unique<evmwatcher::BridgeCatchupWatcher>(
                 catchup_config,
                 nullptr, // no raw message callback needed
                 std::move( chains_provider ),
@@ -3485,7 +3418,7 @@ namespace sgns
                             result_retention_hours_,
                             result_retention_max_mb_ );
 
-        gc_timer_                          = std::make_shared<boost::asio::steady_timer>( *io_ );
+        gc_timer_                          = std::make_unique<boost::asio::steady_timer>( *io_ );
         std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
 
         auto schedule = [this, weakSelf, intervalHours]()
@@ -3866,11 +3799,13 @@ namespace sgns
 
         node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
 
-        auto weak_self = weak_from_this();
+        auto weak_self   = weak_from_this();
         auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
         auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
-        libp2p::network::RouteHelper::SourceAddresses source_addresses{
-            std::move( ipv4_source ), std::move( ipv6_source ), true, true };
+        libp2p::network::RouteHelper::SourceAddresses source_addresses{ std::move( ipv4_source ),
+                                                                        std::move( ipv6_source ),
+                                                                        true,
+                                                                        true };
 
         pubsub_->GetHost()->getNetwork().getDialer().dial(
             *peer_info_ptr,
