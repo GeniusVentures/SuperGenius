@@ -5,9 +5,10 @@
  * @date       2026-07-16
  * @author     Henrique A. Klein (hklein@gnus.ai)
  *
- * Seeds kBatchBurnCount (4, within D-04's 3-5 range) distinct burns to 4 distinct
- * Light-node destinations BEFORE any node's RPC endpoint is configured, then releases
- * all 11 nodes' ConfigureRpcEndpoint calls back-to-back with no waits in between (D-03).
+ * Configures every validator before publishing kBatchBurnCount (4, within D-04's
+ * 3-5 range) distinct burns to 4 distinct Light-node destinations. This prevents
+ * an active catch-up watcher from consuming a burn while only the fixture's initial
+ * weight-25 discovery endpoint is installed.
  * Asserts each of the 4 burned destinations independently reaches exactly kMintAmount on
  * every node, and that unburned Light destinations show no balance increase (cross-burn
  * interference check) — zero manual MintTokens()/MintFunds() calls anywhere in this file.
@@ -22,12 +23,20 @@ namespace
 {
     /** @brief Number of concurrently seeded burns in this batch (within D-04's 3-5 range). */
     constexpr unsigned int kBatchBurnCount = 4u;
+
+    /**
+     * The burns are discovered together, but their mint transactions share the
+     * relayer account's nonce chain. With the race fixture's 60-second consensus
+     * selection window, each transaction can only become eligible after its
+     * predecessor's certificate is stored. Allow one window per burn plus margin.
+     */
+    constexpr std::chrono::milliseconds kBatchConvergenceTimeout{ 300000 };
 } // namespace
 
 TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
 {
     std::vector<std::string> dest_addrs;
-    std::vector<uint64_t>    initial_balances;
+    std::vector<std::array<uint64_t, BridgeRaceE2ETest::kNodeCount>> initial_balances;
     dest_addrs.reserve( kBatchBurnCount );
     initial_balances.reserve( kBatchBurnCount );
 
@@ -37,28 +46,26 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     {
         const std::string dest = DeriveLightDestination( i );
         dest_addrs.push_back( dest );
-        initial_balances.push_back( s_nodes[0]->GetBalance( dest ) );
+        std::array<uint64_t, BridgeRaceE2ETest::kNodeCount> balances{};
+        for ( unsigned int node_index = 0u; node_index < BridgeRaceE2ETest::kNodeCount; ++node_index )
+        {
+            balances[node_index] = s_nodes[node_index]->GetBalance( dest );
+        }
+        initial_balances.push_back( balances );
     }
 
     std::vector<std::string> unburned_dest_addrs;
-    std::vector<uint64_t>    unburned_initial_balances;
+    std::vector<std::array<uint64_t, BridgeRaceE2ETest::kNodeCount>> unburned_initial_balances;
     for ( unsigned int i = kBatchBurnCount + 1u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
         const std::string dest = DeriveLightDestination( i );
         unburned_dest_addrs.push_back( dest );
-        unburned_initial_balances.push_back( s_nodes[0]->GetBalance( dest ) );
-    }
-
-    // Seed all kBatchBurnCount burns BEFORE any ConfigureRpcEndpoint call (D-03).
-    for ( unsigned int i = 0u; i < kBatchBurnCount; ++i )
-    {
-        const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-            s_anvil.RpcUrl(), static_cast<uint64_t>( BridgeRaceE2ETest::kMintAmount ), dest_addrs[i] );
-        ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed batch burn #" << i;
-        spdlog::info( "bridge_race batch: seeded burn #{} dest={} tx_hash={}",
-                      i,
-                      dest_addrs[i].substr( 0, 16 ),
-                      tx_hash );
+        std::array<uint64_t, BridgeRaceE2ETest::kNodeCount> balances{};
+        for ( unsigned int node_index = 0u; node_index < BridgeRaceE2ETest::kNodeCount; ++node_index )
+        {
+            balances[node_index] = s_nodes[node_index]->GetBalance( dest );
+        }
+        unburned_initial_balances.push_back( balances );
     }
 
     sgns::WeightedRpcEndpoint ep_direct;
@@ -75,8 +82,9 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
 
     std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
 
-    // Release all 11 nodes' RPC endpoints together, back-to-back, with NO waits inside
-    // the loop (D-03 — the race-window trigger).
+    // Install a quorum-capable validator configuration before any watcher can
+    // observe a burn. The previous burn-first order could permanently consume a
+    // catch-up cursor after an expected 25/75 validation failure.
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
@@ -85,28 +93,37 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     spdlog::info( "bridge_race batch: released ConfigureRpcEndpoint on all {} nodes",
                   BridgeRaceE2ETest::kNodeCount );
 
+    for ( unsigned int i = 0u; i < kBatchBurnCount; ++i )
+    {
+        const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+            s_anvil.RpcUrl(), static_cast<uint64_t>( BridgeRaceE2ETest::kMintAmount ), dest_addrs[i] );
+        ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed batch burn #" << i;
+        spdlog::info( "bridge_race batch: seeded burn #{} dest={} tx_hash={}",
+                      i,
+                      dest_addrs[i].substr( 0, 16 ),
+                      tx_hash );
+    }
+
     // Every burned destination must independently reach exactly kMintAmount on every node.
     EXPECT_WAIT_FOR_CONDITION(
         [&]()
         {
             for ( unsigned int b = 0u; b < kBatchBurnCount; ++b )
             {
-                const bool all_nodes_minted = std::all_of(
-                    s_nodes.begin(),
-                    s_nodes.end(),
-                    [&]( const std::shared_ptr<GeniusNode> &node )
-                    {
-                        return node->GetBalance( dest_addrs[b] ) >=
-                               initial_balances[b] + BridgeRaceE2ETest::kMintAmount;
-                    } );
-                if ( !all_nodes_minted )
+                for ( unsigned int node_index = 0u;
+                      node_index < BridgeRaceE2ETest::kNodeCount;
+                      ++node_index )
                 {
-                    return false;
+                    if ( s_nodes[node_index]->GetBalance( dest_addrs[b] ) <
+                         initial_balances[b][node_index] + BridgeRaceE2ETest::kMintAmount )
+                    {
+                        return false;
+                    }
                 }
             }
             return true;
         },
-        BridgeRaceE2ETest::kRaceNodeReadyTimeout,
+        kBatchConvergenceTimeout,
         "All 11 nodes must independently mint each of the batch burns exactly once",
         nullptr );
 
@@ -125,7 +142,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
         for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
         {
             const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addrs[b] );
-            EXPECT_EQ( final_balance, initial_balances[b] + BridgeRaceE2ETest::kMintAmount )
+            EXPECT_EQ( final_balance, initial_balances[b][i] + BridgeRaceE2ETest::kMintAmount )
                 << "Node " << i << " destination #" << b << " must mint exactly once (no double-mint)";
         }
     }
@@ -137,7 +154,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
         for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
         {
             const uint64_t final_balance = s_nodes[i]->GetBalance( unburned_dest_addrs[u] );
-            EXPECT_EQ( final_balance, unburned_initial_balances[u] )
+            EXPECT_EQ( final_balance, unburned_initial_balances[u][i] )
                 << "Node " << i << " unburned destination #" << u
                 << " must show no balance increase (cross-burn interference check)";
         }

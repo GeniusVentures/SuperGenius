@@ -52,7 +52,7 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 180)
+set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 500)
 
 addtest(bridge_race_fault_rpc_test
     bridge_race_fault_rpc_test.cpp
@@ -80,7 +80,7 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_rpc_test PROPERTIES TIMEOUT 180)
+set_tests_properties(bridge_race_fault_rpc_test PROPERTIES TIMEOUT 500)
 
 addtest(bridge_race_fault_kill_test
     bridge_race_fault_kill_test.cpp
@@ -107,7 +107,7 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_kill_test PROPERTIES TIMEOUT 180)
+set_tests_properties(bridge_race_fault_kill_test PROPERTIES TIMEOUT 500)
 
 addtest(bridge_race_fault_partition_test
     bridge_race_fault_partition_test.cpp
@@ -134,4 +134,4 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 180)
+set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 500)

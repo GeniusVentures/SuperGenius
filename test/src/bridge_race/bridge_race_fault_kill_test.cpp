@@ -5,7 +5,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * Destroys one Light node's GeniusNode instance (s_nodes[kKilledNodeIndex].reset())
- * IMMEDIATELY after releasing all 11 nodes' RPC endpoints (D-03), before any
+ * IMMEDIATELY after publishing the burn with all 11 nodes' RPC endpoints already
+ * configured, before any
  * convergence wait, then asserts the REMAINING 10 nodes still converge to
  * exactly-once mint for a DIFFERENT Light node's destination. D-10 is scoped to
  * object-lifecycle destruction only (no SIGKILL/fork/subprocess-level crash — that is
@@ -15,6 +16,7 @@
 #include "bridge_race_fixture.hpp"
 
 #include <algorithm>
+#include <array>
 
 TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
 {
@@ -24,18 +26,16 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     constexpr unsigned int kDestinationIndex = 1u;
 
     const std::string dest_addr = DeriveLightDestination( kDestinationIndex );
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    std::array<uint64_t, kNodeCount> initial_balances{};
+    for ( unsigned int i = 0u; i < kNodeCount; ++i )
+    {
+        initial_balances[i] = s_nodes[i]->GetBalance( dest_addr );
+    }
 
     spdlog::info( "bridge_race fault_kill: dest={} initial_balance={} killed_index={}",
                   dest_addr.substr( 0, 16 ),
-                  initial_balance,
+                  initial_balances[0],
                   kKilledNodeIndex );
-
-    // Seed the single contested burn BEFORE any ConfigureRpcEndpoint call (D-03).
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
-    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
-    spdlog::info( "bridge_race fault_kill: seeded burn tx_hash={}", tx_hash );
 
     // Build the RPC endpoint slots (simple same-URL 3-slot pattern — this test is about
     // node lifecycle, not RPC disagreement, so all 3 slots point at the real Anvil URL).
@@ -53,8 +53,9 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
 
     std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
 
-    // Release all 11 nodes' RPC endpoints together, back-to-back, with NO waits inside
-    // the loop (D-03 — the race-window trigger).
+    // Configure every watcher before publishing the burn. Publishing first lets a
+    // watcher consume the CRDT head with the fixture's initial 25/75 endpoint set;
+    // that rejected observation is intentionally not replayed after reconfiguration.
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
@@ -62,6 +63,11 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     }
     spdlog::info( "bridge_race fault_kill: released ConfigureRpcEndpoint on all {} nodes",
                   BridgeRaceE2ETest::kNodeCount );
+
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
+    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
+    spdlog::info( "bridge_race fault_kill: seeded burn tx_hash={}", tx_hash );
 
     // D-10: destroy the killed node's object IMMEDIATELY, before any convergence wait,
     // to genuinely test "mid-mint" rather than post-convergence destruction. Object
@@ -74,18 +80,16 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     EXPECT_WAIT_FOR_CONDITION(
         [&]()
         {
-            return std::all_of(
-                s_nodes.begin(),
-                s_nodes.end(),
-                [&]( const std::shared_ptr<GeniusNode> &node )
+            for ( unsigned int i = 0u; i < kNodeCount; ++i )
+            {
+                // The killed node's slot is now nullptr; only surviving nodes are checked.
+                if ( s_nodes[i] &&
+                     s_nodes[i]->GetBalance( dest_addr ) < initial_balances[i] + kMintAmount )
                 {
-                    // The killed node's slot is now nullptr; only surviving nodes are checked.
-                    if ( !node )
-                    {
-                        return true;
-                    }
-                    return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount;
-                } );
+                    return false;
+                }
+            }
+            return true;
         },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
         "All surviving nodes must converge to exactly-once mint despite one node's mid-mint destruction",
@@ -100,7 +104,7 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
             continue;
         }
         const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addr );
-        EXPECT_EQ( final_balance, initial_balance + kMintAmount )
+        EXPECT_EQ( final_balance, initial_balances[i] + kMintAmount )
             << "Surviving node " << i << " must mint the contested burn exactly once (no double-mint)";
     }
 

@@ -16,12 +16,16 @@
 #ifndef SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 #define SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -67,6 +71,14 @@ namespace sgns::test::anvil
     inline constexpr const char *kSepoliaBridgeContractLower = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
 
     /**
+     * @brief Receipt-local ordinal of BridgeOutInitiated for the deployed Sepolia bridgeOut path.
+     *
+     * The hybrid token emits two transfer/accounting logs before the bridge event,
+     * so the bridge witness must reference receipt entry 2 rather than entry 0.
+     */
+    inline constexpr uint32_t kBridgeOutReceiptLogIndex = 2u;
+
+    /**
      * @brief BridgeOutInitiated event topic0 (v2), DERIVED from the canonical signature
      *        via keccak256 — never a hardcoded hash.
      *
@@ -96,8 +108,8 @@ namespace sgns::test::anvil
      */
     inline constexpr const char *kDestChainId = "1";
 
-    /** @brief Default public Sepolia RPC endpoint used as the Anvil --fork-url source — archive-capable, no API key (D-03). */
-    inline constexpr const char *kSepoliaRpcPublicnode = "https://sepolia.drpc.org";
+    /** @brief Default public Sepolia RPC endpoint used as the Anvil --fork-url source (D-03). */
+    inline constexpr const char *kSepoliaRpcPublicnode = "https://ethereum-sepolia-rpc.publicnode.com";
 
     /** @brief Controlled Sepolia GNUS holder used to fund Anvil account #0 via impersonation (D-08/D-09). */
     inline constexpr const char *kGnusHolderSepolia = "0x910bAa33DeB0D614Aa9d80e38b7f0BF87549c2fC";
@@ -107,6 +119,9 @@ namespace sgns::test::anvil
 
     /** @brief Line-buffer size (bytes) for RunShellCapture's fgets loop. */
     inline constexpr unsigned int kShellLineBufferSize = 1024u;
+
+    /** @brief Maximum Anvil stderr bytes included in a startup-failure diagnostic. */
+    inline constexpr size_t kAnvilErrorTailBytes = 4096u;
 
     /** @brief 1 GNUS expressed in base units (1e18) — funding amount passed to `cast send`. */
     inline constexpr uint64_t kOneGnusInBaseUnits = 1000000000000000000ull;
@@ -227,7 +242,7 @@ namespace sgns::test::anvil
      * `"transactionHash":"0x` marker. No JSON parser dependency.
      *
      * @param[in] cast_output  Raw `cast send --json` stdout.
-     * @return Parsed 0x-prefixed transaction hash, or empty string if not found.
+     * @return Canonical bare lowercase 64-hex transaction hash, or empty string if invalid.
      */
     static inline std::string ParseTxHashFromCastJson( const std::string &cast_output )
     {
@@ -237,13 +252,22 @@ namespace sgns::test::anvil
         {
             return {};
         }
-        size_t start = hash_pos + std::strlen( kTxHashPattern ) - 2; // include "0x"
+        size_t start = hash_pos + std::strlen( kTxHashPattern );
         size_t end   = cast_output.find( '"', start );
         if ( end == std::string::npos )
         {
             return {};
         }
-        return cast_output.substr( start, end - start );
+        std::string hash = cast_output.substr( start, end - start );
+        const bool canonical = hash.size() == 64u &&
+                               std::all_of(
+                                   hash.begin(),
+                                   hash.end(),
+                                   []( unsigned char c )
+                                   {
+                                       return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
+                                   } );
+        return canonical ? hash : std::string{};
     }
 
     /**
@@ -360,7 +384,7 @@ namespace sgns::test::anvil
      * @param[in] anvil_rpc_url       HTTP RPC URL of the local Anvil instance.
      * @param[in] amount              Burn amount in base units.
      * @param[in] sgns_destination_128  Bare 128-char hex X||Y from node->GetAddress().
-     * @return Parsed 0x-prefixed burn tx hash, or empty string on failure.
+     * @return Canonical bare lowercase 64-hex burn transaction hash, or empty string on failure.
      */
     static inline std::string SendBridgeOutBurn( const std::string &anvil_rpc_url,
                                                  uint64_t           amount,
@@ -549,7 +573,8 @@ namespace sgns::test::anvil
      *
      * Start() spawns `anvil --fork-url <fork_url> --port <port> --mnemonic <mnemonic>`
      * via boost::process (fork/exec on POSIX, CreateProcess on Windows) with
-     * stdin/stdout/stderr redirected to null. WaitForReady() polls eth_blockNumber
+     * stdin/stdout redirected to null and stderr captured for startup diagnostics.
+     * WaitForReady() polls eth_blockNumber
      * via `cast block-number` using sgns::waitForCondition (no sleep_for in test
      * code). Stop() force-terminates and reaps the child (SIGKILL /
      * TerminateProcess) within a bounded grace window so a misbehaving Anvil
@@ -610,6 +635,11 @@ namespace sgns::test::anvil
 
             rpc_url_  = "http://127.0.0.1:" + std::to_string( port_ );
             port_str_ = std::to_string( port_ );
+            anvil_stderr_path_ =
+                ( std::filesystem::temp_directory_path() /
+                  ( "supergenius-anvil-" + port_str_ + ".stderr.log" ) ).string();
+            std::error_code remove_ec;
+            std::filesystem::remove( anvil_stderr_path_, remove_ec );
 
             // boost::process resolves `anvil` via PATH (POSIX) / %PATH% (Windows),
             // spawns it cross-platform, and redirects the child's std streams to
@@ -628,11 +658,14 @@ namespace sgns::test::anvil
                     kAnvilMnemonic,
                     bp::std_in < bp::null,
                     bp::std_out > bp::null,
-                    bp::std_err > bp::null );
+                    bp::std_err > anvil_stderr_path_ );
             }
             catch ( const std::system_error &e )
             {
                 spdlog::error( "anvil_fixture: failed to spawn anvil on PATH: {}", e.what() );
+                std::error_code cleanup_ec;
+                std::filesystem::remove( anvil_stderr_path_, cleanup_ec );
+                anvil_stderr_path_.clear();
                 return false;
             }
             started_ = true;
@@ -695,6 +728,11 @@ namespace sgns::test::anvil
                 spdlog::warn( "anvil_fixture: anvil did not become ready at {} within {}ms",
                               rpc,
                               static_cast<long long>( timeout.count() ) );
+                const std::string stderr_tail = ReadFileTail( anvil_stderr_path_, kAnvilErrorTailBytes );
+                if ( !stderr_tail.empty() )
+                {
+                    spdlog::error( "anvil_fixture: anvil stderr:\n{}", stderr_tail );
+                }
             }
             return result;
         }
@@ -716,6 +754,12 @@ namespace sgns::test::anvil
                 anvil_child_->wait( ec );      // reap — bounded, SIGKILL is fatal
                 spdlog::info( "anvil_fixture: stopped anvil exit_code={}", anvil_child_->exit_code() );
                 anvil_child_.reset();
+            }
+            if ( !anvil_stderr_path_.empty() )
+            {
+                std::error_code remove_ec;
+                std::filesystem::remove( anvil_stderr_path_, remove_ec );
+                anvil_stderr_path_.clear();
             }
             started_ = false;
         }
@@ -739,6 +783,27 @@ namespace sgns::test::anvil
         }
 
     private:
+        static std::string ReadFileTail( const std::string &path, size_t max_bytes )
+        {
+            std::ifstream input( path, std::ios::binary );
+            if ( !input )
+            {
+                return {};
+            }
+
+            input.seekg( 0, std::ios::end );
+            const auto end = static_cast<std::streamoff>( input.tellg() );
+            if ( end <= 0 )
+            {
+                return {};
+            }
+            const auto bytes  = static_cast<std::streamoff>( max_bytes );
+            const auto offset = std::max( std::streamoff{ 0 }, end - bytes );
+            input.seekg( offset, std::ios::beg );
+            return std::string( std::istreambuf_iterator<char>( input ),
+                                std::istreambuf_iterator<char>() );
+        }
+
         /**
          * @brief Finds a bindable TCP port without reusing an existing listener.
          *
@@ -781,6 +846,7 @@ namespace sgns::test::anvil
         unsigned int               port_      = 0u;      ///< Anvil TCP port.
         std::string                rpc_url_;             ///< "http://127.0.0.1:<port>".
         std::string                port_str_;            ///< String form of port_ (passed to bp::child args).
+        std::string                anvil_stderr_path_;   ///< Temporary child stderr capture for diagnostics.
         bool                       started_   = false;   ///< Whether Start() has succeeded.
     };
 

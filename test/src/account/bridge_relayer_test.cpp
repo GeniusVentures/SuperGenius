@@ -213,16 +213,18 @@ TEST( BridgeRelayerTest, DispatchesDistinctReceiptOrdinalsWithoutDefaulting )
 {
     auto relayer = BridgeRelayerTestAccess::CreateForTest();
     std::vector<uint32_t> received_indexes;
+    std::vector<std::string> received_hashes;
     BridgeRelayerTestAccess::SetMintFundsOverride(
         relayer,
         [&]( uint64_t,
-             const std::string &,
+             const std::string &tx_hash,
              const std::string &,
              uint32_t receipt_log_index,
              TokenID,
              const std::string & ) -> outcome::result<std::string>
         {
             received_indexes.push_back( receipt_log_index );
+            received_hashes.push_back( tx_hash );
             return std::string( "minted" );
         } );
 
@@ -243,6 +245,10 @@ TEST( BridgeRelayerTest, DispatchesDistinctReceiptOrdinalsWithoutDefaulting )
     BridgeRelayerTestAccess::OnWatchEvent( relayer, make_notification( 2 ) );
 
     EXPECT_EQ( received_indexes, ( std::vector<uint32_t>{ 0, 2 } ) );
+    ASSERT_EQ( received_hashes.size(), 2u );
+    EXPECT_EQ( received_hashes[0],
+               "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" );
+    EXPECT_EQ( received_hashes[1], received_hashes[0] );
 }
 
 TEST( BridgeRelayerTest, RejectsBurnWithoutReceiptLocalOrdinal )

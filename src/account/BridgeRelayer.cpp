@@ -328,8 +328,14 @@ namespace sgns
         }
         const uint32_t receipt_log_index = *notification.event.receipt_log_index;
 
-        // Transaction hash from the event
-        const std::string tx_hash  = rlp::base::parse::hex_array_string( notification.event.tx_hash );
+        // MintFunds persists the burn identity as canonical bare lowercase hex.
+        // hex_array_string() is intended for JSON-RPC and prepends "0x", so
+        // remove that wire-format prefix at this API boundary.
+        std::string tx_hash = rlp::base::parse::hex_array_string( notification.event.tx_hash );
+        if ( tx_hash.rfind( "0x", 0 ) == 0 )
+        {
+            tx_hash.erase( 0, 2 );
+        }
 
         // Chain ID from the event's srcChainID
         const std::string chain_id = std::to_string(

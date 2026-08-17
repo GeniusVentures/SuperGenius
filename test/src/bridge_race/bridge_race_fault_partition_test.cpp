@@ -5,7 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * Splits the 11-node cluster into two pubsub/libp2p-layer groups by disconnecting all
- * cross-group peer links, seeds the burn and releases RPC endpoints WHILE partitioned
+ * cross-group peer links, configures RPC endpoints and seeds the burn WHILE partitioned
  * (both sub-groups can still independently reach Anvil RPC — the partition is at the
  * pubsub/CRDT layer only, never the network path to Anvil), allows time for each
  * sub-group to independently observe/attempt the mint, heals the partition via
@@ -42,11 +42,15 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     static constexpr std::chrono::milliseconds kPrePartitionHealWindow{ 12000 };
 
     const std::string dest_addr = DeriveLightDestination( kDestinationIndex );
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    std::array<uint64_t, kNodeCount> initial_balances{};
+    for ( unsigned int i = 0u; i < kNodeCount; ++i )
+    {
+        initial_balances[i] = s_nodes[i]->GetBalance( dest_addr );
+    }
 
     spdlog::info( "bridge_race fault_partition: dest={} initial_balance={}",
                   dest_addr.substr( 0, 16 ),
-                  initial_balance );
+                  initial_balances[0] );
 
     // Partition: disconnect every cross-group pair, from BOTH sides (Host::disconnect()
     // is local-only per-Host, so the link must be severed from each endpoint to fully
@@ -65,12 +69,6 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
                   kGroupA.size(),
                   kGroupB.size() );
 
-    // Seed the contested burn to a Group B destination BEFORE ConfigureRpcEndpoint (D-03).
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
-    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
-    spdlog::info( "bridge_race fault_partition: seeded burn tx_hash={}", tx_hash );
-
     // Build the RPC endpoint slots (real-Anvil 3-slot, as in the kill test — this test
     // is about pubsub/CRDT partitioning, not RPC disagreement).
     sgns::WeightedRpcEndpoint ep_direct;
@@ -87,9 +85,9 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
 
     std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
 
-    // Release all 11 nodes' RPC endpoints together, WHILE still partitioned (D-03 — the
-    // race-window trigger; both sub-groups' watchers can still independently reach the
-    // real Anvil RPC endpoint, only the pubsub/CRDT mesh is split).
+    // Configure every watcher while still partitioned. Publishing first lets a watcher
+    // consume the CRDT head with the fixture's initial 25/75 endpoint set, and that
+    // rejected observation is intentionally not replayed after reconfiguration.
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
@@ -97,6 +95,11 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     }
     spdlog::info( "bridge_race fault_partition: released ConfigureRpcEndpoint on all {} nodes while partitioned",
                   BridgeRaceE2ETest::kNodeCount );
+
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
+    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
+    spdlog::info( "bridge_race fault_partition: seeded burn tx_hash={}", tx_hash );
 
     // Allow a bounded interval for each sub-group's watcher poll to fire independently
     // before healing the partition. This must actually elapse the window (not wait on an
@@ -125,10 +128,14 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     EXPECT_WAIT_FOR_CONDITION(
         [&]()
         {
-            return std::all_of( s_nodes.begin(),
-                                 s_nodes.end(),
-                                 [&]( const std::shared_ptr<GeniusNode> &node )
-                                 { return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount; } );
+            for ( unsigned int i = 0u; i < kNodeCount; ++i )
+            {
+                if ( s_nodes[i]->GetBalance( dest_addr ) < initial_balances[i] + kMintAmount )
+                {
+                    return false;
+                }
+            }
+            return true;
         },
         kPartitionHealConvergenceTimeout,
         "All 11 nodes must converge to exactly-once mint after the partition heals",
@@ -138,7 +145,7 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
         const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addr );
-        EXPECT_EQ( final_balance, initial_balance + kMintAmount )
+        EXPECT_EQ( final_balance, initial_balances[i] + kMintAmount )
             << "Node " << i << " must mint the contested burn exactly once post-heal (no fork, no double-mint)";
     }
 
