@@ -124,13 +124,14 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> graphsync_; ///< GraphSync network.
         std::shared_ptr<libp2p::basic::Scheduler>            scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
-        std::string                     writeBasePath_;                             ///< Base path for versioned DBs.
-        std::string                     base58key_;                                 ///< Node key suffix for DB paths.
-        base::Logger                    logger_ = base::createLogger( "MigrationStep" ); ///< Logger for this step.
-        std::shared_ptr<crdt::GlobalDB> db_3_5_0_;                                       ///< Target 3.5.0 database.
-        std::shared_ptr<crdt::GlobalDB> db_3_4_0_;                                       ///< Legacy 3.4.0 database.
-        std::shared_ptr<Blockchain>     blockchain_; ///< Blockchain instance used during migration.
+        std::string  writeBasePath_;                                                ///< Base path for versioned DBs.
+        std::string  base58key_;                                                    ///< Node key suffix for DB paths.
+        base::Logger logger_ = base::createLogger( "MigrationStep" );               ///< Logger for this step.
+        /// The account must outlive Blockchain, which reads its address in Blockchain::Stop().
         std::shared_ptr<GeniusAccount>  account_;    ///< Local account being migrated.
+        std::shared_ptr<crdt::GlobalDB> db_3_5_0_;   ///< Target 3.5.0 database.
+        std::shared_ptr<crdt::GlobalDB> db_3_4_0_;   ///< Legacy 3.4.0 database.
+        std::shared_ptr<Blockchain>     blockchain_; ///< Blockchain instance used during migration.
         std::atomic<Status>             blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 
