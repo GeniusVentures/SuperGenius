@@ -68,7 +68,7 @@ TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
 TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 {
     auto old_account_address = node_->GetAddress();
-    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -87,7 +87,7 @@ TEST_F( AccountManagement, TransferAccount )
         node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
             .has_value() );
     auto balance               = node_->GetBalance();
-    auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->TransferAccount( other_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -98,7 +98,7 @@ TEST_F( AccountManagement, TransferAccount )
 TEST_F( AccountManagement, CanDeleteAccount )
 {
     auto old_account_address = node_->GetAddress();
-    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

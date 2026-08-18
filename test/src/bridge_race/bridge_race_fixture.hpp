@@ -31,12 +31,12 @@
 #include <string_view>
 #include <vector>
 
-#include <openssl/sha.h>
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
 
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 #include "account/ChainContractPair.hpp"
+#include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -177,9 +177,7 @@ protected:
         for ( unsigned int attempt = 0u; attempt < 8u; ++attempt )
         {
             const std::string input = std::string( kSeed ) + std::to_string( index ) + "#" + std::to_string( attempt );
-            std::vector<unsigned char> input_bytes( input.begin(), input.end() );
-            std::vector<unsigned char> digest( SHA256_DIGEST_LENGTH );
-            SHA256( input_bytes.data(), input_bytes.size(), digest.data() );
+            const sgns::base::Hash256 digest = sgns::crypto::sha2_256( input.data(), input.size() );
 
             bool all_zero = true;
             for ( unsigned char byte : digest )
@@ -207,7 +205,7 @@ protected:
         }
         // Unreachable in practice — SHA-256 producing an all-zero digest 8 times running
         // is not something any test run will encounter.
-        return std::string( SHA256_DIGEST_LENGTH * 2u, '1' );
+        return std::string( sgns::base::Hash256::size() * 2u, '1' );
     }
 
     /**

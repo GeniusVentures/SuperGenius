@@ -56,8 +56,8 @@ namespace
         GeniusSigner::PrivateKey secret_key{};
         for ( size_t i = secret_key.size(); i-- > 0; )
         {
-            secret_key[i]  = static_cast<uint8_t>( reduced & 0xFFu );
-            reduced      >>= 8;
+            secret_key[i]   = static_cast<uint8_t>( reduced & 0xFFu );
+            reduced       >>= 8;
         }
         return secret_key;
     }
@@ -304,45 +304,41 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
-                                                                              StorageWithAddress response_value,
-                                                                              bool               full_node )
+                                                                              StorageWithAddress response_value )
     {
         auto [storage, private_key] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ), full_node ) );
+            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ) ) );
 
         return instance;
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const boost::filesystem::path &base_path,
-                                                       bool                           full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID token_id, const boost::filesystem::path &base_path )
     {
         if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
         }
 
         genius_account_logger()->error(
             "Could not find existing Genius address, generating one from a random mnemonic" );
 
-        return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+        return NewFromRandomMnemonic( token_id, base_path ).first;
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id, bool full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id )
     {
         auto signer  = GeniusSigner::Generate();
         auto storage = std::make_shared<MemorySecureStorage>( "ephemeral:" + signer.GetAddress() );
         return std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( std::move( signer ), token_id, std::move( storage ), full_node ) );
+            new GeniusAccount( std::move( signer ), token_id, std::move( storage ) ) );
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPrivateKey( TokenID                        token_id,
                                                                      const char                    *eth_private_key,
-                                                                     const boost::filesystem::path &base_path,
-                                                                     bool                           full_node )
+                                                                     const boost::filesystem::path &base_path )
     {
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )
@@ -352,17 +348,15 @@ namespace sgns
         }
 
         genius_account_logger()->debug( "Generated a Genius address from private key" );
-        return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+        return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID          token_id,
-                                                                    std::string_view public_key,
-                                                                    bool             full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID token_id, std::string_view public_key )
     {
         if ( auto response = LoadGeniusAccount( public_key ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
         }
 
         genius_account_logger()->error( "Could not load Genius address from storage" );
@@ -372,8 +366,7 @@ namespace sgns
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromMnemonic( TokenID                        token_id,
                                                                    const std::string             &mnemonic,
-                                                                   const boost::filesystem::path &base_path,
-                                                                   bool                           full_node )
+                                                                   const boost::filesystem::path &base_path )
     {
         try
         {
@@ -389,7 +382,7 @@ namespace sgns
             }
 
             genius_account_logger()->debug( "Generated a Genius address from private key" );
-            auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ) );
 
             if ( account->storage_->Save( "mnemonic", wallet.getMnemonic() ).has_failure() )
             {
@@ -408,12 +401,11 @@ namespace sgns
 
     std::pair<std::shared_ptr<GeniusAccount>, std::string> GeniusAccount::NewFromRandomMnemonic(
         TokenID                        token_id,
-        const boost::filesystem::path &base_path,
-        bool                           full_node )
+        const boost::filesystem::path &base_path )
     {
         TW::HDWallet wallet( 128, "" );
         std::string  mnemonic = wallet.getMnemonic();
-        auto         account  = NewFromMnemonic( token_id, mnemonic, base_path, full_node );
+        auto         account  = NewFromMnemonic( token_id, mnemonic, base_path );
         return { account, mnemonic };
     }
 
@@ -760,13 +752,9 @@ namespace sgns
         genius_account_logger()->debug( "Cleared database dependency handlers" );
     }
 
-    GeniusAccount::GeniusAccount( GeniusSigner                    signer,
-                                  TokenID                         token_id,
-                                  std::shared_ptr<ISecureStorage> storage,
-                                  bool                            full_node ) :
+    GeniusAccount::GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage ) :
         token( token_id ),
         storage_( std::move( storage ) ),
-        is_full_node_( full_node ),
         signer_( std::move( signer ) ),
         utxo_manager_(
             GetAddress(),
