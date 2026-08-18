@@ -17,14 +17,24 @@
 // StartProcessing() blocks the calling thread. Nothing in this suite (or in production
 // today) spawns such a concurrent io_context runner, so deadlineMs-triggered timeout cannot
 // be deterministically exercised from a test without adding that concurrency machinery —
-// a separate, out-of-scope production change, not attempted here.
+// a separate, out-of-scope production change, not attempted here. This remains the one
+// documented, accepted gap in GetLastManifest()'s terminal-state coverage (Phase 16
+// manifest-evolution UAT): TerminalState::Timeout is unreachable from any test in this
+// suite, though it is built by the same buildFailureManifest() lambda as every other
+// terminal state (ProcessingManager.cpp).
 //
 // CancellationToken::IsCancelled() and ExecutionContext::maxOutputArtifactBytes, by
 // contrast, are plain synchronous checks made by the processor itself (see
 // processing_processor_mnn_buffer.cpp and processing_processor_render.cpp) and need no
-// io_context concurrency at all — these are the two mechanisms this suite tests
+// io_context concurrency at all — these are two of the mechanisms this suite tests
 // deterministically, via the caller-owned ExecutionContext now exposed by
-// ProcessingManager::Process()'s new 5-arg overload (Plan 09-12 Task 1).
+// ProcessingManager::Process()'s new 5-arg overload (Plan 09-12 Task 1). A third —
+// RenderDataTransformUnsupportedProducesErrorTerminalState below — deterministically
+// reaches the generic (non-Cancelled/non-Timeout/non-BudgetExceeded) TerminalState::Error
+// path via RENDER-07 (processing_processor_render.cpp: no data_transform executor exists
+// anywhere in this codebase, so any render pass declaring one always fails), closing the
+// other half of the Phase 16 GetLastManifest() reachability gap without needing any
+// concurrency machinery.
 
 namespace sgns
 {
@@ -271,6 +281,115 @@ namespace sgns
 
         std::cout << "RenderCancelBeforeStartProducesNoSuccessfulResult: pre-cancelled Vulkan render "
                      "run correctly produced a non-success result with no output published"
+                  << std::endl;
+    }
+
+    TEST_F( CancellationConformanceTest, RenderDataTransformUnsupportedProducesErrorTerminalState )
+    {
+        if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+        {
+            GTEST_SKIP() << "No usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) found on this "
+                            "host; skipping this GPU-dependent test, not failing it.";
+        }
+
+        // Identical render job to RenderCancelBeforeStartProducesNoSuccessfulResult, plus a
+        // declared data_transforms entry. RENDER-07 (processing_processor_render.cpp) rejects
+        // ANY data_transform declared on a render pass unconditionally — no data_transform
+        // executor exists anywhere in this codebase — so this deterministically reaches the
+        // generic (non-Cancelled/non-Timeout/non-BudgetExceeded) ProcessingError path and its
+        // TerminalState::Error mapping, without cancellation, a real deadline expiry, or a
+        // budget breach.
+        const std::string json_str = R"({
+            "name": "cap-check-render-data-transform",
+            "version": "1.0.0",
+            "gnus_spec_version": 1.0,
+            "inputs": [
+                {
+                    "name": "vertexData",
+                    "source_uri_param": "file://processing_datatypes/float_input.bin",
+                    "type": "buffer",
+                    "dimensions": { "width": 1 }
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "renderTarget",
+                    "source_uri_param": "file://processing_datatypes/render_output.raw",
+                    "type": "image"
+                }
+            ],
+            "passes": [
+                {
+                    "name": "cap_render",
+                    "type": "render",
+                    "data_transforms": [
+                        { "type": "normalize", "input": "input:vertexData", "output": "internal:unused" }
+                    ],
+                    "render_shader": {
+                        "stages": [
+                            {
+                                "stage": "vertex",
+                                "type": "spirv",
+                                "source": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
+                                "entry_point": "main"
+                            },
+                            {
+                                "stage": "fragment",
+                                "type": "spirv",
+                                "source": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
+                                "entry_point": "main"
+                            }
+                        ]
+                    },
+                    "render_target": {
+                        "color_format": "RGBA8",
+                        "depth_format": "D32_SFLOAT",
+                        "width": 64,
+                        "height": 64,
+                        "clear_color": [0.0, 0.0, 0.0, 1.0],
+                        "clear_depth": 1.0
+                    },
+                    "vertex_buffer": { "source": "input:vertexData" },
+                    "vertex_layout": [
+                        { "name": "inPosition", "format": "FLOAT32", "offset": 0 }
+                    ]
+                }
+            ]
+        })";
+
+        auto patched = PatchJsonUrisToAbsolute( json_str, BinPath() );
+        auto r = sgns::sgprocessing::ProcessingManager::Create( patched );
+        ASSERT_TRUE( r.has_value() )
+            << "A render job with a declared data_transform should still be accepted at "
+               "Create()-time (the rejection happens later, inside StartProcessing()): "
+            << r.error().message();
+
+        const auto &manager = r.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:vertexData" ) );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+
+        auto pr = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( pr.has_value() )
+            << "A render pass with a declared data_transform must fail: no data_transform "
+               "executor exists in this codebase (RENDER-07)";
+        ASSERT_EQ( pr.error(), sgns::sgprocessing::ProcessingManager::Error::PROCESSING_FAILED );
+
+        // ARTF-09 + Phase 16 manifest-evolution: GetLastManifest() must be reachable and
+        // correctly populated for a generic (non-Cancelled/non-Timeout/non-BudgetExceeded)
+        // ProcessingError, matching the guarantee already fixture-proven for
+        // Cancelled/BudgetExceeded/Success above.
+        EXPECT_EQ( manager->GetLastManifest().terminalState, sgns::sgprocessing::TerminalState::Error );
+        EXPECT_STRNE( manager->GetLastManifest().errorMessage, "" );
+
+        std::cout << "RenderDataTransformUnsupportedProducesErrorTerminalState: declared "
+                     "data_transform correctly produced TerminalState::Error with a non-empty "
+                     "errorMessage"
                   << std::endl;
     }
 
