@@ -23,6 +23,7 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "blockchain/impl/proto/SGBlockchain.pb.h"
 #include "blockchain/Consensus.hpp"
 #include "base/buffer.hpp"
@@ -76,12 +77,15 @@ namespace sgns
          * @param[in] account GeniusAccount instance.
          * @param[in] pubsub PubSub instance used by consensus manager.
          * @param[in] callback Called when initialization completes.
+         * @param[in] node_type Deployment role, forwarded to the consensus manager. Archive nodes
+         *            abstain from self-voting; defaults to Full so existing call sites are unaffected.
          * @return Shared pointer to blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                BlockchainCallback                         callback );
+                                                BlockchainCallback                         callback,
+                                                NodeType                                   node_type = NodeType::Full );
 
         /**
          * @brief Destroys the blockchain instance.

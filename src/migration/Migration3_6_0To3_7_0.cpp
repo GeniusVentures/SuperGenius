@@ -176,7 +176,8 @@ namespace sgns
                                                    }
                                                    strong->blockchain_status_.store( Status::ST_SUCCESS );
                                                }
-                                           } );
+                                           },
+                                           node_type_ );
         }
         blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
         logger_->debug( "{}: Starting blockchain bootstrap for {}", __func__, ToVersion() );

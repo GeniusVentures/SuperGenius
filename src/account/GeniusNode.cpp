@@ -681,7 +681,8 @@ namespace sgns
                                         }
                                     } );
                             }
-                        } );
+                        },
+                        node_type_ );
                 }
                 if ( blockchain_ )
                 {

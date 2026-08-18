@@ -24,6 +24,7 @@
 #include <atomic>
 #include <limits>
 
+#include "account/NodeType.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
@@ -85,6 +86,10 @@ namespace sgns
          * @param[in] signer Local signing callback for outbound signed objects.
          * @param[in] address Local validator/account identifier.
          * @param[in] consensus_topic Optional topic override used to derive consensus channels.
+         * @param[in] node_type Deployment role. Archive nodes never emit a self-vote; every other
+         *            role votes normally. Passed at construction rather than set afterwards because
+         *            New() subscribes to the consensus topic before returning, so a later setter
+         *            would leave a window in which a proposal could arrive and be voted on.
          * @return Shared pointer to a new manager instance.
          */
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
@@ -92,7 +97,8 @@ namespace sgns
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
-                                                      std::string                                consensus_topic = "" );
+                                                      std::string                                consensus_topic = "",
+                                                      NodeType                                   node_type = NodeType::Full );
         /**
          * @brief      Destroys the Consensus Manager object
          */
@@ -566,13 +572,15 @@ namespace sgns
          * @param[in] signer Local signing callback.
          * @param[in] address Local validator/account id.
          * @param[in] consensus_topic Consensus topic base.
+         * @param[in] node_type Deployment role; drives @ref participates_in_consensus_.
          */
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                    std::shared_ptr<crdt::GlobalDB>            db,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
-                                   std::string                                consensus_topic );
+                                   std::string                                consensus_topic,
+                                   NodeType                                   node_type );
         /**
          * @brief Starts the background round timer loop.
          */
@@ -848,6 +856,7 @@ namespace sgns
         SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
         std::string                     account_address_;            ///< Local validator/account id.
+        const bool                      participates_in_consensus_ = true;
         std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>
