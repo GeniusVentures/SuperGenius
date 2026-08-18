@@ -77,11 +77,8 @@ namespace sgns
          * and if failure, create one with @ref NewFromRandomMnemonic
          * @param[in]   token_id Token ID of the account
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> New( TokenID token_id, const boost::filesystem::path &base_path );
 
         /**
          * @brief Create a fresh account whose key exists only in memory.
@@ -89,53 +86,45 @@ namespace sgns
          * This path keeps storage in memory and does not persist key material
          * or update the account index.
          */
-        static std::shared_ptr<GeniusAccount> NewEphemeral( TokenID token_id, bool full_node = false );
+        static std::shared_ptr<GeniusAccount> NewEphemeral( TokenID token_id );
 
         /**
          * @brief       Creates an account from an Ethereum private key
          * @param[in]   token_id Token ID of the account.
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
         static std::shared_ptr<GeniusAccount> NewFromPrivateKey( TokenID                        token_id,
                                                                  const char                    *eth_private_key,
-                                                                 const boost::filesystem::path &base_path,
-                                                                 bool                           full_node = false );
+                                                                 const boost::filesystem::path &base_path );
 
         /**
          * @brief Creates an account by loading directly from storage.
          * If the account wasn't previously stored, returns `nullptr`.
          */
-        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
-                                                                std::string_view public_key,
-                                                                bool             full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID token_id, std::string_view public_key );
 
         /**
          * @brief       Creates an account from a BIP39 mnemonic phrase.
          * @param[in]   token_id Token ID of the account.
          * @param[in]   mnemonic BIP39 mnemonic phrase.
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
         static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
                                                                const std::string             &mnemonic,
-                                                               const boost::filesystem::path &base_path,
-                                                               bool                           full_node = false );
+                                                               const boost::filesystem::path &base_path );
 
         /**
          * @brief Creates an account with a newly generated random BIP39 mnemonic.
          * @param[in] token_id Token ID of the account.
          * @param[in] base_path Base path to store/retrieve keys.
-         * @param[in] full_node Whether to initialize as a full node.
          * @return Pair of shared account instance (nullptr on failure) and the generated mnemonic phrase.
          */
         static std::pair<std::shared_ptr<GeniusAccount>, std::string> NewFromRandomMnemonic(
             TokenID                        token_id,
-            const boost::filesystem::path &base_path,
-            bool                           full_node = false );
+            const boost::filesystem::path &base_path );
 
         static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
 
@@ -398,12 +387,10 @@ namespace sgns
         static outcome::result<StorageWithAddress> LoadGeniusAccount( std::string_view public_key );
 
         static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
-                                                                          StorageWithAddress response_value,
-                                                                          bool               full_node );
+                                                                          StorageWithAddress response_value );
 
-        TokenID                         token;         ///< Token ID of the account
-        std::shared_ptr<ISecureStorage> storage_;      ///< Secure storage instance
-        bool                            is_full_node_; ///< Whether this account is a full node
+        TokenID                         token;    ///< Token ID of the account
+        std::shared_ptr<ISecureStorage> storage_; ///< Secure storage instance
 
         GeniusSigner                              signer_;                ///< In-memory signing identity
         std::unordered_map<std::string, uint64_t> confirmed_nonces_;      ///< Map of the confirmed nonces from peers
@@ -452,9 +439,8 @@ namespace sgns
          * @param[in]   signer In-memory signing identity.
          * @param[in]   token_id Token ID for the account.
          * @param[in]   storage Secure storage instance.
-         * @param[in]   full_node Whether this account is a full node.
          */
-        GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
+        GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage );
     };
 }
 
