@@ -851,18 +851,16 @@ namespace sgns
         // ───────────────────────────── end ownership order ────────────────────────────
 
         std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
-        static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
-        bool                     autodht_;                 ///< Whether DHT discovery is enabled.
-        bool                     isprocessor_;             ///< Whether processing service should run.
-        bool                     is_full_node_ = false;    ///< Whether this node runs in full-node mode.
-        NodeType                 node_type_ =
-            NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
-        base::Logger     node_logger_;                            ///< Main node logger.
-        GeniusNodeConfig dev_config_;                             ///< Runtime node configuration.
-        std::string      ipfs_cache_dir_          = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
-        bool             mirror_results_          = false; ///< Whether to mirror processing results from other nodes.
-        int              result_retention_hours_  = 168;   ///< Hours to retain results before GC (0 = keep forever).
-        int              result_retention_max_mb_ = 0;     ///< Max MB for result cache (0 = no space cap).
+        static constexpr size_t  kMyTasksMemoryLimit = 50;       ///< Max task IDs kept in @ref my_task_ids_.
+        bool                     autodht_;                       ///< Whether DHT discovery is enabled.
+        bool                     isprocessor_;                   ///< Whether processing service should run.
+        NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
+        base::Logger             node_logger_;                   ///< Main node logger.
+        GeniusNodeConfig         dev_config_;                    ///< Runtime node configuration.
+        std::string              ipfs_cache_dir_ = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool                     mirror_results_ = false; ///< Whether to mirror processing results from other nodes.
+        int result_retention_hours_              = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int result_retention_max_mb_             = 0;     ///< Max MB for result cache (0 = no space cap).
 
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
 
@@ -973,7 +971,68 @@ namespace sgns
          *      @c GenerateRandomPort(port_seed, account_address), except zero which first
          *      resolves an OS-selected ephemeral port.
          */
-        bool InitNetwork( uint16_t port_seed, bool is_full_node );
+        bool InitNetwork( uint16_t port_seed, NodeType node_type );
+
+        /**
+         * @brief Network knobs resolved from @c network_config.json, passed between the
+         *        InitNetwork helpers. Members the node owns outright (@c autodht_,
+         *        @c bootstrap_peers_, @c reconnect_config_) are written directly instead.
+         */
+        struct NetworkSettings
+        {
+            std::string bind_address = "0.0.0.0"; ///< PubSub bind address ("pubsub_bind_address").
+            bool        upnp_enabled = true;      ///< Whether UPnP/IGD mapping is attempted.
+            int         high_water   = 0;         ///< Connection-manager high water mark.
+            int         low_water    = 0;         ///< Connection-manager low water mark.
+            uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
+        };
+
+        /**
+         * @brief Reads @c network_config.json, applying every key that is present and well-typed.
+         * @param[in,out] port_seed Fallback seed; overwritten when a valid @c port_seed key exists.
+         * @param[in] node_type Node role; seeds the default water marks before any config override.
+         * @return Settings with defaults for absent or ill-typed keys.
+         *
+         * Also repopulates @c bootstrap_peers_ and updates @c autodht_ / @c reconnect_config_.
+         */
+        NetworkSettings LoadNetworkConfig( uint16_t &port_seed, NodeType node_type );
+
+        /**
+         * @brief A parsed bootstrap peer set: the PeerInfos to dial and their IDs for lookup.
+         */
+        struct BootstrapPeers
+        {
+            std::vector<libp2p::peer::PeerInfo>      infos; ///< Successfully parsed peers, in input order.
+            std::unordered_set<libp2p::peer::PeerId> ids;   ///< The same peers' IDs, for membership tests.
+        };
+
+        /**
+         * @brief Resolves multiaddr strings into the peer set used for reconnection tracking.
+         * @param[in] addresses Multiaddr strings to parse; unparseable entries are warned and skipped.
+         * @param[in] kind Role word used in log messages ("fullnode" or "peer").
+         * @return The parsed peers; empty when @p addresses is empty or nothing parsed.
+         */
+        BootstrapPeers ParseBootstrapPeers( const std::vector<std::string> &addresses, std::string_view kind ) const;
+
+        /**
+         * @brief Derives @c base58key_, then creates and starts PubSub on @ref pubsubport_.
+         * @param[in] settings Resolved network settings (bind address, water marks).
+         * @return True on success; on failure PubSub is stopped and reset before returning false.
+         */
+        bool StartPubSub( const NetworkSettings &settings );
+
+        /**
+         * @brief Adopts the OS-assigned TCP port into @ref pubsubport_ after an ephemeral bind.
+         * @param[in] interface_address Multiaddr reported by PubSub once listening.
+         * @return True when a non-zero port was recovered.
+         */
+        bool AdoptEphemeralPort( const std::string &interface_address );
+
+        /**
+         * @brief Brings up Bitswap, the FileManager singletons, and the GraphSync network.
+         * @note Requires a started PubSub; uses its libp2p host.
+         */
+        void InitContentExchange();
 
         /**
          * @brief Loads the CRDT configuration.

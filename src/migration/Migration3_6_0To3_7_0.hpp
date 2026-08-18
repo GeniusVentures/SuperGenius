@@ -142,7 +142,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>     db_3_7_0_;            ///< Target 3.7.0 database.
         std::shared_ptr<Blockchain>         blockchain_;          ///< Blockchain instance used during migration.
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction manager used for the migration claim.
-        NodeType                            node_type_ = NodeType::Light; ///< Deployment role of this node.
+        NodeType                            node_type_ = NodeType::Light;          ///< Deployment role of this node.
         std::atomic<Status>                 blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 }

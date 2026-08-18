@@ -245,27 +245,23 @@ namespace sgns
                 using T = std::decay_t<decltype( src )>;
                 if constexpr ( std::is_same_v<T, NewAccount> )
                 {
-                    return GeniusAccount::New( dev_config_.TokenID, write_base_path_, is_full_node_ );
+                    return GeniusAccount::New( dev_config_.TokenID, write_base_path_ );
                 }
                 else if constexpr ( std::is_same_v<T, FromPrivateKey> )
                 {
                     return GeniusAccount::NewFromPrivateKey( dev_config_.TokenID,
                                                              src.eth_private_key.c_str(),
-                                                             write_base_path_,
-                                                             is_full_node_ );
+                                                             write_base_path_ );
                 }
                 else if constexpr ( std::is_same_v<T, FromMnemonic> )
                 {
-                    return GeniusAccount::NewFromMnemonic( dev_config_.TokenID,
-                                                           src.mnemonic,
-                                                           write_base_path_,
-                                                           is_full_node_ );
+                    return GeniusAccount::NewFromMnemonic( dev_config_.TokenID, src.mnemonic, write_base_path_ );
                 }
                 else if constexpr ( std::is_same_v<T, FromPublicKey> )
                 {
                     // FromPublicKey carries a public_address; GeniusAccount::NewFromPublicKey
                     // takes no base_path and consumes an address-like string_view.
-                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID, src.public_address, is_full_node_ );
+                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID, src.public_address );
                 }
             },
             source );
@@ -275,7 +271,7 @@ namespace sgns
         }
 
         // Default port_seed (40001); Phase-1 config layer overrides from network_config.json when present.
-        if ( !InitNetwork( 40001, is_full_node_ ) )
+        if ( !InitNetwork( 40001, node_type_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
         }
@@ -338,18 +334,15 @@ namespace sgns
             rpc_catchup_ = true;
         }
         node_logger_->info( "sgns_config.json: rpc_catchup={}", rpc_catchup_ );
-        // node_type read (CFG-02 / CONTEXT D-02). Sets node_type_ ONLY — does NOT touch
-        // is_full_node_ (the AccountSource ctor derives it; the retained old ctor keeps its param).
+        // node_type read (CFG-02 / CONTEXT D-02). The resolved node_type_ is the single
+        // source of truth for the node role; consumers take it directly.
         if ( config_json.HasMember( "node_type" ) && config_json["node_type"].IsString() )
         {
             const auto parsed = NodeTypeFromString( config_json["node_type"].GetString() );
             if ( parsed )
             {
                 node_type_ = *parsed;
-                node_logger_->info( "sgns_config.json: node_type={}",
-                                    *parsed == sgns::GeniusNode::NodeType::Full      ? "Full"
-                                    : *parsed == sgns::GeniusNode::NodeType::Archive ? "Archive"
-                                                                                     : "Light" );
+                node_logger_->info( "sgns_config.json: node_type={}", node_type_ );
             }
             else
             {
@@ -362,6 +355,21 @@ namespace sgns
         {
             node_type_ = sgns::GeniusNode::NodeType::Light; // default on missing key
             node_logger_->info( "sgns_config.json: node_type not set, defaulting to Light" );
+        }
+        // An Archive is a passive replica: it stores everything and does no work. Processing is
+        // resolved here rather than at StartProcessing() so the role is honoured once,
+        // and so the log states plainly that the config key was overridden rather than ignored.
+        if ( node_type_ == NodeType::Archive && isprocessor_ )
+        {
+            isprocessor_ = false;
+            node_logger_->info( "Archive node: forcing is_processor=false (archives do not process)" );
+        }
+        // Mirroring is how an archive accumulates results it did not produce, so it is the
+        // default for that role; an explicit mirror_results key still wins.
+        if ( node_type_ == NodeType::Archive && !config_json.HasMember( "mirror_results" ) )
+        {
+            mirror_results_ = true;
+            node_logger_->info( "Archive node: defaulting mirror_results=true" );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
@@ -571,7 +579,7 @@ namespace sgns
     void GeniusNode::StateTransition( NodeState next_state )
     {
         state_.store( next_state );
-        node_logger_->debug( "Transitioning to state {}", NodeStateToString( next_state ) );
+        node_logger_->debug( "Transitioning to state {}", next_state );
 
         switch ( next_state )
         {
@@ -641,15 +649,16 @@ namespace sgns
                                 {
                                     strong->node_logger_->debug(
                                         "Skipping transaction initialization, unexpected state: {}",
-                                        NodeStateToString( current_state ) );
+                                        current_state );
                                     return;
                                 }
                                 strong->node_logger_->debug(
                                     "Blockchain started successfully, starting transaction manager" );
-                                if ( strong->is_full_node_ )
+                                if ( ReplicatesAllAccounts( strong->node_type_ ) )
                                 {
                                     strong->node_logger_->debug(
-                                        "Full node: Setting blockchain to grab other account creation blocks" );
+                                        "{} node: Setting blockchain to grab other account creation blocks",
+                                        strong->node_type_ );
                                     strong->blockchain_->SetFullNodeMode();
                                 }
 
@@ -665,7 +674,7 @@ namespace sgns
                                             {
                                                 strong->node_logger_->debug(
                                                     "Skipping transaction initialization, unexpected state: {}",
-                                                    NodeStateToString( current_state ) );
+                                                    current_state );
                                                 return;
                                             }
                                             strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
@@ -745,7 +754,7 @@ namespace sgns
                                                                 io_,
                                                                 account_,
                                                                 blockchain_,
-                                                                is_full_node_,
+                                                                node_type_,
                                                                 subnet_id_,
                                                                 std::chrono::milliseconds( 300000 ),
                                                                 std::chrono::milliseconds( 0 ),
@@ -1158,7 +1167,7 @@ namespace sgns
 
     bool GeniusNode::IsFullNode() const noexcept
     {
-        return is_full_node_;
+        return ReplicatesAllAccounts( node_type_ );
     }
 
     GeniusNode::NodeType GeniusNode::GetNodeType() const noexcept
@@ -1166,318 +1175,307 @@ namespace sgns
         return node_type_;
     }
 
-    bool GeniusNode::InitNetwork( uint16_t port_seed, bool is_full_node )
+    bool GeniusNode::IsProcessor() const noexcept
     {
-        bool                ret         = true;
-        std::string         config_path = write_base_path_ + "/network_config.json";
-        rapidjson::Document config_json;
-        std::string         pubsub_bind_address = "0.0.0.0";
-        bool                upnp_enabled        = true;
-        int                 high_water          = is_full_node ? 400 : 300;
-        int                 low_water           = is_full_node ? 200 : 150;
-        std::string         port_str;
-        uint16_t            config_port = 0;
+        return isprocessor_;
+    }
+
+    GeniusNode::NetworkSettings GeniusNode::LoadNetworkConfig( uint16_t &port_seed, NodeType node_type )
+    {
+        NetworkSettings settings;
+        // Replicating roles (Full, Archive) carry network-wide traffic and need the higher water marks.
+        const bool replicates = ReplicatesAllAccounts( node_type );
+        settings.high_water   = replicates ? 400 : 300;
+        settings.low_water    = replicates ? 200 : 150;
 
         bootstrap_peers_.clear();
 
-        // Try to read config file
-        std::ifstream config_file( config_path );
-        if ( config_file.good() )
+        std::ifstream config_file( write_base_path_ + "/network_config.json" );
+        if ( !config_file.good() )
         {
-            std::stringstream buffer;
-            buffer << config_file.rdbuf();
-            config_json.Parse( buffer.str().c_str() );
-            if ( !config_json.HasParseError() && config_json.IsObject() )
+            GeniusNodeLogger()->error("Could not read network config file");
+            return settings;
+        }
+        std::stringstream buffer;
+        buffer << config_file.rdbuf();
+
+        rapidjson::Document config_json;
+        config_json.Parse( buffer.str().c_str() );
+        if ( config_json.HasParseError() || !config_json.IsObject() )
+        {
+            GeniusNodeLogger()->error("Could not parse network config file");
+            return settings;
+        }
+
+        // Optional-key reader: applies the value only when the key exists with the type its
+        // destination implies, so an absent or ill-typed key keeps whatever default was passed in.
+        // FindMember resolves the key in one lookup, unlike HasMember followed by operator[].
+        auto read = [&]( const char *key, auto &out )
+        {
+            using T           = std::decay_t<decltype( out )>;
+            const auto member = config_json.FindMember( key );
+            if ( member == config_json.MemberEnd() )
             {
-                if ( config_json.HasMember( "pubsub_port" ) && config_json["pubsub_port"].IsString() )
+                return;
+            }
+            if constexpr ( std::is_same_v<T, double> )
+            {
+                // Accept any JSON number: Is<double> maps to IsDouble(), which rejects an
+                // integer-valued literal, so "multiplier": 3 would be silently ignored.
+                if ( member->value.IsNumber() )
                 {
-                    port_str = config_json["pubsub_port"].GetString();
-                    if ( !port_str.empty() )
-                    {
-                        try
-                        {
-                            config_port = static_cast<uint16_t>( std::stoi( port_str ) );
-                        }
-                        catch ( ... )
-                        {
-                            node_logger_->warn( "Invalid pubsub_port in config, using default" );
-                        }
-                    }
+                    out = member->value.GetDouble();
                 }
-                if ( config_json.HasMember( "pubsub_bind_address" ) && config_json["pubsub_bind_address"].IsString() )
-                {
-                    pubsub_bind_address = config_json["pubsub_bind_address"].GetString();
-                }
-                if ( config_json.HasMember( "bootstrap_addresses" ) && config_json["bootstrap_addresses"].IsArray() )
-                {
-                    for ( auto &v : config_json["bootstrap_addresses"].GetArray() )
-                    {
-                        if ( v.IsString() )
-                        {
-                            bootstrap_peers_.push_back( v.GetString() );
-                        }
-                    }
-                }
+            }
+            else if ( member->value.Is<T>() )
+            {
+                out = member->value.Get<T>();
+            }
+        };
+        auto read_seconds = [&]( const char *key, std::chrono::seconds &out )
+        {
+            auto seconds = static_cast<int>( out.count() );
+            read( key, seconds );
+            out = std::chrono::seconds( seconds );
+        };
 
-                if ( config_json.HasMember( "upnp_enabled" ) && config_json["upnp_enabled"].IsBool() )
-                {
-                    upnp_enabled = config_json["upnp_enabled"].GetBool();
-                }
-                if ( config_json.HasMember( "high_water" ) && config_json["high_water"].IsInt() )
-                {
-                    high_water = config_json["high_water"].GetInt();
-                }
-                if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
-                {
-                    low_water = config_json["low_water"].GetInt();
-                }
+        read( "pubsub_bind_address", settings.bind_address );
+        read( "upnp_enabled", settings.upnp_enabled );
+        read( "high_water", settings.high_water );
+        read( "low_water", settings.low_water );
 
-                // ── port_seed: numeric read (intentional divergence from the legacy
-                //    string-based pubsub_port read above — see HARD-01 / CONTEXT D-08).
-                //    Config wins when present; the constructor param is the fallback.
-                if ( config_json.HasMember( "port_seed" ) )
-                {
-                    if ( config_json["port_seed"].IsUint() )
-                    {
-                        port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
-                        node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
-                    }
-                    else
-                    {
-                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
-                                            port_seed );
-                    }
-                }
+        std::string port_str;
+        read( "pubsub_port", port_str );
+        if ( !port_str.empty() )
+        {
+            try
+            {
+                settings.config_port = static_cast<uint16_t>( std::stoi( port_str ) );
+            }
+            catch ( ... )
+            {
+                node_logger_->warn( "Invalid pubsub_port in config, using default" );
+            }
+        }
 
-                // ── auto_dht: bool read. JSON key "auto_dht" -> member autodht_ (D-07).
-                //    Config wins when present; the constructor param (assigned in the ctor
-                //    init-list) is the fallback.
-                if ( config_json.HasMember( "auto_dht" ) )
+        if ( config_json.HasMember( "bootstrap_addresses" ) && config_json["bootstrap_addresses"].IsArray() )
+        {
+            for ( auto &v : config_json["bootstrap_addresses"].GetArray() )
+            {
+                if ( v.IsString() )
                 {
-                    if ( config_json["auto_dht"].IsBool() )
-                    {
-                        autodht_ = config_json["auto_dht"].GetBool();
-                        node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
-                    }
-                    else
-                    {
-                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}",
-                                            autodht_ );
-                    }
-                }
-
-                // ── Parse reconnect config ──
-                if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
-                     config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
-                {
-                    reconnect_config_.base_delay = std::chrono::seconds(
-                        config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
-                }
-                if ( config_json.HasMember( "bootstrap_reconnect_max_delay_sec" ) &&
-                     config_json["bootstrap_reconnect_max_delay_sec"].IsInt() )
-                {
-                    reconnect_config_.max_delay = std::chrono::seconds(
-                        config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
-                }
-                if ( config_json.HasMember( "bootstrap_health_check_interval_sec" ) &&
-                     config_json["bootstrap_health_check_interval_sec"].IsInt() )
-                {
-                    reconnect_config_.health_check_interval = std::chrono::seconds(
-                        config_json["bootstrap_health_check_interval_sec"].GetInt() );
-                }
-                if ( config_json.HasMember( "bootstrap_health_check_disconnected_interval_sec" ) &&
-                     config_json["bootstrap_health_check_disconnected_interval_sec"].IsInt() )
-                {
-                    reconnect_config_.health_check_disconnected_interval = std::chrono::seconds(
-                        config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
-                }
-                if ( config_json.HasMember( "bootstrap_background_multiplier" ) &&
-                     config_json["bootstrap_background_multiplier"].IsDouble() )
-                {
-                    reconnect_config_.background_multiplier = config_json["bootstrap_background_multiplier"]
-                                                                  .GetDouble();
+                    bootstrap_peers_.emplace_back( v.GetString() );
                 }
             }
         }
 
-        // ── Parse bootstrap fullnode multiaddrs into PeerInfo cache for reconnection ──
-        bootstrap_fullnode_infos_.clear();
-        bootstrap_fullnode_ids_.clear();
-        for ( const auto &addr : bootstrap_fullnodes_ )
+        // port_seed is read numerically — an intentional divergence from the legacy string-based
+        // pubsub_port read above (HARD-01 / CONTEXT D-08) — and auto_dht as a bool into autodht_
+        // (D-07). Both warn on an ill-typed value rather than silently falling back, because the
+        // constructor param they override is not otherwise visible to the operator.
+        if ( config_json.HasMember( "port_seed" ) )
         {
-            auto peer_info = ParsePeerInfoFromString( addr );
-            if ( peer_info )
+            if ( config_json["port_seed"].IsUint() )
             {
-                bootstrap_fullnode_infos_.push_back( peer_info.value() );
-                bootstrap_fullnode_ids_.insert( peer_info->id );
+                port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
             }
             else
             {
-                node_logger_->warn( "Failed to parse bootstrap fullnode multiaddr: {}", addr );
+                node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}", port_seed );
             }
         }
-        if ( !bootstrap_fullnode_infos_.empty() )
+        if ( config_json.HasMember( "auto_dht" ) )
         {
-            node_logger_->info( "Parsed {} bootstrap fullnode(s) for reconnection tracking",
-                                bootstrap_fullnode_infos_.size() );
-        }
-
-        // ── Parse bootstrap peer multiaddrs into PeerInfo cache for reconnection ──
-        bootstrap_peer_infos_.clear();
-        bootstrap_peer_ids_.clear();
-        for ( const auto &addr : bootstrap_peers_ )
-        {
-            auto peer_info = ParsePeerInfoFromString( addr );
-            if ( peer_info )
+            if ( config_json["auto_dht"].IsBool() )
             {
-                bootstrap_peer_infos_.push_back( peer_info.value() );
-                bootstrap_peer_ids_.insert( peer_info->id );
+                autodht_ = config_json["auto_dht"].GetBool();
+                node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
             }
             else
             {
-                node_logger_->warn( "Failed to parse bootstrap peer multiaddr: {}", addr );
+                node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}", autodht_ );
             }
         }
-        if ( !bootstrap_peer_infos_.empty() )
+
+        read_seconds( "bootstrap_reconnect_base_delay_sec", reconnect_config_.base_delay );
+        read_seconds( "bootstrap_reconnect_max_delay_sec", reconnect_config_.max_delay );
+        read_seconds( "bootstrap_health_check_interval_sec", reconnect_config_.health_check_interval );
+        read_seconds( "bootstrap_health_check_disconnected_interval_sec",
+                      reconnect_config_.health_check_disconnected_interval );
+        read( "bootstrap_background_multiplier", reconnect_config_.background_multiplier );
+
+        return settings;
+    }
+
+    GeniusNode::BootstrapPeers GeniusNode::ParseBootstrapPeers( const std::vector<std::string> &addresses,
+                                                                std::string_view                kind ) const
+    {
+        BootstrapPeers parsed;
+        for ( const auto &addr : addresses )
         {
-            node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking", bootstrap_peer_infos_.size() );
+            auto peer_info = ParsePeerInfoFromString( addr );
+            if ( !peer_info )
+            {
+                node_logger_->warn( "Failed to parse bootstrap {} multiaddr: {}", kind, addr );
+                continue;
+            }
+            parsed.infos.push_back( peer_info.value() );
+            parsed.ids.insert( peer_info->id );
         }
+        if ( !parsed.infos.empty() )
+        {
+            node_logger_->info( "Parsed {} bootstrap {}(s) for reconnection tracking", parsed.infos.size(), kind );
+        }
+        return parsed;
+    }
+
+    bool GeniusNode::AdoptEphemeralPort( const std::string &interface_address )
+    {
+        auto address = libp2p::multi::Multiaddress::create( interface_address );
+        if ( !address )
+        {
+            return false;
+        }
+        auto assigned_port = address.value().getFirstValueForProtocol<uint16_t>(
+            libp2p::multi::Protocol::Code::TCP,
+            []( const std::string &value ) { return static_cast<uint16_t>( std::stoul( value ) ); } );
+        if ( !assigned_port )
+        {
+            return false;
+        }
+        pubsubport_ = assigned_port.value();
+        return pubsubport_ != 0;
+    }
+
+    bool GeniusNode::StartPubSub( const NetworkSettings &settings )
+    {
+        // Make a base58 out of our address
+        const std::string   address = account_->GetAddress();
+        const base::Hash256 hash    = crypto::sha2_256( address.data(), address.size() );
+
+        auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
+        auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key );
+        auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+        if ( !maybe_base58 )
+        {
+            node_logger_->error( "We couldn't convert the account {} to base58", address );
+            return false;
+        }
+        base58key_              = maybe_base58.value();
+        gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key_;
+
+        //Set a pubsub config, use no signing because we can verify with proof and dag structure
+        libp2p::protocol::gossip::Config config;
+        config.echo_forward_mode       = false;
+        config.sign_messages           = false;
+        config.seen_cache_limit        = 10;
+        config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
+        config.rw_timeout_msec         = std::chrono::seconds{ 30 };
+
+        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
+            crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
+                .GetKeyPair()
+                .value(),
+            config );
+
+        // A half-started PubSub must not be left reachable, so every failure tears it down.
+        auto fail = [this]( const std::string &message )
+        {
+            node_logger_->error( "{}", message );
+            pubsub_->Stop();
+            pubsub_.reset();
+            return false;
+        };
+
+        auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, settings.bind_address, {} );
+        if ( auto pubsub_start_error = pubs.get(); pubsub_start_error )
+        {
+            return fail( fmt::format( "PubSub failed to start on {}:{}: {}",
+                                      settings.bind_address,
+                                      pubsubport_,
+                                      pubsub_start_error.message() ) );
+        }
+
+        const auto interface_address = pubsub_->GetInterfaceAddress();
+        if ( interface_address.empty() )
+        {
+            return fail( fmt::format( "PubSub started without an interface address on {}:{}",
+                                      settings.bind_address,
+                                      pubsubport_ ) );
+        }
+        if ( pubsubport_ == 0 && !AdoptEphemeralPort( interface_address ) )
+        {
+            return fail( fmt::format( "PubSub did not report its OS-assigned TCP port: {}", interface_address ) );
+        }
+        node_logger_->info( "PubSub started at address: {}", interface_address );
+
+        pubsub_->GetHost()->getConnectionManagerConfig().high_water = settings.high_water;
+        pubsub_->GetHost()->getConnectionManagerConfig().low_water  = settings.low_water;
+        return true;
+    }
+
+    void GeniusNode::InitContentExchange()
+    {
+        // Initialize Bitswap for IPFS content-addressed data exchange
+        bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
+        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+        bitswap_->initialize();
+        if ( !ipfs_cache_dir_.empty() )
+        {
+            bitswap_->setCacheDir( write_base_path_ + "/" + ipfs_cache_dir_ );
+        }
+        FileManager::GetInstance().InitializeSingletons();
+        FileManager::GetInstance().setBitswap( bitswap_ );
+
+        graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
+    }
+
+    bool GeniusNode::InitNetwork( uint16_t port_seed, NodeType node_type )
+    {
+        const NetworkSettings settings = LoadNetworkConfig( port_seed, node_type );
+
+        auto fullnodes            = ParseBootstrapPeers( bootstrap_fullnodes_, "fullnode" );
+        bootstrap_fullnode_infos_ = std::move( fullnodes.infos );
+        bootstrap_fullnode_ids_   = std::move( fullnodes.ids );
+
+        auto peers            = ParseBootstrapPeers( bootstrap_peers_, "peer" );
+        bootstrap_peer_infos_ = std::move( peers.infos );
+        bootstrap_peer_ids_   = std::move( peers.ids );
 
         // Port resolution priority (Doxygen: see InitNetwork declaration):
-        //   1. pubsub_port (string override from network_config.json) -> config_port
-        //   2. else: port_seed (constructor param, or network_config.json "port_seed"
-        //      key when present) derives the port via GenerateRandomPort(port_seed, address);
-        //      zero uses an OS-selected port because GossipPubSub cannot reliably start on zero.
-        if ( config_port != 0 )
+        //   1. pubsub_port (string override from network_config.json) -> settings.config_port
+        //   2. else: port_seed (constructor param, or the network_config.json "port_seed" key)
+        //      derives the port via GenerateRandomPort(port_seed, address); zero uses an
+        //      OS-selected port because GossipPubSub cannot reliably start on zero.
+        pubsubport_ = settings.config_port != 0 ? settings.config_port
+                                                : GenerateRandomPort( port_seed, account_->GetAddress() );
+
+        // Never block node construction on UPnP/IGD discovery.
+        // RefreshUPNP() runs on its own thread and will try immediately.
+        if ( settings.upnp_enabled )
         {
-            pubsubport_ = config_port;
+            (void) InitUPNP(); // Ignore UPNP init result for now
         }
-        else
+
+        if ( !StartPubSub( settings ) )
         {
-            pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
+            return false;
         }
 
-        do
+        if ( settings.upnp_enabled )
         {
-            // Never block node construction on UPnP/IGD discovery.
-            // RefreshUPNP() runs on its own thread and will try immediately.
-            if ( upnp_enabled )
-            {
-                //ret = InitUPNP();
-                (void) InitUPNP(); // Ignore UPNP init result for now
-            }
+            RefreshUPNP( pubsubport_ );
+        }
 
-            // Make a base58 out of our address
-            std::string                tempaddress = account_->GetAddress();
-            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+        InitContentExchange();
 
-            auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
-            auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key );
-            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-            if ( !maybe_base58 )
-            {
-                ret = false;
-                node_logger_->error( "We couldn't convert the account {} to base58", account_->GetAddress() );
-                break;
-            }
-            base58key_ = maybe_base58.value();
-
-            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
-                                      base58key_;
-            auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
-
-            //Set a pubsub config, use no signing because we can verify with proof and dag structure
-            libp2p::protocol::gossip::Config config;
-            config.echo_forward_mode       = false;
-            config.sign_messages           = false;
-            config.seen_cache_limit        = 10;
-            config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
-            config.rw_timeout_msec         = std::chrono::seconds{ 30 };
-
-            pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
-                config );
-
-            auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
-            if ( auto pubsub_start_error = pubs.get(); pubsub_start_error )
-            {
-                node_logger_->error( "PubSub failed to start on {}:{}: {}",
-                                     pubsub_bind_address,
-                                     pubsubport_,
-                                     pubsub_start_error.message() );
-                pubsub_->Stop();
-                pubsub_.reset();
-                ret = false;
-                break;
-            }
-
-            auto pubsub_interface_address = pubsub_->GetInterfaceAddress();
-            if ( pubsub_interface_address.empty() )
-            {
-                node_logger_->error( "PubSub started without an interface address on {}:{}",
-                                     pubsub_bind_address,
-                                     pubsubport_ );
-                pubsub_->Stop();
-                pubsub_.reset();
-                ret = false;
-                break;
-            }
-            if ( pubsubport_ == 0 )
-            {
-                auto address = libp2p::multi::Multiaddress::create( pubsub_interface_address );
-                if ( address )
-                {
-                    auto assigned_port = address.value().getFirstValueForProtocol<uint16_t>(
-                        libp2p::multi::Protocol::Code::TCP,
-                        []( const std::string &value ) { return static_cast<uint16_t>( std::stoul( value ) ); } );
-                    if ( assigned_port )
-                    {
-                        pubsubport_ = assigned_port.value();
-                    }
-                }
-                if ( pubsubport_ == 0 )
-                {
-                    node_logger_->error( "PubSub did not report its OS-assigned TCP port: {}",
-                                         pubsub_interface_address );
-                    pubsub_->Stop();
-                    pubsub_.reset();
-                    ret = false;
-                    break;
-                }
-            }
-            node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
-
-            if ( upnp_enabled )
-            {
-                RefreshUPNP( pubsubport_ );
-            }
-
-            pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = low_water;
-
-            // Initialize Bitswap for IPFS content-addressed data exchange
-            bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
-            bitswap_->initialize();
-            if ( !ipfs_cache_dir_.empty() )
-            {
-                auto fullCachePath = write_base_path_ + "/" + ipfs_cache_dir_;
-                bitswap_->setCacheDir( fullCachePath );
-            }
-            FileManager::GetInstance().InitializeSingletons();
-            FileManager::GetInstance().setBitswap( bitswap_ );
-
-            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
-
-            // Initialize DHT early so peer discovery works during database migration
-            if ( autodht_ )
-            {
-                DHTInit();
-            }
-        } while ( 0 );
-        return ret;
+        // Initialize DHT early so peer discovery works during database migration
+        if ( autodht_ )
+        {
+            DHTInit();
+        }
+        return true;
     }
 
     bool GeniusNode::InitUPNP()
@@ -1597,7 +1595,7 @@ namespace sgns
                                                 write_base_path_,  // writeBasePath
                                                 base58key_,        // base58key
                                                 account_,
-                                                is_full_node_ );
+                                                node_type_ );
 
         // We store it to query migration progress later.
         {
@@ -1642,8 +1640,7 @@ namespace sgns
                     auto current_state = strong->state_.load();
                     if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
                     {
-                        strong->node_logger_->debug( "Skipping blockchain retry, unexpected state: {}",
-                                                     NodeStateToString( current_state ) );
+                        strong->node_logger_->debug( "Skipping blockchain retry, unexpected state: {}", current_state );
                         return;
                     }
                     strong->StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
@@ -2001,13 +1998,9 @@ namespace sgns
 
     void GeniusNode::DHTInit()
     {
-        // Encode the string to UTF-8 bytes
-        std::string                temp = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
-        std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
-
-        // Compute the SHA-256 hash of the input bytes
-        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+        // Encode the string to UTF-8 bytes, then compute its SHA-256
+        const std::string   topic = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
+        const base::Hash256 hash  = crypto::sha2_256( topic.data(), topic.size() );
 
         // Provide CID
         auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
@@ -2052,10 +2045,7 @@ namespace sgns
 
     outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key ) const
     {
-        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(),
-                                                             private_key,
-                                                             write_base_path_,
-                                                             is_full_node_ );
+        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(), private_key, write_base_path_ );
         if ( new_account == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2065,10 +2055,7 @@ namespace sgns
 
     outcome::result<void> GeniusNode::AddAccountWithMnemonic( const std::string &mnemonic ) const
     {
-        auto new_account = GeniusAccount::NewFromMnemonic( this->GetTokenID(),
-                                                           mnemonic,
-                                                           write_base_path_,
-                                                           is_full_node_ );
+        auto new_account = GeniusAccount::NewFromMnemonic( this->GetTokenID(), mnemonic, write_base_path_ );
         if ( new_account == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2078,7 +2065,7 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::AddAccountWithRandomMnemonic() const
     {
-        auto new_account = GeniusAccount::NewFromRandomMnemonic( this->GetTokenID(), write_base_path_, is_full_node_ );
+        auto new_account = GeniusAccount::NewFromRandomMnemonic( this->GetTokenID(), write_base_path_ );
         if ( new_account.first == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2103,7 +2090,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        auto account = GeniusAccount::NewFromPublicKey( GetTokenID(), public_address, is_full_node_ );
+        auto account = GeniusAccount::NewFromPublicKey( GetTokenID(), public_address );
 
         if ( account == nullptr )
         {
