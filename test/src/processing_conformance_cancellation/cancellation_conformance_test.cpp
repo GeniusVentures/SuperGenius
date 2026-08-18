@@ -169,6 +169,11 @@ namespace sgns
         ASSERT_TRUE( output_locations.empty() || output_locations[0].empty() )
             << "No output location should be populated for a cancelled run";
 
+        // ARTF-09: a caller holding only `manager` (not the original ProcessingError)
+        // can retrieve a non-empty, human-readable errorMessage via GetLastManifest().
+        EXPECT_EQ( manager->GetLastManifest().terminalState, sgns::sgprocessing::TerminalState::Cancelled );
+        EXPECT_STRNE( manager->GetLastManifest().errorMessage, "" );
+
         std::cout << "CancelBeforeStartProducesNoSuccessfulResult: pre-cancelled MNN run correctly "
                      "produced a non-success result with no output published"
                   << std::endl;
@@ -368,8 +373,51 @@ namespace sgns
         ASSERT_FALSE( pr.has_value() ) << "A 1-byte output budget must be exceeded and produce a failure";
         ASSERT_EQ( pr.error(), sgns::sgprocessing::ProcessingManager::Error::PROCESSING_FAILED );
 
+        // ARTF-09: a caller holding only `manager` (not the original ProcessingError)
+        // can retrieve a non-empty, human-readable errorMessage via GetLastManifest().
+        EXPECT_EQ( manager->GetLastManifest().terminalState, sgns::sgprocessing::TerminalState::BudgetExceeded );
+        EXPECT_STRNE( manager->GetLastManifest().errorMessage, "" );
+
         std::cout << "BudgetExceededProducesBudgetFailure: 1-byte budget correctly rejected the "
                      "MNN run's real output size"
+                  << std::endl;
+    }
+
+    TEST_F( CancellationConformanceTest, SuccessfulRunHasEmptyErrorMessageInManifest )
+    {
+        // Proves the success path also populates m_lastManifest (not just failure paths),
+        // and that errorMessage stays empty when nothing failed (ARTF-09).
+        const std::string &json_str = PatchedJson( "buffer-processing-definition.json" );
+        ASSERT_FALSE( json_str.empty() );
+
+        auto r = sgns::sgprocessing::ProcessingManager::Create( json_str );
+        ASSERT_TRUE( r.has_value() );
+
+        const auto &manager = r.value();
+        auto        p = manager->GetProcessingData();
+        const auto &passes = p.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model       = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_GE( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        sgns::sgprocessing::ExecutionContext execCtx;
+        execCtx.cancelToken.SetCallback( []() {} );
+
+        auto pr = manager->Process( ioc, chunkhashes, model_node, output_locations, execCtx );
+        ASSERT_TRUE( pr.has_value() ) << "Process() should succeed: " << pr.error().message();
+
+        EXPECT_EQ( manager->GetLastManifest().terminalState, sgns::sgprocessing::TerminalState::Success );
+        EXPECT_EQ( manager->GetLastManifest().errorMessage[0], '\0' );
+
+        std::cout << "SuccessfulRunHasEmptyErrorMessageInManifest: normal run correctly left "
+                     "GetLastManifest().errorMessage empty with TerminalState::Success"
                   << std::endl;
     }
 
