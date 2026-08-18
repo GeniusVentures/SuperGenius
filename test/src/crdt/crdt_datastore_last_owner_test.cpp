@@ -15,7 +15,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <unistd.h>
 
 namespace sgns::crdt
 {
@@ -25,6 +24,13 @@ namespace sgns::crdt
         using storage::rocksdb;
 
         constexpr auto kTimeout = std::chrono::seconds( 10 );
+
+        std::string MakeTemporaryDatabasePath( const std::string &name )
+        {
+            return ( boost::filesystem::temp_directory_path() /
+                     boost::filesystem::unique_path( name + "-%%%%-%%%%" ) )
+                .string();
+        }
 
         std::shared_ptr<CrdtDatastore::Delta> MakeDelta( const std::string &key,
                                                          const std::string &value )
@@ -48,9 +54,10 @@ namespace sgns::crdt
 
         int RunFinalOwnerChild()
         {
-            const auto suffix = std::to_string( static_cast<long long>( ::getpid() ) );
-            const std::string sender_path = "/tmp/supergenius_crdt_last_owner_sender_" + suffix;
-            const std::string receiver_path = "/tmp/supergenius_crdt_last_owner_receiver_" + suffix;
+            const std::string sender_path =
+                MakeTemporaryDatabasePath( "supergenius_crdt_last_owner_sender" );
+            const std::string receiver_path =
+                MakeTemporaryDatabasePath( "supergenius_crdt_last_owner_receiver" );
 
             auto sender_db = MakeDatabase( sender_path );
             auto receiver_db = MakeDatabase( receiver_path );
@@ -275,9 +282,8 @@ namespace sgns::crdt
 
         int RunReaperShutdownChild()
         {
-            const auto suffix = std::to_string( static_cast<long long>( ::getpid() ) );
             const std::string database_path =
-                "/tmp/supergenius_crdt_reaper_shutdown_" + suffix;
+                MakeTemporaryDatabasePath( "supergenius_crdt_reaper_shutdown" );
 
             auto database = MakeDatabase( database_path );
             if ( !database )
