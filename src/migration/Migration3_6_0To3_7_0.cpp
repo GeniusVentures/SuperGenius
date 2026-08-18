@@ -62,7 +62,7 @@ namespace sgns
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
         std::shared_ptr<GeniusAccount>                                  account,
-        bool                                                            is_full_node ) :
+        NodeType                                                        node_type ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -71,7 +71,7 @@ namespace sgns
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
         account_( std::move( account ) ),
-        is_full_node_( is_full_node )
+        node_type_( node_type )
     {
     }
 
@@ -288,7 +288,7 @@ namespace sgns
                                                                 ioContext_,
                                                                 account_,
                                                                 blockchain_,
-                                                                is_full_node_ );
+                                                                node_type_ );
             }
 
             logger_->debug( "{}: Registering transaction topic names for migration flow", __func__ );

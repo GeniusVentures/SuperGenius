@@ -25,6 +25,7 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "base/buffer.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "account/TransactionManager.hpp"
@@ -135,7 +136,7 @@ namespace sgns
     public:
         /**
          * @brief Canonical node factory (INTF-01). Account identity is chosen via
-         *        AccountSource; node role (is_full_node_) is derived from node_type in
+         *        AccountSource; node role (node_type_) is read from node_type in
          *        sgns_config.json, not a param. Old factories are retained this phase
          *        (deleted in Phase 3 per 02-CONTEXT.md D-01).
          * @param[in] dev_config Runtime configuration (paths, token, payout data).
@@ -215,15 +216,11 @@ namespace sgns
         /**
          * @brief Deployment node role, read from sgns_config.json ("node_type").
          *
-         * Drives the derived is_full_node_ flag (Full/Archive -> true, Light -> false).
-         * Co-located with NodeState/Error per CFG-02.
+         * Defined in account/NodeType.hpp so the lower layers that consume it
+         * (TransactionManager, MigrationManager) need not include this facade.
+         * Aliased here for source compatibility with GeniusNode::NodeType call sites.
          */
-        enum class NodeType : uint8_t
-        {
-            Full    = 0, ///< Full node (is_full_node_ = true).
-            Light   = 1, ///< Light node (is_full_node_ = false). Default on missing/unknown key.
-            Archive = 2, ///< Archive node (is_full_node_ = true; behavior identical to Full this milestone).
-        };
+        using NodeType = ::sgns::NodeType;
 
 #ifdef SGNS_DEBUG
         static constexpr std::chrono::milliseconds TIMEOUT_ESCROW_PAY{ 50000 }; ///< Debug escrow payout timeout.
@@ -255,10 +252,13 @@ namespace sgns
         bool IsAutodhtEnabled() const noexcept;
 
         /**
-         * @brief Returns whether this node runs in full-node mode after config resolution.
-         * @return The resolved @c is_full_node_ (derived from @c node_type_ in the
-         *         AccountSource constructor: Full/Archive -> true, Light -> false).
+         * @brief Returns whether this node replicates network-wide data.
+         * @return True for Full and Archive, false for Light. Derived from @c node_type_;
          *         Test/read-only observable; does not mutate state.
+         *
+         * @note This answers "does it store everything", not "does it participate".
+         *       Archive replicates like Full but does no consensus or result work —
+         *       use @ref GetNodeType for that distinction.
          */
         bool IsFullNode() const noexcept;
 
@@ -267,6 +267,13 @@ namespace sgns
          * @return The @c node_type_ read from sgns_config.json (default Light). Read-only observable.
          */
         NodeType GetNodeType() const noexcept;
+
+        /**
+         * @brief Returns whether processing services run after config resolution.
+         * @return The resolved @c isprocessor_ (the @c is_processor key, forced to false for
+         *         Archive nodes). Test/read-only observable; does not mutate state.
+         */
+        bool IsProcessor() const noexcept;
 
         /**
          * @brief Adds an account to local storage using an Ethereum private key.
@@ -894,10 +901,10 @@ namespace sgns
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
-         *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
+         *        resolves node_type_ (the init-order hinge fix, INTF-03).
          *
          * Account creation runs via std::visit over the AccountSource variant, with
-         * is_full_node_ already derived. Throws std::runtime_error on account-restore
+         * node_type_ already resolved. Throws std::runtime_error on account-restore
          * failure; the public New(dev_config, AccountSource) catches and returns nullptr (D-04).
          * Old private constructor above is retained this phase (deleted in Phase 3).
          *
@@ -953,7 +960,8 @@ namespace sgns
          *            OS-assigned ephemeral port. Fallback when the
          *            @c port_seed key is absent from @c network_config.json; overridable by
          *            that key when present (config wins, param is fallback).
-         * @param[in] is_full_node Whether to use full-node connection limits.
+         * @param[in] node_type Node role; drives the connection-limit water marks
+         *            (replicating roles — Full and Archive — get the higher limits).
          * @return True when network initialization succeeds.
          *
          * @par Port resolution priority
@@ -1236,5 +1244,12 @@ groups:
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );
+
+/// Lets a NodeState be passed straight to any spdlog/fmt call: `logger->debug( "state {}", state )`.
+template <>
+struct fmt::formatter<sgns::GeniusNode::NodeState> : formatter<std::string_view>
+{
+    format_context::iterator format( sgns::GeniusNode::NodeState state, format_context &ctx ) const;
+};
 
 #endif

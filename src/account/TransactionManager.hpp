@@ -26,6 +26,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
 #include "account/PublicChainInputValidator.hpp"
@@ -114,7 +115,7 @@ namespace sgns
          * @param[in] processing_db Database of the CRDT
          * @param[in] ctx The io context used to run its inner methods
          * @param[in] account Genius account to be used
-         * @param[in] full_node Parameter to indicate if the account is a full node
+         * @param[in] node_type Deployment role of this node (Full / Light / Archive)
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
          * @return shared_ptr to the fully-wired TransactionManager instance
@@ -127,7 +128,7 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context>   ctx,
             std::shared_ptr<GeniusAccount>             account,
             std::shared_ptr<Blockchain>                blockchain,
-            bool                                       full_node                 = false,
+            NodeType                                   node_type                 = NodeType::Light,
             uint16_t                                   subnet_id                 = 0,
             std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
@@ -382,7 +383,7 @@ namespace sgns
                             std::shared_ptr<boost::asio::io_context>   ctx,
                             std::shared_ptr<GeniusAccount>             account,
                             std::shared_ptr<Blockchain>                blockchain,
-                            bool                                       full_node,
+                            NodeType                                   node_type,
                             uint16_t                                   subnet_id,
                             std::chrono::milliseconds                  timestamp_tolerance,
                             std::chrono::milliseconds                  mutability_window,
@@ -549,7 +550,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<Blockchain>              blockchain_;
-        bool                                     full_node_m;
+        NodeType                                 node_type_m;       ///< Deployment role driving replication behavior.
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;

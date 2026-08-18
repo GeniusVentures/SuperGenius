@@ -86,53 +86,6 @@ namespace
         return base + dist( rng );
     }
 
-    const char *NodeStateToString( sgns::GeniusNode::NodeState state )
-    {
-        using State = sgns::GeniusNode::NodeState;
-        switch ( state )
-        {
-            case State::CREATING:
-                return "CREATING";
-            case State::MIGRATING_DATABASE:
-                return "MIGRATING_DATABASE";
-            case State::INITIALIZING_DATABASE:
-                return "INITIALIZING_DATABASE";
-            case State::INITIALIZING_PROCESSING:
-                return "INITIALIZING_PROCESSING";
-            case State::INITIALIZING_BLOCKCHAIN:
-                return "INITIALIZING_BLOCKCHAIN";
-            case State::INITIALIZING_TRANSACTIONS:
-                return "INITIALIZING_TRANSACTIONS";
-            case State::READY:
-                return "READY";
-        }
-        return "UNKNOWN";
-    }
-
-    // Case-insensitive parse of the "node_type" sgns_config.json value (CONTEXT D-02).
-    // Returns nullopt for unrecognized values; the caller (LoadSgnsConfig) WARN-logs + defaults to Light.
-    std::optional<sgns::GeniusNode::NodeType> NodeTypeFromString( std::string_view s )
-    {
-        std::string lower;
-        lower.reserve( s.size() );
-        for ( char c : s )
-        {
-            lower.push_back( static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) ) );
-        }
-        if ( lower == "full" )
-        {
-            return sgns::GeniusNode::NodeType::Full;
-        }
-        if ( lower == "light" )
-        {
-            return sgns::GeniusNode::NodeType::Light;
-        }
-        if ( lower == "archive" )
-        {
-            return sgns::GeniusNode::NodeType::Archive;
-        }
-        return std::nullopt;
-    }
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -253,8 +206,8 @@ namespace sgns
     }
 
     // Reordered constructor (INTF-03 / CONTEXT D-05). Account is created via std::visit
-    // AFTER LoadSgnsConfig() resolves node_type_ -> is_full_node_ (the init-order hinge fix).
-    // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
+    // AFTER LoadSgnsConfig() resolves node_type_ (the init-order hinge fix).
+    // account_ and node_type_ are default-init here (no source/param) and assigned in the
     // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
     // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
     GeniusNode::GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source ) :
@@ -285,9 +238,7 @@ namespace sgns
 
         LoadSgnsConfig(); // resolves node_type_
 
-        is_full_node_ = ( node_type_ != NodeType::Light ); // CFG-03 derivation
-
-        // Create the account with is_full_node_ already known (the hinge fix).
+        // Create the account with node_type_ already resolved (the hinge fix).
         account_ = std::visit(
             [this]( auto &&src ) -> std::shared_ptr<GeniusAccount>
             {
@@ -3958,4 +3909,39 @@ namespace sgns
             node_logger_->warn( "Failed to persist task IDs to {}: {}", MyTasksFilePath(), e.what() );
         }
     }
+}
+
+fmt::format_context::iterator fmt::formatter<sgns::GeniusNode::NodeState>::format( sgns::GeniusNode::NodeState state,
+                                                                                   format_context &ctx ) const
+{
+    using State = sgns::GeniusNode::NodeState;
+
+    string_view name = "UNKNOWN";
+
+    switch ( state )
+    {
+        case State::CREATING:
+            name = "CREATING";
+            break;
+        case State::MIGRATING_DATABASE:
+            name = "MIGRATING_DATABASE";
+            break;
+        case State::INITIALIZING_DATABASE:
+            name = "INITIALIZING_DATABASE";
+            break;
+        case State::INITIALIZING_PROCESSING:
+            name = "INITIALIZING_PROCESSING";
+            break;
+        case State::INITIALIZING_BLOCKCHAIN:
+            name = "INITIALIZING_BLOCKCHAIN";
+            break;
+        case State::INITIALIZING_TRANSACTIONS:
+            name = "INITIALIZING_TRANSACTIONS";
+            break;
+        case State::READY:
+            name = "READY";
+            break;
+    }
+
+    return formatter<string_view>::format( name, ctx );
 }

@@ -336,8 +336,8 @@ public:
                                        crdt_->io_,
                                        account_,
                                        blockchain_,
-                                       false, // full_node
-                                       0,     // subnet_id
+                                       sgns::NodeType::Light, // node_type
+                                       0,                     // subnet_id
                                        kTimestampTolerance,
                                        kMutabilityWindow );
         ASSERT_NE( tm_, nullptr );

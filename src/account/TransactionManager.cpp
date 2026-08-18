@@ -93,14 +93,15 @@ namespace sgns
             return base::createLogger( "TransactionManager" );
         }
 
-        std::string TransactionManagerLoggerName( const std::string &address, bool full_node )
+        std::string TransactionManagerLoggerName( const std::string &address, NodeType node_type )
         {
-            return "TransactionManager:" + address.substr( 0, 8 ) + ":full=" + ( full_node ? "true" : "false" );
+            return "TransactionManager:" + address.substr( 0, 8 ) +
+                   ":role=" + std::string( NodeTypeToString( node_type ) );
         }
 
-        base::Logger MakeTransactionManagerLogger( const std::string &address, bool full_node )
+        base::Logger MakeTransactionManagerLogger( const std::string &address, NodeType node_type )
         {
-            return TransactionManagerLogger()->clone( TransactionManagerLoggerName( address, full_node ) );
+            return TransactionManagerLogger()->clone( TransactionManagerLoggerName( address, node_type ) );
         }
     }
 
@@ -126,7 +127,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>   ctx,
         std::shared_ptr<GeniusAccount>             account,
         std::shared_ptr<Blockchain>                blockchain,
-        bool                                       full_node,
+        NodeType                                   node_type,
         uint16_t                                   subnet_id,
         std::chrono::milliseconds                  timestamp_tolerance,
         std::chrono::milliseconds                  mutability_window,
@@ -137,7 +138,7 @@ namespace sgns
                                                                                      std::move( ctx ),
                                                                                      std::move( account ),
                                                                                      std::move( blockchain ),
-                                                                                     full_node,
+                                                                                     node_type,
                                                                                      subnet_id,
                                                                                      timestamp_tolerance,
                                                                                      mutability_window,
@@ -293,7 +294,7 @@ namespace sgns
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<Blockchain>              blockchain,
-                                            bool                                     full_node,
+                                            NodeType                                 node_type,
                                             uint16_t                                 subnet_id,
                                             std::chrono::milliseconds                timestamp_tolerance,
                                             std::chrono::milliseconds                mutability_window,
@@ -303,7 +304,7 @@ namespace sgns
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         blockchain_( std::move( blockchain ) ),
-        full_node_m( full_node ),
+        node_type_m( node_type ),
         subnet_id_( subnet_id ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
@@ -311,7 +312,7 @@ namespace sgns
         mutability_window_m( mutability_window ),
         burn_basis_points_( initial_burn_basis_points ),
         last_loop_time_( std::chrono::steady_clock::now() ),
-        m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
+        m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), node_type_m ) )
     {
     }
 
@@ -411,7 +412,7 @@ namespace sgns
         full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
 
         globaldb_m->AddTopicName( account_m->GetAddress() );
-        if ( full_node_m )
+        if ( ReplicatesAllAccounts( node_type_m ) )
         {
             globaldb_m->AddTopicName( full_node_topic_m );
         }
@@ -426,7 +427,7 @@ namespace sgns
 
         globaldb_m->AddListenTopic( account_m->GetAddress() );
         m_logger->info( "Adding broadcast to full node on {}", full_node_topic_m );
-        if ( full_node_m )
+        if ( ReplicatesAllAccounts( node_type_m ) )
         {
             m_logger->debug( "Listening full node on {}", full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
@@ -1738,7 +1739,7 @@ namespace sgns
         std::unordered_map<std::string, base::Hash256> roots;
         auto                                           add_address = [this, &roots]( const std::string &address )
         {
-            if ( !full_node_m && address != account_m->GetAddress() )
+            if ( !ReplicatesAllAccounts( node_type_m ) && address != account_m->GetAddress() )
             {
                 return;
             }
@@ -2473,7 +2474,8 @@ namespace sgns
     {
         // Genesis-creating full node — no peers, no prior UTXOs, nonce is trivially zero.
         // The PubSub broadcast would just time out (pre-consensus legacy path).
-        if ( full_node_m && account_m->GetAddress() == Blockchain::GetAuthorizedFullNodeAddress() )
+        if ( ReplicatesAllAccounts( node_type_m ) &&
+             account_m->GetAddress() == Blockchain::GetAuthorizedFullNodeAddress() )
         {
             TransactionManagerLogger()->debug( "[{} - full: {}] Genesis full node — skipping network nonce check",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -2487,7 +2489,7 @@ namespace sgns
             full_node_m );
 
         const auto now                               = std::chrono::steady_clock::now();
-        const bool regular_node_retry_is_on_cooldown = !full_node_m &&
+        const bool regular_node_retry_is_on_cooldown = !ReplicatesAllAccounts( node_type_m ) &&
                                                        last_nonce_request_time_ !=
                                                            std::chrono::steady_clock::time_point{} &&
                                                        now < last_nonce_request_time_ +
@@ -2502,10 +2504,10 @@ namespace sgns
         if ( nonce_from_network_result.has_error() )
         {
             m_logger->error( "Failed to fetch network nonce: {}", nonce_from_network_result.error().message() );
-            if ( full_node_m )
+            if ( ReplicatesAllAccounts( node_type_m ) )
             {
                 m_logger->debug(
-                    "Network nonce fetch failed, but we have a full node configured. Allowing for it to boot" );
+                    "Network nonce fetch failed, but we have a replicating node configured. Allowing it to boot" );
                 return true;
             }
             return false;

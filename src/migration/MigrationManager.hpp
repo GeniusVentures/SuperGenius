@@ -23,6 +23,7 @@
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 #include "IMigrationStep.hpp"
+#include "account/NodeType.hpp"
 
 namespace sgns
 {
@@ -59,7 +60,7 @@ namespace sgns
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
             std::shared_ptr<GeniusAccount>                                  account,
-            bool                                                            is_full_node );
+            NodeType                                                        node_type );
 
         /**
          * @brief   Register a migration step.
