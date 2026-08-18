@@ -28,6 +28,10 @@
 #include "blockchain/ConsensusSlot.hpp"
 #include "storage/database_error.hpp"
 
+#ifdef GetMessage
+#undef GetMessage  // Win32 macro conflicts with protobuf::Reflection::GetMessage.
+#endif
+
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, error )
 {
     using Error = sgns::ConsensusManager::CertificateStoreError;
