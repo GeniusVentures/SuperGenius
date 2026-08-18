@@ -18,6 +18,7 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <utility>
 #include "crdt/proto/bcast.pb.h"
 #include "crdt_mirror_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
@@ -122,23 +123,23 @@ namespace sgns::crdt
             }
             if ( crdt )
             {
+                const auto destruction =
+                    CrdtDatastoreLifetimeObserver::DestructionCompletion( crdt );
                 crdt->Close();
                 crdt.reset();
+                destruction.deletion.wait();
             }
         }
 
         void TearDown() override
         {
-            if ( crdtDatastore_ )
-            {
-                crdtDatastore_->Close();
-                crdtDatastore_ = nullptr;
-            }
+            CloseAndResetCRDT( crdtDatastore_, broadcaster_ );
 
             // Clean up any additional datastores
-            db_          = nullptr;
-            dagSyncer_   = nullptr;
-            broadcaster_ = nullptr;
+            db_ = nullptr;
+            dagSyncer_ = nullptr;
+            ipfsDataStore_ = nullptr;
+            test::removeAllWithRetry( databasePath );
         }
 
         // Helper to create a test delta
@@ -302,8 +303,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux1", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = std::move( crdt_pair.first );
+        auto second_broadcaster = std::move( crdt_pair.second );
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
@@ -380,8 +381,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux2", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = std::move( crdt_pair.first );
+        auto second_broadcaster = std::move( crdt_pair.second );
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
@@ -457,8 +458,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux3", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = std::move( crdt_pair.first );
+        auto second_broadcaster = std::move( crdt_pair.second );
 
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
@@ -537,8 +538,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = std::move( crdt_pair.first );
+        auto second_broadcaster = std::move( crdt_pair.second );
 
         //This Filter always accepts all values
         second_crdt->RegisterElementFilter( "Key.*",
@@ -741,8 +742,8 @@ namespace sgns::crdt
     TEST_F( CrdtDatastoreTest, MixedRejectAndRetryDependencyParksRetainedNamespace )
     {
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "mixed-dependency", ipfsDataStore_ );
-        auto receiver = crdt_pair.first;
-        auto receiver_broadcaster = crdt_pair.second;
+        auto receiver = std::move( crdt_pair.first );
+        auto receiver_broadcaster = std::move( crdt_pair.second );
 
         std::atomic<int64_t> fake_elapsed_ms{ 0 };
         const auto base_now = std::chrono::steady_clock::now();
@@ -821,8 +822,8 @@ namespace sgns::crdt
     TEST_F( CrdtDatastoreTest, DeltaFilterDependencyRetryRetainsAndEventuallyProcessesSource )
     {
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "dependency", ipfsDataStore_ );
-        auto receiver = crdt_pair.first;
-        auto receiver_broadcaster = crdt_pair.second;
+        auto receiver = std::move( crdt_pair.first );
+        auto receiver_broadcaster = std::move( crdt_pair.second );
 
         std::atomic<int64_t> fake_elapsed_ms{ 0 };
         const auto base_now = std::chrono::steady_clock::now();
@@ -898,8 +899,8 @@ namespace sgns::crdt
     TEST_F( CrdtDatastoreTest, DeltaFilterDependencyAttemptLimitAndShutdownDrainParkedRoots )
     {
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "attempt-limit", ipfsDataStore_ );
-        auto receiver = crdt_pair.first;
-        auto receiver_broadcaster = crdt_pair.second;
+        auto receiver = std::move( crdt_pair.first );
+        auto receiver_broadcaster = std::move( crdt_pair.second );
 
         std::atomic<int64_t> fake_elapsed_ms{ 0 };
         const auto base_now = std::chrono::steady_clock::now();
@@ -978,8 +979,8 @@ namespace sgns::crdt
     TEST_F( CrdtDatastoreTest, WorkerInitiatedShutdownCompletesBeforeBarrierAndRunsNoPostCloseWork )
     {
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "worker-shutdown", ipfsDataStore_ );
-        auto receiver = crdt_pair.first;
-        auto receiver_broadcaster = crdt_pair.second;
+        auto receiver = std::move( crdt_pair.first );
+        auto receiver_broadcaster = std::move( crdt_pair.second );
 
         std::promise<std::shared_future<void>> barrier_promise;
         auto barrier_delivery = barrier_promise.get_future();
