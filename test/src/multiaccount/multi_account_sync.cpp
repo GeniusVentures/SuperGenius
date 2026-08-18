@@ -25,6 +25,8 @@
 #include <ctime>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
+#include <optional>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -74,6 +76,24 @@ namespace sgns
             return true;
         }
 
+        /// Fetches a finalized consensus certificate by subject hash, so a test can inspect who voted.
+        /// Query this on a node that definitely holds the certificate (e.g. the full node) — an
+        /// abstaining node's own view says nothing about what it did or did not sign.
+        static std::optional<ConsensusCertificate> GetCertificate( const std::shared_ptr<GeniusNode> &node,
+                                                                   const std::string                 &subject_hash )
+        {
+            if ( !node || !node->blockchain_ || !node->blockchain_->consensus_manager_ )
+            {
+                return std::nullopt;
+            }
+            auto result = node->blockchain_->consensus_manager_->GetCertificateBySubjectHash( subject_hash );
+            if ( result.has_error() )
+            {
+                return std::nullopt;
+            }
+            return result.value();
+        }
+
         static inline std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
@@ -108,11 +128,15 @@ class MultiAccountTest : public ::testing::Test
 protected:
     static constexpr std::string_view FILE_PREFIX = "mat_";
 
-    std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
-                                                  bool               isFullNode          = false,
-                                                  bool               isProcessor         = false,
-                                                  bool               isGenesisAuthorized = false,
-                                                  std::string        existingBasePath    = {} )
+    /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
+    ///        Full/Light implied by @p isFullNode. Trailing and defaulted so the ~15 existing
+    ///        call sites are untouched; used to spin up an "Archive" node.
+    std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string         &self_address,
+                                                  bool                       isFullNode          = false,
+                                                  bool                       isProcessor         = false,
+                                                  bool                       isGenesisAuthorized = false,
+                                                  std::string                existingBasePath    = {},
+                                                  std::optional<std::string> nodeTypeOverride    = std::nullopt )
     {
         static std::atomic<int> nodeCounter{ 0 };
         const bool              reuseStorage = !existingBasePath.empty();
@@ -164,7 +188,7 @@ protected:
         {
             sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                               isFullNode ? "Full" : "Light",
+                                               nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" ),
                                                /*is_processor=*/isProcessor,
                                                /*rpc_catchup=*/false );
         }
@@ -855,4 +879,136 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         ASSERT_TRUE( validator ) << "missing validator in registry: " << validator_id;
         EXPECT_GT( validator->weight(), 0 ) << "validator has non-positive weight: " << validator_id;
     }
+}
+
+// PROP-02: an Archive node is a passive replica — it tallies and stores everyone else's votes but
+// never emits one of its own. Two independent assertions, because each has a different weakness:
+//
+//   1. Registry absence (primary). Voting is the ONLY path into the validator registry: votes from
+//      addresses not yet in the registry are collected as "unregistered" and then inserted as
+//      ACTIVE/REGULAR validators with nonzero weight. So an address that never appears in the
+//      registry never voted, and unlike the certificate check this accumulates over every proposal
+//      in the test and is permanent once it happens — it cannot be missed by timing.
+//   2. Certificate voter set (corroboration). Weaker on its own, because the aggregator cuts a
+//      certificate from whatever votes it holds at that instant, so a late vote can be absent from
+//      a certificate without the node having abstained.
+//
+// Three positive controls guard against the failure mode that matters most here: if consensus never
+// ran at all, "the archive did not vote" would be trivially true and the test would pass vacuously.
+TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
+{
+    constexpr size_t kCertificatesPerBatch = 1;
+    const auto       kCertificateDelay     = std::chrono::seconds( 1 );
+
+    auto node_full    = CreateNode( "node_abstain_full", true, true, true );
+    auto node_client  = CreateNode( "node_abstain_client" );
+    auto node_peer1   = CreateNode( "node_abstain_peer1" );
+    auto node_peer2   = CreateNode( "node_abstain_peer2" );
+    auto node_archive = CreateNode( "node_abstain_archive",
+                                    /*isFullNode=*/false,
+                                    /*isProcessor=*/false,
+                                    /*isGenesisAuthorized=*/false,
+                                    /*existingBasePath=*/{},
+                                    /*nodeTypeOverride=*/std::string( "Archive" ) );
+
+    const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_archive };
+    for ( size_t i = 1; i < nodes.size(); ++i )
+    {
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    }
+    for ( const auto &node : nodes )
+    {
+        ConfigureConsensus( node, kCertificatesPerBatch, kCertificateDelay );
+    }
+
+    // Fail loudly here rather than downstream if the role did not resolve.
+    ASSERT_EQ( node_archive->GetNodeType(), sgns::GeniusNode::NodeType::Archive );
+    const std::string archive_address = node_archive->GetAddress();
+
+    auto registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
+    ASSERT_TRUE( registry );
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadCurrentRegistry();
+            return load.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "validator registry not initialized" );
+
+    auto registry_before = registry->LoadCurrentRegistry();
+    ASSERT_TRUE( registry_before.has_value() );
+    const auto epoch_before = registry_before.value().epoch();
+
+    // Drive consensus with a transaction the archive neither authored nor received.
+    auto mint = node_client->MintTokens( 100,
+                                         sgns::test::NextMintSourceHash(),
+                                         "test",
+                                         TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint.has_value() ) << "mint failed on node_client";
+
+    // MintTokens returns once submitted; the UTXO has to settle before it is spendable. Wait on the
+    // balance explicitly rather than relying on incidental delay from other assertions.
+    sgns::test::assertWaitForCondition( [&]() { return node_client->GetBalance() >= 100; },
+                                        std::chrono::milliseconds( 30000 ),
+                                        "mint did not settle into node_client's balance" );
+
+    auto transfer = node_client->TransferFunds( 75,
+                                                node_peer1->GetAddress(),
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer.has_value() ) << "transfer failed on node_client";
+
+    // The nonce subject's hash IS the transaction hash (GetSubjectHash returns payload.tx_hash()
+    // for BuiltinSubjectKind::Nonce), so the tx id looks the certificate up directly.
+    const std::string subject_hash = transfer.value().first;
+
+    // POSITIVE CONTROL 1: a certificate with at least one vote exists. assertWaitForCondition
+    // FAILS the test on timeout, so "consensus never ran" can never masquerade as success.
+    std::optional<sgns::ConsensusCertificate> certificate;
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            certificate = sgns::MultiAccountTestAccess::GetCertificate( node_full, subject_hash );
+            return certificate.has_value() && certificate->votes_size() > 0;
+        },
+        std::chrono::milliseconds( 30000 ),
+        "no certificate with votes formed for the transfer; the abstention assertion would be vacuous" );
+
+    std::unordered_set<std::string> voters;
+    for ( const auto &vote : certificate->votes() )
+    {
+        voters.insert( vote.voter_id() );
+    }
+
+    // POSITIVE CONTROL 2: a non-archive node voted in THIS certificate, so a missing archive
+    // voter_id means abstention rather than an empty vote set.
+    EXPECT_TRUE( voters.count( node_client->GetAddress() ) > 0 || voters.count( node_full->GetAddress() ) > 0 )
+        << "no non-archive voter present in the certificate; the assertion below would be trivially true";
+
+    EXPECT_EQ( voters.count( archive_address ), 0u )
+        << "archive node voted on proposal " << certificate->proposal_id();
+
+    // PRIMARY ASSERTION: registry membership. Wait for the registry to advance first, so we are
+    // inspecting a snapshot that consensus actually produced.
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadCurrentRegistry();
+            return load.has_value() && load.value().epoch() > epoch_before;
+        },
+        std::chrono::milliseconds( 30000 ),
+        "validator registry did not update" );
+
+    auto registry_after = registry->LoadCurrentRegistry();
+    ASSERT_TRUE( registry_after.has_value() );
+
+    EXPECT_FALSE( sgns::ValidatorRegistry::FindValidator( registry_after.value(), archive_address ) )
+        << "archive node was enrolled as a validator, which only casting a vote can cause";
+
+    // POSITIVE CONTROL 3: a voting node IS enrolled in that same snapshot, so registry-absence is
+    // evidence of abstention and not of an empty registry.
+    EXPECT_TRUE( sgns::ValidatorRegistry::FindValidator( registry_after.value(), node_client->GetAddress() ) ||
+                 sgns::ValidatorRegistry::FindValidator( registry_after.value(), node_full->GetAddress() ) )
+        << "no non-archive validator enrolled either; the assertion above would be trivially true";
 }
