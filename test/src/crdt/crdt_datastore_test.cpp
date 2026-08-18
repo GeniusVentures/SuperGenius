@@ -873,10 +873,17 @@ namespace sgns::crdt
         dependency_ready = true;
         fake_elapsed_ms = 1000;
         receiver->WakeDependencyRetryWorkerForTesting();
-        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->HasKey( { "/retry/slot" } ).value(); },
-                                   std::chrono::milliseconds( 5000 ),
-                                   "dependency retry did not merge",
-                                   nullptr );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return receiver->HasKey( { "/retry/slot" } ).value() &&
+                       receiver->GetParkedRootCount() == 0 &&
+                       new_element_calls.load() == 1 &&
+                       filter_calls.load() == 2;
+            },
+            std::chrono::milliseconds( 5000 ),
+            "dependency retry did not reach its terminal state",
+            nullptr );
         EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
         EXPECT_EQ( new_element_calls.load(), 1 );
         EXPECT_EQ( filter_calls.load(), 2 );
