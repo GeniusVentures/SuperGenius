@@ -631,10 +631,10 @@ namespace sgns::crdt
     };
 
     /**
-     * Narrow lifetime observer used by the isolated final-owner regression.
+     * Lifetime observer used by shutdown fixtures and isolated regressions.
      *
-     * Returned futures and snapshots never retain a CrdtDatastore and cannot
-     * initiate or alter shutdown.
+     * Returned futures and snapshots never retain a CrdtDatastore. The explicit
+     * reaper shutdown hook is reserved for isolated process-exit regressions.
      */
     class CrdtDatastoreLifetimeObserver
     {
@@ -660,6 +660,7 @@ namespace sgns::crdt
             const std::shared_ptr<CrdtDatastore> &datastore );
         static CallbackSnapshot Snapshot(
             const std::shared_ptr<CrdtDatastore> &datastore );
+        static void ShutdownReaperForTesting();
     };
 
 }

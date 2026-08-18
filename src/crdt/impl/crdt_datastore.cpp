@@ -95,15 +95,26 @@ namespace sgns::crdt
 
         ~CrdtDatastoreReaper()
         {
+            Shutdown();
+        }
+
+        void Shutdown()
+        {
             {
                 std::lock_guard lock( mutex_ );
-                assert( registrations_ == 0 );
-                assert( jobs_.empty() );
-                accepting_ = false;
                 stopping_ = true;
             }
             cv_.notify_all();
-            service_thread_.join();
+            if ( service_thread_.joinable() )
+            {
+                service_thread_.join();
+            }
+            {
+                std::lock_guard lock( mutex_ );
+                accepting_ = false;
+                assert( registrations_ == 0 );
+                assert( jobs_.empty() );
+            }
         }
 
         std::shared_ptr<void> Register()
@@ -2738,6 +2749,11 @@ namespace sgns::crdt
                  control->delete_callback_wrapper_entries.load(),
                  control->active_callback_wrappers.load(),
                  control->destructor_started.load() };
+    }
+
+    void CrdtDatastoreLifetimeObserver::ShutdownReaperForTesting()
+    {
+        GetCrdtDatastoreReaper().Shutdown();
     }
 
     void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast )

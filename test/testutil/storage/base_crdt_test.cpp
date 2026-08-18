@@ -3,9 +3,11 @@
 #include <atomic>
 #include <chrono>
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <future>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
+#include <thread>
 
 #include <boost/asio/io_context.hpp>
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -91,6 +93,20 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        std::shared_ptr<sgns::crdt::CrdtDatastore> crdt_datastore;
+        std::shared_future<std::thread::id>         deletion_completion;
+        if ( db_ )
+        {
+            crdt_datastore = db_->GetCRDTDataStore();
+            if ( crdt_datastore )
+            {
+                deletion_completion =
+                    sgns::crdt::CrdtDatastoreLifetimeObserver::DestructionCompletion(
+                        crdt_datastore )
+                        .deletion;
+            }
+        }
+
         try
         {
             if ( pubs_ )
@@ -103,6 +119,11 @@ namespace test
             std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
         }
         db_.reset();
+        crdt_datastore.reset();
+        if ( deletion_completion.valid() )
+        {
+            deletion_completion.wait();
+        }
         try
         {
             pubs_.reset();

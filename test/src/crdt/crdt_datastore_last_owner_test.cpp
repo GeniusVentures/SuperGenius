@@ -272,12 +272,65 @@ namespace sgns::crdt
             receiver_db.reset();
             std::_Exit( 0 );
         }
+
+        int RunReaperShutdownChild()
+        {
+            const auto suffix = std::to_string( static_cast<long long>( ::getpid() ) );
+            const std::string database_path =
+                "/tmp/supergenius_crdt_reaper_shutdown_" + suffix;
+
+            auto database = MakeDatabase( database_path );
+            if ( !database )
+            {
+                return 40;
+            }
+
+            auto ipfs_store = std::make_shared<InMemoryDatastore>();
+            auto syncer = std::make_shared<CustomDagSyncer>( ipfs_store );
+            auto broadcaster = std::make_shared<CRDTMirrorBroadcaster>();
+            auto datastore = CrdtDatastore::New( database,
+                                                 HierarchicalKey( "/reaper-shutdown" ),
+                                                 syncer,
+                                                 broadcaster,
+                                                 CrdtOptions::DefaultOptions() );
+            if ( !datastore )
+            {
+                return 41;
+            }
+
+            const auto destruction =
+                CrdtDatastoreLifetimeObserver::DestructionCompletion( datastore );
+            datastore->Start();
+            datastore->Close();
+            datastore.reset();
+
+            CrdtDatastoreLifetimeObserver::ShutdownReaperForTesting();
+            if ( destruction.deletion.wait_for( std::chrono::seconds( 0 ) ) !=
+                 std::future_status::ready )
+            {
+                return 42;
+            }
+
+            broadcaster.reset();
+            syncer.reset();
+            ipfs_store.reset();
+            database.reset();
+            boost::filesystem::remove_all( database_path );
+            return 0;
+        }
     } // namespace
 
     TEST( CrdtDatastoreLifetimeTest,
           FinalExternalOwnerReleasedInsideCallbackEventuallyDeletesOnReaper )
     {
         EXPECT_EXIT( std::_Exit( RunFinalOwnerChild() ),
+                     ::testing::ExitedWithCode( 0 ),
+                     "" );
+    }
+
+    TEST( CrdtDatastoreLifetimeTest, ReaperShutdownDrainsQueuedFinalDeletion )
+    {
+        EXPECT_EXIT( std::exit( RunReaperShutdownChild() ),
                      ::testing::ExitedWithCode( 0 ),
                      "" );
     }
