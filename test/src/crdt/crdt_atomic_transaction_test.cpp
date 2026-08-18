@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <future>
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "crdt_custom_broadcaster.hpp"
@@ -35,13 +36,12 @@ namespace sgns::crdt
         void SetUp() override
         {
             // Remove leftover database
-            std::string databasePath = "supergenius_atomic_transaction_test";
-            test::removeAllWithRetry( databasePath );
+            test::removeAllWithRetry( databasePath_ );
 
             // Create new database
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
-            auto dataStoreResult      = rocksdb::create( databasePath, options );
+            auto dataStoreResult      = rocksdb::create( databasePath_, options );
             auto dataStore            = dataStoreResult.value();
 
             // Create new DAGSyncer
@@ -66,8 +66,16 @@ namespace sgns::crdt
 
         void TearDown() override
         {
-            crdtDatastore_->Close();
-            crdtDatastore_ = nullptr;
+            if ( crdtDatastore_ )
+            {
+                const auto destruction =
+                    CrdtDatastoreLifetimeObserver::DestructionCompletion( crdtDatastore_ );
+                crdtDatastore_->Close();
+                crdtDatastore_.reset();
+                ASSERT_EQ( destruction.deletion.wait_for( std::chrono::seconds( 10 ) ),
+                           std::future_status::ready );
+            }
+            test::removeAllWithRetry( databasePath_ );
         }
 
         void SimulateNetworkDelay()
@@ -101,6 +109,7 @@ namespace sgns::crdt
             }
         }
 
+        const std::string              databasePath_{ "supergenius_atomic_transaction_test" };
         std::shared_ptr<CrdtDatastore> crdtDatastore_;
     };
 
