@@ -64,7 +64,8 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key,
-                                                                         account ) );
+                                                                         account,
+                                                                         node_type ) );
         instance->RegisterStep( std::make_shared<Migration3_5_0To3_6_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,

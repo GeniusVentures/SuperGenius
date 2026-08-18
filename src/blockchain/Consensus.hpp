@@ -540,6 +540,18 @@ namespace sgns
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         /**
+         * @brief Whether this node takes an active part in consensus.
+         * @return False only for Archive nodes, which neither self-vote nor aggregate.
+         *
+         * Exposed so Blockchain can gate registry-batch authoring on the role without
+         * duplicating the flag; this instance is the single source of truth.
+         */
+        bool ParticipatesInConsensus() const noexcept
+        {
+            return participates_in_consensus_;
+        }
+
+        /**
          * @brief Retrieves a certificate by subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return Certificate when present, or an error.

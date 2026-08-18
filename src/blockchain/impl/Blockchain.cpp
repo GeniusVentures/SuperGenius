@@ -191,7 +191,10 @@ namespace sgns
                 {
                     return outcome::failure( std::errc::owner_dead );
                 }
-                if ( !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
+                // Role first: an Archive must not author registry batches even if it somehow
+                // became an active validator (e.g. seeded into the genesis validator list).
+                if ( !strong->consensus_manager_->ParticipatesInConsensus() ||
+                     !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
                 {
                     return outcome::success();
                 }
