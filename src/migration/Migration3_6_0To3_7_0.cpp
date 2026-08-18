@@ -160,23 +160,23 @@ namespace sgns
         if ( !blockchain_ )
         {
             logger_->debug( "{}: Creating blockchain for target {}", __func__, ToVersion() );
-            blockchain_ = Blockchain::New(
-                db_3_7_0_,
-                account_,
-                pubSub_,
-                [wptr( weak_from_this() )]( outcome::result<void> result )
-                {
-                    if ( auto strong = wptr.lock() )
-                    {
-                        if ( result.has_error() )
-                        {
-                            strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
-                            strong->blockchain_status_.store( Status::ST_ERROR );
-                            return;
-                        }
-                        strong->blockchain_status_.store( Status::ST_SUCCESS );
-                    }
-                } );
+            blockchain_ = Blockchain::New( db_3_7_0_,
+                                           account_,
+                                           pubSub_,
+                                           [wptr( weak_from_this() )]( outcome::result<void> result )
+                                           {
+                                               if ( auto strong = wptr.lock() )
+                                               {
+                                                   if ( result.has_error() )
+                                                   {
+                                                       strong->logger_->error( "Error starting blockchain: {}",
+                                                                               result.error().message() );
+                                                       strong->blockchain_status_.store( Status::ST_ERROR );
+                                                       return;
+                                                   }
+                                                   strong->blockchain_status_.store( Status::ST_SUCCESS );
+                                               }
+                                           } );
         }
         blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
         logger_->debug( "{}: Starting blockchain bootstrap for {}", __func__, ToVersion() );
@@ -358,7 +358,7 @@ namespace sgns
         }
         if ( blockchain_ )
         {
-            (void)blockchain_->Stop();
+            (void) blockchain_->Stop();
             blockchain_.reset();
         }
         if ( account_ )
@@ -428,10 +428,9 @@ namespace sgns
 
         if ( !balances.empty() )
         {
-            std::sort(
-                balances.begin(),
-                balances.end(),
-                []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
+            std::sort( balances.begin(),
+                       balances.end(),
+                       []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
             return balances;
         }
 
@@ -476,8 +475,9 @@ namespace sgns
 
                     for ( std::uint32_t i = 0; i < outputs.size(); ++i )
                     {
-                        produced_outputs[MakeLegacyOutPointKey( tx_hash, i )] =
-                            LegacyProducedOutput{ outputs[i].dest_address, outputs[i].encrypted_amount };
+                        produced_outputs[MakeLegacyOutPointKey( tx_hash, i )] = LegacyProducedOutput{
+                            outputs[i].dest_address,
+                            outputs[i].encrypted_amount };
                     }
 
                     continue;
@@ -485,8 +485,9 @@ namespace sgns
 
                 if ( auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx ) )
                 {
-                    produced_outputs[MakeLegacyOutPointKey( tx_hash, 0 )] =
-                        LegacyProducedOutput{ mint_tx->GetSrcAddress(), mint_tx->GetAmount() };
+                    produced_outputs[MakeLegacyOutPointKey( tx_hash, 0 )] = LegacyProducedOutput{
+                        mint_tx->GetSrcAddress(),
+                        mint_tx->GetAmount() };
                 }
             }
         }
@@ -510,10 +511,9 @@ namespace sgns
             balances.emplace_back( std::move( address ), balance );
         }
 
-        std::sort(
-            balances.begin(),
-            balances.end(),
-            []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
+        std::sort( balances.begin(),
+                   balances.end(),
+                   []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
 
         logger_->info( "Reconstructed {} legacy balances from {} transactions and {} produced outputs",
                        balances.size(),

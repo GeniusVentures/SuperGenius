@@ -35,7 +35,7 @@ namespace sgns
     class MigrationManager : public std::enable_shared_from_this<MigrationManager>
     {
     public:
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             BLOCKCHAIN_INIT_FAILED = 1,
         };
