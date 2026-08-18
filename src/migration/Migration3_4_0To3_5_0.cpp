@@ -34,7 +34,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account ) :
+        std::shared_ptr<GeniusAccount>                                  account,
+        NodeType                                                        node_type ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -42,7 +43,8 @@ namespace sgns
         generator_( std::move( generator ) ),
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
-        account_( std::move( account ) )
+        account_( std::move( account ) ),
+        node_type_( node_type )
     {
     }
 
@@ -145,7 +147,8 @@ namespace sgns
                         strong->logger_->debug( "Blockchain started successfully, starting transaction manager" );
                         strong->blockchain_status_.store( Status::ST_SUCCESS );
                     }
-                } );
+                },
+                node_type_ );
         }
 
         auto                  retry_duration   = std::chrono::minutes( 2 );

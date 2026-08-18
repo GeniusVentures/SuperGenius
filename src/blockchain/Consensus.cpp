@@ -187,7 +187,9 @@ namespace sgns
         pubsub_( std::move( pubsub ) ),           //
         signer_( std::move( signer ) ),           //
         account_address_( std::move( address ) ), //
-        participates_in_consensus_( ParticipatesInConsensus( node_type ) ),
+        // ::sgns:: qualified: the member accessor of the same name would otherwise shadow the
+        // free predicate in class scope.
+        participates_in_consensus_( ::sgns::ParticipatesInConsensus( node_type ) ),
         consensus_messages_topic_( fmt::format( "{}{}{}",
                                                 CONSENSUS_CHANNEL_PREFIX,
                                                 sgns::version::GetNetAndVersionAppendix(),
@@ -1693,6 +1695,15 @@ namespace sgns
 
     void ConsensusManager::ProcessCertificates()
     {
+        // Defense in depth. Aggregation is otherwise gated only by validator-registry membership,
+        // which an Archive normally never attains precisely because it never votes. That is a
+        // side effect, not a guarantee — a genesis-seeded Archive (SetAdditionalGenesisValidator-
+        // Addresses) is ACTIVE without ever having voted. Refuse by role as well as by registry.
+        if ( !participates_in_consensus_ )
+        {
+            return;
+        }
+
         std::vector<ProposalState> to_process;
         {
             std::lock_guard lock( proposals_mutex_ );
