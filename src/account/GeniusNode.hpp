@@ -1132,7 +1132,7 @@ namespace sgns
         /**
          * @brief Starts DHT provider discovery for the processing grid topic.
          */
-        void DHTInit();
+        outcome::result<void> DHTInit();
 
         /**
          * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString

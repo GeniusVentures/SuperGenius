@@ -1193,7 +1193,7 @@ namespace sgns
         std::ifstream config_file( write_base_path_ + "/network_config.json" );
         if ( !config_file.good() )
         {
-            GeniusNodeLogger()->error("Could not read network config file");
+            GeniusNodeLogger()->error( "Could not read network config file" );
             return settings;
         }
         std::stringstream buffer;
@@ -1203,7 +1203,7 @@ namespace sgns
         config_json.Parse( buffer.str().c_str() );
         if ( config_json.HasParseError() || !config_json.IsObject() )
         {
-            GeniusNodeLogger()->error("Could not parse network config file");
+            GeniusNodeLogger()->error( "Could not parse network config file" );
             return settings;
         }
 
@@ -1473,7 +1473,10 @@ namespace sgns
         // Initialize DHT early so peer discovery works during database migration
         if ( autodht_ )
         {
-            DHTInit();
+            if ( DHTInit().has_failure() )
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -1996,7 +1999,7 @@ namespace sgns
         }
     }
 
-    void GeniusNode::DHTInit()
+    outcome::result<void> GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes, then compute its SHA-256
         const std::string   topic = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
@@ -2004,7 +2007,7 @@ namespace sgns
 
         // Provide CID
         auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
-        pubsub_->GetDHT()->Start();
+        BOOST_OUTCOME_TRY( pubsub_->GetDHT()->Start() );
         pubsub_->ProvideCID( key );
 
         auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
@@ -2013,7 +2016,7 @@ namespace sgns
         node_logger_->info( "CID Test:: {}", cidstring.value() );
 
         // Also Find providers
-        pubsub_->StartFindingPeers( key );
+        return pubsub_->StartFindingPeers( key );
     }
 
     std::string generate_uuid_with_ipfs_id( const std::string &ipfs_id )
