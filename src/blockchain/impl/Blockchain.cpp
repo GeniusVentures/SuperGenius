@@ -502,6 +502,12 @@ namespace sgns
                            account_->GetAddress().substr( 0, 8 ) );
 
             validator_registry_->RetryInitializationIfNeeded();
+            // RetryInitializationIfNeeded() can only re-request heads this node already
+            // knows about. A node whose bootstrap peer was offline during construction has
+            // no heads at all, and the initial pubsub registry request was lost with it.
+            // Re-issue that request on every deferred retry, otherwise initialization waits
+            // for the peer's next CRDT head rebroadcast (crdt_options: 60s).
+            RequestValidatorRegistry();
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
         start_deferred_.store( false );
