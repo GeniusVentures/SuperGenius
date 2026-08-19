@@ -362,4 +362,140 @@ namespace sgns
         ASSERT_NE( hash, std::vector<uint8_t>( 32, 0 ) )
             << "Output hash must not be RenderProcessor::MakeError's all-zero sentinel vector";
     }
+
+    // Proves texture_buffer's schema/validation gate (Phase 17 D-05, texturing's
+    // "define contracts" half) in isolation: an input:-prefixed texture_buffer.source
+    // must be accepted, an output:-prefixed one must be rejected -- both purely at
+    // ProcessingManager::Create()'s CheckProcessValidity() gate, never calling
+    // Process() (Wave 3's Plan 17-04 sampler/descriptor infrastructure does not
+    // exist yet, so this test must not depend on it).
+    TEST_F( ProcessingDispatchTest, RenderPassTextureBufferSourcePrefixGating )
+    {
+        const std::string jsonAcceptedInputPrefix = R"({
+      "name": "render-pass-texture-buffer-accept",
+      "version": "1.0.0",
+      "gnus_spec_version": 1.0,
+      "inputs": [
+        {
+          "name": "renderInput",
+          "source_uri_param": "file://processing_dispatch/happy-path-vertex-data.raw",
+          "type": "buffer",
+          "dimensions": { "width": 1 }
+        },
+        {
+          "name": "textureData",
+          "source_uri_param": "file://processing_dispatch/texturing-source-image.raw",
+          "type": "buffer",
+          "dimensions": { "width": 1 }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "renderOutput",
+          "source_uri_param": "file://processing_dispatch/happy-path-render-output.raw",
+          "type": "image"
+        }
+      ],
+      "passes": [
+        {
+          "name": "renderPass",
+          "type": "render",
+          "render_shader": {
+            "stages": [
+              { "stage": "vertex", "type": "glsl", "source": "file://processing_dispatch/scalar_position_vertex_shader.glsl", "entry_point": "main" },
+              { "stage": "fragment", "type": "glsl", "source": "file://processing_dispatch/solid_red_fragment_shader.glsl", "entry_point": "main" }
+            ]
+          },
+          "render_target": {
+            "color_format": "RGBA8",
+            "depth_format": "D32_SFLOAT",
+            "width": 8,
+            "height": 8,
+            "clear_color": [0.0, 0.0, 0.0, 1.0],
+            "clear_depth": 1.0
+          },
+          "vertex_buffer": { "source": "input:renderInput" },
+          "vertex_layout": [
+            { "name": "inPosition", "format": "FLOAT32", "offset": 0 }
+          ],
+          "pipeline_state": {
+            "topology": "point_list",
+            "cull_mode": "none",
+            "front_face": "ccw",
+            "depth_test": "disabled"
+          },
+          "texture_buffer": { "source": "input:textureData", "width": 64, "height": 64 }
+        }
+      ]
+    })";
+
+        const std::string jsonRejectedOutputPrefix = R"({
+      "name": "render-pass-texture-buffer-reject",
+      "version": "1.0.0",
+      "gnus_spec_version": 1.0,
+      "inputs": [
+        {
+          "name": "renderInput",
+          "source_uri_param": "file://processing_dispatch/happy-path-vertex-data.raw",
+          "type": "buffer",
+          "dimensions": { "width": 1 }
+        },
+        {
+          "name": "textureData",
+          "source_uri_param": "file://processing_dispatch/texturing-source-image.raw",
+          "type": "buffer",
+          "dimensions": { "width": 1 }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "renderOutput",
+          "source_uri_param": "file://processing_dispatch/happy-path-render-output.raw",
+          "type": "image"
+        }
+      ],
+      "passes": [
+        {
+          "name": "renderPass",
+          "type": "render",
+          "render_shader": {
+            "stages": [
+              { "stage": "vertex", "type": "glsl", "source": "file://processing_dispatch/scalar_position_vertex_shader.glsl", "entry_point": "main" },
+              { "stage": "fragment", "type": "glsl", "source": "file://processing_dispatch/solid_red_fragment_shader.glsl", "entry_point": "main" }
+            ]
+          },
+          "render_target": {
+            "color_format": "RGBA8",
+            "depth_format": "D32_SFLOAT",
+            "width": 8,
+            "height": 8,
+            "clear_color": [0.0, 0.0, 0.0, 1.0],
+            "clear_depth": 1.0
+          },
+          "vertex_buffer": { "source": "input:renderInput" },
+          "vertex_layout": [
+            { "name": "inPosition", "format": "FLOAT32", "offset": 0 }
+          ],
+          "pipeline_state": {
+            "topology": "point_list",
+            "cull_mode": "none",
+            "front_face": "ccw",
+            "depth_test": "disabled"
+          },
+          "texture_buffer": { "source": "output:textureData", "width": 64, "height": 64 }
+        }
+      ]
+    })";
+
+        auto acceptedResult = sgns::sgprocessing::ProcessingManager::Create( jsonAcceptedInputPrefix );
+        ASSERT_TRUE( acceptedResult.has_value() )
+            << "An input:-prefixed texture_buffer.source must be accepted by "
+               "CheckProcessValidity() at Create() time";
+
+        auto rejectedResult = sgns::sgprocessing::ProcessingManager::Create( jsonRejectedOutputPrefix );
+        ASSERT_FALSE( rejectedResult.has_value() )
+            << "An output:-prefixed texture_buffer.source must be rejected fail-closed by "
+               "CheckProcessValidity() at Create() time -- no cross-pass output: dependency "
+               "graph exists for texture_buffer, mirroring vertex_buffer/index_buffer's gate";
+    }
 }

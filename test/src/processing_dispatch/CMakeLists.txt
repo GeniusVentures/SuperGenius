@@ -27,6 +27,7 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/scalar_position_vertex_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/solid_red_fragment_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-happy-path-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturing-source-image.raw"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )
