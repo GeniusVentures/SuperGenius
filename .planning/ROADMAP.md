@@ -88,7 +88,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Restart and proposal-ordering tests prove durable non-equivocation and correct best-candidate behavior before versus after vote publication.
 4. Slot/index corruption tests fail closed, and existing nonce-chain plus producer-UTXO certificate suites pass against the v2.0 store.
 
-**Plans:** 4/5 plans complete — 12-05 pending re-run #5: run-4 blocker fixed (flaky exact-replay competitor proposal made deterministically distinct in 84bce439); full-suite verification still owed
+**Plans:** 5/5 plans complete
 
 ## Requirement Coverage
 

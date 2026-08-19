@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
-status: All 5 plans executed; closure BLOCKED — 12-05 run 4 focused gate hit flaky replay-identity test; stop gate fired before full suite (see Blockers)
-last_updated: "2026-08-19T20:22:44Z"
-last_activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic StructuredTraceUsesStableIdentityForExactReplay (CreateProposal ms-timestamp proposal_id collision)
+status: verifying
+last_updated: "2026-08-19T21:03:58.621Z"
+last_activity: 2026-08-19
 progress:
   total_phases: 8
   completed_phases: 8
@@ -31,8 +31,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 5 of 5
-Status: All 5 plans executed; closure BLOCKED — 12-05 run 4 focused gate hit flaky replay-identity test; stop gate fired before full suite (see Blockers)
-Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic StructuredTraceUsesStableIdentityForExactReplay (CreateProposal ms-timestamp proposal_id collision)
+Status: Phase complete — ready for verification
+Last activity: 2026-08-19
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic 
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ executing (5/5 plans executed; closure BLOCKED by 12-05 full-suite failures) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ✓ complete (5/5 plans; run 5 closed: focused 7/7, isolated race PASS, full suite 98/98) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -81,7 +81,7 @@ Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic 
 
 ## Session Continuity
 
-**Last session:** 2026-08-19T20:24:22.668Z
+**Last session:** 2026-08-19T21:03:50.656Z
 **Stopped at:** Completed 12-05-PLAN.md (run 4 BLOCKED: flaky replay-identity test; stop gate before full suite)
 **Resume file:** None
 
@@ -131,6 +131,7 @@ Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic 
 | Phase 12 P05 | 37 min | 1 tasks | 1 files |
 | Phase 12 P05 | 46 min | 2 tasks | 1 files |
 | Phase 12 P05 | 11 min | 1 tasks | 1 files |
+| Phase 12 P05 | 29 min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -223,6 +224,7 @@ Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic 
 
 ### Blockers
 
+- RESOLVED 2026-08-19 (12-05 run 5, commits e31a7026/3a2b5b83): all prior 12-05 blockers cleared — focused gate 7/7, isolated race PASS 271.20s, unfiltered full suite 98/98 with zero failures/timeouts/Not-Run/skips. Historical blockers below kept for audit:
 - Phase 12-05 re-run blocked: bridge_race_single_burn_test fails deterministically at af382b03 (mint output destination equals node validator identity instead of SGNS address on all 11 nodes); full suite not run per stop gate; TEST-01..06 remain blocked
 - Phase 12-05 re-run 3 blocked: focused gate 7/7 and isolated race PASS after evmrelay 4787e582 fix, but unfiltered full suite recorded 7/98 failures - 6 bridge/Anvil fixtures fail deterministically (sepolia.drpc.org dropped Sepolia from free plan, HTTP 400 code 35, verified directly) and bridge_race_single_burn_test timed out at 500s under -j2 load (passed isolated in 271s); TEST-01 and TEST-06 blocked on full suite; follow-up: repoint fixture fork URLs, decide race timeout/serialization, re-run unfiltered suite
 - Phase 12-05 run 4 blocked: consensus_finalization_test StructuredTraceUsesStableIdentityForExactReplay flaky (~1/3) — CreateProposal proposal_id relies on CurrentTimeMs() uniqueness, same-tick competitor collides at consensus_finalization_test.cpp:691; stop gate fired, full suite not run; TEST-01..06 remain blocked
