@@ -1166,11 +1166,6 @@ namespace sgns
         return autodht_;
     }
 
-    bool GeniusNode::IsFullNode() const noexcept
-    {
-        return ReplicatesAllAccounts( node_type_ );
-    }
-
     GeniusNode::NodeType GeniusNode::GetNodeType() const noexcept
     {
         return node_type_;
@@ -1181,9 +1176,10 @@ namespace sgns
         return isprocessor_;
     }
 
-    GeniusNode::NetworkSettings GeniusNode::LoadNetworkConfig( uint16_t &port_seed, NodeType node_type )
+    GeniusNode::NetworkSettings GeniusNode::LoadNetworkConfig( uint16_t port_seed, NodeType node_type )
     {
         NetworkSettings settings;
+        settings.port_seed = port_seed;
         // Replicating roles (Full, Archive) carry network-wide traffic and need the higher water marks.
         const bool replicates = ReplicatesAllAccounts( node_type );
         settings.high_water   = replicates ? 400 : 300;
@@ -1278,12 +1274,13 @@ namespace sgns
         {
             if ( config_json["port_seed"].IsUint() )
             {
-                port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
-                node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
+                settings.port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                node_logger_->info( "network_config.json: port_seed overridden to {}", settings.port_seed );
             }
             else
             {
-                node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}", port_seed );
+                node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
+                                    settings.port_seed );
             }
         }
         if ( config_json.HasMember( "auto_dht" ) )
@@ -1450,7 +1447,7 @@ namespace sgns
         //      derives the port via GenerateRandomPort(port_seed, address); zero uses an
         //      OS-selected port because GossipPubSub cannot reliably start on zero.
         pubsubport_ = settings.config_port != 0 ? settings.config_port
-                                                : GenerateRandomPort( port_seed, account_->GetAddress() );
+                                                : GenerateRandomPort( settings.port_seed, account_->GetAddress() );
 
         // Never block node construction on UPnP/IGD discovery.
         // RefreshUPNP() runs on its own thread and will try immediately.
@@ -2217,7 +2214,7 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
-        auto funds = GetProcessCost( procmgr );
+        auto funds = GetProcessCost( *procmgr );
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -2340,9 +2337,9 @@ namespace sgns
         return task_queue_->GetTaskResult( taskId );
     }
 
-    uint64_t GeniusNode::GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr )
+    uint64_t GeniusNode::GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr )
     {
-        auto blockLen = procmgr->ParseBlockSize();
+        auto blockLen = procmgr.ParseBlockSize();
         if ( !blockLen )
         {
             node_logger_->error( "ParseBlockSize failed" );

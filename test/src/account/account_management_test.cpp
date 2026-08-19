@@ -301,7 +301,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_requester->GetProcessCost( procmgr.value() );
+    auto        cost      = node_requester->GetProcessCost( *procmgr.value() );
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
 #if defined( _WIN32 ) || defined( __linux__ )
     bin_path += "../";
