@@ -1,0 +1,74 @@
+{
+  "name": "render-lighting",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "lightingVertexInput",
+      "source_uri_param": "file://processing_dispatch/lighting-vertex-data.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "lightingRenderOutput",
+      "source_uri_param": "file://processing_dispatch/lighting-render-output.raw",
+      "type": "image"
+    }
+  ],
+  "passes": [
+    {
+      "name": "lightingPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "glsl",
+            "source": "file://processing_dispatch/lighting_vertex_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/lighting_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ],
+        "uniforms": {
+          "lightDir": { "type": "vec3", "value": [-0.3, -1.0, -0.2] },
+          "lightColor": { "type": "vec3", "value": [1.0, 1.0, 1.0] },
+          "viewPos": { "type": "vec3", "value": [0.0, 0.0, 3.0] }
+        }
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:lightingVertexInput"
+      },
+      "vertex_layout": [
+        { "name": "inPosX", "format": "FLOAT32", "offset": 0 },
+        { "name": "inPosY", "format": "FLOAT32", "offset": 4 },
+        { "name": "inPosZ", "format": "FLOAT32", "offset": 8 },
+        { "name": "inNormX", "format": "FLOAT32", "offset": 12 },
+        { "name": "inNormY", "format": "FLOAT32", "offset": 16 },
+        { "name": "inNormZ", "format": "FLOAT32", "offset": 20 }
+      ],
+      "pipeline_state": {
+        "topology": "triangle_list",
+        "cull_mode": "none",
+        "front_face": "ccw",
+        "depth_test": "disabled"
+      }
+    }
+  ]
+}
