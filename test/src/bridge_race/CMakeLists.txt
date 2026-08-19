@@ -25,7 +25,9 @@ endif()
 
 # D-15/Pitfall 2: 11-node startup cost is higher than the fast bridge_e2e suite's
 # default timeout — own extended TIMEOUT, isolated ctest target.
-set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 500)
+# RUN_SERIAL: under full-suite -jN load the 11-node race exceeded 500s at 500.04s
+# despite passing isolated in ~271s; run it alone with a larger budget.
+set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 900 RUN_SERIAL TRUE)
 
 addtest(bridge_race_batch_test
     bridge_race_batch_test.cpp
