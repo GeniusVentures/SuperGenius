@@ -431,8 +431,8 @@ namespace sgns
         auto bytes1 = sgns::sgprocessing::SerializeManifest( m1 );
         auto bytes2 = sgns::sgprocessing::SerializeManifest( m2 );
 
-        ASSERT_EQ( bytes1.size(), sgns::sgprocessing::MANIFEST_SERIALIZED_SIZE );
-        ASSERT_EQ( bytes2.size(), sgns::sgprocessing::MANIFEST_SERIALIZED_SIZE );
+        ASSERT_EQ( bytes1.size(), sgns::sgprocessing::MANIFEST_V2_SERIALIZED_SIZE );
+        ASSERT_EQ( bytes2.size(), sgns::sgprocessing::MANIFEST_V2_SERIALIZED_SIZE );
         ASSERT_EQ( bytes1, bytes2 )
             << "Serialized manifest bytes must be byte-identical across two independent runs "
                "with timing fields zeroed, mirroring Process()'s internal manifestHash "
