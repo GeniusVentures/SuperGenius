@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
 status: executing
-last_updated: "2026-08-14T17:47:19.000Z"
-last_activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager recreation segfault fix
+last_updated: "2026-08-19T15:06:34.505Z"
+last_activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic bridge_race_single_burn_test failure
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 40
-  completed_plans: 39
-  percent: 75
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 47
+  completed_plans: 47
+  percent: 100
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -31,8 +31,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager recreation segfault fix
+Status: All 5 plans executed; closure BLOCKED — 12-05 re-run recorded a deterministic isolated-race failure (see Blockers)
+Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic bridge_race_single_burn_test failure
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager 
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ executing (4/5 plans complete) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ◐ executing (5/5 plans executed; closure BLOCKED by 12-05 race failure) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -81,8 +81,8 @@ Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager 
 
 ## Session Continuity
 
-**Last session:** 2026-07-30T19:49:00.000Z
-**Stopped at:** Completed 12-04-PLAN.md
+**Last session:** 2026-08-19T15:05:56.869Z
+**Stopped at:** Completed 12-05-PLAN.md (re-run BLOCKED: deterministic race failure)
 **Resume file:** None
 
 ## Performance Metrics
@@ -128,6 +128,7 @@ Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager 
 | Phase 12 P03 | 7 min | 2 tasks | 3 files |
 | Phase 12 P02 | 8 min | 2 tasks | 4 files |
 | Phase 12 P04 | 2h 21m | 2 tasks | 10 files |
+| Phase 12 P05 | 37 min | 1 tasks | 1 files |
 
 ## Decisions
 
@@ -217,3 +218,7 @@ Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager 
 - [Phase 12]: Restart verification requires proven manager destruction and exact durable replay bytes. — Weak ownership proves the original manager is gone; byte equality and zero signer calls prove replay does not re-sign.
 - [Phase 12]: Certificate corruption verification uses typed status diagnostics and byte-stable authority. — Tests remain useful without binding correctness to exact log wording or permitting malformed index reads to mutate durable authority.
 - [Phase 12]: Existing TransactionManager replay-protection and producer-witness tests are the real certificate-index consumer gates. — They exercise previous-nonce and producer-UTXO behavior through production lookup paths, so no production or fixture bypass is needed.
+
+### Blockers
+
+- Phase 12-05 re-run blocked: bridge_race_single_burn_test fails deterministically at af382b03 (mint output destination equals node validator identity instead of SGNS address on all 11 nodes); full suite not run per stop gate; TEST-01..06 remain blocked

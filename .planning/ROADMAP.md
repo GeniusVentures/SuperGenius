@@ -88,7 +88,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Restart and proposal-ordering tests prove durable non-equivocation and correct best-candidate behavior before versus after vote publication.
 4. Slot/index corruption tests fail closed, and existing nonce-chain plus producer-UTXO certificate suites pass against the v2.0 store.
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed — closure BLOCKED: 12-05 re-run recorded a deterministic `bridge_race_single_burn_test` failure (mint output destination mismatch on all 11 nodes); full-suite verification still owed
 
 ## Requirement Coverage
 
