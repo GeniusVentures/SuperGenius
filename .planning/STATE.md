@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
-status: All 5 plans executed; closure BLOCKED — 12-05 re-run 3 full suite recorded 6 drpc-prerequisite fixture failures + 1 race timeout (see Blockers)
-last_updated: "2026-08-19T16:12:03.181Z"
-last_activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC prerequisite regression (6 fixtures) and full-suite race timeout
+status: All 5 plans executed; closure BLOCKED — 12-05 run 4 focused gate hit flaky replay-identity test; stop gate fired before full suite (see Blockers)
+last_updated: "2026-08-19T20:22:44Z"
+last_activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic StructuredTraceUsesStableIdentityForExactReplay (CreateProposal ms-timestamp proposal_id collision)
 progress:
   total_phases: 8
   completed_phases: 8
@@ -31,8 +31,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 5 of 5
-Status: All 5 plans executed; closure BLOCKED — 12-05 re-run 3 full suite recorded 6 drpc-prerequisite fixture failures + 1 race timeout (see Blockers)
-Last activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC prerequisite regression (6 fixtures) and full-suite race timeout
+Status: All 5 plans executed; closure BLOCKED — 12-05 run 4 focused gate hit flaky replay-identity test; stop gate fired before full suite (see Blockers)
+Last activity: 2026-08-19 -- Completed 12-05 run 4; BLOCKED by nondeterministic StructuredTraceUsesStableIdentityForExactReplay (CreateProposal ms-timestamp proposal_id collision)
 
 ## Roadmap Snapshot
 
@@ -81,8 +81,8 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC 
 
 ## Session Continuity
 
-**Last session:** 2026-08-19T16:12:03.176Z
-**Stopped at:** Completed 12-05-PLAN.md (re-run 3 BLOCKED: external fork-RPC prerequisite regression + full-suite race timeout)
+**Last session:** 2026-08-19T20:24:22.668Z
+**Stopped at:** Completed 12-05-PLAN.md (run 4 BLOCKED: flaky replay-identity test; stop gate before full suite)
 **Resume file:** None
 
 ## Performance Metrics
@@ -130,6 +130,7 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC 
 | Phase 12 P04 | 2h 21m | 2 tasks | 10 files |
 | Phase 12 P05 | 37 min | 1 tasks | 1 files |
 | Phase 12 P05 | 46 min | 2 tasks | 1 files |
+| Phase 12 P05 | 11 min | 1 tasks | 1 files |
 
 ## Decisions
 
@@ -224,3 +225,4 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC 
 
 - Phase 12-05 re-run blocked: bridge_race_single_burn_test fails deterministically at af382b03 (mint output destination equals node validator identity instead of SGNS address on all 11 nodes); full suite not run per stop gate; TEST-01..06 remain blocked
 - Phase 12-05 re-run 3 blocked: focused gate 7/7 and isolated race PASS after evmrelay 4787e582 fix, but unfiltered full suite recorded 7/98 failures - 6 bridge/Anvil fixtures fail deterministically (sepolia.drpc.org dropped Sepolia from free plan, HTTP 400 code 35, verified directly) and bridge_race_single_burn_test timed out at 500s under -j2 load (passed isolated in 271s); TEST-01 and TEST-06 blocked on full suite; follow-up: repoint fixture fork URLs, decide race timeout/serialization, re-run unfiltered suite
+- Phase 12-05 run 4 blocked: consensus_finalization_test StructuredTraceUsesStableIdentityForExactReplay flaky (~1/3) — CreateProposal proposal_id relies on CurrentTimeMs() uniqueness, same-tick competitor collides at consensus_finalization_test.cpp:691; stop gate fired, full suite not run; TEST-01..06 remain blocked
