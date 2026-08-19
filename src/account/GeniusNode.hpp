@@ -252,15 +252,20 @@ namespace sgns
         bool IsAutodhtEnabled() const noexcept;
 
         /**
-         * @brief Returns whether this node replicates network-wide data.
-         * @return True for Full and Archive, false for Light. Derived from @c node_type_;
-         *         Test/read-only observable; does not mutate state.
+         * @brief Returns whether this node's role is Full.
+         * @return True only for @c NodeType::Full. Derived from @c node_type_;
+         *         test/read-only observable; does not mutate state.
          *
-         * @note This answers "does it store everything", not "does it participate".
-         *       Archive replicates like Full but does no consensus or result work —
-         *       use @ref GetNodeType for that distinction.
+         * @note This is a role check, not a capability check. Archive replicates
+         *       network-wide data just like Full but is not a Full node — for the
+         *       "does it store everything" question use @c ReplicatesAllAccounts,
+         *       and for "does it do the work" use @c ParticipatesInConsensus
+         *       (both in account/NodeType.hpp, taking @ref GetNodeType).
          */
-        bool IsFullNode() const noexcept;
+        bool IsFullNode() const noexcept
+        {
+            return node_type_ == NodeType::Full;
+        }
 
         /**
          * @brief Returns the resolved node role.
@@ -359,7 +364,7 @@ namespace sgns
          * @param[in] procmgr Processing manager containing parsed request data.
          * @return Estimated cost in minions, or 0 when the request size, price, or cost calculation fails.
          */
-        uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );
+        uint64_t GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
 
         /**
          * @brief Basis points of an escrow payout burned to the zero address during release.
@@ -985,17 +990,19 @@ namespace sgns
             int         high_water   = 0;         ///< Connection-manager high water mark.
             int         low_water    = 0;         ///< Connection-manager low water mark.
             uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
+            uint16_t    port_seed    = 0;         ///< "port_seed", or the constructor param when the key is absent.
         };
 
         /**
          * @brief Reads @c network_config.json, applying every key that is present and well-typed.
-         * @param[in,out] port_seed Fallback seed; overwritten when a valid @c port_seed key exists.
+         * @param[in] port_seed Fallback seed, returned in @c NetworkSettings::port_seed unless a
+         *            valid @c port_seed key overrides it.
          * @param[in] node_type Node role; seeds the default water marks before any config override.
          * @return Settings with defaults for absent or ill-typed keys.
          *
          * Also repopulates @c bootstrap_peers_ and updates @c autodht_ / @c reconnect_config_.
          */
-        NetworkSettings LoadNetworkConfig( uint16_t &port_seed, NodeType node_type );
+        NetworkSettings LoadNetworkConfig( uint16_t port_seed, NodeType node_type );
 
         /**
          * @brief A parsed bootstrap peer set: the PeerInfos to dial and their IDs for lookup.

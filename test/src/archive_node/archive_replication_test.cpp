@@ -4,7 +4,7 @@
  * @date       2026-08-18
  *
  * The single-node coverage in node_type_derivation_test only proves that node_type=Archive resolves
- * correctly (IsFullNode() true, IsProcessor() false). That is configuration, not behavior. This test
+ * correctly (ReplicatesAllAccounts true, IsProcessor() false). That is configuration, not behavior. This test
  * puts a real Archive node on a live network alongside two Light nodes that transact with each
  * other, and asserts the Archive ends up holding their transaction and their ledger state.
  *
@@ -134,7 +134,8 @@ namespace sgns
     TEST_F( ArchiveReplicationTest, ArchiveStoresThirdPartyTransaction )
     {
         ASSERT_EQ( archive_node->GetNodeType(), GeniusNode::NodeType::Archive );
-        EXPECT_TRUE( archive_node->IsFullNode() ) << "Archive must replicate network-wide data like Full";
+        EXPECT_TRUE( ReplicatesAllAccounts( archive_node->GetNodeType() ) )
+            << "Archive must replicate network-wide data like Full";
         EXPECT_FALSE( archive_node->IsProcessor() ) << "Archive must not process";
 
         constexpr uint64_t kMintAmount     = 1000;

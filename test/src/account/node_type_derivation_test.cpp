@@ -91,8 +91,9 @@ TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
 }
 
 // Scene C (PROP-02): Archive is a passive replica. It replicates network-wide data like Full
-// (IsFullNode() stays true, so the full-node topic subscription and blockchain mode are kept),
-// but it performs no work: is_processor is forced off even though the config asks for it.
+// (ReplicatesAllAccounts stays true, so the full-node topic subscription and blockchain mode are
+// kept), but it performs no work: is_processor is forced off even though the config asks for it.
+// IsFullNode() is a role check, so it is false here — Archive replicates like Full, it is not Full.
 TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
 {
     UseMemorySecureStorage();
@@ -109,7 +110,9 @@ TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Archive );
-    EXPECT_TRUE( node->IsFullNode() ) << "Archive must replicate network-wide data like Full";
+    EXPECT_FALSE( node->IsFullNode() ) << "Archive replicates like Full but is not a Full node";
+    EXPECT_TRUE( ReplicatesAllAccounts( node->GetNodeType() ) )
+        << "Archive must replicate network-wide data like Full";
     EXPECT_FALSE( node->IsProcessor() ) << "Archive must not process, even with is_processor=true";
 
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
