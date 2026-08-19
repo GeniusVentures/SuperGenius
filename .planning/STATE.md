@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
-status: executing
-last_updated: "2026-08-19T15:06:34.505Z"
-last_activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic bridge_race_single_burn_test failure
+status: All 5 plans executed; closure BLOCKED — 12-05 re-run 3 full suite recorded 6 drpc-prerequisite fixture failures + 1 race timeout (see Blockers)
+last_updated: "2026-08-19T16:12:03.181Z"
+last_activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC prerequisite regression (6 fixtures) and full-suite race timeout
 progress:
   total_phases: 8
   completed_phases: 8
@@ -31,8 +31,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 5 of 5
-Status: All 5 plans executed; closure BLOCKED — 12-05 re-run recorded a deterministic isolated-race failure (see Blockers)
-Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic bridge_race_single_burn_test failure
+Status: All 5 plans executed; closure BLOCKED — 12-05 re-run 3 full suite recorded 6 drpc-prerequisite fixture failures + 1 race timeout (see Blockers)
+Last activity: 2026-08-19 -- Completed 12-05 re-run 3; BLOCKED by drpc fork-RPC prerequisite regression (6 fixtures) and full-suite race timeout
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic br
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ executing (5/5 plans executed; closure BLOCKED by 12-05 race failure) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ◐ executing (5/5 plans executed; closure BLOCKED by 12-05 full-suite failures) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -81,8 +81,8 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic br
 
 ## Session Continuity
 
-**Last session:** 2026-08-19T15:05:56.869Z
-**Stopped at:** Completed 12-05-PLAN.md (re-run BLOCKED: deterministic race failure)
+**Last session:** 2026-08-19T16:12:03.176Z
+**Stopped at:** Completed 12-05-PLAN.md (re-run 3 BLOCKED: external fork-RPC prerequisite regression + full-suite race timeout)
 **Resume file:** None
 
 ## Performance Metrics
@@ -129,6 +129,7 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic br
 | Phase 12 P02 | 8 min | 2 tasks | 4 files |
 | Phase 12 P04 | 2h 21m | 2 tasks | 10 files |
 | Phase 12 P05 | 37 min | 1 tasks | 1 files |
+| Phase 12 P05 | 46 min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -222,3 +223,4 @@ Last activity: 2026-08-19 -- Completed 12-05 re-run; BLOCKED by deterministic br
 ### Blockers
 
 - Phase 12-05 re-run blocked: bridge_race_single_burn_test fails deterministically at af382b03 (mint output destination equals node validator identity instead of SGNS address on all 11 nodes); full suite not run per stop gate; TEST-01..06 remain blocked
+- Phase 12-05 re-run 3 blocked: focused gate 7/7 and isolated race PASS after evmrelay 4787e582 fix, but unfiltered full suite recorded 7/98 failures - 6 bridge/Anvil fixtures fail deterministically (sepolia.drpc.org dropped Sepolia from free plan, HTTP 400 code 35, verified directly) and bridge_race_single_burn_test timed out at 500s under -j2 load (passed isolated in 271s); TEST-01 and TEST-06 blocked on full suite; follow-up: repoint fixture fork URLs, decide race timeout/serialization, re-run unfiltered suite
