@@ -658,10 +658,20 @@ TEST_F( ConsensusFinalizationHarness, StructuredTraceUsesStableIdentityForExactR
         manager, registry, account,
         "9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678", nullptr, nullptr, 31 );
     ASSERT_TRUE( certificate );
+    // Distinct proposer: with a shared subject, CreateProposal varies only by
+    // CurrentTimeMs(), so a same-millisecond competitor lands an identical
+    // proposal_id and the EXPECT_NE below flakes (~1/3). A different proposer_id
+    // makes the competitor target deterministically distinct.
+    auto competitor_proposer = sgns::GeniusAccount::NewFromPrivateKey(
+        sgns::TokenID::FromBytes( { 0 } ),
+        "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead",
+        boost::filesystem::path( db_path_ ) / "competitor-proposer",
+        false );
+    ASSERT_TRUE( competitor_proposer );
     auto competitor = MakeCertificate(
         manager, registry, account,
         "9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678",
-        &certificate.value().proposal().subject(), nullptr, 31 );
+        &certificate.value().proposal().subject(), competitor_proposer, 31 );
     ASSERT_TRUE( competitor );
 
     std::vector<Event> votes;
