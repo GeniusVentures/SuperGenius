@@ -88,7 +88,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Restart and proposal-ordering tests prove durable non-equivocation and correct best-candidate behavior before versus after vote publication.
 4. Slot/index corruption tests fail closed, and existing nonce-chain plus producer-UTXO certificate suites pass against the v2.0 store.
 
-**Plans:** 5/5 plans executed — closure BLOCKED: 12-05 full-suite run recorded 6 external-prerequisite fixture failures (drpc free-plan Sepolia withdrawal) + 1 race timeout under -j2 load; see 12-FULL-SUITE-REPORT.md
+**Plans:** 4/5 plans complete — 12-05 pending re-run #4: run-3 blockers fixed (stale test binaries rebuilt against publicnode fork endpoint; race timeout raised to 900s + RUN_SERIAL in 63645bbc); full-suite verification still owed
 
 ## Requirement Coverage
 
