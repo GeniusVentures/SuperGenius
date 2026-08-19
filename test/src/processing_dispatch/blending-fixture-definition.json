@@ -1,0 +1,68 @@
+{
+  "name": "render-blending",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "blendingVertexInput",
+      "source_uri_param": "file://processing_dispatch/blending-vertex-data.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "blendingRenderOutput",
+      "source_uri_param": "file://processing_dispatch/blending-render-output.raw",
+      "type": "image"
+    }
+  ],
+  "passes": [
+    {
+      "name": "blendingPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "glsl",
+            "source": "file://processing_dispatch/blending_vertex_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/blending_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ]
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.2, 0.4, 0.6, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:blendingVertexInput"
+      },
+      "vertex_layout": [
+        { "name": "inPosX", "format": "FLOAT32", "offset": 0 },
+        { "name": "inPosY", "format": "FLOAT32", "offset": 4 }
+      ],
+      "pipeline_state": {
+        "topology": "triangle_list",
+        "cull_mode": "none",
+        "front_face": "ccw",
+        "depth_test": "disabled",
+        "blend_enable": true,
+        "blend_src_factor": "src_alpha",
+        "blend_dst_factor": "one_minus_src_alpha"
+      }
+    }
+  ]
+}
