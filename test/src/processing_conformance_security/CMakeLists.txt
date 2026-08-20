@@ -3,6 +3,7 @@ addtest(processing_conformance_security_test
     secv01_tex3d_counter_test.cpp
     secv01_render_lighting_counter_test.cpp
     secv01_render_blending_counter_test.cpp
+    secv01_render_texturing_counter_test.cpp
     secv02_counter_test.cpp
 )
 
