@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: ready_to_plan
-last_updated: 2026-08-20T18:56:37.761Z
+status: planning
+last_updated: "2026-08-20T20:39:39.395Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 5
@@ -11,7 +11,6 @@ progress:
   total_plans: 1
   completed_plans: 1
   percent: 20
-stopped_at: Phase 8 complete (1/1) — ready to discuss Phase 9
 ---
 
 # Project State
@@ -82,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-20T15:45:16.940Z
-Stopped at: Completed 08-01-PLAN.md
-Resume file: None
+Last session: 2026-08-20T20:39:39.387Z
+Stopped at: Phase 9 context gathered
+Resume file: .planning/phases/09-durable-one-vote-finality/09-CONTEXT.md
