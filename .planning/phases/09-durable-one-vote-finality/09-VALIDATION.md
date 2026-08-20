@@ -38,10 +38,10 @@ created: 2026-08-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 09-01-01 | 01 | 1 | VOTE-01 | T-09-01 | Late/stalled candidates cannot change a frozen same-slot winner. | deterministic lifecycle | focused consensus CTest | ✅ | ⬜ pending |
-| 09-01-02 | 01 | 1 | VOTE-02 | T-09-02 | Persistence failure emits no usable vote; stored bytes bind slot/proposal/vote/deadline. | injected-store failure | focused consensus CTest | ✅ | ⬜ pending |
-| 09-01-03 | 01 | 1 | VOTE-03 | T-09-03 | Restart and retry replay only exact stored bytes; expiry retains the no-revote lock. | restart lifecycle | focused consensus CTest | ✅ | ⬜ pending |
-| 09-01-04 | 01 | 1 | VOTE-04 | T-09-04 | Only durable accepted same-slot certificate releases the local record. | ingress lifecycle | focused consensus CTest | ✅ | ⬜ pending |
+| 09-01-01 | 01 | 1 | VOTE-01–03 | T-09-01–03 | Test seam exposes deterministic window, direct local-store failures, exact announcement, and restart inspection. | test infrastructure | focused consensus CTest | ✅ | ⬜ pending |
+| 09-01-02 | 01 | 1 | VOTE-01–03 | T-09-01–03 | Freeze/ranking, durable-before-first-publication, exact replay, collision/corruption, and expiry retain the no-revote lock. | deterministic lifecycle | focused consensus CTest | ✅ | ⬜ pending |
+| 09-02-01 | 02 | 2 | VOTE-04 | T-09-04 | Only successful post-commit legacy-key readback, binding revalidation, `Check::Approve`, and same-slot match release the record. | durable-ingress lifecycle | focused consensus CTest | ✅ | ⬜ pending |
+| 09-02-02 | 02 | 2 | VOTE-04 | T-09-04 | Callback-before-commit, readback-race, malformed/rejected/stalled/different-slot paths retain the record; later committed same-slot readback releases it. | adversarial lifecycle | focused consensus CTest | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
