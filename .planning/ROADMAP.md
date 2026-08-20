@@ -137,7 +137,7 @@ Plans:
 **Goal:** Publish only complete ready account generations, close old-manager admission at accepted selection, preserve already-admitted terminal work, and make failed or retired generations explicitly unavailable and permanently non-mutable.
 **Requirements**: TBD
 **Depends on:** Phase 13
-**Plans:** 11/15 plans executed
+**Plans:** 12/15 plans executed
 Plans:
 **Wave 1**
 
@@ -185,7 +185,7 @@ Plans:
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 14-12-PLAN.md — Migrate node-example and processing-multi callers with exact target ownership
+- [x] 14-12-PLAN.md — Migrate node-example and processing-multi callers with exact target ownership
 
 **Wave 13** *(blocked on Wave 12 completion)*
 

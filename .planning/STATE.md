@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 14
 status: executing
-stopped_at: Completed 14-11-PLAN.md
-last_updated: "2026-08-20T19:23:38.550Z"
+stopped_at: Completed 14-12-PLAN.md
+last_updated: "2026-08-20T20:05:39.840Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 48
+  completed_plans: 49
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 12 of 15
+Plan: 13 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,8 +67,8 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T19:23:38.546Z
-**Stopped At:** Completed 14-11-PLAN.md
+**Last session:** 2026-08-20T20:05:39.835Z
+**Stopped At:** Completed 14-12-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -129,6 +129,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P09 | 3h 6m | 2 tasks | 4 files |
 | Phase 14 P10 | 5 min | 2 tasks | 7 files |
 | Phase 14 P11 | 9 min | 2 tasks | 8 files |
+| Phase 14 P12 | 14min | 2 tasks | 10 files |
 
 ## Decisions
 
@@ -213,3 +214,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 14]: Bridge E2E setup uses fixture-owned configured identity before readiness and checked active account results afterward; bridge-race ownership remains isolated. — This preserves lifecycle errors at ready-generation reads without redesigning bridge provider, relayer, watcher, or catch-up ownership.
 - [Phase 14]: Shared bridge-race fixture lifecycle rows enumerate all five concrete test targets before temporary node shims are removed. — A header has no compile_commands entry, so its actual five consumers must be explicit for caller-closure evidence.
 - [Phase 14]: Bridge-race pre-ready genesis setup uses fixture-owned configured identity; post-ready address and balance reads require an active generation. — This preserves the genesis timing contract without exposing a pending or failed node generation as active.
+- [Phase 14]: ProcessImage and escrow waits use checked ready-generation results; raw WaitForEscrowRelease remains the temporary Plan 14-13 shim. — Lifecycle errors must not be represented as a raw sentinel status.
+- [Phase 14]: processing_multi_test is registered only through its parent CMake list, preserving the existing target definition and fixture behavior. — The plan permits only parent graph wiring, not target or harness redesign.
+
+### Blockers
+
+- Plan 14-12 processing integration fixtures reach listener initialization but do not complete readiness: processing_multi ProcessOne reports ACCOUNT_UNAVAILABLE then exits 139; processing_nodes PostProcessing emits no terminal result.
