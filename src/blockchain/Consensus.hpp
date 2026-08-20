@@ -797,6 +797,21 @@ namespace sgns
                                                                          uint64_t acceptance_deadline_ms );
         void RecoverActiveVotes();
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
+        /**
+         * @brief Checks existing accepted legacy certificate values for a canonical slot.
+         * @details This is a read-only Phase 9 safety seam. It does not establish
+         * certificate authority or introduce slot-keyed certificate storage.
+         */
+        bool HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
+        /**
+         * @brief Removes a direct local active-vote record for an accepted slot.
+         * @return `true` only when an exact matching local record was synchronously removed.
+         */
+        outcome::result<bool> ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key );
+        /**
+         * @brief Processes a certificate only after its live legacy value has been read back.
+         */
+        void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
         void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
