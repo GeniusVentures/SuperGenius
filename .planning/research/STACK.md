@@ -1,129 +1,105 @@
-# Stack Research — GeniusNode Construction Refactor
+# Technology Stack: v3.0 Canonical Burn Finality Rebuild
 
-**Date:** 2026-07-02
-**Scope:** C++17 idioms for collapsing overloaded factories into a `std::variant`-driven factory + moving runtime knobs into RapidJSON config files.
+**Project:** SuperGenius — Canonical Burn Finality Rebuild
+**Researched:** 2026-08-20
+**Recommendation confidence:** HIGH for reuse/no-new-dependency; MEDIUM for the exact finality-record schema, which must be decided in the phase protocol contract.
 
-> The existing system stack is fully mapped in `.planning/codebase/STACK.md`. This doc covers ONLY the patterns needed for the refactor.
+## Decision
 
-## Recommendation Summary
+**Add no external dependency and introduce no new network protocol transport.** Implement the feature with the existing C++17, Protobuf, consensus, CRDT/GlobalDB, RocksDB, libp2p PubSub, and GoogleTest/CTest stack.
 
-| Need | Recommendation | Confidence |
-|------|----------------|------------|
-| Account-source dispatch | `std::variant` + `std::visit` with a lambda-overload set | High |
-| Variant alternatives | Named aggregate structs (not raw tagged values) | High |
-| JSON config read | Existing RapidJSON `HasMember`+`IsXxx`+`GetXxx` pattern (already in codebase) | High |
-| String → enum parse | Free function `NodeTypeFromString()` with fallback | High |
-| Bool → enum at boundary | Keep derived `is_full_node_` bool; introduce `NodeType` enum as source of truth | High |
+The existing stack already has all necessary capabilities:
 
-## std::variant Factory Dispatch (C++17)
+| Existing facility | Concrete source | Reuse for |
+|---|---|---|
+| C++17 and CMake | `build/CommonCompilerOptions.cmake`, root CMake targets | Small protocol/domain types and focused changes in current services. |
+| Protobuf consensus envelope | `src/blockchain/impl/proto/Consensus.proto`, `src/blockchain/Consensus.hpp` | Preserve a certificate's embedded exact proposal and its signed vote bundle. Add fields/messages only if the chosen finality record cannot be deterministically derived from the existing certificate and proposal. |
+| Deterministic proposal arbitration | `ConsensusManager::RegisterSlotKeyHandler()` and `GetSlotKey()` in `src/blockchain/{Consensus.hpp,Consensus.cpp}`; current registration in `src/account/TransactionManager.cpp:169` | Supply one bridge-burn slot identity for all competing bridge-mint proposals. |
+| Validator signatures and certificate verification | `CreateCertificate`, `ValidateCertificate`, `TallyVotes`, and `GetAggregatorRole` in `src/blockchain/Consensus.cpp`; `src/blockchain/ConsensusAuth.hpp` | Keep certificate-to-proposal cryptographic binding and derive publisher eligibility from the certificate/proposal registry facts. |
+| Existing dissemination | `ConsensusManager::Publish()` / `SubmitCertificate()` in `src/blockchain/Consensus.cpp`; `crdt::GlobalDB` in `src/crdt/globaldb/globaldb.{hpp,cpp}`; existing libp2p/IPFS PubSub | Advertise verified certificate/finality data and synchronize it between peers. No separate RPC, leader-election service, or lock server is required. |
+| CRDT filters/callbacks | `src/crdt/impl/crdt_callback_manager.cpp`, `src/crdt/globaldb/globaldb.hpp` | Validate and consume received state. Treat callbacks only as notifications of replicated data, never as proof that the local peer is the authorized writer. |
+| Durable local state | `src/storage/rocksdb/{rocksdb.hpp,rocksdb.cpp,rocksdb_batch.hpp,rocksdb_batch.cpp}` | Store a finality/application record and atomically record local application steps that must survive restart. |
+| Crash retry journal | `src/crdt/globaldb/crdt_work_journal.hpp`, `src/crdt/impl/crdt_work_journal.cpp` | Resume unfinished certificate/finality consumption after callback interruption or restart. |
+| Multi-node and restart tests | `test/src/bridge_e2e/bridge_e2e_test.cpp`, `test/src/multiaccount/multi_account_sync.cpp`, `test/src/transaction_sync/transaction_crash_test.cpp`, `test/src/crdt/globaldb_integration.cpp` | Exercise real PubSub/CRDT ingress, delayed delivery, loss of the original publisher, and restart recovery. |
 
-The codebase is `CMAKE_CXX_STANDARD 17` (`build/CommonCompilerOptions.cmake`). Use std::variant — do **not** introduce inheritance hierarchies or `std::any`.
+## Required Stack-Level Changes
 
-### Variant alternatives — use named structs, not raw values
+These are design changes inside existing modules, not package additions.
 
-```cpp
-// In a small header, e.g. src/account/AccountSource.hpp
-namespace sgns
-{
-    struct NewAccount        {};                       // generate fresh identity
-    struct FromPrivateKey    { std::string key_hex; }; // eth private key
-    struct FromMnemonic      { std::string mnemonic; };
-    struct FromPublicKey     { std::string address; }; // watch-only
+### 1. Make the slot an external-burn identity
 
-    using AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>;
-}
-```
+Reuse the slot-key registration seam rather than inventing another consensus engine. The current mint path delegates `NONCE_SUBJECT_TYPE` slot selection to `GeniusTransaction::GetSlotID()` through `TransactionManager.cpp`; `MintTransactionV2::GetSlotID()` in `src/account/MintTransactionV2.cpp` currently incorporates chain/token/amount/destination/source hash. That is not the milestone contract: proposal-controlled mint details must not split the finality domain.
 
-**Why named structs:** self-documenting at call sites (`FromPrivateKey{key}` reads better than positional args), each alternative carries its own payload type-safely, and adding a future source is a non-breaking variant extension. Do **not** use a single struct with a tag enum + optional fields (defeats the variant's exhaustiveness guarantee).
+Define a canonical `BurnId` (or similarly named value object) at the bridge/transaction boundary and have the existing handler return `bridge-burn:<canonical-id>`. Its minimum source identity must be agreed explicitly and canonically serialized. The observed bridge infrastructure already exposes source-chain identity, contract and event/log index in `src/watcher/impl/bridge_rpc_watcher.cpp`; however, the active `BridgeRelayer`/`MintFunds` path currently passes only `chain_id` and `transaction_hash` (`src/account/BridgeRelayer.cpp`, `src/account/TransactionManager.cpp`). If multiple valid burn logs can occur in one external transaction, the boundary must carry the log index (and canonical contract identifier) before this milestone can honestly claim one-burn-at-most-once. Do not silently assume transaction hash is globally one-burn-one-event.
 
-### Dispatch with std::visit + overload set
+### 2. Keep certificate binding; make finality slot-scoped
 
-```cpp
-std::shared_ptr<GeniusAccount> account = std::visit(
-    [this](auto &&src) -> std::shared_ptr<GeniusAccount> {
-        using T = std::decay_t<decltype(src)>;
-        if constexpr (std::is_same_v<T, NewAccount>)
-            return GeniusAccount::New(token_id, write_path, is_full_node_);
-        else if constexpr (std::is_same_v<T, FromPrivateKey>)
-            return GeniusAccount::NewFromPrivateKey(token_id, src.key_hex.c_str(), write_path, is_full_node_);
-        else if constexpr (std::is_same_v<T, FromMnemonic>)
-            return GeniusAccount::NewFromMnemonic(token_id, src.mnemonic, write_path, is_full_node_);
-        else if constexpr (std::is_same_v<T, FromPublicKey>)
-            return GeniusAccount::NewFromPublicKey(token_id, src.address, is_full_node_);
-    },
-    source );
-```
+Continue using `ConsensusCertificate` with its embedded `ConsensusProposal`; `ValidateCertificate()` already checks proposal id, registry binding, subject validity, deterministic proposal id, signatures, and quorum (`src/blockchain/Consensus.cpp`). The canonical slot decides which proposal is eligible to finalize, but must not replace the certificate's referenced proposal or rewrite certificate payloads.
 
-**Why this over a switch on `index()`:** `if constexpr` chains are exhaustive when all alternatives are handled, and adding a variant member without handling it produces a compile warning under `-Wswitch`-style checks. Prefer a small lambda-overload helper if the codebase already has one; if not, the `if constexpr` chain above is sufficient and avoids a new utility.
+The existing in-memory `SlotState` and tie-breaker in `Consensus.cpp` are useful for proposal competition but not sufficient as protocol finality: they disappear on restart and `ValidateCertificateBestProposal()` currently depends on each receiver's local proposal arrival order. Persisted/received finality therefore needs an explicit deterministic comparison rule based only on verifiable proposal/certificate fields. Any slot-finality record should carry the canonical slot id and the full (or cryptographically bound) winning certificate/proposal id; receivers must verify both before applying it.
 
-**Key std facilities (all C++17):** `std::variant`, `std::visit`, `std::is_same_v`, `std::decay_t`, `if constexpr`. Avoid `std::get<T>` (throws `std::bad_variant_access`) in favor of `std::holds_alternative`/`std::get_if` only if not using `visit`.
+### 3. Reorder and narrow certificate publication
 
-## RapidJSON Config Reading — match existing pattern
+`ConsensusManager::SubmitCertificate()` currently PubSub-publishes the certificate before `db_->Put()` writes `/cert/<subject-hash>` (`src/blockchain/Consensus.cpp`). This is incompatible with persistence-before-advertisement. Change the existing method or extract a small publisher component so its order is:
 
-The codebase already parses both config files identically with RapidJSON. Match it exactly (see `GeniusNode.cpp:273-311` for `LoadSgnsConfig`, `GeniusNode.cpp:791-832` for `InitNetwork`). The pattern:
+1. verify certificate and deterministic publisher/failover eligibility;
+2. durably persist the certificate/finality record;
+3. advertise it through the existing PubSub/CRDT path;
+4. process all peers' replicated result through the common finality-consumer path.
 
-```cpp
-// Defaults declared first
-uint16_t base_port = 40001;       // current default arg
-bool     autodht   = true;        // current default arg
+The current rotating aggregator calculation (`GetOrderedActiveValidators()` + `GetAggregatorRole()` in `Consensus.cpp`) is a candidate building block for deterministic authority and later-round failover. It is not by itself a complete publication rule, because it is proposal-id based and its failure interval/takeover evidence have to be protocol-defined. The phase should define a certificate/slot-based owner selection and a deterministic round/timeout handoff that every peer can recompute from the same certificate, proposal, registry snapshot, and time/round inputs.
 
-// Then override from config if present + correctly typed
-if ( config_json.HasMember( "base_port" ) && config_json["base_port"].IsUint() )
-{
-    base_port = static_cast<uint16_t>( config_json["base_port"].GetUint() );
-    node_logger_->info( "network_config.json: base_port={}", base_port );
-}
-```
+### 4. Use CRDT for replication, not distributed compare-and-set
 
-**Field type choice for ports:** the existing `pubsub_port` is stored as a **string** (`IsString()` → `std::stoi`, see `GeniusNode.cpp:791-805`). For `base_port`, prefer a numeric field (`IsUint()`) — string-to-int parsing for `pubsub_port` is fragile (the code wraps `std::stoi` in try/catch). New keys should not inherit that wart. Document the divergence in a comment.
+Use `GlobalDB::Put()` / `AtomicTransaction` only to write and replicate data the authorized publisher has already chosen. `AtomicTransaction` (`src/crdt/impl/atomic_transaction.cpp`) combines a local multi-key delta and publishes it atomically, but it does **not** provide a cross-peer conditional put, lease, or single-writer lock. It cannot safely elect an author when peers concurrently write the same CRDT certificate key.
 
-**Default-on-missing-key is mandatory:** deployed config files lack the new keys. Every new read must follow the existing `HasMember && IsXxx` guard and keep the pre-declared default when absent. Never hard-fail on a missing key.
+The finality consumer must never react to receipt of a certificate by writing that same CRDT key again. `CRDTCallbackManager::PutDataCallback()` supplies a local `(key, value, cid)` notification, and its work journal records processing state; neither gives network-verifiable publication ownership. Leave receivers read/validate/apply-only. A failover publisher writes only after the protocol's reproducible takeover predicate holds, not because it saw a remote callback or a local `DeliverySource`-style indicator.
 
-## NodeType Enum + String Parsing
+### 5. Reuse RocksDB for durable exactly-once application
 
-### Enum location
+The current bridge code has a local `/bridge/executed/<chain>:<tx>` marker in `TransactionManager` (`src/account/TransactionManager.hpp:559`, checks in `MintFunds()`, write on confirmation near `TransactionManager.cpp:5254`). It is a useful migration point but not a sufficient canonical finality record: its key lacks a log/event discriminator and it is written only after transaction confirmation.
 
-```cpp
-// In src/account/GeniusNode.hpp (alongside the existing NodeState/Error enums at lines 129/143)
-enum class NodeType : uint8_t
-{
-    Light   = 0,   // default; is_full_node_ = false
-    Full    = 1,   // is_full_node_ = true
-    Archive = 2    // is_full_node_ = true (forward-compat; same behavior as Full today)
-};
-```
+Use the existing `storage::rocksdb::Batch` to atomically persist a namespaced finality/application record and its application state (for example, `accepted`, `mint-enqueued`, `mint-confirmed` plus proposal/certificate binding) where one local transition must not be torn by a restart. The final schema and recovery state machine belong in the phase specification. Do not build a second database, a distributed lock table, or a broad TransactionManager refactor.
 
-**Order rationale:** `Light = 0` so the zero-initialized default (value 0) maps to the safe non-full behavior, matching today's `is_full_node = false` default.
+`CRDTWorkJournal` is appropriate for retrying receiver-side consumption after crash/temporary validation stall. It is not a replacement for the finality record: work entries track callback processing leases, while canonical finality and mint idempotency require application-level facts.
 
-### String → enum helper
+## Do Not Add
 
-```cpp
-inline NodeType NodeTypeFromString( std::string_view s )
-{
-    if ( s == "Full" )    return NodeType::Full;
-    if ( s == "Archive" ) return NodeType::Archive;
-    // anything else (including "Light", "", or absent) → Light
-    return NodeType::Light;
-}
-```
+| Do not add | Why |
+|---|---|
+| New database, Kafka/queue, Redis lock, ZooKeeper/etcd, or external leader-election service | Existing RocksDB supplies durable local transitions and the validator registry/consensus supplies deterministic network authority. An external coordinator would create a second, unverified trust domain. |
+| New P2P transport, HTTP/RPC control plane, or bespoke gossip protocol | Existing `GossipPubSub`, consensus channels, and GlobalDB propagation already reach the production nodes. |
+| A CRDT compare-and-set/last-writer-wins certificate lock | The supplied CRDT transaction is atomic only for one local delta, not a distributed authority mechanism; concurrent writers remain the failure being eliminated. |
+| A `DeliverySource`, callback-origin boolean, or local sender heuristic | It is neither durable nor verifiable by another peer and cannot safely decide publication/failover. |
+| Broad CRDT, registry, consensus, or TransactionManager rewrite | The available extension seams are sufficient. Keep changes concentrated around bridge identity, slot arbitration/finality, publication, and the mint application boundary. |
+| New cryptographic library | Existing signing/verifying (`GeniusAccount`, `ConsensusAuth`, SHA/BLAKE helpers) is enough for canonical serialization/hash binding. |
 
-Log the parsed value and the resolved derived bool at INFO so operators can verify their config took effect (matches existing `"sgns_config.json: is_processor={}"` logging style at `GeniusNode.cpp:282`).
+## Implementation Implications
 
-## What NOT to Use
+1. Introduce a small canonical bridge-burn identity/value type and thread it from real-time watcher and catch-up scan to `MintFunds`/the consensus subject. Normalize textual chain/contract/hash values before bytes are signed or keys are constructed.
+2. Change the registered mint slot-key handler to use that identity only. Do not let amount, recipient, nonce, local proposer, or mint transaction hash select the finality slot.
+3. Define an explicit slot-finality schema and deterministic winner/publisher/failover predicate. It must be recomputable after restart and by a peer that did not receive proposals in the same order.
+4. Centralize all certificate ingress (local quorum, PubSub, replicated CRDT recovery) behind one validation → durable-finality → idempotent-application path. Receivers must not republish/rewrite certificate CRDT keys.
+5. Make the successful durable store occur before advertisement. Use RocksDB batch writes for related local finality/application transitions; keep `GlobalDB` writes for replication only after authorization.
+6. Extend existing CTest fixtures with production paths: at least two contending mints for one BurnId, out-of-order proposal/certificate delivery, original publisher loss with deterministic takeover, and node restart before/after application. Unit tests alone are insufficient.
 
-| Avoid | Why |
-|-------|-----|
-| `std::any` | Type-erased, no compile-time exhaustiveness; variant is strictly better for a closed set |
-| Inheritance hierarchy (`IAccountSource` + subclasses) | Heap allocation + virtual dispatch for 4 trivial alternatives is overkill; variant is stack-allocated and value-semantic |
-| Boost.Program_options / a config framework | The codebase uses JSON files; stay in RapidJSON |
-| Tagged struct (`struct AccountSource{ enum Tag; string key; string mnemonic; ... }`) | Loses exhaustiveness, invites "set the wrong field" bugs |
-| `std::get<T>` without prior check | Throws; prefer `std::visit` or `std::get_if` |
-| Changing `pubsub_port`'s string format in this milestone | Out of scope; only add new keys |
+## Alternatives Considered
 
-## Conventions to Match (from `.planning/codebase/CONVENTIONS.md`)
+| Category | Recommended | Alternative | Why not |
+|---|---|---|---|
+| Finality ownership | Deterministic rule derived from validated consensus/registry data | Callback-origin flag or first receiver | Local timing/provenance is not protocol evidence and fails after restart. |
+| Persistence | Existing RocksDB + its batch API | New SQL/coordination store | Adds operational and trust complexity without solving cross-peer authority. |
+| Replication | Existing GlobalDB/CRDT + PubSub | New event bus/queue | Duplicates the deployed synchronization plane. |
+| Conflict control | Slot-specific deterministic winner before publication | Multi-writer CRDT key resolution | Multi-writer race is the known failure mode and jeopardizes certificate binding. |
 
-- Private members: `snake_case_` trailing underscore (e.g. `is_full_node_`, `autodht_`)
-- Factory returns `std::shared_ptr<T>` (existing pattern)
-- Doxygen `@param`/`@brief` on every public declaration
-- RapidJSON `HasMember` + typed `IsXxx` guard before every `GetXxx`
-- INFO log every config value resolved (with the file name prefix)
+## Sources and Evidence
+
+- `src/blockchain/Consensus.hpp` and `src/blockchain/Consensus.cpp` — proposal slots, certificate validation, aggregator rotation, certificate CRDT keying and publication order.
+- `src/account/TransactionManager.cpp`, `src/account/MintTransactionV2.cpp`, and `src/account/BridgeRelayer.cpp` — current mint identity flow and the current over-broad slot key.
+- `src/watcher/impl/bridge_rpc_watcher.cpp` — external claim fields available for a canonical identity, including log index and contract.
+- `src/crdt/globaldb/globaldb.hpp`, `src/crdt/atomic_transaction.hpp`, and `src/crdt/impl/atomic_transaction.cpp` — CRDT atomic-delta semantics and their non-CAS boundary.
+- `src/storage/rocksdb/rocksdb_batch.{hpp,cpp}` — local atomic batch facility.
+- `src/crdt/impl/crdt_callback_manager.cpp` and `src/crdt/globaldb/crdt_work_journal.hpp` — callback and durable retry behavior.
+- `test/src/bridge_e2e/bridge_e2e_test.cpp`, `test/src/multiaccount/multi_account_sync.cpp`, `test/src/transaction_sync/transaction_crash_test.cpp` — existing production-path test foundations.
+
+No external library documentation lookup was required: this milestone is constrained to existing in-repository components, and the dependency question is answered directly by the baseline's concrete facilities.
