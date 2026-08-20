@@ -13,10 +13,10 @@
 
 ### Vote Finality
 
-- [ ] **VOTE-01**: Validators use a bounded contention window and deterministic winner selection for candidates in one slot, so voting does not wait indefinitely for a possible contender.
-- [ ] **VOTE-02**: Before broadcasting a vote, a validator durably records one active vote for the slot, including the chosen proposal, signed vote material, and its acceptance deadline.
-- [ ] **VOTE-03**: An active vote survives restart and may be recovered or re-announced only as that exact vote; the validator cannot emit a different usable vote for the same slot while the original remains accepted.
-- [ ] **VOTE-04**: A vote lock is cleared only after the matching authoritative certificate is durably accepted for its slot; expiry cleanup cannot authorize an incompatible vote that overlaps the original vote's acceptance period.
+- [x] **VOTE-01**: Validators use a bounded contention window and deterministic winner selection for candidates in one slot, so voting does not wait indefinitely for a possible contender.
+- [x] **VOTE-02**: Before broadcasting a vote, a validator durably records one active vote for the slot, including the chosen proposal, signed vote material, and its acceptance deadline.
+- [x] **VOTE-03**: An active vote survives restart and may be recovered or re-announced only as that exact vote; the validator cannot emit a different usable vote for the same slot while the original remains accepted.
+- [x] **VOTE-04**: A vote lock is cleared only after the matching authoritative certificate is durably accepted for its slot; expiry cleanup cannot authorize an incompatible vote that overlaps the original vote's acceptance period.
 
 ### Slot-Keyed Certificate Publication
 
@@ -63,10 +63,10 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | SLOT-01 | Phase 8 | Complete |
 | SLOT-02 | Phase 8 | Complete |
 | SLOT-03 | Phase 8 | Complete |
-| VOTE-01 | Phase 9 | Pending |
-| VOTE-02 | Phase 9 | Pending |
-| VOTE-03 | Phase 9 | Pending |
-| VOTE-04 | Phase 9 | Pending |
+| VOTE-01 | Phase 9 | Complete |
+| VOTE-02 | Phase 9 | Complete |
+| VOTE-03 | Phase 9 | Complete |
+| VOTE-04 | Phase 9 | Complete |
 | CERT-01 | Phase 10 | Pending |
 | CERT-02 | Phase 10 | Pending |
 | CERT-03 | Phase 10 | Pending |
