@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 GeniusNode Construction Refactor** — Phases 1-3 (shipped 2026-07-03)
-- 📋 **v3.0 Canonical Burn Finality Rebuild** — Phases 4-8 (planned)
+- 📋 **v3.0 Canonical Burn Finality Rebuild** — Phases 8-12 (planned)
 
 ## Overview
 
@@ -26,15 +26,15 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone Goal:** One verified external burn can finalize through one authoritative generic certificate and produce one mint effect despite contention, reordered delivery, publisher loss, and restart.
 
-- [ ] **Phase 4: Canonical Slot & Certificate Binding** - Make every competing verified mint share its existing canonical slot and reject certificate/proposal mismatches.
-- [ ] **Phase 5: Durable One-Vote Finality** - Lock each validator to one recoverable, non-overlapping vote per canonical slot.
-- [ ] **Phase 6: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority.
-- [ ] **Phase 7: Convergent Certificate Consumption & Mint Recovery** - Consume accepted slot certificates once and recover mint application safely.
-- [ ] **Phase 8: Multi-Node Finality Fault Proof** - Prove the complete production path under contention, loss, delayed delivery, and restart.
+- [ ] **Phase 8: Canonical Slot & Certificate Binding** - Make every competing verified mint share its existing canonical slot and reject certificate/proposal mismatches.
+- [ ] **Phase 9: Durable One-Vote Finality** - Lock each validator to one recoverable, non-overlapping vote per canonical slot.
+- [ ] **Phase 10: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority.
+- [ ] **Phase 11: Convergent Certificate Consumption & Mint Recovery** - Consume accepted slot certificates once and recover mint application safely.
+- [ ] **Phase 12: Multi-Node Finality Fault Proof** - Prove the complete production path under contention, loss, delayed delivery, and restart.
 
 ## Phase Details
 
-### Phase 4: Canonical Slot & Certificate Binding
+### Phase 8: Canonical Slot & Certificate Binding
 **Goal**: Validators and receivers recognize all competing proposals for one verified external burn as one finality domain while preserving the certificate's exact winning-proposal binding.
 **Depends on**: Phase 3
 **Requirements**: SLOT-01, SLOT-02, SLOT-03
@@ -44,9 +44,9 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   3. A certificate is accepted only when its canonical slot, storage key, payload, and embedded winning proposal agree; a slot/key/payload or proposal-binding mismatch is rejected before it can finalize or mint.
 **Plans**: TBD
 
-### Phase 5: Durable One-Vote Finality
+### Phase 9: Durable One-Vote Finality
 **Goal**: A validator deterministically chooses and durably commits to at most one usable vote for a canonical slot throughout contention and restart recovery.
-**Depends on**: Phase 4
+**Depends on**: Phase 8
 **Requirements**: VOTE-01, VOTE-02, VOTE-03, VOTE-04
 **Success Criteria** (what must be TRUE):
   1. Validators close a bounded contention window and select the same deterministic eligible winner for a slot without waiting indefinitely for a possible contender.
@@ -55,9 +55,9 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   4. A vote lock clears only when the matching authoritative slot certificate is durably accepted; cleanup never enables an incompatible vote during the original vote's acceptance period.
 **Plans**: TBD
 
-### Phase 6: Authoritative Slot Certificate Publication
+### Phase 10: Authoritative Slot Certificate Publication
 **Goal**: The network can discover one generic, slot-keyed authoritative certificate that a deterministic publisher persists before advertising and an eligible successor can recover safely.
-**Depends on**: Phase 5
+**Depends on**: Phase 9
 **Requirements**: CERT-01, CERT-02, CERT-03, CERT-04, COMP-01
 **Success Criteria** (what must be TRUE):
   1. The only authoritative certificate namespace for a canonical slot is `/cert/<canonical-slot-id>`; no bridge-specific finality record or subject-hash certificate authority can finalize the mint.
@@ -67,9 +67,9 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   5. A consumer that begins with a subject hash resolves the corresponding canonical slot before authoritative lookup, or uses a hash-to-slot locator that cannot itself confer certificate authority.
 **Plans**: TBD
 
-### Phase 7: Convergent Certificate Consumption & Mint Recovery
+### Phase 11: Convergent Certificate Consumption & Mint Recovery
 **Goal**: Every node converges on one accepted slot certificate and applies its exact certified mint at most once across duplicate delivery and crash recovery.
-**Depends on**: Phase 6
+**Depends on**: Phase 10
 **Requirements**: CERT-05, MINT-01, MINT-02
 **Success Criteria** (what must be TRUE):
   1. Local completion, PubSub, CRDT synchronization, and restart recovery all pass certificates through one idempotent acceptance path for the same canonical slot.
@@ -78,9 +78,9 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   4. Recovery durably distinguishes certified, applying, and applied mint work (or an equivalent atomic boundary), so a crash neither repeats the mint effect nor silently loses certified work.
 **Plans**: TBD
 
-### Phase 8: Multi-Node Finality Fault Proof
+### Phase 12: Multi-Node Finality Fault Proof
 **Goal**: Operators have production-path regression proof that canonical slot finality remains safe and live through contention, propagation disorder, publisher loss, and restart.
-**Depends on**: Phase 7
+**Depends on**: Phase 11
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06
 **Success Criteria** (what must be TRUE):
   1. A multi-node production-path scenario with competing proposals for one burn produces one canonical slot, one authoritative certificate, and one exact winning proposal.
@@ -92,18 +92,18 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 4 → 5 → 6 → 7 → 8.
+**Execution Order:** Phases execute in numeric order: 8 → 9 → 10 → 11 → 12.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Config-Driven Settings Foundation | v1.0 | 1/1 | Complete | 2026-07-03 |
 | 2. Variant Factory + Constructor Reorder | v1.0 | 1/1 | Complete | 2026-07-03 |
 | 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
-| 4. Canonical Slot & Certificate Binding | v3.0 | 0/TBD | Not started | - |
-| 5. Durable One-Vote Finality | v3.0 | 0/TBD | Not started | - |
-| 6. Authoritative Slot Certificate Publication | v3.0 | 0/TBD | Not started | - |
-| 7. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
-| 8. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
+| 8. Canonical Slot & Certificate Binding | v3.0 | 0/TBD | Not started | - |
+| 9. Durable One-Vote Finality | v3.0 | 0/TBD | Not started | - |
+| 10. Authoritative Slot Certificate Publication | v3.0 | 0/TBD | Not started | - |
+| 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
 
 ---
-*Roadmap last updated: 2026-08-20 for v3.0 planning*
+*Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
