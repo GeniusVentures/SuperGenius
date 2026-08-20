@@ -40,6 +40,18 @@ FIXTURE_SOURCES = {
     "test/src/blockchain/blockchain_genesis_test.cpp",
 }
 
+# Plan 14-08 owns the processing/transaction-sync caller partition below. Other
+# processing consumers remain staged for their separately planned migrations.
+PLAN_14_08_SOURCES = {
+    "test/src/processing_nodes/processing_nodes_test.cpp",
+    "test/src/processing_nodes/full_node_test.cpp",
+    "test/src/processing_nodes/child_tokens_test.cpp",
+    "test/src/transaction_sync/genius_node_bootstrap_reconnect_test.cpp",
+    "test/src/transaction_sync/transaction_sync_test.cpp",
+    "test/src/transaction_sync/transaction_crash_test.cpp",
+    "test/src/transaction_sync/migration_sync_test.cpp",
+}
+
 def owner_for(source):
     s = source.replace("\\", "/")
     if s in {"src/account/GeniusNode.cpp", "src/account/GeniusNode.hpp", "test/src/node/node_initialization_progress.cpp"}:
@@ -177,6 +189,8 @@ def check_migrated(inventory, commands, owner):
     # unrelated historical default rows that remain staged for later partitions.
     if owner == "14-07":
         owned = [row for row in owned if row["source"] in FIXTURE_SOURCES]
+    if owner == "14-08":
+        owned = [row for row in owned if row["source"] in PLAN_14_08_SOURCES]
     pending = [row["expression"] for row in owned if row["disposition"] != "migrated"]
     if pending:
         raise SystemExit("unmigrated owner rows: " + ", ".join(pending))
