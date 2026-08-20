@@ -24,7 +24,21 @@ METHODS = (
     "GetTransactionManager GetTransactionStatus ConfigureRpcEndpoint StartProcessing "
     "StopProcessing ResetProcessingMembers SendTransactionAndProof"
 ).split()
+# A caller that has already moved to the checked account-address API still
+# implements the GetAddress contract.  Keep its concrete expression in the
+# manifest so the audit proves that a fixture no longer reaches the temporary
+# default-returning shim.
+CALL_METHODS = {method: method for method in METHODS}
+CALL_METHODS["GetActiveAccountAddress"] = "GetAddress"
+CALL_METHODS["GetActiveProcessingStatus"] = "GetProcessingStatus"
 ALLOWED = {"14-06", "14-07", "14-08", "14-09", "14-10", "14-11", "14-12"}
+FIXTURE_SOURCES = {
+    "test/src/account/account_management_test.cpp",
+    "test/src/account/network_config_precedence_test.cpp",
+    "test/src/account/node_type_derivation_test.cpp",
+    "test/src/blockchain/node_startup_test.cpp",
+    "test/src/blockchain/blockchain_genesis_test.cpp",
+}
 
 def owner_for(source):
     s = source.replace("\\", "/")
@@ -50,7 +64,7 @@ def contract_for(method, source):
     return "active-ready"
 
 def identity_for(contract):
-    return "configured-bootstrap" if contract == "internal-control" else "active-generation"
+    return "configured-bootstrap" if contract == "configured-bootstrap" else "active-generation"
 
 def targets_by_source(commands):
     result = defaultdict(set)
@@ -85,18 +99,27 @@ def rows(commands):
                      "identity_kind": identity_for(contract), "source": "src/account/GeniusNode.hpp",
                      "targets": ";".join(sorted(targets.get("src/account/GeniusNode.hpp", {"genius_node_test"}))),
                      "owner_plan": "14-06", "disposition": "migrate"})
-    call = re.compile(r"(?:->|\.|\bGeniusNode::)\s*(%s)\s*\(" % "|".join(METHODS))
+    call = re.compile(r"(?:->|\.|\bGeniusNode::)\s*(%s)\s*\(" % "|".join(CALL_METHODS))
+    fixture_call = re.compile(
+        r"(?:\bnode_?[A-Za-z0-9_]*|fixture\.node)\s*(?:->|\.)\s*(%s)\s*\(" % "|".join(CALL_METHODS))
     for path in discover_sources():
         rel = path.relative_to(ROOT).as_posix()
         if rel == "src/account/GeniusNode.hpp":
             continue
         text = re.sub(r"/\*.*?\*/", "", path.read_text(errors="ignore"), flags=re.S)
         text = re.sub(r"//[^\n]*|\"(?:\\.|[^\"])*\"", "", text)
-        found = sorted(set(call.findall(text)))
-        for method in found:
+        matcher = fixture_call if rel in FIXTURE_SOURCES else call
+        found = sorted(set(matcher.findall(text)))
+        for called_method in found:
+            method = CALL_METHODS[called_method]
             contract = contract_for(method, rel)
-            rows.append({"method": method, "expression": f"{rel}:{method}", "contract": contract,
+            rows.append({"method": method, "expression": f"{rel}:{called_method}", "contract": contract,
                          "identity_kind": identity_for(contract), "source": rel,
+                         "targets": ";".join(sorted(targets.get(rel, {"header-consumer"}))),
+                         "owner_plan": owner_for(rel), "disposition": "migrate"})
+        if rel in FIXTURE_SOURCES:
+            rows.append({"method": "GetAddress", "expression": f"{rel}:fixture-configured-bootstrap",
+                         "contract": "configured-bootstrap", "identity_kind": "configured-bootstrap", "source": rel,
                          "targets": ";".join(sorted(targets.get(rel, {"header-consumer"}))),
                          "owner_plan": owner_for(rel), "disposition": "migrate"})
     return sorted(rows, key=lambda row: (row["method"], row["expression"], row["targets"]))
@@ -172,6 +195,15 @@ def main():
     args = parser.parse_args()
     if args.write_inventory:
         generated = rows(args.compile_commands)
+        previous_dispositions = {}
+        if args.write_inventory.exists():
+            previous_dispositions = {
+                (row["method"], row["source"], row["targets"]): row["disposition"]
+                for row in read_inventory(args.write_inventory)
+            }
+        for row in generated:
+            row["disposition"] = previous_dispositions.get(
+                (row["method"], row["source"], row["targets"]), row["disposition"] )
         args.write_inventory.parent.mkdir(parents=True, exist_ok=True)
         with args.write_inventory.open("w", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=FIELDS, delimiter="\t")
