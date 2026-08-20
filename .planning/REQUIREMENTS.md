@@ -7,9 +7,9 @@
 
 ### Canonical Slot and Certificate Binding
 
-- [ ] **SLOT-01**: Competing `MintTransactionV2` proposals for the same verified external burn resolve to the same canonical slot while proposals from different burns do not.
-- [ ] **SLOT-02**: The canonical slot continues to include the verified burn facts already represented by `MintTransactionV2::GetSlotID`, including chain, token, source transaction, amount, and destination; proposer account and proposal nonce cannot alter it.
-- [ ] **SLOT-03**: A certificate remains cryptographically and structurally bound to its exact winning proposal, and certificate acceptance rejects a slot/key/payload mismatch.
+- [x] **SLOT-01**: Competing `MintTransactionV2` proposals for the same verified external burn resolve to the same canonical slot while proposals from different burns do not.
+- [x] **SLOT-02**: The canonical slot continues to include the verified burn facts already represented by `MintTransactionV2::GetSlotID`, including chain, token, source transaction, amount, and destination; proposer account and proposal nonce cannot alter it.
+- [x] **SLOT-03**: A certificate remains cryptographically and structurally bound to its exact winning proposal, and certificate acceptance rejects a slot/key/payload mismatch.
 
 ### Vote Finality
 
@@ -60,9 +60,9 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | Phase 8 | Pending |
-| SLOT-02 | Phase 8 | Pending |
-| SLOT-03 | Phase 8 | Pending |
+| SLOT-01 | Phase 8 | Complete |
+| SLOT-02 | Phase 8 | Complete |
+| SLOT-03 | Phase 8 | Complete |
 | VOTE-01 | Phase 9 | Pending |
 | VOTE-02 | Phase 9 | Pending |
 | VOTE-03 | Phase 9 | Pending |
