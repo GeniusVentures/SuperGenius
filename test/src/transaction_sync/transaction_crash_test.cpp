@@ -20,6 +20,34 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string RequireActiveAddress( const GeniusNode &node )
+        {
+            const auto address = node.GetActiveAccountAddress();
+            if ( address.has_error() )
+            {
+                ADD_FAILURE() << "expected active account address: " << address.error().message();
+                return {};
+            }
+            return address.value();
+        }
+
+        uint64_t RequireActiveBalance( GeniusNode &node )
+        {
+            (void)RequireActiveAddress( node );
+            return node.GetBalance();
+        }
+
+        TransactionManager::TransactionStatus RequireIncomingStatus( GeniusNode &node,
+                                                                       const std::string &transaction_id,
+                                                                       std::chrono::milliseconds timeout )
+        {
+            (void)RequireActiveAddress( node );
+            return node.WaitForTransactionIncoming( transaction_id, timeout );
+        }
+    } // namespace
+
     /**
  * @file transaction_crash_sync_test_updated.cpp
  * @brief Verifies transaction synchronization after a node crash and recovery,
@@ -114,10 +142,10 @@ namespace sgns
     TEST_F( CrashRecoverySyncTest, DISABLED_TransactionSyncAfterCrash )
     {
         std::cout << "Recording initial balance for verification" << std::endl;
-        auto initial_balance = node1->GetBalance();
+        auto initial_balance = RequireActiveBalance( *node1 );
 
-        std::cout << "node1->GetBalance(): " << node1->GetBalance() << std::endl;
-        std::cout << "node2->GetBalance(): " << node2->GetBalance() << std::endl;
+        std::cout << "node1->GetBalance(): " << RequireActiveBalance( *node1 ) << std::endl;
+        std::cout << "node2->GetBalance(): " << RequireActiveBalance( *node2 ) << std::endl;
 
         std::cout << "Calculating total amount to mint" << std::endl;
         uint64_t total_amount = 0;
@@ -136,14 +164,14 @@ namespace sgns
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;
-        EXPECT_EQ( node1->GetBalance(), initial_balance + total_amount ) << "Balance mismatch after minting";
+        EXPECT_EQ( RequireActiveBalance( *node1 ), initial_balance + total_amount ) << "Balance mismatch after minting";
 
         std::cout << "Executing transfers and collecting transaction IDs" << std::endl;
         std::vector<std::string> tx_ids;
         for ( int i = 0; i < TOTAL_TRANSFERS; i++ )
         {
             auto transfer_result = node1->TransferFunds( 1000,
-                                                         node2->GetAddress(),
+                                                         RequireActiveAddress( *node2 ),
                                                          TokenID::FromBytes( { 0x00 } ),
                                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
             ASSERT_TRUE( transfer_result.has_value() ) << "Transfer " << i << " failed";
@@ -157,7 +185,7 @@ namespace sgns
         std::cout << "Waiting for the first batch of incoming transactions" << std::endl;
         for ( int i = 0; i < INITIAL_WAIT_TRANSFERS; i++ )
         {
-            EXPECT_EQ( node2->WaitForTransactionIncoming( tx_ids[i],
+            EXPECT_EQ( RequireIncomingStatus( *node2, tx_ids[i],
                                                           std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
                        TransactionManager::TransactionStatus::CONFIRMED )
                 << "Failed to receive initial transaction " << tx_ids[i] << " on node2";
@@ -173,7 +201,7 @@ namespace sgns
             << std::endl;
         for ( int i = 0; i < TOTAL_TRANSFERS; i++ )
         {
-            EXPECT_EQ( node2->WaitForTransactionIncoming( tx_ids[i],
+            EXPECT_EQ( RequireIncomingStatus( *node2, tx_ids[i],
                                                           std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
                        TransactionManager::TransactionStatus::CONFIRMED )
                 << "Missing post-recovery transaction " << tx_ids[i];

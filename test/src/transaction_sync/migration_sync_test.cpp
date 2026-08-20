@@ -23,6 +23,27 @@ namespace fs = std::filesystem;
 
 using namespace sgns;
 
+namespace
+{
+    std::string ConfiguredFixtureAddress( const GeniusNodeConfig &config, const char *key_hex )
+    {
+        const auto account = GeniusAccount::NewFromPrivateKey(
+            config.TokenID, key_hex, boost::filesystem::path( config.BaseWritePath ) / "configured-identity", true );
+        return account ? account->GetAddress() : std::string{};
+    }
+
+    uint64_t RequireActiveBalance( GeniusNode &node )
+    {
+        const auto address = node.GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return 0;
+        }
+        return node.GetBalance();
+    }
+} // namespace
+
 TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
 {
     const auto *validator = IInputValidator::Get( "migration" );
@@ -146,8 +167,13 @@ protected:
                                       /*node_type=*/"Full",
                                       /*is_processor=*/false,
                                       /*rpc_catchup=*/false );
+        const auto configured_address = ConfiguredFixtureAddress( devConfig, FULL_NODE_KEY );
+        if ( configured_address.empty() )
+        {
+            return nullptr;
+        }
         auto instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
-        Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
+        Blockchain::SetAuthorizedFullNodeAddress( configured_address );
 
         return instance;
     }
@@ -174,7 +200,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
                                   std::chrono::milliseconds( 100000 ),
                                   readiness_message );
 
-    EXPECT_EQ( node->GetBalance(), params.expected_balance );
+    EXPECT_EQ( RequireActiveBalance( *node ), params.expected_balance );
 }
 
 TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )

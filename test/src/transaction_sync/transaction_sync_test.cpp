@@ -32,6 +32,42 @@ using namespace sgns;
 
 namespace sgns
 {
+    namespace
+    {
+        std::string RequireActiveAddress( const GeniusNode &node )
+        {
+            const auto address = node.GetActiveAccountAddress();
+            if ( address.has_error() )
+            {
+                ADD_FAILURE() << "expected active account address: " << address.error().message();
+                return {};
+            }
+            return address.value();
+        }
+
+        uint64_t RequireActiveBalance( GeniusNode &node )
+        {
+            (void)RequireActiveAddress( node );
+            return node.GetBalance();
+        }
+
+        TransactionManager::TransactionStatus RequireIncomingStatus( GeniusNode &node,
+                                                                       const std::string &transaction_id,
+                                                                       std::chrono::milliseconds timeout )
+        {
+            (void)RequireActiveAddress( node );
+            return node.WaitForTransactionIncoming( transaction_id, timeout );
+        }
+
+        TransactionManager::TransactionStatus RequireOutgoingStatus( GeniusNode &node,
+                                                                       const std::string &transaction_id,
+                                                                       std::chrono::milliseconds timeout )
+        {
+            (void)RequireActiveAddress( node );
+            return node.WaitForTransactionOutgoing( transaction_id, timeout );
+        }
+    } // namespace
+
     class TransactionSyncTest : public ::testing::Test
     {
     protected:
@@ -101,7 +137,6 @@ namespace sgns
             full_node = sgns::GeniusNode::New(
                 DEV_CONFIG3,
                 sgns::FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
-            Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
             node_proc1 = sgns::GeniusNode::New(
                 DEV_CONFIG,
                 sgns::FromPrivateKey{ "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" } );
@@ -116,6 +151,7 @@ namespace sgns
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 50000 ),
                                           "full_node not ready" );
+            Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *full_node ) );
             test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 50000 ),
                                           "node_proc1 not ready" );
@@ -177,17 +213,17 @@ namespace sgns
             return &node.account_->GetUTXOManager();
         }
 
-        void SendPair( sgns::GeniusNode &node, std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
+        outcome::result<void> SendPair( sgns::GeniusNode &node, std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
         {
-            node.SendTransactionAndProof( std::move( tx ), std::move( proof ) );
+            return node.SendTransactionAndProof( std::move( tx ), std::move( proof ) );
         }
     };
 }
 
 TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
 {
-    auto balance_1_before = node_proc1->GetBalance();
-    auto balance_2_before = node_proc2->GetBalance();
+    auto balance_1_before = RequireActiveBalance( *node_proc1 );
+    auto balance_2_before = RequireActiveBalance( *node_proc2 );
     auto mint_result      = node_proc1->MintTokens( 10000000000,
                                                     sgns::test::NextMintSourceHash(),
                                                     "test",
@@ -200,11 +236,11 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     std::cout << "Mint transaction completed in " << mint_duration << " ms" << std::endl;
 
     // Verify balance after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before + 10000000000 ) << "Correct Balance of outgoing transactions";
 
     // Transfer funds with timeout
     auto transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                      node_proc2->GetAddress(),
+                                                      RequireActiveAddress( *node_proc2 ),
                                                       sgns::TokenID::FromBytes( { 0x00 } ),
                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_TRANSFER ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
@@ -212,7 +248,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
 
     auto start_time        = std::chrono::steady_clock::now();
-    auto transfer_received = node_proc2->WaitForTransactionIncoming(
+    auto transfer_received = RequireIncomingStatus( *node_proc2,
         transfer_tx_id,
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
@@ -221,7 +257,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     start_time                       = std::chrono::steady_clock::now();
-    auto full_node_transfer_received = full_node->WaitForTransactionIncoming(
+    auto full_node_transfer_received = RequireIncomingStatus( *full_node,
         transfer_tx_id,
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( full_node_transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
@@ -230,17 +266,17 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     std::cout << "Full Node received transaction completed in " << duration << " ms" << std::endl;
 
     // Verify node_proc1's balance decreased
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before ) << "Transfer should decrease node_proc1's balance";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before ) << "Transfer should decrease node_proc1's balance";
 
     // Verify node_proc2's balance increased
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_2_before + 10000000000 )
         << "Transfer should increase node_proc2's balance";
 }
 
 TEST_F( TransactionSyncTest, TransactionMintSync )
 {
-    auto balance_1_before = node_proc1->GetBalance();
-    auto balance_2_before = node_proc2->GetBalance();
+    auto balance_1_before = RequireActiveBalance( *node_proc1 );
+    auto balance_2_before = RequireActiveBalance( *node_proc2 );
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> mint_amounts = { 10000000000, 20000000000 };
@@ -269,12 +305,12 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 30000000000 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before + 30000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_2_before + 10000000000 ) << "Correct Balance of outgoing transactions";
 
     // Transfer funds
     auto transfer_result1 = node_proc1->TransferFunds( 10000000000,
-                                                       node_proc2->GetAddress(),
+                                                       RequireActiveAddress( *node_proc2 ),
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
@@ -283,7 +319,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     // Wait for the transfer to happen or timeout.
     auto start_time = std::chrono::steady_clock::now();
 
-    auto transfer_received = node_proc2->WaitForTransactionIncoming(
+    auto transfer_received = RequireIncomingStatus( *node_proc2,
         transfer_tx_id1,
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
@@ -292,8 +328,8 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     std::cout << "node2 Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     // Verify balances after transfers
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 20000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before + 20000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_2_before + 20000000000 ) << "Correct Balance of outgoing transactions";
 }
 
 TEST_F( TransactionSyncTest, TransactionTransferSync )
@@ -306,8 +342,8 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
-    auto balance_1_before = node_proc1->GetBalance();
-    auto balance_2_before = node_proc2->GetBalance();
+    auto balance_1_before = RequireActiveBalance( *node_proc1 );
+    auto balance_2_before = RequireActiveBalance( *node_proc2 );
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> xfer_amounts[2] = {
@@ -325,7 +361,7 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
         auto xfer_amount  = xfer_amounts[0][index];
         xfer_amount_1    += xfer_amount;
         auto transfer_result1 = node_proc1->TransferFunds( xfer_amount,
-                                                           node_proc2->GetAddress(),
+                                                           RequireActiveAddress( *node_proc2 ),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
@@ -337,7 +373,7 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
         xfer_amount    = xfer_amounts[1][index];
         xfer_amount_2 += xfer_amount;
         auto transfer_result2 = node_proc2->TransferFunds( xfer_amount,
-                                                           node_proc1->GetAddress(),
+                                                           RequireActiveAddress( *node_proc1 ),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result2.has_value() ) << "Transfer transaction failed or timed out";
@@ -352,7 +388,7 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
         // wait for both transfers to happen or timeout.
         auto start_time1        = std::chrono::steady_clock::now();
         auto transfer_tx_id2    = txIDs[1][index];
-        auto transfer_received1 = node_proc1->WaitForTransactionIncoming(
+        auto transfer_received1 = RequireIncomingStatus( *node_proc1,
             transfer_tx_id2,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
         EXPECT_EQ( transfer_received1, TransactionManager::TransactionStatus::CONFIRMED );
@@ -364,7 +400,7 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
         // wait for both transfers to happen or timeout.
         auto start_time2        = std::chrono::steady_clock::now();
         auto transfer_tx_id1    = txIDs[0][index];
-        auto transfer_received2 = node_proc2->WaitForTransactionIncoming(
+        auto transfer_received2 = RequireIncomingStatus( *node_proc2,
             transfer_tx_id1,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
         EXPECT_EQ( transfer_received2, TransactionManager::TransactionStatus::CONFIRMED );
@@ -375,16 +411,16 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
     }
 
     // Verify balances after transfers
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before - xfer_amount_1 + xfer_amount_2 )
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before - xfer_amount_1 + xfer_amount_2 )
         << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before - xfer_amount_2 + xfer_amount_1 )
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_2_before - xfer_amount_2 + xfer_amount_1 )
         << "Correct Balance of outgoing transactions";
 }
 
 TEST_F( TransactionSyncTest, InvalidTransactionTest )
 {
-    auto balance_1_before = node_proc1->GetBalance();
-    auto balance_2_before = node_proc2->GetBalance();
+    auto balance_1_before = RequireActiveBalance( *node_proc1 );
+    auto balance_2_before = RequireActiveBalance( *node_proc2 );
 
     // Mint tokens with timeout
     auto mint_result = node_proc1->MintTokens( 10000000000,
@@ -408,11 +444,11 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     auto balance_1_before_invalid = balance_1_before + 20000000000;
 
     // Verify balance after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
     auto tx_pair = CreateTransfer( *GetAccountFromNode( *node_proc1 ),
                                    10000000000,
-                                   node_proc2->GetAddress(),
+                                   RequireActiveAddress( *node_proc2 ),
                                    mint_tx_id );
     if ( !tx_pair.has_value() )
     {
@@ -429,14 +465,14 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     tx->dag_st.clear_signature();
 
     auto invalid_tx_id = tx->dag_st.data_hash();
-    SendPair( *node_proc1, tx, proof_vect );
+    ASSERT_TRUE( SendPair( *node_proc1, tx, proof_vect ).has_value() );
 
-    auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
+    auto invalid_tx_result_sent = RequireOutgoingStatus( *node_proc1,
         invalid_tx_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED );
 
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( RequireActiveBalance( *node_proc1 ), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
     std::cout << "Invalid tx failed" << std::endl;
 
@@ -447,7 +483,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     std::cout << "wait until its ready" << std::endl;
 
     auto transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                      node_proc2->GetAddress(),
+                                                      RequireActiveAddress( *node_proc2 ),
                                                       sgns::TokenID::FromBytes( { 0x00 } ),
                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed when it should succeed";
@@ -456,7 +492,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
 
     auto start_time        = std::chrono::steady_clock::now();
-    auto transfer_received = node_proc2->WaitForTransactionIncoming(
+    auto transfer_received = RequireIncomingStatus( *node_proc2,
         transfer_tx_id,
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
@@ -465,7 +501,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     // Verify node_proc2's balance increased
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_2_before + 10000000000 )
         << "Transfer should increase node_proc2's balance";
 }
 
@@ -482,23 +518,23 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
 
     // Create and send a valid first transfer using the normal flow
     auto transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                      node_proc2->GetAddress(),
+                                                      RequireActiveAddress( *node_proc2 ),
                                                       sgns::TokenID::FromBytes( { 0x00 } ),
                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
     auto [tx1_id, transfer_duration] = transfer_result.value();
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
 
-    auto tx1_status = node_proc1->WaitForTransactionOutgoing(
+    auto tx1_status = RequireOutgoingStatus( *node_proc1,
         tx1_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
     EXPECT_EQ(
-        node_proc2->WaitForTransactionIncoming( tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+        RequireIncomingStatus( *node_proc2, tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
         TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
-    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(), tx1_id );
+    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, RequireActiveAddress( *node_proc2 ), tx1_id );
     ASSERT_TRUE( tx_pair2.has_value() );
 
     auto [tx2, proof2]   = tx_pair2.value();
@@ -516,17 +552,17 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     {
         proof_vect2 = proof2.value();
     }
-    SendPair( *node_proc1, tx2, proof_vect2 );
+    ASSERT_TRUE( SendPair( *node_proc1, tx2, proof_vect2 ).has_value() );
 
-    auto tx2_status = node_proc1->WaitForTransactionOutgoing( tx2->GetHash(), std::chrono::seconds( 10 ) );
+    auto tx2_status = RequireOutgoingStatus( *node_proc1, tx2->GetHash(), std::chrono::seconds( 10 ) );
     EXPECT_EQ( tx2_status, TransactionManager::TransactionStatus::FAILED );
 }
 
 TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
 {
     constexpr uint64_t amount         = 100;
-    const auto         destination    = node_proc2->GetAddress();
-    const auto         balance_before = node_proc2->GetBalance();
+    const auto         destination    = RequireActiveAddress( *node_proc2 );
+    const auto         balance_before = RequireActiveBalance( *node_proc2 );
 
     // Keep node_proc2's datastore, but take the node offline while the CRDT head is published.
     node_proc2.reset();
@@ -556,8 +592,8 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
                                   std::chrono::milliseconds( 50000 ),
                                   "reconnected node did not finish recovery" );
 
-    EXPECT_EQ( node_proc2->WaitForTransactionIncoming( transaction_id,
+    EXPECT_EQ( RequireIncomingStatus( *node_proc2, transaction_id,
                                                        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
                TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_EQ( node_proc2->GetBalance(), balance_before + amount );
+    EXPECT_EQ( RequireActiveBalance( *node_proc2 ), balance_before + amount );
 }

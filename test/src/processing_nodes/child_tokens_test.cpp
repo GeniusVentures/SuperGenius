@@ -52,6 +52,37 @@ namespace sgns
 
 namespace
 {
+    std::string RequireActiveAddress( const sgns::GeniusNode &node )
+    {
+        const auto address = node.GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( sgns::GeniusNode &node )
+    {
+        (void)RequireActiveAddress( node );
+        return node.GetBalance();
+    }
+
+    uint64_t RequireActiveBalance( sgns::GeniusNode &node, sgns::TokenID token_id )
+    {
+        (void)RequireActiveAddress( node );
+        return node.GetBalance( token_id );
+    }
+
+    sgns::TransactionManager::TransactionStatus RequireIncomingStatus( sgns::GeniusNode &node,
+                                                                         const std::string &transaction_id,
+                                                                         std::chrono::milliseconds timeout )
+    {
+        (void)RequireActiveAddress( node );
+        return node.WaitForTransactionIncoming( transaction_id, timeout );
+    }
+
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize GeniusGeniusNodeConfig.
@@ -99,7 +130,10 @@ namespace
 
         if ( setAsAuthorized )
         {
-            sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+            test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+                                          std::chrono::milliseconds( 50000 ),
+                                          "authorized full node not ready" );
+            sgns::Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *node ) );
         }
 
         return node;
@@ -140,12 +174,12 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     ConfigureTestConsensus( node52, "node52" );
 
     // Record initial balances
-    uint64_t init50_full = node50->GetBalance();
-    uint64_t init50_t50  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x50 } ) );
-    uint64_t init50_t51  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x51 } ) );
-    uint64_t init50_t52  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x52 } ) );
-    uint64_t init51_t51  = node51->GetBalance( sgns::TokenID::FromBytes( { 0x51 } ) );
-    uint64_t init52_t52  = node52->GetBalance( sgns::TokenID::FromBytes( { 0x52 } ) );
+    uint64_t init50_full = RequireActiveBalance( *node50 );
+    uint64_t init50_t50  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x50 } ) );
+    uint64_t init50_t51  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x51 } ) );
+    uint64_t init50_t52  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x52 } ) );
+    uint64_t init51_t51  = RequireActiveBalance( *node51, sgns::TokenID::FromBytes( { 0x51 } ) );
+    uint64_t init52_t52  = RequireActiveBalance( *node52, sgns::TokenID::FromBytes( { 0x52 } ) );
 
     std::cout << "Initial balances:\n";
     std::cout << "node50 total: " << init50_full << ", token50: " << init50_t50 << ", token51: " << init50_t51
@@ -205,7 +239,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     for ( const auto &t : transfers )
     {
         auto transferRes = t.src->TransferFunds( t.amount,
-                                                 node50->GetAddress(),
+                                                 RequireActiveAddress( *node50 ),
                                                  t.tokenId,
                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
@@ -213,24 +247,24 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
 
         EXPECT_EQ(
-            node50->WaitForTransactionIncoming( txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+            RequireIncomingStatus( *node50, txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
             TransactionManager::TransactionStatus::CONFIRMED )
             << "node50 did not receive transaction " << txHash;
     }
 
     // Record final balances
-    uint64_t final50_full = node50->GetBalance();
-    uint64_t final50_t50  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x50 } ) );
-    uint64_t final50_t51  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x51 } ) );
-    uint64_t final50_t52  = node50->GetBalance( sgns::TokenID::FromBytes( { 0x52 } ) );
-    uint64_t final51_t51  = node51->GetBalance( sgns::TokenID::FromBytes( { 0x51 } ) );
-    uint64_t final52_t52  = node52->GetBalance( sgns::TokenID::FromBytes( { 0x52 } ) );
+    uint64_t final50_full = RequireActiveBalance( *node50 );
+    uint64_t final50_t50  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x50 } ) );
+    uint64_t final50_t51  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x51 } ) );
+    uint64_t final50_t52  = RequireActiveBalance( *node50, sgns::TokenID::FromBytes( { 0x52 } ) );
+    uint64_t final51_t51  = RequireActiveBalance( *node51, sgns::TokenID::FromBytes( { 0x51 } ) );
+    uint64_t final52_t52  = RequireActiveBalance( *node52, sgns::TokenID::FromBytes( { 0x52 } ) );
 
     std::cout << "Final balances:\n";
     std::cout << "node50 total: " << final50_full << ", token50: " << final50_t50 << ", token51: " << final50_t51
               << ", token52: " << final50_t52 << '\n';
-    std::cout << "node51 total" << node51->GetBalance() << " token51: " << final51_t51 << '\n';
-    std::cout << "node52 total" << node52->GetBalance() << " token52: " << final52_t52 << '\n';
+    std::cout << "node51 total" << RequireActiveBalance( *node51 ) << " token51: " << final51_t51 << '\n';
+    std::cout << "node52 total" << RequireActiveBalance( *node52 ) << " token52: " << final52_t52 << '\n';
 
     // Validate expected deltas and leftover
     uint64_t expected50 = totalMint51 + totalMint52;
@@ -254,8 +288,8 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
     ConfigureTestConsensus( nodefull, "nodefull" );
     ConfigureTestConsensus( node, "node" );
 
-    auto initialMain  = node->GetBalance();
-    auto initialToken = node->GetBalance( tokenId );
+    auto initialMain  = RequireActiveBalance( *node );
+    auto initialToken = RequireActiveBalance( *node, tokenId );
 
     auto parsedChildMint = node->ParseTokens( "1.0", tokenId );
     ASSERT_TRUE( parsedChildMint.has_value() );
@@ -269,11 +303,11 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( childMintRes.has_value() );
 
-    auto finalFmtRes = node->FormatTokens( node->GetBalance( tokenId ) - initialToken, tokenId );
+    auto finalFmtRes = node->FormatTokens( RequireActiveBalance( *node, tokenId ) - initialToken, tokenId );
     ASSERT_TRUE( finalFmtRes.has_value() );
     EXPECT_EQ( finalFmtRes.value(), "1.000000" );
-    EXPECT_EQ( node->GetBalance() - initialMain, parsedChildMint.value() );
-    EXPECT_EQ( node->GetBalance( tokenId ) - initialToken, parsedChildMint.value() );
+    EXPECT_EQ( RequireActiveBalance( *node ) - initialMain, parsedChildMint.value() );
+    EXPECT_EQ( RequireActiveBalance( *node, tokenId ) - initialToken, parsedChildMint.value() );
 }
 
 // Suite 3: Mint multiple token IDs on same node
@@ -306,10 +340,10 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     std::map<TokenID, uint64_t> initialBalances;
     for ( const auto &id : tokenIds )
     {
-        initialBalances[id] = node->GetBalance( id );
+        initialBalances[id] = RequireActiveBalance( *node, id );
     }
 
-    uint64_t initialMainBalance = node->GetBalance();
+    uint64_t initialMainBalance = RequireActiveBalance( *node );
 
     std::map<sgns::TokenID, uint64_t> expectedTotals;
     uint64_t                          totalMinted = 0;
@@ -332,11 +366,11 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     {
         const auto &id       = entry.first;
         uint64_t    expected = initialBalances[id] + entry.second;
-        uint64_t    balance  = node->GetBalance( id );
+        uint64_t    balance  = RequireActiveBalance( *node, id );
         EXPECT_EQ( balance, expected ); // << "Balance mismatch for " << id;
     }
 
-    uint64_t mainBalance = node->GetBalance();
+    uint64_t mainBalance = RequireActiveBalance( *node );
     EXPECT_EQ( mainBalance, initialMainBalance + totalMinted )
         << "Main balance did not reflect total minted (" << totalMinted << ")";
 }
@@ -516,12 +550,12 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     MultiAccountTestAccess::SetGNUSPrice( node_main, 1.0 );
     auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto cost          = node_main->GetProcessCost( procmgr.value() );
-    auto bal_main_init = node_main->GetBalance();
-    auto bal_p1_init   = node_proc1->GetBalance();
-    auto bal_p2_init   = node_proc2->GetBalance();
-    auto tok_main_init = node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) );
-    auto tok_p1_init   = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
-    auto tok_p2_init   = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto bal_main_init = RequireActiveBalance( *node_main );
+    auto bal_p1_init   = RequireActiveBalance( *node_proc1 );
+    auto bal_p2_init   = RequireActiveBalance( *node_proc2 );
+    auto tok_main_init = RequireActiveBalance( *node_main, sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto tok_p1_init   = RequireActiveBalance( *node_proc1, sgns::TokenID::FromBytes( { 0x01 } ) );
+    auto tok_p2_init   = RequireActiveBalance( *node_proc2, sgns::TokenID::FromBytes( { 0x02 } ) );
 
     std::cout << "Process cost: " << cost << "\n";
     auto postjob = node_main->ProcessImage( json_data );
@@ -529,12 +563,12 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
                TransactionManager::TransactionStatus::CONFIRMED );
 
-    assertWaitForCondition( [&]() { return node_main->GetBalance() == bal_main_init - cost; },
+    assertWaitForCondition( [&]() { return RequireActiveBalance( *node_main ) == bal_main_init - cost; },
                             std::chrono::milliseconds( 20000 ),
                             "Main general balance not updated in time" );
 
-    ASSERT_EQ( bal_main_init - cost, node_main->GetBalance() );
-    ASSERT_EQ( tok_main_init - cost, node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) ) );
+    ASSERT_EQ( bal_main_init - cost, RequireActiveBalance( *node_main ) );
+    ASSERT_EQ( tok_main_init - cost, RequireActiveBalance( *node_main, sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
     uint64_t burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     uint64_t available   = cost - burn_amount;
@@ -544,19 +578,19 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     assertWaitForCondition(
         [&]()
         {
-            return ( node_proc1->GetBalance() + node_proc2->GetBalance() ) ==
+            return ( RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 ) ) ==
                    ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
         },
         std::chrono::milliseconds( 40000 ),
         "Other nodes balance not updated in time" );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
+               RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 ) );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) +
-                   node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+               RequireActiveBalance( *node_proc1, sgns::TokenID::FromBytes( { 0x01 } ) ) +
+                   RequireActiveBalance( *node_proc2, sgns::TokenID::FromBytes( { 0x02 } ) ) );
 
     uint64_t dev_payment = available - 2 * expected_peer_gain;
     ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
-               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment +
+               RequireActiveBalance( *node_main ) + RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 ) + dev_payment +
                    burn_amount );
 }

@@ -22,6 +22,33 @@
 
 using namespace sgns::test;
 
+namespace
+{
+    std::string RequireActiveAddress( const sgns::GeniusNode &node )
+    {
+        const auto address = node.GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( sgns::GeniusNode &node )
+    {
+        (void)RequireActiveAddress( node );
+        return node.GetBalance();
+    }
+
+    size_t RequireActiveTransactionCount( const sgns::GeniusNode &node,
+                                          std::optional<sgns::TransactionManager::TransactionStatus> status = std::nullopt )
+    {
+        (void)RequireActiveAddress( node );
+        return node.CountTransactions( status );
+    }
+} // namespace
+
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
@@ -69,7 +96,6 @@ protected:
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
@@ -102,6 +128,7 @@ protected:
                                             { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
                                             std::chrono::milliseconds( 50000 ),
                                             "node_proc2 not ready" );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *node_proc1 ) );
     }
 
     static void TearDownTestSuite()
@@ -142,9 +169,9 @@ std::string ProcessingNodesTest::binary_path = "";
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
-    std::string address_main  = node_main->GetAddress();
-    std::string address_proc1 = node_proc1->GetAddress();
-    std::string address_proc2 = node_proc2->GetAddress();
+    std::string address_main  = RequireActiveAddress( *node_main );
+    std::string address_proc1 = RequireActiveAddress( *node_proc1 );
+    std::string address_proc2 = RequireActiveAddress( *node_proc2 );
     std::cout << "Addresses " << std::endl;
     std::cout << "Main Node: " << address_main << std::endl;
     std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -176,22 +203,24 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
     sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
                                         std::chrono::milliseconds( 50000 ),
                                         "Node proc 2 not synced" );
-    node_main->MintTokens( 50000000000,
-                           sgns::test::NextMintSourceHash(),
-                           "test",
-                           sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
-                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
-    node_main->MintTokens( 50000000000,
-                           sgns::test::NextMintSourceHash(),
-                           "test",
-                           sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
-                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( node_main->MintTokens( 50000000000,
+                                        sgns::test::NextMintSourceHash(),
+                                        "test",
+                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                        "",
+                                        std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) )
+                     .has_value() );
+    ASSERT_TRUE( node_main->MintTokens( 50000000000,
+                                        sgns::test::NextMintSourceHash(),
+                                        "test",
+                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                        "",
+                                        std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) )
+                     .has_value() );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
-    int transcount_node1 = node_proc1->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
-    int transcount_node2 = node_proc2->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    int transcount_main  = RequireActiveTransactionCount( *node_main, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    int transcount_node1 = RequireActiveTransactionCount( *node_proc1, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    int transcount_node2 = RequireActiveTransactionCount( *node_proc2, sgns::TransactionManager::TransactionStatus::CONFIRMED );
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -504,9 +533,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
-    auto balance_main  = node_main->GetBalance();
-    auto balance_node1 = node_proc1->GetBalance();
-    auto balance_node2 = node_proc2->GetBalance();
+    auto balance_main  = RequireActiveBalance( *node_main );
+    auto balance_node1 = RequireActiveBalance( *node_proc1 );
+    auto balance_node2 = RequireActiveBalance( *node_proc2 );
     auto postjob       = node_main->ProcessImage( json_data );
 
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
@@ -522,33 +551,33 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     assertWaitForCondition(
         [&]
         {
-            auto result = node_main->GetBalance();
+            auto result = RequireActiveBalance( *node_main );
             return result == balance_main - cost;
         },
         std::chrono::milliseconds( 20000 ),
         "Main Balance not updated in time" );
-    ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
+    ASSERT_EQ( balance_main - cost, RequireActiveBalance( *node_main ) );
     auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     auto available   = cost - burn_amount;
     assertWaitForCondition(
         [&]
         {
-            auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
+            auto result             = RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 );
             auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
             return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );
-    std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
-    std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
-    std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
+    std::cout << "Balance main (After):   " << RequireActiveBalance( *node_main ) << std::endl;
+    std::cout << "Balance node1 (After):  " << RequireActiveBalance( *node_proc1 ) << std::endl;
+    std::cout << "Balance node2 (After):  " << RequireActiveBalance( *node_proc2 ) << std::endl;
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
     auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
     ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
+               RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 ) );
 
     auto gameDeveloperPayment = available - 2 * expected_peer_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
-               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
+               RequireActiveBalance( *node_main ) + RequireActiveBalance( *node_proc1 ) + RequireActiveBalance( *node_proc2 ) + gameDeveloperPayment +
                    burn_amount );
 }

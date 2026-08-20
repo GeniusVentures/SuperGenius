@@ -19,6 +19,20 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string RequireActiveAddress( const GeniusNode &node )
+        {
+            const auto address = node.GetActiveAccountAddress();
+            if ( address.has_error() )
+            {
+                ADD_FAILURE() << "expected active account address: " << address.error().message();
+                return {};
+            }
+            return address.value();
+        }
+    } // namespace
+
     class GeniusNodeBootstrapReconnectTest : public ::testing::Test
     {
     protected:
@@ -50,12 +64,12 @@ namespace sgns
 
             full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
             ASSERT_TRUE( full_node_ );
-            Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
             ASSERT_NO_FATAL_FAILURE(
                 test::assertWaitForCondition( [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
                                               std::chrono::seconds( 50 ),
                                               "bootstrap full node did not become ready" ) );
+            Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *full_node_ ) );
 
             bootstrap_address_ = full_node_->GetPubSub()->GetInterfaceAddress();
             ASSERT_FALSE( bootstrap_address_.empty() );
@@ -127,12 +141,12 @@ namespace sgns
 
         full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
         ASSERT_TRUE( full_node_ );
-        Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
             std::chrono::seconds( 50 ),
             "late bootstrap full node did not become ready" ) );
+        Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *full_node_ ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]() { return client_node_->GetState() == GeniusNode::NodeState::READY; },
             std::chrono::seconds( 50 ),
@@ -159,12 +173,12 @@ namespace sgns
 
         full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
         ASSERT_TRUE( full_node_ );
-        Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
             std::chrono::seconds( 50 ),
             "restarted bootstrap full node did not become ready" ) );
+        Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *full_node_ ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {

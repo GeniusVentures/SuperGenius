@@ -17,6 +17,26 @@
 
 using namespace sgns;
 
+namespace
+{
+    std::string RequireActiveAddress( const GeniusNode &node )
+    {
+        const auto address = node.GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( GeniusNode &node )
+    {
+        (void)RequireActiveAddress( node );
+        return node.GetBalance();
+    }
+} // namespace
+
 /**
  * @brief Helper to create a GeniusNode with explicit full-node flag, custom folder, and fixed private key.
  * @param self_address Address for this node
@@ -52,11 +72,6 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
-    if ( isFullNode )
-    {
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
-    }
-
     return node;
 }
 
@@ -88,9 +103,10 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "Recovery node initial balance not updated in time" );
+    Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( *fullNode ) );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
-    uint64_t beforeMint = originalNode->GetBalance();
+    uint64_t beforeMint = RequireActiveBalance( *originalNode );
     uint64_t afterMint;
 
     constexpr size_t mintAmount = 10;
@@ -103,7 +119,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                                  "",
                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
-        afterMint = originalNode->GetBalance();
+        afterMint = RequireActiveBalance( *originalNode );
         ASSERT_GT( afterMint, beforeMint );
     }
 
@@ -117,7 +133,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     recoveryNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
-    test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
+    test::assertWaitForCondition( [&]() { return RequireActiveBalance( *recoveryNode ) == afterMint; },
                                   std::chrono::milliseconds( 150000 ),
                                   "Recovery node balance not updated in time" );
 }
