@@ -1,9 +1,10 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: planning
-last_updated: '2026-08-20'
+last_updated: "2026-08-20T14:06:11.427Z"
+last_activity: 2026-08-20 — Renumbered v3.0 phases to avoid retained historical phase directories.
 progress:
   total_phases: 5
   completed_phases: 0
@@ -33,6 +34,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 5 (prior milestone)
 - v3.0 plans completed: 0
 - Average duration: Not yet measured for v3.0
@@ -75,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-20
-Stopped at: v3.0 roadmap renumbered; Phase 8 is ready for detailed planning.
-Resume file: None
+Last session: 2026-08-20T14:06:11.420Z
+Stopped at: Phase 8 context gathered
+Resume file: .planning/phases/08-canonical-slot-certificate-binding/08-CONTEXT.md
