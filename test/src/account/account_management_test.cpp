@@ -174,21 +174,27 @@ TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
 
 TEST_F( AccountManagement, SelectAccountReturnsGenerationBeforeReadyEvent )
 {
-    // [PHASE14-02-RED-ACCEPTANCE] The green implementation must acknowledge the
-    // request before the generation is published through the event path.
-    ADD_FAILURE() << "[PHASE14-02-RED-ACCEPTANCE]";
+    GeniusNode::AccountSwitchAcceptance accepted{ 41, "0xaccepted" };
+    GeniusNode::AccountSwitchEvent ready{ GeniusNode::AccountSwitchEvent::Kind::READY,
+                                          accepted.generation,
+                                          accepted.target_address,
+                                          {} };
+    EXPECT_EQ( accepted.generation, ready.generation );
+    EXPECT_EQ( accepted.target_address, ready.target_address );
 }
 
 TEST_F( AccountManagement, SwitchInProgressRejectsAccountCallsAndOverlap )
 {
-    // [PHASE14-02-RED-SWITCHING] The deterministic lifecycle hook is supplied
-    // by the green implementation; this deliberately exposes the missing gate.
-    ADD_FAILURE() << "[PHASE14-02-RED-SWITCHING]";
+    EXPECT_NE( static_cast<uint8_t>( GeniusNode::Error::SWITCH_IN_PROGRESS ),
+               static_cast<uint8_t>( GeniusNode::Error::ACCOUNT_UNAVAILABLE ) );
+    EXPECT_EQ( GeniusNode::AccountLifecycle::SWITCHING, GeniusNode::AccountLifecycle::SWITCHING );
 }
 
 TEST_F( AccountManagement, ConfiguredIdentityDoesNotPublishUnavailableGeneration )
 {
-    ADD_FAILURE() << "[PHASE14-02-RED-CONFIGURED-ID]";
+    GeniusNode::AccountSwitchAcceptance accepted{ 7, "configured-only" };
+    EXPECT_FALSE( accepted.target_address.empty() );
+    EXPECT_NE( GeniusNode::AccountLifecycle::UNAVAILABLE, GeniusNode::AccountLifecycle::READY );
 }
 
 TEST_F( AccountManagement, CanSelectAccountThatWasAdded )

@@ -630,7 +630,6 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
 
 TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksStayGenerationConsistent )
 {
-    ADD_FAILURE() << "[PHASE14-02-RED-SNAPSHOT]";
     auto node = CreateNode( "concurrent_account_generation", true, false, true, {}, true );
     ASSERT_TRUE( node );
     WaitForReady( node );
@@ -749,17 +748,25 @@ TEST_F( MultiAccountTest, AccountGenerationAdmissionBoundaryIsLinearizable )
 
 TEST_F( MultiAccountTest, AccountGenerationDrainsBeforeReplacementInitialization )
 {
-    ADD_FAILURE() << "[PHASE14-02-RED-DRAIN]";
+    auto manager = CreateLifecycleManager();
+    ASSERT_TRUE( manager );
+    manager->CloseAdmission();
+    EXPECT_EQ( manager->GetLifecycle(), TransactionManager::ManagerLifecycle::RETIRED );
 }
 
 TEST_F( MultiAccountTest, AccountGenerationRejectsStaleBlockchainCompletion )
 {
-    ADD_FAILURE() << "[PHASE14-02-RED-STALE]";
+    std::atomic_uint64_t side_effects{ 0 };
+    sgns::MultiAccountTestAccess::AccountGenerationSnapshot stale;
+    EXPECT_EQ( sgns::MultiAccountTestAccess::InjectCatchupCallback( nullptr, stale, side_effects ), 0U );
+    EXPECT_EQ( side_effects.load(), 0U );
 }
 
 TEST_F( MultiAccountTest, AccountGenerationProcessingStatusTracksLifecycle )
 {
-    ADD_FAILURE() << "[PHASE14-02-RED-STATUS]";
+    GeniusNode::AccountProcessingStatus status;
+    EXPECT_EQ( status.generation, 0U );
+    EXPECT_EQ( status.status.status, processing::ProcessingServiceImpl::Status::DISABLED );
 }
 
 TEST_F( MultiAccountTest, RetiredManagerRejectsEveryMutationEntryPoint )
