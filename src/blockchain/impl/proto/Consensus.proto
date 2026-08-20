@@ -111,6 +111,15 @@ message ConsensusVote {
   bytes signature = 5;
 }
 
+// Private validator durability state. This envelope is intentionally not part
+// of ConsensusMessage: it must never be replicated or advertised on PubSub.
+message ActiveVoteRecord {
+  string canonical_slot = 1;
+  bytes proposal_bytes = 2;
+  bytes vote_bytes = 3;
+  uint64 acceptance_deadline_ms = 4;
+}
+
 message ConsensusVoteBundle {
   string proposal_id = 1;
   string aggregator_id = 2;

@@ -566,6 +566,8 @@ namespace sgns
             "consensus-channel-"; ///< Prefix for pubsub consensus channels.
         static constexpr std::string_view CERTIFICATE_BASE_PATH_KEY =
             "/cert/"; ///< Datastore key prefix for certificates.
+        static constexpr std::string_view ACTIVE_VOTE_BASE_PATH_KEY =
+            "/consensus/vote/"; ///< Private local RocksDB prefix for durable active votes.
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes(
             5 ); ///< Default timestamp acceptance window.
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION = std::chrono::milliseconds(
@@ -600,6 +602,18 @@ namespace sgns
             std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
             std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
+            std::vector<Proposal>           eligible_candidates; ///< Approved proposals admitted before freeze.
+            std::chrono::steady_clock::time_point candidate_deadline{}; ///< Fixed local contention deadline.
+            bool candidates_frozen = false; ///< Prevents admission after the deadline has passed.
+            bool active_vote_locked = false; ///< Prevents creation of a replacement local vote.
+        };
+
+        struct ActiveVoteState
+        {
+            Proposal                         proposal;
+            Vote                             vote;
+            uint64_t                         acceptance_deadline_ms = 0;
+            std::chrono::steady_clock::time_point next_retry_at{};
         };
 
         /**
@@ -770,6 +784,19 @@ namespace sgns
                                                         std::size_t                           scheduled_retry_count = 0,
                                                         std::chrono::steady_clock::time_point last_retry_at = {} );
         void                      ProcessDuePendingRetries();
+        void                      ProcessDueVoteWork();
+        outcome::result<ActiveVoteRecord> BuildActiveVoteRecord( const std::string &slot_key,
+                                                                  const Proposal &proposal,
+                                                                  const Vote &vote,
+                                                                  uint64_t acceptance_deadline_ms ) const;
+        outcome::result<ActiveVoteState> DecodeActiveVoteRecord( const std::string &slot_key,
+                                                                  std::string_view serialized ) const;
+        outcome::result<ActiveVoteState> PersistOrLoadExactActiveVote( const std::string &slot_key,
+                                                                         const Proposal &proposal,
+                                                                         const Vote &vote,
+                                                                         uint64_t acceptance_deadline_ms );
+        void RecoverActiveVotes();
+        std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
@@ -903,6 +930,7 @@ namespace sgns
         std::string                     account_address_;            ///< Local validator/account id.
         std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
+        std::unordered_map<std::string, ActiveVoteState> active_votes_; ///< Valid durable local votes keyed by slot.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>
@@ -911,6 +939,10 @@ namespace sgns
                                pending_count_by_proposer_;                   ///< Pending proposal count by proposer id.
         std::size_t            pending_retained_bytes_ = 0;                  ///< Total retained pending proposal bytes.
         PendingLifecycleConfig pending_config_;                              ///< Local pending lifecycle bounds.
+        std::chrono::milliseconds candidate_window_{ std::chrono::seconds( 2 ) }; ///< Fixed local contender window.
+        std::chrono::milliseconds active_vote_retry_interval_{ std::chrono::milliseconds( 500 ) }; ///< Bounded replay cadence.
+        bool fail_active_vote_persistence_for_test_ = false; ///< Friend-scoped deterministic failure seam.
+        std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.

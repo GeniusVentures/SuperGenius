@@ -253,6 +253,35 @@ namespace sgns
             manager->ContinueProposalAfterSubject( proposal );
         }
 
+        static void ForceCandidateWindowDue( const std::shared_ptr<ConsensusManager> &manager,
+                                             const std::string                       &slot_key )
+        {
+            auto it = manager->slot_states_.find( slot_key );
+            ASSERT_TRUE( it != manager->slot_states_.end() );
+            it->second.candidate_deadline = std::chrono::steady_clock::now() - std::chrono::milliseconds( 1 );
+        }
+
+        static void ProcessDueVoteWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->ProcessDueVoteWork();
+        }
+
+        static void SetActiveVotePersistenceFailure( const std::shared_ptr<ConsensusManager> &manager, bool fail )
+        {
+            manager->fail_active_vote_persistence_for_test_ = fail;
+        }
+
+        static const std::vector<std::string> &ActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager->active_vote_announcements_for_test_;
+        }
+
+        static bool HasActiveVoteLock( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot_key )
+        {
+            auto it = manager->slot_states_.find( slot_key );
+            return it != manager->slot_states_.end() && it->second.active_vote_locked;
+        }
+
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(
             const std::shared_ptr<ConsensusManager> &manager,
             const std::string                       &subject_hash )
