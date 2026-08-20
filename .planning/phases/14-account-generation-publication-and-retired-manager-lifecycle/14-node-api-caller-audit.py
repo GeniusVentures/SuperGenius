@@ -70,6 +70,20 @@ PLAN_14_10_SOURCES = {
     "test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp",
 }
 
+# `bridge_race_fixture.hpp` is included by five independently-built race targets.
+# Headers do not have compile_commands entries of their own, so model their concrete
+# consumers explicitly instead of collapsing their lifecycle calls into the generic
+# `header-consumer` placeholder.  This expansion is a precondition for removing the
+# temporary GeniusNode compatibility shims in the final caller-closure plan.
+BRIDGE_RACE_FIXTURE = "test/src/bridge_race/bridge_race_fixture.hpp"
+BRIDGE_RACE_TARGETS = {
+    "bridge_race_single_burn_test",
+    "bridge_race_batch_test",
+    "bridge_race_fault_rpc_test",
+    "bridge_race_fault_kill_test",
+    "bridge_race_fault_partition_test",
+}
+
 def owner_for(source):
     s = source.replace("\\", "/")
     if s in {"src/account/GeniusNode.cpp", "src/account/GeniusNode.hpp", "test/src/node/node_initialization_progress.cpp"}:
@@ -145,9 +159,10 @@ def rows(commands):
         for called_method in found:
             method = CALL_METHODS[called_method]
             contract = contract_for(method, rel)
+            row_targets = BRIDGE_RACE_TARGETS if rel == BRIDGE_RACE_FIXTURE else targets.get(rel, {"header-consumer"})
             rows.append({"method": method, "expression": f"{rel}:{called_method}", "contract": contract,
                          "identity_kind": identity_for(contract), "source": rel,
-                         "targets": ";".join(sorted(targets.get(rel, {"header-consumer"}))),
+                         "targets": ";".join(sorted(row_targets)),
                          "owner_plan": owner_for(rel), "disposition": "migrate"})
         if rel in FIXTURE_SOURCES:
             rows.append({"method": "GetAddress", "expression": f"{rel}:fixture-configured-bootstrap",

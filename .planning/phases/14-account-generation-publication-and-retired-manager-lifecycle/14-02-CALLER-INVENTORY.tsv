@@ -53,7 +53,7 @@ GetAddress	test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp:GetActiveAccountAddress	
 GetAddress	test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp:GetAddress	active-ready	active-generation	test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp	bridge_rlpx_e2e_test	14-10	migrated
 GetAddress	test/src/bridge_e2e/bridge_sepolia_e2e_test.cpp:GetActiveAccountAddress	active-ready	active-generation	test/src/bridge_e2e/bridge_sepolia_e2e_test.cpp	bridge_sepolia_e2e_test	14-10	migrated
 GetAddress	test/src/bridge_e2e/bridge_sepolia_e2e_test.cpp:GetAddress	active-ready	active-generation	test/src/bridge_e2e/bridge_sepolia_e2e_test.cpp	bridge_sepolia_e2e_test	14-10	migrated
-GetAddress	test/src/bridge_race/bridge_race_fixture.hpp:GetAddress	active-ready	active-generation	test/src/bridge_race/bridge_race_fixture.hpp	header-consumer	14-11	migrate
+GetAddress	test/src/bridge_race/bridge_race_fixture.hpp:GetAddress	active-ready	active-generation	test/src/bridge_race/bridge_race_fixture.hpp	bridge_race_batch_test;bridge_race_fault_kill_test;bridge_race_fault_partition_test;bridge_race_fault_rpc_test;bridge_race_single_burn_test	14-11	migrate
 GetAddress	test/src/local_secure_storage/json_migration_test.cpp:GetAddress	active-ready	active-generation	test/src/local_secure_storage/json_migration_test.cpp	json_migration_test	14-07	migrate
 GetAddress	test/src/multiaccount/multi_account_sync.cpp:GetActiveAccountAddress	active-ready	active-generation	test/src/multiaccount/multi_account_sync.cpp	multi_account_test	14-09	migrated
 GetAddress	test/src/multiaccount/multi_account_sync.cpp:GetAddress	active-ready	active-generation	test/src/multiaccount/multi_account_sync.cpp	multi_account_test	14-09	migrated
