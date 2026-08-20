@@ -208,3 +208,13 @@ Non-negotiable testing rules: no direct local-author helper as authority proof, 
 ---
 *Research completed: 2026-08-20*
 *Ready for roadmap: yes — after the listed protocol confirmations are resolved or explicitly assigned to Phase 1.*
+
+## Decision Update — 2026-08-20
+
+The user confirmed the following correction to this research: `MintTransactionV2::GetSlotID()` is already the intended shared contention identity when its amount and destination are independently validated burn facts. This milestone must not introduce `BridgeBurnRef`, `BridgeFinalityPublication`, or a bridge-only `/bridge/finality/...` authority.
+
+Instead, generic certificate authority moves from `/cert/<subject-hash>` to `/cert/<canonical-slot-id>`. The existing certificate remains the sole payload and continues to bind the exact winning proposal, registry snapshot, quorum, and vote signatures. The deterministic aggregator persists that slot key before advertising it; PubSub/CRDT receivers validate and consume it but never write it merely because they received it.
+
+The temporal safety gap is closed with a direct-RocksDB active-vote record keyed by canonical slot. Before a validator publishes its first vote, it durably records the slot, proposal, signed vote bytes, and validity/expiry horizon. It may collect contenders only for a bounded pre-vote window; after publication, no second usable vote for that slot may be produced. The record clears only after the matching validated certificate is durably observable at `/cert/<slot-id>`, or after the signed vote can no longer contribute to any accepted certificate. A different certificate for the same slot is a safety conflict and does not unlock the record.
+
+Hash-only certificate consumers must either migrate to slot-aware lookup or use a non-authoritative `subject-hash -> slot-id` locator; such a locator is not a second certificate record and never decides finality.
