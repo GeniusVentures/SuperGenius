@@ -1497,6 +1497,13 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
+        if ( ValidateCertificate( certificate ) != Check::Approve )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected invalid certificate proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
         ConsensusMessage message;
         *message.mutable_certificate() = certificate;
         auto result                    = Publish( message );
@@ -1818,6 +1825,13 @@ namespace sgns
                 continue;
             }
 
+            if ( ValidateCertificate( certificate_result.value() ) != Check::Approve )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected invalid generated certificate proposal_id={}",
+                                                 __func__,
+                                                 state.proposal.proposal_id() );
+                continue;
+            }
             if ( SubmitCertificate( certificate_result.value() ).has_error() )
             {
                 continue;
@@ -1878,6 +1892,12 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
+        if ( !ValidateLegacyCertificateKey( certificate, element.key() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: legacy key binding failed, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
         if ( ValidateCertificate( certificate ) == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
@@ -1899,7 +1919,24 @@ namespace sgns
             return;
         }
 
-        const auto certificate_check = ValidateCertificate( certificate );
+        if ( !ValidateLegacyCertificateKey( certificate, key ) )
+        {
+            ConsensusManagerLogger()->error( "{}: legacy key binding failed for key {}", __func__, key );
+            return;
+        }
+
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ),
+                                             subject_hash.error().message() );
+            return;
+        }
+
+        auto certificate_check = ValidateCertificate( certificate );
+
         if ( certificate_check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
@@ -2052,6 +2089,14 @@ namespace sgns
             return Check::Reject;
         }
 
+        if ( !ValidateCertificateBinding( certificate ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot binding failed proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return Check::Reject;
+        }
+
         std::vector<Vote> votes;
         votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
         for ( const auto &vote : certificate.votes() )
@@ -2065,6 +2110,30 @@ namespace sgns
         }
 
         return Check::Approve;
+    }
+
+    bool ConsensusManager::ValidateCertificateBinding( const Certificate &certificate )
+    {
+        return certificate.has_proposal() && !GetSlotKey( certificate.proposal() ).empty();
+    }
+
+    bool ConsensusManager::ValidateLegacyCertificateKey( const Certificate &certificate, std::string_view key )
+    {
+        if ( !ValidateCertificateBinding( certificate ) )
+        {
+            return false;
+        }
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        return subject_hash.has_value() && key == std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash.value();
+    }
+
+    std::string ConsensusManager::GetExpectedCertificateSlotKey( const Certificate &certificate )
+    {
+        if ( !ValidateCertificateBinding( certificate ) )
+        {
+            return {};
+        }
+        return std::string{ CERTIFICATE_BASE_PATH_KEY } + GetSlotKey( certificate.proposal() );
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
