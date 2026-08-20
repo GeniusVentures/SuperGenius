@@ -60,27 +60,27 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | Phase 4 | Pending |
-| SLOT-02 | Phase 4 | Pending |
-| SLOT-03 | Phase 4 | Pending |
-| VOTE-01 | Phase 5 | Pending |
-| VOTE-02 | Phase 5 | Pending |
-| VOTE-03 | Phase 5 | Pending |
-| VOTE-04 | Phase 5 | Pending |
-| CERT-01 | Phase 6 | Pending |
-| CERT-02 | Phase 6 | Pending |
-| CERT-03 | Phase 6 | Pending |
-| CERT-04 | Phase 6 | Pending |
-| CERT-05 | Phase 7 | Pending |
-| COMP-01 | Phase 6 | Pending |
-| MINT-01 | Phase 7 | Pending |
-| MINT-02 | Phase 7 | Pending |
-| TEST-01 | Phase 8 | Pending |
-| TEST-02 | Phase 8 | Pending |
-| TEST-03 | Phase 8 | Pending |
-| TEST-04 | Phase 8 | Pending |
-| TEST-05 | Phase 8 | Pending |
-| TEST-06 | Phase 8 | Pending |
+| SLOT-01 | Phase 8 | Pending |
+| SLOT-02 | Phase 8 | Pending |
+| SLOT-03 | Phase 8 | Pending |
+| VOTE-01 | Phase 9 | Pending |
+| VOTE-02 | Phase 9 | Pending |
+| VOTE-03 | Phase 9 | Pending |
+| VOTE-04 | Phase 9 | Pending |
+| CERT-01 | Phase 10 | Pending |
+| CERT-02 | Phase 10 | Pending |
+| CERT-03 | Phase 10 | Pending |
+| CERT-04 | Phase 10 | Pending |
+| CERT-05 | Phase 11 | Pending |
+| COMP-01 | Phase 10 | Pending |
+| MINT-01 | Phase 11 | Pending |
+| MINT-02 | Phase 11 | Pending |
+| TEST-01 | Phase 12 | Pending |
+| TEST-02 | Phase 12 | Pending |
+| TEST-03 | Phase 12 | Pending |
+| TEST-04 | Phase 12 | Pending |
+| TEST-05 | Phase 12 | Pending |
+| TEST-06 | Phase 12 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 21 total
@@ -89,4 +89,4 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 
 ---
 *Requirements defined: 2026-08-20*
-*Last updated: 2026-08-20 after v3.0 roadmap creation*
+*Last updated: 2026-08-20 after renumbering v3.0 phases to avoid retained historical directories*
