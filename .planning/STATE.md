@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-08-20T14:45:12.473Z"
-last_activity: 2026-08-20 -- Phase 8 planning complete
+status: verifying
+last_updated: "2026-08-20T15:45:16.945Z"
+last_activity: 2026-08-20
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 ## Current Position
 
-Phase: 8 of 12 overall (1 of 5 in v3.0) — Canonical Slot & Certificate Binding
-Plan: Not yet planned
-Status: Ready to execute
-Last activity: 2026-08-20 -- Phase 8 planning complete
+Phase: 8 (Canonical Slot & Certificate Binding) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-08-20
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 | 12. Multi-Node Finality Fault Proof | 0 | - | - |
 
 **Recent Trend:** Not yet measured for v3.0.
+| Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Progress: [░░░░░░░░░░] 0%
 - Certificates are authoritative only at `/cert/<canonical-slot-id>` and remain bound to the exact winning proposal; no bridge-specific finality record or legacy certificate authority is permitted.
 - A direct RocksDB active-vote record is written before broadcast, permits only exact-vote recovery, and clears only on matching durable certificate finality without incompatible overlap.
 - Certificate publisher authority and failover are deterministic and protocol-visible; persist and verify before PubSub; recipients consume/resolve only and never write the CRDT certificate key.
+- [Phase 08]: Keep the legacy subject-hash CRDT key non-authoritative while validating it at key-aware ingress.
+- [Phase 08]: Reject invalid certificate bindings before submit, cleanup, callbacks, registry finalization, or handler dispatch.
+- [Phase 08]: Use in-memory secure storage in the pending-lifecycle fixture before creating the signing account.
 
 ### Pending Todos
 
@@ -77,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-20T14:06:11.420Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-canonical-slot-certificate-binding/08-CONTEXT.md
+Last session: 2026-08-20T15:45:16.940Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
