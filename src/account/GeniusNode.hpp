@@ -344,8 +344,6 @@ namespace sgns
 
         /** Returns the ready generation address, or an explicit lifecycle error. */
         [[nodiscard]] outcome::result<std::string> GetActiveAccountAddress() const;
-        /** Returns the configured/bootstrap identity without publishing it as an active generation. */
-        [[nodiscard]] std::string GetConfiguredAccountAddress() const;
         /** Returns switching/unavailable errors before reading any processing owner. */
         [[nodiscard]] outcome::result<AccountProcessingStatus> GetActiveProcessingStatus() const;
         /** Registers the one generation-tagged account lifecycle completion path. */
@@ -1126,6 +1124,10 @@ namespace sgns
 
         /** Copy the one published account/manager generation, or an empty snapshot while switching. */
         [[nodiscard]] AccountServiceSnapshot SnapshotAccountServices() const;
+        /** Returns the complete ready generation, or the precise lifecycle unavailability error. */
+        [[nodiscard]] outcome::result<AccountServiceSnapshot> RequireReadyAccountGeneration() const;
+        /** Returns the private configured/bootstrap identity without publishing it as active. */
+        [[nodiscard]] std::string GetConfiguredAccountAddress() const;
 
         /** The sole commit point that makes a complete account generation observable. */
         void PublishReadyAccountGeneration();

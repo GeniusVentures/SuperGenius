@@ -125,9 +125,10 @@ def read_inventory(path):
     with path.open(newline="") as stream:
         return list(csv.DictReader(stream, delimiter="\t"))
 
-def semantic_rows(rows):
+def semantic_rows(rows, include_disposition=False):
+    fields = FIELDS if include_disposition else [field for field in FIELDS if field != "disposition"]
     return sorted(
-        tuple(row[field] for field in FIELDS)
+        tuple(row[field] for field in fields)
         for row in rows
     )
 

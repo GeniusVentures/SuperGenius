@@ -341,7 +341,7 @@ namespace sgns
         {
             throw std::runtime_error( "Network initialization error" );
         }
-        node_logger_->debug( "Account Address {}", account_->GetAddress() );
+        node_logger_->debug( "Configured account address {}", GetConfiguredAccountAddress() );
 
         // Initializes the thread pool for IO context
         io_threads_.reserve( io_thread_count_ );
@@ -822,7 +822,7 @@ namespace sgns
                     if ( !trust_signer_ )
                     {
                         trust_signer_ = std::make_shared<const NodeTrustSigner>(
-                            NodeTrustSigner{ account_->GetAddress(), account_ } );
+                            NodeTrustSigner{ GetConfiguredAccountAddress(), account_ } );
                     }
                     const auto trust_signer = trust_signer_;
                     auto created = sgns::account::TrustStartupController::New(
@@ -1667,7 +1667,7 @@ namespace sgns
         }
         else
         {
-            pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
+            pubsubport_ = GenerateRandomPort( port_seed, GetConfiguredAccountAddress() );
         }
 
         do
@@ -1681,7 +1681,7 @@ namespace sgns
             }
 
             // Make a base58 out of our address
-            std::string                tempaddress = account_->GetAddress();
+            std::string                tempaddress = GetConfiguredAccountAddress();
             std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
             std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
             SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
@@ -1692,7 +1692,8 @@ namespace sgns
             if ( !maybe_base58 )
             {
                 ret = false;
-                node_logger_->error( "We couldn't convert the account {} to base58", account_->GetAddress() );
+                node_logger_->error( "We couldn't convert the configured account {} to base58",
+                                     GetConfiguredAccountAddress() );
                 break;
             }
             base58key_ = maybe_base58.value();
@@ -2501,7 +2502,8 @@ namespace sgns
     {
         public_address = GeniusAccount::NormalizeAddress( public_address );
 
-        if ( public_address == GetAddress() )
+        BOOST_OUTCOME_TRY( auto active_address, GetActiveAccountAddress() );
+        if ( public_address == active_address )
         {
             node_logger_->warn( "Address already active" );
             return std::errc::address_in_use;
@@ -2593,7 +2595,8 @@ namespace sgns
     {
         const std::string destination_address( GeniusAccount::NormalizeAddress( public_address ) );
 
-        if ( destination_address == GetAddress() )
+        BOOST_OUTCOME_TRY( auto active_address, GetActiveAccountAddress() );
+        if ( destination_address == active_address )
         {
             node_logger_->warn( "Address already active" );
             return std::errc::address_in_use;
@@ -2607,8 +2610,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
         const auto token_id = GetTokenID();
         auto       balance  = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( balance > 0 )
@@ -2629,7 +2631,8 @@ namespace sgns
 
     outcome::result<void> GeniusNode::DeleteAccount( std::string_view public_address )
     {
-        if ( public_address == GetAddress() )
+        BOOST_OUTCOME_TRY( auto active_address, GetActiveAccountAddress() );
+        if ( public_address == active_address )
         {
             node_logger_->error( "Can't delete active account" );
             return std::errc::address_not_available;
@@ -2640,20 +2643,19 @@ namespace sgns
 
     outcome::result<void> GeniusNode::MergeAccount( std::string_view public_address )
     {
-        const auto previous_address = GetAddress();
+        BOOST_OUTCOME_TRY( auto previous_address, GetActiveAccountAddress() );
         BOOST_OUTCOME_TRY( TransferAccount( public_address ) );
         return DeleteAccount( previous_address );
     }
 
     outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
     {
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
         if ( !GeniusAccount::IsValidPublicKey( payout_address ) )
         {
             return outcome::failure( std::errc::bad_address );
         }
 
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         BOOST_OUTCOME_TRY( snapshot.account->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );
@@ -2663,7 +2665,8 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
+        if ( snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
@@ -2675,8 +2678,6 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         if ( snapshot.account->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
@@ -2853,9 +2854,8 @@ namespace sgns
                                                          TokenID            tokenid,
                                                          std::string        destination )
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ||
-             snapshot.manager->GetState() != TransactionManager::State::READY )
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
+        if ( snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
@@ -2898,8 +2898,9 @@ namespace sgns
 
     std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account ) return std::nullopt;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        if ( snapshot_result.has_failure() ) return std::nullopt;
+        const auto &snapshot = snapshot_result.value();
         auto res = snapshot.account->LoadFromSecureStorage( "mnemonic" );
         if ( res.has_error() )
         {
@@ -3003,9 +3004,8 @@ namespace sgns
                                                             const std::string &destination,
                                                             TokenID            token_id )
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ||
-             snapshot.manager->GetState() != TransactionManager::State::READY )
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
+        if ( snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
@@ -3098,33 +3098,38 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        const auto snapshot = SnapshotAccountServices();
-        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance() : 0;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        return snapshot_result.has_value() ? snapshot_result.value().account->GetUTXOManager().GetBalance() : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        const auto snapshot = SnapshotAccountServices();
-        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id ) : 0;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        return snapshot_result.has_value()
+                   ? snapshot_result.value().account->GetUTXOManager().GetBalance( token_id )
+                   : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        const auto snapshot = SnapshotAccountServices();
-        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( address ) : 0;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        return snapshot_result.has_value() ? snapshot_result.value().account->GetUTXOManager().GetBalance( address ) : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        const auto snapshot = SnapshotAccountServices();
-        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id, address ) : 0;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        return snapshot_result.has_value()
+                   ? snapshot_result.value().account->GetUTXOManager().GetBalance( token_id, address )
+                   : 0;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC        = __func__;
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return;
+        auto snapshot_result = RequireReadyAccountGeneration();
+        if ( snapshot_result.has_failure() ) return;
+        const auto &snapshot = snapshot_result.value();
         const auto account_tag = snapshot.account->GetAddress().substr( 0, 8 );
         node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
@@ -3212,8 +3217,9 @@ namespace sgns
                            {
                                if ( auto strong = weak_self.lock() )
                                {
-                                   const auto snapshot = strong->SnapshotAccountServices();
-                                   if ( !snapshot.account ) return;
+                                   auto snapshot_result = strong->RequireReadyAccountGeneration();
+                                   if ( snapshot_result.has_failure() ) return;
+                                   const auto &snapshot = snapshot_result.value();
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
                                                                 snapshot.account->GetAddress().substr( 0, 8 ),
                                                                 task_id );
@@ -3402,13 +3408,24 @@ namespace sgns
         return { account_, transaction_manager_, account_service_generation_ };
     }
 
+    outcome::result<GeniusNode::AccountServiceSnapshot> GeniusNode::RequireReadyAccountGeneration() const
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( account_lifecycle_ == AccountLifecycle::SWITCHING )
+        {
+            return outcome::failure( Error::SWITCH_IN_PROGRESS );
+        }
+        if ( account_lifecycle_ != AccountLifecycle::READY || !account_ || !transaction_manager_ )
+        {
+            return outcome::failure( Error::ACCOUNT_UNAVAILABLE );
+        }
+        return AccountServiceSnapshot{ account_, transaction_manager_, account_service_generation_ };
+    }
+
     outcome::result<std::string> GeniusNode::GetActiveAccountAddress() const
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( snapshot.account ) return snapshot.account->GetAddress();
-        std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
-        return outcome::failure( account_lifecycle_ == AccountLifecycle::SWITCHING ? Error::SWITCH_IN_PROGRESS
-                                                                                   : Error::ACCOUNT_UNAVAILABLE );
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
+        return snapshot.account->GetAddress();
     }
 
     std::string GeniusNode::GetConfiguredAccountAddress() const
@@ -3596,11 +3613,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TransactionManager>> GeniusNode::GetTransactionManager() const
     {
-        auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.manager )
-        {
-            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
-        }
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
         return snapshot.manager;
     }
 
