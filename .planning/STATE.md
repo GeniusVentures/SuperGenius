@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 14
 status: executing
-stopped_at: Completed 14-07-PLAN.md
-last_updated: "2026-08-20T19:00:54.599Z"
+stopped_at: Completed 14-10-PLAN.md
+last_updated: "2026-08-20T19:11:29.730Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 46
+  completed_plans: 47
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 10 of 15
+Plan: 11 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,8 +67,8 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T19:00:38.721Z
-**Stopped At:** Completed 14-07-PLAN.md
+**Last session:** 2026-08-20T19:11:29.726Z
+**Stopped At:** Completed 14-10-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -127,6 +127,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P07 | 10 min | 2 tasks | 7 files |
 | Phase 14 P08 | 13 min | 2 tasks | 10 files |
 | Phase 14 P09 | 3h 6m | 2 tasks | 4 files |
+| Phase 14 P10 | 5 min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -208,3 +209,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 14]: migration_sync_test retains configured fixture identity before readiness and checks active balance afterward.
 - [Phase 14]: Multi-account migration proof is constrained to its two owned sources. — Later partitions cannot satisfy or invalidate the 14-09 audit.
 - [Phase 14]: Concurrent lifecycle readers assert typed switching or unavailable errors. — Legacy empty/default shim values cannot be accepted as ready state.
+- [Phase 14]: Bridge E2E setup uses fixture-owned configured identity before readiness and checked active account results afterward; bridge-race ownership remains isolated. — This preserves lifecycle errors at ready-generation reads without redesigning bridge provider, relayer, watcher, or catch-up ownership.

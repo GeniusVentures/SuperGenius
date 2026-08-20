@@ -137,7 +137,7 @@ Plans:
 **Goal:** Publish only complete ready account generations, close old-manager admission at accepted selection, preserve already-admitted terminal work, and make failed or retired generations explicitly unavailable and permanently non-mutable.
 **Requirements**: TBD
 **Depends on:** Phase 13
-**Plans:** 9/15 plans executed
+**Plans:** 10/15 plans executed
 Plans:
 **Wave 1**
 
@@ -177,7 +177,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 14-10-PLAN.md — Bridge common/E2E GeniusNode caller migration
+- [x] 14-10-PLAN.md — Bridge common/E2E GeniusNode caller migration
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
