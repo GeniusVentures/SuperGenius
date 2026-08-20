@@ -21,7 +21,7 @@ key-decisions:
   - "ProcessImage and escrow waits use checked ready-generation results; the raw escrow status API remains only the marked temporary Plan 14-13 shim."
   - "The existing processing_multi_test target is registered only through its parent CMake list, preserving its local target definition and fixture behavior."
 requirements-completed: [D-03, D-04, D-11, D-16]
-duration: 14min
+duration: 10min
 completed: 2026-08-20
 ---
 
@@ -31,9 +31,9 @@ completed: 2026-08-20
 
 ## Performance
 
-- **Duration:** 14 min
+- **Duration:** 10 min
 - **Started:** 2026-08-20T19:55:50Z
-- **Completed:** 2026-08-20T20:09:50Z
+- **Completed:** 2026-08-20T20:06:07Z
 - **Tasks:** 2/2
 - **Files modified:** 10 implementation/inventory files
 

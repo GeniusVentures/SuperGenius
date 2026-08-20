@@ -129,7 +129,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P09 | 3h 6m | 2 tasks | 4 files |
 | Phase 14 P10 | 5 min | 2 tasks | 7 files |
 | Phase 14 P11 | 9 min | 2 tasks | 8 files |
-| Phase 14 P12 | 14min | 2 tasks | 10 files |
+| Phase 14 P12 | 10min | 2 tasks | 10 files |
 
 ## Decisions
 
