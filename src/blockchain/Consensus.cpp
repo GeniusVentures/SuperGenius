@@ -620,6 +620,13 @@ const auto &proposal_id = proposal.proposal_id();
             {
                 return;
             }
+            if ( HasAcceptedCertificateForSlot( slot_key ) )
+            {
+                // Existing accepted legacy data is only a local no-revote fence in Phase 9.
+                slot_state.active_vote_locked = true;
+                slot_state.candidates_frozen  = true;
+                return;
+            }
             const auto now = std::chrono::steady_clock::now();
             if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
             {
@@ -1049,6 +1056,76 @@ const auto &proposal_id = proposal.proposal_id();
         return std::string( ACTIVE_VOTE_BASE_PATH_KEY ) + std::string( slot_key );
     }
 
+    bool ConsensusManager::HasAcceptedCertificateForSlot( const std::string &slot_key ) const
+    {
+        if ( slot_key.empty() || !db_ )
+        {
+            return false;
+        }
+        auto certificates = db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY );
+        if ( certificates.has_error() )
+        {
+            return false;
+        }
+        for ( const auto &[key, value] : certificates.value() )
+        {
+            auto key_string = db_->KeyToString( key );
+            if ( key_string.has_error() || key_string.value().rfind( std::string( CERTIFICATE_BASE_PATH_KEY ), 0 ) != 0 )
+            {
+                continue;
+            }
+            Certificate certificate;
+            if ( !certificate.ParseFromArray( value.data(), value.size() ) ||
+                 !ValidateLegacyCertificateKey( certificate, key_string.value() ) ||
+                 ValidateCertificate( certificate ) != Check::Approve )
+            {
+                continue;
+            }
+            if ( GetSlotKey( certificate.proposal() ) == slot_key )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    outcome::result<bool> ConsensusManager::ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key )
+    {
+        if ( slot_key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        auto datastore = db_ ? db_->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+        crdt::GlobalDB::Buffer key;
+        key.put( ActiveVoteStorageKey( slot_key ) );
+        auto existing = datastore->get( key );
+        if ( existing.has_error() )
+        {
+            if ( existing.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return false;
+            }
+            return outcome::failure( existing.error() );
+        }
+        auto decoded = DecodeActiveVoteRecord( slot_key, existing.value().toString() );
+        if ( decoded.has_error() )
+        {
+            return outcome::failure( decoded.error() );
+        }
+        auto removed = datastore->remove( key );
+        if ( removed.has_error() )
+        {
+            return outcome::failure( removed.error() );
+        }
+        std::lock_guard lock( proposals_mutex_ );
+        active_votes_.erase( slot_key );
+        return true;
+    }
+
     outcome::result<ActiveVoteRecord> ConsensusManager::BuildActiveVoteRecord( const std::string &slot_key,
                                                                                  const Proposal &proposal,
                                                                                  const Vote &vote,
@@ -1186,6 +1263,10 @@ const auto &proposal_id = proposal.proposal_id();
             slot_state.candidates_frozen  = true;
             slot_state.best_proposal_id   = decoded.value().proposal.proposal_id();
             slot_state.voted_proposal_ids.insert( decoded.value().proposal.proposal_id() );
+            if ( HasAcceptedCertificateForSlot( slot_key ) )
+            {
+                continue;
+            }
             if ( now_ms < decoded.value().acceptance_deadline_ms )
             {
                 active_votes_[slot_key] = std::move( decoded.value() );
@@ -1205,9 +1286,15 @@ const auto &proposal_id = proposal.proposal_id();
             for ( auto &[slot_key, slot_state] : slot_states_ )
             {
                 if ( slot_state.active_vote_locked || slot_state.candidates_frozen ||
-                     slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
-                     now_steady < slot_state.candidate_deadline )
+                    slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
+                    now_steady < slot_state.candidate_deadline )
                 {
+                    continue;
+                }
+                if ( HasAcceptedCertificateForSlot( slot_key ) )
+                {
+                    slot_state.active_vote_locked = true;
+                    slot_state.candidates_frozen  = true;
                     continue;
                 }
                 slot_state.candidates_frozen = true;
@@ -2176,111 +2263,14 @@ const auto &proposal_id = proposal.proposal_id();
     void ConsensusManager::CertificateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data,
                                                 const std::string & )
     {
-        const auto &[key, value] = new_data;
-        Certificate certificate;
-        if ( !certificate.ParseFromArray( value.data(), value.size() ) )
-        {
-            ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
-            return;
-        }
-
-        if ( !ValidateLegacyCertificateKey( certificate, key ) )
-        {
-            ConsensusManagerLogger()->error( "{}: legacy key binding failed for key {}", __func__, key );
-            return;
-        }
-
-        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
-                                             __func__,
-                                             certificate.proposal_id().substr( 0, 8 ),
-                                             subject_hash.error().message() );
-            return;
-        }
-
-        auto certificate_check = ValidateCertificate( certificate );
-
-        if ( certificate_check == Check::Reject )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
-            return;
-        }
-
-        if ( certificate_check == Check::Stalled )
-        {
-            ConsensusManagerLogger()->error(
-                "{}: Validation of the certificate pending for key {}, certificate handler not called ",
-                __func__,
-                key );
-            certificate_work_journal_->MarkStalled( key );
-            return;
-        }
-
-        const auto &proposal            = certificate.proposal();
-        const auto &proposal_id         = certificate.proposal_id();
-        auto        subject_hash_result = GetSubjectHash( proposal.subject() );
-        if ( subject_hash_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
-                                             __func__,
-                                             proposal_id.substr( 0, 8 ),
-                                             subject_hash_result.error().message() );
-            return;
-        }
-        const auto &subject_hash = subject_hash_result.value();
-
-        auto registry_result = registry_->OnFinalizedCertificate( certificate );
-        if ( registry_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: registry finalization failed proposal_id={} error={}",
-                                             __func__,
-                                             proposal_id.substr( 0, 8 ),
-                                             registry_result.error().message() );
-            certificate_work_journal_->MarkStalled( key );
-            return;
-        }
-
-        const auto                type_hash = ParseSubjectTypeHash( proposal.subject() ).value();
-        CertificateSubjectHandler handler;
-        {
-            std::shared_lock lock( certificate_handlers_mutex_ );
-            auto             it = certificate_subject_handlers_.find( type_hash );
-            if ( it != certificate_subject_handlers_.end() )
-            {
-                handler = it->second;
-            }
-        }
-
-        if ( handler )
-        {
-            auto result = handler( subject_hash, certificate );
-            if ( result.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: certificate handler error proposal_id={} error={}",
-                                                 __func__,
-                                                 proposal_id.substr( 0, 8 ),
-                                                 result.error().message() );
-                return;
-            }
-
-            if ( result.value() == Check::Stalled )
-            {
-                ConsensusManagerLogger()->warn( "{}: certificate handler stalled proposal_id={}",
-                                                __func__,
-                                                proposal_id.substr( 0, 8 ) );
-                certificate_work_journal_->MarkStalled( key );
-                return;
-            }
-        }
-        else
-        {
-            ConsensusManagerLogger()->warn( "{}: no subject handler for certificate key={}", __func__, key );
-        }
-
-        (void) certificate_work_journal_->MarkDone( key );
-        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
+        auto [key, value] = new_data;
+        (void) cid;
+        (void) value;
+        // CrdtSet invokes this callback before committing its batch. Receipt therefore
+        // cannot authorize certificate handling or removal of the local vote lock.
+        certificate_work_journal_->MarkSeen( key );
+        certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+        timer_cv_.notify_all();
     }
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
@@ -3206,10 +3196,67 @@ const auto &proposal_id = proposal.proposal_id();
             auto value = db_->Get( { entry.key } );
             if ( value.has_error() )
             {
+                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
                 continue;
             }
-            CertificateReceived( { entry.key, value.value() }, std::string{} );
+            Certificate certificate;
+            if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
+                 !ValidateLegacyCertificateKey( certificate, entry.key ) ||
+                 ValidateCertificate( certificate ) != Check::Approve )
+            {
+                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
+                continue;
+            }
+
+            const auto slot_key = GetSlotKey( certificate.proposal() );
+            auto release         = ReleaseActiveVoteForAcceptedSlot( slot_key );
+            if ( release.has_error() || !release.value() )
+            {
+                // A missing/racing local record is never a release authorization.
+                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
+                continue;
+            }
+
+            // Only a successful durable readback and matching direct-local removal
+            // may clear volatile proposal bookkeeping for this finalized slot.
+            ClearProposalSlot( certificate.proposal() );
+            ProcessCommittedCertificate( entry.key, certificate );
         }
+    }
+
+    void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )
+    {
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash.has_error() )
+        {
+            certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
+
+        registry_->OnFinalizedCertificate( certificate );
+
+        CertificateSubjectHandler handler;
+        {
+            std::shared_lock lock( certificate_handlers_mutex_ );
+            auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
+            if ( it == certificate_subject_handlers_.end() )
+            {
+                (void) certificate_work_journal_->MarkDone( key );
+                ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
+                (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
+                return;
+            }
+            handler = it->second;
+        }
+
+        auto certificate_handler_result = handler( subject_hash.value(), certificate );
+        if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
+        {
+            certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
+        (void) certificate_work_journal_->MarkDone( key );
+        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
     }
 
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
