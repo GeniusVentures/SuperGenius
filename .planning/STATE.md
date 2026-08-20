@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: verifying
-last_updated: "2026-08-20T15:45:16.945Z"
+status: ready_to_plan
+last_updated: 2026-08-20T18:56:37.761Z
 last_activity: 2026-08-20
 progress:
   total_phases: 5
@@ -11,6 +11,7 @@ progress:
   total_plans: 1
   completed_plans: 1
   percent: 20
+stopped_at: Phase 8 complete (1/1) — ready to discuss Phase 9
 ---
 
 # Project State
@@ -20,30 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 8 — Canonical Slot & Certificate Binding
+**Current focus:** Phase 9 — durable one vote finality
 
 ## Current Position
 
-Phase: 8 (Canonical Slot & Certificate Binding) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 9
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-20
 
-Progress: [██████████] 100%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5 (prior milestone)
-- v3.0 plans completed: 0
+- Total plans completed: 6 (5 prior milestone + 1 v3.0)
+- v3.0 plans completed: 1
 - Average duration: Not yet measured for v3.0
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 8. Canonical Slot & Certificate Binding | 0 | - | - |
+| 8. Canonical Slot & Certificate Binding | 1 | 48m | 48m |
 | 9. Durable One-Vote Finality | 0 | - | - |
 | 10. Authoritative Slot Certificate Publication | 0 | - | - |
 | 11. Convergent Certificate Consumption & Mint Recovery | 0 | - | - |
