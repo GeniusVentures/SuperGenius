@@ -606,6 +606,7 @@ namespace sgns
             std::chrono::steady_clock::time_point candidate_deadline{}; ///< Fixed local contention deadline.
             bool candidates_frozen = false; ///< Prevents admission after the deadline has passed.
             bool active_vote_locked = false; ///< Prevents creation of a replacement local vote.
+            bool certificate_scan_pending = false; ///< A failed finalized-slot scan blocks vote work until it succeeds.
         };
 
         struct ActiveVoteState
@@ -802,10 +803,12 @@ namespace sgns
          * @details This is a read-only Phase 9 safety seam. It does not establish
          * certificate authority or introduce slot-keyed certificate storage.
          */
-        bool HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
+        outcome::result<bool> HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
         /**
          * @brief Removes a direct local active-vote record for an accepted slot.
-         * @return `true` only when an exact matching local record was synchronously removed.
+         * @return `true` when an exact matching local record was synchronously removed;
+         *         `false` when no local record exists. Both outcomes permit accepted
+         *         certificate processing after durable certificate validation.
          */
         outcome::result<bool> ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key );
         /**
@@ -958,6 +961,7 @@ namespace sgns
         std::chrono::milliseconds active_vote_retry_interval_{ std::chrono::milliseconds( 500 ) }; ///< Bounded replay cadence.
         bool fail_active_vote_persistence_for_test_ = false; ///< Friend-scoped deterministic failure seam.
         bool fail_active_vote_removal_for_test_ = false; ///< Friend-scoped durable-release failure seam.
+        bool fail_accepted_certificate_scan_for_test_ = false; ///< Friend-scoped finalized-slot scan failure seam.
         std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
