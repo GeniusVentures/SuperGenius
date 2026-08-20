@@ -613,17 +613,20 @@ namespace sgns
             {
                 return;
             }
+            const auto now = std::chrono::steady_clock::now();
             auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
             if ( accepted_certificate.has_error() )
             {
                 // An incomplete legacy scan is never evidence that a slot is unfinalized.
                 slot_state.certificate_scan_pending = true;
-                if ( std::none_of( slot_state.scan_pending_candidates.begin(),
+                if ( ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
+                       now < slot_state.candidate_deadline ) &&
+                     std::none_of( slot_state.scan_pending_candidates.begin(),
                                    slot_state.scan_pending_candidates.end(),
-                                   [&proposal]( const Proposal &candidate )
-                                   { return candidate.proposal_id() == proposal.proposal_id(); } ) )
+                                   [&proposal]( const ScanPendingCandidate &candidate )
+                                   { return candidate.proposal.proposal_id() == proposal.proposal_id(); } ) )
                 {
-                    slot_state.scan_pending_candidates.push_back( proposal );
+                    slot_state.scan_pending_candidates.push_back( { proposal, now } );
                 }
                 return;
             }
@@ -635,22 +638,25 @@ namespace sgns
                 slot_state.candidates_frozen  = true;
                 return;
             }
-            const auto now = std::chrono::steady_clock::now();
             if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
             {
                 slot_state.candidate_deadline = now + candidate_window_;
+            }
+            if ( now < slot_state.candidate_deadline )
+            {
                 for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
                 {
-                    if ( std::none_of( slot_state.eligible_candidates.begin(),
+                    if ( pending_candidate.admitted_at < slot_state.candidate_deadline &&
+                         std::none_of( slot_state.eligible_candidates.begin(),
                                        slot_state.eligible_candidates.end(),
                                        [&pending_candidate]( const Proposal &candidate )
-                                       { return candidate.proposal_id() == pending_candidate.proposal_id(); } ) )
+                                       { return candidate.proposal_id() == pending_candidate.proposal.proposal_id(); } ) )
                     {
-                        slot_state.eligible_candidates.push_back( pending_candidate );
+                        slot_state.eligible_candidates.push_back( pending_candidate.proposal );
                     }
                 }
-                slot_state.scan_pending_candidates.clear();
             }
+            slot_state.scan_pending_candidates.clear();
             if ( now >= slot_state.candidate_deadline )
             {
                 process_due_work = true;
@@ -1361,18 +1367,24 @@ namespace sgns
                         // No window existed while the scan was unavailable. Start the
                         // fixed window at recovery, retaining every validated contender.
                         slot_state.candidate_deadline = now_steady + candidate_window_;
+                    }
+                    if ( now_steady < slot_state.candidate_deadline )
+                    {
                         for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
                         {
-                            if ( std::none_of( slot_state.eligible_candidates.begin(),
+                            if ( pending_candidate.admitted_at < slot_state.candidate_deadline &&
+                                 std::none_of( slot_state.eligible_candidates.begin(),
                                                slot_state.eligible_candidates.end(),
                                                [&pending_candidate]( const Proposal &candidate )
-                                               { return candidate.proposal_id() == pending_candidate.proposal_id(); } ) )
+                                               { return candidate.proposal_id() == pending_candidate.proposal.proposal_id(); } ) )
                             {
-                                slot_state.eligible_candidates.push_back( pending_candidate );
+                                slot_state.eligible_candidates.push_back( pending_candidate.proposal );
                             }
                         }
-                        slot_state.scan_pending_candidates.clear();
                     }
+                    // A successful scan after the original deadline deliberately drops
+                    // retained contenders rather than retroactively extending the window.
+                    slot_state.scan_pending_candidates.clear();
                 }
                 if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
                     now_steady < slot_state.candidate_deadline )

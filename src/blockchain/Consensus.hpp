@@ -594,6 +594,12 @@ namespace sgns
             uint64_t                        last_attempt_round   = NO_ROUND; ///< Last certificate-attempt round.
         };
 
+        struct ScanPendingCandidate
+        {
+            Proposal                              proposal;
+            std::chrono::steady_clock::time_point admitted_at;
+        };
+
         /**
          * @brief Runtime slot arbitration state.
          */
@@ -603,7 +609,7 @@ namespace sgns
             std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
             std::vector<Proposal>           eligible_candidates; ///< Approved proposals admitted before freeze.
-            std::vector<Proposal>           scan_pending_candidates; ///< Validated contenders retained while finalized-slot scanning is indeterminate.
+            std::vector<ScanPendingCandidate> scan_pending_candidates; ///< Validated contenders retained while finalized-slot scanning is indeterminate.
             std::chrono::steady_clock::time_point candidate_deadline{}; ///< Fixed local contention deadline.
             bool candidates_frozen = false; ///< Prevents admission after the deadline has passed.
             bool active_vote_locked = false; ///< Prevents creation of a replacement local vote.

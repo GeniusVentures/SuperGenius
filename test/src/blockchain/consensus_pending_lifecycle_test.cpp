@@ -1347,6 +1347,112 @@ TEST_F( ConsensusPendingLifecycleTest, ScanFailureRetainsCandidateUntilTimerCanO
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, ScanRecoveryMergesOnlyPreDeadlineContendersIntoTheOriginalWindow )
+{
+    sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject &subject )
+        {
+            auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+            return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
+        } );
+
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto higher_ranked = MakeProposal( manager, registry, 87, "z-higher-hash" );
+    auto lower_ranked  = MakeProposal( manager, registry, 87, "a-lower-hash" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( higher_ranked );
+    ASSERT_EQ( slot, sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( lower_ranked ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, higher_ranked );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, lower_ranked );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 1U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+
+    // Recovery before the original deadline admits the stored lower hash without
+    // requiring redelivery or moving that deadline.
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, false );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( manager, slot ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 0U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+
+    // A lower hash arriving only after the fixed deadline cannot enter through
+    // the recovery buffer or change the already-closed candidate set.
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    auto late = MakeProposal( manager, registry, 87, "0-late-lower-hash" );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, late );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 0U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, false );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    auto record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot );
+    ASSERT_TRUE( record_bytes.has_value() );
+    sgns::ActiveVoteRecord record;
+    ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
+    sgns::ConsensusProposal persisted;
+    ASSERT_TRUE( persisted.ParseFromString( record.proposal_bytes() ) );
+    EXPECT_EQ( persisted.proposal_id(), lower_ranked.proposal_id() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ScanRecoveryAfterDeadlineCannotChangeTheFrozenWinner )
+{
+    sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject &subject )
+        {
+            auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+            return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
+        } );
+
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto original_winner = MakeProposal( manager, registry, 88, "z-original-hash" );
+    auto retained_later  = MakeProposal( manager, registry, 88, "a-retained-hash" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( original_winner );
+    ASSERT_EQ( slot, sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( retained_later ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, original_winner );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retained_later );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 1U );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( manager, slot ) );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, false );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    auto record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot );
+    ASSERT_TRUE( record_bytes.has_value() );
+    sgns::ActiveVoteRecord record;
+    ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
+    sgns::ConsensusProposal persisted;
+    ASSERT_TRUE( persisted.ParseFromString( record.proposal_bytes() ) );
+    EXPECT_EQ( persisted.proposal_id(), original_winner.proposal_id() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot )
 {
     auto account = MakeSigningAccount();
