@@ -42,6 +42,13 @@ namespace
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
+
+    std::string ConfiguredFixtureAddress( const boost::filesystem::path &base )
+    {
+        const auto account = GeniusAccount::NewFromPrivateKey(
+            sgns::TokenID::FromBytes( { 0x00 } ), TEST_PRIVATE_KEY, ( base / "configured-identity" ).string(), true );
+        return account ? account->GetAddress() : std::string{};
+    }
 } // namespace
 
 // Scene A (CONTEXT D-02/CFG-03): the new canonical factory derives is_full_node_ from the
@@ -62,7 +69,9 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    const auto configured_address = ConfiguredFixtureAddress( base );
+    ASSERT_FALSE( configured_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_address );
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );

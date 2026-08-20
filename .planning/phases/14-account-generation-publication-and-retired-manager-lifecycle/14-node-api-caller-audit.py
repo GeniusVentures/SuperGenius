@@ -173,6 +173,10 @@ def check_owner(inventory, commands, owner, sources, required_targets):
 def check_migrated(inventory, commands, owner):
     check_current(inventory, commands)
     owned = [row for row in read_inventory(inventory) if row["owner_plan"] == owner]
+    # Plan 14-07 owns the five account/blockchain fixture targets, not the
+    # unrelated historical default rows that remain staged for later partitions.
+    if owner == "14-07":
+        owned = [row for row in owned if row["source"] in FIXTURE_SOURCES]
     pending = [row["expression"] for row in owned if row["disposition"] != "migrated"]
     if pending:
         raise SystemExit("unmigrated owner rows: " + ", ".join(pending))

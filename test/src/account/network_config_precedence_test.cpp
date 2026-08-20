@@ -55,6 +55,13 @@ namespace
                                       std::chrono::seconds( 50 ),
                                       "network-config test node did not finish initialization" );
     }
+
+    std::string ConfiguredFixtureAddress( const boost::filesystem::path &base )
+    {
+        const auto account = GeniusAccount::NewFromPrivateKey(
+            sgns::TokenID::FromBytes( { 0x00 } ), TEST_PRIVATE_KEY, ( base / "configured-identity" ).string(), true );
+        return account ? account->GetAddress() : std::string{};
+    }
 } // namespace
 
 // Scene A (reframed in Phase 3): the canonical New(dev_config, AccountSource) factory has no
@@ -70,7 +77,9 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    const auto configured_address = ConfiguredFixtureAddress( base );
+    ASSERT_FALSE( configured_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_address );
 
     // config "auto_dht": false drives the resolved value.
     EXPECT_FALSE( node->IsAutodhtEnabled() );
@@ -94,7 +103,9 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    const auto configured_address = ConfiguredFixtureAddress( base );
+    ASSERT_FALSE( configured_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_address );
 
     const auto resolved = node->GetPubsubPort();
     EXPECT_GE( resolved, 20000u );
@@ -115,7 +126,9 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    const auto configured_address = ConfiguredFixtureAddress( base );
+    ASSERT_FALSE( configured_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_address );
 
     EXPECT_GT( node->GetPubsubPort(), 0u );
     EXPECT_EQ( node->GetPubSub()->GetInterfaceAddress().find( "/tcp/0/" ), std::string::npos );

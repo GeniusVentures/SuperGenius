@@ -22,6 +22,26 @@
 using namespace sgns::test;
 using namespace sgns;
 
+namespace
+{
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node )
+    {
+        (void)RequireActiveAddress( node );
+        return node->GetBalance();
+    }
+} // namespace
+
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
 namespace
@@ -199,13 +219,13 @@ TEST_F( AccountManagement, ConfiguredIdentityDoesNotPublishUnavailableGeneration
 
 TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 {
-    auto old_account_address = node_->GetAddress();
+    auto old_account_address = RequireActiveAddress( node_ );
     auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
-    ASSERT_EQ( node_->GetAddress(), new_account_address );
+    ASSERT_EQ( RequireActiveAddress( node_ ), new_account_address );
     // Can go back to previous account
     ASSERT_TRUE( node_->SelectAccount( old_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -218,18 +238,18 @@ TEST_F( AccountManagement, TransferAccount )
     ASSERT_TRUE(
         node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
             .has_value() );
-    auto balance               = node_->GetBalance();
+    auto balance               = RequireActiveBalance( node_ );
     auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->TransferAccount( other_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
-    ASSERT_EQ( node_->GetBalance(), balance );
+    ASSERT_EQ( RequireActiveBalance( node_ ), balance );
 }
 
 TEST_F( AccountManagement, CanDeleteAccount )
 {
-    auto old_account_address = node_->GetAddress();
+    auto old_account_address = RequireActiveAddress( node_ );
     auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -294,7 +314,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                   "node_requester not synced" );
     ASSERT_EQ( node_requester->GetState(), GeniusNode::NodeState::READY );
 
-    ASSERT_TRUE( node_->SetPayoutAddress( node_receiver->GetAddress() ).has_value() );
+    ASSERT_TRUE( node_->SetPayoutAddress( RequireActiveAddress( node_receiver ) ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "node_ not synced" );
@@ -450,9 +470,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
-    auto balance_worker    = node_->GetBalance();
-    auto balance_receiver  = node_receiver->GetBalance();
-    auto balance_requester = node_requester->GetBalance();
+    auto balance_worker    = RequireActiveBalance( node_ );
+    auto balance_receiver  = RequireActiveBalance( node_receiver );
+    auto balance_requester = RequireActiveBalance( node_requester );
 
     auto postjob = node_requester->ProcessImage( json_data );
     ASSERT_TRUE( postjob ) << "post job error: " << postjob.error().message();
@@ -462,18 +482,19 @@ TEST_F( AccountManagement, SetPayoutAddress )
     assertWaitForCondition(
         [&]
         {
-            auto result = node_requester->GetBalance();
+            auto result = RequireActiveBalance( node_requester );
             return result < balance_requester;
         },
         std::chrono::milliseconds( 20000 ),
         "Requester balance not updated in time" );
-    ASSERT_TRUE( node_requester->GetBalance() < balance_requester );
+    ASSERT_TRUE( RequireActiveBalance( node_requester ) < balance_requester );
 
     assertWaitForCondition(
         [&]
         {
-            auto result = node_receiver->GetBalance();
-            std::cout << "Rec: " << node_receiver->GetBalance() << " Req: " << node_requester->GetBalance() << '\n';
+            auto result = RequireActiveBalance( node_receiver );
+            std::cout << "Rec: " << RequireActiveBalance( node_receiver )
+                      << " Req: " << RequireActiveBalance( node_requester ) << '\n';
             return result > balance_receiver;
         },
         std::chrono::milliseconds( 40000 ),

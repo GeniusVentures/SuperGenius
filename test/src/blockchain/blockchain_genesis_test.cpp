@@ -80,6 +80,31 @@ TEST( BlockchainGenesisConfigTest, AuthorizedAddressIsSafeDuringConcurrentStartu
 class BlockchainGenesisTest : public ::testing::Test
 {
 protected:
+    struct FixtureNode
+    {
+        std::shared_ptr<sgns::GeniusNode> node;
+        std::string                       configured_address;
+
+        GeniusNode *operator->() const { return node.get(); }
+    };
+
+    static std::string RequireActiveAddress( const FixtureNode &fixture )
+    {
+        const auto address = fixture.node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    static uint64_t RequireActiveBalance( const FixtureNode &fixture )
+    {
+        (void)RequireActiveAddress( fixture );
+        return fixture.node->GetBalance();
+    }
+
     static void SetUpTestSuite()
     {
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
@@ -87,11 +112,11 @@ protected:
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
 
-    std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
-                                                  const std::string &dev_addr,
-                                                  const std::string &tokenValue,
-                                                  sgns::TokenID      tokenId,
-                                                  bool               isFullNode = false )
+    FixtureNode CreateNode( const std::string &self_address,
+                            const std::string &dev_addr,
+                            const std::string &tokenValue,
+                            sgns::TokenID      tokenId,
+                            bool               isFullNode = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -134,12 +159,18 @@ protected:
                                            /*is_processor=*/false,
                                            /*rpc_catchup=*/false );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
+        auto configured_account = GeniusAccount::NewFromPrivateKey(
+            tokenId, key.c_str(), outPath + "configured-identity/", isFullNode );
+        if ( !configured_account )
+        {
+            return {};
+        }
 
         // New starts PubSub synchronously in the constructor
         // (InitNetwork -> pubs.wait()) and kicks off async DB/blockchain init.
         // Callers wait for READY via waitForCondition, so no fixed sleep is
         // needed here (and a sleep would obscure startup-timing measurements).
-        return node;
+        return { std::move( node ), configured_account->GetAddress() };
     }
 
     void SetUp() override
@@ -188,9 +219,9 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
                                       false // not full node
     );
 
-    std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
-    std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
-    std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
+    std::cout << "Full node configured address: " << node_full.configured_address << std::endl;
+    std::cout << "Regular node 1 configured address: " << node_regular_1.configured_address << std::endl;
+    std::cout << "Regular node 2 configured address: " << node_regular_2.configured_address << std::endl;
 
     // DO NOT call SetAuthorizedFullNodeAddress on any node
     std::cout << "NOT setting authorized full node address - nodes should not sync" << std::endl;
@@ -232,8 +263,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                  true // is full node
     );
-    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
-    std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
+    Blockchain::SetAuthorizedFullNodeAddress( node_full.configured_address );
+    std::cout << "Setting authorized full node address to: " << node_full.configured_address << std::endl;
 
     // Create two regular nodes
     auto node_regular_1 = CreateNode( "regular_node_with_auth_1",
@@ -243,8 +274,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                       false // not full node
     );
 
-    std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
-    std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
+    std::cout << "Full node configured address: " << node_full.configured_address << std::endl;
+    std::cout << "Regular node 1 configured address: " << node_regular_1.configured_address << std::endl;
 
     node_regular_1->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
@@ -267,8 +298,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "All nodes are ready and synchronized!" << std::endl;
 
     // Verify that all nodes have the same authorized address configured
-    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
-    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
+    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), RequireActiveAddress( node_full ) );
+    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), RequireActiveAddress( node_full ) );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
 }
@@ -279,7 +310,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     // Create the full node first (this will be the genesis creator)
     auto node_full = CreateNode( "full_node_with_auth", "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), true );
-    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full.configured_address );
 
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
@@ -312,8 +343,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                   std::chrono::milliseconds( 50000 ),
                                   "regular node 2 not ready" );
 
-    auto balance_regular_1_before = node_regular_1->GetBalance();
-    auto balance_regular_2_before = node_regular_2->GetBalance();
+    auto balance_regular_1_before = RequireActiveBalance( node_regular_1 );
+    auto balance_regular_2_before = RequireActiveBalance( node_regular_2 );
 
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
@@ -326,12 +357,12 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
     std::cout << "Mint transaction (" << mint_tx_id << ") completed in " << mint_duration << " ms" << std::endl;
-    EXPECT_EQ( node_regular_1->GetBalance(), balance_regular_1_before + mint_amount )
+    EXPECT_EQ( RequireActiveBalance( node_regular_1 ), balance_regular_1_before + mint_amount )
         << "Mint should credit the sender balance";
 
     // Transfer the freshly minted amount to the second node
     auto transfer_result = node_regular_1->TransferFunds( mint_amount,
-                                                          node_regular_2->GetAddress(),
+                                                          RequireActiveAddress( node_regular_2 ),
                                                           token_id,
                                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
@@ -350,9 +381,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( full_node_status, TransactionManager::TransactionStatus::CONFIRMED );
 
-    EXPECT_EQ( node_regular_1->GetBalance(), balance_regular_1_before )
+    EXPECT_EQ( RequireActiveBalance( node_regular_1 ), balance_regular_1_before )
         << "Sender balance should return to its starting value after transfer";
-    EXPECT_EQ( node_regular_2->GetBalance(), balance_regular_2_before + mint_amount )
+    EXPECT_EQ( RequireActiveBalance( node_regular_2 ), balance_regular_2_before + mint_amount )
         << "Recipient balance should include the transferred amount";
 
     std::cout << "=== With Authorization Sync + Transactions Test Completed Successfully ===" << std::endl;
@@ -389,9 +420,9 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
                                       false // not full node
     );
 
-    std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
-    std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
-    std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
+    std::cout << "Full node configured address: " << node_full.configured_address << std::endl;
+    std::cout << "Regular node 1 configured address: " << node_regular_1.configured_address << std::endl;
+    std::cout << "Regular node 2 configured address: " << node_regular_2.configured_address << std::endl;
 
     // Connect nodes to each other
     std::cout << "Connecting nodes..." << std::endl;

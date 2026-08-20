@@ -229,7 +229,7 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
                                  TokenID::FromBytes( { 0x00 } ),
                                  true );
     ASSERT_TRUE( node_full.node );
-    Blockchain::SetAuthorizedFullNodeAddress( node_full.node->GetAddress() );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full.authority->GetAddress() );
 
     std::chrono::milliseconds restricted_elapsed_ms;
     test::assertWaitForCondition( [&]() {
@@ -268,7 +268,7 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
     // Bring the genesis full node to READY first.
     auto genesisNode = CreateNode( "genesis_node_startup", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), true );
     ASSERT_TRUE( genesisNode.node );
-    Blockchain::SetAuthorizedFullNodeAddress( genesisNode.node->GetAddress() );
+    Blockchain::SetAuthorizedFullNodeAddress( genesisNode.authority->GetAddress() );
 
     std::chrono::milliseconds genesis_restricted_ms;
     test::assertWaitForCondition( [&]() {
@@ -334,7 +334,7 @@ TEST_F( NodeStartupTest, GenesisNodeDefaultBurnRateIsOnePercent )
                                  TokenID::FromBytes( { 0x00 } ),
                                  true );
     ASSERT_TRUE( node_full.node );
-    Blockchain::SetAuthorizedFullNodeAddress( node_full.node->GetAddress() );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full.authority->GetAddress() );
 
     test::assertWaitForCondition( [&]() {
                                       return node_full.node->GetState() ==
