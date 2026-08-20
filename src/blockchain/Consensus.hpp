@@ -788,12 +788,6 @@ namespace sgns
          */
         std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
         bool                  RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason );
-        void                  RetryPendingProposal( const Proposal                       &proposal,
-                                                    std::string_view                      reason,
-                                                    std::size_t                           scheduled_retry_count = 0,
-                                                    std::chrono::steady_clock::time_point last_retry_at         = {} );
-        void                  ProcessDuePendingRetries();
-        void                  ExpirePendingProposals();
         bool                  CanAdmitPendingProposalLocked( const Proposal    &proposal,
                                                              std::size_t        retained_bytes,
                                                              const std::string &proposer_id ) const;
