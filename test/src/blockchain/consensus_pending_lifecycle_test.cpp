@@ -315,6 +315,11 @@ namespace sgns
             manager->fail_active_vote_persistence_for_test_ = fail;
         }
 
+        static void SetActiveVoteRemovalFailure( const std::shared_ptr<ConsensusManager> &manager, bool fail )
+        {
+            manager->fail_active_vote_removal_for_test_ = fail;
+        }
+
         static const std::vector<std::string> &ActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
         {
             return manager->active_vote_announcements_for_test_;
@@ -1326,10 +1331,62 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, legacy_key ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
+    // A durable, accepted certificate for another canonical slot cannot release this lock.
+    auto other_subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                      87,
+                                                                      "0xdurable-certificate-other-slot",
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      MakeTestCommitment(),
+                                                                      MakeTestWitness() );
+    ASSERT_TRUE( other_subject.has_value() );
+    auto other_proposal = manager->CreateProposal(
+        other_subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( other_proposal.has_value() );
+    auto other_vote = manager->CreateVote(
+        other_proposal.value().proposal_id(), account->GetAddress(), true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( other_vote.has_value() );
+    auto other_certificate = manager->CreateCertificate( other_proposal.value(), { other_vote.value() } );
+    ASSERT_TRUE( other_certificate.has_value() );
+    auto other_subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( other_proposal.value().subject() );
+    ASSERT_TRUE( other_subject_hash.has_value() );
+    const auto other_legacy_key = std::string( "/cert/" ) + other_subject_hash.value();
+    std::string other_serialized;
+    ASSERT_TRUE( other_certificate.value().SerializeToString( &other_serialized ) );
+    sgns::base::Buffer other_callback_value;
+    other_callback_value.put( other_serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager, { other_legacy_key, std::move( other_callback_value ) } );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, other_certificate.value() );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, certificate.value() );
+    // A keyless pubsub delivery is not a durable release boundary.
+    sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, certificate.value() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    // Even after successful readback, a local deletion failure retains the exact lock/work for retry.
+    sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRemovalFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, legacy_key ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+    sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRemovalFailure( manager, false );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+
+    // A reconstructed manager only scans existing legacy values; it does not create
+    // a certificate key or cast another vote for a finalized canonical slot.
+    auto restarted = MakeSigningManager( registry, account );
+    ASSERT_TRUE( restarted );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( restarted, voted_proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( restarted );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( restarted, slot ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).empty() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( restarted, slot ).has_value() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
 }

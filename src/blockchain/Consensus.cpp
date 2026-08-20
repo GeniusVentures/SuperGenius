@@ -1112,6 +1112,10 @@ namespace sgns
         {
             return outcome::failure( decoded.error() );
         }
+        if ( fail_active_vote_removal_for_test_ )
+        {
+            return outcome::failure( std::errc::io_error );
+        }
         auto removed = datastore->remove( key );
         if ( removed.has_error() )
         {
