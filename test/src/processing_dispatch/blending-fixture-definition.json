@@ -19,6 +19,14 @@
       "type": "image"
     }
   ],
+  "parameters": [
+    {
+      "name": "byteQuantMode",
+      "type": "int",
+      "default": 6,
+      "description": "Empirically-derived blending byteQuantMode (Phase 17 D-06/D-08, RENDTOL-02). 17-CAPTURE-RESULTS-ROUND1.md's Round 1 capture measured a real Mac-vs-Windows divergence for this fixture of maxAbsDelta=1.0 (maxUlpDistance=1, contentHashMatch=false) -- the divergence-absorption floor (smallest N with 2^N > 1.0) is N=1. secv01_render_blending_counter_test.cpp's own binary search over N in [1,8] against a deliberately wrong blend factor pair (src_alpha/one_minus_src_alpha -> one/zero) found the counter-test passes through N=6 and fails (artifactIds collide) at N=7 -- N=6 is chosen as one integer step of margin below that confirmed failure boundary, giving a ~64x margin over the real measured maxAbsDelta=1.0 while remaining empirically confirmed to still catch this fixture's own deliberate corruption."
+    }
+  ],
   "passes": [
     {
       "name": "blendingPass",

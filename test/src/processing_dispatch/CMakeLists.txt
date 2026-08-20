@@ -32,6 +32,10 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/lighting_vertex_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/lighting_fragment_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/lighting-vertex-data.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blending-fixture-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blending_vertex_shader.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blending_fragment_shader.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blending-vertex-data.raw"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )
