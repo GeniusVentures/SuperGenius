@@ -810,6 +810,29 @@ namespace sgns
          */
         ConsensusManager::Check ValidateCertificate( const Certificate &certificate ) const;
         /**
+         * @brief Validates the certificate's exact embedded proposal and canonical slot binding.
+         * @param[in] certificate Certificate to inspect.
+         * @return `true` when the embedded proposal resolves to a non-empty canonical slot.
+         */
+        static bool ValidateCertificateBinding( const Certificate &certificate );
+        /**
+         * @brief Validates current legacy certificate-key compatibility for CRDT ingress.
+         * @details This checks `/cert/<subject-hash>` only as supplied ingress evidence;
+         *          it does not make that key canonical certificate authority.
+         * @param[in] certificate Certificate whose embedded proposal determines the expected key.
+         * @param[in] key Current CRDT key supplied by the ingress path.
+         * @return `true` when the supplied key matches the embedded proposal subject hash.
+         */
+        static bool ValidateLegacyCertificateKey( const Certificate &certificate, std::string_view key );
+        /**
+         * @brief Computes the future canonical-slot certificate key for validation only.
+         * @details The result is non-authoritative until Phase 10; it is not used for
+         *          persistence, lookup, acceptance, or writer selection in this phase.
+         * @param[in] certificate Certificate whose embedded proposal supplies the slot.
+         * @return `/cert/<canonical-slot>` when the slot is available, otherwise empty.
+         */
+        static std::string GetExpectedCertificateSlotKey( const Certificate &certificate );
+        /**
          * @brief Computes deterministic proposal identifier.
          * @param[in] proposal Proposal to identify.
          * @return Proposal identifier string.
