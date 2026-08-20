@@ -5,13 +5,13 @@ milestone_name: trusted-peer genesis, quorum-policy, and production integration 
 current_phase: 14
 status: executing
 stopped_at: Completed 14-07-PLAN.md
-last_updated: "2026-08-20T15:52:14.971Z"
+last_updated: "2026-08-20T19:00:54.599Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 45
+  completed_plans: 46
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 9 of 15
+Plan: 10 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,7 +67,7 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T15:51:53.937Z
+**Last session:** 2026-08-20T19:00:38.721Z
 **Stopped At:** Completed 14-07-PLAN.md
 **Resume File:** None
 
@@ -126,6 +126,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P06 | 18 min | 2 tasks | 5 files |
 | Phase 14 P07 | 10 min | 2 tasks | 7 files |
 | Phase 14 P08 | 13 min | 2 tasks | 10 files |
+| Phase 14 P09 | 3h 6m | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -205,3 +206,5 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 14]: Plan 14-07 migration checks are limited to its five owned fixture sources; later caller partitions remain assigned to their planned owners. — Preserves the staged migration boundary and avoids consuming later partitions.
 - [Phase 14]: Processing and transaction-sync fixtures check active readiness before temporary balance and wait shims.
 - [Phase 14]: migration_sync_test retains configured fixture identity before readiness and checks active balance afterward.
+- [Phase 14]: Multi-account migration proof is constrained to its two owned sources. — Later partitions cannot satisfy or invalidate the 14-09 audit.
+- [Phase 14]: Concurrent lifecycle readers assert typed switching or unavailable errors. — Legacy empty/default shim values cannot be accepted as ready state.
