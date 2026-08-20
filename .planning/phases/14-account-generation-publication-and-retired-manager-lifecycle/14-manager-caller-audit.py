@@ -4,6 +4,7 @@ import argparse, json, re, sys
 from pathlib import Path
 
 METHODS = ("TransferFunds", "MintFunds", "MigrationFunds", "HoldEscrow", "PayEscrow", "AsyncPayEscrow", "SubmitTransaction", "EnqueueTransaction", "GetOutTransactions", "CountTransactions", "GetState", "GetTransactionStatusByTxId", "WaitForTransactionIncoming", "WaitForTransactionOutgoing", "RegisterStateChangeCallback", "RegisterTopicNames", "StartCore", "Start", "Stop")
+FIXTURE_MANAGER_ACCESS_METHODS = ("GetTransactionManager", "GetPublicChainInputValidator")
 ROOTS = ("src", "test", "apps", "example")
 ALLOWED = {"src/account/GeniusNode.cpp", "src/account/BridgeRelayer.cpp", "src/migration/Migration3_6_0To3_7_0.cpp", "test/src/account/burnconfig_policy_e2e_test.cpp", "test/src/account/transaction_manager_pending_lifecycle_test.cpp", "test/src/blockchain/consensus_subject_test.cpp", "test/src/multiaccount/multi_account_sync.cpp", "test/src/multiaccount/policy_lifetime_multi_account_test.cpp", "test/src/bridge_race/bridge_race_fault_rpc_test.cpp"}
 PLAN4 = {"test/src/account/burnconfig_policy_e2e_test.cpp", "test/src/account/transaction_manager_pending_lifecycle_test.cpp", "test/src/blockchain/consensus_subject_test.cpp", "test/src/bridge_race/bridge_race_fault_rpc_test.cpp"}
@@ -28,7 +29,10 @@ def rows(commands, disposition="pending"):
         for file in Path(root).rglob("*.cpp"):
             path=file.as_posix(); text=scrub(file.read_text(errors="ignore"))
             if path not in ALLOWED: continue
-            for method in METHODS:
+            methods = METHODS
+            if path == "test/src/bridge_race/bridge_race_fault_rpc_test.cpp":
+                methods += FIXTURE_MANAGER_ACCESS_METHODS
+            for method in methods:
                 for match in re.finditer(r"(?:->|\.)\s*(%s)\s*\(" % method, text):
                     line=text.count("\n", 0, match.start()) + 1
                     out.append((method, f"{method}@{line}", path, targets(path, commands), owner(path), disposition))
@@ -65,11 +69,14 @@ def main():
         wanted_sources = set(args.sources.split(",")) if args.sources else None
         owner_rows = [row for row in data if row[4] == args.check_owner]
         assert owner_rows
+        current_owner_rows = [row for row in rows(commands) if row[4] == args.check_owner]
+        assert identities(owner_rows) == identities(current_owner_rows)
         if wanted_sources:
-            assert {row[2] for row in owner_rows} == wanted_sources
+            assert {row[2] for row in owner_rows} <= wanted_sources
+            assert all(targets(source, commands) != "unresolved" for source in wanted_sources)
         if args.required_targets:
             required = set(args.required_targets.split(","))
-            actual = {target for row in owner_rows for target in row[3].split(",")}
+            actual = {target for source in wanted_sources for target in targets(source, commands).split(",")}
             assert required <= actual
     if args.check_migrated:
         assert args.owner
