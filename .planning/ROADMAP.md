@@ -26,7 +26,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone Goal:** One verified external burn can finalize through one authoritative generic certificate and produce one mint effect despite contention, reordered delivery, publisher loss, and restart.
 
-- [ ] **Phase 8: Canonical Slot & Certificate Binding** - Make every competing verified mint share its existing canonical slot and reject certificate/proposal mismatches.
+- [x] **Phase 8: Canonical Slot & Certificate Binding** - Make every competing verified mint share its existing canonical slot and reject certificate/proposal mismatches. (completed 2026-08-20)
 - [ ] **Phase 9: Durable One-Vote Finality** - Lock each validator to one recoverable, non-overlapping vote per canonical slot.
 - [ ] **Phase 10: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority.
 - [ ] **Phase 11: Convergent Certificate Consumption & Mint Recovery** - Consume accepted slot certificates once and recover mint application safely.
@@ -99,7 +99,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 1. Config-Driven Settings Foundation | v1.0 | 1/1 | Complete | 2026-07-03 |
 | 2. Variant Factory + Constructor Reorder | v1.0 | 1/1 | Complete | 2026-07-03 |
 | 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
-| 8. Canonical Slot & Certificate Binding | v3.0 | 0/TBD | Not started | - |
+| 8. Canonical Slot & Certificate Binding | v3.0 | 1/1 | Complete   | 2026-08-20 |
 | 9. Durable One-Vote Finality | v3.0 | 0/TBD | Not started | - |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 0/TBD | Not started | - |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
