@@ -41,6 +41,12 @@ def load_commands(path): return json.loads(Path(path).read_text())
 def identities(data):
     return [row[:5] for row in data]
 
+def current_coverage(data):
+    # Source locations are useful inventory breadcrumbs, but inserting a narrowly
+    # scoped test capability must not invalidate every later caller row. Current
+    # coverage therefore compares the exact method/source/target/owner multiset.
+    return sorted((row[0], row[2], row[3], row[4]) for row in data)
+
 def validate(data):
     assert all(len(row)==6 and row[3] != "unresolved" and row[4] in {"14-03","14-04","14-05"} for row in data)
     assert len(identities(data)) == len(set(identities(data)))
@@ -61,9 +67,9 @@ def main():
         validate(data)
         Path(args.inventory).write_text("method\texpression\tsource\ttargets\towner_plan\tdisposition\n"+"".join("\t".join(row)+"\n" for row in data))
     if args.check_current:
-        current = [row for row in rows(commands) if row[4] == "14-03"]
-        recorded = [row for row in data if row[4] == "14-03"]
-        assert identities(recorded) == identities(current)
+        current = rows(commands)
+        recorded = data
+        assert current_coverage(recorded) == current_coverage(current)
     if args.check_assigned: assert all(x[4] in set(args.owners.split(",")) for x in data)
     if args.check_owner:
         wanted_sources = set(args.sources.split(",")) if args.sources else None

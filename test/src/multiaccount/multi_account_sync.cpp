@@ -127,6 +127,21 @@ namespace sgns
             manager.ChangeState( state );
         }
 
+        static void PrepareLifecycleManager( TransactionManager &manager )
+        {
+            manager.RegisterTopicNames();
+        }
+
+        static outcome::result<TransactionManager::AdmittedOperation> TryAdmit( TransactionManager &manager )
+        {
+            return manager.TryAdmit();
+        }
+
+        static void CloseAdmission( TransactionManager &manager )
+        {
+            manager.CloseAdmission();
+        }
+
         static uint64_t GetTransactionManagerConstructionCount( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->transaction_manager_construction_count_.load() : 0;
@@ -200,7 +215,7 @@ protected:
         auto manager = TransactionManager::New( db_, io_, account, blockchain );
         EXPECT_TRUE( manager );
         if ( !manager ) return nullptr;
-        manager->RegisterTopicNames();
+        sgns::MultiAccountTestAccess::PrepareLifecycleManager( *manager );
         account->SetPeerConfirmedNonce( 0, account->GetAddress() );
         sgns::MultiAccountTestAccess::SetTransactionManagerState( *manager, TransactionManager::State::READY );
         return manager;
@@ -739,10 +754,10 @@ TEST_F( MultiAccountTest, AccountGenerationAdmissionBoundaryIsLinearizable )
     auto manager = CreateLifecycleManager();
     ASSERT_TRUE( manager );
 
-    auto admitted = manager->TryAdmit();
+    auto admitted = sgns::MultiAccountTestAccess::TryAdmit( *manager );
     ASSERT_TRUE( admitted.has_value() );
-    manager->CloseAdmission();
-    auto rejected = manager->TryAdmit();
+    sgns::MultiAccountTestAccess::CloseAdmission( *manager );
+    auto rejected = sgns::MultiAccountTestAccess::TryAdmit( *manager );
     EXPECT_TRUE( rejected.has_error() ) << "[PHASE14-01-RED-ADMISSION]";
 }
 
@@ -750,7 +765,7 @@ TEST_F( MultiAccountTest, AccountGenerationDrainsBeforeReplacementInitialization
 {
     auto manager = CreateLifecycleManager();
     ASSERT_TRUE( manager );
-    manager->CloseAdmission();
+    sgns::MultiAccountTestAccess::CloseAdmission( *manager );
     EXPECT_EQ( manager->GetLifecycle(), TransactionManager::ManagerLifecycle::RETIRED );
 }
 
@@ -774,7 +789,7 @@ TEST_F( MultiAccountTest, RetiredManagerRejectsEveryMutationEntryPoint )
     auto manager = CreateLifecycleManager();
     ASSERT_TRUE( manager );
 
-    manager->CloseAdmission();
+    sgns::MultiAccountTestAccess::CloseAdmission( *manager );
     const auto result = manager->TransferFunds( 1, "0x0000000000000000000000000000000000000000", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( result.has_error() );
     EXPECT_EQ( result.error().message(), "MANAGER_RETIRED" ) << "[PHASE14-01-RED-PUBLIC-SURFACE]";
@@ -785,7 +800,7 @@ TEST_F( MultiAccountTest, RetiredManagerDiagnosticsAreImmutable )
     auto manager = CreateLifecycleManager();
     ASSERT_TRUE( manager );
 
-    manager->CloseAdmission();
+    sgns::MultiAccountTestAccess::CloseAdmission( *manager );
     const auto before = manager->GetRetirementSnapshot();
     const auto after  = manager->GetRetirementSnapshot();
     EXPECT_EQ( before.lifecycle, TransactionManager::ManagerLifecycle::RETIRED )
@@ -799,10 +814,10 @@ TEST_F( MultiAccountTest, RetiredManagerDeliversAcceptedTerminalOutcomeWithOldGe
     auto manager = CreateLifecycleManager();
     ASSERT_TRUE( manager );
 
-    auto admitted = manager->TryAdmit();
+    auto admitted = sgns::MultiAccountTestAccess::TryAdmit( *manager );
     ASSERT_TRUE( admitted.has_value() );
     const auto admitted_generation = admitted.value().generation();
-    manager->CloseAdmission();
+    sgns::MultiAccountTestAccess::CloseAdmission( *manager );
     admitted = outcome::failure( std::errc::operation_canceled );
     const auto snapshot = manager->GetRetirementSnapshot();
     EXPECT_EQ( snapshot.lifecycle, TransactionManager::ManagerLifecycle::RETIRED )
