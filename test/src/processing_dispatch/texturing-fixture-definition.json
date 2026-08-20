@@ -1,0 +1,81 @@
+{
+  "name": "render-texturing",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "texturingVertexInput",
+      "source_uri_param": "file://processing_dispatch/texturing-vertex-data.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    },
+    {
+      "name": "texturingSourceImage",
+      "source_uri_param": "file://processing_dispatch/texturing-source-image.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "texturingRenderOutput",
+      "source_uri_param": "file://processing_dispatch/texturing-render-output.raw",
+      "type": "image"
+    }
+  ],
+  "passes": [
+    {
+      "name": "texturingPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "glsl",
+            "source": "file://processing_dispatch/texturing_vertex_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/texturing_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ]
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:texturingVertexInput"
+      },
+      "texture_buffer": {
+        "source": "input:texturingSourceImage",
+        "width": 64,
+        "height": 64,
+        "filter": "nearest"
+      },
+      "vertex_layout": [
+        { "name": "inPosX", "format": "FLOAT32", "offset": 0 },
+        { "name": "inPosY", "format": "FLOAT32", "offset": 4 },
+        { "name": "inUvX", "format": "FLOAT32", "offset": 8 },
+        { "name": "inUvY", "format": "FLOAT32", "offset": 12 }
+      ],
+      "pipeline_state": {
+        "topology": "triangle_list",
+        "cull_mode": "none",
+        "front_face": "ccw",
+        "depth_test": "disabled"
+      }
+    }
+  ]
+}
