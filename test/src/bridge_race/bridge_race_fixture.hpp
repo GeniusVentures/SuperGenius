@@ -33,6 +33,7 @@
 
 #include <openssl/sha.h>
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -43,6 +44,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/wait_condition.hpp"
+#include "testutil/outcome.hpp"
 
 #include "../bridge_e2e/anvil_fixture.hpp"
 
@@ -210,11 +212,43 @@ protected:
         return std::string( SHA256_DIGEST_LENGTH * 2u, '1' );
     }
 
+    static std::string ConfiguredFixtureAddress( const GeniusNodeConfig &config,
+                                                 const std::string      &private_key,
+                                                 bool                    is_full_node )
+    {
+        const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+            config.TokenID,
+            private_key.c_str(),
+            boost::filesystem::path( config.BaseWritePath ) / "configured-identity",
+            is_full_node );
+        return account ? account->GetAddress() : std::string{};
+    }
+
+    static std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    static uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node, const std::string &address )
+    {
+        if ( RequireActiveAddress( node ).empty() )
+        {
+            return 0;
+        }
+        return node->GetBalance( address );
+    }
+
     /**
      * @brief Returns the SGNS destination address for a Light-node index (D-07 — burns
      *        must target Light-node addresses, not the Full node's own address).
      *
-     * Must read the LIVE node's GetAddress() — a node's true SGNS address is NOT simply
+     * Must read the LIVE node's checked active address — a node's true SGNS address is NOT simply
      * EthereumKeyGenerator(private_key). GeniusAccount::GenerateGeniusAddress() signs a
      * predefined constant with the raw key and SHA-256s the signature to derive the
      * actual key seed, so the address can only be obtained from a constructed GeniusNode.
@@ -224,7 +258,7 @@ protected:
      */
     static std::string DeriveLightDestination( unsigned int light_index )
     {
-        return s_nodes[light_index]->GetAddress();
+        return RequireActiveAddress( s_nodes[light_index] );
     }
 
     /**
@@ -280,16 +314,17 @@ protected:
                    kAnvilRpcUrl + R"("],"status":"active"}])";
         };
 
-        // Bootstrap order: create the 10 Light nodes FIRST and register their REAL
+        // Bootstrap order: create the 10 Light nodes FIRST and register their configured
         // addresses via SetAdditionalGenesisValidatorAddresses, THEN create the Full node
-        // LAST and register its REAL address via SetAuthorizedFullNodeAddress immediately
+        // LAST and register its configured address via SetAuthorizedFullNodeAddress immediately
         // afterward (no other node creation in between).
         //
         // Why: a node's true SGNS address is NOT simply EthereumKeyGenerator(private_key)
         // — GeniusAccount::GenerateGeniusAddress() signs a predefined constant with the
         // raw key and SHA-256s the signature to derive the actual key seed. Addresses can
-        // only be obtained from a LIVE GeniusNode's GetAddress(), not precomputed from the
-        // key alone. And Blockchain::New() — which bakes GetAuthorizedFullNodeAddress()/
+        // only be reproduced through the same GeniusAccount construction. The fixture owns
+        // this configured bootstrap identity before the node becomes READY. Blockchain::New()
+        // bakes GetAuthorizedFullNodeAddress()/
         // GetAdditionalGenesisValidatorAddresses() into the ValidatorRegistry's
         // genesis_authority and additional-validator list — runs ASYNCHRONOUSLY per node
         // (via the INITIALIZING_BLOCKCHAIN state transition, after DB migration), so
@@ -332,21 +367,27 @@ protected:
         for ( unsigned int i = 1u; i < kNodeCount; ++i )
         {
             write_node_config( i, "Light" );
-            s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ DeriveNodeKey( i ) } );
+            const auto private_key = DeriveNodeKey( i );
+            s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ private_key } );
             ASSERT_NE( s_nodes[i], nullptr ) << "Failed to create node index " << i;
             s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
-            light_addresses.push_back( s_nodes[i]->GetAddress() );
+            const auto configured_light_address = ConfiguredFixtureAddress( s_configs[i], private_key, false );
+            ASSERT_FALSE( configured_light_address.empty() ) << "Failed to construct Light-node configured identity";
+            light_addresses.push_back( configured_light_address );
         }
 
         sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
         spdlog::info( "bridge_race: registered {} additional genesis validators", light_addresses.size() );
 
         write_node_config( 0u, "Full" );
-        s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ DeriveNodeKey( 0u ) } );
+        const auto full_private_key = DeriveNodeKey( 0u );
+        s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ full_private_key } );
         ASSERT_NE( s_nodes[0], nullptr ) << "Failed to create Full node";
         s_nodes[0]->SetChainlistFetcher( chainlist_fetcher );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-        spdlog::info( "bridge_race: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
+        const auto configured_full_address = ConfiguredFixtureAddress( s_configs[0], full_private_key, true );
+        ASSERT_FALSE( configured_full_address.empty() ) << "Failed to construct Full-node configured identity";
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_full_address );
+        spdlog::info( "bridge_race: configured authorized full node = {}", configured_full_address.substr( 0, 16 ) );
 
         // Star-topology PubSub mesh bootstrap: each Light node peers directly with the
         // Full node (sufficient for CRDT sync; a full 11x11 mesh is unnecessary).

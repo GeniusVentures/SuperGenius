@@ -158,7 +158,11 @@ def rows(commands):
         found = sorted(set(matcher.findall(text)))
         for called_method in found:
             method = CALL_METHODS[called_method]
-            contract = contract_for(method, rel)
+            # The shared bridge-race fixture owns a separately constructed account
+            # identity during pre-ready bootstrap; all other fixture node calls use
+            # the checked active-generation surface.
+            contract = ("configured-bootstrap" if rel == BRIDGE_RACE_FIXTURE and called_method == "GetAddress"
+                        else contract_for(method, rel))
             row_targets = BRIDGE_RACE_TARGETS if rel == BRIDGE_RACE_FIXTURE else targets.get(rel, {"header-consumer"})
             rows.append({"method": method, "expression": f"{rel}:{called_method}", "contract": contract,
                          "identity_kind": identity_for(contract), "source": rel,

@@ -37,7 +37,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     {
         const std::string dest = DeriveLightDestination( i );
         dest_addrs.push_back( dest );
-        initial_balances.push_back( s_nodes[0]->GetBalance( dest ) );
+        initial_balances.push_back( RequireActiveBalance( s_nodes[0], dest ) );
     }
 
     std::vector<std::string> unburned_dest_addrs;
@@ -46,7 +46,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     {
         const std::string dest = DeriveLightDestination( i );
         unburned_dest_addrs.push_back( dest );
-        unburned_initial_balances.push_back( s_nodes[0]->GetBalance( dest ) );
+        unburned_initial_balances.push_back( RequireActiveBalance( s_nodes[0], dest ) );
     }
 
     // Seed all kBatchBurnCount burns BEFORE any ConfigureRpcEndpoint call (D-03).
@@ -79,6 +79,8 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
+        ASSERT_FALSE( RequireActiveAddress( s_nodes[i] ).empty() )
+            << "Node " << i << " is not active-ready before RPC endpoint configuration";
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
             << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
@@ -96,7 +98,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
                     s_nodes.end(),
                     [&]( const std::shared_ptr<GeniusNode> &node )
                     {
-                        return node->GetBalance( dest_addrs[b] ) >=
+                        return RequireActiveBalance( node, dest_addrs[b] ) >=
                                initial_balances[b] + BridgeRaceE2ETest::kMintAmount;
                     } );
                 if ( !all_nodes_minted )
@@ -124,7 +126,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     {
         for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
         {
-            const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addrs[b] );
+            const uint64_t final_balance = RequireActiveBalance( s_nodes[i], dest_addrs[b] );
             EXPECT_EQ( final_balance, initial_balances[b] + BridgeRaceE2ETest::kMintAmount )
                 << "Node " << i << " destination #" << b << " must mint exactly once (no double-mint)";
         }
@@ -136,7 +138,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     {
         for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
         {
-            const uint64_t final_balance = s_nodes[i]->GetBalance( unburned_dest_addrs[u] );
+            const uint64_t final_balance = RequireActiveBalance( s_nodes[i], unburned_dest_addrs[u] );
             EXPECT_EQ( final_balance, unburned_initial_balances[u] )
                 << "Node " << i << " unburned destination #" << u
                 << " must show no balance increase (cross-burn interference check)";

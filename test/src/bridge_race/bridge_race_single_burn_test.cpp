@@ -19,7 +19,7 @@
 TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
 {
     const std::string dest_addr = DeriveLightDestination( 1u );
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
 
     spdlog::info( "bridge_race single_burn: dest={} initial_balance={}",
                   dest_addr.substr( 0, 8 ),
@@ -51,6 +51,8 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
+        ASSERT_FALSE( RequireActiveAddress( s_nodes[i] ).empty() )
+            << "Node " << i << " is not active-ready before RPC endpoint configuration";
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
             << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
@@ -65,13 +67,13 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
             return std::all_of( s_nodes.begin(),
                                  s_nodes.end(),
                                  [&]( const std::shared_ptr<GeniusNode> &node )
-                                 { return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount; } );
+                                 { return RequireActiveBalance( node, dest_addr ) >= initial_balance + kMintAmount; } );
         },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
         "All 11 nodes must independently mint the contested burn exactly once",
         nullptr );
 
-    const uint64_t balance_before_stability_window = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t balance_before_stability_window = RequireActiveBalance( s_nodes[0], dest_addr );
 
     // Stability/double-mint check: actually elapse one additional watcher poll window
     // (not a wait-for-already-true-condition, which would return immediately) so a
@@ -85,7 +87,7 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
     // this is the double-mint guard (D-02).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addr );
+        const uint64_t final_balance = RequireActiveBalance( s_nodes[i], dest_addr );
         EXPECT_EQ( final_balance, initial_balance + kMintAmount )
             << "Node " << i << " must mint the contested burn exactly once (no double-mint)";
     }

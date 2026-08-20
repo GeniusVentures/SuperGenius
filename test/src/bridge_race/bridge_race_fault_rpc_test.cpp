@@ -59,6 +59,8 @@ namespace
         const auto configs =
             sgns::test::BuildDivergentSlotConfigs( direct_behavior, public1_behavior, public2_behavior );
 
+        ASSERT_FALSE( RequireActiveAddress( node ).empty() )
+            << "node is not active-ready before divergent RPC endpoint configuration";
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
         auto manager = tx_mgr_result.value();
@@ -110,7 +112,7 @@ namespace
 TEST_F( BridgeRaceE2ETest, RpcDisagreementStillReachesCorrectQuorum )
 {
     const std::string dest_addr     = DeriveLightDestination( 2u );
-    const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t    initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
 
     spdlog::info( "bridge_race fault_rpc (DIRECT-succeeds-alone): dest={} initial_balance={}",
                   dest_addr.substr( 0, 16 ),
@@ -134,19 +136,19 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementStillReachesCorrectQuorum )
     }
 
     EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetBalance( dest_addr ) >= initial_balance + kMintAmount; },
+        [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) >= initial_balance + kMintAmount; },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
         "node 0 must mint via DIRECT-succeeds-alone quorum despite PUBLIC-slot disagreement",
         nullptr );
 
-    EXPECT_EQ( s_nodes[0]->GetBalance( dest_addr ), initial_balance + kMintAmount )
+    EXPECT_EQ( RequireActiveBalance( s_nodes[0], dest_addr ), initial_balance + kMintAmount )
         << "Mint must be exactly-once even under RPC-slot disagreement";
 }
 
 TEST_F( BridgeRaceE2ETest, RpcDisagreementPublicPairQuorumStillCorrect )
 {
     const std::string dest_addr     = DeriveLightDestination( 3u );
-    const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t    initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
 
     spdlog::info( "bridge_race fault_rpc (PUBLIC-pair-agrees-alone): dest={} initial_balance={}",
                   dest_addr.substr( 0, 16 ),
@@ -170,11 +172,11 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementPublicPairQuorumStillCorrect )
     }
 
     EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetBalance( dest_addr ) >= initial_balance + kMintAmount; },
+        [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) >= initial_balance + kMintAmount; },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
         "node 0 must mint via PUBLIC-pair-agrees-alone quorum despite DIRECT-slot disagreement",
         nullptr );
 
-    EXPECT_EQ( s_nodes[0]->GetBalance( dest_addr ), initial_balance + kMintAmount )
+    EXPECT_EQ( RequireActiveBalance( s_nodes[0], dest_addr ), initial_balance + kMintAmount )
         << "Mint must be exactly-once even under RPC-slot disagreement";
 }

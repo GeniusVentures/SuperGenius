@@ -42,7 +42,7 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     static constexpr std::chrono::milliseconds kPrePartitionHealWindow{ 12000 };
 
     const std::string dest_addr = DeriveLightDestination( kDestinationIndex );
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
 
     spdlog::info( "bridge_race fault_partition: dest={} initial_balance={}",
                   dest_addr.substr( 0, 16 ),
@@ -92,6 +92,8 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     // real Anvil RPC endpoint, only the pubsub/CRDT mesh is split).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
+        ASSERT_FALSE( RequireActiveAddress( s_nodes[i] ).empty() )
+            << "Node " << i << " is not active-ready before RPC endpoint configuration";
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
             << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
@@ -128,7 +130,7 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
             return std::all_of( s_nodes.begin(),
                                  s_nodes.end(),
                                  [&]( const std::shared_ptr<GeniusNode> &node )
-                                 { return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount; } );
+                                 { return RequireActiveBalance( node, dest_addr ) >= initial_balance + kMintAmount; } );
         },
         kPartitionHealConvergenceTimeout,
         "All 11 nodes must converge to exactly-once mint after the partition heals",
@@ -137,7 +139,7 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     // Exactly-once guard across all 11 nodes post-heal.
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addr );
+        const uint64_t final_balance = RequireActiveBalance( s_nodes[i], dest_addr );
         EXPECT_EQ( final_balance, initial_balance + kMintAmount )
             << "Node " << i << " must mint the contested burn exactly once post-heal (no fork, no double-mint)";
     }

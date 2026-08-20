@@ -24,7 +24,7 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     constexpr unsigned int kDestinationIndex = 1u;
 
     const std::string dest_addr = DeriveLightDestination( kDestinationIndex );
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
 
     spdlog::info( "bridge_race fault_kill: dest={} initial_balance={} killed_index={}",
                   dest_addr.substr( 0, 16 ),
@@ -57,6 +57,8 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
+        ASSERT_FALSE( RequireActiveAddress( s_nodes[i] ).empty() )
+            << "Node " << i << " is not active-ready before RPC endpoint configuration";
         ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
             << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
@@ -84,7 +86,7 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
                     {
                         return true;
                     }
-                    return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount;
+                    return RequireActiveBalance( node, dest_addr ) >= initial_balance + kMintAmount;
                 } );
         },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
@@ -99,7 +101,7 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
         {
             continue;
         }
-        const uint64_t final_balance = s_nodes[i]->GetBalance( dest_addr );
+        const uint64_t final_balance = RequireActiveBalance( s_nodes[i], dest_addr );
         EXPECT_EQ( final_balance, initial_balance + kMintAmount )
             << "Surviving node " << i << " must mint the contested burn exactly once (no double-mint)";
     }
