@@ -94,6 +94,50 @@ namespace sgns
             manager->CertificateReceived( std::move( new_data ), std::string{} );
         }
 
+        static void RecoverPendingCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->RecoverPendingCertificateWork();
+        }
+
+        static bool HasStalledCertificateWork( const std::shared_ptr<ConsensusManager> &manager,
+                                               const std::string                       &key )
+        {
+            auto entry = manager->certificate_work_journal_->GetEntry( key );
+            return entry.has_value() && entry->state == crdt::CRDTWorkJournal::State::Stalled;
+        }
+
+        static bool HasAcceptedCertificateForSlot( const std::shared_ptr<ConsensusManager> &manager,
+                                                   const std::string                       &slot_key )
+        {
+            return manager->HasAcceptedCertificateForSlot( slot_key );
+        }
+
+        static void WriteLiveLegacyCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                                const ConsensusManager::Certificate     &certificate )
+        {
+            auto subject_hash = ConsensusManager::GetSubjectHash( certificate.proposal().subject() );
+            ASSERT_TRUE( subject_hash.has_value() );
+            std::string serialized;
+            ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+            crdt::GlobalDB::Buffer value;
+            value.put( serialized );
+            ASSERT_TRUE( manager->db_->Put( { std::string( "/cert/" ) + subject_hash.value() }, value, {} ).has_value() );
+        }
+
+        static ConsensusManager::Proposal ResignWithLaterTimestamp(
+            const std::shared_ptr<sgns::GeniusAccount> &account,
+            ConsensusManager::Proposal                   proposal )
+        {
+            proposal.set_timestamp( proposal.timestamp() + 1 );
+            proposal.clear_signature();
+            proposal.set_proposal_id( ConsensusManager::CreateProposalId( proposal ) );
+            auto bytes = ConsensusManager::ProposalSigningBytes( proposal );
+            EXPECT_TRUE( bytes.has_value() );
+            auto signature = account->Sign( bytes.value() );
+            proposal.set_signature( signature.data(), signature.size() );
+            return proposal;
+        }
+
         static std::string GetSlotKey( const ConsensusManager::Proposal &proposal )
         {
             return ConsensusManager::GetSlotKey( proposal );
@@ -706,7 +750,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
         manager,
         sgns::crdt::CRDTCallbackManager::NewDataPair{ matching_element.key(), std::move( matching_buffer ) } );
-    EXPECT_EQ( handler_calls.load(), 1 );
+    EXPECT_EQ( handler_calls.load(), 0 );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
     auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, mismatched_element );
@@ -717,7 +761,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
         manager,
         sgns::crdt::CRDTCallbackManager::NewDataPair{ mismatched_element.key(), std::move( serialized_buffer ) } );
-    EXPECT_EQ( handler_calls.load(), 1 );
+    EXPECT_EQ( handler_calls.load(), 0 );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
     // Keyless pubsub ingress accepts the same exactly-bound certificate without inventing a storage key.
@@ -1226,5 +1270,66 @@ TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorize
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                86,
+                                                                "0xdurable-certificate-release",
+                                                                sgns::EmbeddedTransaction{},
+                                                                MakeTestCommitment(),
+                                                                MakeTestWitness() );
+    ASSERT_TRUE( subject.has_value() );
+    auto voted_proposal_result = manager->CreateProposal(
+        subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( voted_proposal_result.has_value() );
+    auto voted_proposal = voted_proposal_result.value();
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, voted_proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
+    ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
+    auto certified_vote = manager->CreateVote(
+        certified_proposal.proposal_id(), account->GetAddress(), true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( certified_vote.has_value() );
+    auto certificate = manager->CreateCertificate( certified_proposal, { certified_vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( certified_proposal.subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+    const auto legacy_key = std::string( "/cert/" ) + subject_hash.value();
+    std::string serialized;
+    ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
+
+    // The CRDT callback occurs before its batch commits, so it can only retain stalled work.
+    sgns::base::Buffer callback_value;
+    callback_value.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived( manager, { legacy_key, std::move( callback_value ) } );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, legacy_key ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+
+    // A pre-commit/missing readback must remain retryable and cannot unlock the slot.
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, legacy_key ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, certificate.value() );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
