@@ -388,7 +388,10 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiAccountTestAccess;
+        // PHASE14_TEMP_MANAGER_LEGACY_SHIM: retained only until Plans 14-03..05
+        // migrate all callers; it performs admission and cannot bypass retirement.
         void EnqueueTransaction( TransactionPair element );
+        // PHASE14_TEMP_MANAGER_LEGACY_SHIM: see TransactionPair overload.
         void EnqueueTransaction( TransactionItem element );
 
         void SetTimeFrameToleranceMs( uint64_t timeframe_tolerance );
@@ -616,6 +619,11 @@ namespace sgns
         void BindAdmittedOperation( AdmittedOperation &operation, const std::string &transaction_id );
         void CompleteAdmittedTransaction( const std::string &transaction_id );
         void RetireIfDrainedLocked();
+        void EnqueueAdmittedTransaction( TransactionItem element, AdmittedOperation &operation );
+        outcome::result<std::string> PayEscrowAdmitted( const std::string                       &escrow_path,
+                                                        const SGProcessing::TaskResult          &task_result,
+                                                        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+                                                        AdmittedOperation                        &operation );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 

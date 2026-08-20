@@ -50,6 +50,7 @@ namespace sgns
 {
     namespace
     {
+        std::atomic<uint64_t> next_transaction_manager_generation{ 1 };
         using input_validator_constants::HASH256_BYTES;
         using input_validator_constants::SERIALIZED_UINT32_BYTES;
         using utxo_merkle::HashLeaf;
@@ -300,6 +301,7 @@ namespace sgns
         mutability_window_m( mutability_window ),
         burn_basis_points_( initial_burn_basis_points ),
         confirmed_burn_provider_( std::move( confirmed_burn_provider ) ),
+        manager_generation_( next_transaction_manager_generation.fetch_add( 1, std::memory_order_relaxed ) ),
         last_loop_time_( std::chrono::steady_clock::now() ),
         m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
     {
@@ -369,6 +371,10 @@ namespace sgns
     outcome::result<TransactionManager::AdmittedOperation> TransactionManager::TryAdmit()
     {
         std::lock_guard lock( admission_mutex_ );
+        if ( lifecycle_ != ManagerLifecycle::ACTIVE )
+        {
+            return outcome::failure( Error::MANAGER_RETIRED );
+        }
         const auto       id = next_admitted_operation_id_++;
         admitted_operations_.emplace( id, std::string{} );
         return AdmittedOperation( this, id, manager_generation_ );
@@ -377,12 +383,14 @@ namespace sgns
     void TransactionManager::CloseAdmission()
     {
         std::lock_guard lock( admission_mutex_ );
-        lifecycle_ = ManagerLifecycle::DRAINING;
+        if ( lifecycle_ == ManagerLifecycle::ACTIVE ) lifecycle_ = ManagerLifecycle::DRAINING;
+        RetireIfDrainedLocked();
     }
 
     TransactionManager::RetirementSnapshot TransactionManager::GetRetirementSnapshot() const
     {
         std::lock_guard lock( admission_mutex_ );
+        if ( lifecycle_ == ManagerLifecycle::RETIRED ) return retirement_snapshot_;
         auto            snapshot = retirement_snapshot_;
         snapshot.lifecycle = lifecycle_;
         snapshot.generation = manager_generation_;
@@ -406,6 +414,7 @@ namespace sgns
             if ( !it->second.empty() ) admitted_transaction_ids_.erase( it->second );
             admitted_operations_.erase( it );
         }
+        RetireIfDrainedLocked();
         operation.manager_ = nullptr;
         operation.id_ = 0;
     }
@@ -429,10 +438,14 @@ namespace sgns
         if ( transaction_it == admitted_transaction_ids_.end() ) return;
         admitted_operations_.erase( transaction_it->second );
         admitted_transaction_ids_.erase( transaction_it );
+        RetireIfDrainedLocked();
     }
 
     void TransactionManager::RetireIfDrainedLocked()
     {
+        if ( lifecycle_ != ManagerLifecycle::DRAINING || !admitted_operations_.empty() ) return;
+        lifecycle_ = ManagerLifecycle::RETIRED;
+        retirement_snapshot_ = RetirementSnapshot{ ManagerLifecycle::RETIRED, manager_generation_, 0 };
     }
 
     void TransactionManager::Stop()
@@ -667,6 +680,7 @@ namespace sgns
                                                                     std::string destination,
                                                                     TokenID     token_id )
     {
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -683,7 +697,7 @@ namespace sgns
 
         account_m->GetUTXOManager().ReserveUTXOs( inputs, transfer_transaction->GetHash() );
 
-        EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
+        EnqueueAdmittedTransaction( { { std::make_pair( transfer_transaction, std::nullopt ) }, std::nullopt }, admitted );
 
         return transfer_transaction->GetHash();
     }
@@ -694,6 +708,7 @@ namespace sgns
                                                                 TokenID     tokenid,
                                                                 std::string destination )
     {
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -801,7 +816,8 @@ namespace sgns
 
             mint_transaction->MakeSignature( *account_m );
             txId = mint_transaction->GetHash();
-            EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
+            EnqueueAdmittedTransaction( { { std::make_pair( std::move( mint_transaction ), std::nullopt ) }, std::nullopt },
+                                         admitted );
         }
         catch ( const std::exception &e )
         {
@@ -826,6 +842,7 @@ namespace sgns
                                                                      TokenID     tokenid,
                                                                      std::string destination )
     {
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -838,7 +855,8 @@ namespace sgns
 
         auto txId = migration_transaction->GetHash();
 
-        EnqueueTransaction( std::make_pair( std::move( migration_transaction ), std::nullopt ) );
+        EnqueueAdmittedTransaction( { { std::make_pair( std::move( migration_transaction ), std::nullopt ) }, std::nullopt },
+                                     admitted );
 
         return txId;
     }
@@ -848,6 +866,7 @@ namespace sgns
                                                                                             uint64_t peers_cut,
                                                                                             const std::string &job_id )
     {
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -868,7 +887,7 @@ namespace sgns
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->GetHash();
 
-        EnqueueTransaction( std::make_pair( escrow_transaction, std::nullopt ) );
+        EnqueueAdmittedTransaction( { { std::make_pair( escrow_transaction, std::nullopt ) }, std::nullopt }, admitted );
 
         crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( escrow_transaction->SerializeByteVector() );
@@ -881,6 +900,16 @@ namespace sgns
         const std::string                       &escrow_path,
         const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+    {
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
+        return PayEscrowAdmitted( escrow_path, task_result, std::move( crdt_transaction ), admitted );
+    }
+
+    outcome::result<std::string> TransactionManager::PayEscrowAdmitted(
+        const std::string                       &escrow_path,
+        const SGProcessing::TaskResult          &task_result,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+        AdmittedOperation                        &admitted )
     {
         uint64_t burn_basis_points = burn_basis_points_.load( std::memory_order_relaxed );
         if ( confirmed_burn_provider_ )
@@ -999,8 +1028,9 @@ namespace sgns
 
         transfer_transaction->MakeSignature( *account_m );
 
-        EnqueueTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } },
-                                             std::move( crdt_transaction ) } );
+        EnqueueAdmittedTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } },
+                                                     std::move( crdt_transaction ) },
+                                     admitted );
         return transfer_transaction->GetHash();
     }
 
@@ -1027,7 +1057,14 @@ namespace sgns
             return;
         }
 
-        auto payout = PayEscrow( escrow_path, task_result, std::move( crdt_transaction ) );
+        auto admitted = TryAdmit();
+        if ( admitted.has_error() )
+        {
+            submission_lock.unlock();
+            callback( TransactionCompletion{ {}, TransactionStatus::INVALID, {}, admitted.error() } );
+            return;
+        }
+        auto payout = PayEscrowAdmitted( escrow_path, task_result, std::move( crdt_transaction ), admitted.value() );
         submission_lock.unlock();
         if ( payout.has_error() )
         {
@@ -1214,6 +1251,17 @@ namespace sgns
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
+        auto admitted = TryAdmit(); // PHASE14_TEMP_MANAGER_LEGACY_SHIM
+        if ( admitted.has_error() )
+        {
+            m_logger->warn( "Rejecting legacy enqueue after manager retirement" );
+            return;
+        }
+        EnqueueAdmittedTransaction( std::move( element ), admitted.value() );
+    }
+
+    void TransactionManager::EnqueueAdmittedTransaction( TransactionItem element, AdmittedOperation &operation )
+    {
         m_logger->debug( "Transaction enqueuing" );
         if ( element.first.empty() )
         {
@@ -1229,8 +1277,12 @@ namespace sgns
                 m_logger->error( "Failed to change transaction state for {}", tx->GetHash() );
             }
         }
-        std::lock_guard lock( mutex_m );
-        tx_queue_m.emplace_back( std::move( element ) );
+        const auto transaction_id = element.first.front().first->GetHash();
+        {
+            std::lock_guard lock( mutex_m );
+            tx_queue_m.emplace_back( std::move( element ) );
+        }
+        BindAdmittedOperation( operation, transaction_id );
     }
 
     void TransactionManager::EnqueueTransaction( TransactionPair element )
@@ -4886,6 +4938,7 @@ namespace sgns
                     // applying its account-side effects fails.
                     tx_lock.unlock();
                     NotifyTransactionStatusChanged( tx->GetHash() );
+                    CompleteAdmittedTransaction( tx->GetHash() );
                     return outcome::failure( parse_result.error() );
                 }
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
@@ -5007,6 +5060,10 @@ namespace sgns
                          tx->GetHash(),
                          static_cast<int>( new_status ) );
         NotifyTransactionStatusChanged( tx->GetHash() );
+        if ( IsTerminalTransactionStatus( new_status ) )
+        {
+            CompleteAdmittedTransaction( tx->GetHash() );
+        }
         return outcome::success();
     }
 
