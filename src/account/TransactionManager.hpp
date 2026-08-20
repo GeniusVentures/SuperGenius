@@ -185,23 +185,28 @@ namespace sgns
 
         ~TransactionManager();
 
+        [[nodiscard]] uint64_t GetGeneration() const noexcept;
+        /** A value-only diagnostic that remains stable after retirement. */
+        RetirementSnapshot GetRetirementSnapshot() const;
+        [[nodiscard]] ManagerLifecycle GetLifecycle() const;
+
+    protected:
         /** Attempts one externally visible mutation admission. */
         outcome::result<AdmittedOperation> TryAdmit();
         /** Stops new admission; previously admitted work is allowed to terminalize. */
         void CloseAdmission();
-        /** A value-only diagnostic that remains stable after retirement. */
-        RetirementSnapshot GetRetirementSnapshot() const;
-        [[nodiscard]] ManagerLifecycle GetLifecycle() const;
 
         void Start();
         void RegisterTopicNames();
         void StartListeningTopics();
         void StartCore();
 
+    public:
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
         size_t CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
 
+    public:
         /**
          * @brief Creates and enqueues a transfer transaction.
          * @param[in] amount  Amount to transfer.
@@ -279,6 +284,7 @@ namespace sgns
                              std::chrono::milliseconds                timeout,
                              TransactionCompletionCallback            callback );
 
+    public:
         /**
          * @brief Asynchronously observes an already-tracked outgoing transaction.
          */
@@ -301,6 +307,7 @@ namespace sgns
         TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                 std::chrono::milliseconds timeout ) const;
 
+    public:
         static std::string GetTransactionPath( uint16_t base, const std::string &tx_hash );
         static std::string GetTransactionPath( const GeniusTransaction &element );
         static std::string GetTransactionPath( const std::string &tx_hash );
@@ -314,6 +321,7 @@ namespace sgns
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction(
             const base::Buffer &tx_data );
 
+    public:
         State GetState() const
         {
             return state_m;
@@ -329,6 +337,7 @@ namespace sgns
         outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
             const GeniusTransaction &element ) const;
 
+    protected:
         /**
          * @brief Idempotent stop. Sets the stopped flag and wakes the tick loop.
          */
@@ -337,6 +346,7 @@ namespace sgns
         void RegisterStateChangeCallback( StateChangeCallback callback );
         void UnregisterStateChangeCallback();
 
+    public:
         static std::string StateToString( State state )
         {
             switch ( state )
@@ -360,6 +370,7 @@ namespace sgns
         /// @brief Overload using the current network ID.
         static std::string GetBlockChainBase();
 
+    protected:
         /**
          * @brief Queries all transaction keys from the CRDT across monitored networks
          *        and processes each one via FetchAndProcessTransaction.
@@ -380,6 +391,7 @@ namespace sgns
         outcome::result<void> FetchAndProcessTransaction( const std::string          &tx_key,
                                                           std::optional<base::Buffer> tx_data = std::nullopt );
 
+    public:
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
 
         /**
@@ -395,13 +407,12 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiAccountTestAccess;
+        friend class BurnConfigPolicyE2ETestAccess;
+        friend class BridgeRaceFaultRpcTestAccess;
         /** Invokes @p callback once the closed manager has no admitted work left. */
         void OnDrained( std::function<void()> callback );
-        // PHASE14_TEMP_MANAGER_LEGACY_SHIM: retained only until Plans 14-03..05
-        // migrate all callers; it performs admission and cannot bypass retirement.
-        void EnqueueTransaction( TransactionPair element );
-        // PHASE14_TEMP_MANAGER_LEGACY_SHIM: see TransactionPair overload.
-        void EnqueueTransaction( TransactionItem element );
+        /** Friend-only deterministic fixture capability for a multi-transaction CRDT batch. */
+        void EnqueueForTest( TransactionItem element );
 
         void SetTimeFrameToleranceMs( uint64_t timeframe_tolerance );
         void SetMutabilityWindowMs( uint64_t mutability_window );
@@ -835,7 +846,7 @@ namespace sgns
          */
         void ChangeState( State new_state );
 
-    public:
+    protected:
         enum class WitnessValidationResult : uint8_t
         {
             VALID,

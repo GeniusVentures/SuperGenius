@@ -37,13 +37,16 @@ namespace sgns
             manager.ChangeState( state );
         }
 
+        static void RegisterTopicNames( TransactionManager &manager ) { manager.RegisterTopicNames(); }
+        static void Stop( TransactionManager &manager ) { manager.Stop(); }
+
         static void Enqueue( TransactionManager                      &manager,
                              std::shared_ptr<GeniusTransaction>       transaction,
                              std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
         {
             TransactionManager::TransactionBatch batch;
             batch.emplace_back( std::move( transaction ), std::nullopt );
-            manager.EnqueueTransaction( { std::move( batch ), std::move( crdt_transaction ) } );
+            manager.EnqueueForTest( { std::move( batch ), std::move( crdt_transaction ) } );
         }
 
         static void TickOnce( TransactionManager &manager )
@@ -84,7 +87,7 @@ namespace
 
             manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
             ASSERT_TRUE( manager_ );
-            manager_->RegisterTopicNames();
+            sgns::TransactionManagerPendingLifecycleTestAccess::RegisterTopicNames( *manager_ );
 
             account_->SetPeerConfirmedNonce( 0, account_->GetAddress() );
             sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
@@ -95,7 +98,7 @@ namespace
         {
             if ( manager_ )
             {
-                manager_->Stop();
+                sgns::TransactionManagerPendingLifecycleTestAccess::Stop( *manager_ );
             }
         }
 
@@ -130,11 +133,11 @@ namespace
 
         void RecreateManager()
         {
-            manager_->Stop();
+            sgns::TransactionManagerPendingLifecycleTestAccess::Stop( *manager_ );
             manager_.reset();
             manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
             ASSERT_TRUE( manager_ );
-            manager_->RegisterTopicNames();
+            sgns::TransactionManagerPendingLifecycleTestAccess::RegisterTopicNames( *manager_ );
             sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
                                                                              sgns::TransactionManager::State::READY );
         }
@@ -391,7 +394,7 @@ TEST_F( TransactionManagerRecoveryTest, StopCancelsPendingOutgoingWait )
                                                [&]( sgns::TransactionManager::TransactionCompletion result )
                                                { completion = std::move( result ); } );
 
-    manager_->Stop();
+    sgns::TransactionManagerPendingLifecycleTestAccess::Stop( *manager_ );
 
     ASSERT_TRUE( completion.has_value() );
     EXPECT_EQ( completion->transaction_id, transaction->GetHash() );

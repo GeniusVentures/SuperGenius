@@ -22,6 +22,20 @@
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 
+namespace sgns
+{
+    class BurnConfigPolicyE2ETestAccess
+    {
+    public:
+        static void Stop( TransactionManager &manager ) { manager.Stop(); }
+        static std::vector<std::vector<uint8_t>> GetOutTransactions( const TransactionManager &manager )
+        {
+            return manager.GetOutTransactions();
+        }
+        static size_t CountTransactions( const TransactionManager &manager ) { return manager.CountTransactions(); }
+    };
+} // namespace sgns
+
 namespace
 {
     using namespace sgns;
@@ -92,7 +106,7 @@ namespace
 
         void TearDown() override
         {
-            if ( manager_ ) manager_->Stop();
+            if ( manager_ ) sgns::BurnConfigPolicyE2ETestAccess::Stop( *manager_ );
             manager_.reset();
             blockchain_.reset();
             if ( account_ ) account_->DeconfigureDatabaseDependencies();
@@ -182,7 +196,7 @@ namespace
             EXPECT_TRUE( paid.has_value() ) << ( paid.has_error() ? paid.error().message() : "" );
             if ( paid.has_error() ) return 0;
             std::shared_ptr<TransferTransaction> transfer;
-            for ( auto bytes : manager_->GetOutTransactions() )
+            for ( auto bytes : sgns::BurnConfigPolicyE2ETestAccess::GetOutTransactions( *manager_ ) )
             {
                 auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( bytes ) ) );
                 if ( transaction.has_value() && transaction.value()->GetHash() == paid.value() )
@@ -222,7 +236,7 @@ namespace
         size_t CountOutputDestinations() const
         {
             size_t count = 0;
-            for ( auto bytes : manager_->GetOutTransactions() )
+            for ( auto bytes : sgns::BurnConfigPolicyE2ETestAccess::GetOutTransactions( *manager_ ) )
             {
                 auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( bytes ) ) );
                 if ( transaction.has_error() ) continue;
@@ -250,11 +264,11 @@ namespace
 TEST_F( BurnConfigPolicyE2ETest, GenesisWaitsForTrustedPeerConfirmationAndExactBurnQuorum )
 {
     const auto pre_ready_escrow = StoreEscrow( 10000 );
-    const auto transaction_count = manager_->CountTransactions();
+    const auto transaction_count = sgns::BurnConfigPolicyE2ETestAccess::CountTransactions( *manager_ );
     auto pre_ready = manager_->PayEscrow( pre_ready_escrow, SGProcessing::TaskResult{}, nullptr );
     ASSERT_TRUE( pre_ready.has_error() );
     EXPECT_EQ( pre_ready.error(), make_error_code( TransactionManager::Error::TRUST_POLICY_NOT_READY ) );
-    EXPECT_EQ( manager_->CountTransactions(), transaction_count );
+    EXPECT_EQ( sgns::BurnConfigPolicyE2ETestAccess::CountTransactions( *manager_ ), transaction_count );
     EXPECT_FALSE( burn_->IsEconomicallyReady() );
     EXPECT_TRUE( burn_->ListPendingBurnCandidates().has_error() );
     EXPECT_TRUE( burn_->OnTrustedPeerGenesisConfirmed().has_error() );
@@ -403,7 +417,7 @@ TEST_F( BurnConfigPolicyE2ETest, PayEscrowUsesExactOverflowSafeBurnForUint64Maxi
         if ( output.dest_address != zero ) EXPECT_EQ( output.encrypted_amount, 0U );
     }
 
-    manager_->Stop();
+    sgns::BurnConfigPolicyE2ETestAccess::Stop( *manager_ );
     manager_ = TransactionManager::New( node_->db,
                                         node_->io,
                                         account_,
@@ -416,13 +430,13 @@ TEST_F( BurnConfigPolicyE2ETest, PayEscrowUsesExactOverflowSafeBurnForUint64Maxi
                                         nullptr );
     ASSERT_TRUE( manager_ );
     const auto invalid_escrow = StoreEscrow( maximum );
-    const auto transaction_count = manager_->CountTransactions();
-    const auto outgoing_count = manager_->GetOutTransactions().size();
+    const auto transaction_count = sgns::BurnConfigPolicyE2ETestAccess::CountTransactions( *manager_ );
+    const auto outgoing_count = sgns::BurnConfigPolicyE2ETestAccess::GetOutTransactions( *manager_ ).size();
     const auto output_count = CountOutputDestinations();
     auto invalid = manager_->PayEscrow( invalid_escrow, SingleSubtaskResult(), nullptr );
     ASSERT_TRUE( invalid.has_error() );
     EXPECT_EQ( invalid.error(), std::make_error_code( std::errc::invalid_argument ) );
-    EXPECT_EQ( manager_->CountTransactions(), transaction_count );
-    EXPECT_EQ( manager_->GetOutTransactions().size(), outgoing_count );
+    EXPECT_EQ( sgns::BurnConfigPolicyE2ETestAccess::CountTransactions( *manager_ ), transaction_count );
+    EXPECT_EQ( sgns::BurnConfigPolicyE2ETestAccess::GetOutTransactions( *manager_ ).size(), outgoing_count );
     EXPECT_EQ( CountOutputDestinations(), output_count );
 }

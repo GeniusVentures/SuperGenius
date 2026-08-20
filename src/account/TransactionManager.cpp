@@ -391,6 +391,11 @@ namespace sgns
         if ( drained ) drained();
     }
 
+    uint64_t TransactionManager::GetGeneration() const noexcept
+    {
+        return manager_generation_;
+    }
+
     void TransactionManager::OnDrained( std::function<void()> callback )
     {
         std::function<void()> drained;
@@ -1275,12 +1280,12 @@ namespace sgns
         }
     }
 
-    void TransactionManager::EnqueueTransaction( TransactionItem element )
+    void TransactionManager::EnqueueForTest( TransactionItem element )
     {
-        auto admitted = TryAdmit(); // PHASE14_TEMP_MANAGER_LEGACY_SHIM
+        auto admitted = TryAdmit();
         if ( admitted.has_error() )
         {
-            m_logger->warn( "Rejecting legacy enqueue after manager retirement" );
+            m_logger->warn( "Rejecting fixture enqueue after manager retirement" );
             return;
         }
         EnqueueAdmittedTransaction( std::move( element ), admitted.value() );
@@ -1309,11 +1314,6 @@ namespace sgns
             tx_queue_m.emplace_back( std::move( element ) );
         }
         BindAdmittedOperation( operation, transaction_id );
-    }
-
-    void TransactionManager::EnqueueTransaction( TransactionPair element )
-    {
-        EnqueueTransaction( { { std::move( element ) }, std::nullopt } );
     }
 
     outcome::result<void> TransactionManager::SubmitTransaction( TransactionPair element )

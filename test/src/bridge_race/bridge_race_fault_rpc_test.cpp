@@ -23,6 +23,18 @@
 #include "src/mock/mock_rpc_config.hpp"
 #include "src/mock/mock_rpc_transport.hpp"
 
+namespace sgns
+{
+    class BridgeRaceFaultRpcTestAccess
+    {
+    public:
+        static PublicChainInputValidator &Validator( TransactionManager &manager )
+        {
+            return manager.GetPublicChainInputValidator();
+        }
+    };
+} // namespace sgns
+
 namespace
 {
     /// @brief Mock-default bridge contract address/topic0 (mirrors the private
@@ -50,9 +62,9 @@ namespace
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
         auto manager = tx_mgr_result.value();
-        ASSERT_EQ( manager->GetLifecycle(), TransactionManager::ManagerLifecycle::ACTIVE )
+        ASSERT_EQ( manager->GetLifecycle(), sgns::TransactionManager::ManagerLifecycle::ACTIVE )
             << "node transaction manager retired before fault injection";
-        auto &validator = manager->GetPublicChainInputValidator();
+        auto &validator = sgns::BridgeRaceFaultRpcTestAccess::Validator( *manager );
 
         // Factory-dispatch lambda keyed on exact URL match (08-PATTERNS.md Pattern 3).
         validator.SetTransportFactory(

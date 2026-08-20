@@ -3,7 +3,7 @@
 import argparse, json, re, sys
 from pathlib import Path
 
-METHODS = ("TransferFunds", "MintFunds", "MigrationFunds", "HoldEscrow", "PayEscrow", "AsyncPayEscrow", "SubmitTransaction", "EnqueueTransaction", "GetOutTransactions", "CountTransactions", "GetState", "GetTransactionStatusByTxId", "WaitForTransactionIncoming", "WaitForTransactionOutgoing", "RegisterStateChangeCallback", "RegisterTopicNames", "StartCore", "Start", "Stop")
+METHODS = ("TransferFunds", "MintFunds", "MigrationFunds", "HoldEscrow", "PayEscrow", "AsyncPayEscrow", "SubmitTransaction", "GetOutTransactions", "CountTransactions", "GetState", "GetTransactionStatusByTxId", "WaitForTransactionIncoming", "WaitForTransactionOutgoing", "RegisterStateChangeCallback", "RegisterTopicNames", "StartCore", "Start", "Stop")
 FIXTURE_MANAGER_ACCESS_METHODS = ("GetTransactionManager", "GetPublicChainInputValidator")
 ROOTS = ("src", "test", "apps", "example")
 ALLOWED = {"src/account/GeniusNode.cpp", "src/account/BridgeRelayer.cpp", "src/migration/Migration3_6_0To3_7_0.cpp", "test/src/account/burnconfig_policy_e2e_test.cpp", "test/src/account/transaction_manager_pending_lifecycle_test.cpp", "test/src/blockchain/consensus_subject_test.cpp", "test/src/multiaccount/multi_account_sync.cpp", "test/src/multiaccount/policy_lifetime_multi_account_test.cpp", "test/src/bridge_race/bridge_race_fault_rpc_test.cpp"}
@@ -52,7 +52,7 @@ def validate(data):
     assert len(identities(data)) == len(set(identities(data)))
 
 def main():
-    p=argparse.ArgumentParser(); p.add_argument("--write-inventory"); p.add_argument("--inventory"); p.add_argument("--compile-commands", required=True); p.add_argument("--check-assigned", action="store_true"); p.add_argument("--owners"); p.add_argument("--check-current", action="store_true"); p.add_argument("--check-owner"); p.add_argument("--sources"); p.add_argument("--required-targets"); p.add_argument("--check-migrated", action="store_true"); p.add_argument("--owner"); p.add_argument("--refresh-owner"); p.add_argument("--mark-migrated"); args=p.parse_args(); commands=load_commands(args.compile_commands)
+    p=argparse.ArgumentParser(); p.add_argument("--write-inventory"); p.add_argument("--inventory"); p.add_argument("--compile-commands", required=True); p.add_argument("--check-assigned", action="store_true"); p.add_argument("--owners"); p.add_argument("--check-current", action="store_true"); p.add_argument("--check-owner"); p.add_argument("--sources"); p.add_argument("--required-targets"); p.add_argument("--check-migrated", action="store_true"); p.add_argument("--check-all-migrated", action="store_true"); p.add_argument("--targets-output"); p.add_argument("--owner"); p.add_argument("--refresh-owner"); p.add_argument("--mark-migrated"); args=p.parse_args(); commands=load_commands(args.compile_commands)
     if args.write_inventory:
         data=rows(commands); Path(args.write_inventory).write_text("method\texpression\tsource\ttargets\towner_plan\tdisposition\n"+"".join("\t".join(r)+"\n" for r in data)); return
     lines=Path(args.inventory).read_text().splitlines(); assert lines[0] == "method\texpression\tsource\ttargets\towner_plan\tdisposition"
@@ -88,4 +88,10 @@ def main():
         assert args.owner
         owner_rows = [row for row in data if row[4] == args.owner]
         assert owner_rows and all(row[5] == "migrated" for row in owner_rows)
+    if args.check_all_migrated:
+        assert data and all(row[5] == "migrated" for row in data)
+        assert args.targets_output
+        resolved = sorted({target for row in data for target in row[3].split(",") if target != "unresolved"})
+        assert resolved
+        Path(args.targets_output).write_text("\n".join(resolved) + "\n")
 if __name__ == "__main__": main()
