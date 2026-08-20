@@ -52,6 +52,14 @@ PLAN_14_08_SOURCES = {
     "test/src/transaction_sync/migration_sync_test.cpp",
 }
 
+# Plan 14-09 owns only the multi-account caller partition below. Keep its
+# migration proof independent from every later caller partition so the exact
+# two-target build and manifest rows remain auditable on their own.
+PLAN_14_09_SOURCES = {
+    "test/src/multiaccount/multi_account_sync.cpp",
+    "test/src/multiaccount/policy_lifetime_multi_account_test.cpp",
+}
+
 def owner_for(source):
     s = source.replace("\\", "/")
     if s in {"src/account/GeniusNode.cpp", "src/account/GeniusNode.hpp", "test/src/node/node_initialization_progress.cpp"}:
@@ -191,6 +199,8 @@ def check_migrated(inventory, commands, owner):
         owned = [row for row in owned if row["source"] in FIXTURE_SOURCES]
     if owner == "14-08":
         owned = [row for row in owned if row["source"] in PLAN_14_08_SOURCES]
+    if owner == "14-09":
+        owned = [row for row in owned if row["source"] in PLAN_14_09_SOURCES]
     pending = [row["expression"] for row in owned if row["disposition"] != "migrated"]
     if pending:
         raise SystemExit("unmigrated owner rows: " + ", ".join(pending))
