@@ -540,8 +540,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
-    EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
-               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    auto escrow_release = node_main->WaitForActiveEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) );
+    ASSERT_TRUE( escrow_release ) << "escrow release error: " << escrow_release.error().message();
+    EXPECT_EQ( escrow_release.value(), sgns::TransactionManager::TransactionStatus::CONFIRMED );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;

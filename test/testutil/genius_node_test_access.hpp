@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 
 #include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
@@ -14,6 +15,16 @@ namespace sgns
     class GeniusNodeTestAccess
     {
     public:
+        static void SetAccountLifecycleForTest( const std::shared_ptr<GeniusNode> &node,
+                                                GeniusNode::AccountLifecycle        lifecycle )
+        {
+            if ( node )
+            {
+                std::lock_guard<std::recursive_mutex> lock( node->lifecycle_mutex_ );
+                node->account_lifecycle_ = lifecycle;
+            }
+        }
+
         static void CacheGnusPrice( const std::shared_ptr<GeniusNode> &node, double price )
         {
             if ( node )

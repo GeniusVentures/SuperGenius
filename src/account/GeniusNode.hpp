@@ -741,10 +741,19 @@ namespace sgns
                                                                           std::chrono::milliseconds timeout );
 
         /**
-         * @brief Waits until an escrow hold output is consumed.
+         * @brief Waits for an escrow release through the published ready account generation.
          * @param[in] originalEscrowId Hash of the original escrow hold transaction.
          * @param[in] timeout Maximum time to wait.
-         * @return CONFIRMED when consumed, or INVALID when transactions are not ready or the wait times out.
+         * @return The escrow-release terminal status, or the exact lifecycle error while switching/unavailable.
+         */
+        [[nodiscard]] outcome::result<TransactionManager::TransactionStatus> WaitForActiveEscrowRelease(
+            const std::string        &originalEscrowId,
+            std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Temporary raw-status compatibility shim for the pre-Phase 14 escrow API.
+         * @return The active-generation status, or INVALID when that generation is switching or unavailable.
+         * @note PHASE14_TEMP_NODE_LEGACY_SHIM: Plan 14-13 removes this after the caller closure audit.
          */
         TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                                     std::chrono::milliseconds timeout );

@@ -560,8 +560,9 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     std::cout << "Process cost: " << cost << "\n";
     auto postjob = node_main->ProcessImage( json_data );
     ASSERT_TRUE( postjob ) << "ProcessImage failed: " << postjob.error().message();
-    EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+    auto escrow_release = node_main->WaitForActiveEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) );
+    ASSERT_TRUE( escrow_release ) << "escrow release error: " << escrow_release.error().message();
+    EXPECT_EQ( escrow_release.value(), TransactionManager::TransactionStatus::CONFIRMED );
 
     assertWaitForCondition( [&]() { return RequireActiveBalance( *node_main ) == bal_main_init - cost; },
                             std::chrono::milliseconds( 20000 ),

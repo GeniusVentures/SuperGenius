@@ -3600,15 +3600,20 @@ namespace sgns
         return manager_result.value()->WaitForTransactionIncoming( txId, timeout );
     }
 
+    outcome::result<TransactionManager::TransactionStatus> GeniusNode::WaitForActiveEscrowRelease(
+        const std::string        &originalEscrowId,
+        std::chrono::milliseconds timeout )
+    {
+        BOOST_OUTCOME_TRY( auto snapshot, RequireReadyAccountGeneration() );
+        return snapshot.manager->WaitForEscrowRelease( originalEscrowId, timeout );
+    }
+
     TransactionManager::TransactionStatus GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                                             std::chrono::milliseconds timeout )
     {
-        auto manager_result = GetTransactionManager();
-        if ( !manager_result.has_value() )
-        {
-            return TransactionManager::TransactionStatus::INVALID;
-        }
-        return manager_result.value()->WaitForEscrowRelease( originalEscrowId, timeout );
+        // PHASE14_TEMP_NODE_LEGACY_SHIM: lifecycle errors must not masquerade as a successful status.
+        auto result = WaitForActiveEscrowRelease( originalEscrowId, timeout );
+        return result.has_value() ? result.value() : TransactionManager::TransactionStatus::INVALID;
     }
 
     outcome::result<std::shared_ptr<TransactionManager>> GeniusNode::GetTransactionManager() const

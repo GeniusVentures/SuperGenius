@@ -15,6 +15,7 @@
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/genius_node_test_access.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
@@ -151,7 +152,6 @@ public:
         {
             const std::string_view name( info->name() );
             if ( name.find( "SelectAccountReturnsGenerationBeforeReadyEvent" ) != std::string_view::npos ||
-                 name.find( "SwitchInProgressRejectsAccountCallsAndOverlap" ) != std::string_view::npos ||
                  name.find( "ConfiguredIdentityDoesNotPublishUnavailableGeneration" ) != std::string_view::npos )
             {
                 return;
@@ -207,7 +207,18 @@ TEST_F( AccountManagement, SwitchInProgressRejectsAccountCallsAndOverlap )
 {
     EXPECT_NE( static_cast<uint8_t>( GeniusNode::Error::SWITCH_IN_PROGRESS ),
                static_cast<uint8_t>( GeniusNode::Error::ACCOUNT_UNAVAILABLE ) );
-    EXPECT_EQ( GeniusNode::AccountLifecycle::SWITCHING, GeniusNode::AccountLifecycle::SWITCHING );
+
+    GeniusNodeTestAccess::SetAccountLifecycleForTest( node_, GeniusNode::AccountLifecycle::SWITCHING );
+    const auto switching = node_->WaitForActiveEscrowRelease( "ignored", std::chrono::milliseconds::zero() );
+    ASSERT_TRUE( switching.has_error() );
+    EXPECT_EQ( switching.error(), GeniusNode::Error::SWITCH_IN_PROGRESS );
+
+    GeniusNodeTestAccess::SetAccountLifecycleForTest( node_, GeniusNode::AccountLifecycle::UNAVAILABLE );
+    const auto unavailable = node_->WaitForActiveEscrowRelease( "ignored", std::chrono::milliseconds::zero() );
+    ASSERT_TRUE( unavailable.has_error() );
+    EXPECT_EQ( unavailable.error(), GeniusNode::Error::ACCOUNT_UNAVAILABLE );
+
+    GeniusNodeTestAccess::SetAccountLifecycleForTest( node_, GeniusNode::AccountLifecycle::READY );
 }
 
 TEST_F( AccountManagement, ConfiguredIdentityDoesNotPublishUnavailableGeneration )
@@ -476,8 +487,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
 
     auto postjob = node_requester->ProcessImage( json_data );
     ASSERT_TRUE( postjob ) << "post job error: " << postjob.error().message();
-    ASSERT_EQ( node_requester->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+    auto escrow_release = node_requester->WaitForActiveEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) );
+    ASSERT_TRUE( escrow_release ) << "escrow release error: " << escrow_release.error().message();
+    ASSERT_EQ( escrow_release.value(), TransactionManager::TransactionStatus::CONFIRMED );
 
     assertWaitForCondition(
         [&]
