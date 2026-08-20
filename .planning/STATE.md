@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
-current_phase: 13
+current_phase: 14
 status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-08-20T12:38:21.897Z"
-last_activity: 2026-08-20 -- Phase 14 planning complete
+last_updated: "2026-08-20T13:49:38.774Z"
+last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 37
+  completed_plans: 38
   percent: 33
 ---
 
@@ -19,20 +19,20 @@ progress:
 
 **Last updated:** 2026-08-12
 **Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 13
+**Current Phase:** 14
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-07-20)
 **Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 13 — Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
+**Current focus:** Phase 14 — Account-generation publication and retired-manager lifecycle safety
 
 ## Current Position
 
-Phase: 13 (Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps) — VERIFYING
-Plan: 29 of 29
+Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
+Plan: 2 of 15
 Status: Ready to execute
-Last activity: 2026-08-20 -- Phase 14 planning complete
+Last activity: 2026-08-20
 
 ## Roadmap Snapshot
 
@@ -67,9 +67,9 @@ Last activity: 2026-08-20 -- Phase 14 planning complete
 
 ## Session
 
-**Last session:** 2026-08-17T21:26:45.876Z
+**Last session:** 2026-08-20T13:49:12.914Z
 **Stopped At:** Phase 14 context gathered
-**Resume File:** .planning/phases/14-account-generation-publication-and-retired-manager-lifecycle/14-CONTEXT.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -118,6 +118,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P27 | 36min | 2 tasks | 4 files |
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
+| Phase 14 P01 | 25 min | 2 tasks | 8 files |
 
 ## Decisions
 
@@ -182,3 +183,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Only policy and burn discovery failures are transient; activation failures remain actionable and controller-scoped candidate suppression is preserved. — Semantic stage classification prevents retries from masking durable, genesis, publication, or candidate-specific activation faults.
 - [Phase 13]: One refresh cycle is exactly attempts 1 through 7 with 100/200/400/800/1600/3200ms delays; duplicate requests coalesce and exhaustion returns the dispatcher to idle. — The fixed cap and exact observability close retry storms while preserving autonomous recovery from transient discovery failures.
 - [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
+- [Phase 14]: Admission is the single lifecycle linearization point; accepted work stays in a transaction-ID ledger until terminalization.
