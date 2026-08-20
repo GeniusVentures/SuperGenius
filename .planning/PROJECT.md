@@ -4,11 +4,21 @@
 
 SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
 
-This milestone is an **interface refactor of `GeniusNode`** — not new product capability. It cleans up the node construction API and moves runtime knobs into configuration files where they belong.
+This milestone rebuilds bridge-mint finality from the `develop` baseline. Competing proposals for one external burn must converge on a single canonical finality slot without treating CRDT callback timing or a local message-delivery flag as protocol authority.
 
 ## Core Value
 
-**Constructing a `GeniusNode` must be a single, self-documenting call driven by config files** — no more overloaded factory methods carrying boolean network/role flags that are really config concerns. If this refactor lands clean and all 18 call sites compile and tests pass, the milestone succeeds.
+**One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.**
+
+## Current Milestone: v3.0 Canonical Burn Finality Rebuild
+
+**Goal:** Implement a minimal, protocol-defined canonical-slot finality path on `develop`, with explicit publication ownership and safe failover.
+
+**Target features:**
+- Canonical external-burn slot identity shared by every competing mint proposal
+- Deterministic winner/finality rules that preserve certificate-to-proposal binding
+- Verifiable certificate publication ownership, persistence-before-advertisement, and safe failover
+- Multi-node regression coverage for contention, delayed CRDT delivery, publisher loss, restart, and exactly-once minting
 
 ## Requirements
 
@@ -31,17 +41,12 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ### Active
 
-<!-- This milestone's scope. Hypotheses until shipped. — All v1 requirements VALIDATED (Phases 1-3). -->
+<!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [x] `autodht` and `base_port` are read from `network_config.json` (in `InitNetwork`), not passed as constructor/factory params
-- [x] `node_type` ("Full" / "Light" / "Archive") is read from `sgns_config.json` (in `LoadSgnsConfig`); a `NodeType` enum is introduced
-- [x] `GeniusNode::is_full_node_` becomes a **derived** bool (Full/Archive → true, Light → false), sourced from `node_type`; downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) keep the existing bool, unchanged
-- [x] Three factories (`New`, `NewFromPrivateKey`, `NewFromMnemonic`) collapse into a single `New(dev_config, AccountSource)` where `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`
-- [x] `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option (watch-only / read-only)
-- [x] All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/`, 17 across `test/src/{account,node,blockchain,transaction_sync,processing_multi,processing_nodes,multiaccount}/`) migrate to the new `New()` API
-- [x] Each migrated test writes its `autodht` / `base_port` / `node_type` into the appropriate config file (the `sgns_config.json` write pattern is already established in tests)
-- [x] Existing config files without the new keys keep working via sensible defaults (`autodht=true`, `base_port=40001`, `node_type=Light`)
-- [x] Full build passes and existing tests remain green after the refactor
+- [ ] Canonical bridge-burn identity and its scope are defined independently of proposer address, nonce, amount, and destination.
+- [ ] Certificate publication has a verifiable authority rule, persistence-before-advertisement ordering, and a safe failover policy.
+- [ ] All certificate ingress paths converge on one durable finality record without receiver-side duplicate CRDT writes.
+- [ ] A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart.
 
 ### Out of Scope
 
@@ -53,12 +58,17 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
 - Rewriting `DevConfig_st` or the dev-config plumbing — only the `GeniusNode` construction surface changes
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
+- Porting, rebasing, or repairing the rejected Phase 9–12 implementation — its design and dependencies are reference material only, not a source of production code
+- A local `DeliverySource` flag as proof of certificate authorship or CRDT write authority — local call provenance is neither network-verifiable nor durable
+- Broad TransactionManager, CRDT, registry, or persistence refactors that are not required by the canonical-finality contract
 
 ## Context
 
-**Current State (v1.0 — shipped 2026-07-03):** The GeniusNode construction-refactor milestone is complete. `New(dev_config, AccountSource)` is the sole public factory; `auto_dht`/`port_seed`/`node_type` are config-driven; `is_full_node_` is derived from `NodeType` in a reordered ctor (init-order hinge fixed); all ~25 call sites migrated; old factories deleted. Full build + CTest green; no behavior change for default/pre-existing configs. GSD subagent runtime was broken this milestone — all plan/execute/verify ran inline via the workflow's documented fallbacks.
+**Current State:** v1.0’s GeniusNode construction refactor remains the validated `develop` baseline. An unmerged v2.0 exploratory branch attempted slot-scoped finality through broad phases 9–12, but introduced a multi-writer CRDT certificate-store race and remains blocked by crashes, timeouts, and mint/sync failures. v3.0 starts clean from `develop`; the old worktree remains preserved for forensic reference only.
 
-**Next Milestone Goals:** TBD — run `/gsd-new-milestone`. Candidate work (deferred to v2, see `.planning/milestones/v1.0-REQUIREMENTS.md`): `NodeType` downstream propagation (PROP-01), distinct Archive-vs-Full runtime behavior (PROP-02), `pubsub_port` numeric cleanup (HARD-01), config schema versioning (HARD-02). Also consider restoring the GSD subagent runtime before the next milestone.
+**Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
+
+**Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable finality, and application idempotency must be specified as one protocol contract. The finality store cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -73,10 +83,11 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ## Constraints
 
-- **Tech stack**: C++17, CMake, RapidJSON, Boost, libp2p, git submodules — no new dependencies this milestone (use existing `std::variant` + RapidJSON).
-- **Compatibility**: deployed nodes have `network_config.json` / `sgns_config.json` **without** the new keys — they must keep working via defaults; no hard-fail on missing keys.
-- **Non-functional**: no behavior change for existing configurations — pure interface/config-location refactor. Tests stay green.
-- **Scope boundary**: the `NodeType` enum stops at the `GeniusNode` boundary this milestone (derived bool passed downstream).
+- **Tech stack**: C++17, CMake, existing RocksDB/CRDT/libp2p facilities; no new dependency unless research establishes a concrete need.
+- **Protocol safety**: a certificate remains cryptographically bound to its exact winning proposal while the canonical slot establishes the shared finality domain.
+- **Publication safety**: writer authority and failover must be deterministic, protocol-verifiable, and covered by failure tests; no local-only provenance shortcut.
+- **Durability**: write ordering and restart recovery must prevent a second certificate or second mint effect.
+- **Verification**: multi-node tests must exercise production ingress and propagation paths, not direct local-author helper calls.
 
 ## Key Decisions
 
@@ -89,6 +100,8 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 | No compatibility shim — migrate all 18 call sites directly | Only this repo consumes the factory; a shim would just delay the cleanup. Tests already write `sgns_config.json`, so the config-write pattern is established | Phase 3 ✓ (all ~25 call sites migrated + old factories deleted) |
 | `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
 | Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ (all three defaults verified: `auto_dht=true`/`port_seed=40001` Phase 1, `node_type=Light` Phase 2) |
+| Restart canonical-finality work from `develop` | The unmerged Phase 9–12 branch has a large blast radius and a publication-authority design flaw; retain its observations, not its implementation | — Pending |
+| Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | — Pending |
 
 ## Evolution
 
@@ -108,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after Phase 3 completion (milestone v1 complete — all 3 phases shipped green)*
+*Last updated: 2026-08-20 after starting milestone v3.0 from the `develop` baseline*
