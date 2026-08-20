@@ -5,13 +5,13 @@ milestone_name: trusted-peer genesis, quorum-policy, and production integration 
 current_phase: 14
 status: executing
 stopped_at: Completed 14-04-PLAN.md
-last_updated: "2026-08-20T14:41:34.970Z"
+last_updated: "2026-08-20T15:02:05.356Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 41
+  completed_plans: 42
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 5 of 15
+Plan: 6 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,7 +67,7 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T14:41:34.776Z
+**Last session:** 2026-08-20T15:02:05.333Z
 **Stopped At:** Completed 14-04-PLAN.md
 **Resume File:** None
 
@@ -122,6 +122,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P02 | 14min | 2 tasks | 6 files |
 | Phase 14 P03 | 20 min | 2 tasks | 6 files |
 | Phase 14 P04 | 8 min | 2 tasks | 3 files |
+| Phase 14 P05 | 22 min | 2 tasks | 9 files |
 
 ## Decisions
 
@@ -194,3 +195,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 14]: Selection closes admission outside the node lifecycle mutex and stops a retired manager only after its admitted ledger drains. — This preserves accepted terminal work before destructive teardown.
 - [Phase 14]: Bridge fault injection requires a checked active manager before test-only validator access. — This retains the fixture's mock transport behavior without accepting a retired manager.
 - [Phase 14]: Fixture audit resolves required compile targets independently when a fixture has no direct manager expression. — Consensus target coverage stays explicit without inventing a compatibility call.
+- [Phase 14]: Final TransactionManager closure removes the legacy enqueue seam; setup, control, and mutable validator access are available only to named owners and fixture capabilities. — This closes D-13/D-14 after all mapped targets compile.
