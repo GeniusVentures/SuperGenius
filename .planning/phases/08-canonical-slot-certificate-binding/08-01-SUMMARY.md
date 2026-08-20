@@ -45,18 +45,21 @@ Canonical Mint slot identity is now regression-tested, and certificate ingress r
 - Added one certificate-binding predicate shared by semantic validation, key-aware CRDT filtering, and callback receipt handling.
 - Preserved keyless `HandleCertificate` acceptance for valid certificates; only ingress that supplies a legacy key checks its compatibility.
 - Added a lifecycle regression that proves rejected CRDT-key evidence leaves certificate state and finality effects untouched, while valid keyless handling remains accepted.
+- Followed up on review finding CR-01: intrinsic proposal and canonical-slot checks now precede registry availability, and keyless handling requires `Approve` before any proposal-state cleanup.
 
 ## Task Commits
 
 1. **Task 1: Canonical Mint slot identity tests** — `8d66d670` (`test(08-01): prove canonical Mint slot identity`)
 2. **Task 2: Certificate binding regressions** — `5ded0222` (`test(08-01): add certificate binding regression`)
 3. **Task 2: Certificate ingress implementation** — `38f0e40e` (`feat(08-01): enforce certificate ingress binding`)
+4. **Review follow-up: unavailable-registry fail-closed fix** — `35daf3d0` (`fix(08): reject stalled certificates before cleanup`)
 
 ## Decisions Made
 
 - The current `/cert/<subject-hash>` key remains the persistence and lookup contract. The newly exposed canonical slot key is a validated future-migration predicate only; it does not migrate authority in this phase.
 - `ProcessCertificates` clears a pending proposal only after certificate validation and submission succeed, so failed binding checks cannot erase recoverable state.
 - The lifecycle fixture explicitly selects `MemorySecureStorage` before `GeniusAccount::NewFromPrivateKey`, avoiding platform keychain use during the regression test.
+- Registry unavailability remains a deferred `Stalled` condition only for already intrinsic-valid certificates; `HandleCertificate` does not treat it as authorization to create or clear local proposal state.
 
 ## Verification
 
@@ -64,6 +67,7 @@ Canonical Mint slot identity is now regression-tested, and certificate ingress r
 - `ctest --test-dir build/OSX/Release -R 'consensus_(slot_key|pending_lifecycle)_test' --output-on-failure` — passed, 2/2 tests.
 - `git diff --check` — passed.
 - `git diff --quiet HEAD -- src/account/MintTransactionV2.cpp` — passed; Mint implementation remains unchanged.
+- Review follow-up focused Release verification: both consensus targets built and `ctest --test-dir build/OSX/Release -R 'consensus_(slot_key|pending_lifecycle)_test' --output-on-failure` passed, 2/2 tests.
 
 ## Deviations from Plan
 
