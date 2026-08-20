@@ -70,6 +70,15 @@ PLAN_14_10_SOURCES = {
     "test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp",
 }
 
+# The Plan 14-12 processing-multi target is defined in its child CMake file but
+# is not yet part of the parent test graph while this audit first runs.  Keep
+# that known local target definition as evidence instead of collapsing the row
+# to ``header-consumer`` before Task 2 wires the parent subdirectory.
+PLAN_14_12_TARGETS = {
+    "example/node_test/NodeExample.cpp": {"node_example"},
+    "test/src/processing_multi/processing_multi_test.cpp": {"processing_multi_test"},
+}
+
 # `bridge_race_fixture.hpp` is included by five independently-built race targets.
 # Headers do not have compile_commands entries of their own, so model their concrete
 # consumers explicitly instead of collapsing their lifecycle calls into the generic
@@ -136,6 +145,53 @@ def discover_sources():
             if path.suffix in {".cpp", ".cc", ".cxx", ".hpp", ".h"}:
                 yield path
 
+def strip_comments_and_strings(text):
+    """Replace C++ comments and literals without mistaking URL text for comments."""
+    output = []
+    index = 0
+    length = len(text)
+    while index < length:
+        if text.startswith("//", index):
+            end = text.find("\n", index)
+            if end == -1:
+                break
+            output.append("\n")
+            index = end + 1
+        elif text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            end = length if end == -1 else end + 2
+            output.append("\n" * text[index:end].count("\n"))
+            index = end
+        elif text.startswith('R"', index):
+            delimiter_end = text.find("(", index + 2)
+            if delimiter_end == -1:
+                output.append(text[index])
+                index += 1
+                continue
+            delimiter = text[index + 2:delimiter_end]
+            terminator = ")" + delimiter + '"'
+            end = text.find(terminator, delimiter_end + 1)
+            end = length if end == -1 else end + len(terminator)
+            output.append("\n" * text[index:end].count("\n"))
+            index = end
+        elif text[index] in {'"', "'"}:
+            quote = text[index]
+            end = index + 1
+            while end < length:
+                if text[end] == "\\\\":
+                    end += 2
+                elif text[end] == quote:
+                    end += 1
+                    break
+                else:
+                    end += 1
+            output.append("\n" * text[index:end].count("\n"))
+            index = end
+        else:
+            output.append(text[index])
+            index += 1
+    return "".join(output)
+
 def rows(commands):
     targets = targets_by_source(commands)
     rows = []
@@ -152,8 +208,16 @@ def rows(commands):
         rel = path.relative_to(ROOT).as_posix()
         if rel == "src/account/GeniusNode.hpp":
             continue
-        text = re.sub(r"/\*.*?\*/", "", path.read_text(errors="ignore"), flags=re.S)
-        text = re.sub(r"//[^\n]*|\"(?:\\.|[^\"])*\"", "", text)
+        raw_text = path.read_text(errors="ignore")
+        # Plan 14-12's two omitted caller sources contain raw JSON URLs.  Use
+        # the lexer for that partition so ``://`` cannot hide later calls;
+        # preserve the established discovery baseline for every already-owned
+        # partition until its dedicated plan updates it.
+        if rel in PLAN_14_12_TARGETS:
+            text = strip_comments_and_strings(raw_text)
+        else:
+            text = re.sub(r"/\*.*?\*/", "", raw_text, flags=re.S)
+            text = re.sub(r"//[^\n]*|\"(?:\\.|[^\"])*\"", "", text)
         matcher = fixture_call if rel in FIXTURE_SOURCES else call
         found = sorted(set(matcher.findall(text)))
         for called_method in found:
@@ -163,7 +227,11 @@ def rows(commands):
             # the checked active-generation surface.
             contract = ("configured-bootstrap" if rel == BRIDGE_RACE_FIXTURE and called_method == "GetAddress"
                         else contract_for(method, rel))
-            row_targets = BRIDGE_RACE_TARGETS if rel == BRIDGE_RACE_FIXTURE else targets.get(rel, {"header-consumer"})
+            row_targets = (
+                BRIDGE_RACE_TARGETS
+                if rel == BRIDGE_RACE_FIXTURE
+                else PLAN_14_12_TARGETS.get(rel, targets.get(rel, {"header-consumer"}))
+            )
             rows.append({"method": method, "expression": f"{rel}:{called_method}", "contract": contract,
                          "identity_kind": identity_for(contract), "source": rel,
                          "targets": ";".join(sorted(row_targets)),
@@ -238,6 +306,22 @@ def check_migrated(inventory, commands, owner):
     if pending:
         raise SystemExit("unmigrated owner rows: " + ", ".join(pending))
 
+def check_all_migrated(inventory, commands, targets_output, sources_output):
+    check_current(inventory, commands)
+    all_rows = read_inventory(inventory)
+    check(all_rows, ALLOWED)
+    pending = [row["expression"] for row in all_rows if row["disposition"] != "migrated"]
+    if pending:
+        raise SystemExit("unmigrated rows: " + ", ".join(pending))
+    targets = sorted({target for row in all_rows for target in row["targets"].split(";") if target})
+    sources = sorted({row["source"] for row in all_rows})
+    if "header-consumer" in targets:
+        raise SystemExit("unresolved header-consumer target in final caller union")
+    if targets_output:
+        targets_output.write_text("\n".join(targets) + "\n")
+    if sources_output:
+        sources_output.write_text("\n".join(sources) + "\n")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--compile-commands", type=pathlib.Path, default=ROOT / "build/OSX/Release/compile_commands.json")
@@ -253,6 +337,9 @@ def main():
     parser.add_argument("--required-targets", default="")
     parser.add_argument("--check-migrated", action="store_true")
     parser.add_argument("--owner")
+    parser.add_argument("--check-all-migrated", action="store_true")
+    parser.add_argument("--targets-output", type=pathlib.Path)
+    parser.add_argument("--sources-output", type=pathlib.Path)
     args = parser.parse_args()
     if args.write_inventory:
         generated = rows(args.compile_commands)
@@ -283,6 +370,8 @@ def main():
         if not args.owner:
             parser.error("--check-migrated requires --owner")
         check_migrated(args.inventory, args.compile_commands, args.owner)
+    if args.check_all_migrated:
+        check_all_migrated(args.inventory, args.compile_commands, args.targets_output, args.sources_output)
     print("phase14_node_api_caller_audit=PASS")
 
 if __name__ == "__main__":
