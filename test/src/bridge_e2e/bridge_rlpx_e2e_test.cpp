@@ -23,6 +23,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include "account/BridgeRelayer.hpp"
@@ -40,6 +41,36 @@
 
 #include "anvil_fixture.hpp"
 #include "../../../evmrelay/examples/chain_config.hpp"
+
+template <typename Config>
+static std::string ConfiguredFixtureAddress( const Config &config, const std::string &private_key, bool is_full_node )
+{
+    const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+        config.TokenID, private_key.c_str(), boost::filesystem::path( config.BaseWritePath ) / "configured-identity", is_full_node );
+    return account ? account->GetAddress() : std::string{};
+}
+
+static std::string RequireActiveAddress( const std::shared_ptr<sgns::GeniusNode> &node )
+{
+    const auto address = node->GetActiveAccountAddress();
+    if ( address.has_error() )
+    {
+        ADD_FAILURE() << "expected active account address: " << address.error().message();
+        return {};
+    }
+    return address.value();
+}
+
+static uint64_t RequireActiveBalance( const std::shared_ptr<sgns::GeniusNode> &node, const std::string &address )
+{
+    const auto active_address = RequireActiveAddress( node );
+    if ( active_address != address )
+    {
+        ADD_FAILURE() << "balance requested for a non-active account";
+        return 0;
+    }
+    return node->GetBalance( address );
+}
 
 /**
  * @brief Decodes a base64-encoded string to raw bytes.
@@ -338,8 +369,10 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     }
 
     // Set authorized address to match the full node
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
-    spdlog::info( "rlpx_e2e: set authorized full node address to {}", node_main->GetAddress().substr( 0, 16 ) );
+    const auto configured_main_address = ConfiguredFixtureAddress( gGeniusNodeConfig, s_eth_private_key, true );
+    ASSERT_FALSE( configured_main_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_main_address );
+    spdlog::info( "rlpx_e2e: set configured full node address to {}", configured_main_address.substr( 0, 16 ) );
 
     // Wait for the full node to reach READY state
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
@@ -592,18 +625,18 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
     spdlog::info( "rlpx_e2e: sender address = {}", sender_addr );
 
     // Use each node's own SuperGenius address as mint destination
-    const std::string dest_addr_main  = node_main->GetAddress();
-    const std::string dest_addr_proc1 = node_proc1->GetAddress();
-    const std::string dest_addr_proc2 = node_proc2->GetAddress();
+    const std::string dest_addr_main  = RequireActiveAddress( node_main );
+    const std::string dest_addr_proc1 = RequireActiveAddress( node_proc1 );
+    const std::string dest_addr_proc2 = RequireActiveAddress( node_proc2 );
     spdlog::info( "rlpx_e2e: destination addresses — main={}, proc1={}, proc2={}",
                   dest_addr_main.substr( 0, 16 ),
                   dest_addr_proc1.substr( 0, 16 ),
                   dest_addr_proc2.substr( 0, 16 ) );
 
     // --- Step 2: Record initial balances ---
-    uint64_t initial_balance_main  = node_main->GetBalance( dest_addr_main );
-    uint64_t initial_balance_proc1 = node_proc1->GetBalance( dest_addr_proc1 );
-    uint64_t initial_balance_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
+    uint64_t initial_balance_main  = RequireActiveBalance( node_main, dest_addr_main );
+    uint64_t initial_balance_proc1 = RequireActiveBalance( node_proc1, dest_addr_proc1 );
+    uint64_t initial_balance_proc2 = RequireActiveBalance( node_proc2, dest_addr_proc2 );
     spdlog::info( "rlpx_e2e: initial balances — main={}, proc1={}, proc2={}",
                   initial_balance_main, initial_balance_proc1, initial_balance_proc2 );
 
@@ -677,9 +710,9 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         ++successful_burns;
 
         // Update baselines: record current balances as baseline for next burn
-        baseline_main  = node_main->GetBalance( dest_addr_main );
-        baseline_proc1 = node_proc1->GetBalance( dest_addr_proc1 );
-        baseline_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
+        baseline_main  = RequireActiveBalance( node_main, dest_addr_main );
+        baseline_proc1 = RequireActiveBalance( node_proc1, dest_addr_proc1 );
+        baseline_proc2 = RequireActiveBalance( node_proc2, dest_addr_proc2 );
     }
 
     spdlog::info( "rlpx_e2e: burn stream complete — {} / {} burns successful",
@@ -706,7 +739,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             bool     ok      = waitForCondition(
                 [&]()
                 {
-                    current = node_main->GetBalance( dest_addr_main );
+                    current = RequireActiveBalance( node_main, dest_addr_main );
                     return current >= rec.baseline_main + kMintAmount;
                 },
                 kMintTimeoutMs );
@@ -732,7 +765,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             bool     ok      = waitForCondition(
                 [&]()
                 {
-                    current = node_proc1->GetBalance( dest_addr_proc1 );
+                    current = RequireActiveBalance( node_proc1, dest_addr_proc1 );
                     return current >= rec.baseline_proc1 + kMintAmount;
                 },
                 kMintTimeoutMs );
@@ -758,7 +791,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             bool     ok      = waitForCondition(
                 [&]()
                 {
-                    current = node_proc2->GetBalance( dest_addr_proc2 );
+                    current = RequireActiveBalance( node_proc2, dest_addr_proc2 );
                     return current >= rec.baseline_proc2 + kMintAmount;
                 },
                 kMintTimeoutMs );
@@ -780,9 +813,9 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
     }
 
     // --- Step 5: Final assertions ---
-    uint64_t final_balance_main  = node_main->GetBalance( dest_addr_main );
-    uint64_t final_balance_proc1 = node_proc1->GetBalance( dest_addr_proc1 );
-    uint64_t final_balance_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
+    uint64_t final_balance_main  = RequireActiveBalance( node_main, dest_addr_main );
+    uint64_t final_balance_proc1 = RequireActiveBalance( node_proc1, dest_addr_proc1 );
+    uint64_t final_balance_proc2 = RequireActiveBalance( node_proc2, dest_addr_proc2 );
 
     uint64_t delta_main  = ( final_balance_main > initial_balance_main )
                                ? ( final_balance_main - initial_balance_main )

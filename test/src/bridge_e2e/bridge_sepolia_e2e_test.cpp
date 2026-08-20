@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include "account/GeniusAccount.hpp"
@@ -38,6 +39,36 @@ using sgns::GeniusNode;
 
 namespace
 {
+
+    template <typename Config>
+    std::string ConfiguredFixtureAddress( const Config &config, const std::string &private_key, bool is_full_node )
+    {
+        const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+            config.TokenID, private_key.c_str(), boost::filesystem::path( config.BaseWritePath ) / "configured-identity", is_full_node );
+        return account ? account->GetAddress() : std::string{};
+    }
+
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node, const std::string &address )
+    {
+        const auto active_address = RequireActiveAddress( node );
+        if ( active_address != address )
+        {
+            ADD_FAILURE() << "balance requested for a non-active account";
+            return 0;
+        }
+        return node->GetBalance( address );
+    }
 
     std::vector<uint8_t> Base64Decode( const std::string &input )
     {
@@ -184,8 +215,10 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
     spdlog::info( "bridge_sepolia: creating {}-node cluster against live Sepolia", kNodeCount );
 
     s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ s_eth_private_key } );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-    spdlog::info( "bridge_sepolia: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
+    const auto configured_main_address = ConfiguredFixtureAddress( s_configs[0], s_eth_private_key, true );
+    ASSERT_FALSE( configured_main_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_main_address );
+    spdlog::info( "bridge_sepolia: configured full node = {}", configured_main_address.substr( 0, 16 ) );
 
     ASSERT_WAIT_FOR_CONDITION(
         [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
@@ -274,8 +307,8 @@ TEST_F( BridgeSepoliaE2ETest, DISABLED_BurnToMintPipeline )
     ASSERT_FALSE( sender_addr.empty() ) << "Could not derive sender address from PRIVATE_KEY";
     spdlog::info( "bridge_sepolia: sender = {}", sender_addr );
 
-    const std::string dest_addr       = s_nodes[0]->GetAddress();
-    const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const std::string dest_addr       = RequireActiveAddress( s_nodes[0] );
+    const uint64_t    initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
     spdlog::info( "bridge_sepolia: initial balance = {}", initial_balance );
 
     std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) +
@@ -300,12 +333,12 @@ TEST_F( BridgeSepoliaE2ETest, DISABLED_BurnToMintPipeline )
                                                  kMintTimeout ) );
 
     EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetBalance( dest_addr ) > initial_balance; },
+        [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) > initial_balance; },
         kMintTimeout,
         "live Sepolia minted UTXO appears in recipient balance",
         nullptr );
 
-    const uint64_t final_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t final_balance = RequireActiveBalance( s_nodes[0], dest_addr );
     spdlog::info( "bridge_sepolia: balance after mint = {} (delta = {})",
                   final_balance,
                   final_balance - initial_balance );

@@ -41,6 +41,7 @@
 #include <vector>
 
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -63,6 +64,36 @@ using sgns::GeniusNode;
 // =============================================================================
 namespace
 {
+    template <typename Config>
+    std::string ConfiguredFixtureAddress( const Config &config, const std::string &private_key, bool is_full_node )
+    {
+        const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+            config.TokenID, private_key.c_str(), boost::filesystem::path( config.BaseWritePath ) / "configured-identity", is_full_node );
+        return account ? account->GetAddress() : std::string{};
+    }
+
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node, const std::string &address )
+    {
+        const auto active_address = RequireActiveAddress( node );
+        if ( active_address != address )
+        {
+            ADD_FAILURE() << "balance requested for a non-active account";
+            return 0;
+        }
+        return node->GetBalance( address );
+    }
+
     /** @brief Sepolia numeric chain ID used for standalone watcher assertions. */
     inline constexpr uint64_t kSepoliaChainIdNumeric = 11155111ull;
 
@@ -409,11 +440,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // creation so the ValidatorRegistry bootstraps the genesis registry before
     // the blockchain attempts to initialize (must be called before the genesis
     // block is created).
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
+    const auto configured_main_address = ConfiguredFixtureAddress( s_configs[0], kAnvilAccountHexKeys[0], true );
+    const auto configured_proc1_address = ConfiguredFixtureAddress( s_configs[1], kAnvilAccountHexKeys[1], false );
+    const auto configured_proc2_address = ConfiguredFixtureAddress( s_configs[2], kAnvilAccountHexKeys[2], false );
+    ASSERT_FALSE( configured_main_address.empty() );
+    ASSERT_FALSE( configured_proc1_address.empty() );
+    ASSERT_FALSE( configured_proc2_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_main_address );
     sgns::Blockchain::SetAdditionalGenesisValidatorAddresses(
-        { node_proc1->GetAddress(), node_proc2->GetAddress() } );
+        { configured_proc1_address, configured_proc2_address } );
     spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
-                  node_main->GetAddress().substr( 0, 16 ) );
+                  configured_main_address.substr( 0, 16 ) );
 
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
     node_proc1->AddPeers(
@@ -499,8 +536,8 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
 {
     ASSERT_GT( s_fork_block, 0ull ) << "Fork block was not captured in SetUpTestSuite — D-22 instrumentation missing";
 
-    const std::string dest_addr       = node_main->GetAddress();
-    const uint64_t    initial_balance = node_main->GetBalance( dest_addr );
+    const std::string dest_addr       = RequireActiveAddress( node_main );
+    const uint64_t    initial_balance = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "catchup_e2e Test A: dest={} initial_balance={} fork_block={}",
                   dest_addr.substr( 0, 16 ),
                   initial_balance,
@@ -512,12 +549,12 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
     // >= initial_balance check is trivially true (balance never decreases from
     // a scan) and provides zero coverage (WR-01).
     EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
+        [&]() { return RequireActiveBalance( node_main, dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
         kCatchupMintTimeout,
         "Catch-up scan must mint all pre-node burns",
         nullptr );
 
-    EXPECT_GE( node_main->GetBalance( dest_addr ), initial_balance + kNumCatchupBurns * kMintAmount )
+    EXPECT_GE( RequireActiveBalance( node_main, dest_addr ), initial_balance + kNumCatchupBurns * kMintAmount )
         << "Full-genesis scan must mint all pre-node burns without reducing the recipient balance";
 
     spdlog::info( "catchup_e2e Test A: full-genesis scan completed; fork_block={}, balance={} "
@@ -678,8 +715,8 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     // Capture the balance BEFORE the production watcher's second-poll window so
     // the stability assertion is meaningful — a double-mint would occur DURING
     // the poll window, not between two back-to-back reads (WR-02).
-    const std::string dest_addr      = node_main->GetAddress();
-    const uint64_t    balance_before = node_main->GetBalance( dest_addr );
+    const std::string dest_addr      = RequireActiveAddress( node_main );
+    const uint64_t    balance_before = RequireActiveBalance( node_main, dest_addr );
 
     // LIVENESS GATE: gate on node READY liveness for the production watcher's
     // second-poll window to prove no double-mint occurred at the node level.
@@ -692,7 +729,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
 
     // Balance stability: production watcher must not double-mint on its second poll
     // because last_block_per_chain_ bridged the gap.
-    const uint64_t balance_after = node_main->GetBalance( dest_addr );
+    const uint64_t balance_after = RequireActiveBalance( node_main, dest_addr );
     EXPECT_EQ( balance_after, balance_before )
         << "Test C: production watcher must not double-mint on its second poll — last_block_per_chain_ bridged the gap";
 

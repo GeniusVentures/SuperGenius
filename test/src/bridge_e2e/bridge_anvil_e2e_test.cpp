@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include "account/GeniusAccount.hpp"
@@ -41,6 +42,36 @@ using sgns::GeniusNode;
 
 namespace
 {
+
+    template <typename Config>
+    std::string ConfiguredFixtureAddress( const Config &config, const std::string &private_key, bool is_full_node )
+    {
+        const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+            config.TokenID, private_key.c_str(), boost::filesystem::path( config.BaseWritePath ) / "configured-identity", is_full_node );
+        return account ? account->GetAddress() : std::string{};
+    }
+
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node, const std::string &address )
+    {
+        const auto active_address = RequireActiveAddress( node );
+        if ( active_address != address )
+        {
+            ADD_FAILURE() << "balance requested for a non-active account";
+            return 0;
+        }
+        return node->GetBalance( address );
+    }
 
     /**
      * @brief Decodes a base64-encoded string to raw bytes.
@@ -357,10 +388,16 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     // Register all node addresses as genesis validators so the Phase 6
     // slot-based consensus quorum can be met (slot_public_min_group_ = 2
     // requires ≥2 distinct validators per PUBLIC hash group).
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { s_nodes[1]->GetAddress(), s_nodes[2]->GetAddress() } );
+    const auto configured_main_address = ConfiguredFixtureAddress( s_configs[0], kAnvilAccountHexKeys[0], true );
+    const auto configured_proc1_address = ConfiguredFixtureAddress( s_configs[1], kAnvilAccountHexKeys[1], false );
+    const auto configured_proc2_address = ConfiguredFixtureAddress( s_configs[2], kAnvilAccountHexKeys[2], false );
+    ASSERT_FALSE( configured_main_address.empty() );
+    ASSERT_FALSE( configured_proc1_address.empty() );
+    ASSERT_FALSE( configured_proc2_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_main_address );
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { configured_proc1_address, configured_proc2_address } );
     spdlog::info( "bridge_anvil: authorized full node = {}, +{} additional genesis validators",
-                  s_nodes[0]->GetAddress().substr( 0, 16 ),
+                  configured_main_address.substr( 0, 16 ),
                   kNodeCount - 1u );
 
     // Wait for full node READY (genesis + account-creation blocks).
@@ -461,17 +498,17 @@ void BridgeAnvilE2ETest::TearDownTestSuite()
 TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
 {
     const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    const std::string dest_addr   = s_nodes[0]->GetAddress();
+    const std::string dest_addr   = RequireActiveAddress( s_nodes[0] );
     spdlog::info( "bridge_anvil: sender={}, dest={}", sender_addr, dest_addr.substr( 0, 16 ) );
 
-    const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t initial_balance = RequireActiveBalance( s_nodes[0], dest_addr );
     spdlog::info( "bridge_anvil: initial balance = {}", initial_balance );
 
     // Send a real bridgeOut() burn targeting the LOCAL Anvil RPC (D-14 Path A).
     spdlog::info( "bridge_anvil: sending burn transaction to local Anvil" );
     const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
                                                                       kMintAmount,
-                                                                      s_nodes[0]->GetAddress() );
+                                                                      RequireActiveAddress( s_nodes[0] ) );
     spdlog::info( "bridge_anvil: burn tx hash = {}", tx_hash );
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
 
@@ -487,12 +524,12 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
     spdlog::info( "bridge_anvil: MintTokens completed" );
 
     // D-17a: assert minted UTXO appears in recipient balance.
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > initial_balance; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) > initial_balance; },
                                kMintTimeout,
                                "Anvil burn minted UTXO appears in recipient balance",
                                nullptr );
 
-    const uint64_t final_balance = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t final_balance = RequireActiveBalance( s_nodes[0], dest_addr );
     spdlog::info( "bridge_anvil: balance after mint = {} (delta = {})",
                   final_balance,
                   final_balance - initial_balance );
@@ -510,19 +547,19 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
  */
 TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
 {
-    const std::string dest_addr = s_nodes[0]->GetAddress();
+    const std::string dest_addr = RequireActiveAddress( s_nodes[0] );
 
     // Send a fresh bridgeOut() burn tx to local Anvil.
     const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
                                                                       kMintAmount,
-                                                                      s_nodes[0]->GetAddress() );
+                                                                      RequireActiveAddress( s_nodes[0] ) );
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
     // First mint should succeed — capture balance BEFORE the mint so the
     // delta check compares against the pre-mint value (not the post-mint
     // value, which has already increased).
-    const uint64_t balance_before_first = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t balance_before_first = RequireActiveBalance( s_nodes[0], dest_addr );
     EXPECT_OUTCOME_TRUE( first_result,
                          s_nodes[0]->MintTokens( kMintAmount,
                                                  tx_hash,
@@ -532,14 +569,14 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
                                                  kReplayTimeout ) );
     spdlog::info( "bridge_anvil: replay-test first mint submitted" );
 
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_first; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) > balance_before_first; },
                                kReplayTimeout,
                                "First Anvil mint balance increase",
                                nullptr );
 
     // Capture the post-first-mint baseline BEFORE submitting the second mint, so
     // a duplicate mint is detectable as a balance increase above this value.
-    const uint64_t balance_before_replay = s_nodes[0]->GetBalance( dest_addr );
+    const uint64_t balance_before_replay = RequireActiveBalance( s_nodes[0], dest_addr );
 
     // Second mint with the SAME tx hash must be rejected by the dedup cache.
     auto second_result = s_nodes[0]->MintTokens( kMintAmount,
@@ -558,7 +595,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
         // held — pass. If it DOES settle, the duplicate was erroneously
         // accepted — fail (WR-04: the previous == check was trivially true).
         const bool duplicate_settled = waitForCondition(
-            [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_replay; },
+            [&]() { return RequireActiveBalance( s_nodes[0], dest_addr ) > balance_before_replay; },
             kReplayTimeout );
         EXPECT_FALSE( duplicate_settled ) << "Balance must not increase from a replayed Anvil burn tx hash";
         spdlog::info( "bridge_anvil: second mint returned OK; duplicate_settled={}", duplicate_settled );

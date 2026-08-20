@@ -16,6 +16,7 @@
 #include <thread>
 
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 #include "account/GeniusAccount.hpp"
@@ -37,6 +38,36 @@
 
 #include <eth/bridge_event.hpp>
 #include <eth/objects.hpp>
+
+template <typename Config>
+static std::string ConfiguredFixtureAddress( const Config &config, const std::string &private_key, bool is_full_node )
+{
+    const auto account = sgns::GeniusAccount::NewFromPrivateKey(
+        config.TokenID, private_key.c_str(), boost::filesystem::path( config.BaseWritePath ) / "configured-identity", is_full_node );
+    return account ? account->GetAddress() : std::string{};
+}
+
+static std::string RequireActiveAddress( const std::shared_ptr<sgns::GeniusNode> &node )
+{
+    const auto address = node->GetActiveAccountAddress();
+    if ( address.has_error() )
+    {
+        ADD_FAILURE() << "expected active account address: " << address.error().message();
+        return {};
+    }
+    return address.value();
+}
+
+static uint64_t RequireActiveBalance( const std::shared_ptr<sgns::GeniusNode> &node, const std::string &address )
+{
+    const auto active_address = RequireActiveAddress( node );
+    if ( active_address != address )
+    {
+        ADD_FAILURE() << "balance requested for a non-active account";
+        return 0;
+    }
+    return node->GetBalance( address );
+}
 
 /**
  * @brief Decodes a base64-encoded string to raw bytes.
@@ -302,8 +333,10 @@ void BridgeE2ETest::SetUpTestSuite()
     node_main = GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
-    spdlog::info( "bridge_e2e: set authorized full node address to {}", node_main->GetAddress().substr( 0, 16 ) );
+    const auto configured_main_address = ConfiguredFixtureAddress( DEV_CONFIG, s_eth_private_key, true );
+    ASSERT_FALSE( configured_main_address.empty() );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( configured_main_address );
+    spdlog::info( "bridge_e2e: set configured full node address to {}", configured_main_address.substr( 0, 16 ) );
 
     // Wait for the full node to reach READY state (creates genesis + account-creation blocks)
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
@@ -416,11 +449,11 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 
     // Use the node's own SuperGenius address as the mint destination.
     // The Ethereum address is only used for the cast send to Sepolia.
-    const std::string dest_addr = node_main->GetAddress();
+    const std::string dest_addr = RequireActiveAddress( node_main );
     spdlog::info( "bridge_e2e: destination address = {}", dest_addr.substr( 0, 16 ) );
 
     // Capture initial balance before burn
-    uint64_t initial_balance = node_main->GetBalance( dest_addr );
+    uint64_t initial_balance = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "bridge_e2e: initial balance = {}", initial_balance );
 
     // --- Step 2: Send burn transaction to Sepolia via cast send ---
@@ -473,12 +506,12 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 
     // --- Step 4: Poll for UTXO confirmation on node_main ---
     std::chrono::milliseconds e2e_timeout{ 10000 };
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > initial_balance; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( node_main, dest_addr ) > initial_balance; },
                                e2e_timeout,
                                "Minted UTXO appears in recipient balance on node_main",
                                nullptr );
 
-    uint64_t final_balance = node_main->GetBalance( dest_addr );
+    uint64_t final_balance = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "bridge_e2e: node_main balance after mint = {} (delta = {})",
                   final_balance,
                   final_balance - initial_balance );
@@ -511,8 +544,8 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     spdlog::info( "bridge_e2e: burn_hash_2 = {}", burn_hash_2 );
 
     // --- Step 2: Record initial balance ---
-    std::string dest_addr       = node_main->GetAddress();
-    uint64_t    initial_balance = node_main->GetBalance( dest_addr );
+    std::string dest_addr       = RequireActiveAddress( node_main );
+    uint64_t    initial_balance = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "bridge_e2e: initial balance = {} for {}", initial_balance, dest_addr );
 
     // --- Step 3: First mint (burn_hash_1) ---
@@ -530,12 +563,12 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     spdlog::info( "bridge_e2e: first MintTokens completed" );
 
     // --- Step 4: Wait for first mint to propagate ---
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > initial_balance; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( node_main, dest_addr ) > initial_balance; },
                                kSlotKeyTimeout,
                                "First mint balance increase on node_main",
                                nullptr );
 
-    uint64_t balance_after_first = node_main->GetBalance( dest_addr );
+    uint64_t balance_after_first = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "bridge_e2e: balance after first mint = {} (delta = {})",
                   balance_after_first,
                   balance_after_first - initial_balance );
@@ -553,12 +586,12 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     spdlog::info( "bridge_e2e: second MintTokens completed" );
 
     // --- Step 6: Wait for second mint to propagate ---
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > balance_after_first; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( node_main, dest_addr ) > balance_after_first; },
                                kSlotKeyTimeout,
                                "Second mint balance increase on node_main (collision resistance proof)",
                                nullptr );
 
-    uint64_t final_balance = node_main->GetBalance( dest_addr );
+    uint64_t final_balance = RequireActiveBalance( node_main, dest_addr );
     spdlog::info( "bridge_e2e: final balance = {} (total delta = {})", final_balance, final_balance - initial_balance );
 
     // --- Step 7: Verify final balance = initial + 2 * kSlotMintAmount ---
@@ -582,7 +615,7 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     spdlog::info( "bridge_e2e: ReplayRejection — burn_tx_hash = {}", burn_tx_hash );
 
     // Step 2: First mint should succeed
-    const std::string                   dest_addr = node_main->GetAddress();
+    const std::string                   dest_addr = RequireActiveAddress( node_main );
     constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
 
     EXPECT_OUTCOME_TRUE( first_result,
@@ -595,8 +628,8 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     spdlog::info( "bridge_e2e: first mint submitted" );
 
     // Step 3: Wait for the first mint to finalize
-    uint64_t balance_before = node_main->GetBalance( dest_addr );
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > balance_before; },
+    uint64_t balance_before = RequireActiveBalance( node_main, dest_addr );
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return RequireActiveBalance( node_main, dest_addr ) > balance_before; },
                                kReplayTimeout,
                                "First mint UTXO appears in balance",
                                nullptr );
@@ -613,8 +646,8 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     if ( !replay_rejected )
     {
         // MintTokens returned OK but consensus may reject — verify balance unchanged
-        uint64_t balance_after_replay = node_main->GetBalance( dest_addr );
-        EXPECT_EQ( balance_after_replay, node_main->GetBalance( dest_addr ) )
+        uint64_t balance_after_replay = RequireActiveBalance( node_main, dest_addr );
+        EXPECT_EQ( balance_after_replay, RequireActiveBalance( node_main, dest_addr ) )
             << "Balance should not increase for a replayed burn tx hash";
         spdlog::info( "bridge_e2e: ReplayRejection — second mint returned OK but balance unchanged" );
     }
@@ -647,7 +680,7 @@ TEST_F( BridgeE2ETest, MissingEndpointsFailClosed )
                                                                         burn_tx_hash,
                                                                         "999999",
                                                                         sgns::TokenID::FromBytes( { 0x00 } ),
-                                                                        node_main->GetAddress(),
+                                                                        RequireActiveAddress( node_main ),
                                                                         kFailClosedTimeout );
 
     EXPECT_TRUE( result.has_error() )
