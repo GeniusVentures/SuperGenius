@@ -353,6 +353,13 @@ namespace sgns
             return it != manager->slot_states_.end() && it->second.certificate_scan_pending;
         }
 
+        static std::size_t PendingCertificateScanCandidateCount( const std::shared_ptr<ConsensusManager> &manager,
+                                                                  const std::string                       &slot_key )
+        {
+            auto it = manager->slot_states_.find( slot_key );
+            return it == manager->slot_states_.end() ? 0U : it->second.scan_pending_candidates.size();
+        }
+
         static std::string ActiveVoteStorageKey( const std::shared_ptr<ConsensusManager> &manager,
                                                  const std::string                       &slot_key )
         {
@@ -1292,6 +1299,51 @@ TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorize
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ScanFailureRetainsCandidateUntilTimerCanOpenOneWindow )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 86, "0xscan-retry-candidate" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( manager, slot ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 1U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    // No proposal redelivery is needed: the next due-work pass retries the scan,
+    // opens one fresh fixed window, and retains the original approved candidate.
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, false );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( manager, slot ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCertificateScanCandidateCount( manager, slot ), 0U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    // Once open, a scan failure at the already-closed deadline retains that
+    // deadline rather than extending it or selecting a new contender set.
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( manager, slot ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, false );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
