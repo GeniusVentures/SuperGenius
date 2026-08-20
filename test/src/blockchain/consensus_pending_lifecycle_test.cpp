@@ -276,10 +276,65 @@ namespace sgns
             return manager->active_vote_announcements_for_test_;
         }
 
+        static void ClearActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->active_vote_announcements_for_test_.clear();
+        }
+
         static bool HasActiveVoteLock( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot_key )
         {
             auto it = manager->slot_states_.find( slot_key );
             return it != manager->slot_states_.end() && it->second.active_vote_locked;
+        }
+
+        static std::string ActiveVoteStorageKey( const std::shared_ptr<ConsensusManager> &manager,
+                                                 const std::string                       &slot_key )
+        {
+            return manager->ActiveVoteStorageKey( slot_key );
+        }
+
+        static std::optional<std::string> ReadActiveVoteRecord( const std::shared_ptr<ConsensusManager> &manager,
+                                                                 const std::string                       &slot_key )
+        {
+            auto store = manager->db_ ? manager->db_->GetDataStore() : nullptr;
+            if ( !store )
+            {
+                return std::nullopt;
+            }
+            sgns::crdt::GlobalDB::Buffer key;
+            key.put( manager->ActiveVoteStorageKey( slot_key ) );
+            auto value = store->get( key );
+            return value.has_value() ? std::optional<std::string>( std::string( value.value().toString() ) )
+                                     : std::nullopt;
+        }
+
+        static void WriteActiveVoteRecord( const std::shared_ptr<ConsensusManager> &manager,
+                                           const std::string                       &slot_key,
+                                           const std::string                       &bytes )
+        {
+            auto store = manager->db_ ? manager->db_->GetDataStore() : nullptr;
+            ASSERT_TRUE( store );
+            sgns::crdt::GlobalDB::Buffer key;
+            key.put( manager->ActiveVoteStorageKey( slot_key ) );
+            sgns::crdt::GlobalDB::Buffer value;
+            value.put( bytes );
+            ASSERT_TRUE( store->put( key, value ).has_value() );
+        }
+
+        static void ForceActiveVoteRetryDue( const std::shared_ptr<ConsensusManager> &manager,
+                                             const std::string                       &slot_key )
+        {
+            auto it = manager->active_votes_.find( slot_key );
+            ASSERT_TRUE( it != manager->active_votes_.end() );
+            it->second.next_retry_at = std::chrono::steady_clock::now() - std::chrono::milliseconds( 1 );
+        }
+
+        static void ForceActiveVoteExpired( const std::shared_ptr<ConsensusManager> &manager,
+                                            const std::string                       &slot_key )
+        {
+            auto it = manager->active_votes_.find( slot_key );
+            ASSERT_TRUE( it != manager->active_votes_.end() );
+            it->second.acceptance_deadline_ms = 1;
         }
 
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(
@@ -884,10 +939,10 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
 
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retry_pending.front() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, retry_proposal_id ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retry_proposal );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
     config                               = sgns::ConsensusManager::PendingLifecycleConfig{};
     config.pending_ttl                   = std::chrono::seconds( 10 );
@@ -936,7 +991,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     ASSERT_TRUE( manager->WakePendingDependency( predecessor_key ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, dependency_proposal_id ) );
     EXPECT_EQ( handler_attempts["0xdependency-tx2"], 1 );
-    EXPECT_TRUE(
+    EXPECT_FALSE(
         sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, dependency_proposal_id ) );
 
     auto       multi_proposal      = MakeProposal( manager, registry, 52, "0xmulti-dep" );
@@ -964,7 +1019,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
 
     ASSERT_TRUE( manager->WakePendingDependency( multi_b ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, multi_proposal_id ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, multi_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, multi_proposal_id ) );
 
     config                               = sgns::ConsensusManager::PendingLifecycleConfig{};
     config.pending_ttl                   = std::chrono::seconds( 10 );
@@ -1042,5 +1097,134 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, ttl_proposal_id ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetainedBytes( manager ), 0U );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ActiveVoteFreezesEligibleCandidatesBeforePublishingOneWinner )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto winner = MakeProposal( manager, registry, 81, "0xfrozen-slot" );
+    winner.set_proposal_id( "a-frozen-winner" );
+    auto contender = winner;
+    contender.set_proposal_id( "z-frozen-contender" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( winner );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, contender );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, winner );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    auto record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot );
+    ASSERT_TRUE( record_bytes.has_value() );
+    sgns::ActiveVoteRecord record;
+    ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
+    EXPECT_EQ( record.canonical_slot(), slot );
+    EXPECT_EQ( record.vote_bytes(), sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front() );
+    EXPECT_GT( record.acceptance_deadline_ms(), 0U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, winner.proposal_id() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, contender.proposal_id() ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ActiveVoteWriteFailureCannotPublishOrCreateALock )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 82, "0xwrite-failure" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::SetActiveVotePersistenceFailure( manager, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal.proposal_id() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsStoredSignedBytes )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 83, "0xretry-exact" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    auto bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot );
+    ASSERT_TRUE( bytes.has_value() );
+    sgns::ActiveVoteRecord record;
+    ASSERT_TRUE( record.ParseFromString( bytes.value() ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( manager );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front(), record.vote_bytes() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+    auto restarted = MakeSigningManager( registry, account );
+    ASSERT_TRUE( restarted );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( restarted, slot ) );
+    sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( restarted );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( restarted, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( restarted );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).size(), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).front(), record.vote_bytes() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorizeAReplacement )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto corrupt = MakeProposal( manager, registry, 84, "0xcorrupt-record" );
+    const auto corrupt_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( corrupt );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteActiveVoteRecord( manager, corrupt_slot, "not-a-protobuf-record" );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, corrupt );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, corrupt_slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, corrupt_slot ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+
+    auto proposal = MakeProposal( manager, registry, 85, "0xexpired-record" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+    sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( manager );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteExpired( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
