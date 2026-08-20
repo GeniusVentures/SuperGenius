@@ -44,7 +44,7 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] Canonical bridge-burn identity and its scope are defined independently of proposer address, nonce, amount, and destination.
+- [ ] Canonical bridge-burn identity is shared by competing mint proposals and is derived from verified burn facts, never proposer address or nonce.
 - [ ] Certificate publication has a verifiable authority rule, persistence-before-advertisement ordering, and a safe failover policy.
 - [ ] All certificate ingress paths converge on one durable finality record without receiver-side duplicate CRDT writes.
 - [ ] A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart.

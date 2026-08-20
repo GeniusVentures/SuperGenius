@@ -1,143 +1,94 @@
-# Requirements
+# Requirements: SuperGenius
 
-## Milestone v1.1: Multi-Signature Secure CRDT Storage
+**Defined:** 2026-08-20
+**Core Value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
 
-### Active
+## v3.0 Requirements
 
-**MultiSig — decoupled multi-signature primitive**
-- [ ] **MSIG-01:** A component computes canonical signing-bytes for an arbitrary payload and verifies signatures against it, reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives
-- [ ] **MSIG-02:** The component supports N-of-M quorum evaluation given a signer set and a required threshold (no hardcoded N)
-- [ ] **MSIG-03:** The component is usable independently of CRDT (importable/testable without a running node)
+### Canonical Slot and Certificate Binding
 
-**SecureCRDT — secure CRDT storage layer**
-- [ ] **SCRDT-01:** An `ISignedCRDTData` interface exists: implementers provide payload codec, `Verify()`, `Apply()`
-- [ ] **SCRDT-02:** A static registry maps a topic/key pattern to {signer-set source, quorum rule, `ISignedCRDTData` type}, declared in code at startup
-- [ ] **SCRDT-03:** Writing/updating a registered CRDT key requires quorum-verified signatures; unsigned or under-signed writes are rejected locally before being applied
-- [ ] **SCRDT-04:** Propose/sign/quorum flow works entirely via CRDT puts + filter callbacks (pending-value + signature entries) — no new networking/RPC
+- [ ] **SLOT-01**: Competing `MintTransactionV2` proposals for the same verified external burn resolve to the same canonical slot while proposals from different burns do not.
+- [ ] **SLOT-02**: The canonical slot continues to include the verified burn facts already represented by `MintTransactionV2::GetSlotID`, including chain, token, source transaction, amount, and destination; proposer account and proposal nonce cannot alter it.
+- [ ] **SLOT-03**: A certificate remains cryptographically and structurally bound to its exact winning proposal, and certificate acceptance rejects a slot/key/payload mismatch.
 
-**TrustedPeerRegistry — new component**
-- [ ] **TPR-01:** Genesis node seeds an initial trusted-peer set from a hardcoded genesis config entry
-- [ ] **TPR-02:** Adding/removing/replacing a member requires a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set
-- [ ] **TPR-03:** `TrustedPeerRegistry` is implemented via `ISignedCRDTData`/SecureCRDT (SCRDT-01..04), not bespoke logic
+### Vote Finality
 
-**BurnConfig — applying it to BURN_BASIS_POINTS**
-- [ ] **BURN-01:** `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value instead of a compile-time constant
-- [ ] **BURN-02:** `TransactionManager` caches the current value and refreshes it via a CRDT-change callback (no CRDT read per `PayEscrow` call)
-- [ ] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
+- [ ] **VOTE-01**: Validators use a bounded contention window and deterministic winner selection for candidates in one slot, so voting does not wait indefinitely for a possible contender.
+- [ ] **VOTE-02**: Before broadcasting a vote, a validator durably records one active vote for the slot, including the chosen proposal, signed vote material, and its acceptance deadline.
+- [ ] **VOTE-03**: An active vote survives restart and may be recovered or re-announced only as that exact vote; the validator cannot emit a different usable vote for the same slot while the original remains accepted.
+- [ ] **VOTE-04**: A vote lock is cleared only after the matching authoritative certificate is durably accepted for its slot; expiry cleanup cannot authorize an incompatible vote that overlaps the original vote's acceptance period.
 
-**Migration**
-- [ ] **MIG-05:** `ValidatorRegistry` is migrated onto the `ISignedCRDTData` interface (reusing SecureCRDT, not just `BURN_BASIS_POINTS`)
-- [ ] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
+### Slot-Keyed Certificate Publication
 
-### Out of Scope
+- [ ] **CERT-01**: The authoritative certificate record uses the generic key `/cert/<canonical-slot-id>`; no bridge-only finality record or subject-hash certificate authority is introduced.
+- [ ] **CERT-02**: At most the deterministic protocol-selected publisher writes an authoritative certificate for a slot; receiving a certificate through PubSub never makes a peer write that CRDT key.
+- [ ] **CERT-03**: The publisher durably writes and verifies the authoritative slot certificate before advertising it on PubSub.
+- [ ] **CERT-04**: If the selected publisher stalls, deterministic and protocol-verifiable failover can publish the same valid certificate only after the defined recovery condition, without allowing competing certificate contents.
+- [ ] **CERT-05**: PubSub, CRDT synchronization, local completion, and restart recovery converge through one idempotent certificate-acceptance path; a different valid-looking certificate for an occupied slot is a safety conflict and never overwrites or unlocks the slot.
+- [ ] **COMP-01**: Existing consumers that start with a subject hash are migrated to obtain the corresponding slot before certificate lookup, or use only a non-authoritative hash-to-slot locator; certificate authority remains slot-keyed.
 
-- `ConsensusManager` changes / pluggable voter sources — CRDT itself carries propose/sign/quorum messages
-- Any new pubsub/RPC transport — reuse existing CRDT put/filter-callback machinery
-- Unrelated consensus refactors
+### Exactly-Once Mint Application
 
-### Traceability
+- [ ] **MINT-01**: A durably accepted slot certificate drives its winning mint transaction at most once on each node, including duplicate delivery and restart.
+- [ ] **MINT-02**: Recovery records distinguish certified, applying, and applied work (or provide an equivalent atomic boundary), so a crash cannot create a second mint effect or silently lose a certified mint.
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| MSIG-01 | Phase 8 | Pending |
-| MSIG-02 | Phase 8 | Pending |
-| MSIG-03 | Phase 8 | Pending |
-| SCRDT-01 | Phase 9 | Pending |
-| SCRDT-02 | Phase 9 | Pending |
-| SCRDT-03 | Phase 9 | Pending |
-| SCRDT-04 | Phase 9 | Pending |
-| TPR-01 | Phase 10 | Pending |
-| TPR-02 | Phase 10 | Pending |
-| TPR-03 | Phase 10 | Pending |
-| BURN-01 | Phase 11 | Pending |
-| BURN-02 | Phase 11 | Pending |
-| BURN-03 | Phase 11 | Pending |
-| MIG-05 | Phase 12 | Pending |
-| MIG-06 | Phase 12 | Pending |
+### Production-Path Regression Coverage
 
-Coverage: 15/15 v1.1 requirements mapped.
+- [ ] **TEST-01**: A multi-node test proves that differently sourced/proposed mints for one burn contend for one slot and produce one authoritative certificate with one winning proposal.
+- [ ] **TEST-02**: A regression test proves that a late contender after an earlier slot vote or certificate cannot obtain a second usable vote or certificate for that slot.
+- [ ] **TEST-03**: A propagation test proves that PubSub recipients do not write the certificate key and do not time out synchronizing a CID they wrote themselves.
+- [ ] **TEST-04**: Restart tests cover recovery before certificate arrival, after durable certificate acceptance, and during mint application without a changed vote or duplicate mint.
+- [ ] **TEST-05**: Publisher-loss tests cover persistence-before-advertisement and deterministic failover without conflicting slot records.
+- [ ] **TEST-06**: The finality tests exercise the production PubSub, CRDT, persistence, and mint ingress paths rather than direct local-author shortcuts.
 
-### ELM Bridging (added 2026-08-26 — product-v1.0 requirement, pre-ship; extends v1.1)
+## Future Requirements
 
-Source: `.planning/notes/ELM-bridging-gaps.md` (ingested DOC); full detail in `.planning/intel/requirements.md`. Rate conflict resolved by owner: **$0.0003/hour**.
+None currently. Future finality features must not weaken the v3.0 one-vote-per-slot or single-authoritative-certificate contract.
 
-**Job model & scheduler boundary**
-- [ ] **ELM-01:** A GCS instance creates ONE normal SuperGenius processing job (`job_type: "elm_processing"`) containing one or more ELM work items; the `elms[]` array lives entirely in the existing `Task.json_data` (no main-protobuf change)
-- [ ] **ELM-02:** The existing processing grid owns worker participation, task ownership, subtask distribution, and result publication for ELM subtasks; GCS performs no worker selection, bid solicitation, quote collection, intent windows, claims, or leases
-- [ ] **ELM-03:** Issue #369's removed scope stays removed: no `NodeElmCapabilities`, no ELM/cache inventory advertising, no `ElmProcessingIntent`, no requester-side selection, no per-node quotes, no GCS-managed claims/leases, no price negotiation, no resource bidding — in code or protobuf
+## Out of Scope
 
-**Model manifests & cache (SGProcessingManager)**
-- [ ] **ELM-04:** Each work item references an immutable manifest (URI + hash); the node loads, hash-verifies, checks cache, fetches and verifies each artifact (sha256), and pins the cache entry while processing — a node never executes an unverified model
-- [ ] **ELM-05:** Local content-addressed cache keyed by manifest hash (`cache/<model-manifest-hash>/`): dedup downloads, pin active, keep recently used, evict under disk pressure, recover from partial downloads, verify before reuse; cache state is never advertised and never affects eligibility (an empty-cache node can complete any assigned subtask)
+| Feature | Reason |
+|---------|--------|
+| Porting, rebasing, or repairing rejected Phase 9-12 code | The rebuild deliberately starts from `develop`; only forensic findings are retained. |
+| A bridge-specific finality storage record | Certificate authority is generic and keyed by canonical slot. |
+| `DeliverySource::Local` as publisher authority | Local callback provenance is not protocol-verifiable or durable. |
+| Receiver-side CRDT certificate writes | Multiple writers cause the failure this milestone exists to remove. |
+| Broad TransactionManager, CRDT, registry, or persistence refactors | Limit the blast radius to what the finality contract requires. |
+| New dependencies or a new consensus protocol | Existing C++17, RocksDB, CRDT, PubSub, and validator facilities are sufficient. |
 
-**ELM runtime (SGProcessingManager — split candidate, separate issue)**
-- [ ] **ELM-06:** A real ELM processor: tokenizer loading, chat-template support, prompt tokenization, prefill, autoregressive generation, KV cache, sampling, stop tokens/strings, detokenization, token counts, cancellation, final output creation — honoring `max_output_tokens`/`temperature`/`top_p`/`seed`
-- [ ] **ELM-07:** Results identify their originating ELM work item (existing `SubTask.subtaskid` mapping); GCS aggregates by work-item ID with no SuperGenius-side aggregation logic
+## Traceability
 
-**Funding**
-- [ ] **ELM-08:** Fixed built-in rate **$0.0003/processing-hour**, no negotiation; funding deterministic from job JSON (`funding.maximum_processing_hours`, `escrow_path`); model download is part of the job's billable work via existing accounting/escrow
-
-**Traceability**
+Roadmap mapping is pending.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ELM-01 | Phase 13 | Pending |
-| ELM-02 | Phase 13 | Pending |
-| ELM-03 | Phase 13 | Pending |
-| ELM-04 | Phase 14 | Pending |
-| ELM-05 | Phase 14 | Pending |
-| ELM-06 | Phase 14 | Pending |
-| ELM-07 | Phase 14 | Pending |
-| ELM-08 | Phase 13 | Pending |
+| SLOT-01 | — | Pending |
+| SLOT-02 | — | Pending |
+| SLOT-03 | — | Pending |
+| VOTE-01 | — | Pending |
+| VOTE-02 | — | Pending |
+| VOTE-03 | — | Pending |
+| VOTE-04 | — | Pending |
+| CERT-01 | — | Pending |
+| CERT-02 | — | Pending |
+| CERT-03 | — | Pending |
+| CERT-04 | — | Pending |
+| CERT-05 | — | Pending |
+| COMP-01 | — | Pending |
+| MINT-01 | — | Pending |
+| MINT-02 | — | Pending |
+| TEST-01 | — | Pending |
+| TEST-02 | — | Pending |
+| TEST-03 | — | Pending |
+| TEST-04 | — | Pending |
+| TEST-05 | — | Pending |
+| TEST-06 | — | Pending |
 
-Coverage: 8/8 ELM requirements mapped (Phase 14 executes in the SGProcessingManager repo; tracked in SuperGenius via cross-repo issue).
+**Coverage:**
+- v3.0 requirements: 21 total
+- Mapped to phases: 0
+- Unmapped: 21 (roadmap pending)
 
-> ELM-09 (streaming proto) **dropped** 2026-08-26 per owner: streaming, if ever needed, rides the existing gossip-pubsub results channel (seq-numbered JSON events on `Task.results_channel`) — no `SGElmProcessing.proto`.
-
-## Slot-Based Network Voting (Phase 6)
-
-### Active
-
-- [ ] **REQ-SLOT-01 — Proto extension:** `ConsensusVote` extended with 3 `bytes32` fields (`slot_0_hash`, `slot_1_hash`, `slot_2_hash`) using unused field tags 6/7/8 per D-01.
-- [ ] **REQ-SLOT-02 — Slot 0 (DIRECT_API):** Only validators with a paid/API-key RPC endpoint fill slot 0. 1 valid hash contributes `voter.weight × 0.50` to qualified_sum per D-02.
-- [ ] **REQ-SLOT-03 — Slots 1-2 (PUBLIC) hash deduplication:** Hash groups with ≥2 distinct validators contribute `voter.weight × 0.25`. Solo hashes (1 validator) contribute zero per D-03.
-- [ ] **REQ-SLOT-04 — Cumulative >75% quorum:** Certificate produced iff `qualified_sum > total_voting_reputation × 0.75` where qualified_sum is the cumulative slot-weighted sum across all 3 slots per D-06.
-- [ ] **REQ-SLOT-05 — Both tally sites agree:** Shared `EvaluateQuorum` helper dispatches both `TallyVotes` (certificate) and `HandleVote` (incremental) for bridge-mint subjects; non-bridge subjects use unchanged single-pool `IsQuorum` per D-06, RESEARCH Pitfall 1.
-- [ ] **REQ-SLOT-06 — Abstention:** A validator that cannot produce any valid RPC hash marks the transaction seen/invalid and does not vote; all three slot hashes empty contributes full weight to total_voting_reputation but zero to qualified_sum (raising the threshold without helping meet it) per D-05.
-- [ ] **REQ-REPUT-01 — Role::FULL promotion:** REGULAR validator with weight ≥ `full_promotion_weight_` and penalty_score < `penalty_threshold_` is promoted to Role::FULL inside `ApplyVoteEffects` per D-07, D-08.
-- [ ] **REQ-DETERM-01 — Deterministic:** Given the same vote set and registry snapshot, every peer computes identical qualified_sum and threshold; slot tally is a pure function of votes + registry state per D-06, D-07.
-
-## Pending Proposal Lifecycle
-
-### Active
-
-- [ ] **PEND-01 — Structured deferred validation:** Subject validation can return `Pending` with zero
-  or more dependency keys while preserving distinct `Approve`, terminal `Reject`, and local
-  infrastructure `Stalled` outcomes.
-- [ ] **PEND-02 — Local-only Pending:** Pending outcomes are retained locally and never broadcast as
-  votes or counted toward quorum. Approval remains the only broadcast voting outcome in this phase.
-- [ ] **PEND-03 — Dependency-triggered retry:** Consensus indexes pending proposals by their missing
-  dependency keys and retries validation immediately when a dependency becomes available. A
-  predecessor certificate arrival must resume every proposal waiting on that certificate hash.
-- [ ] **PEND-04 — Scheduled transient retry:** Pending outcomes without an explicit dependency event
-  are retried using bounded scheduling and backoff so transient RPC, datastore, or similar local
-  failures can recover.
-- [ ] **PEND-05 — Bounded lifetime:** Pending proposals expire after a compile-time default TTL of
-  three minutes. `ConsensusManager` permits TTL injection/configuration for deterministic tests,
-  which normally use ten seconds.
-- [ ] **PEND-06 — Resource bounds and cleanup:** Consensus enforces pending proposal count and retained
-  byte limits. Certification, terminal rejection, or expiry removes proposal state, dependency
-  indexes, queued votes, retry metadata, and temporary transaction tracking.
-- [ ] **PEND-07 — Retry-safe validation:** Retrying the same proposal is idempotent and cannot cast
-  duplicate votes, double-count validator weight, or corrupt transaction state.
-- [ ] **TXSTATE-01 — Inconclusive transaction state:** Consensus timeout/TTL expiry uses a distinct
-  `EXPIRED` or `UNCONFIRMED` transaction state. `FAILED` is reserved for transactions proven invalid
-  by local validation.
-
-### Out of Scope
-
-- Broadcasting Pending decisions.
-- Signed Reject votes, rejection certificates, or negative-quorum rules.
-- Validator reputation rewards or penalties based on negative votes.
-- Penalizing validators when a proposal merely expires without a conclusive outcome.
-
+---
+*Requirements defined: 2026-08-20*
+*Last updated: 2026-08-20 after requirements approval*
