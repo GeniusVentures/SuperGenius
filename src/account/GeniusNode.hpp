@@ -215,7 +215,49 @@ namespace sgns
             TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction did not finalize within the timeout.
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
             INVALID_NODE_TYPE         = 16, ///< sgns_config.json node_type string was not Full/Light/Archive.
+            SWITCH_IN_PROGRESS        = 17, ///< An accepted account generation is not yet published.
+            ACCOUNT_UNAVAILABLE       = 18, ///< No ready account generation is currently published.
         };
+
+        /** Public lifecycle of the account-owned service generation. */
+        enum class AccountLifecycle : uint8_t
+        {
+            UNAVAILABLE,
+            SWITCHING,
+            READY,
+        };
+
+        /** Immediate acknowledgement of one accepted asynchronous account switch. */
+        struct AccountSwitchAcceptance
+        {
+            uint64_t    generation{ 0 };
+            std::string target_address;
+        };
+
+        /** Completion delivered after a generation reaches ready or has been cleaned up. */
+        struct AccountSwitchEvent
+        {
+            enum class Kind : uint8_t
+            {
+                READY,
+                FAILED,
+            };
+
+            Kind                       kind{ Kind::READY };
+            uint64_t                   generation{ 0 };
+            std::string                target_address;
+            boost::system::error_code error;
+        };
+
+        /** Coherent status value for the active processing generation. */
+        struct AccountProcessingStatus
+        {
+            uint64_t generation{ 0 };
+            processing::ProcessingServiceImpl::ProcessingStatus status{
+                processing::ProcessingServiceImpl::Status::DISABLED, 0.0f };
+        };
+
+        using AccountSwitchEventCallback = std::function<void( AccountSwitchEvent )>;
 
         /**
          * @brief Deployment node role, read from sgns_config.json ("node_type").
@@ -298,7 +340,16 @@ namespace sgns
          * @param[in] public_address Stored account address to activate.
          * @return Success after services are reset and database initialization is restarted, or an address error.
          */
-        outcome::result<void> SelectAccount( std::string_view public_address );
+        outcome::result<AccountSwitchAcceptance> SelectAccount( std::string_view public_address );
+
+        /** Returns the ready generation address, or an explicit lifecycle error. */
+        [[nodiscard]] outcome::result<std::string> GetActiveAccountAddress() const;
+        /** Returns the configured/bootstrap identity without publishing it as an active generation. */
+        [[nodiscard]] std::string GetConfiguredAccountAddress() const;
+        /** Returns switching/unavailable errors before reading any processing owner. */
+        [[nodiscard]] outcome::result<AccountProcessingStatus> GetActiveProcessingStatus() const;
+        /** Registers the one generation-tagged account lifecycle completion path. */
+        void SetAccountSwitchEventCallback( AccountSwitchEventCallback callback );
 
         /**
          * @brief Transfers node ownership to another stored account address.
@@ -532,13 +583,8 @@ namespace sgns
          * @brief Returns the current processing service status.
          * @return Processing status, or DISABLED when the service is not initialized.
          */
-        [[nodiscard]] processing::ProcessingServiceImpl::ProcessingStatus GetProcessingStatus() const
-        {
-            return processing_service_ == nullptr ? processing::ProcessingServiceImpl::ProcessingStatus(
-                                                        processing::ProcessingServiceImpl::Status::DISABLED,
-                                                        0.0f )
-                                                  : processing_service_->GetProcessingStatus();
-        }
+        // PHASE14_TEMP_NODE_LEGACY_SHIM: callers migrate to GetActiveProcessingStatus in plans 14-06..14-12.
+        [[nodiscard]] processing::ProcessingServiceImpl::ProcessingStatus GetProcessingStatus() const;
 
         /**
          * @brief Transfers funds and waits for the transaction to finalize.
@@ -797,6 +843,28 @@ namespace sgns
             uint64_t                            generation = 0;
         };
 
+        struct ReadyAccountGeneration
+        {
+            std::shared_ptr<GeniusAccount>                       account;
+            std::shared_ptr<TransactionManager>                  manager;
+            std::shared_ptr<processing::ProcessingServiceImpl>   processing;
+            uint64_t                                              generation{ 0 };
+        };
+
+        struct RetiringAccountGeneration
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            uint64_t                            generation{ 0 };
+        };
+
+        struct PendingAccountGeneration
+        {
+            std::shared_ptr<GeniusAccount> account;
+            uint64_t                       generation{ 0 };
+            std::string                    target_address;
+        };
+
         /** Immutable address/key binding used by node-scoped trust policy. */
         struct NodeTrustSigner
         {
@@ -822,6 +890,12 @@ namespace sgns
         /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
         uint64_t account_service_generation_ = 0;
         bool     account_service_switching_  = false;
+        AccountLifecycle account_lifecycle_{ AccountLifecycle::UNAVAILABLE };
+        std::string configured_account_address_;
+        PendingAccountGeneration pending_account_generation_;
+        RetiringAccountGeneration retiring_account_generation_;
+        ReadyAccountGeneration ready_account_generation_;
+        AccountSwitchEventCallback account_switch_event_callback_;
         /// State currently executing inside StateTransition; nested transitions temporarily replace it.
         std::optional<NodeState> transition_in_progress_;
         /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
@@ -1052,6 +1126,12 @@ namespace sgns
 
         /** Copy the one published account/manager generation, or an empty snapshot while switching. */
         [[nodiscard]] AccountServiceSnapshot SnapshotAccountServices() const;
+
+        /** The sole commit point that makes a complete account generation observable. */
+        void PublishReadyAccountGeneration();
+        /** Begins initialization only after the retiring manager has closed admission and drained. */
+        void BeginPendingAccountInitialization( uint64_t generation, const std::shared_ptr<GeniusAccount> &expected );
+        void EmitAccountSwitchEvent( AccountSwitchEvent event );
 
         /** Recheck a captured generation under the lifecycle lock before an asynchronous side effect. */
         bool ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,

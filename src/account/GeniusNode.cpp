@@ -179,6 +179,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Requested transaction failed";
         case sgns::GeniusNode::Error::INVALID_NODE_TYPE:
             return "sgns_config.json node_type was not Full/Light/Archive";
+        case sgns::GeniusNode::Error::SWITCH_IN_PROGRESS:
+            return "SWITCH_IN_PROGRESS";
+        case sgns::GeniusNode::Error::ACCOUNT_UNAVAILABLE:
+            return "ACCOUNT_UNAVAILABLE";
     }
     return "Unknown error";
 }
@@ -330,6 +334,7 @@ namespace sgns
         {
             throw std::runtime_error( "Account creation failed" ); // D-04: New() catches -> nullptr
         }
+        configured_account_address_ = account_->GetAddress();
 
         // Default port_seed (40001); Phase-1 config layer overrides from network_config.json when present.
         if ( !InitNetwork( 40001, is_full_node_ ) )
@@ -1023,9 +1028,8 @@ namespace sgns
                 account_transaction_callback_owner_generation_.store( owner_generation );
                 catchup_callback_owner_generation_.store( owner_generation );
                 auto manager = transaction_manager_;
-                // The replacement is now a complete account/manager pair.  This
-                // is the sole publication point for a switching generation.
-                account_service_switching_ = false;
+                // Keep the generation unavailable until processing is initialized
+                // and PublishReadyAccountGeneration performs one complete commit.
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this(),
@@ -1035,9 +1039,13 @@ namespace sgns
                         if ( auto strong = weak_self.lock() )
                         {
                             auto callback_manager = weak_manager.lock();
-                            const auto snapshot = strong->SnapshotAccountServices();
-                            if ( !callback_manager || snapshot.generation != owner_generation ||
-                                 snapshot.manager.get() != callback_manager.get() )
+                            bool current = false;
+                            {
+                                std::lock_guard<std::recursive_mutex> lock( strong->lifecycle_mutex_ );
+                                current = callback_manager && strong->account_service_generation_ == owner_generation &&
+                                          strong->transaction_manager_.get() == callback_manager.get();
+                            }
+                            if ( !current )
                             {
                                 return;
                             }
@@ -1263,6 +1271,7 @@ namespace sgns
 
             case NodeState::READY:
             {
+                PublishReadyAccountGeneration();
                 node_logger_->info( "GeniusNode READY" );
                 break;
             }
@@ -2488,7 +2497,7 @@ namespace sgns
         return new_account.second;
     }
 
-    outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
+    outcome::result<GeniusNode::AccountSwitchAcceptance> GeniusNode::SelectAccount( std::string_view public_address )
     {
         public_address = GeniusAccount::NormalizeAddress( public_address );
 
@@ -2514,14 +2523,24 @@ namespace sgns
         }
 
         std::shared_ptr<evmwatcher::BridgeCatchupWatcher> previous_watcher;
+        AccountSwitchAcceptance acceptance;
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             if ( account_service_switching_ )
             {
-                return std::errc::operation_in_progress;
+                return outcome::failure( Error::SWITCH_IN_PROGRESS );
             }
             account_service_switching_ = true;
             ++account_service_generation_; // invalidate every captured account-service snapshot
+            account_lifecycle_ = AccountLifecycle::SWITCHING;
+            pending_account_generation_ = { account, account_service_generation_, std::string( public_address ) };
+            acceptance = { account_service_generation_, std::string( public_address ) };
+            if ( transaction_manager_ )
+            {
+                // Admission closes before the accepted generation becomes observable.
+                transaction_manager_->CloseAdmission();
+                retiring_account_generation_ = { account_, transaction_manager_, account_service_generation_ - 1 };
+            }
             ++bridge_init_generation_;
             catchup_callback_owner_generation_.store( 0 );
             previous_watcher = std::move( catchup_watcher_ );
@@ -2553,21 +2572,15 @@ namespace sgns
             account->InitMessenger( this->pubsub_ );
             account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
             this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-            {
-                std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
-                account_ = std::move( account );
-                StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
-                account_service_switching_ = false;
-            }
+            BeginPendingAccountInitialization( acceptance.generation, account );
         }
         else
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             account_ = std::move( account );
-            account_service_switching_ = false;
         }
 
-        return outcome::success();
+        return acceptance;
     }
 
     void GeniusNode::ResetProcessingMembers()
@@ -2616,7 +2629,8 @@ namespace sgns
                                  duration_ms );
         }
 
-        return SelectAccount( destination_address );
+        BOOST_OUTCOME_TRY( SelectAccount( destination_address ) );
+        return outcome::success();
     }
 
     outcome::result<void> GeniusNode::DeleteAccount( std::string_view public_address )
@@ -3394,6 +3408,107 @@ namespace sgns
         return { account_, transaction_manager_, account_service_generation_ };
     }
 
+    outcome::result<std::string> GeniusNode::GetActiveAccountAddress() const
+    {
+        const auto snapshot = SnapshotAccountServices();
+        if ( snapshot.account ) return snapshot.account->GetAddress();
+        std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+        return outcome::failure( account_lifecycle_ == AccountLifecycle::SWITCHING ? Error::SWITCH_IN_PROGRESS
+                                                                                   : Error::ACCOUNT_UNAVAILABLE );
+    }
+
+    std::string GeniusNode::GetConfiguredAccountAddress() const
+    {
+        std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+        return configured_account_address_;
+    }
+
+    outcome::result<GeniusNode::AccountProcessingStatus> GeniusNode::GetActiveProcessingStatus() const
+    {
+        std::shared_ptr<processing::ProcessingServiceImpl> processing;
+        uint64_t generation = 0;
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            if ( account_lifecycle_ == AccountLifecycle::SWITCHING )
+            {
+                return outcome::failure( Error::SWITCH_IN_PROGRESS );
+            }
+            if ( account_lifecycle_ != AccountLifecycle::READY || !processing_service_ )
+            {
+                return outcome::failure( Error::ACCOUNT_UNAVAILABLE );
+            }
+            processing = processing_service_;
+            generation = account_service_generation_;
+        }
+        return AccountProcessingStatus{ generation, processing->GetProcessingStatus() };
+    }
+
+    processing::ProcessingServiceImpl::ProcessingStatus GeniusNode::GetProcessingStatus() const
+    {
+        // PHASE14_TEMP_NODE_LEGACY_SHIM: preserved only while caller partitions are migrated.
+        auto result = GetActiveProcessingStatus();
+        return result.has_value() ? result.value().status
+                                  : processing::ProcessingServiceImpl::ProcessingStatus(
+                                        processing::ProcessingServiceImpl::Status::DISABLED, 0.0f );
+    }
+
+    void GeniusNode::SetAccountSwitchEventCallback( AccountSwitchEventCallback callback )
+    {
+        std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+        account_switch_event_callback_ = std::move( callback );
+    }
+
+    void GeniusNode::EmitAccountSwitchEvent( AccountSwitchEvent event )
+    {
+        AccountSwitchEventCallback callback;
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            callback = account_switch_event_callback_;
+        }
+        if ( callback )
+        {
+            boost::asio::post( *io_, [callback = std::move( callback ), event = std::move( event )]() mutable
+                               { callback( std::move( event ) ); } );
+        }
+    }
+
+    void GeniusNode::PublishReadyAccountGeneration()
+    {
+        AccountSwitchEvent event;
+        bool publish = false;
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            if ( !account_ || !transaction_manager_ || !processing_service_ ) return;
+            const bool selected_generation = pending_account_generation_.generation == account_service_generation_;
+            ready_account_generation_ = { account_, transaction_manager_, processing_service_, account_service_generation_ };
+            account_service_switching_ = false;
+            account_lifecycle_ = AccountLifecycle::READY;
+            if ( selected_generation )
+            {
+                event = { AccountSwitchEvent::Kind::READY,
+                          account_service_generation_,
+                          pending_account_generation_.target_address,
+                          {} };
+                pending_account_generation_ = {};
+                retiring_account_generation_ = {};
+                publish = true;
+            }
+        }
+        if ( publish ) EmitAccountSwitchEvent( std::move( event ) );
+    }
+
+    void GeniusNode::BeginPendingAccountInitialization( uint64_t generation,
+                                                         const std::shared_ptr<GeniusAccount> &expected )
+    {
+        std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+        if ( account_service_generation_ != generation || pending_account_generation_.account.get() != expected.get() )
+        {
+            return;
+        }
+        account_ = expected;
+        StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+    }
+
     bool GeniusNode::ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
                                                     const std::function<void()>  &side_effect )
     {
@@ -3409,13 +3524,9 @@ namespace sgns
 
     std::string GeniusNode::GetAddress() const
     {
-        std::string address = "UNVAILABLE";
-        auto        snapshot = SnapshotAccountServices();
-        if ( snapshot.account )
-        {
-            address = snapshot.account->GetAddress();
-        }
-        return address;
+        // PHASE14_TEMP_NODE_LEGACY_SHIM: never expose pending/failed configured identity.
+        auto result = GetActiveAccountAddress();
+        return result.has_value() ? result.value() : std::string{};
     }
 
     // Wait for a transaction to be processed with a timeout

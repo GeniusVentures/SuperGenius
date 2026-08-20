@@ -630,6 +630,7 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
 
 TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksStayGenerationConsistent )
 {
+    ADD_FAILURE() << "[PHASE14-02-RED-SNAPSHOT]";
     auto node = CreateNode( "concurrent_account_generation", true, false, true, {}, true );
     ASSERT_TRUE( node );
     WaitForReady( node );
@@ -724,7 +725,9 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
     ASSERT_FALSE( observed_generations.empty() );
     for ( const auto &observed : observed_generations )
     {
-        if ( !observed.account || !observed.manager ) continue;
+        ASSERT_EQ( static_cast<bool>( observed.account ), static_cast<bool>( observed.manager ) )
+            << "[PHASE14-02-RED-SNAPSHOT] partial account-generation publication";
+        if ( !observed.account ) continue;
         ASSERT_FALSE( observed.account_address.empty() );
         ASSERT_EQ( observed.account_address, observed.manager_address ) << "CR-11 generation mismatch";
         ASSERT_EQ( observed.generation, observed.catchup_generation ) << "CR-11 generation mismatch";
@@ -742,6 +745,21 @@ TEST_F( MultiAccountTest, AccountGenerationAdmissionBoundaryIsLinearizable )
     manager->CloseAdmission();
     auto rejected = manager->TryAdmit();
     EXPECT_TRUE( rejected.has_error() ) << "[PHASE14-01-RED-ADMISSION]";
+}
+
+TEST_F( MultiAccountTest, AccountGenerationDrainsBeforeReplacementInitialization )
+{
+    ADD_FAILURE() << "[PHASE14-02-RED-DRAIN]";
+}
+
+TEST_F( MultiAccountTest, AccountGenerationRejectsStaleBlockchainCompletion )
+{
+    ADD_FAILURE() << "[PHASE14-02-RED-STALE]";
+}
+
+TEST_F( MultiAccountTest, AccountGenerationProcessingStatusTracksLifecycle )
+{
+    ADD_FAILURE() << "[PHASE14-02-RED-STATUS]";
 }
 
 TEST_F( MultiAccountTest, RetiredManagerRejectsEveryMutationEntryPoint )
