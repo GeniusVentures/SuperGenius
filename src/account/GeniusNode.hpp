@@ -821,11 +821,11 @@ namespace sgns
         friend class GeniusNodeTestAccess;
 
         /**
-         * @brief Enqueues a transaction and its proof directly through the transaction manager.
+         * @brief Submits a transaction and proof through the checked manager lifecycle boundary.
          * @param[in] tx Transaction to enqueue.
          * @param[in] proof Serialized proof bytes associated with @p tx.
          */
-        void SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
+        outcome::result<void> SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
 
         std::string                    write_base_path_; ///< Base path for node databases, logs, and account storage.
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
@@ -1131,6 +1131,9 @@ namespace sgns
         void PublishReadyAccountGeneration();
         /** Begins initialization only after the retiring manager has closed admission and drained. */
         void BeginPendingAccountInitialization( uint64_t generation, const std::shared_ptr<GeniusAccount> &expected );
+        /** Stops and releases one fully drained generation before starting its pending replacement. */
+        void HandleRetiredAccountGenerationDrained( uint64_t generation,
+                                                    std::shared_ptr<TransactionManager> retiring_manager );
         void EmitAccountSwitchEvent( AccountSwitchEvent event );
 
         /** Recheck a captured generation under the lifecycle lock before an asynchronous side effect. */

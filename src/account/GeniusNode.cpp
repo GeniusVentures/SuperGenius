@@ -2523,6 +2523,7 @@ namespace sgns
         }
 
         std::shared_ptr<evmwatcher::BridgeCatchupWatcher> previous_watcher;
+        std::shared_ptr<TransactionManager>               retiring_manager;
         AccountSwitchAcceptance acceptance;
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
@@ -2537,47 +2538,40 @@ namespace sgns
             acceptance = { account_service_generation_, std::string( public_address ) };
             if ( transaction_manager_ )
             {
-                // Admission closes before the accepted generation becomes observable.
-                transaction_manager_->CloseAdmission();
-                retiring_account_generation_ = { account_, transaction_manager_, account_service_generation_ - 1 };
+                retiring_manager = transaction_manager_;
+                retiring_account_generation_ = { account_, retiring_manager, account_service_generation_ - 1 };
             }
             ++bridge_init_generation_;
             catchup_callback_owner_generation_.store( 0 );
             previous_watcher = std::move( catchup_watcher_ );
         }
 
-        // Watcher draining and manager/blockchain Stop may block or join threads;
-        // they deliberately run without lifecycle_mutex_.  Public and async
-        // consumers see the switching epoch as unavailable throughout the drain.
+        // Close admission without lifecycle_mutex_ before the accepted generation
+        // returns.  The drained callback below performs destructive teardown only
+        // after the old generation's admitted work has terminalized.
+        if ( retiring_manager ) retiring_manager->CloseAdmission();
+
+        // Watcher draining may block or join threads; it deliberately runs without
+        // lifecycle_mutex_.  Public and async consumers see switching throughout.
         if ( previous_watcher )
         {
             previous_watcher->stopWatching();
             previous_watcher.reset();
         }
-        auto shutdown_result = ShutdownAccountBoundServices( true );
-        if ( shutdown_result.has_error() )
-        {
-            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
-            account_service_switching_ = false;
-            return outcome::failure( shutdown_result.error() );
-        }
 
-        if ( this->tx_globaldb_ )
+        if ( retiring_manager )
         {
-            // Database is already initialized (keyed by node ID, not account).
-            // Keep it alive, configure it for the new account, and restart the
-            // account-dependent layers. We must replicate what MIGRATING_DATABASE
-            // and INITIALIZING_DATABASE do for a new account, without recreating
-            // the database itself.
-            account->InitMessenger( this->pubsub_ );
-            account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
-            this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-            BeginPendingAccountInitialization( acceptance.generation, account );
+            retiring_manager->OnDrained( [weak_self = weak_from_this(), generation = acceptance.generation, retiring_manager]
+                                         {
+                                             if ( auto strong = weak_self.lock() )
+                                             {
+                                                 strong->HandleRetiredAccountGenerationDrained( generation, retiring_manager );
+                                             }
+                                         } );
         }
         else
         {
-            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
-            account_ = std::move( account );
+            HandleRetiredAccountGenerationDrained( acceptance.generation, {} );
         }
 
         return acceptance;
@@ -3509,6 +3503,42 @@ namespace sgns
         StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
     }
 
+    void GeniusNode::HandleRetiredAccountGenerationDrained( uint64_t generation,
+                                                             std::shared_ptr<TransactionManager> retiring_manager )
+    {
+        std::shared_ptr<GeniusAccount> pending_account;
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            if ( account_service_generation_ != generation || account_lifecycle_ != AccountLifecycle::SWITCHING ||
+                 ( retiring_manager && retiring_account_generation_.manager.get() != retiring_manager.get() ) )
+            {
+                return;
+            }
+            pending_account = pending_account_generation_.account;
+        }
+
+        auto shutdown_result = ShutdownAccountBoundServices( true );
+        if ( shutdown_result.has_error() )
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            if ( account_service_generation_ == generation ) account_lifecycle_ = AccountLifecycle::UNAVAILABLE;
+            return;
+        }
+
+        if ( tx_globaldb_ )
+        {
+            pending_account->InitMessenger( pubsub_ );
+            pending_account->ConfigureDatabaseDependencies( tx_globaldb_ );
+            tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+            BeginPendingAccountInitialization( generation, pending_account );
+        }
+        else
+        {
+            std::lock_guard<std::recursive_mutex> lock( lifecycle_mutex_ );
+            if ( account_service_generation_ == generation ) account_ = std::move( pending_account );
+        }
+    }
+
     bool GeniusNode::ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
                                                     const std::function<void()>  &side_effect )
     {
@@ -3597,17 +3627,11 @@ namespace sgns
         return manager_result.value()->GetState();
     }
 
-    void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
+    outcome::result<void> GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx,
+                                                                std::vector<uint8_t>              proof )
     {
-        auto manager_result = GetTransactionManager();
-        if ( manager_result.has_value() )
-        {
-            manager_result.value()->EnqueueTransaction( std::make_pair( tx, proof ) );
-        }
-        else
-        {
-            node_logger_->error( "{}: Transactions not ready", __func__ );
-        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        return manager->SubmitTransaction( std::make_pair( std::move( tx ), std::move( proof ) ) );
     }
 
     void GeniusNode::RotateLogFiles( const std::string &base_path )

@@ -240,6 +240,13 @@ namespace sgns
                                                      std::string destination = "" );
 
         /**
+         * @brief Admits and enqueues one already-built transaction with its proof.
+         * @return Success when the transaction crossed the admission boundary, or
+         *         MANAGER_RETIRED when the manager no longer accepts work.
+         */
+        outcome::result<void> SubmitTransaction( TransactionPair element );
+
+        /**
          * @brief Creates and enqueues an escrow-hold transaction.
          *
          * Hashes @p job_id with blake2b-256 to derive the escrow destination address,
@@ -388,6 +395,8 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiAccountTestAccess;
+        /** Invokes @p callback once the closed manager has no admitted work left. */
+        void OnDrained( std::function<void()> callback );
         // PHASE14_TEMP_MANAGER_LEGACY_SHIM: retained only until Plans 14-03..05
         // migrate all callers; it performs admission and cannot bypass retirement.
         void EnqueueTransaction( TransactionPair element );
@@ -618,7 +627,7 @@ namespace sgns
         void CompleteAdmittedOperation( AdmittedOperation &operation );
         void BindAdmittedOperation( AdmittedOperation &operation, const std::string &transaction_id );
         void CompleteAdmittedTransaction( const std::string &transaction_id );
-        void RetireIfDrainedLocked();
+        std::function<void()> RetireIfDrainedLocked();
         void EnqueueAdmittedTransaction( TransactionItem element, AdmittedOperation &operation );
         outcome::result<std::string> PayEscrowAdmitted( const std::string                       &escrow_path,
                                                         const SGProcessing::TaskResult          &task_result,
@@ -635,6 +644,7 @@ namespace sgns
         uint64_t                             next_admitted_operation_id_{ 1 };
         std::unordered_map<uint64_t, std::string> admitted_operations_;
         std::unordered_map<std::string, uint64_t> admitted_transaction_ids_;
+        std::function<void()>                 drained_callback_;
         RetirementSnapshot                   retirement_snapshot_{};
 
         std::shared_ptr<boost::asio::io_context> ctx_m;

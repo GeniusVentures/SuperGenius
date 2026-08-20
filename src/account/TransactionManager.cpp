@@ -382,9 +382,30 @@ namespace sgns
 
     void TransactionManager::CloseAdmission()
     {
-        std::lock_guard lock( admission_mutex_ );
-        if ( lifecycle_ == ManagerLifecycle::ACTIVE ) lifecycle_ = ManagerLifecycle::DRAINING;
-        RetireIfDrainedLocked();
+        std::function<void()> drained;
+        {
+            std::lock_guard lock( admission_mutex_ );
+            if ( lifecycle_ == ManagerLifecycle::ACTIVE ) lifecycle_ = ManagerLifecycle::DRAINING;
+            drained = RetireIfDrainedLocked();
+        }
+        if ( drained ) drained();
+    }
+
+    void TransactionManager::OnDrained( std::function<void()> callback )
+    {
+        std::function<void()> drained;
+        {
+            std::lock_guard lock( admission_mutex_ );
+            if ( lifecycle_ == ManagerLifecycle::RETIRED )
+            {
+                drained = std::move( callback );
+            }
+            else
+            {
+                drained_callback_ = std::move( callback );
+            }
+        }
+        if ( drained ) drained();
     }
 
     TransactionManager::RetirementSnapshot TransactionManager::GetRetirementSnapshot() const
@@ -406,17 +427,21 @@ namespace sgns
 
     void TransactionManager::CompleteAdmittedOperation( AdmittedOperation &operation )
     {
-        std::lock_guard lock( admission_mutex_ );
-        if ( operation.manager_ != this || operation.id_ == 0 ) return;
-        const auto it = admitted_operations_.find( operation.id_ );
-        if ( it != admitted_operations_.end() )
+        std::function<void()> drained;
         {
-            if ( !it->second.empty() ) admitted_transaction_ids_.erase( it->second );
-            admitted_operations_.erase( it );
+            std::lock_guard lock( admission_mutex_ );
+            if ( operation.manager_ != this || operation.id_ == 0 ) return;
+            const auto it = admitted_operations_.find( operation.id_ );
+            if ( it != admitted_operations_.end() )
+            {
+                if ( !it->second.empty() ) admitted_transaction_ids_.erase( it->second );
+                admitted_operations_.erase( it );
+            }
+            drained = RetireIfDrainedLocked();
+            operation.manager_ = nullptr;
+            operation.id_ = 0;
         }
-        RetireIfDrainedLocked();
-        operation.manager_ = nullptr;
-        operation.id_ = 0;
+        if ( drained ) drained();
     }
 
     void TransactionManager::BindAdmittedOperation( AdmittedOperation &operation, const std::string &transaction_id )
@@ -441,11 +466,12 @@ namespace sgns
         RetireIfDrainedLocked();
     }
 
-    void TransactionManager::RetireIfDrainedLocked()
+    std::function<void()> TransactionManager::RetireIfDrainedLocked()
     {
-        if ( lifecycle_ != ManagerLifecycle::DRAINING || !admitted_operations_.empty() ) return;
+        if ( lifecycle_ != ManagerLifecycle::DRAINING || !admitted_operations_.empty() ) return {};
         lifecycle_ = ManagerLifecycle::RETIRED;
         retirement_snapshot_ = RetirementSnapshot{ ManagerLifecycle::RETIRED, manager_generation_, 0 };
+        return std::move( drained_callback_ );
     }
 
     void TransactionManager::Stop()
@@ -1288,6 +1314,14 @@ namespace sgns
     void TransactionManager::EnqueueTransaction( TransactionPair element )
     {
         EnqueueTransaction( { { std::move( element ) }, std::nullopt } );
+    }
+
+    outcome::result<void> TransactionManager::SubmitTransaction( TransactionPair element )
+    {
+        if ( !element.first ) return outcome::failure( std::errc::invalid_argument );
+        BOOST_OUTCOME_TRY( auto admitted, TryAdmit() );
+        EnqueueAdmittedTransaction( { { std::move( element ) }, std::nullopt }, admitted );
+        return outcome::success();
     }
 
     //TODO - Fill hash stuff on DAGStruct
