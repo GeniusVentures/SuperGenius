@@ -58,37 +58,35 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 
 ## Traceability
 
-Roadmap mapping is pending.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | — | Pending |
-| SLOT-02 | — | Pending |
-| SLOT-03 | — | Pending |
-| VOTE-01 | — | Pending |
-| VOTE-02 | — | Pending |
-| VOTE-03 | — | Pending |
-| VOTE-04 | — | Pending |
-| CERT-01 | — | Pending |
-| CERT-02 | — | Pending |
-| CERT-03 | — | Pending |
-| CERT-04 | — | Pending |
-| CERT-05 | — | Pending |
-| COMP-01 | — | Pending |
-| MINT-01 | — | Pending |
-| MINT-02 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
+| SLOT-01 | Phase 4 | Pending |
+| SLOT-02 | Phase 4 | Pending |
+| SLOT-03 | Phase 4 | Pending |
+| VOTE-01 | Phase 5 | Pending |
+| VOTE-02 | Phase 5 | Pending |
+| VOTE-03 | Phase 5 | Pending |
+| VOTE-04 | Phase 5 | Pending |
+| CERT-01 | Phase 6 | Pending |
+| CERT-02 | Phase 6 | Pending |
+| CERT-03 | Phase 6 | Pending |
+| CERT-04 | Phase 6 | Pending |
+| CERT-05 | Phase 7 | Pending |
+| COMP-01 | Phase 6 | Pending |
+| MINT-01 | Phase 7 | Pending |
+| MINT-02 | Phase 7 | Pending |
+| TEST-01 | Phase 8 | Pending |
+| TEST-02 | Phase 8 | Pending |
+| TEST-03 | Phase 8 | Pending |
+| TEST-04 | Phase 8 | Pending |
+| TEST-05 | Phase 8 | Pending |
+| TEST-06 | Phase 8 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 (roadmap pending)
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-08-20*
-*Last updated: 2026-08-20 after requirements approval*
+*Last updated: 2026-08-20 after v3.0 roadmap creation*
