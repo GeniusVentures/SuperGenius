@@ -184,12 +184,23 @@ if (CreateProposalId(proposal) != certificate.proposal_id()) return Check::Rejec
 |---|---|---|---|
 | A1 | Phase 8 can expose a future-key calculation without changing current CRDT persistence behavior. | Architecture Patterns | Planner must confirm exact helper visibility/call sites against the intended Phase-8 acceptance interpretation. |
 
-## Open Questions
+## Resolved Ingress Contract
 
-1. **Which Phase-8 ingress point enforces a storage-key mismatch while current storage remains subject-hash keyed?**
-   - What we know: CRDT filter and callback receive the key, but it is currently `/cert/<subject-hash>`; live `HandleCertificate` receives no datastore key. [CITED: src/blockchain/Consensus.cpp]
-   - What's unclear: Whether the Phase-8 plan should add a key-aware validator only for future activation, or introduce a compatibility mode that accepts legacy keys but cannot treat them as slot authority. [ASSUMED]
-   - Recommendation: Plan a pure `canonical_slot`/`expected_slot_key` helper plus strict exact-proposal validation now; reserve strict authoritative key enforcement and all key migration for Phase 10, avoiding a broken mixed namespace. [ASSUMED]
+`HandleCertificate` has no datastore key, while the CRDT filter/callback currently receive
+the legacy `/cert/<subject-hash>` key. Phase 8 therefore applies exact
+certificate/proposal/canonical-slot validation at every ingress, but validates storage-key
+evidence only at key-aware CRDT ingress:
+
+- A keyless ingress must accept a valid, exactly bound certificate; it cannot reject merely
+  because no datastore key was supplied.
+- A key-aware CRDT ingress validates the supplied key against the current legacy subject-hash
+  namespace and the exact embedded proposal. That key is compatibility evidence only, never
+  canonical-slot authority.
+- Phase 8 exposes and tests deterministic canonical-slot/expected-future-slot-key calculation,
+  but does not use `/cert/<canonical-slot-id>` for acceptance, persistence, lookup, or writer
+  selection. Those changes remain Phase 10.
+
+This avoids both an always-reject guard and an accidental mixed authority model.
 
 ## Validation Architecture
 

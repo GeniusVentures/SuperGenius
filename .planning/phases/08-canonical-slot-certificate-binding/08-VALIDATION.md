@@ -39,8 +39,8 @@ created: 2026-08-20
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 08-01-01 | 01 | 1 | SLOT-01, SLOT-02 | T-08-01 | Same verified Mint facts produce the same slot; changing every required fact changes it; proposer and nonce do not. | unit | `ctest --test-dir build -R consensus_slot_key_test --output-on-failure` | ✅ extend | ⬜ pending |
-| 08-02-01 | 02 | 1 | SLOT-03 | T-08-02 | A certificate/proposal/slot binding mismatch returns before cleanup, finalization notification, handler dispatch, or mint-capable effects. | component | `ctest --test-dir build -R consensus_pending_lifecycle_test --output-on-failure` | ✅ extend | ⬜ pending |
-| 08-02-02 | 02 | 1 | SLOT-03 | T-08-03 | Canonical-slot and expected future slot-key derivation are deterministic while current subject-hash persistence remains unchanged until Phase 10. | unit | `ctest --test-dir build -R 'consensus_(slot_key|pending_lifecycle)_test' --output-on-failure` | ✅ extend | ⬜ pending |
+| 08-01-02 | 01 | 1 | SLOT-03 | T-08-02 | A certificate/proposal/slot binding mismatch returns before cleanup, finalization notification, handler dispatch, or mint-capable effects. | component | `ctest --test-dir build -R consensus_pending_lifecycle_test --output-on-failure` | ✅ extend | ⬜ pending |
+| 08-01-03 | 01 | 1 | SLOT-03 | T-08-03 | Canonical-slot and expected future slot-key derivation are deterministic while current subject-hash persistence remains unchanged until Phase 10. | unit | `ctest --test-dir build -R 'consensus_(slot_key|pending_lifecycle)_test' --output-on-failure` | ✅ extend | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
