@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 4 — Canonical Slot & Certificate Binding
+**Current focus:** Phase 8 — Canonical Slot & Certificate Binding
 
 ## Current Position
 
-Phase: 4 of 8 overall (1 of 5 in v3.0) — Canonical Slot & Certificate Binding
+Phase: 8 of 12 overall (1 of 5 in v3.0) — Canonical Slot & Certificate Binding
 Plan: Not yet planned
 Status: Ready to plan
-Last activity: 2026-08-20 — Created v3.0 canonical-finality roadmap and requirement traceability.
+Last activity: 2026-08-20 — Renumbered v3.0 phases to avoid retained historical phase directories.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -41,11 +41,11 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 4. Canonical Slot & Certificate Binding | 0 | - | - |
-| 5. Durable One-Vote Finality | 0 | - | - |
-| 6. Authoritative Slot Certificate Publication | 0 | - | - |
-| 7. Convergent Certificate Consumption & Mint Recovery | 0 | - | - |
-| 8. Multi-Node Finality Fault Proof | 0 | - | - |
+| 8. Canonical Slot & Certificate Binding | 0 | - | - |
+| 9. Durable One-Vote Finality | 0 | - | - |
+| 10. Authoritative Slot Certificate Publication | 0 | - | - |
+| 11. Convergent Certificate Consumption & Mint Recovery | 0 | - | - |
+| 12. Multi-Node Finality Fault Proof | 0 | - | - |
 
 **Recent Trend:** Not yet measured for v3.0.
 
@@ -64,7 +64,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 4 planning must lock implementation-level validation and exact winner evidence without changing the required `GetSlotID()` verified-fact semantics.
+- Phase 8 planning must lock implementation-level validation and exact winner evidence without changing the required `GetSlotID()` verified-fact semantics.
 - Production-path multi-node failure and restart coverage is mandatory for milestone completion.
 
 ## Deferred Items
@@ -76,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-08-20
-Stopped at: v3.0 roadmap created; Phase 4 is ready for detailed planning after approval.
+Stopped at: v3.0 roadmap renumbered; Phase 8 is ready for detailed planning.
 Resume file: None
