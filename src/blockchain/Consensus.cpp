@@ -19,6 +19,7 @@
 #include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ConsensusAuth.hpp"
+#include "storage/database_error.hpp"
 
 namespace sgns
 {
@@ -94,6 +95,7 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}",
                                          __func__,
                                          instance->consensus_messages_topic_ );
+        instance->RecoverActiveVotes();
         instance->StartRoundTimer();
         if ( !instance->RegisterCertificateFilter() )
         {
@@ -197,6 +199,7 @@ namespace sgns
                     }
                     self->ExpirePendingProposals();
                     self->ProcessDuePendingRetries();
+                    self->ProcessDueVoteWork();
                     // Keep replaying unfinished certificate work while the node is running.
                     self->RecoverPendingCertificateWork();
                 }
@@ -581,7 +584,8 @@ namespace sgns
                                          GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ) );
         const auto slot_key    = GetSlotKey( proposal );
-        bool       should_vote = false;
+        bool       process_due_work = false;
+        bool       candidate_admitted = false;
 
         ConsensusManagerLogger()->debug( "{}: Slot key acquired: hash {}, id {}, slot key {}",
                                          __func__,
@@ -605,7 +609,29 @@ namespace sgns
             }
 
             auto &slot_state = slot_states_[slot_key];
-            if ( slot_state.best_proposal_id.empty() )
+            if ( slot_state.active_vote_locked )
+            {
+                return;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
+            {
+                slot_state.candidate_deadline = now + candidate_window_;
+            }
+            if ( now >= slot_state.candidate_deadline )
+            {
+                process_due_work = true;
+            }
+            else if ( !slot_state.candidates_frozen &&
+                      std::none_of( slot_state.eligible_candidates.begin(),
+                                    slot_state.eligible_candidates.end(),
+                                    [&proposal]( const Proposal &candidate )
+                                    { return candidate.proposal_id() == proposal.proposal_id(); } ) )
+            {
+                slot_state.eligible_candidates.push_back( proposal );
+                candidate_admitted = true;
+            }
+            if ( candidate_admitted && slot_state.best_proposal_id.empty() )
             {
                 ConsensusManagerLogger()->debug( "{}: Configuring best proposal for hash {}, id={}, slot key {}",
                                                  __func__,
@@ -619,7 +645,7 @@ namespace sgns
                     slot_state.best_tx_hash = nonce_payload.value().tx_hash();
                 }
             }
-            else
+            else if ( candidate_admitted )
             {
                 const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
                 ConsensusManagerLogger()->debug(
@@ -645,18 +671,6 @@ namespace sgns
                 }
             }
 
-            if ( slot_state.best_proposal_id == proposal.proposal_id() &&
-                 slot_state.voted_proposal_ids.find( proposal.proposal_id() ) == slot_state.voted_proposal_ids.end() )
-            {
-                ConsensusManagerLogger()->debug(
-                    "{}: My proposal for hash {}, id={}, slot key {} is better so let's vote on it. ",
-                    __func__,
-                    GetPrintableSubjectHash( proposal.subject() ),
-                    proposal.proposal_id().substr( 0, 8 ),
-                    slot_key );
-                slot_state.voted_proposal_ids.insert( proposal.proposal_id() );
-                should_vote = true;
-            }
         }
 
         auto pending_votes = TakePendingVotes( proposal.proposal_id() );
@@ -665,27 +679,9 @@ namespace sgns
             HandleVote( vote );
         }
 
-        if ( should_vote )
+        if ( process_due_work )
         {
-            auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
-            if ( vote_result.has_value() )
-            {
-                (void) SubmitVote( vote_result.value() );
-                ConsensusManagerLogger()->debug( "{}: self-vote submitted for hash {}, id={}, slot key {}",
-                                                 __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key );
-            }
-            else
-            {
-                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={}, slot key {} error={}",
-                                                 __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key,
-                                                 vote_result.error().message() );
-            }
+            ProcessDueVoteWork();
         }
     }
 
@@ -1041,6 +1037,228 @@ namespace sgns
         for ( const auto &candidate : retry_now )
         {
             RetryPendingProposal( candidate.proposal, "scheduled-retry", candidate.scheduled_retry_count, now );
+        }
+    }
+
+    std::string ConsensusManager::ActiveVoteStorageKey( std::string_view slot_key ) const
+    {
+        return std::string( ACTIVE_VOTE_BASE_PATH_KEY ) + std::string( slot_key );
+    }
+
+    outcome::result<ActiveVoteRecord> ConsensusManager::BuildActiveVoteRecord( const std::string &slot_key,
+                                                                                 const Proposal &proposal,
+                                                                                 const Vote &vote,
+                                                                                 uint64_t acceptance_deadline_ms ) const
+    {
+        std::string proposal_bytes;
+        std::string vote_bytes;
+        if ( slot_key.empty() || acceptance_deadline_ms == 0 || !proposal.SerializeToString( &proposal_bytes ) ||
+             !vote.SerializeToString( &vote_bytes ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        ActiveVoteRecord record;
+        record.set_canonical_slot( slot_key );
+        record.set_proposal_bytes( proposal_bytes );
+        record.set_vote_bytes( vote_bytes );
+        record.set_acceptance_deadline_ms( acceptance_deadline_ms );
+        return record;
+    }
+
+    outcome::result<ConsensusManager::ActiveVoteState> ConsensusManager::DecodeActiveVoteRecord(
+        const std::string &slot_key,
+        std::string_view serialized ) const
+    {
+        ActiveVoteRecord record;
+        if ( slot_key.empty() || serialized.empty() || !record.ParseFromArray( serialized.data(), serialized.size() ) ||
+             record.canonical_slot() != slot_key || record.proposal_bytes().empty() || record.vote_bytes().empty() ||
+             record.acceptance_deadline_ms() == 0 )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        ActiveVoteState state;
+        if ( !state.proposal.ParseFromString( record.proposal_bytes() ) || !state.vote.ParseFromString( record.vote_bytes() ) ||
+             GetSlotKey( state.proposal ) != slot_key || state.vote.proposal_id() != state.proposal.proposal_id() ||
+             state.vote.voter_id() != account_address_ || !state.vote.approve() || !CheckVote( state.vote ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        auto signing_bytes = VoteSigningBytes( state.vote );
+        if ( signing_bytes.has_error() ||
+             !GeniusAccount::VerifySignature( state.vote.voter_id(), state.vote.signature(), signing_bytes.value() ) )
+        {
+            return outcome::failure( std::errc::permission_denied );
+        }
+        state.acceptance_deadline_ms = record.acceptance_deadline_ms();
+        state.next_retry_at          = std::chrono::steady_clock::now();
+        return state;
+    }
+
+    outcome::result<ConsensusManager::ActiveVoteState> ConsensusManager::PersistOrLoadExactActiveVote(
+        const std::string &slot_key,
+        const Proposal &proposal,
+        const Vote &vote,
+        uint64_t acceptance_deadline_ms )
+    {
+        auto record = BuildActiveVoteRecord( slot_key, proposal, vote, acceptance_deadline_ms );
+        if ( record.has_error() || fail_active_vote_persistence_for_test_ )
+        {
+            return outcome::failure( record.has_error() ? record.error() : std::make_error_code( std::errc::io_error ) );
+        }
+        std::string encoded;
+        if ( !record.value().SerializeToString( &encoded ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        auto datastore = db_ ? db_->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        crdt::GlobalDB::Buffer key;
+        key.put( ActiveVoteStorageKey( slot_key ) );
+        auto existing = datastore->get( key );
+        if ( existing.has_value() )
+        {
+            const std::string existing_bytes( existing.value().toString() );
+            if ( existing_bytes != encoded )
+            {
+                return outcome::failure( std::errc::operation_not_permitted );
+            }
+            return DecodeActiveVoteRecord( slot_key, existing_bytes );
+        }
+        if ( existing.error() != storage::DatabaseError::NOT_FOUND )
+        {
+            return outcome::failure( existing.error() );
+        }
+
+        crdt::GlobalDB::Buffer value;
+        value.put( encoded );
+        auto put = datastore->put( key, value );
+        if ( put.has_error() )
+        {
+            return outcome::failure( put.error() );
+        }
+        return DecodeActiveVoteRecord( slot_key, encoded );
+    }
+
+    void ConsensusManager::RecoverActiveVotes()
+    {
+        auto datastore = db_ ? db_->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            return;
+        }
+        crdt::GlobalDB::Buffer prefix;
+        prefix.put( ACTIVE_VOTE_BASE_PATH_KEY );
+        auto records = datastore->query( prefix );
+        if ( records.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed to enumerate durable active votes: {}", __func__, records.error().message() );
+            return;
+        }
+        const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                             std::chrono::system_clock::now().time_since_epoch() )
+                                                             .count() );
+        std::lock_guard lock( proposals_mutex_ );
+        for ( const auto &[key, value] : records.value() )
+        {
+            const std::string key_string( key.toString() );
+            if ( key_string.rfind( std::string( ACTIVE_VOTE_BASE_PATH_KEY ), 0 ) != 0 )
+            {
+                continue;
+            }
+            const auto slot_key = key_string.substr( ACTIVE_VOTE_BASE_PATH_KEY.size() );
+            auto decoded = DecodeActiveVoteRecord( slot_key, value.toString() );
+            if ( decoded.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: ignored invalid durable active vote slot={}", __func__, slot_key );
+                continue;
+            }
+            auto &slot_state = slot_states_[slot_key];
+            slot_state.active_vote_locked = true;
+            slot_state.candidates_frozen  = true;
+            slot_state.best_proposal_id   = decoded.value().proposal.proposal_id();
+            slot_state.voted_proposal_ids.insert( decoded.value().proposal.proposal_id() );
+            if ( now_ms < decoded.value().acceptance_deadline_ms )
+            {
+                active_votes_[slot_key] = std::move( decoded.value() );
+            }
+        }
+    }
+
+    void ConsensusManager::ProcessDueVoteWork()
+    {
+        std::vector<ActiveVoteState> publish;
+        const auto now_steady = std::chrono::steady_clock::now();
+        const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                         std::chrono::system_clock::now().time_since_epoch() )
+                                                         .count() );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto &[slot_key, slot_state] : slot_states_ )
+            {
+                if ( slot_state.active_vote_locked || slot_state.candidates_frozen ||
+                     slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
+                     now_steady < slot_state.candidate_deadline )
+                {
+                    continue;
+                }
+                slot_state.candidates_frozen = true;
+                if ( slot_state.eligible_candidates.empty() )
+                {
+                    continue;
+                }
+                const Proposal *winner = &slot_state.eligible_candidates.front();
+                for ( const auto &candidate : slot_state.eligible_candidates )
+                {
+                    if ( IsBetterProposal( candidate, *winner ) )
+                    {
+                        winner = &candidate;
+                    }
+                }
+                slot_state.best_proposal_id = winner->proposal_id();
+                auto vote = CreateVote( winner->proposal_id(), account_address_, true, signer_ );
+                if ( vote.has_error() )
+                {
+                    continue;
+                }
+                const auto deadline_ms = now_ms + static_cast<uint64_t>( candidate_window_.count() );
+                auto active_vote = PersistOrLoadExactActiveVote( slot_key, *winner, vote.value(), deadline_ms );
+                if ( active_vote.has_error() )
+                {
+                    ConsensusManagerLogger()->error( "{}: failed to persist active vote slot={}: {}",
+                                                     __func__, slot_key, active_vote.error().message() );
+                    continue;
+                }
+                slot_state.active_vote_locked = true;
+                slot_state.voted_proposal_ids.insert( active_vote.value().proposal.proposal_id() );
+                active_vote.value().next_retry_at = now_steady + active_vote_retry_interval_;
+                publish.push_back( active_vote.value() );
+                active_votes_[slot_key] = std::move( active_vote.value() );
+            }
+
+            for ( auto &[slot_key, active_vote] : active_votes_ )
+            {
+                if ( now_ms >= active_vote.acceptance_deadline_ms || now_steady < active_vote.next_retry_at )
+                {
+                    continue;
+                }
+                active_vote.next_retry_at = now_steady + active_vote_retry_interval_;
+                publish.push_back( active_vote );
+            }
+        }
+        for ( const auto &active_vote : publish )
+        {
+            std::string bytes;
+            if ( !active_vote.vote.SerializeToString( &bytes ) )
+            {
+                continue;
+            }
+            active_vote_announcements_for_test_.push_back( bytes );
+            (void) SubmitVote( active_vote.vote );
         }
     }
 
@@ -2339,9 +2557,10 @@ namespace sgns
                 return;
             }
             auto slot_it = slot_states_.find( proposal_state.slot_key );
-            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
+            if ( slot_it != slot_states_.end() &&
+                 ( !slot_it->second.candidates_frozen || slot_it->second.best_proposal_id != vote.proposal_id() ) )
             {
-                ConsensusManagerLogger()->error( "{}: ignored: not best proposal proposal_id={}",
+                ConsensusManagerLogger()->error( "{}: ignored: proposal has not won frozen slot arbitration proposal_id={}",
                                                  __func__,
                                                  vote.proposal_id().substr( 0, 8 ) );
                 return;
