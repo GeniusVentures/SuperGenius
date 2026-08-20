@@ -186,6 +186,10 @@ The receiver's CRDT filter verifies the envelope before accepting it; its callba
 
 ## Sources
 
+## Decision Update — 2026-08-20
+
+This proposal's bridge-only envelope and `BridgeBurnRef` are superseded. The chosen design keeps `MintTransactionV2::GetSlotID()` as the shared slot when every included field is validated against the burn, changes the generic certificate key to `/cert/<slot-id>`, and adds a durable local active-vote lock. The lock is created before the first vote is published and prevents any later usable vote for that slot until matching slot-keyed finality is durable or the vote expires. Certificate persistence precedes advertisement; receivers never write the slot key on receipt.
+
 - `src/blockchain/Consensus.hpp`, `src/blockchain/Consensus.cpp` — proposal arbitration, certificate validation, current `/cert` persistence, aggregation rotation, and CRDT recovery.
 - `src/account/TransactionManager.cpp`, `src/account/MintTransactionV2.cpp`, `src/account/BridgeRelayer.cpp` — current mint proposal, slot derivation, bridge ingress, execution marker, and certificate application.
 - `src/crdt/proto/delta.proto`, `src/crdt/impl/crdt_datastore.cpp`, `src/crdt/impl/crdt_callback_manager.cpp`, `src/crdt/globaldb/crdt_work_journal.hpp` — unauthenticated CRDT metadata, persistence/broadcast path, callback work semantics, and recovery facility.
