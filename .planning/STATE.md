@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 14
 status: executing
-stopped_at: Completed 14-06-PLAN.md
-last_updated: "2026-08-20T15:23:59.410Z"
+stopped_at: Completed 14-07-PLAN.md
+last_updated: "2026-08-20T15:37:31.784Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 43
+  completed_plans: 44
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 7 of 15
+Plan: 8 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,8 +67,8 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T15:23:59.377Z
-**Stopped At:** Completed 14-06-PLAN.md
+**Last session:** 2026-08-20T15:37:31.778Z
+**Stopped At:** Completed 14-07-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -124,6 +124,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 14 P04 | 8 min | 2 tasks | 3 files |
 | Phase 14 P05 | 22 min | 2 tasks | 9 files |
 | Phase 14 P06 | 18 min | 2 tasks | 5 files |
+| Phase 14 P07 | 10 min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -199,3 +200,5 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 14]: Final TransactionManager closure removes the legacy enqueue seam; setup, control, and mutable validator access are available only to named owners and fixture capabilities. — This closes D-13/D-14 after all mapped targets compile.
 - [Phase 14]: Production active operations capture one checked ready-generation snapshot, while configured identity remains private bootstrap-only state.
 - [Phase 14]: Temporary node compatibility shims remain until Plan 14-13 after production caller migration.
+- [Phase 14]: Fixture authorization before readiness derives identity from fixture-owned account material, while post-ready assertions use checked active account results. — Prevents configured bootstrap identity from being presented as a ready generation.
+- [Phase 14]: Plan 14-07 migration checks are limited to its five owned fixture sources; later caller partitions remain assigned to their planned owners. — Preserves the staged migration boundary and avoids consuming later partitions.
