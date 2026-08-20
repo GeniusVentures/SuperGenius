@@ -12,12 +12,13 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 ## Current Milestone: v3.0 Canonical Burn Finality Rebuild
 
-**Goal:** Implement a minimal, protocol-defined canonical-slot finality path on `develop`, with explicit publication ownership and safe failover.
+**Goal:** Implement a minimal, generic canonical-slot certificate path on `develop`, with a durable one-vote-per-slot lock, slot-keyed certificate authority, and safe publication recovery.
 
 **Target features:**
 - Canonical external-burn slot identity shared by every competing mint proposal
 - Deterministic winner/finality rules that preserve certificate-to-proposal binding
-- Verifiable certificate publication ownership, persistence-before-advertisement, and safe failover
+- Persisted local vote locks that prohibit a second usable vote for a slot until matching finality or vote expiry
+- Generic slot-keyed certificate storage, persistence-before-advertisement, and safe publication recovery
 - Multi-node regression coverage for contention, delayed CRDT delivery, publisher loss, restart, and exactly-once minting
 
 ## Requirements
@@ -68,7 +69,7 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
-**Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable finality, and application idempotency must be specified as one protocol contract. The finality store cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
+**Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable vote locking, and application idempotency must be specified as one protocol contract. The certificate store is generic and keyed by canonical slot, not a bridge-only finality side channel. The finality path cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -102,6 +103,8 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 | Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ (all three defaults verified: `auto_dht=true`/`port_seed=40001` Phase 1, `node_type=Light` Phase 2) |
 | Restart canonical-finality work from `develop` | The unmerged Phase 9–12 branch has a large blast radius and a publication-authority design flaw; retain its observations, not its implementation | — Pending |
 | Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | — Pending |
+| Store authoritative certificates by canonical slot | Same-slot contenders must meet one generic certificate authority, while the certificate itself retains exact-proposal binding; no bridge-only finality record is introduced | — Pending |
+| Persist one local active vote per slot before publication | Volatile slot arbitration is insufficient after restart or cleanup; a published vote remains locked until matching durable finality or cryptographic expiry | — Pending |
 
 ## Evolution
 
