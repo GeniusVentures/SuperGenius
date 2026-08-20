@@ -24,8 +24,16 @@
 #include <boost/asio.hpp>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/TransactionManager.hpp"
+#include "blockchain/Blockchain.hpp"
+#include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "FileManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "testutil/remove_all.hpp"
+#include "testutil/wait_condition.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
@@ -33,6 +41,113 @@
 
 namespace
 {
+    constexpr auto kReadyTimeout = std::chrono::milliseconds( 30000 );
+
+    struct TrustedNodeFixture
+    {
+        std::shared_ptr<sgns::GeniusNode>    node;
+        std::shared_ptr<sgns::GeniusAccount> authority;
+        std::filesystem::path                path;
+    };
+
+    TrustedNodeFixture CreateTrustedNode( GeniusNodeConfig config,
+                                          const char       *private_key,
+                                          const char       *node_type,
+                                          bool              is_processor,
+                                          bool              is_full_node )
+    {
+        sgns::test::removeAllWithRetry( config.BaseWritePath );
+        std::filesystem::create_directories( config.BaseWritePath );
+        sgns::GeniusNode::WriteNetworkConfig( config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+
+        auto authority = sgns::GeniusAccount::NewFromPrivateKey(
+            sgns::TokenID::FromBytes( { 0x00 } ), private_key, config.BaseWritePath, is_full_node );
+        EXPECT_TRUE( authority );
+        if ( !authority )
+        {
+            return {};
+        }
+
+        std::ofstream node_config( config.BaseWritePath + "sgns_config.json" );
+        EXPECT_TRUE( node_config.good() );
+        if ( !node_config.good() )
+        {
+            return {};
+        }
+        node_config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\"" << node_type
+                    << "\",\"is_processor\":" << ( is_processor ? "true" : "false" )
+                    << ",\"rpc_catchup\":false,\"trusted_peers\":[\"" << authority->GetAddress()
+                    << "\"],\"bootstrapper_node\":\"" << authority->GetAddress()
+                    << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
+        node_config.close();
+
+        return { sgns::GeniusNode::New( config, sgns::FromPrivateKey{ private_key } ),
+                 std::move( authority ),
+                 config.BaseWritePath };
+    }
+
+    void SubmitReviewedTrustAndAwaitReady( const TrustedNodeFixture &fixture )
+    {
+        ASSERT_TRUE( fixture.node );
+        ASSERT_TRUE( fixture.authority );
+        sgns::test::assertWaitForCondition(
+            [&] { return fixture.node->GetState() == sgns::GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+            kReadyTimeout,
+            "node did not reach the reviewed-trust checkpoint" );
+
+        const auto network_config = fixture.path / "reviewed-trust-network.json";
+        const auto database_path  = fixture.path / "reviewed-trust-globaldb";
+        std::filesystem::create_directories( database_path );
+        std::ofstream composition_file( network_config );
+        ASSERT_TRUE( composition_file.good() );
+        composition_file << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+                         << fixture.node->GetPubSub()->GetInterfaceAddress() << R"("]})";
+        composition_file.close();
+
+        const std::string topic( sgns::TransactionManager::GNUS_FULL_NODES_TOPIC );
+        sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
+        composition_config.network_config_path = network_config.string();
+        composition_config.database_path       = database_path.string();
+        composition_config.listen_topic        = topic;
+        composition_config.broadcast_topic     = topic;
+        auto composition_result = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
+        ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
+        auto composition = composition_result.value();
+        ASSERT_TRUE( composition->Start().has_value() );
+
+        auto secure_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
+        auto store = sgns::trustedpeer::TrustStateStore::Open( ( fixture.path / "reviewed-trust-state" ).string(), 144 );
+        ASSERT_TRUE( store.has_value() ) << store.error().message();
+
+        sgns::trustedpeer::GenesisManifest manifest;
+        manifest.network_id              = 144;
+        manifest.bootstrapper_public_key = fixture.authority->GetAddress();
+        manifest.peers                   = { fixture.authority->GetAddress() };
+        manifest.membership_threshold    = 1;
+        manifest.burn_threshold          = 1;
+        const auto canonical             = manifest.Canonicalized();
+        ASSERT_TRUE( canonical.has_value() );
+        const auto manifest_bytes = canonical->CanonicalBytes();
+        ASSERT_TRUE( manifest_bytes.has_value() );
+
+        auto registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+            secure_crdt,
+            store.value(),
+            *canonical,
+            fixture.authority->Sign( *manifest_bytes ),
+            fixture.authority->GetAddress(),
+            [authority = fixture.authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
+        ASSERT_TRUE( registry.has_value() ) << registry.error().message();
+        ASSERT_TRUE( secure_crdt->RegisterFilters() );
+        auto submitted = registry.value()->SubmitReviewedGenesisApproval();
+        ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+
+        sgns::test::assertWaitForCondition(
+            [&] { return fixture.node->GetState() == sgns::GeniusNode::NodeState::READY; },
+            kReadyTimeout,
+            "reviewed trust and deterministic initial burn did not reach READY" );
+    }
+
     bool RequireActiveGeneration( const std::shared_ptr<sgns::GeniusNode> &node )
     {
         const auto address = node->GetActiveAccountAddress();
@@ -89,23 +204,35 @@ protected:
         DEV_CONFIG2.BaseWritePath = binary_path + "/node2/";
         DEV_CONFIG3.BaseWritePath = binary_path + "/node3/";
 
-        // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
-        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+        auto proc1_fixture = CreateTrustedNode(
+            DEV_CONFIG2,
+            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "Full",
+            true,
+            true );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( proc1_fixture.authority->GetAddress() );
+        SubmitReviewedTrustAndAwaitReady( proc1_fixture );
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                           sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
-        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
-                            sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
-        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
-                            sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        auto main_fixture = CreateTrustedNode(
+            DEV_CONFIG,
+            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "Light",
+            false,
+            false );
+        main_fixture.node->AddPeer( proc1_fixture.node->GetPubSub()->GetInterfaceAddress() );
+        SubmitReviewedTrustAndAwaitReady( main_fixture );
+
+        auto proc2_fixture = CreateTrustedNode(
+            DEV_CONFIG3,
+            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "Light",
+            true,
+            false );
+        proc2_fixture.node->AddPeer( proc1_fixture.node->GetPubSub()->GetInterfaceAddress() );
+        SubmitReviewedTrustAndAwaitReady( proc2_fixture );
+        node_main  = std::move( main_fixture.node );
+        node_proc1 = std::move( proc1_fixture.node );
+        node_proc2 = std::move( proc2_fixture.node );
 
         ASSERT_TRUE( RequireActiveGeneration( node_proc1 ) );
         node_proc1->StopProcessing();
@@ -257,51 +384,47 @@ TEST_F( ProcessingMultiTest, ProcessOne )
 {
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
     std::string json_data = R"(
-                {
-                "data": {
-                    "type": "file",
-                    "URL": "file://[basepath]../../../../test/src/processing_nodes/"
-                },
-                "model": {
-                    "name": "mnnimage",
-                    "file": "model.mnn"
-                },
-                "input": [
-                    {
-                        "image": "data/ballet.data",
-                        "block_len": 4860000 ,
-                        "block_line_stride": 5400,
-                        "block_stride": 0,
-                        "chunk_line_stride": 1080,
-                        "chunk_offset": 0,
-                        "chunk_stride": 4320,
-                        "chunk_subchunk_height": 5,
-                        "chunk_subchunk_width": 5,
-                        "chunk_count": 25,
-                        "channels": 4
-                    },
-                    {
-                        "image": "data/frisbee3.data",
-                        "block_len": 786432 ,
-                        "block_line_stride": 1536,
-                        "block_stride": 0,
-                        "chunk_line_stride": 384,
-                        "chunk_offset": 0,
-                        "chunk_stride": 1152,
-                        "chunk_subchunk_height": 4,
-                        "chunk_subchunk_width": 4,
-                        "chunk_count": 16,
-                        "channels": 3
-                    }
-                ]
-                }
+{
+  "name": "processing-multi-single-job",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "test",
+  "description": "Processing-multi single job",
+  "tags": ["test"],
+  "inputs": [{
+    "name": "ballet_image",
+    "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+    "type": "texture2D",
+    "description": "Ballet pose image input",
+    "dimensions": {
+      "width": 1350, "height": 900, "block_len": 4860000,
+      "block_line_stride": 5400, "block_stride": 0, "chunk_line_stride": 1080,
+      "chunk_offset": 0, "chunk_stride": 4320, "chunk_subchunk_height": 5,
+      "chunk_subchunk_width": 5, "chunk_count": 25
+    },
+    "format": "RGBA8"
+  }],
+  "outputs": [{
+    "name": "ballet_keypoints", "source_uri_param": "dummy", "type": "tensor",
+    "description": "Detected keypoints", "dimensions": {"width": 17, "height": 3}, "format": "FLOAT32"
+  }],
+  "passes": [{
+    "name": "ballet_pose_inference", "type": "inference", "description": "Run PoseNet inference",
+    "model": {
+      "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+      "format": "MNN", "batch_size": 1,
+      "input_nodes": [{"name": "input", "type": "texture2D", "source": "input:ballet_image", "shape": [1, 256, 256, 4]}],
+      "output_nodes": [{"name": "output", "type": "tensor", "target": "output:ballet_keypoints", "shape": [1, 17, 3]}]
+    }
+  }]
+}
                )";
     ASSERT_TRUE( RequireActiveGeneration( node_proc1 ) );
     node_proc1->StartProcessing();
+    boost::replace_all( json_data, "[basepath]", bin_path );
     auto procmgr = sgns::sgprocessing::ProcessingManager::Create( json_data );
     ASSERT_FALSE( procmgr.has_error() ) << procmgr.error().message();
     auto cost = node_main->GetProcessCost( procmgr.value() );
-    boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
     const auto balance_main  = ActiveBalance( node_main );
     const auto balance_node1 = ActiveBalance( node_proc1 );
