@@ -66,6 +66,49 @@ namespace sgns
         enum class Error : uint8_t
         {
             TRUST_POLICY_NOT_READY = 1,
+            MANAGER_RETIRED,
+        };
+
+        /// Lifecycle of an account-generation transaction manager.  Admission is
+        /// the sole linearization point for externally initiated mutations.
+        enum class ManagerLifecycle : uint8_t
+        {
+            ACTIVE,
+            DRAINING,
+            RETIRED,
+        };
+
+        struct RetirementSnapshot
+        {
+            ManagerLifecycle lifecycle{ ManagerLifecycle::ACTIVE };
+            uint64_t         generation{ 0 };
+            size_t           admitted_operations{ 0 };
+        };
+
+        /** Move-only proof that a mutation crossed the admission boundary. */
+        class AdmittedOperation
+        {
+        public:
+            AdmittedOperation() = default;
+            AdmittedOperation( const AdmittedOperation & ) = delete;
+            AdmittedOperation &operator=( const AdmittedOperation & ) = delete;
+            AdmittedOperation( AdmittedOperation &&other ) noexcept;
+            AdmittedOperation &operator=( AdmittedOperation &&other ) noexcept;
+            ~AdmittedOperation();
+
+            [[nodiscard]] uint64_t generation() const noexcept { return generation_; }
+            [[nodiscard]] bool     valid() const noexcept { return manager_ != nullptr && id_ != 0; }
+
+        private:
+            friend class TransactionManager;
+            AdmittedOperation( TransactionManager *manager, uint64_t id, uint64_t generation ) noexcept :
+                manager_( manager ), id_( id ), generation_( generation )
+            {
+            }
+
+            TransactionManager *manager_{ nullptr };
+            uint64_t            id_{ 0 };
+            uint64_t            generation_{ 0 };
         };
 
         /**
@@ -141,6 +184,14 @@ namespace sgns
             std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider = nullptr );
 
         ~TransactionManager();
+
+        /** Attempts one externally visible mutation admission. */
+        outcome::result<AdmittedOperation> TryAdmit();
+        /** Stops new admission; previously admitted work is allowed to terminalize. */
+        void CloseAdmission();
+        /** A value-only diagnostic that remains stable after retirement. */
+        RetirementSnapshot GetRetirementSnapshot() const;
+        [[nodiscard]] ManagerLifecycle GetLifecycle() const;
 
         void Start();
         void RegisterTopicNames();
@@ -561,7 +612,22 @@ namespace sgns
          */
         void OnProposalTimeoutCleanup( const std::string &tx_hash );
 
+        void CompleteAdmittedOperation( AdmittedOperation &operation );
+        void BindAdmittedOperation( AdmittedOperation &operation, const std::string &transaction_id );
+        void CompleteAdmittedTransaction( const std::string &transaction_id );
+        void RetireIfDrainedLocked();
+
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
+
+        // Keep this mutex disjoint from queue, state, wait and account locks.  It
+        // protects only admission/terminal-ledger bookkeeping.
+        mutable std::mutex                   admission_mutex_;
+        ManagerLifecycle                     lifecycle_{ ManagerLifecycle::ACTIVE };
+        uint64_t                             manager_generation_{ 0 };
+        uint64_t                             next_admitted_operation_id_{ 1 };
+        std::unordered_map<uint64_t, std::string> admitted_operations_;
+        std::unordered_map<std::string, uint64_t> admitted_transaction_ids_;
+        RetirementSnapshot                   retirement_snapshot_{};
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;

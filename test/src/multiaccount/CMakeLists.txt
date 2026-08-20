@@ -7,6 +7,7 @@ target_include_directories(multi_account_test PRIVATE ${AsyncIOManager_INCLUDE_D
 target_link_libraries(multi_account_test
     genius_node_test
     json_secure_storage
+    base_crdt_test
 )
 
 if(WIN32)

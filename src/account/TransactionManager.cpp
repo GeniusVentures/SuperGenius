@@ -40,6 +40,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
     {
         case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
             return "TRUST_POLICY_NOT_READY";
+        case sgns::TransactionManager::Error::MANAGER_RETIRED:
+            return "MANAGER_RETIRED";
     }
     return "Unknown TransactionManager error";
 }
@@ -338,6 +340,99 @@ namespace sgns
             metrics_tracking_fail_.load() );
 
         Stop();
+    }
+
+    TransactionManager::AdmittedOperation::AdmittedOperation( AdmittedOperation &&other ) noexcept :
+        manager_( std::exchange( other.manager_, nullptr ) ),
+        id_( std::exchange( other.id_, 0 ) ),
+        generation_( std::exchange( other.generation_, 0 ) )
+    {
+    }
+
+    TransactionManager::AdmittedOperation &TransactionManager::AdmittedOperation::operator=( AdmittedOperation &&other ) noexcept
+    {
+        if ( this != &other )
+        {
+            if ( manager_ ) manager_->CompleteAdmittedOperation( *this );
+            manager_    = std::exchange( other.manager_, nullptr );
+            id_         = std::exchange( other.id_, 0 );
+            generation_ = std::exchange( other.generation_, 0 );
+        }
+        return *this;
+    }
+
+    TransactionManager::AdmittedOperation::~AdmittedOperation()
+    {
+        if ( manager_ ) manager_->CompleteAdmittedOperation( *this );
+    }
+
+    outcome::result<TransactionManager::AdmittedOperation> TransactionManager::TryAdmit()
+    {
+        std::lock_guard lock( admission_mutex_ );
+        const auto       id = next_admitted_operation_id_++;
+        admitted_operations_.emplace( id, std::string{} );
+        return AdmittedOperation( this, id, manager_generation_ );
+    }
+
+    void TransactionManager::CloseAdmission()
+    {
+        std::lock_guard lock( admission_mutex_ );
+        lifecycle_ = ManagerLifecycle::DRAINING;
+    }
+
+    TransactionManager::RetirementSnapshot TransactionManager::GetRetirementSnapshot() const
+    {
+        std::lock_guard lock( admission_mutex_ );
+        auto            snapshot = retirement_snapshot_;
+        snapshot.lifecycle = lifecycle_;
+        snapshot.generation = manager_generation_;
+        snapshot.admitted_operations = admitted_operations_.size();
+        return snapshot;
+    }
+
+    TransactionManager::ManagerLifecycle TransactionManager::GetLifecycle() const
+    {
+        std::lock_guard lock( admission_mutex_ );
+        return lifecycle_;
+    }
+
+    void TransactionManager::CompleteAdmittedOperation( AdmittedOperation &operation )
+    {
+        std::lock_guard lock( admission_mutex_ );
+        if ( operation.manager_ != this || operation.id_ == 0 ) return;
+        const auto it = admitted_operations_.find( operation.id_ );
+        if ( it != admitted_operations_.end() )
+        {
+            if ( !it->second.empty() ) admitted_transaction_ids_.erase( it->second );
+            admitted_operations_.erase( it );
+        }
+        operation.manager_ = nullptr;
+        operation.id_ = 0;
+    }
+
+    void TransactionManager::BindAdmittedOperation( AdmittedOperation &operation, const std::string &transaction_id )
+    {
+        std::lock_guard lock( admission_mutex_ );
+        if ( operation.manager_ != this || operation.id_ == 0 ) return;
+        auto it = admitted_operations_.find( operation.id_ );
+        if ( it == admitted_operations_.end() ) return;
+        it->second = transaction_id;
+        admitted_transaction_ids_[transaction_id] = operation.id_;
+        operation.manager_ = nullptr;
+        operation.id_ = 0;
+    }
+
+    void TransactionManager::CompleteAdmittedTransaction( const std::string &transaction_id )
+    {
+        std::lock_guard lock( admission_mutex_ );
+        const auto transaction_it = admitted_transaction_ids_.find( transaction_id );
+        if ( transaction_it == admitted_transaction_ids_.end() ) return;
+        admitted_operations_.erase( transaction_it->second );
+        admitted_transaction_ids_.erase( transaction_it );
+    }
+
+    void TransactionManager::RetireIfDrainedLocked()
+    {
     }
 
     void TransactionManager::Stop()

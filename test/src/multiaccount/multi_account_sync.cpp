@@ -46,9 +46,11 @@
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "testutil/storage/base_crdt_test.hpp"
 
 using namespace sgns;
 
@@ -120,6 +122,11 @@ namespace sgns
             return node ? node->transaction_manager_ : nullptr;
         }
 
+        static void SetTransactionManagerState( TransactionManager &manager, TransactionManager::State state )
+        {
+            manager.ChangeState( state );
+        }
+
         static uint64_t GetTransactionManagerConstructionCount( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->transaction_manager_construction_count_.load() : 0;
@@ -171,10 +178,33 @@ namespace sgns
 
 } // namespace sgns
 
-class MultiAccountTest : public ::testing::Test
+class MultiAccountTest : public ::test::CRDTFixture
 {
 protected:
     static constexpr std::string_view FILE_PREFIX = "mat_";
+
+    MultiAccountTest() : ::test::CRDTFixture( "multi_account_sync" )
+    {
+    }
+
+    std::shared_ptr<TransactionManager> CreateLifecycleManager()
+    {
+        auto account = GeniusAccount::New( TokenID::FromBytes( { 0x00 } ), base_path / "phase14_lifecycle_account" );
+        EXPECT_TRUE( account );
+        if ( !account ) return nullptr;
+        EXPECT_TRUE( account->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
+        (void) account->ConfigureDatabaseDependencies( db_ );
+        auto blockchain = Blockchain::New( db_, account, pubs_, []( outcome::result<void> ) {} );
+        EXPECT_TRUE( blockchain );
+        if ( !blockchain ) return nullptr;
+        auto manager = TransactionManager::New( db_, io_, account, blockchain );
+        EXPECT_TRUE( manager );
+        if ( !manager ) return nullptr;
+        manager->RegisterTopicNames();
+        account->SetPeerConfirmedNonce( 0, account->GetAddress() );
+        sgns::MultiAccountTestAccess::SetTransactionManagerState( *manager, TransactionManager::State::READY );
+        return manager;
+    }
 
     static std::string DeterministicKey( const std::string &self_address )
     {
@@ -407,6 +437,7 @@ protected:
 
     void SetUp() override
     {
+        ::test::CRDTFixture::SetUp();
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
@@ -699,6 +730,59 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
         ASSERT_EQ( observed.generation, observed.catchup_generation ) << "CR-11 generation mismatch";
     }
     ASSERT_EQ( stale_callback_side_effects.load(), 0U ) << "CR-11 generation mismatch";
+}
+
+TEST_F( MultiAccountTest, AccountGenerationAdmissionBoundaryIsLinearizable )
+{
+    auto manager = CreateLifecycleManager();
+    ASSERT_TRUE( manager );
+
+    auto admitted = manager->TryAdmit();
+    ASSERT_TRUE( admitted.has_value() );
+    manager->CloseAdmission();
+    auto rejected = manager->TryAdmit();
+    EXPECT_TRUE( rejected.has_error() ) << "[PHASE14-01-RED-ADMISSION]";
+}
+
+TEST_F( MultiAccountTest, RetiredManagerRejectsEveryMutationEntryPoint )
+{
+    auto manager = CreateLifecycleManager();
+    ASSERT_TRUE( manager );
+
+    manager->CloseAdmission();
+    const auto result = manager->TransferFunds( 1, "0x0000000000000000000000000000000000000000", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_EQ( result.error().message(), "MANAGER_RETIRED" ) << "[PHASE14-01-RED-PUBLIC-SURFACE]";
+}
+
+TEST_F( MultiAccountTest, RetiredManagerDiagnosticsAreImmutable )
+{
+    auto manager = CreateLifecycleManager();
+    ASSERT_TRUE( manager );
+
+    manager->CloseAdmission();
+    const auto before = manager->GetRetirementSnapshot();
+    const auto after  = manager->GetRetirementSnapshot();
+    EXPECT_EQ( before.lifecycle, TransactionManager::ManagerLifecycle::RETIRED )
+        << "[PHASE14-01-RED-DIAGNOSTICS]";
+    EXPECT_EQ( before.generation, after.generation );
+    EXPECT_EQ( before.admitted_operations, after.admitted_operations );
+}
+
+TEST_F( MultiAccountTest, RetiredManagerDeliversAcceptedTerminalOutcomeWithOldGeneration )
+{
+    auto manager = CreateLifecycleManager();
+    ASSERT_TRUE( manager );
+
+    auto admitted = manager->TryAdmit();
+    ASSERT_TRUE( admitted.has_value() );
+    const auto admitted_generation = admitted.value().generation();
+    manager->CloseAdmission();
+    admitted = outcome::failure( std::errc::operation_canceled );
+    const auto snapshot = manager->GetRetirementSnapshot();
+    EXPECT_EQ( snapshot.lifecycle, TransactionManager::ManagerLifecycle::RETIRED )
+        << "[PHASE14-01-RED-ATTRIBUTION]";
+    EXPECT_EQ( snapshot.generation, admitted_generation );
 }
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
