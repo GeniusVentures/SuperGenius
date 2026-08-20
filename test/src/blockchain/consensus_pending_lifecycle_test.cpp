@@ -106,6 +106,11 @@ namespace sgns
             return entry.has_value() && entry->state == crdt::CRDTWorkJournal::State::Stalled;
         }
 
+        static bool HasCertificateWork( const std::shared_ptr<ConsensusManager> &manager, const std::string &key )
+        {
+            return manager->certificate_work_journal_->GetEntry( key ).has_value();
+        }
+
         static outcome::result<bool> HasAcceptedCertificateForSlot( const std::shared_ptr<ConsensusManager> &manager,
                                                                      const std::string                       &slot_key )
         {
@@ -1372,6 +1377,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, other_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, other_legacy_key ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, certificate.value() );
