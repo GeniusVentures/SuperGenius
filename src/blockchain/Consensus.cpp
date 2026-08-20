@@ -618,6 +618,13 @@ namespace sgns
             {
                 // An incomplete legacy scan is never evidence that a slot is unfinalized.
                 slot_state.certificate_scan_pending = true;
+                if ( std::none_of( slot_state.scan_pending_candidates.begin(),
+                                   slot_state.scan_pending_candidates.end(),
+                                   [&proposal]( const Proposal &candidate )
+                                   { return candidate.proposal_id() == proposal.proposal_id(); } ) )
+                {
+                    slot_state.scan_pending_candidates.push_back( proposal );
+                }
                 return;
             }
             slot_state.certificate_scan_pending = false;
@@ -632,6 +639,17 @@ namespace sgns
             if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
             {
                 slot_state.candidate_deadline = now + candidate_window_;
+                for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
+                {
+                    if ( std::none_of( slot_state.eligible_candidates.begin(),
+                                       slot_state.eligible_candidates.end(),
+                                       [&pending_candidate]( const Proposal &candidate )
+                                       { return candidate.proposal_id() == pending_candidate.proposal_id(); } ) )
+                    {
+                        slot_state.eligible_candidates.push_back( pending_candidate );
+                    }
+                }
+                slot_state.scan_pending_candidates.clear();
             }
             if ( now >= slot_state.candidate_deadline )
             {
@@ -1320,8 +1338,43 @@ namespace sgns
             std::lock_guard lock( proposals_mutex_ );
             for ( auto &[slot_key, slot_state] : slot_states_ )
             {
-                if ( slot_state.active_vote_locked || slot_state.candidates_frozen ||
-                    slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
+                if ( slot_state.active_vote_locked || slot_state.candidates_frozen )
+                {
+                    continue;
+                }
+                if ( slot_state.certificate_scan_pending )
+                {
+                    auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+                    if ( accepted_certificate.has_error() )
+                    {
+                        continue;
+                    }
+                    slot_state.certificate_scan_pending = false;
+                    if ( accepted_certificate.value() )
+                    {
+                        slot_state.active_vote_locked = true;
+                        slot_state.candidates_frozen  = true;
+                        continue;
+                    }
+                    if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
+                    {
+                        // No window existed while the scan was unavailable. Start the
+                        // fixed window at recovery, retaining every validated contender.
+                        slot_state.candidate_deadline = now_steady + candidate_window_;
+                        for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
+                        {
+                            if ( std::none_of( slot_state.eligible_candidates.begin(),
+                                               slot_state.eligible_candidates.end(),
+                                               [&pending_candidate]( const Proposal &candidate )
+                                               { return candidate.proposal_id() == pending_candidate.proposal_id(); } ) )
+                            {
+                                slot_state.eligible_candidates.push_back( pending_candidate );
+                            }
+                        }
+                        slot_state.scan_pending_candidates.clear();
+                    }
+                }
+                if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} ||
                     now_steady < slot_state.candidate_deadline )
                 {
                     continue;
