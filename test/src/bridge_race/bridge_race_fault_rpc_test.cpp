@@ -49,7 +49,10 @@ namespace
 
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
-        auto &validator = tx_mgr_result.value()->GetPublicChainInputValidator();
+        auto manager = tx_mgr_result.value();
+        ASSERT_EQ( manager->GetLifecycle(), TransactionManager::ManagerLifecycle::ACTIVE )
+            << "node transaction manager retired before fault injection";
+        auto &validator = manager->GetPublicChainInputValidator();
 
         // Factory-dispatch lambda keyed on exact URL match (08-PATTERNS.md Pattern 3).
         validator.SetTransportFactory(
