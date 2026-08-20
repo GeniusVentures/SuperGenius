@@ -192,6 +192,66 @@ def strip_comments_and_strings(text):
             index += 1
     return "".join(output)
 
+def genius_node_receivers(text):
+    """Return simple receiver expressions proved to have GeniusNode type.
+
+    This audit intentionally stays declaration-driven rather than treating a
+    method spelling as proof of a receiver type.  The API shares several names
+    (notably GetAddress and GetBalance) with accounts, UTXO managers, and
+    TransactionManager.  Recognise only local/member variables declared as a
+    GeniusNode smart pointer/reference/value, plus ``auto`` values constructed
+    directly by GeniusNode::New.  The resulting set is deliberately small and
+    deterministic; callers using another abstraction must expose a real
+    GeniusNode declaration before they enter this migration manifest.
+    """
+    qualified = r"(?:sgns::)?GeniusNode"
+    receivers = set()
+    pointer = re.compile(
+        rf"(?:\bconst\s+)?std::(?:shared_ptr|unique_ptr)\s*<\s*(?:const\s+)?{qualified}\s*>"
+        rf"\s*(?:const\s*)?[&*]?\s*([A-Za-z_]\w*)"
+    )
+    direct = re.compile(rf"\b(?:const\s+)?{qualified}\s*[&*]?\s*([A-Za-z_]\w*)")
+    constructed = re.compile(
+        rf"\bauto\s+(?:const\s+)?([A-Za-z_]\w*)\s*=\s*(?:{qualified})::New\s*\("
+    )
+    for pattern in (pointer, direct, constructed):
+        receivers.update(pattern.findall(text))
+    return receivers
+
+def genius_node_calls(text, receivers, include_definitions=False):
+    """Find only calls whose receiver is a proved GeniusNode expression."""
+    methods = "|".join(CALL_METHODS)
+    call = re.compile(
+        rf"\b(?P<receiver>[A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)?)\s*"
+        rf"(?P<operator>->|\.)\s*(?P<method>{methods})\s*\("
+    )
+    found = set()
+    for match in call.finditer(text):
+        receiver = re.sub(r"\s+", "", match.group("receiver"))
+        if receiver in receivers:
+            found.add(match.group("method"))
+    if include_definitions:
+        definitions = re.compile(rf"\bGeniusNode::(?P<method>{methods})\s*\(")
+        found.update(match.group("method") for match in definitions.finditer(text))
+    return found
+
+def check_receiver_self_test():
+    """Keep the audit's type and lexer boundary from silently regressing."""
+    sample = r'''
+        std::shared_ptr<sgns::GeniusNode> node;
+        const std::shared_ptr<GeniusNode> &node_ref = node;
+        node->GetBalance();
+        node_ref.GetAddress();
+        // node->GetBalance();
+        const char *text = "node->GetBalance()";
+        account->GetAddress();
+        manager.CountTransactions();
+        helper.GetBalance();
+    '''
+    calls = genius_node_calls(strip_comments_and_strings(sample), genius_node_receivers(sample))
+    if calls != {"GetBalance", "GetAddress"}:
+        raise SystemExit("receiver self-check failed: real GeniusNode calls were lost or false positives accepted")
+
 def rows(commands):
     targets = targets_by_source(commands)
     rows = []
@@ -201,25 +261,14 @@ def rows(commands):
                      "identity_kind": identity_for(contract), "source": "src/account/GeniusNode.hpp",
                      "targets": ";".join(sorted(targets.get("src/account/GeniusNode.hpp", {"genius_node_test"}))),
                      "owner_plan": "14-06", "disposition": "migrate"})
-    call = re.compile(r"(?:->|\.|\bGeniusNode::)\s*(%s)\s*\(" % "|".join(CALL_METHODS))
-    fixture_call = re.compile(
-        r"(?:\bnode_?[A-Za-z0-9_]*|fixture\.node)\s*(?:->|\.)\s*(%s)\s*\(" % "|".join(CALL_METHODS))
     for path in discover_sources():
         rel = path.relative_to(ROOT).as_posix()
         if rel == "src/account/GeniusNode.hpp":
             continue
         raw_text = path.read_text(errors="ignore")
-        # Plan 14-12's two omitted caller sources contain raw JSON URLs.  Use
-        # the lexer for that partition so ``://`` cannot hide later calls;
-        # preserve the established discovery baseline for every already-owned
-        # partition until its dedicated plan updates it.
-        if rel in PLAN_14_12_TARGETS:
-            text = strip_comments_and_strings(raw_text)
-        else:
-            text = re.sub(r"/\*.*?\*/", "", raw_text, flags=re.S)
-            text = re.sub(r"//[^\n]*|\"(?:\\.|[^\"])*\"", "", text)
-        matcher = fixture_call if rel in FIXTURE_SOURCES else call
-        found = sorted(set(matcher.findall(text)))
+        text = strip_comments_and_strings(raw_text)
+        found = sorted(genius_node_calls(
+            text, genius_node_receivers(text), include_definitions=rel == "src/account/GeniusNode.cpp"))
         for called_method in found:
             method = CALL_METHODS[called_method]
             # The shared bridge-race fixture owns a separately constructed account
@@ -341,6 +390,7 @@ def main():
     parser.add_argument("--targets-output", type=pathlib.Path)
     parser.add_argument("--sources-output", type=pathlib.Path)
     args = parser.parse_args()
+    check_receiver_self_test()
     if args.write_inventory:
         generated = rows(args.compile_commands)
         previous_dispositions = {}
@@ -354,7 +404,7 @@ def main():
                 (row["method"], row["source"], row["targets"]), row["disposition"] )
         args.write_inventory.parent.mkdir(parents=True, exist_ok=True)
         with args.write_inventory.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=FIELDS, delimiter="\t")
+            writer = csv.DictWriter(stream, fieldnames=FIELDS, delimiter="\t", lineterminator="\n")
             writer.writeheader(); writer.writerows(generated)
     if args.check_assigned:
         check(read_inventory(args.inventory), set(filter(None, args.owners.split(","))))
