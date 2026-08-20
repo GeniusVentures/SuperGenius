@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 14
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-08-20T13:49:38.774Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-08-20T14:08:00.866Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 18
   completed_phases: 6
   total_plans: 52
-  completed_plans: 38
+  completed_plans: 39
   percent: 33
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 14 (Account-generation publication and retired-manager lifecycle safety) — EXECUTING
-Plan: 2 of 15
+Plan: 3 of 15
 Status: Ready to execute
 Last activity: 2026-08-20
 
@@ -67,8 +67,8 @@ Last activity: 2026-08-20
 
 ## Session
 
-**Last session:** 2026-08-20T13:49:12.914Z
-**Stopped At:** Phase 14 context gathered
+**Last session:** 2026-08-20T14:08:00.861Z
+**Stopped At:** Completed 14-02-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -119,6 +119,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 14 P01 | 25 min | 2 tasks | 8 files |
+| Phase 14 P02 | 14min | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -184,3 +185,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: One refresh cycle is exactly attempts 1 through 7 with 100/200/400/800/1600/3200ms delays; duplicate requests coalesce and exhaustion returns the dispatcher to idle. — The fixed cap and exact observability close retry storms while preserving autonomous recovery from transient discovery failures.
 - [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
 - [Phase 14]: Admission is the single lifecycle linearization point; accepted work stays in a transaction-ID ledger until terminalization.
+- [Phase 14]: GeniusNode selection acknowledges a generation before readiness; only the complete owner bundle publishes ready.
+- [Phase 14]: Configured identity stays private and checked active accessors distinguish switching from unavailable.
+- [Phase 14]: Account-bound API callers are generated into one exact staged migration manifest before caller adaptation.
