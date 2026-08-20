@@ -957,6 +957,7 @@ namespace sgns
         std::chrono::milliseconds candidate_window_{ std::chrono::seconds( 2 ) }; ///< Fixed local contender window.
         std::chrono::milliseconds active_vote_retry_interval_{ std::chrono::milliseconds( 500 ) }; ///< Bounded replay cadence.
         bool fail_active_vote_persistence_for_test_ = false; ///< Friend-scoped deterministic failure seam.
+        bool fail_active_vote_removal_for_test_ = false; ///< Friend-scoped durable-release failure seam.
         std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
