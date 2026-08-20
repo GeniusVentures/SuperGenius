@@ -137,7 +137,7 @@ Plans:
 **Goal:** Publish only complete ready account generations, close old-manager admission at accepted selection, preserve already-admitted terminal work, and make failed or retired generations explicitly unavailable and permanently non-mutable.
 **Requirements**: TBD
 **Depends on:** Phase 13
-**Plans:** 2/15 plans executed
+**Plans:** 3/15 plans executed
 Plans:
 **Wave 1**
 
@@ -149,7 +149,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 14-03-PLAN.md — Production TransactionManager caller migration and target builds
+- [x] 14-03-PLAN.md — Production TransactionManager caller migration and target builds
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
