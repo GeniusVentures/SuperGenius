@@ -60,12 +60,24 @@ PLAN_14_09_SOURCES = {
     "test/src/multiaccount/policy_lifetime_multi_account_test.cpp",
 }
 
+# Bridge E2E callers form their own source/target partition.  The bridge-race
+# fixtures remain exclusively with Plan 14-11 and must not satisfy 14-10 proof.
+PLAN_14_10_SOURCES = {
+    "test/src/bridge_e2e/bridge_e2e_test.cpp",
+    "test/src/bridge_e2e/bridge_anvil_e2e_test.cpp",
+    "test/src/bridge_e2e/bridge_anvil_catchup_e2e_test.cpp",
+    "test/src/bridge_e2e/bridge_sepolia_e2e_test.cpp",
+    "test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp",
+}
+
 def owner_for(source):
     s = source.replace("\\", "/")
     if s in {"src/account/GeniusNode.cpp", "src/account/GeniusNode.hpp", "test/src/node/node_initialization_progress.cpp"}:
         return "14-06"
-    if "/bridge_race/" in s or "/bridge/" in s and "test/" in s:
-        return "14-11" if "race" in s else "14-10"
+    if "/bridge_race/" in s:
+        return "14-11"
+    if s in PLAN_14_10_SOURCES:
+        return "14-10"
     if "/multiaccount/" in s:
         return "14-09"
     if "/processing_multi/" in s or "/NodeExample.cpp" in s:
@@ -201,6 +213,8 @@ def check_migrated(inventory, commands, owner):
         owned = [row for row in owned if row["source"] in PLAN_14_08_SOURCES]
     if owner == "14-09":
         owned = [row for row in owned if row["source"] in PLAN_14_09_SOURCES]
+    if owner == "14-10":
+        owned = [row for row in owned if row["source"] in PLAN_14_10_SOURCES]
     pending = [row["expression"] for row in owned if row["disposition"] != "migrated"]
     if pending:
         raise SystemExit("unmigrated owner rows: " + ", ".join(pending))
