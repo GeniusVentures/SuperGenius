@@ -54,6 +54,34 @@
 
 using namespace sgns;
 
+namespace
+{
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
+    uint64_t RequireActiveBalance( const std::shared_ptr<GeniusNode> &node )
+    {
+        (void)RequireActiveAddress( node );
+        return node->GetBalance();
+    }
+
+    size_t RequireActiveTransactionCount(
+        const std::shared_ptr<GeniusNode> &node,
+        std::optional<TransactionManager::TransactionStatus> status = std::nullopt )
+    {
+        (void)RequireActiveAddress( node );
+        return node->CountTransactions( status );
+    }
+} // namespace
+
 namespace sgns
 {
     class MultiAccountTestAccess
@@ -649,7 +677,7 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
     ASSERT_TRUE( node );
     WaitForReady( node );
 
-    const auto original_address = node->GetAddress();
+    const auto original_address = RequireActiveAddress( node );
     const auto replacement_key  = DeterministicKey( "concurrent_account_generation_replacement" );
     ASSERT_TRUE( node->AddAccountWithKey( replacement_key.c_str() ).has_value() );
     const auto accounts = node->GetAvailableAccounts();
@@ -707,9 +735,18 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
             do
             {
                 auto observed = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
-                (void) node->GetAddress();
-                (void) node->GetTransactionManager();
-                (void) node->GetBalance();
+                const auto active_address = node->GetActiveAccountAddress();
+                if ( active_address.has_error() )
+                {
+                    EXPECT_TRUE( active_address.error().message() == "SWITCH_IN_PROGRESS" ||
+                                 active_address.error().message() == "ACCOUNT_UNAVAILABLE" );
+                }
+                else
+                {
+                    ASSERT_FALSE( active_address.value().empty() );
+                    ASSERT_TRUE( node->GetTransactionManager().has_value() );
+                    (void)RequireActiveBalance( node );
+                }
                 std::lock_guard<std::mutex> lock( observed_mutex );
                 observed_generations.push_back( std::move( observed ) );
                 std::this_thread::yield();
@@ -721,7 +758,11 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
         {
             arrive_at_selection_barrier();
             sgns::test::assertWaitForCondition(
-                [&] { return node->GetAddress() != original_address; },
+                [&]
+                {
+                    const auto active_address = node->GetActiveAccountAddress();
+                    return active_address.has_value() && active_address.value() != original_address;
+                },
                 std::chrono::milliseconds( 50000 ),
                 "account selection did not publish a replacement" );
             const auto callback_generation = sgns::MultiAccountTestAccess::InjectCatchupCallback(
@@ -782,6 +823,12 @@ TEST_F( MultiAccountTest, AccountGenerationProcessingStatusTracksLifecycle )
     GeniusNode::AccountProcessingStatus status;
     EXPECT_EQ( status.generation, 0U );
     EXPECT_EQ( status.status.status, processing::ProcessingServiceImpl::Status::DISABLED );
+
+    auto node = CreateNode( "account_generation_processing_status", true, false, true );
+    ASSERT_TRUE( node );
+    const auto active = node->GetActiveProcessingStatus();
+    ASSERT_TRUE( active.has_error() );
+    EXPECT_EQ( active.error().message(), "ACCOUNT_UNAVAILABLE" );
 }
 
 TEST_F( MultiAccountTest, RetiredManagerRejectsEveryMutationEntryPoint )

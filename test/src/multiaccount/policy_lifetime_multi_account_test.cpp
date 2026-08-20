@@ -217,6 +217,17 @@ namespace
         "04071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6021";
     const TokenID TOKEN_ID = TokenID::FromBytes( { 0x00 } );
 
+    std::string RequireActiveAddress( const std::shared_ptr<GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account address: " << address.error().message();
+            return {};
+        }
+        return address.value();
+    }
+
     outcome::result<void> CommitBatch( storage::rocksdb                         &database,
                                        const std::vector<TrustStateStore::Write> &writes )
     {
@@ -437,7 +448,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBe
         },
         std::chrono::seconds( 30 ),
         "pinned trust signer did not reach durable initial burn value 100" ) );
-    EXPECT_EQ( node_a->GetAddress(), replacement_address );
+    EXPECT_EQ( RequireActiveAddress( node_a ), replacement_address );
 }
 
 TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAfterReadiness )
@@ -535,7 +546,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
         },
         std::chrono::seconds( 30 ),
         "exact successor did not activate under the pinned trust signer" ) );
-    EXPECT_EQ( node_a->GetAddress(), replacement_address );
+    EXPECT_EQ( RequireActiveAddress( node_a ), replacement_address );
     EXPECT_EQ( MultiAccountTestAccess::ManagerAccountAddress( node_a ), replacement_address );
     EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_a ) ).get(),
                provider.get() );
@@ -554,7 +565,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     Blockchain::SetAuthorizedFullNodeAddress( operator_a_signer->GetAddress() );
     auto node_a = NewNode( path_ / "operator-a", OPERATOR_A_KEY, peers, operator_a_signer->GetAddress() );
     ASSERT_TRUE( node_a );
-    Blockchain::SetAuthorizedFullNodeAddress( node_a->GetAddress() );
+    Blockchain::SetAuthorizedFullNodeAddress( RequireActiveAddress( node_a ) );
     const auto bootstrap_address = node_a->GetPubSub()->GetInterfaceAddress();
     ASSERT_FALSE( bootstrap_address.empty() );
 
@@ -635,7 +646,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     ASSERT_TRUE( node_c->AddAccountWithKey( PASSIVE_C_SECONDARY_KEY ).has_value() );
     const auto accounts = node_c->GetAvailableAccounts();
     const auto secondary = std::find_if(
-        accounts.begin(), accounts.end(), [&]( const std::string &address ) { return address != node_c->GetAddress(); } );
+        accounts.begin(), accounts.end(), [&]( const std::string &address ) { return address != RequireActiveAddress( node_c ); } );
     ASSERT_NE( secondary, accounts.end() );
     ASSERT_TRUE( node_c->SelectAccount( *secondary ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
