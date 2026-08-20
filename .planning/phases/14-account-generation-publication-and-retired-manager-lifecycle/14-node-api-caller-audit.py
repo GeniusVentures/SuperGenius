@@ -20,7 +20,7 @@ METHODS = (
     "MintTokens ProcessImage GetBalance GetInTransactions GetOutTransactions "
     "CountTransactions GetAddress GetMnemonicOfActiveAccount GetProcessingStatus "
     "TransferFunds PayDev WaitForFinalized IsFinalized WaitForTransactionOutgoing "
-    "WaitForTransactionIncoming WaitForEscrowRelease GetTransactionManagerState "
+    "WaitForTransactionIncoming WaitForActiveEscrowRelease WaitForEscrowRelease GetTransactionManagerState "
     "GetTransactionManager GetTransactionStatus ConfigureRpcEndpoint StartProcessing "
     "StopProcessing ResetProcessingMembers SendTransactionAndProof"
 ).split()
@@ -31,6 +31,17 @@ METHODS = (
 CALL_METHODS = {method: method for method in METHODS}
 CALL_METHODS["GetActiveAccountAddress"] = "GetAddress"
 CALL_METHODS["GetActiveProcessingStatus"] = "GetProcessingStatus"
+# ProcessImage already returns outcome::result and gates through
+# RequireReadyAccountGeneration.  The checked escrow wait is its lifecycle-safe
+# counterpart; neither needs a compatibility wrapper at genuine call sites.
+CHECKED_MIGRATED_METHODS = {"ProcessImage", "WaitForActiveEscrowRelease"}
+ESCROW_SHIM_SOURCES = {"src/account/GeniusNode.hpp", "src/account/GeniusNode.cpp"}
+# `child_tokens_test` returns a declared GeniusNode smart pointer from its
+# local CreateNode helper.  Record that receiver explicitly so its genuine
+# escrow wait cannot evade the audit without broadening prior partitions.
+SOURCE_NODE_FACTORIES = {
+    "test/src/processing_nodes/child_tokens_test.cpp": {"CreateNode"},
+}
 ALLOWED = {"14-06", "14-07", "14-08", "14-09", "14-10", "14-11", "14-12"}
 FIXTURE_SOURCES = {
     "test/src/account/account_management_test.cpp",
@@ -116,10 +127,15 @@ def contract_for(method, source):
         source == "test/src/node/node_initialization_progress.cpp" and method == "GetAddress"
     ):
         return "configured-bootstrap"
+    if method == "WaitForEscrowRelease":
+        return "temporary-compatibility-shim"
     return "active-ready"
 
 def identity_for(contract):
     return "configured-bootstrap" if contract == "configured-bootstrap" else "active-generation"
+
+def disposition_for(method):
+    return "migrated" if method in CHECKED_MIGRATED_METHODS else "migrate"
 
 def targets_by_source(commands):
     result = defaultdict(set)
@@ -192,7 +208,7 @@ def strip_comments_and_strings(text):
             index += 1
     return "".join(output)
 
-def genius_node_receivers(text):
+def genius_node_receivers(text, known_factories=()):
     """Return simple receiver expressions proved to have GeniusNode type.
 
     This audit intentionally stays declaration-driven rather than treating a
@@ -216,6 +232,12 @@ def genius_node_receivers(text):
     )
     for pattern in (pointer, direct, constructed):
         receivers.update(pattern.findall(text))
+    factories = set(known_factories)
+    if factories:
+        factory_result = re.compile(
+            rf"\bauto\s+(?:const\s+)?([A-Za-z_]\w*)\s*=\s*(?:{'|'.join(map(re.escape, factories))})\s*\("
+        )
+        receivers.update(factory_result.findall(text))
     return receivers
 
 def genius_node_calls(text, receivers, include_definitions=False):
@@ -240,16 +262,19 @@ def check_receiver_self_test():
     sample = r'''
         std::shared_ptr<sgns::GeniusNode> node;
         const std::shared_ptr<GeniusNode> &node_ref = node;
+        std::shared_ptr<GeniusNode> CreateNode();
+        auto created = CreateNode();
         node->GetBalance();
         node_ref.GetAddress();
+        created->WaitForActiveEscrowRelease();
         // node->GetBalance();
         const char *text = "node->GetBalance()";
         account->GetAddress();
         manager.CountTransactions();
         helper.GetBalance();
     '''
-    calls = genius_node_calls(strip_comments_and_strings(sample), genius_node_receivers(sample))
-    if calls != {"GetBalance", "GetAddress"}:
+    calls = genius_node_calls(strip_comments_and_strings(sample), genius_node_receivers(sample, {"CreateNode"}))
+    if calls != {"GetBalance", "GetAddress", "WaitForActiveEscrowRelease"}:
         raise SystemExit("receiver self-check failed: real GeniusNode calls were lost or false positives accepted")
 
 def rows(commands):
@@ -260,7 +285,7 @@ def rows(commands):
         rows.append({"method": method, "expression": f"declaration:{method}", "contract": contract,
                      "identity_kind": identity_for(contract), "source": "src/account/GeniusNode.hpp",
                      "targets": ";".join(sorted(targets.get("src/account/GeniusNode.hpp", {"genius_node_test"}))),
-                     "owner_plan": "14-06", "disposition": "migrate"})
+                     "owner_plan": "14-06", "disposition": disposition_for(method)})
     for path in discover_sources():
         rel = path.relative_to(ROOT).as_posix()
         if rel == "src/account/GeniusNode.hpp":
@@ -268,7 +293,9 @@ def rows(commands):
         raw_text = path.read_text(errors="ignore")
         text = strip_comments_and_strings(raw_text)
         found = sorted(genius_node_calls(
-            text, genius_node_receivers(text), include_definitions=rel == "src/account/GeniusNode.cpp"))
+            text,
+            genius_node_receivers(text, SOURCE_NODE_FACTORIES.get(rel, ())),
+            include_definitions=rel == "src/account/GeniusNode.cpp"))
         for called_method in found:
             method = CALL_METHODS[called_method]
             # The shared bridge-race fixture owns a separately constructed account
@@ -284,15 +311,26 @@ def rows(commands):
             rows.append({"method": method, "expression": f"{rel}:{called_method}", "contract": contract,
                          "identity_kind": identity_for(contract), "source": rel,
                          "targets": ";".join(sorted(row_targets)),
-                         "owner_plan": owner_for(rel), "disposition": "migrate"})
+                         "owner_plan": owner_for(rel), "disposition": disposition_for(method)})
         if rel in FIXTURE_SOURCES:
             rows.append({"method": "GetAddress", "expression": f"{rel}:fixture-configured-bootstrap",
                          "contract": "configured-bootstrap", "identity_kind": "configured-bootstrap", "source": rel,
                          "targets": ";".join(sorted(targets.get(rel, {"header-consumer"}))),
-                         "owner_plan": owner_for(rel), "disposition": "migrate"})
+                         "owner_plan": owner_for(rel), "disposition": disposition_for("GetAddress")})
     return sorted(rows, key=lambda row: (row["method"], row["expression"], row["targets"]))
 
 FIELDS = ["method", "expression", "contract", "identity_kind", "source", "targets", "owner_plan", "disposition"]
+
+def check_escrow_wait_contract(rows):
+    """Permit the raw escrow shim only for its declared temporary implementation."""
+    raw_callers = sorted(
+        row["expression"] for row in rows
+        if row["method"] == "WaitForEscrowRelease" and row["source"] not in ESCROW_SHIM_SOURCES
+    )
+    if raw_callers:
+        raise SystemExit(
+            "raw escrow wait callers must use WaitForActiveEscrowRelease: " + ", ".join(raw_callers)
+        )
 
 def check(rows, owners):
     errors = []
@@ -311,6 +349,7 @@ def check(rows, owners):
         if not row["targets"]: errors.append("target missing: " + row["expression"])
     if errors:
         raise SystemExit("\n".join(errors))
+    check_escrow_wait_contract(rows)
 
 def read_inventory(path):
     with path.open(newline="") as stream:
@@ -325,11 +364,13 @@ def semantic_rows(rows, include_disposition=False):
 
 def check_current(inventory, commands):
     actual = rows(commands)
+    check_escrow_wait_contract(actual)
     if semantic_rows(read_inventory(inventory)) != semantic_rows(actual):
         raise SystemExit("inventory differs from current declaration/call discovery")
 
 def check_owner(inventory, commands, owner, sources, required_targets):
     actual = [row for row in rows(commands) if row["source"] in sources]
+    check_escrow_wait_contract(actual)
     owned = [row for row in read_inventory(inventory) if row["owner_plan"] == owner and row["source"] in sources]
     if semantic_rows(owned) != semantic_rows(actual):
         raise SystemExit("owner rows differ from current source discovery")
@@ -400,8 +441,9 @@ def main():
                 for row in read_inventory(args.write_inventory)
             }
         for row in generated:
-            row["disposition"] = previous_dispositions.get(
-                (row["method"], row["source"], row["targets"]), row["disposition"] )
+            if row["method"] not in CHECKED_MIGRATED_METHODS:
+                row["disposition"] = previous_dispositions.get(
+                    (row["method"], row["source"], row["targets"]), row["disposition"] )
         args.write_inventory.parent.mkdir(parents=True, exist_ok=True)
         with args.write_inventory.open("w", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=FIELDS, delimiter="\t", lineterminator="\n")
