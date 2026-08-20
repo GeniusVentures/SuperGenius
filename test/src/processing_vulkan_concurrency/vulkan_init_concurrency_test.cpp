@@ -11,6 +11,7 @@
 #include <boost/asio/io_context.hpp>
 #include <processingbase/ProcessingManager.hpp>
 #include <processors/processing_processor_render.hpp>
+#include <processors/vulkan_gpu_probe.hpp>
 
 namespace sgns
 {
@@ -161,5 +162,30 @@ namespace sgns
         }
 
         SUCCEED() << "Completed " << kIterations << " concurrent-init iterations without crash";
+    }
+
+    // BUILD-01 regression (Phase 18, D-03): pins the exact scenario the original bug
+    // report described -- a single, synchronous ProcessingManager::Create() call on the
+    // main test thread (no concurrency) with a real Vulkan device present. The described
+    // VulkanInitMutex() self-deadlock (CapabilityValidator::BuildSnapshot() holding the
+    // mutex while ensureVulkanDevice() re-acquires it via RenderProcessor::InitializeContext())
+    // was already fixed by 528a92a; this test exists so a future regression of that fix
+    // fails fast and loudly here instead of silently reappearing.
+    TEST_F( VulkanConcurrentInitTest, CreateSucceedsWithRealVulkanDevicePresent )
+    {
+        if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+        {
+            GTEST_SKIP() << "No usable Vulkan device found on this host; this regression test "
+                            "specifically requires a real Vulkan device to exercise the "
+                            "capability-probe deadlock scenario, not failing it.";
+        }
+
+        std::string json_str = LoadAndPatchJson( "string-processing-definition.json" );
+        ASSERT_FALSE( json_str.empty() ) << "fixture JSON failed to load";
+
+        EXPECT_NO_THROW( {
+            auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_str );
+            EXPECT_TRUE( mgr_result.has_value() );
+        } );
     }
 }
