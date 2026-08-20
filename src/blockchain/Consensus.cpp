@@ -613,7 +613,15 @@ namespace sgns
             {
                 return;
             }
-            if ( HasAcceptedCertificateForSlot( slot_key ) )
+            auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+            if ( accepted_certificate.has_error() )
+            {
+                // An incomplete legacy scan is never evidence that a slot is unfinalized.
+                slot_state.certificate_scan_pending = true;
+                return;
+            }
+            slot_state.certificate_scan_pending = false;
+            if ( accepted_certificate.value() )
             {
                 // Existing accepted legacy data is only a local no-revote fence in Phase 9.
                 slot_state.active_vote_locked = true;
@@ -1052,28 +1060,44 @@ namespace sgns
         return std::string( ACTIVE_VOTE_BASE_PATH_KEY ) + std::string( slot_key );
     }
 
-    bool ConsensusManager::HasAcceptedCertificateForSlot( const std::string &slot_key ) const
+    outcome::result<bool> ConsensusManager::HasAcceptedCertificateForSlot( const std::string &slot_key ) const
     {
         if ( slot_key.empty() || !db_ )
         {
-            return false;
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( fail_accepted_certificate_scan_for_test_ )
+        {
+            return outcome::failure( std::errc::io_error );
         }
         auto certificates = db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY );
         if ( certificates.has_error() )
         {
-            return false;
+            return outcome::failure( certificates.error() );
         }
         for ( const auto &[key, value] : certificates.value() )
         {
             auto key_string = db_->KeyToString( key );
-            if ( key_string.has_error() || key_string.value().rfind( std::string( CERTIFICATE_BASE_PATH_KEY ), 0 ) != 0 )
+            if ( key_string.has_error() )
             {
-                continue;
+                return outcome::failure( key_string.error() );
+            }
+            if ( key_string.value().rfind( std::string( CERTIFICATE_BASE_PATH_KEY ), 0 ) != 0 )
+            {
+                return outcome::failure( std::errc::invalid_argument );
             }
             Certificate certificate;
             if ( !certificate.ParseFromArray( value.data(), value.size() ) ||
-                 !ValidateLegacyCertificateKey( certificate, key_string.value() ) ||
-                 ValidateCertificate( certificate ) != Check::Approve )
+                 !ValidateLegacyCertificateKey( certificate, key_string.value() ) )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto validation = ValidateCertificate( certificate );
+            if ( validation == Check::Pending || validation == Check::Stalled )
+            {
+                return outcome::failure( std::errc::resource_unavailable_try_again );
+            }
+            if ( validation != Check::Approve )
             {
                 continue;
             }
@@ -1263,7 +1287,18 @@ namespace sgns
             slot_state.candidates_frozen  = true;
             slot_state.best_proposal_id   = decoded.value().proposal.proposal_id();
             slot_state.voted_proposal_ids.insert( decoded.value().proposal.proposal_id() );
-            if ( HasAcceptedCertificateForSlot( slot_key ) )
+            auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+            if ( accepted_certificate.has_error() )
+            {
+                slot_state.certificate_scan_pending = true;
+                if ( now_ms < decoded.value().acceptance_deadline_ms )
+                {
+                    active_votes_[slot_key] = std::move( decoded.value() );
+                }
+                continue;
+            }
+            slot_state.certificate_scan_pending = false;
+            if ( accepted_certificate.value() )
             {
                 continue;
             }
@@ -1291,7 +1326,14 @@ namespace sgns
                 {
                     continue;
                 }
-                if ( HasAcceptedCertificateForSlot( slot_key ) )
+                auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+                if ( accepted_certificate.has_error() )
+                {
+                    slot_state.certificate_scan_pending = true;
+                    continue;
+                }
+                slot_state.certificate_scan_pending = false;
+                if ( accepted_certificate.value() )
                 {
                     slot_state.active_vote_locked = true;
                     slot_state.candidates_frozen  = true;
@@ -1333,6 +1375,24 @@ namespace sgns
 
             for ( auto &[slot_key, active_vote] : active_votes_ )
             {
+                auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+                auto slot_state_it = slot_states_.find( slot_key );
+                if ( accepted_certificate.has_error() )
+                {
+                    if ( slot_state_it != slot_states_.end() )
+                    {
+                        slot_state_it->second.certificate_scan_pending = true;
+                    }
+                    continue;
+                }
+                if ( slot_state_it != slot_states_.end() )
+                {
+                    slot_state_it->second.certificate_scan_pending = false;
+                }
+                if ( accepted_certificate.value() )
+                {
+                    continue;
+                }
                 if ( now_ms >= active_vote.acceptance_deadline_ms || now_steady < active_vote.next_retry_at )
                 {
                     continue;
@@ -3438,15 +3498,15 @@ namespace sgns
 
             const auto slot_key = GetSlotKey( certificate.proposal() );
             auto release         = ReleaseActiveVoteForAcceptedSlot( slot_key );
-            if ( release.has_error() || !release.value() )
+            if ( release.has_error() )
             {
-                // A missing/racing local record is never a release authorization.
+                // A read/decode/remove failure leaves the durable certificate work retryable.
                 certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
                 continue;
             }
 
-            // Only a successful durable readback and matching direct-local removal
-            // may clear volatile proposal bookkeeping for this finalized slot.
+            // A successful durable readback proves finality even when this node never
+            // held a local active-vote record (or already removed it on an earlier replay).
             ClearProposalSlot( certificate.proposal() );
             ProcessCommittedCertificate( entry.key, certificate );
         }

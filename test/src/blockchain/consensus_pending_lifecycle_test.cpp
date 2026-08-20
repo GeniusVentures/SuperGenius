@@ -106,10 +106,15 @@ namespace sgns
             return entry.has_value() && entry->state == crdt::CRDTWorkJournal::State::Stalled;
         }
 
-        static bool HasAcceptedCertificateForSlot( const std::shared_ptr<ConsensusManager> &manager,
-                                                   const std::string                       &slot_key )
+        static outcome::result<bool> HasAcceptedCertificateForSlot( const std::shared_ptr<ConsensusManager> &manager,
+                                                                     const std::string                       &slot_key )
         {
             return manager->HasAcceptedCertificateForSlot( slot_key );
+        }
+
+        static void SetAcceptedCertificateScanFailure( const std::shared_ptr<ConsensusManager> &manager, bool fail )
+        {
+            manager->fail_accepted_certificate_scan_for_test_ = fail;
         }
 
         static void WriteLiveLegacyCertificate( const std::shared_ptr<ConsensusManager> &manager,
@@ -334,6 +339,13 @@ namespace sgns
         {
             auto it = manager->slot_states_.find( slot_key );
             return it != manager->slot_states_.end() && it->second.active_vote_locked;
+        }
+
+        static bool HasAcceptedCertificateScanPending( const std::shared_ptr<ConsensusManager> &manager,
+                                                       const std::string                       &slot_key )
+        {
+            auto it = manager->slot_states_.find( slot_key );
+            return it != manager->slot_states_.end() && it->second.certificate_scan_pending;
         }
 
         static std::string ActiveVoteStorageKey( const std::shared_ptr<ConsensusManager> &manager,
@@ -1359,7 +1371,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
         manager, { other_legacy_key, std::move( other_callback_value ) } );
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, other_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, certificate.value() );
@@ -1376,8 +1388,22 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot ) );
+    auto accepted_certificate = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot );
+    ASSERT_TRUE( accepted_certificate.has_value() );
+    EXPECT_TRUE( accepted_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+
+    // A transient scan failure after durable same-slot finality is indeterminate,
+    // never proof that the finalized slot can receive a replacement local vote.
+    auto scan_failed = MakeSigningManager( registry, account );
+    ASSERT_TRUE( scan_failed );
+    sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( scan_failed, true );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( scan_failed, voted_proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( scan_failed );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateScanPending( scan_failed, slot ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( scan_failed ).empty() );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( scan_failed, slot ).has_value() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( scan_failed );
 
     // A reconstructed manager only scans existing legacy values; it does not create
     // a certificate key or cast another vote for a finalized canonical slot.
