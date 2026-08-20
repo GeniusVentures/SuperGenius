@@ -9,11 +9,11 @@ files_reviewed_list:
   - src/blockchain/Consensus.cpp
   - test/src/blockchain/consensus_pending_lifecycle_test.cpp
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 9: Code Review Report
@@ -21,11 +21,11 @@ status: issues_found
 **Reviewed:** 2026-08-20T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 4
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-Re-review of `007b1e80` confirms the initial scan-failure retry is retained and the focused lifecycle and slot-key binaries pass (15/15 and 6/6). However, a validated contender received during an already-open contention window is still dropped when that slot's finality scan is temporarily indeterminate. Since it can be the deterministic winner, this is a consensus-correctness blocker.
+Final re-review of `5b85d0ae` is clean. Each scan-buffered contender carries its monotonic admission time, successful scan recovery merges only contenders admitted before the unchanged window deadline, and recovery after close clears the buffer without changing the frozen candidate set. The focused lifecycle and slot-key binaries pass (17/17 and 6/6), including the new pre-deadline winner, post-deadline exclusion, and exactly-one-vote regressions.
 
 ## Resolved Critical Issues
 
@@ -41,14 +41,11 @@ Re-review of `007b1e80` confirms the initial scan-failure retry is retained and 
 
 The finalized-slot scan now returns `outcome::result<bool>` and propagates enumeration, key-conversion, malformed-entry, and temporarily unverifiable-certificate failures. Candidate admission, recovery, due work, and exact-vote replay retain fail-closed state on errors. The focused regression injects a scan failure after durable same-slot finality and proves no announcement or replacement record is created.
 
-## Critical Issues
+### CR-03: Scan-retry drops a valid contender from an already-open window — resolved
 
-### CR-03: Scan-retry drops a valid contender from an already-open window
+**Verified in:** `src/blockchain/Consensus.cpp:616`, `src/blockchain/Consensus.cpp:1351`
 
-**File:** `src/blockchain/Consensus.cpp:1345`
-**Issue:** If proposal A opens a slot window, then proposal B is fully validated before that window's deadline while `HasAcceptedCertificateForSlot()` fails, `ContinueProposalAfterSubject()` stores B in `scan_pending_candidates` (lines 616-628). When the timer's scan succeeds, it merges those candidates only if `candidate_deadline` is unset (lines 1359-1375). The existing window already has a deadline, so B stays stranded in `scan_pending_candidates` and is never eligible for selection. The later freeze selects only A (lines 1395-1407), despite B having been validated before the deadline and possibly ranking lower. Different validators can consequently vote for different winners in the same slot.
-
-**Fix:** On a successful retry, merge pending scan candidates that were received before the established deadline into `eligible_candidates` regardless of whether the window began before or after the scan outage; discard candidates captured after that deadline. Record the candidate admission time with the pending entry (or reject/avoid retaining candidates once `steady_clock::now() >= candidate_deadline`) so a late contender cannot be backfilled after close. Add a regression with an already-open window, a lower-ranked second candidate arriving during a scan failure before close, scan recovery, and an assertion that it becomes the sole persisted/published winner. Also assert a candidate arriving after close cannot be added by the recovery path.
+`ScanPendingCandidate` now retains its admission time. Recovery merges it into the eligible set only while the original deadline remains in the future; it clears the buffer after that deadline without extending the window or adding late contenders. Winner selection still uses the existing generic ranking, and a successful freeze persists and announces exactly one vote. Focused regressions cover both pre-deadline recovery selecting the lower-ranked contender and post-deadline recovery preserving the original winner.
 
 ---
 
