@@ -163,6 +163,17 @@ static bool check_arg_count_min( const std::vector<std::string> &args, size_t mi
     return true;
 }
 
+static bool require_active_generation( const std::shared_ptr<sgns::GeniusNode> &node, const char *operation )
+{
+    const auto address = node->GetActiveAccountAddress();
+    if ( address.has_error() )
+    {
+        logger->error( "{} unavailable: {}", operation, address.error().message() );
+        return false;
+    }
+    return true;
+}
+
 static constexpr const char *POSENET_JSON = R"({
   "name": "posenet-inference",
   "version": "1.0.0",
@@ -251,7 +262,10 @@ static void cmd_info( const std::vector<std::string> &args, std::shared_ptr<sgns
     {
         return;
     }
-    logger->info( "Balance: {}", node->GetBalance() );
+    if ( require_active_generation( node, "Balance" ) )
+    {
+        logger->info( "Balance: {}", node->GetBalance() );
+    }
 }
 
 static void cmd_balance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
@@ -260,7 +274,10 @@ static void cmd_balance( const std::vector<std::string> &args, std::shared_ptr<s
     {
         return;
     }
-    logger->info( "Balance: {}", node->GetBalance( args[1] ) );
+    if ( require_active_generation( node, "Balance" ) )
+    {
+        logger->info( "Balance: {}", node->GetBalance( args[1] ) );
+    }
 }
 
 static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
@@ -280,7 +297,11 @@ static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns
     }
     try
     {
-        node->MintTokens( std::stoull( args[1] ), "supergenius", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        const auto minted = node->MintTokens( std::stoull( args[1] ), "supergenius", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        if ( minted.has_error() )
+        {
+            logger->error( "Mint failed: {}", minted.error().message() );
+        }
     }
     catch ( const std::exception &e )
     {
@@ -296,10 +317,14 @@ static void cmd_transfer( const std::vector<std::string> &args, std::shared_ptr<
     }
     try
     {
-        node->TransferFunds( std::stoull( args[1] ),
-                             args[2],
-                             sgns::TokenID::FromBytes( { 0x00 } ),
-                             std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_TRANSFER ) );
+        const auto transfer = node->TransferFunds( std::stoull( args[1] ),
+                                                   args[2],
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_TRANSFER ) );
+        if ( transfer.has_error() )
+        {
+            logger->error( "Transfer failed: {}", transfer.error().message() );
+        }
     }
     catch ( const std::exception &e )
     {
@@ -341,8 +366,11 @@ static void cmd_peer( const std::vector<std::string> &args, std::shared_ptr<sgns
 
 static void cmd_stopprocessing( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> node )
 {
-    node->StopProcessing();
-    logger->info( "Stopping processing" );
+    if ( require_active_generation( node, "Stop processing" ) )
+    {
+        node->StopProcessing();
+        logger->info( "Stopping processing" );
+    }
 }
 
 static void cmd_quit( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> /*node*/ )
@@ -439,10 +467,15 @@ void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
             break;
         }
 
-        auto status = genius_node->GetProcessingStatus();
+        auto status = genius_node->GetActiveProcessingStatus();
+        if ( status.has_error() )
+        {
+            logger->error( "Processing status unavailable: {}", status.error().message() );
+            continue;
+        }
         logger->info( "[Status: {} | Progress: {:.2f}%]",
-                      STATUS_NAMES[static_cast<int>( status.status )],
-                      status.percentage );
+                      STATUS_NAMES[static_cast<int>( status.value().status.status )],
+                      status.value().status.percentage );
     }
 }
 

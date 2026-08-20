@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <iostream>
 #include <cstdint>
 #include <cstdio>
@@ -30,6 +31,40 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
+namespace
+{
+    bool RequireActiveGeneration( const std::shared_ptr<sgns::GeniusNode> &node )
+    {
+        const auto address = node->GetActiveAccountAddress();
+        if ( address.has_error() )
+        {
+            ADD_FAILURE() << "expected active account generation: " << address.error().message();
+            return false;
+        }
+        return true;
+    }
+
+    std::optional<uint64_t> ActiveBalance( const std::shared_ptr<sgns::GeniusNode> &node )
+    {
+        if ( !RequireActiveGeneration( node ) )
+        {
+            return std::nullopt;
+        }
+        return node->GetBalance();
+    }
+
+    bool SubmitProcessImage( const std::shared_ptr<sgns::GeniusNode> &node, const std::string &json_data )
+    {
+        const auto submitted = node->ProcessImage( json_data );
+        if ( submitted.has_error() )
+        {
+            ADD_FAILURE() << "processing submission failed: " << submitted.error().message();
+            return false;
+        }
+        return true;
+    }
+} // namespace
+
 class ProcessingMultiTest : public ::testing::Test
 {
 protected:
@@ -50,20 +85,9 @@ protected:
             { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        std::strncpy( DEV_CONFIG.BaseWritePath,
-                      ( binary_path + "/node1/" ).c_str(),
-                      sizeof( DEV_CONFIG.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG2.BaseWritePath,
-                      ( binary_path + "/node2/" ).c_str(),
-                      sizeof( DEV_CONFIG2.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG3.BaseWritePath,
-                      ( binary_path + "/node3/" ).c_str(),
-                      sizeof( DEV_CONFIG3.BaseWritePath ) );
-
-        // Ensure null termination in case the string is too long
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-        DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+        DEV_CONFIG.BaseWritePath  = binary_path + "/node1/";
+        DEV_CONFIG2.BaseWritePath = binary_path + "/node2/";
+        DEV_CONFIG3.BaseWritePath = binary_path + "/node3/";
 
         // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
@@ -83,7 +107,9 @@ protected:
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
+        ASSERT_TRUE( RequireActiveGeneration( node_proc1 ) );
         node_proc1->StopProcessing();
+        ASSERT_TRUE( RequireActiveGeneration( node_proc2 ) );
         node_proc2->StopProcessing();
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
@@ -100,21 +126,21 @@ protected:
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
-        delete node_main;
+        node_main.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete main node files\n";
         // }
 
         std::cout << "Tear down 2" << std::endl;
-        delete node_proc1;
+        node_proc1.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 2 files\n";
         // }
 
         std::cout << "Tear down 3" << std::endl;
-        delete node_proc2;
+        node_proc2.reset();
         // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 3 files\n";
@@ -147,18 +173,20 @@ std::string ProcessingMultiTest::binary_path = "";
 
 TEST_F( ProcessingMultiTest, MintTokens )
 {
-    node_main->MintTokens( 50000000000,
-                           sgns::test::NextMintSourceHash(),
-                           "test",
-                           sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
-                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
-    node_main->MintTokens( 50000000000,
-                           sgns::test::NextMintSourceHash(),
-                           "test",
-                           sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
-                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    const auto first_mint = node_main->MintTokens( 50000000000,
+                                                   sgns::test::NextMintSourceHash(),
+                                                   "test",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   "",
+                                                   std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_FALSE( first_mint.has_error() ) << first_mint.error().message();
+    const auto second_mint = node_main->MintTokens( 50000000000,
+                                                    sgns::test::NextMintSourceHash(),
+                                                    "test",
+                                                    sgns::TokenID::FromBytes( { 0x00 } ),
+                                                    "",
+                                                    std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_FALSE( second_mint.has_error() ) << second_mint.error().message();
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
 }
 
@@ -206,23 +234,23 @@ TEST_F( ProcessingMultiTest, PostJobs )
                 }
                )";
     boost::replace_all( json_data, "[basepath]", bin_path );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
-    node_main->ProcessImage( json_data );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
 }
 
 TEST_F( ProcessingMultiTest, ProcessOne )
@@ -268,23 +296,35 @@ TEST_F( ProcessingMultiTest, ProcessOne )
                 ]
                 }
                )";
+    ASSERT_TRUE( RequireActiveGeneration( node_proc1 ) );
     node_proc1->StartProcessing();
-    auto cost = node_main->GetProcessCost( json_data );
+    auto procmgr = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    ASSERT_FALSE( procmgr.has_error() ) << procmgr.error().message();
+    auto cost = node_main->GetProcessCost( procmgr.value() );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
-    auto balance_main  = node_main->GetBalance();
-    auto balance_node1 = node_proc1->GetBalance();
-    auto balance_node2 = node_proc2->GetBalance();
+    const auto balance_main  = ActiveBalance( node_main );
+    const auto balance_node1 = ActiveBalance( node_proc1 );
+    const auto balance_node2 = ActiveBalance( node_proc2 );
+    ASSERT_TRUE( balance_main.has_value() );
+    ASSERT_TRUE( balance_node1.has_value() );
+    ASSERT_TRUE( balance_node2.has_value() );
     //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
-    std::cout << "Balance main (Before):  " << balance_main << std::endl;
-    std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
-    std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
+    std::cout << "Balance main (Before):  " << *balance_main << std::endl;
+    std::cout << "Balance node1 (Before): " << *balance_node1 << std::endl;
+    std::cout << "Balance node2 (Before): " << *balance_node2 << std::endl;
     std::cout << "Cost:                   " << cost << std::endl;
-    std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
-    std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
-    std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
+    const auto balance_main_after  = ActiveBalance( node_main );
+    const auto balance_node1_after = ActiveBalance( node_proc1 );
+    const auto balance_node2_after = ActiveBalance( node_proc2 );
+    ASSERT_TRUE( balance_main_after.has_value() );
+    ASSERT_TRUE( balance_node1_after.has_value() );
+    ASSERT_TRUE( balance_node2_after.has_value() );
+    std::cout << "Balance main (After):   " << *balance_main_after << std::endl;
+    std::cout << "Balance node1 (After):  " << *balance_node1_after << std::endl;
+    std::cout << "Balance node2 (After):  " << *balance_node2_after << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
@@ -339,28 +379,41 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
                 ]
                 }
                )";
-    auto        cost      = node_main->GetProcessCost( json_data );
+    auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    ASSERT_FALSE( procmgr.has_error() ) << procmgr.error().message();
+    auto        cost      = node_main->GetProcessCost( procmgr.value() );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
-    auto balance_main  = node_main->GetBalance();
-    auto balance_node1 = node_proc1->GetBalance();
-    auto balance_node2 = node_proc2->GetBalance();
+    const auto balance_main  = ActiveBalance( node_main );
+    const auto balance_node1 = ActiveBalance( node_proc1 );
+    const auto balance_node2 = ActiveBalance( node_proc2 );
+    ASSERT_TRUE( balance_main.has_value() );
+    ASSERT_TRUE( balance_node1.has_value() );
+    ASSERT_TRUE( balance_node2.has_value() );
+    ASSERT_TRUE( RequireActiveGeneration( node_proc1 ) );
     node_proc1->StopProcessing();
+    ASSERT_TRUE( RequireActiveGeneration( node_proc2 ) );
     node_proc2->StartProcessing();
     std::vector bootstrappers = { node_main->GetPubSub()->GetLocalAddress(),
                                   node_proc1->GetPubSub()->GetLocalAddress() };
     node_proc2->AddPeers( bootstrappers );
-    node_main->ProcessImage( json_data );
+    ASSERT_TRUE( SubmitProcessImage( node_main, json_data ) );
     //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
-    std::cout << "Balance main (Before):  " << balance_main << std::endl;
-    std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
-    std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
+    std::cout << "Balance main (Before):  " << *balance_main << std::endl;
+    std::cout << "Balance node1 (Before): " << *balance_node1 << std::endl;
+    std::cout << "Balance node2 (Before): " << *balance_node2 << std::endl;
     std::cout << "Cost:                   " << cost << std::endl;
-    std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
-    std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
-    std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
+    const auto balance_main_after  = ActiveBalance( node_main );
+    const auto balance_node1_after = ActiveBalance( node_proc1 );
+    const auto balance_node2_after = ActiveBalance( node_proc2 );
+    ASSERT_TRUE( balance_main_after.has_value() );
+    ASSERT_TRUE( balance_node1_after.has_value() );
+    ASSERT_TRUE( balance_node2_after.has_value() );
+    std::cout << "Balance main (After):   " << *balance_main_after << std::endl;
+    std::cout << "Balance node1 (After):  " << *balance_node1_after << std::endl;
+    std::cout << "Balance node2 (After):  " << *balance_node2_after << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
