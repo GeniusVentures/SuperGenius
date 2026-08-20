@@ -104,6 +104,11 @@ namespace sgns
             return ConsensusManager::GetExpectedCertificateSlotKey( certificate );
         }
 
+        static outcome::result<std::string> GetSubjectHash( const ConsensusManager::Subject &subject )
+        {
+            return ConsensusManager::GetSubjectHash( subject );
+        }
+
         static bool AddPendingProposal( const std::shared_ptr<ConsensusManager>  &manager,
                                         const ConsensusManager::Proposal         &proposal,
                                         const std::string                        &subject_hash,
@@ -582,15 +587,17 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     EXPECT_EQ( std::string( "/cert/" ) + canonical_slot,
                sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate ) );
 
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( certificate.proposal().subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+
     std::string serialized;
     ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+    sgns::crdt::pb::Element matching_element;
+    matching_element.set_key( std::string( "/cert/" ) + subject_hash.value() );
+    matching_element.set_value( serialized );
     sgns::crdt::pb::Element mismatched_element;
     mismatched_element.set_key( "/cert/not-the-subject-hash" );
     mismatched_element.set_value( serialized );
-
-    auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, mismatched_element );
-    ASSERT_TRUE( filter_result.has_value() );
-    EXPECT_TRUE( filter_result->empty() );
 
     std::atomic<int> handler_calls{ 0 };
     ASSERT_TRUE( manager->RegisterSubjectHandler(
@@ -607,17 +614,100 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     sgns::ConsensusPendingLifecycleTestAccess::HandleProposal( manager, certificate.proposal() );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
+    // Key-aware CRDT ingress accepts a certificate only when the supplied legacy key matches its subject.
+    auto matching_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, matching_element );
+    EXPECT_FALSE( matching_filter.has_value() );
+    sgns::base::Buffer matching_buffer;
+    matching_buffer.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager,
+        sgns::crdt::CRDTCallbackManager::NewDataPair{ matching_element.key(), std::move( matching_buffer ) } );
+    EXPECT_EQ( handler_calls.load(), 1 );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
+
+    auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, mismatched_element );
+    ASSERT_TRUE( filter_result.has_value() );
+    EXPECT_TRUE( filter_result->empty() );
     sgns::base::Buffer serialized_buffer;
     serialized_buffer.put( serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
         manager,
         sgns::crdt::CRDTCallbackManager::NewDataPair{ mismatched_element.key(), std::move( serialized_buffer ) } );
-    EXPECT_EQ( handler_calls.load(), 0 );
+    EXPECT_EQ( handler_calls.load(), 1 );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
     // Keyless pubsub ingress accepts the same exactly-bound certificate without inventing a storage key.
     sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, certificate );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedCertificateCleanup )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        account->GetAddress(), 72, "0xunavailable-registry", sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
+    ASSERT_TRUE( subject_result.has_value() );
+    auto proposal_result = manager->CreateProposal(
+        subject_result.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal_result.has_value() );
+    auto vote_result = manager->CreateVote(
+        proposal_result.value().proposal_id(),
+        account->GetAddress(),
+        true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote_result.has_value() );
+    auto certificate_result = manager->CreateCertificate( proposal_result.value(), { vote_result.value() } );
+    ASSERT_TRUE( certificate_result.has_value() );
+
+    auto malformed = certificate_result.value();
+    malformed.set_registry_cid( "unavailable-registry-cid" );
+    malformed.mutable_proposal()->set_registry_cid( "unavailable-registry-cid" );
+
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( malformed.proposal().subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+    std::string serialized;
+    ASSERT_TRUE( malformed.SerializeToString( &serialized ) );
+    sgns::crdt::pb::Element element;
+    element.set_key( std::string( "/cert/" ) + subject_hash.value() );
+    element.set_value( serialized );
+
+    auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
+    ASSERT_TRUE( filter_result.has_value() );
+    EXPECT_TRUE( filter_result->empty() );
+
+    std::atomic<int> handler_calls{ 0 };
+    ASSERT_TRUE( manager->RegisterSubjectHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject & )
+        { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&handler_calls]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        {
+            ++handler_calls;
+            return outcome::success( sgns::ConsensusManager::Check::Approve );
+        } ) );
+    sgns::ConsensusPendingLifecycleTestAccess::HandleProposal( manager, certificate_result.value().proposal() );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, malformed );
+    EXPECT_EQ( handler_calls.load(), 0 );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
+
+    sgns::base::Buffer serialized_buffer;
+    serialized_buffer.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager,
+        sgns::crdt::CRDTCallbackManager::NewDataPair{ element.key(), std::move( serialized_buffer ) } );
+    EXPECT_EQ( handler_calls.load(), 0 );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
