@@ -1197,13 +1197,18 @@ namespace sgns
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        while ( !HasRequestPeers() )
+        while ( !stop_worker_.load() && !HasRequestPeers() )
         {
             if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 return outcome::failure( Error::GENESIS_REQUEST_ERROR );
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
+        if ( stop_worker_.load() )
+        {
+            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
         }
 
         auto request_result = send_request( req_id );
