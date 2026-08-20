@@ -1,36 +1,94 @@
-# Requirements
+# Requirements: SuperGenius
 
-## Pending Proposal Lifecycle
+**Defined:** 2026-08-20
+**Core Value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
 
-### Active
+## v3.0 Requirements
 
-- [ ] **PEND-01 — Structured deferred validation:** Subject validation can return `Pending` with zero
-  or more dependency keys while preserving distinct `Approve`, terminal `Reject`, and local
-  infrastructure `Stalled` outcomes.
-- [ ] **PEND-02 — Local-only Pending:** Pending outcomes are retained locally and never broadcast as
-  votes or counted toward quorum. Approval remains the only broadcast voting outcome in this phase.
-- [ ] **PEND-03 — Dependency-triggered retry:** Consensus indexes pending proposals by their missing
-  dependency keys and retries validation immediately when a dependency becomes available. A
-  predecessor certificate arrival must resume every proposal waiting on that certificate hash.
-- [ ] **PEND-04 — Scheduled transient retry:** Pending outcomes without an explicit dependency event
-  are retried using bounded scheduling and backoff so transient RPC, datastore, or similar local
-  failures can recover.
-- [ ] **PEND-05 — Bounded lifetime:** Pending proposals expire after a compile-time default TTL of
-  three minutes. `ConsensusManager` permits TTL injection/configuration for deterministic tests,
-  which normally use ten seconds.
-- [ ] **PEND-06 — Resource bounds and cleanup:** Consensus enforces pending proposal count and retained
-  byte limits. Certification, terminal rejection, or expiry removes proposal state, dependency
-  indexes, queued votes, retry metadata, and temporary transaction tracking.
-- [ ] **PEND-07 — Retry-safe validation:** Retrying the same proposal is idempotent and cannot cast
-  duplicate votes, double-count validator weight, or corrupt transaction state.
-- [ ] **TXSTATE-01 — Inconclusive transaction state:** Consensus timeout/TTL expiry uses a distinct
-  `EXPIRED` or `UNCONFIRMED` transaction state. `FAILED` is reserved for transactions proven invalid
-  by local validation.
+### Canonical Slot and Certificate Binding
 
-### Out of Scope
+- [ ] **SLOT-01**: Competing `MintTransactionV2` proposals for the same verified external burn resolve to the same canonical slot while proposals from different burns do not.
+- [ ] **SLOT-02**: The canonical slot continues to include the verified burn facts already represented by `MintTransactionV2::GetSlotID`, including chain, token, source transaction, amount, and destination; proposer account and proposal nonce cannot alter it.
+- [ ] **SLOT-03**: A certificate remains cryptographically and structurally bound to its exact winning proposal, and certificate acceptance rejects a slot/key/payload mismatch.
 
-- Broadcasting Pending decisions.
-- Signed Reject votes, rejection certificates, or negative-quorum rules.
-- Validator reputation rewards or penalties based on negative votes.
-- Penalizing validators when a proposal merely expires without a conclusive outcome.
+### Vote Finality
 
+- [ ] **VOTE-01**: Validators use a bounded contention window and deterministic winner selection for candidates in one slot, so voting does not wait indefinitely for a possible contender.
+- [ ] **VOTE-02**: Before broadcasting a vote, a validator durably records one active vote for the slot, including the chosen proposal, signed vote material, and its acceptance deadline.
+- [ ] **VOTE-03**: An active vote survives restart and may be recovered or re-announced only as that exact vote; the validator cannot emit a different usable vote for the same slot while the original remains accepted.
+- [ ] **VOTE-04**: A vote lock is cleared only after the matching authoritative certificate is durably accepted for its slot; expiry cleanup cannot authorize an incompatible vote that overlaps the original vote's acceptance period.
+
+### Slot-Keyed Certificate Publication
+
+- [ ] **CERT-01**: The authoritative certificate record uses the generic key `/cert/<canonical-slot-id>`; no bridge-only finality record or subject-hash certificate authority is introduced.
+- [ ] **CERT-02**: At most the deterministic protocol-selected publisher writes an authoritative certificate for a slot; receiving a certificate through PubSub never makes a peer write that CRDT key.
+- [ ] **CERT-03**: The publisher durably writes and verifies the authoritative slot certificate before advertising it on PubSub.
+- [ ] **CERT-04**: If the selected publisher stalls, deterministic and protocol-verifiable failover can publish the same valid certificate only after the defined recovery condition, without allowing competing certificate contents.
+- [ ] **CERT-05**: PubSub, CRDT synchronization, local completion, and restart recovery converge through one idempotent certificate-acceptance path; a different valid-looking certificate for an occupied slot is a safety conflict and never overwrites or unlocks the slot.
+- [ ] **COMP-01**: Existing consumers that start with a subject hash are migrated to obtain the corresponding slot before certificate lookup, or use only a non-authoritative hash-to-slot locator; certificate authority remains slot-keyed.
+
+### Exactly-Once Mint Application
+
+- [ ] **MINT-01**: A durably accepted slot certificate drives its winning mint transaction at most once on each node, including duplicate delivery and restart.
+- [ ] **MINT-02**: Recovery records distinguish certified, applying, and applied work (or provide an equivalent atomic boundary), so a crash cannot create a second mint effect or silently lose a certified mint.
+
+### Production-Path Regression Coverage
+
+- [ ] **TEST-01**: A multi-node test proves that differently sourced/proposed mints for one burn contend for one slot and produce one authoritative certificate with one winning proposal.
+- [ ] **TEST-02**: A regression test proves that a late contender after an earlier slot vote or certificate cannot obtain a second usable vote or certificate for that slot.
+- [ ] **TEST-03**: A propagation test proves that PubSub recipients do not write the certificate key and do not time out synchronizing a CID they wrote themselves.
+- [ ] **TEST-04**: Restart tests cover recovery before certificate arrival, after durable certificate acceptance, and during mint application without a changed vote or duplicate mint.
+- [ ] **TEST-05**: Publisher-loss tests cover persistence-before-advertisement and deterministic failover without conflicting slot records.
+- [ ] **TEST-06**: The finality tests exercise the production PubSub, CRDT, persistence, and mint ingress paths rather than direct local-author shortcuts.
+
+## Future Requirements
+
+None currently. Future finality features must not weaken the v3.0 one-vote-per-slot or single-authoritative-certificate contract.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Porting, rebasing, or repairing rejected Phase 9-12 code | The rebuild deliberately starts from `develop`; only forensic findings are retained. |
+| A bridge-specific finality storage record | Certificate authority is generic and keyed by canonical slot. |
+| `DeliverySource::Local` as publisher authority | Local callback provenance is not protocol-verifiable or durable. |
+| Receiver-side CRDT certificate writes | Multiple writers cause the failure this milestone exists to remove. |
+| Broad TransactionManager, CRDT, registry, or persistence refactors | Limit the blast radius to what the finality contract requires. |
+| New dependencies or a new consensus protocol | Existing C++17, RocksDB, CRDT, PubSub, and validator facilities are sufficient. |
+
+## Traceability
+
+Roadmap mapping is pending.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SLOT-01 | — | Pending |
+| SLOT-02 | — | Pending |
+| SLOT-03 | — | Pending |
+| VOTE-01 | — | Pending |
+| VOTE-02 | — | Pending |
+| VOTE-03 | — | Pending |
+| VOTE-04 | — | Pending |
+| CERT-01 | — | Pending |
+| CERT-02 | — | Pending |
+| CERT-03 | — | Pending |
+| CERT-04 | — | Pending |
+| CERT-05 | — | Pending |
+| COMP-01 | — | Pending |
+| MINT-01 | — | Pending |
+| MINT-02 | — | Pending |
+| TEST-01 | — | Pending |
+| TEST-02 | — | Pending |
+| TEST-03 | — | Pending |
+| TEST-04 | — | Pending |
+| TEST-05 | — | Pending |
+| TEST-06 | — | Pending |
+
+**Coverage:**
+- v3.0 requirements: 21 total
+- Mapped to phases: 0
+- Unmapped: 21 (roadmap pending)
+
+---
+*Requirements defined: 2026-08-20*
+*Last updated: 2026-08-20 after requirements approval*
