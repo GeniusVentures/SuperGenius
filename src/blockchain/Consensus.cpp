@@ -2187,17 +2187,6 @@ namespace sgns
                                              certificate.proposal_id() );
             return Check::Reject;
         }
-        auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
-        if ( registry_ret.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
-                                             __func__,
-                                             registry_ret.error().message(),
-                                             certificate.registry_cid(),
-                                             certificate.proposal_id() );
-            return Check::Stalled;
-        }
-        auto &registry = registry_ret.value();
         if ( !ValidateSubject( proposal.subject() ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
@@ -2235,6 +2224,18 @@ namespace sgns
                                              certificate.proposal_id() );
             return Check::Reject;
         }
+
+        auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
+        if ( registry_ret.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: registry load pending error={} for registry cid {} proposal_id={}",
+                                             __func__,
+                                             registry_ret.error().message(),
+                                             certificate.registry_cid(),
+                                             certificate.proposal_id() );
+            return Check::Stalled;
+        }
+        auto &registry = registry_ret.value();
 
         std::vector<Vote> votes;
         votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
@@ -2434,7 +2435,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( ValidateCertificate( certificate ) == Check::Reject )
+        if ( ValidateCertificate( certificate ) != Check::Approve )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
