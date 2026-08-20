@@ -4,6 +4,8 @@
 #include "base/buffer.hpp"
 #include <libp2p/peer/peer_info.hpp>
 #include <boost/optional.hpp>
+#include <chrono>
+#include <thread>
 #include <tuple>
 #include <string>
 #include <optional>
@@ -32,13 +34,35 @@ namespace sgns::crdt
          * @param peerInfo   Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success or outcome::failure on error.
          */
-        virtual outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) = 0;
+        virtual outcome::result<void> Broadcast( const base::Buffer                     &buff,
+                                                 std::string                             topic,
+                                                 boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) = 0;
 
         /**
          * Obtain the next payload and its topic received from the network.
-         * @return buffer value or outcome::failure on error 
+         * @return buffer value or outcome::failure on error
          */
         virtual outcome::result<base::Buffer> Next() = 0;
+
+        /**
+         * Block until Next() may have a payload, or until \p timeout elapses.
+         *
+         * Lets a consumer react to an arrival instead of polling for it. The default
+         * sleeps, which is all a broadcaster with no readiness signal can offer.
+         * @param timeout Longest time to block.
+         */
+        virtual void WaitForNext( std::chrono::milliseconds timeout )
+        {
+            std::this_thread::sleep_for( timeout );
+        }
+
+        /**
+         * Wake anyone blocked in WaitForNext() and stop later waits from blocking.
+         * Called on shutdown so a consumer does not sit out the rest of its timeout.
+         */
+        virtual void CancelWait()
+        {
+        }
 
         /**
          * @brief Checks whether the broadcaster is subscribed to the specified topic.
@@ -52,7 +76,10 @@ namespace sgns::crdt
          * @brief Get the underlying DAG syncer (if available).
          * @return Shared pointer to the DAG syncer, or nullptr if not available.
          */
-        virtual std::shared_ptr<void> GetDagSyncer() const { return nullptr; }
+        virtual std::shared_ptr<void> GetDagSyncer() const
+        {
+            return nullptr;
+        }
     };
 } // namespace sgns::crdt
 
