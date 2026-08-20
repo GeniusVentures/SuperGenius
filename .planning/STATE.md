@@ -1,75 +1,58 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Multi-Signature Secure CRDT Storage
-current_phase: 11
-status: executing
-last_updated: "2026-07-24T18:58:19.372Z"
-last_activity: 2026-08-27 -- Completed quick task 260827-hbf: GetGraphsyncNetwork accessor
+milestone: v3.0
+milestone_name: Canonical Burn Finality Rebuild
+status: planning
+last_updated: "2026-08-20T12:20:48.817Z"
+last_activity: 2026-08-20
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 5
-  percent: 60
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
-# State: SuperGenius — Multi-Signature Secure CRDT Storage
+# State: SuperGenius — GeniusNode Construction Refactor
 
-**Last updated:** 2026-07-20
-**Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 11
+**Last updated:** 2026-07-02
+**Milestone:** v1.0 — GeniusNode Construction Refactor
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-20)
+See: .planning/PROJECT.md (updated 2026-07-02)
 
-**Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 11 — burnconfig-quorum-wiring
+**Core value:** Constructing a `GeniusNode` must be a single, self-documenting call driven by config files.
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 11 (burnconfig-quorum-wiring) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 11
-Last activity: 2026-07-24 -- Phase 11 execution started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-20 — Milestone v3.0 started
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 8 | MultiSig Primitive | not started | MSIG-01, MSIG-02, MSIG-03 |
-| 9 | SecureCRDT Layer | blocked by 8 | SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04 |
-| 10 | TrustedPeerRegistry | blocked by 9 | TPR-01, TPR-02, TPR-03 |
-| 11 | BurnConfig Quorum Wiring | blocked by 10 | BURN-01, BURN-02, BURN-03 |
-| 12 | ValidatorRegistry Migration | blocked by 9 | MIG-05, MIG-06 |
+| 1 | Config-Driven Settings Foundation | ○ not started | CFG-01, CFG-02, CFG-04 |
+| 2 | Variant Factory + Constructor Reorder | ○ blocked by 1 | INTF-01..04, CFG-03 |
+| 3 | Call-Site Migration + Verification | ○ blocked by 2 | MIG-01..04 |
 
 ## Key Decisions
 
-- Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle — `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance
-- Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks); no new networking/RPC
-- `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) — matches `ValidatorRegistry`'s existing per-type style
-- `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set — different concerns (economic-parameter signers vs. consensus validators)
-- `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback — avoids a CRDT read on every `PayEscrow` call
+- `node_type` → `sgns_config.json`; `autodht`+`base_port` → `network_config.json` (deployment-time, not per-call)
+- `is_full_node_` stays a derived bool at the GeniusNode boundary; NodeType enum NOT propagated downstream this milestone
+- Single `New(dev_config, AccountSource)` with `std::variant`; no compat shim; all 18 call sites migrated
+- Account creation moves INTO the constructor (after `LoadSgnsConfig`) to resolve init-order chicken-and-egg
 
 ## Notes
 
-- This milestone continues phase numbering from an undocumented prior body of work (`.planning/phases/01` through `07`, bridge-relayer/consensus-voting features). Phases 8-12 in this milestone are unrelated to those directories; do not reuse or renumber them.
-- Precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives.
-- Brownfield codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
-- Sequential dependency chain: 8 → 9 → {10 → 11, 12}. Phase 12 depends only on Phase 9 and could in principle run in parallel with 10/11, but is numbered last per the suggested delivery order.
+- Research produced inline (subagent runtime returned schema error `no such column: replacement_seq` on all spawns); 5 docs in `.planning/research/`.
+- Brownfield codebase map exists at `.planning/codebase/` (7 docs).
+- Strictly sequential phases (1 → 2 → 3); later phases won't compile until earlier ones land.
 
 ## Operator Next Steps
 
-- Review `.planning/ROADMAP.md` (Milestone v1.1 section) and `.planning/REQUIREMENTS.md` traceability
-- Run `/gsd:plan-phase 8` to begin planning the MultiSig Primitive phase
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260827-hbf | Add GetGraphsyncNetwork() accessor to GeniusNode (SDK needs it — no public path existed) | 2026-08-27 | 8c9e1b4f | [260827-hbf-check-if-graphsyncnetwork-can-be-obtaine](./quick/260827-hbf-check-if-graphsyncnetwork-can-be-obtaine/) |
-
-### v1.0 History
-
-v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
+- Start the next milestone with /gsd-new-milestone
