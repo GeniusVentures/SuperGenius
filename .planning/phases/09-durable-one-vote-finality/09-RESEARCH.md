@@ -35,7 +35,7 @@ None — discussion stayed within Phase 9. Slot-keyed certificate publication/fa
 | VOTE-01 | Bounded contention and deterministic winner selection per slot. | `ContinueProposalAfterSubject`, `SlotState`, `IsBetterProposal`, and the timer are the direct seam. [VERIFIED: codebase grep] |
 | VOTE-02 | Durable selected proposal, signed vote material, and deadline before broadcast. | `GlobalDB::GetDataStore()` exposes local `storage::rocksdb`; its normal path uses synchronous writes. [VERIFIED: codebase grep] |
 | VOTE-03 | Restart recovery and exact-vote-only re-announcement. | The manager starts a round timer at construction and already performs recovery work from that loop; add active-vote recovery to the same lifecycle. [VERIFIED: codebase grep] |
-| VOTE-04 | Delete the lock only after durable same-slot certificate acceptance. | Certificate ingress and volatile `ClearProposalSlot` are distinct seams; persistent vote deletion must be gated at durable certificate acceptance, not volatile cleanup. [VERIFIED: codebase grep] |
+| VOTE-04 | Delete the lock only after durable same-slot certificate acceptance. | Defer release until the existing legacy-key `db_->Get` readback in `RecoverPendingCertificateWork` succeeds; validate that committed readback, derive `GetSlotKey(certificate.proposal())`, then and only then delete the matching local vote record. A read racing before the batch commit fails closed and is retried. [VERIFIED: codebase grep] |
 </phase_requirements>
 
 ## Summary
@@ -56,7 +56,7 @@ The contention state must be changed from “current best plus already-voted pro
 | Deterministic winner selection and incoming-vote gating | API / Backend (ConsensusManager) | PubSub transport | `IsBetterProposal`, `HandleVote`, and slot state are local consensus responsibilities; PubSub only carries envelopes. [VERIFIED: codebase grep] |
 | Active-vote durability and restart read | Database / Storage (local RocksDB) | API / Backend | `GlobalDB::GetDataStore()` returns the underlying local RocksDB, while `GlobalDB::Put` is a CRDT operation and is expressly out of scope. [VERIFIED: codebase grep] |
 | Exact-vote re-announcement | API / Backend (ConsensusManager timer) | PubSub transport | `StartRoundTimer` already drives deferred work and `SubmitVote` is the outbound boundary. [VERIFIED: codebase grep] |
-| Lock release after durable certificate acceptance | Database / Storage | API / Backend | Certificate receipt must be validated and known durable before deleting the local vote key; simple parse/volatile slot cleanup is insufficient. [VERIFIED: codebase grep] [ASSUMED] |
+| Lock release after durable certificate acceptance | Database / Storage | API / Backend | `CertificateReceived` is only a pre-commit notification; the release owner is a post-commit `db_->Get` readback of the existing legacy certificate key, followed by certificate validation and same-slot comparison. [VERIFIED: codebase grep] |
 
 ## Standard Stack
 
@@ -209,19 +209,28 @@ The persisted byte payload must retain `vote_bytes` rather than reconstructing a
 
 The current `GossipPubSub::Publish` call is wrapped by `ConsensusManager::Publish`, which always returns success after calling the transport. Therefore the safe bounded-backoff design is to re-announce the stored vote at every retry cadence before the deadline, rather than trying to infer a transport acknowledgement that this API does not expose. [VERIFIED: codebase grep] [ASSUMED]
 
-### Pattern 4: Release only at a durable same-slot acceptance boundary
+### Pattern 4: Release only from durable legacy-key readback
 
-**What:** Split volatile `ClearProposalSlot` from persistent-record removal. Call a `ReleaseActiveVoteForAcceptedSlot` helper only after certificate validation/acceptance has succeeded in the durable certificate ingress path, and compare `GetSlotKey(certificate.proposal())` to the active-record key—not proposal ID or subject hash. [VERIFIED: codebase grep] [ASSUMED]
+**What:** Split volatile `ClearProposalSlot` from persistent-record removal. `SubmitCertificate` validates and writes only the existing legacy `"/cert/" + subject_hash` CRDT key; it must not delete an active vote merely because `Publish` or the `db_->Put` call was initiated. `FilterCertificate` runs before merge and `CertificateReceived` is invoked from the CRDT put hook before its RocksDB batch is committed, so neither is a release boundary. [VERIFIED: codebase grep]
 
-**When to use:** The registered CRDT certificate callback (`CertificateReceived`) is the closest current post-storage ingress; PubSub-only `HandleCertificate`, `FilterCertificate`, malformed records, rejected certificates, and stalled certificates must never delete the vote record. [VERIFIED: codebase grep] [ASSUMED]
+**Required order:**
 
-The current certificate authority is still the legacy `/cert/<subject-hash>` storage/lookup path; Phase 8 deliberately made `/cert/<slot>` only a future validation predicate. Phase 9 must not publish or make authoritative a slot certificate key. To keep post-restart voting fail-closed after an active record is released, introduce a read-only “accepted certificate for canonical slot” query over existing accepted certificate values (or preserve an equivalent local finalized-slot marker) and have Phase 10 replace its lookup implementation with the authoritative slot key. This is the one planning-level integration point that must be explicit. [VERIFIED: codebase grep] [ASSUMED]
+1. Treat `CertificateReceived` only as a notification. It must leave the active vote record intact and mark the existing certificate-work entry stalled (with no future lease) so the work journal will replay it after the CRDT writer returns. [VERIFIED: codebase grep]
+2. `RecoverPendingCertificateWork`, called at manager construction and on every round-timer iteration, attempts `db_->Get({ legacy_cert_key })` for that stalled entry. `GlobalDB::Get` reaches `CrdtSet::GetElement`, which reads the stored prevalent value and verifies that the element remains live (not tombstoned). This call occurs outside the pre-commit put hook; if it races ahead of commit or otherwise fails, it does not release and the stalled entry remains for a later attempt. [VERIFIED: codebase grep]
+3. A dedicated post-readback helper must parse that returned value, re-check `ValidateLegacyCertificateKey`, require `ValidateCertificate(...) == Check::Approve`, and derive `GetSlotKey(certificate.proposal())`. Only after all of those succeed may it call `ReleaseActiveVoteForAcceptedSlot` for the exact matching local vote key, then perform volatile `ClearProposalSlot` bookkeeping. A failed/missing readback, parse/binding/validation failure, `Stalled`, or different slot retains the vote record and keeps/re-marks the work item stalled. [VERIFIED: codebase grep]
+
+`CrdtSet::SetValue` invokes its put hook after buffering value/priority writes but before `CrdtSet::PutElems` calls `batchDatastore->commit()`. The hook becomes `CrdtDatastore::PutElementsCallback` → `CRDTCallbackManager::PutDataCallback` → registered `CertificateReceived`; therefore callback delivery cannot prove persistence. `RecoverPendingCertificateWork` already performs the required existing `db_->Get` readback outside that hook; only a successful readback is the safe fail-closed release mechanism. [VERIFIED: codebase grep]
+
+For locally generated certificates, `SubmitCertificate`'s successful `db_->Put` is also not itself the release call: route it through the same readback helper (or leave it for the journal replay) and require the readback above. This keeps local and remote certificates on one rule. The default `GlobalDB` path creates `storage::rocksdb` with synchronous write options; direct reads observe only committed database state. [VERIFIED: codebase grep]
+
+The current certificate authority remains the legacy `/cert/<subject-hash>` storage/lookup path; Phase 8 deliberately made `/cert/<slot>` only a future validation predicate. Phase 9 must not publish or make authoritative a slot certificate key. To keep post-restart voting fail-closed after an active record is released, introduce a read-only same-slot query over existing accepted legacy certificate values (or preserve an equivalent local finalized marker) and have Phase 10 replace its lookup implementation with the authoritative slot key. [VERIFIED: codebase grep] [ASSUMED]
 
 ### Anti-Patterns to Avoid
 
 - **Immediate self-vote on each newly best proposal:** Current behavior makes `voted_proposal_ids` a proposal-level memory set rather than a slot-level durable lock; replace it with deadline freeze then one record. [VERIFIED: codebase grep]
 - **Re-signing during recovery:** Changes the timestamp and signature and violates the exact-vote rule. [VERIFIED: codebase grep]
 - **Writing the active vote through `GlobalDB::Put`:** Replicates local safety state as CRDT data and violates D-05. [VERIFIED: codebase grep]
+- **Treating `CertificateReceived` as a commit callback:** `CrdtSet::SetValue` calls the registered put hook before `PutElems` commits its RocksDB batch. Mark work for replay and release only from the later `db_->Get` readback. [VERIFIED: codebase grep]
 - **Deleting the record in `ClearProposalSlot` or `HandleCertificate`:** Both are volatile/currently PubSub-adjacent paths; neither alone proves durable acceptance. [VERIFIED: codebase grep]
 - **Letting current “best” change after freeze:** Candidate admission after deadline must be rejected even if the timer tick runs later. [ASSUMED]
 - **Counting votes before the winner is frozen:** Store/defer them or ignore them until the frozen winner is known; a vote for an early/nonwinning proposal must not contribute to finality. [VERIFIED: .planning/phases/09-durable-one-vote-finality/09-CONTEXT.md] [ASSUMED]
@@ -276,7 +285,7 @@ The current certificate authority is still the legacy `/cert/<subject-hash>` sto
 
 **Why it happens:** Existing paths mix subject-hash legacy lookup, PubSub `HandleCertificate`, CRDT callback receipt, and volatile `ClearProposalSlot`. [VERIFIED: codebase grep]
 
-**How to avoid:** Validate first; only in durable accepted ingress derive the slot from `certificate.proposal()` with `GetSlotKey`; delete only the matching active-vote key; then clear volatile state. Retain the active record on parse/reject/stall/other-slot events. [VERIFIED: codebase grep] [ASSUMED]
+**How to avoid:** The callback must mark the certificate work stalled rather than release. On the timer/startup replay, use `db_->Get` of the legacy certificate key as the post-commit readback; validate that readback, derive the slot from `certificate.proposal()` with `GetSlotKey`, delete only the matching active-vote key, then clear volatile state. Retain the record on missing/mismatched readback, parse/reject/stall/other-slot events. [VERIFIED: codebase grep]
 
 **Warning signs:** A same-slot certificate using a different proposal leaves a record, or a malformed/other-slot certificate removes one. [ASSUMED]
 
@@ -340,23 +349,21 @@ auto vote = CreateVote(winner.proposal_id(), account_address_, true, signer_);
 | A1 | A new local protobuf `ActiveVoteRecord` is the smallest safe encoding and can be added to the existing consensus proto generation without a build-system change. | Standard Stack / Patterns | Planner may need a separate local record codec or generated-source task. |
 | A2 | `"/consensus/vote/" + canonical_slot` is the correct generic local prefix. | Summary / Patterns | Prefix may conflict with an undocumented storage convention; verify with maintainers/codebase search before implementation. |
 | A3 | A single manager mutex is sufficient for record create-if-absent in the supported one-validator-process model. | Pattern 2 | Multiple concurrently running processes against one RocksDB could race and require a stronger storage primitive. |
-| A4 | The current CRDT callback is the appropriate present durable-acceptance hook once validation succeeds. | Pattern 4 | Callback ordering may not itself prove the required persistence boundary; implementation must validate this against `CrdtDatastore` callback order. |
-| A5 | A read-only scan of accepted legacy `/cert/` records, or an equivalent local finalized marker, is required to preserve post-restart no-revote after active-record deletion until Phase 10's authoritative slot key exists. | Pattern 4 | Omitting it can let a restarted node vote in a finalized slot whose winning proposal has a different subject hash. |
-| A6 | Re-announcing every bounded retry interval is the safe interpretation of send failure because the current PubSub `Publish` path has no acknowledgement result. | Pattern 3 | Network layer may later expose delivery status; then retries can be reduced but must remain exact-vote only. |
+| A4 | A read-only scan of accepted legacy `/cert/` records, or an equivalent local finalized marker, is required to preserve post-restart no-revote after active-record deletion until Phase 10's authoritative slot key exists. | Pattern 4 | Omitting it can let a restarted node vote in a finalized slot whose winning proposal has a different subject hash. |
+| A5 | Re-announcing every bounded retry interval is the safe interpretation of send failure because the current PubSub `Publish` path has no acknowledgement result. | Pattern 3 | Network layer may later expose delivery status; then retries can be reduced but must remain exact-vote only. |
 
 ## Open Questions
 
-1. **What exact event proves the current legacy certificate record is durably accepted?**
-   - What we know: `FilterCertificate` validates incoming CRDT elements; `CertificateReceived` performs validation/handler work after callback registration, whereas `HandleCertificate` is a keyless PubSub path that clears volatile slot state. [VERIFIED: codebase grep]
-   - What's unclear: The inspected files do not prove the precise write-versus-callback ordering inside `CrdtDatastore`. [VERIFIED: codebase grep]
-   - Recommendation: Planner should include a code-reading task that confirms callback ordering, then place vote-record deletion only after that proven boundary plus `Check::Approve`; never at `HandleCertificate`. [ASSUMED]
+### Resolved: legacy certificate durability boundary
 
-2. **How does a restart block a slot after the vote record is correctly deleted?**
+`FilterCertificate` runs before CRDT merge. During merge, `CrdtSet::SetValue` invokes the put hook before `CrdtSet::PutElems` calls `batchDatastore->commit()`, and that hook synchronously reaches the registered `CertificateReceived` callback. It is therefore expressly not a durability boundary. The existing safe mechanism is a successful `RecoverPendingCertificateWork` replay: it calls `db_->Get({legacy_cert_key})` outside that hook, and `CrdtSet::GetElement` returns a committed prevalent value only if it remains a live CRDT element. A read that races the commit must fail closed and leave the journal entry stalled for retry. The release helper must operate only on that returned/read-back certificate after legacy-key binding and `Check::Approve` validation, and must compare `GetSlotKey(certificate.proposal())` to the local record key. `HandleCertificate`, callback arrival, parsing, `SubmitCertificate` initiation, or `ClearProposalSlot` never release the record. [VERIFIED: codebase grep]
+
+1. **How does a restart block a slot after the vote record is correctly deleted?**
    - What we know: Phase 8 preserves current certificate persistence/lookup at `/cert/<subject-hash>` and makes `/cert/<slot>` a future predicate, while Phase 9 requires deletion after same-slot certificate finality. [VERIFIED: .planning/phases/08-canonical-slot-certificate-binding/08-01-SUMMARY.md]
    - What's unclear: A different winning proposal can have the same canonical slot but a different subject hash, so current direct lookup is not enough by itself. [VERIFIED: codebase grep] [ASSUMED]
    - Recommendation: Implement a generic read-only same-slot accepted-certificate query over current records (or a local finalized marker with equivalent restart semantics), explicitly marked as a Phase 10 migration seam and not as new certificate authority. [ASSUMED]
 
-3. **How will persistence failure and exact publication be observed deterministically in a focused unit test?**
+2. **How will persistence failure and exact publication be observed deterministically in a focused unit test?**
    - What we know: The existing lifecycle test already has friend access, a real temporary RocksDB, and manager constructors; `Publish` wraps a void PubSub publish call and returns success after invocation. [VERIFIED: codebase grep]
    - What's unclear: There is no current storage-failure or outbound-message observation hook. [VERIFIED: codebase grep]
    - Recommendation: Add the narrowest private/test-access seam for a local active-vote store and/or announcement counter, keeping production calls routed to `GetDataStore()` and `SubmitVote`. [ASSUMED]
@@ -433,6 +440,7 @@ auto vote = CreateVote(winner.proposal_id(), account_address_, true, signer_);
 ### Primary (HIGH confidence)
 
 - `src/blockchain/Consensus.hpp` and `src/blockchain/Consensus.cpp` — current immediate self-vote, `SlotState`, ranking, timer, vote publication, certificate ingress, and volatile cleanup. [VERIFIED: codebase grep]
+- `src/crdt/impl/crdt_datastore.cpp`, `src/crdt/impl/crdt_set.cpp`, `src/crdt/impl/crdt_callback_manager.cpp`, and `src/crdt/impl/crdt_work_journal.cpp` — filter-before-merge, callback-before-batch-commit, work-journal replay, and the post-commit `db_->Get` readback path. [VERIFIED: codebase grep]
 - `src/storage/rocksdb/rocksdb.hpp`, `src/storage/rocksdb/rocksdb.cpp`, and `src/crdt/globaldb/globaldb.hpp` — local store API, synchronous path write options, and direct datastore exposure. [VERIFIED: codebase grep]
 - `src/blockchain/impl/proto/Consensus.proto` — existing proposal/vote/certificate protobuf schema. [VERIFIED: codebase grep]
 - `test/src/blockchain/consensus_pending_lifecycle_test.cpp`, `test/src/blockchain/consensus_slot_key_test.cpp`, and `test/src/storage/rocksdb/rocksdb_integration_test.cpp` — focused fixture, test-access pattern, canonical-slot coverage, and RocksDB operations. [VERIFIED: codebase grep]
@@ -453,7 +461,7 @@ auto vote = CreateVote(winner.proposal_id(), account_address_, true, signer_);
 **Confidence breakdown:**
 
 - Standard stack: HIGH — all required facilities are already in this repository; no dependency recommendation is made. [VERIFIED: codebase grep]
-- Architecture: HIGH — the entry points and storage/timer seams are directly implemented in `ConsensusManager`; durable-certificate callback ordering remains explicitly gated as A4. [VERIFIED: codebase grep]
+- Architecture: HIGH — the entry points, CRDT callback ordering, post-commit readback, and storage/timer seams are directly implemented in the repository. [VERIFIED: codebase grep]
 - Pitfalls: HIGH — immediate voting, volatile cleanup, and timer cadence are observable in current code; future-schema/test-hook choices are flagged as assumptions. [VERIFIED: codebase grep]
 
 **Research date:** 2026-08-20  
