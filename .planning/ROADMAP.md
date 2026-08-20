@@ -132,6 +132,73 @@ Plans:
 
 - [x] 13-29-PLAN.md — Exact twenty-two-case, twenty-five-target, sanitizer-aware final closure gate
 
+### Phase 14: Account-generation publication and retired-manager lifecycle safety
+
+**Goal:** Publish only complete ready account generations, close old-manager admission at accepted selection, preserve already-admitted terminal work, and make failed or retired generations explicitly unavailable and permanently non-mutable.
+**Requirements**: TBD
+**Depends on:** Phase 13
+**Plans:** 15 plans
+Plans:
+**Wave 1**
+
+- [ ] 14-01-PLAN.md — Manager admission, terminal-ledger, retirement core, deterministic tests, and caller inventory
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 14-02-PLAN.md — Node ready/retiring/pending generation core, events, status, deterministic tests, and complete API inventory
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 14-03-PLAN.md — Production TransactionManager caller migration and target builds
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 14-04-PLAN.md — Account, pending, consensus, and bridge-fault manager fixture migration
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 14-05-PLAN.md — Final manager caller migration, compatibility removal, and exact public-surface closure
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 14-06-PLAN.md — Production/startup GeniusNode caller migration
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 14-07-PLAN.md — Account and blockchain fixture GeniusNode caller migration
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 14-08-PLAN.md — Processing and transaction-sync GeniusNode caller migration
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 14-09-PLAN.md — Multi-account GeniusNode caller migration
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 14-10-PLAN.md — Bridge common/E2E GeniusNode caller migration
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 14-11-PLAN.md — Bridge-race GeniusNode caller migration and shared-fixture target expansion
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 14-12-PLAN.md — Migrate node-example and processing-multi callers with exact target ownership
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 14-13-PLAN.md — Final node compatibility removal and complete node caller-union build
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 14-14-PLAN.md — Timeout, cleanup-first failure, old terminal attribution, and explicit drain-gated recovery
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 14-15-PLAN.md — Read-only manager/node union and exact lifecycle closure gate
+
 ## Backlog
 
 (Items deferred to future milestones — see `.planning/milestones/v1.0-REQUIREMENTS.md` v2 section: PROP-01 NodeType propagation, PROP-02 Archive/Full behavior split, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
