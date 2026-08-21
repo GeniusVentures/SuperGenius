@@ -65,7 +65,14 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   3. The selected publisher durably persists and verifies the exact slot certificate before it advertises that certificate on PubSub.
   4. If the selected publisher stalls, an eligible successor can satisfy a defined protocol-visible recovery condition and publish the same valid certificate without admitting competing contents.
   5. A consumer that begins with a subject hash resolves the corresponding canonical slot before authoritative lookup, or uses a hash-to-slot locator that cannot itself confer certificate authority.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Add immutable CRDT record semantics for authoritative certificate collision safety.
+- [ ] 10-02-PLAN.md — Publish and recover authoritative slot certificates through deterministic selected-publisher authority.
+- [ ] 10-03-PLAN.md — Replace Consensus and Blockchain certificate lookup with validated canonical-slot authority.
+- [ ] 10-04-PLAN.md — Migrate transaction-backed and witness consumers to transaction-derived slot lookup.
+- [ ] 10-05-PLAN.md — Migrate registry batch certificate loading to generic slot authority without redesigning batch identity.
 
 ### Phase 11: Convergent Certificate Consumption & Mint Recovery
 **Goal**: Every node converges on one accepted slot certificate and applies its exact certified mint at most once across duplicate delivery and crash recovery.
@@ -101,7 +108,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
 | 8. Canonical Slot & Certificate Binding | v3.0 | 1/1 | Complete   | 2026-08-20 |
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
-| 10. Authoritative Slot Certificate Publication | v3.0 | 0/TBD | Not started | - |
+| 10. Authoritative Slot Certificate Publication | v3.0 | 0/5 | Not started | - |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
 | 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
 
