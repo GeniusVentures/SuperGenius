@@ -607,6 +607,29 @@ namespace
             EXPECT_TRUE( proposal_result.has_value() );
             return proposal_result.value();
         }
+
+        sgns::ConsensusManager::Proposal MakeSigningProposal(
+            const std::shared_ptr<sgns::ConsensusManager>  &manager,
+            const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+            const std::shared_ptr<sgns::GeniusAccount>     &account,
+            uint64_t                                        nonce,
+            const std::string                              &tx_hash )
+        {
+            auto subject_result = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                              nonce,
+                                                                              tx_hash,
+                                                                              sgns::EmbeddedTransaction{},
+                                                                              MakeTestCommitment(),
+                                                                              MakeTestWitness() );
+            EXPECT_TRUE( subject_result.has_value() );
+
+            auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                            account->GetAddress(),
+                                                            registry->GetRegistryCid(),
+                                                            registry->GetRegistryEpoch() );
+            EXPECT_TRUE( proposal_result.has_value() );
+            return proposal_result.value();
+        }
     };
 } // namespace
 
@@ -817,7 +840,7 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnAppro
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 91, "0xslot-lookup-approved" );
+    auto proposal = MakeSigningProposal( manager, registry, account, 91, "0xslot-lookup-approved" );
     auto vote = manager->CreateVote(
         proposal.proposal_id(), account->GetAddress(), true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
@@ -844,7 +867,7 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupRejectsLegacyMalfo
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 92, "0xslot-lookup-negative" );
+    auto proposal = MakeSigningProposal( manager, registry, account, 92, "0xslot-lookup-negative" );
     auto vote = manager->CreateVote(
         proposal.proposal_id(), account->GetAddress(), true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
