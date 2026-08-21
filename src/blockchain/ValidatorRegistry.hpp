@@ -323,6 +323,7 @@ namespace sgns
 
     protected:
         friend class sgns::Migration3_5_0To3_6_0;
+        friend class ValidatorRegistryCertificateLookupTestAccess;
 
         /**
          * @brief Migrates registry-related CIDs from old to new datastore.
@@ -504,12 +505,17 @@ namespace sgns
                                                                        uint32_t                   certificate_count,
                                                                        std::optional<std::string> expected_root ) const;
         /**
-         * @brief Loads certificate referenced by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Loaded certificate or an error.
+         * @brief Looks up the canonical slot retained for a pending certificate subject.
+         * @param[in] subject_hash Batch metadata identifying the pending certificate.
+         * @return Canonical generic slot or an error when it is not locally available.
          */
-        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
+        outcome::result<std::string> GetPendingCertificateSlot( const std::string &subject_hash ) const;
+        /**
+         * @brief Loads a certificate from its authoritative generic slot key.
+         * @param[in] slot_key Canonical generic slot key without the /cert/ prefix.
+         * @return Parsed certificate bound to the supplied slot or an error.
+         */
+        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Attempts to create and submit a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
@@ -551,6 +557,8 @@ namespace sgns
         mutable std::mutex batch_mutex_;                              ///< Guards batch-tracking collections.
         std::unordered_map<std::string, std::set<std::string>>
             pending_certificate_subjects_by_base_;                  ///< Pending subject hashes keyed by base registry.
+        std::unordered_map<std::string, std::string>
+            pending_certificate_slots_by_subject_; ///< Ephemeral subject-hash to generic-slot associations.
         std::unordered_set<std::string> pending_batch_subject_ids_; ///< Batch subject ids pending finalization.
         std::unordered_set<std::string> finalized_batch_subject_ids_; ///< Batch subject ids already finalized.
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
