@@ -122,16 +122,16 @@ namespace sgns
             manager->fail_accepted_certificate_scan_for_test_ = fail;
         }
 
-        static void WriteLiveLegacyCertificate( const std::shared_ptr<ConsensusManager> &manager,
-                                                const ConsensusManager::Certificate     &certificate )
+        static void WriteLiveCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                          const ConsensusManager::Certificate     &certificate )
         {
-            auto subject_hash = ConsensusManager::GetSubjectHash( certificate.proposal().subject() );
-            ASSERT_TRUE( subject_hash.has_value() );
+            const auto key = ConsensusManager::GetExpectedCertificateSlotKey( certificate );
+            ASSERT_FALSE( key.empty() );
             std::string serialized;
             ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
             crdt::GlobalDB::Buffer value;
             value.put( serialized );
-            ASSERT_TRUE( manager->db_->Put( { std::string( "/cert/" ) + subject_hash.value() }, value, {} ).has_value() );
+            ASSERT_TRUE( manager->db_->PutConvergentImmutable( { key }, value, {} ).has_value() );
         }
 
         static ConsensusManager::Proposal ResignWithLaterTimestamp(
@@ -750,7 +750,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     std::string serialized;
     ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
     sgns::crdt::pb::Element matching_element;
-    matching_element.set_key( std::string( "/cert/" ) + subject_hash.value() );
+    matching_element.set_key( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate ) );
     matching_element.set_value( serialized );
     sgns::crdt::pb::Element mismatched_element;
     mismatched_element.set_key( "/cert/not-the-subject-hash" );
@@ -771,7 +771,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     sgns::ConsensusPendingLifecycleTestAccess::HandleProposal( manager, certificate.proposal() );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
-    // Key-aware CRDT ingress accepts a certificate only when the supplied legacy key matches its subject.
+    // Key-aware CRDT ingress accepts a certificate only when the supplied canonical slot matches.
     auto matching_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, matching_element );
     EXPECT_FALSE( matching_filter.has_value() );
     sgns::base::Buffer matching_buffer;
@@ -832,7 +832,7 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
     std::string serialized;
     ASSERT_TRUE( malformed.SerializeToString( &serialized ) );
     sgns::crdt::pb::Element element;
-    element.set_key( std::string( "/cert/" ) + subject_hash.value() );
+    element.set_key( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate_result.value() ) );
     element.set_value( serialized );
 
     auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
@@ -1489,7 +1489,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     ASSERT_TRUE( certificate.has_value() );
     auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( certified_proposal.subject() );
     ASSERT_TRUE( subject_hash.has_value() );
-    const auto legacy_key = std::string( "/cert/" ) + subject_hash.value();
+    const auto legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
     std::string serialized;
     ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
 
@@ -1525,20 +1525,20 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     ASSERT_TRUE( other_certificate.has_value() );
     auto other_subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( other_proposal.value().subject() );
     ASSERT_TRUE( other_subject_hash.has_value() );
-    const auto other_legacy_key = std::string( "/cert/" ) + other_subject_hash.value();
+    const auto other_legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( other_certificate.value() );
     std::string other_serialized;
     ASSERT_TRUE( other_certificate.value().SerializeToString( &other_serialized ) );
     sgns::base::Buffer other_callback_value;
     other_callback_value.put( other_serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
         manager, { other_legacy_key, std::move( other_callback_value ) } );
-    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, other_certificate.value() );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, other_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, other_legacy_key ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
-    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveLegacyCertificate( manager, certificate.value() );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, certificate.value() );
     // A keyless pubsub delivery is not a durable release boundary.
     sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, certificate.value() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
@@ -1569,7 +1569,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( scan_failed, slot ).has_value() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( scan_failed );
 
-    // A reconstructed manager only scans existing legacy values; it does not create
+    // A reconstructed manager only scans existing authoritative slot values; it does not create
     // a certificate key or cast another vote for a finalized canonical slot.
     auto restarted = MakeSigningManager( registry, account );
     ASSERT_TRUE( restarted );

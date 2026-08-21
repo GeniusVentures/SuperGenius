@@ -86,4 +86,14 @@ namespace
         pubs2->Stop();
     }
 
+    TEST_F( PubsubCounts, PublishReportsStoppedTransport )
+    {
+        auto pubsub = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+
+        const auto result = pubsub->Publish( "stopped-transport", { 0x01 } );
+
+        EXPECT_TRUE( result.has_error() );
+        EXPECT_EQ( result.error(), sgns::ipfs_pubsub::GossipPubSubError::SERVICE_NOT_RUNNING );
+    }
+
 }

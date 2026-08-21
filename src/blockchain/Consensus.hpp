@@ -806,9 +806,7 @@ namespace sgns
         void RecoverActiveVotes();
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**
-         * @brief Checks existing accepted legacy certificate values for a canonical slot.
-         * @details This is a read-only Phase 9 safety seam. It does not establish
-         * certificate authority or introduce slot-keyed certificate storage.
+         * @brief Checks the authoritative certificate value for a canonical slot.
          */
         outcome::result<bool> HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
         /**
@@ -819,7 +817,7 @@ namespace sgns
          */
         outcome::result<bool> ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key );
         /**
-         * @brief Processes a certificate only after its live legacy value has been read back.
+         * @brief Processes a certificate only after its authoritative slot value has been read back.
          */
         void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
         void                      ExpirePendingProposals();
@@ -868,18 +866,14 @@ namespace sgns
          */
         static bool ValidateCertificateBinding( const Certificate &certificate );
         /**
-         * @brief Validates current legacy certificate-key compatibility for CRDT ingress.
-         * @details This checks `/cert/<subject-hash>` only as supplied ingress evidence;
-         *          it does not make that key canonical certificate authority.
+         * @brief Validates authoritative canonical-slot certificate-key binding for CRDT ingress.
          * @param[in] certificate Certificate whose embedded proposal determines the expected key.
          * @param[in] key Current CRDT key supplied by the ingress path.
-         * @return `true` when the supplied key matches the embedded proposal subject hash.
+         * @return `true` when the supplied key matches the embedded proposal slot.
          */
-        static bool ValidateLegacyCertificateKey( const Certificate &certificate, std::string_view key );
+        static bool ValidateCertificateKey( const Certificate &certificate, std::string_view key );
         /**
-         * @brief Computes the future canonical-slot certificate key for validation only.
-         * @details The result is non-authoritative until Phase 10; it is not used for
-         *          persistence, lookup, acceptance, or writer selection in this phase.
+         * @brief Computes the authoritative canonical-slot certificate key.
          * @param[in] certificate Certificate whose embedded proposal supplies the slot.
          * @return `/cert/<canonical-slot>` when the slot is available, otherwise empty.
          */
