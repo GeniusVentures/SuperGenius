@@ -13,25 +13,26 @@
 - **D-01:** Preserve the existing proposal-derived, deterministic consensus-round aggregator rotation. Phase 10 introduces no new publisher-selection or timeout mechanism.
 - **D-02:** Only the locally selected current-round aggregator may enter the authoritative certificate write path. Receiving a certificate through PubSub never grants authority and never writes the CRDT key.
 - **D-03:** A non-selected validator that sees quorum retains the evidence but neither writes nor advertises. It waits until a later normal round makes it eligible.
-- **D-04:** The first valid certificate persisted for a slot is final. A replay of the same certificate is harmless; a different payload for an occupied slot is a safety conflict and must never overwrite it.
+- **D-04:** An identical certificate replay is harmless. If concurrent valid certificate encodings contend for one slot, every replica deterministically resolves them by certificate-hash ordering rather than local first-seen order; the result must converge and never use an overwrite race. Phase 9 still prevents distinct winning proposals from normally reaching this state.
 
 #### Persistence and advertisement
 
 - **D-05:** The selected aggregator validates the certificate, persists `/cert/<slot>`, and only then sends the PubSub notification. A successful durable write result is sufficient; Phase 10 does not add a readback-before-advertise requirement.
 - **D-06:** PubSub is best-effort cleanup acceleration, not finality. Publish the full certificate as today, but a failed publish is logged and not retried; normal CRDT replication/recovery is the fallback.
 - **D-07:** The publisher has no special completion shortcut. After its write, it follows the same certificate receipt/recovery path as every other node.
+- **D-08:** Add the smallest production PubSub publish-result/error contract needed to log an actual failed certificate notification. Do not retry the notification or change CRDT finality semantics.
 
 #### Failover
 
-- **D-08:** Existing consensus-round rotation is the complete, protocol-visible failover rule. A later round's selected aggregator may publish only when no authoritative slot record exists.
-- **D-09:** A successor requires the same fully validated quorum evidence for the exact winning proposal. It must fail closed and wait/retry if it cannot reliably determine whether the slot is already occupied.
-- **D-10:** If publishers are unavailable for successive rounds, recovery continues through ordinary rotation with that same validated evidence. No new lease, timeout, or retry cap is introduced.
+- **D-09:** Existing consensus-round rotation is the complete, protocol-visible failover rule. A later round's selected aggregator may publish only when no authoritative slot record exists.
+- **D-10:** A successor requires the same fully validated quorum evidence for the exact winning proposal. It must fail closed and wait/retry if it cannot reliably determine whether the slot is already occupied.
+- **D-11:** If publishers are unavailable for successive rounds, recovery continues through ordinary rotation with that same validated evidence. No new lease, timeout, or retry cap is introduced.
 
 #### Consumer lookup migration
 
-- **D-11:** Transaction-backed consumers derive the authoritative certificate key directly from the transaction's `GetSlotID()`. No subject-hash-to-slot locator and no subject-hash certificate authority are introduced.
-- **D-12:** A caller that retained only a transaction hash retrieves the transaction from CRDT, derives its slot, and then performs authoritative lookup. If it cannot retrieve the transaction, finality is unavailable and normal recovery retries; it never falls back to a subject-hash certificate key.
-- **D-13:** Registry-batch identity semantics are not redesigned in this phase. Existing generic `GetSlotKey` behavior remains the integration point for non-transaction subjects using the slot-keyed namespace.
+- **D-12:** Transaction-backed consumers derive the authoritative certificate key directly from the transaction's `GetSlotID()`. No subject-hash-to-slot locator and no subject-hash certificate authority are introduced.
+- **D-13:** A caller that retained only a transaction hash retrieves the transaction from CRDT, derives its slot, and then performs authoritative lookup. If it cannot retrieve the transaction, finality is unavailable and normal recovery retries; it never falls back to a subject-hash certificate key.
+- **D-14:** Registry-batch identity semantics are not redesigned in this phase. Existing generic `GetSlotKey` behavior remains the integration point for non-transaction subjects using the slot-keyed namespace.
 
 ### the agent's Discretion
 
@@ -60,9 +61,9 @@
 
 Phase 10 is a narrow migration of certificate authority, not a new consensus protocol. `GetSlotKey(certificate.proposal())` already produces the generic canonical slot, `GetExpectedCertificateSlotKey` already formats `/cert/<slot>`, and `GetAggregatorRole` already implements the locked round rotation. The existing code instead publishes first and writes `/cert/<subject-hash>` afterwards; CRDT filter/recovery and all public lookup helpers still enforce that legacy key. [CITED: src/blockchain/Consensus.cpp]
 
-Use one private authoritative-slot helper family in `ConsensusManager`: derive key only from the embedded proposal, validate the exact certificate, inspect an existing slot value, accept byte-identical replay, reject a different valid payload as a conflict, and fail closed on an indeterminate read. Keep `SubmitCertificate` callable only from the selected-aggregator path; successful durable `db_->Put` precedes best-effort full-certificate PubSub. Then migrate read paths so a transaction hash is first resolved to its stored transaction and `GetSlotID()`, never used as a `/cert/` suffix. [CITED: src/blockchain/Consensus.cpp] [CITED: src/account/TransactionManager.cpp]
+Use one private authoritative-slot helper family in `ConsensusManager`: derive key only from the embedded proposal, validate the exact certificate, and deterministically select the lowest certificate hash when concurrent valid payloads for one slot are observed. Compute that ordering key as `crypto::sha2_256(serialized_certificate_bytes)` represented by lowercase hexadecimal `base::hex_lower`, matching the existing proposal-ID hash representation. This is storage convergence, not a replacement for Phase 9’s normal single-winner prevention. Keep `SubmitCertificate` callable only from the selected-aggregator path; successful durable `db_->Put` precedes one best-effort full-certificate PubSub attempt. Then migrate read paths so a transaction hash is first resolved to its stored transaction and `GetSlotID()`, never used as a `/cert/` suffix. [CITED: src/crypto/hasher.hpp] [CITED: src/base/hexutil.hpp] [CITED: src/blockchain/ConsensusAuth.hpp] [CITED: src/account/TransactionManager.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-**Primary recommendation:** Implement the namespace/ingress/lookup migration together in `ConsensusManager` and `Blockchain`, then migrate transaction consumers and registry-batch lookup in one follow-up plan; do not add a locator, publisher lease, receiver-side write, or CRDT/persistence redesign. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
+**Primary recommendation:** Implement the namespace/ingress/lookup migration together in `ConsensusManager` and `Blockchain`, then migrate transaction consumers while retaining registry-batch identity through its existing generic `GetSlotKey` integration; do not add a locator, publisher lease, receiver-side write, or CRDT/persistence redesign. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ## Architectural Responsibility Map
 
@@ -96,8 +97,8 @@ Use one private authoritative-slot helper family in `ConsensusManager`: derive k
 
 | Instead of | Could Use | Tradeoff |
 |---|---|---|
-| Generic slot record | Subject-hash `/cert/<hash>` authority | Rejected by D-11/D-12 and CERT-01; the hash identifies a proposal/transaction, not the shared finality domain. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
-| Existing round rotation | Publisher lease/health timeout | Rejected by D-01/D-08/D-10; ordinary rounds are the full failover rule. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
+| Generic slot record | Subject-hash `/cert/<hash>` authority | Rejected by D-12/D-13 and CERT-01; the hash identifies a proposal/transaction, not the shared finality domain. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
+| Existing round rotation | Publisher lease/health timeout | Rejected by D-01/D-09/D-11; ordinary rounds are the full failover rule. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
 | Selected publisher only | Receiver-side CRDT write or delivery-source authority | Rejected by D-02 and the milestone scope. [CITED: .planning/REQUIREMENTS.md] |
 
 **Installation:** None — the phase must use existing C++17, CRDT, RocksDB, PubSub, and validator facilities. [CITED: .planning/REQUIREMENTS.md]
@@ -148,7 +149,7 @@ src/blockchain/
 ├── Consensus.cpp                 # publish ordering, occupancy checks, filter/recovery migration
 ├── Blockchain.hpp                # slot-aware certificate façade
 ├── impl/Blockchain.cpp           # façade forwarding
-└── ValidatorRegistry.cpp/.hpp    # registry batch: generic slot-derived certificate lookup
+└── ValidatorRegistry.cpp/.hpp    # retain generic GetSlotKey integration; no batch-identity redesign
 src/account/
 ├── TransactionManager.cpp        # retrieve hash-addressed transaction, then derive GetSlotID
 └── GeniusInputValidator.cpp      # same producer transaction-to-slot lookup
@@ -170,25 +171,25 @@ if (key.empty() || stored_key != key || ValidateCertificate(certificate) != Chec
 }
 ```
 
-### Pattern 2: Check occupied state before an authorized write
+### Pattern 2: Deterministic certificate-hash convergence for one occupied slot
 
-**What:** In `SubmitCertificate`, after validation and selected-aggregator gating, derive the slot key and read the current value. If absent, write exactly once; if bytes equal, return idempotent success; if a parsed, valid different certificate occupies the key, report a safety conflict and do not publish; if the read/parse/validation status is indeterminate, return failure and keep proposal state for a later ordinary round. [ASSUMED]
+**What:** Define one helper that serializes a valid `ConsensusCertificate`, computes `crypto::sha2_256` over those bytes, and returns lowercase hexadecimal with `base::hex_lower`. On every replica, compare certificate hashes lexicographically: identical bytes/hash are idempotent; distinct valid encodings for the same slot choose the lower hash. The selected aggregator applies this helper before publishing, and CRDT ingress/recovery apply the same helper when merging/reading the occupied slot. [CITED: src/crypto/hasher.hpp] [CITED: src/base/hexutil.hpp] [CITED: src/blockchain/ConsensusAuth.hpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-**Why:** `GlobalDB::Put` creates a CRDT add delta without an existence predicate, while `CrdtSet::SetValue` accepts an equal-priority different value by storing it; a simple `Put` is not an immutable first-write operation. [CITED: src/crdt/impl/crdt_datastore.cpp] [CITED: src/crdt/impl/crdt_set.cpp]
+**Why:** `GlobalDB::Put` creates a CRDT add delta without an existence predicate, while `CrdtSet::SetValue` can store an equal-priority different value. D-04 resolves that storage race by a deterministic value ordering, not local first-seen state or a presumed compare-and-set. [CITED: src/crdt/impl/crdt_datastore.cpp] [CITED: src/crdt/impl/crdt_set.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-**Implementation note:** A local pre-read does not supply distributed compare-and-set semantics. The planner must keep this as a protocol safety risk and add a test proving the chosen collision guard rejects an already visible different slot payload; no existing `GlobalDB` API provides atomic “put if absent.” [CITED: src/crdt/globaldb/globaldb.hpp] [ASSUMED]
+**Implementation note:** The plan must ensure the CRDT’s visible value is made to follow this comparison (not merely rejected after a local read), and add a two-replica concurrent-write regression: start with two valid certificates for one slot, write opposite values on isolated replicas, synchronize in both orders, then assert both replicas expose the same lowest-hash certificate. Phase 9 remains the normal control that prevents distinct winning proposals from reaching this exceptional storage-convergence path. [CITED: src/crdt/impl/crdt_set.cpp] [CITED: .planning/phases/09-durable-one-vote-finality/09-CONTEXT.md] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ### Pattern 3: Persist before best-effort advertisement
 
 **What:** Serialize and persist `/cert/<slot>` before calling `Publish(message)`. On a persistence failure return an error and retain quorum evidence. After a successful write, invoke PubSub exactly once; the publisher must still wait for normal CRDT callback/readback recovery instead of directly clearing its slot or vote lock. [CITED: src/blockchain/Consensus.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-**Important transport limitation:** `ConsensusManager::Publish` calls `pubsub_->Publish(...)` whose currently visible interface returns no status, then returns success after serialization. Therefore the existing code cannot observe or log a transport-send failure, even though D-06 requires failed publishes to be logged without retry. [CITED: src/blockchain/Consensus.cpp]
+**Production publish-result contract:** Change only `ipfs_pubsub::GossipPubSub::Publish(topic, payload)` from its current void contract to `outcome::result<void>` (or the dependency’s equivalent existing error result). Propagate the result through `ConsensusManager::Publish`, log an error in `SubmitCertificate` after persistence when that result fails, and return without retrying. Update the only direct project call sites: `src/blockchain/Consensus.cpp` and `src/account/AccountMessenger.cpp`; no message schema, consensus round, or CRDT finality behavior changes. [CITED: src/blockchain/Consensus.cpp] [CITED: src/account/AccountMessenger.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ### Pattern 4: Derive slot from a retrieved transaction, never the certificate hash key
 
 **What:** Provide a lookup API that accepts either a known slot or a `GeniusTransaction`; callers with only a transaction hash load `GetTransactionPath(hash)` from `GlobalDB`, deserialize it, call `GetSlotID()`, then load `/cert/<slot>`. [CITED: src/account/TransactionManager.cpp] [CITED: src/account/GeniusTransaction.hpp]
 
-**When to use:** All transaction-backed `Blockchain::CheckCertificate`, `Blockchain::GetCertificateBySubjectHash`, replay protection, confirmation/state transitions, and input validation call sites. Registry batch code must instead use the generic certificate’s embedded proposal through `GetSlotKey`, preserving D-13. [CITED: src/account/TransactionManager.cpp] [CITED: src/account/GeniusInputValidator.cpp] [CITED: src/blockchain/ValidatorRegistry.cpp]
+**When to use:** All transaction-backed `Blockchain::CheckCertificate`, `Blockchain::GetCertificateBySubjectHash`, replay protection, confirmation/state transitions, and input validation call sites. Registry batch code retains its existing generic `GetSlotKey` integration; its identity semantics are explicitly not redesigned in this phase. [CITED: src/account/TransactionManager.cpp] [CITED: src/account/GeniusInputValidator.cpp] [CITED: src/blockchain/ValidatorRegistry.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ### Anti-Patterns to Avoid
 
@@ -196,7 +197,7 @@ if (key.empty() || stored_key != key || ValidateCertificate(certificate) != Chec
 - **Calling `SubmitCertificate` from PubSub receipt:** `HandleCertificate` must remain a receiver/validation path; D-02 forbids receivers from obtaining write authority. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 - **Retaining `ValidateLegacyCertificateKey`:** It explicitly binds `/cert/<subject-hash>` and would reject the Phase-10 authoritative record. [CITED: src/blockchain/Consensus.cpp]
 - **Clearing proposal or active-vote state immediately after the local write:** Phase 9 requires a committed callback/recovery readback before lock release. [CITED: src/blockchain/Consensus.cpp] [CITED: .planning/phases/09-durable-one-vote-finality/09-CONTEXT.md]
-- **Adding a hash-to-slot authority locator:** D-11/D-12 prohibit it; retrieve the transaction and derive `GetSlotID()`. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
+- **Adding a hash-to-slot authority locator:** D-12/D-13 prohibit it; retrieve the transaction and derive `GetSlotID()`. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ## Don't Hand-Roll
 
@@ -215,13 +216,13 @@ if (key.empty() || stored_key != key || ValidateCertificate(certificate) != Chec
 
 **What goes wrong:** `SubmitCertificate` writes `/cert/<slot>` but filter/recovery/finalized-slot lookup still validate or scan `/cert/<subject-hash>`, causing legitimate authoritative records to stall and legacy records to remain effective. [CITED: src/blockchain/Consensus.cpp]
 
-**How to avoid:** Make one slot-key predicate the only certificate-record predicate and migrate `FilterCertificate`, `RecoverPendingCertificateWork`, `HasAcceptedCertificateForSlot`, and public lookup helpers in the same implementation task. [ASSUMED]
+**How to avoid:** Make one slot-key predicate the only certificate-record predicate and migrate `FilterCertificate`, `RecoverPendingCertificateWork`, `HasAcceptedCertificateForSlot`, and public lookup helpers in the same implementation task. [CITED: src/blockchain/Consensus.cpp]
 
-### Pitfall 2: Equal-priority CRDT collision overwrites the apparent first record
+### Pitfall 2: Local first-seen collision handling diverges replicas
 
-**What goes wrong:** Multiple CRDT elements can exist for a key, and the stored visible value is updated when incoming priority is equal and value bytes differ. [CITED: src/crdt/impl/crdt_set.cpp]
+**What goes wrong:** Multiple CRDT elements can exist for a key, and the current visible value may change when an equal-priority different value arrives. Choosing whichever value was read first makes replica order observable and can diverge authority. [CITED: src/crdt/impl/crdt_set.cpp]
 
-**How to avoid:** Gate every writer by deterministic role and visible occupancy; treat an occupied different certificate as a conflict. Flag the lack of distributed conditional put explicitly; do not claim that a pre-read alone proves first-writer finality. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] [ASSUMED]
+**How to avoid:** Compute the locked SHA-256 lowercase-hex certificate ordering key from serialized `ConsensusCertificate` bytes and make every local/remote merge select the same lowest key. Prove it with two replicas writing concurrent valid payloads and synchronizing in both orders. This convergence rule handles storage races only; Phase 9 still prevents distinct winners in normal operation. [CITED: src/crypto/hasher.hpp] [CITED: src/base/hexutil.hpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ### Pitfall 3: Reintroducing callback-time completion
 
@@ -235,18 +236,18 @@ if (key.empty() || stored_key != key || ValidateCertificate(certificate) != Chec
 
 **How to avoid:** For a transaction hash, fetch and deserialize the transaction, derive `GetSlotID()`, and fail/pending when retrieval is unavailable. For registry batches, derive from the embedded certificate proposal using generic `GetSlotKey`; do not redesign batch identity. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-### Pitfall 5: Testing PubSub failure that the current API cannot surface
+### Pitfall 5: Swallowing a real PubSub publish result
 
-**What goes wrong:** `ConsensusManager::Publish` reports success after calling a `void` transport method, so a unit test cannot inject or assert an error without a new observable transport seam. [CITED: src/blockchain/Consensus.cpp]
+**What goes wrong:** `ConsensusManager::Publish` currently reports success after calling a void transport method, so a failed notification cannot be logged or asserted. [CITED: src/blockchain/Consensus.cpp]
 
-**How to avoid:** Resolve this D-06/API tension before implementation: either confirm “failed publish” means serialization failure only, or authorize a narrow injectable/returning wrapper around the transport. Do not implement a retry loop. [ASSUMED]
+**How to avoid:** Implement the locked `GossipPubSub::Publish` result contract, propagate it through `ConsensusManager::Publish`, and test an injected publish error after a successful CRDT write. Assert the write remains authoritative, the error is logged/returned, and there is one notification attempt with no retry. [CITED: src/blockchain/Consensus.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ## Code Examples
 
 ### Authoritative slot lookup after transaction retrieval
 
 ```cpp
-// Shape required by D-11/D-12. [CITED: src/account/TransactionManager.cpp]
+// Shape required by D-12/D-13. [CITED: src/account/TransactionManager.cpp]
 auto tx = TransactionManager::FetchTransaction(db, TransactionManager::GetTransactionPath(tx_hash));
 if (tx.has_error() || !tx.value()) {
     return outcome::failure(std::errc::resource_unavailable_try_again);
@@ -274,31 +275,13 @@ return ordered[index] == account_address_ ? AggregatorRole::CurrentAggregator
 
 **Deprecated/outdated:** `ValidateLegacyCertificateKey`, `/cert/<subject-hash>` as authority, and direct hash-suffix certificate reads are all incompatible with CERT-01/COMP-01. [CITED: src/blockchain/Consensus.cpp] [CITED: .planning/REQUIREMENTS.md]
 
-## Assumptions Log
+## Resolved Planning Decisions
 
-| # | Claim | Section | Risk if Wrong |
-|---|---|---|---|
-| A1 | A centralized `ConsensusManager` helper can safely serialize local read/compare/write decisions, but it cannot by itself add distributed CAS to `GlobalDB`. | Pattern 2 | Concurrent publishers may still cause CRDT value replacement; protocol-level finality needs an explicit resolution. |
-| A2 | The minimal safe collision behavior for this phase is visible occupancy detection plus conflict rejection, with stronger distributed immutability deferred only if existing CRDT facilities cannot support it. | Pattern 2 / Open Questions | D-04 could remain unprovable under partition/concurrent writes. |
-| A3 | D-06 needs an observable PubSub failure seam or clarification because current `Publish` cannot report a transport error. | Pattern 3 / Pitfall 5 | Required logging/negative test may be impossible or misleading. |
-| A4 | A new slot-aware public API plus retained compatibility method implementation can migrate all current internal callers without a broad refactor. | Pattern 4 | API migration may require more consumers or a different ownership boundary. |
+1. **Concurrent slot records converge by certificate hash.** Serialize the exact `ConsensusCertificate`, compute `crypto::sha2_256(bytes)`, represent it with lowercase `base::hex_lower`, and select the lexicographically lowest certificate hash on every replica. This is a locked D-04 storage-convergence rule, not local first-seen state or an assumed conditional write. The Phase 10 plan must include a two-replica concurrent-write/synchronize-in-both-orders regression. [CITED: src/crypto/hasher.hpp] [CITED: src/base/hexutil.hpp] [CITED: src/blockchain/ConsensusAuth.hpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-## Open Questions
+2. **Actual PubSub failures become observable without retry.** The authorized minimal contract is a result-returning `GossipPubSub::Publish(topic, payload)`. `ConsensusManager::Publish` propagates it; certificate publication logs and returns the failure only after its successful CRDT write, and does not retry. The direct project callers that need compilation updates are `ConsensusManager::Publish` and `AccountMessenger`. Add transport-layer result tests and a consensus lifecycle injected-error regression. [CITED: src/blockchain/Consensus.cpp] [CITED: src/account/AccountMessenger.cpp] [CITED: test/src/pubsub_counts/pubsub_counts.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
-1. **How is “first valid certificate persisted is final” enforced against concurrent writes?**
-   - What we know: `GlobalDB` offers `Put` and `Get` but no exposed atomic conditional put, and `CrdtSet` can store a different equal-priority value. [CITED: src/crdt/globaldb/globaldb.hpp] [CITED: src/crdt/impl/crdt_set.cpp]
-   - What's unclear: Whether the protocol’s deterministic round/availability assumptions rule out an old and successor publisher racing, or whether an existing lower-layer conditional primitive can be exposed within scope. [ASSUMED]
-   - Recommendation: Make this a planner checkpoint: inspect the CRDT priority/merge contract and choose a demonstrably no-overwrite mechanism before claiming D-04 complete. A pre-read must fail closed but is not a distributed CAS. [ASSUMED]
-
-2. **How can PubSub failure be logged under D-06?**
-   - What we know: the current consensus wrapper invokes `pubsub_->Publish` and returns success; no status is checked. [CITED: src/blockchain/Consensus.cpp]
-   - What's unclear: Whether the dependency exposes another status-returning interface outside the checked-in headers. [ASSUMED]
-   - Recommendation: Confirm with the project owner or dependency source before planning a test. If no status exists, record the limitation rather than fabricating a failure branch; do not add retries. [ASSUMED]
-
-3. **Which hash-based registry/batch calls must migrate in Phase 10?**
-   - What we know: `ValidatorRegistry::LoadCertificateBySubjectHash` is used during batch creation and update verification. [CITED: src/blockchain/ValidatorRegistry.cpp]
-   - What's unclear: D-13 preserves generic `GetSlotKey` semantics, while these paths retain batch subject hashes and do not have a `GeniusTransaction`. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
-   - Recommendation: Keep the batch subject-hash list as identity metadata, but replace direct hash-key lookup by scanning/deriving the certificate’s generic slot or introduce a generic subject-to-slot API that cannot become a subject-hash authority. [ASSUMED]
+3. **Registry-batch identity stays unchanged.** Keep existing generic `GetSlotKey` integration for non-transaction subjects; do not introduce a batch hash-to-slot locator or redesign registry-batch identity in Phase 10. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ## Environment Availability
 
@@ -331,22 +314,22 @@ Baseline: the focused CTest command passed on 2026-08-21 (2/2 tests). [VERIFIED:
 | CERT-01 | Slot-key filter/recovery/lookup reject legacy subject-hash keys and accept only expected `/cert/<slot>`. | component | focused CTest command | ✅ fixture; ❌ Phase-10 cases [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] |
 | CERT-02 | Only forced current-round aggregator calls authoritative write; keyless `HandleCertificate` and non-aggregator paths observe no `Put`/advertisement. | component | focused CTest command | ✅ fixture/accessor; ❌ cases [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] |
 | CERT-03 | A successful slot write precedes PubSub invocation; write failure emits no announcement; local writer completion still waits for callback/recovery. | component | focused CTest command | ✅ lifecycle fixture; ❌ write/order seam [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] |
-| CERT-04 | Later normal-round successor sees absent slot and can publish same exact certificate; occupied identical is replay-safe; occupied different fails closed. | component + fault injection | focused CTest command | ✅ timer/round accessor; ❌ occupancy/failure cases [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] |
+| CERT-04 | Later normal-round successor sees absent slot and can publish same exact certificate; two replicas concurrently writing distinct valid encodings for one slot converge to the lowest SHA-256 lowercase-hex certificate hash in either sync order. | two-replica component + fault injection | focused CTest command plus CRDT integration target | ✅ lifecycle fixture; ❌ two-replica convergence cases [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] [CITED: test/src/crdt/globaldb_integration.cpp] |
 | COMP-01 | Hash-only transaction consumer fetches transaction, derives slot, then finds authoritative record; missing transaction never falls back to `/cert/<hash>`. | integration/component | focused CTest plus relevant account target | ❌ dedicated cases [CITED: src/account/TransactionManager.cpp] |
 
 ### Sampling Rate
 
 - **Per task commit:** build both focused targets, then run the focused CTest command. [VERIFIED: local build probe]
-- **Per wave merge:** focused CTest command plus `git diff --check`. [ASSUMED]
-- **Phase gate:** all focused slot/lifecycle regressions green; add the relevant transaction/validator target when COMP-01 changes their implementation. [ASSUMED]
+- **Per wave merge:** focused CTest command plus the two-replica CRDT convergence regression and `git diff --check`. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
+- **Phase gate:** all focused slot/lifecycle, transport-result, two-replica convergence, and relevant transaction/validator regressions green. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ### Wave 0 Gaps
 
-- [ ] Extend `ConsensusPendingLifecycleTestAccess` with an observable authoritative-write/announcement seam and a way to seed/read `/cert/<slot>` values. [ASSUMED]
+- [ ] Extend `ConsensusPendingLifecycleTestAccess` with an observable authoritative-write/announcement seam, result-returning publish-error injection, and a way to seed/read `/cert/<slot>` values. [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 - [ ] Add deterministic role/round tests for non-selected, selected, and successor paths without sleeps. [CITED: test/src/blockchain/consensus_pending_lifecycle_test.cpp]
-- [ ] Add collision tests for empty, byte-identical, different-valid, malformed, and unreadable slot records. [ASSUMED]
-- [ ] Add transaction lookup tests covering hash → CRDT transaction → `GetSlotID()` → slot certificate and missing transaction fail-closed behavior. [ASSUMED]
-- [ ] Decide whether a transport-status test seam is in scope for D-06. [ASSUMED]
+- [ ] Add a two-replica regression that concurrently writes distinct valid same-slot certificates, synchronizes both directions/orders, and asserts the same lowest certificate hash/value; retain empty, byte-identical, malformed, and unreadable cases. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
+- [ ] Add transaction lookup tests covering hash → CRDT transaction → `GetSlotID()` → slot certificate and missing transaction fail-closed behavior. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
+- [ ] Add a PubSub contract test for actual result propagation and a certificate-publication test proving persisted record + logged single failed notification + no retry. [CITED: src/blockchain/Consensus.cpp] [CITED: test/src/pubsub_counts/pubsub_counts.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 
 ## Security Domain
 
@@ -366,7 +349,7 @@ Baseline: the focused CTest command passed on 2026-08-21 (2/2 tests). [VERIFIED:
 |---|---|---|
 | Non-selected peer or PubSub receiver writes the record | Elevation / Tampering | Gate the only write path by deterministic `CurrentAggregator`; receipt never calls `Put`. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
 | Malformed or wrong-slot CRDT certificate enters recovery | Tampering / DoS | Validate key-to-embedded-proposal slot before recovery effects; retain stalled work on failed readback. [CITED: src/blockchain/Consensus.cpp] |
-| Different certificate replaces occupied slot | Tampering | Reject conflict and do not overwrite; resolve the missing conditional-write guarantee before sign-off. [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] [ASSUMED] |
+| Concurrent valid certificate encodings contend for one slot | Tampering / Race | Select the lexicographically lowest SHA-256 lowercase-hex certificate hash on every replica; prove two-replica convergence in both sync orders. [CITED: src/crypto/hasher.hpp] [CITED: src/base/hexutil.hpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md] |
 | Callback triggers early finality | Replay / DoS | Keep Phase-9 pre-commit callback journal behavior and post-commit readback. [CITED: src/blockchain/Consensus.cpp] |
 
 ## Sources
@@ -387,14 +370,14 @@ Baseline: the focused CTest command passed on 2026-08-21 (2/2 tests). [VERIFIED:
 
 ### Tertiary (LOW confidence)
 
-- The four implementation choices recorded in the Assumptions Log, especially the absence of a distributed conditional-write primitive and the needed PubSub status seam.
+- None — the prior collision, PubSub-result, and registry-batch planning ambiguities are now locked decisions.
 
 ## Metadata
 
 **Confidence breakdown:**
 - Standard stack: HIGH — the phase uses only inspected project facilities. [VERIFIED: codebase grep]
-- Architecture: MEDIUM — key migration/role/recovery seams are concrete, but distributed no-overwrite semantics need resolution. [CITED: src/crdt/impl/crdt_set.cpp] [ASSUMED]
+- Architecture: HIGH — key migration/role/recovery seams are concrete and D-04 now locks deterministic hash convergence; the plan must verify the CRDT integration implements that ordering. [CITED: src/crdt/impl/crdt_set.cpp] [CITED: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md]
 - Pitfalls: HIGH — current publish-before-write, legacy lookup, pre-commit callback, and CRDT replacement behavior were inspected directly. [CITED: src/blockchain/Consensus.cpp] [CITED: src/crdt/impl/crdt_set.cpp]
 
 **Research date:** 2026-08-21  
-**Valid until:** 2026-09-20 for internal-code findings; revisit the two open implementation tensions before execution. [ASSUMED]
+**Valid until:** 2026-09-20 for internal-code findings; re-check the external PubSub interface signature before implementation. [CITED: src/blockchain/Consensus.cpp]
