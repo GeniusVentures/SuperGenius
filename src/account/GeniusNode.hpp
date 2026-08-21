@@ -1275,6 +1275,11 @@ sinks:
     - name: file
       type: file
       capacity: 1000
+      # buffer_size must stay near capacity * message size: Sink::push only calls
+      # async_flush() at 4/5 of it, so the 4Mb default made that threshold
+      # unreachable and left the sink waiting on its latency timer.
+      buffer_size: 131072
+      latency: 100
       path: [basepath]/sgnslog.log
 groups:
     - name: SuperGeniusNode
