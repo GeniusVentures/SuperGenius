@@ -18,6 +18,7 @@
 #include <openssl/crypto.h>
 
 #include "account/GeniusSigner.hpp"
+#include "base/hexutil.hpp"
 
 #ifndef O_NOFOLLOW
 #define O_NOFOLLOW 0
@@ -158,10 +159,16 @@ namespace sgns::trustedpeer
         {
             if ( private_key.size() != PRIVATE_KEY_HEX_LENGTH )
                 return outcome::failure( Error::INVALID_PRIVATE_KEY );
+            auto key_bytes = sgns::base::unhex( private_key );
+            if ( key_bytes.has_error() || key_bytes.value().size() != GeniusSigner::PRIVATE_KEY_SIZE )
+                return outcome::failure( Error::INVALID_PRIVATE_KEY );
             try
             {
-                std::shared_ptr<GeniusSigner> local_key =
-                    std::make_shared<GeniusSigner>( ethereum::EthereumKeyGenerator( private_key ) );
+                GeniusSigner::PrivateKey secret_key{};
+                std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
+                std::shared_ptr<GeniusSigner> local_key = std::make_shared<GeniusSigner>( secret_key );
+                if ( local_key->GetAddress().empty() )
+                    return outcome::failure( Error::INVALID_PRIVATE_KEY );
                 return Signer{ local_key->GetAddress(),
                                [local_key]( const std::vector<uint8_t> &bytes ) { return local_key->Sign( bytes ); } };
             }

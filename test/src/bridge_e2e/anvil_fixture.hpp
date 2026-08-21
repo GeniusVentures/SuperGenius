@@ -16,12 +16,16 @@
 #ifndef SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 #define SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -124,6 +128,9 @@ namespace sgns::test::anvil
 
     /** @brief Line-buffer size (bytes) for RunShellCapture's fgets loop. */
     inline constexpr unsigned int kShellLineBufferSize = 1024u;
+
+    /** @brief Maximum Anvil stderr bytes included in a startup-failure diagnostic. */
+    inline constexpr size_t kAnvilErrorTailBytes = 4096u;
 
     /** @brief 1 GNUS expressed in base units (1e18) — funding amount passed to `cast send`. */
     inline constexpr uint64_t kOneGnusInBaseUnits = 1000000000000000000ull;
@@ -631,10 +638,16 @@ namespace sgns::test::anvil
 
             rpc_url_  = "http://127.0.0.1:" + std::to_string( port_ );
             port_str_ = std::to_string( port_ );
+            anvil_stderr_path_ =
+                ( std::filesystem::temp_directory_path() /
+                  ( "supergenius-anvil-" + port_str_ + ".stderr.log" ) ).string();
+            std::error_code remove_ec;
+            std::filesystem::remove( anvil_stderr_path_, remove_ec );
 
             // boost::process resolves `anvil` via PATH (POSIX) / %PATH% (Windows),
-            // spawns it cross-platform, and redirects the child's std streams to
-            // null. search_path returns an empty path when the binary is missing,
+            // spawns it cross-platform, redirects the child's stdin/stdout to null,
+            // and captures stderr for startup diagnostics. search_path returns an
+            // empty path when the binary is missing,
             // and the bp::child constructor then throws system_error — caught here
             // and reported, unlike the old execlp() path which silently _exit(127)'d.
             try
@@ -649,11 +662,14 @@ namespace sgns::test::anvil
                     kAnvilMnemonic,
                     bp::std_in < bp::null,
                     bp::std_out > bp::null,
-                    bp::std_err > bp::null );
+                    bp::std_err > anvil_stderr_path_ );
             }
             catch ( const std::system_error &e )
             {
                 spdlog::error( "anvil_fixture: failed to spawn anvil on PATH: {}", e.what() );
+                std::error_code cleanup_ec;
+                std::filesystem::remove( anvil_stderr_path_, cleanup_ec );
+                anvil_stderr_path_.clear();
                 return false;
             }
             started_ = true;
@@ -716,6 +732,11 @@ namespace sgns::test::anvil
                 spdlog::warn( "anvil_fixture: anvil did not become ready at {} within {}ms",
                               rpc,
                               static_cast<long long>( timeout.count() ) );
+                const std::string stderr_tail = ReadFileTail( anvil_stderr_path_, kAnvilErrorTailBytes );
+                if ( !stderr_tail.empty() )
+                {
+                    spdlog::error( "anvil_fixture: anvil stderr:\n{}", stderr_tail );
+                }
             }
             return result;
         }
@@ -737,6 +758,12 @@ namespace sgns::test::anvil
                 anvil_child_->wait( ec );      // reap — bounded, SIGKILL is fatal
                 spdlog::info( "anvil_fixture: stopped anvil exit_code={}", anvil_child_->exit_code() );
                 anvil_child_.reset();
+            }
+            if ( !anvil_stderr_path_.empty() )
+            {
+                std::error_code remove_ec;
+                std::filesystem::remove( anvil_stderr_path_, remove_ec );
+                anvil_stderr_path_.clear();
             }
             started_ = false;
         }
@@ -760,6 +787,27 @@ namespace sgns::test::anvil
         }
 
     private:
+        static std::string ReadFileTail( const std::string &path, size_t max_bytes )
+        {
+            std::ifstream input( path, std::ios::binary );
+            if ( !input )
+            {
+                return {};
+            }
+
+            input.seekg( 0, std::ios::end );
+            const auto end = static_cast<std::streamoff>( input.tellg() );
+            if ( end <= 0 )
+            {
+                return {};
+            }
+            const auto bytes  = static_cast<std::streamoff>( max_bytes );
+            const auto offset = std::max( std::streamoff{ 0 }, end - bytes );
+            input.seekg( offset, std::ios::beg );
+            return std::string( std::istreambuf_iterator<char>( input ),
+                                std::istreambuf_iterator<char>() );
+        }
+
         /**
          * @brief Finds a bindable TCP port without reusing an existing listener.
          *
@@ -802,6 +850,7 @@ namespace sgns::test::anvil
         unsigned int               port_      = 0u;      ///< Anvil TCP port.
         std::string                rpc_url_;             ///< "http://127.0.0.1:<port>".
         std::string                port_str_;            ///< String form of port_ (passed to bp::child args).
+        std::string                anvil_stderr_path_;   ///< Temporary child stderr capture for diagnostics.
         bool                       started_   = false;   ///< Whether Start() has succeeded.
     };
 
