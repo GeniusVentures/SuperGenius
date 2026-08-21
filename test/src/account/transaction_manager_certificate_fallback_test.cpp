@@ -70,54 +70,11 @@ namespace sgns
             return tm.GetTrackedTxByHash( hash );
         }
 
-        static void Track( TransactionManager                       &tm,
-                           const std::shared_ptr<GeniusTransaction> &tx,
-                           TransactionManager::TransactionStatus     status )
+        static ConsensusManager::Check EvaluateReplayProtection(
+            TransactionManager          &tm,
+            const GeniusTransaction     &transaction )
         {
-            std::unique_lock lock( tm.tx_mutex_m );
-            tm.tx_processed_m[TransactionManager::GetTransactionPath( *tx )] = TransactionManager::TrackedTx{
-                tx,
-                status,
-                tx->GetNonce() };
-        }
-
-        static outcome::result<void> ChangeState( TransactionManager                       &tm,
-                                                  const std::shared_ptr<GeniusTransaction> &tx,
-                                                  TransactionManager::TransactionStatus     status )
-        {
-            return tm.ChangeTransactionState( tx, status );
-        }
-
-        /**
-         * @brief Looks up the certificate handler ConsensusManager would dispatch to for
-         *        @p subject_type, i.e. the one TransactionManager::New registered.
-         * @return The registered handler, or nullptr when nothing is registered.
-         */
-        static ConsensusManager::CertificateSubjectHandler FindCertificateHandler( Blockchain      &blockchain,
-                                                                                   std::string_view subject_type )
-        {
-            const auto &manager = blockchain.consensus_manager_;
-            if ( !manager )
-            {
-                return nullptr;
-            }
-            auto type_hash = ConsensusManager::ComputeSubjectTypeHash( subject_type );
-            if ( type_hash.has_error() )
-            {
-                return nullptr;
-            }
-            std::shared_lock lock( manager->certificate_handlers_mutex_ );
-            auto             it = manager->certificate_subject_handlers_.find( type_hash.value() );
-            if ( it == manager->certificate_subject_handlers_.end() )
-            {
-                return nullptr;
-            }
-            return it->second;
-        }
-
-        static outcome::result<std::string> GetSubjectHash( const ConsensusManager::Subject &subject )
-        {
-            return ConsensusManager::GetSubjectHash( subject );
+            return tm.EvaluateTransactionReplayProtection( transaction ).validation.check;
         }
     };
 }
@@ -242,21 +199,21 @@ namespace
         return result.value();
     }
 
-    /**
-     * @brief Builds a DAGStruct owned by @p account, so the local-account branches of
-     *        ChangeTransactionState (UTXO release, nonce bookkeeping) are exercised.
-     */
-    SGTransaction::DAGStruct MakeLocalDag( const GeniusAccount &account, uint64_t nonce )
+    std::shared_ptr<TransferTransaction> MakeTransfer( const std::string &source_address,
+                                                        uint64_t           nonce,
+                                                        const std::string &previous_hash = {} )
     {
         SGTransaction::DAGStruct dag;
+        dag.set_type( "transfer" );
+        dag.set_source_addr( source_address );
         dag.set_nonce( nonce );
-        dag.set_source_addr( account.GetAddress() );
-        dag.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
-        return dag;
+        dag.set_previous_hash( previous_hash );
+        dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch() ).count() ) );
+        return std::make_shared<TransferTransaction>(
+            TransferTransaction::New( {}, {}, std::move( dag ) ) );
     }
-}
+}  // anonymous namespace
 
 /**
  * @brief Concrete CRDTFixture used as a plain object rather than a gtest fixture.
@@ -271,54 +228,15 @@ public:
     {
     }
 
-    void TestBody() override
-    {
-    }
-};
-
-/**
- * @brief Lightweight test fixture creating a TransactionManager directly (no GeniusNode,
- *        no network sync).
- *
- * The GossipPubSub/GlobalDB stack is built once per suite rather than per test. Only the account,
- * Blockchain and TransactionManager -- the cheap, stateful parts -- are rebuilt per test.
- *
- * Because the GlobalDB is now shared, each test gets a freshly generated account, and so
- * a distinct address. Address-keyed state (UTXOs, confirmed nonces) written by one test
- * is therefore invisible to the next. Do not rely on the account address being stable
- * across tests.
- */
-class CertificateFallbackTest : public ::testing::Test
-{
-public:
-    static void SetUpTestSuite()
-    {
-        test::CRDTFixture::SetUpTestSuite(); // logging system only
-        crdt_ = std::make_unique<SharedCrdtEnvironment>();
-    }
-
-    static void TearDownTestSuite()
-    {
-        crdt_.reset();
-        test::CRDTFixture::TearDownTestSuite();
-    }
-
     void SetUp() override
     {
-        ASSERT_NE( crdt_, nullptr );
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
-
-        // MemorySecureStorage keys its (process-wide static) store by identifier, so a
-        // unique path per test is what forces a fresh keypair and a fresh address.
-        static std::atomic<uint64_t> account_counter{ 0 };
-        const auto account_path = fs::path( crdt_->getPathString() ) /
-                                  ( "account-" +
-                                    std::to_string( account_counter.fetch_add( 1, std::memory_order_relaxed ) ) );
-
-        account_ = GeniusAccount::New( kTestTokenId, account_path );
-        ASSERT_NE( account_, nullptr );
+        // Create a GeniusAccount for the TransactionManager (random key, no crypto derivation)
+        account_ = GeniusAccount::New( kTestTokenId, base_path / "account" );
+        assert( account_ != nullptr );
 
         // Load the UTXOManager's DB so ParseTransaction can store UTXOs
         auto load_result = account_->GetUTXOManager().LoadUTXOs( crdt_->db_->GetDataStore() );
@@ -363,11 +281,24 @@ public:
 
     ~CertificateFallbackTest() override = default;
 
-    static std::unique_ptr<SharedCrdtEnvironment> crdt_;
+    std::shared_ptr<GeniusAccount>        account_;
+    std::shared_ptr<Blockchain>           blockchain_;
+    std::shared_ptr<TransactionManager>   tm_;
 
-    std::shared_ptr<GeniusAccount>      account_;
-    std::shared_ptr<Blockchain>         blockchain_;
-    std::shared_ptr<TransactionManager> tm_;
+    void PersistTransaction( const std::shared_ptr<GeniusTransaction> &transaction )
+    {
+        ASSERT_TRUE( transaction );
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( transaction->SerializeByteVector() );
+        ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized, {} ).has_value() );
+    }
+
+    void PersistLegacyCertificateRecord( const std::string &transaction_hash )
+    {
+        crdt::GlobalDB::Buffer legacy_value;
+        legacy_value.put( "legacy-certificate-record" );
+        ASSERT_TRUE( db_->Put( { "/cert/" + transaction_hash }, legacy_value, {} ).has_value() );
+    }
 };
 
 std::unique_ptr<SharedCrdtEnvironment> CertificateFallbackTest::crdt_;
@@ -772,4 +703,38 @@ TEST_F( CertificateFallbackTest, RegisteredCertificateHandlerRoutesToConflictRes
                TransactionManager::TransactionStatus::FAILED );
     EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_hash )->status,
                TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+/**
+ * A hash-only prior transaction dependency remains pending when the producer
+ * transaction has not been recovered from CRDT. A certificate hash record
+ * alone is never a finality authority key.
+ */
+TEST_F( CertificateFallbackTest, ReplayProtection_MissingPreviousTransactionRemainsPending )
+{
+    const auto previous_hash = std::string( "missing-previous-transaction" );
+    const auto candidate = MakeTransfer( account_->GetAddress(), 1, previous_hash );
+
+    PersistLegacyCertificateRecord( previous_hash );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::EvaluateReplayProtection( *tm_, *candidate ),
+               ConsensusManager::Check::Pending );
+}
+
+/**
+ * Even after the previous transaction is available in CRDT, only its derived
+ * slot can establish finality. A legacy /cert/<transaction-hash> record must
+ * leave the nonce dependency pending when no authoritative slot record exists.
+ */
+TEST_F( CertificateFallbackTest, ReplayProtection_RejectsLegacyHashCertificateRecord )
+{
+    const auto previous = MakeTransfer( account_->GetAddress(), 0 );
+    ASSERT_FALSE( previous->GetHash().empty() );
+    PersistTransaction( previous );
+    PersistLegacyCertificateRecord( previous->GetHash() );
+
+    const auto candidate = MakeTransfer( account_->GetAddress(), 1, previous->GetHash() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::EvaluateReplayProtection( *tm_, *candidate ),
+               ConsensusManager::Check::Pending );
 }
