@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-21T16:50:34.806Z"
-last_activity: 2026-08-21 -- Phase 10 planning complete
+last_updated: "2026-08-21T17:11:52.199Z"
+last_activity: 2026-08-21
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 8
-  completed_plans: 3
-  percent: 38
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 10 — authoritative slot certificate publication
+**Current focus:** Phase 10 — Authoritative Slot Certificate Publication
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
+Phase: 10 (Authoritative Slot Certificate Publication) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-21 -- Phase 10 planning complete
+Last activity: 2026-08-21
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [████░░░░░░] 40%
 
 **Recent Trend:** Not yet measured for v3.0.
 | Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
+| Phase 10 P01 | 10m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,7 @@ Progress: [████░░░░░░] 40%
 - [Phase 08]: Keep the legacy subject-hash CRDT key non-authoritative while validating it at key-aware ingress.
 - [Phase 08]: Reject invalid certificate bindings before submit, cleanup, callbacks, registry finalization, or handler dispatch.
 - [Phase 08]: Use in-memory secure storage in the pending-lifecycle fixture before creating the signing account.
+- [Phase 10]: Immutable authority records converge by the lowest SHA-256 lowercase-hex serialized bytes. — A reserved replicated CRDT priority avoids local first-seen and read-then-write semantics.
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-21T14:32:34.047Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md
+Last session: 2026-08-21T17:11:51.814Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
