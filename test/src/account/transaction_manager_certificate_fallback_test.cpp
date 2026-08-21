@@ -16,15 +16,18 @@
 
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <gsl/span>
 #include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns;
 
@@ -39,42 +42,45 @@ namespace sgns
     {
     public:
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
-            TransactionManager          &tm,
-            const EmbeddedTransaction   &embedded )
+            TransactionManager        &tm,
+            const EmbeddedTransaction &embedded )
         {
             return tm.DeSerializeEmbeddedTransaction( embedded );
         }
 
-        static outcome::result<ConsensusManager::Check> OnConsensusCertificate(
-            TransactionManager       &tm,
-            const std::string        &tx_hash,
-            const ConsensusCertificate &cert )
+        static outcome::result<ConsensusManager::Check> OnConsensusCertificate( TransactionManager         &tm,
+                                                                                const std::string          &tx_hash,
+                                                                                const ConsensusCertificate &cert )
         {
             return tm.OnConsensusCertificate( tx_hash, cert );
         }
 
-        static std::shared_ptr<GeniusTransaction> GetTransactionByHash(
-            TransactionManager &tm,
-            const std::string  &hash )
+        static std::shared_ptr<GeniusTransaction> GetTransactionByHash( TransactionManager &tm,
+                                                                        const std::string  &hash )
         {
             return tm.GetTransactionByHash( hash );
         }
 
-        static std::optional<TransactionManager::TrackedTx> GetTrackedTxByHash(
-            TransactionManager &tm,
-            const std::string  &hash )
+        static std::optional<TransactionManager::TrackedTx> GetTrackedTxByHash( TransactionManager &tm,
+                                                                                const std::string  &hash )
         {
             return tm.GetTrackedTxByHash( hash );
         }
 
-        static ConsensusManager::Check EvaluateReplayProtection(
-            TransactionManager          &tm,
-            const GeniusTransaction     &transaction )
+        static ConsensusManager::Check EvaluateReplayProtection( TransactionManager      &tm,
+                                                                 const GeniusTransaction &transaction )
         {
             return tm.EvaluateTransactionReplayProtection( transaction ).validation.check;
         }
+
+        static outcome::result<void> FetchAndProcessTransaction( TransactionManager         &tm,
+                                                                 const std::string          &key,
+                                                                 std::optional<base::Buffer> data )
+        {
+            return tm.FetchAndProcessTransaction( key, std::move( data ) );
+        }
     };
-}  // namespace sgns
+} // namespace sgns
 
 namespace
 {
@@ -90,14 +96,12 @@ namespace
      * @param[in] proposal_id  Unique proposal identifier.
      * @return Populated ConsensusCertificate.
      */
-    ConsensusCertificate BuildCertificate( const ConsensusManager::Subject &subject,
-                                           const std::string               &proposal_id )
+    ConsensusCertificate BuildCertificate( const ConsensusManager::Subject &subject, const std::string &proposal_id )
     {
         ConsensusCertificate cert;
         cert.set_proposal_id( proposal_id );
         const auto now_ms = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch() )
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
         cert.set_timestamp( now_ms );
         cert.set_total_weight( 1 );
@@ -131,8 +135,7 @@ namespace
         *bare_embedded.mutable_transfer() = bare_tx;
 
         // Step 2: Deserialize to get a real TransferTransaction object
-        auto deser_result =
-            CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( tm, bare_embedded );
+        auto deser_result = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( tm, bare_embedded );
         assert( deser_result.has_value() && deser_result.value() != nullptr );
         auto tx_obj = deser_result.value();
 
@@ -140,8 +143,8 @@ namespace
         SGTransaction::DAGStruct dag_copy = tx_obj->dag_st;
         dag_copy.clear_signature();
         dag_copy.clear_data_hash();
-        auto   serialized_bytes = tx_obj->SerializeByteVector( dag_copy );
-        auto hash = sgns::crypto::blake2b_256(
+        auto serialized_bytes = tx_obj->SerializeByteVector( dag_copy );
+        auto hash             = sgns::crypto::blake2b_256(
             gsl::span<const uint8_t>( serialized_bytes.data(), serialized_bytes.size() ) );
 
         // Step 4: Rebuild the TransferTx proto with the correct data_hash
@@ -161,8 +164,7 @@ namespace
      * @param[in] embedded EmbeddedTransaction with kTransfer case set.
      * @return Transaction hash string, or empty string on failure.
      */
-    std::string ComputeEmbeddedTxHash( TransactionManager         &tm,
-                                       const EmbeddedTransaction  &embedded )
+    std::string ComputeEmbeddedTxHash( TransactionManager &tm, const EmbeddedTransaction &embedded )
     {
         auto tx_result = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( tm, embedded );
         if ( tx_result.has_error() )
@@ -185,43 +187,66 @@ namespace
                                                 const std::string         &tx_hash,
                                                 const EmbeddedTransaction &embedded )
     {
-        auto result = ConsensusManager::CreateNonceSubject(
-            account_id, nonce, tx_hash, embedded, std::nullopt, std::nullopt );
+        auto result = ConsensusManager::CreateNonceSubject( account_id,
+                                                            nonce,
+                                                            tx_hash,
+                                                            embedded,
+                                                            std::nullopt,
+                                                            std::nullopt );
         return result.value();
     }
 
     std::shared_ptr<TransferTransaction> MakeTransfer( const std::string &source_address,
-                                                        uint64_t           nonce,
-                                                        const std::string &previous_hash = {} )
+                                                       uint64_t           nonce,
+                                                       const std::string &previous_hash = {} )
     {
         SGTransaction::DAGStruct dag;
         dag.set_type( "transfer" );
         dag.set_source_addr( source_address );
         dag.set_nonce( nonce );
         dag.set_previous_hash( previous_hash );
-        dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch() ).count() ) );
-        return std::make_shared<TransferTransaction>(
-            TransferTransaction::New( {}, {}, std::move( dag ) ) );
+        dag.set_timestamp( static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() ) );
+        return std::make_shared<TransferTransaction>( TransferTransaction::New( {}, {}, std::move( dag ) ) );
     }
-}  // anonymous namespace
+
+    std::shared_ptr<MintTransactionV2> MakeCompetingMintV2( const std::string &source_address, uint64_t nonce )
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "mint-v2" );
+        dag.set_source_addr( source_address );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() ) );
+
+        const auto burn_hash = base::Hash256::fromReadableString( std::string( 64, 'a' ) );
+        assert( burn_hash.has_value() );
+        return std::make_shared<MintTransactionV2>( MintTransactionV2::New( 42,
+                                                                            "source-chain",
+                                                                            kTestTokenId,
+                                                                            std::move( dag ),
+                                                                            { { burn_hash.value(), 0, {} } },
+                                                                            source_address ) );
+    }
+} // anonymous namespace
 
 /**
  * @brief Lightweight test fixture using CRDTFixture for database/pubsub and
  *        creating a TransactionManager directly (no GeniusNode, no network sync).
  */
-class CertificateFallbackTest : public test::CRDTFixture
+class CertificateFallbackTest : public ::test::CRDTFixture
 {
 public:
-    CertificateFallbackTest() : CRDTFixture( "cert_fallback_test" )
+    CertificateFallbackTest() : ::test::CRDTFixture( "cert_fallback_test" )
     {
     }
 
     void SetUp() override
     {
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
         // Create a GeniusAccount for the TransactionManager (random key, no crypto derivation)
         account_ = GeniusAccount::New( kTestTokenId, base_path / "account" );
@@ -232,36 +257,37 @@ public:
         assert( load_result.has_value() );
 
         // Create a Blockchain with a no-op callback
-        blockchain_ = Blockchain::New(
-            db_, account_, pubs_, []( outcome::result<void> ) {} );
+        blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
         assert( blockchain_ != nullptr );
 
         // Create a TransactionManager in non-full-node mode
         constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
         constexpr auto kMutabilityWindow   = std::chrono::milliseconds( 600000 );
 
-        tm_ = TransactionManager::New(
-            db_, io_, account_,
-            blockchain_,
-            false,  // full_node
-            0,      // subnet_id
-            kTimestampTolerance,
-            kMutabilityWindow );
+        tm_ = TransactionManager::New( db_,
+                                       io_,
+                                       account_,
+                                       blockchain_,
+                                       false, // full_node
+                                       0,     // subnet_id
+                                       kTimestampTolerance,
+                                       kMutabilityWindow );
         assert( tm_ != nullptr );
     }
 
     ~CertificateFallbackTest() override = default;
 
-    std::shared_ptr<GeniusAccount>        account_;
-    std::shared_ptr<Blockchain>           blockchain_;
-    std::shared_ptr<TransactionManager>   tm_;
+    std::shared_ptr<GeniusAccount>      account_;
+    std::shared_ptr<Blockchain>         blockchain_;
+    std::shared_ptr<TransactionManager> tm_;
 
     void PersistTransaction( const std::shared_ptr<GeniusTransaction> &transaction )
     {
         ASSERT_TRUE( transaction );
         crdt::GlobalDB::Buffer serialized;
         serialized.put( transaction->SerializeByteVector() );
-        ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized, {} ).has_value() );
+        ASSERT_TRUE(
+            db_->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized, {} ).has_value() );
     }
 
     void PersistLegacyCertificateRecord( const std::string &transaction_hash )
@@ -269,6 +295,104 @@ public:
         crdt::GlobalDB::Buffer legacy_value;
         legacy_value.put( "legacy-certificate-record" );
         ASSERT_TRUE( db_->Put( { "/cert/" + transaction_hash }, legacy_value, {} ).has_value() );
+    }
+
+    outcome::result<ConsensusCertificate> BuildSignedCertificate(
+        const std::shared_ptr<GeniusTransaction> &transaction )
+    {
+        if ( !transaction )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        auto registry = blockchain_->GetValidatorRegistry();
+        if ( !registry || registry
+                              ->StoreGenesisRegistry( account_->GetAddress(),
+                                                      [account = account_]( std::vector<uint8_t> payload )
+                                                      { return account->Sign( std::move( payload ) ); } )
+                              .has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( !::waitForCondition(
+                 [&registry]()
+                 {
+                     auto current = registry->LoadCurrentRegistry();
+                     return current.has_value() && !registry->GetRegistryCid().empty();
+                 },
+                 std::chrono::milliseconds( 2000 ),
+                 nullptr ) )
+        {
+            return outcome::failure( std::errc::timed_out );
+        }
+
+        auto signing_manager = ConsensusManager::New(
+            registry,
+            db_,
+            pubs_,
+            [account = account_]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+            account_->GetAddress() );
+        if ( !signing_manager )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        const auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                                   transaction->GetNonce(),
+                                                                   transaction->GetHash(),
+                                                                   transaction->SerializeToEmbeddedTransaction(),
+                                                                   std::nullopt,
+                                                                   std::nullopt );
+        if ( subject.has_error() )
+        {
+            signing_manager->Close();
+            return outcome::failure( subject.error() );
+        }
+        const auto proposal = signing_manager->CreateProposal( subject.value(),
+                                                               account_->GetAddress(),
+                                                               registry->GetRegistryCid(),
+                                                               registry->GetRegistryEpoch() );
+        if ( proposal.has_error() )
+        {
+            signing_manager->Close();
+            return outcome::failure( proposal.error() );
+        }
+        const auto vote = signing_manager->CreateVote( proposal.value().proposal_id(),
+                                                       account_->GetAddress(),
+                                                       true,
+                                                       [account = account_]( std::vector<uint8_t> payload )
+                                                       { return account->Sign( std::move( payload ) ); } );
+        if ( vote.has_error() )
+        {
+            signing_manager->Close();
+            return outcome::failure( vote.error() );
+        }
+        const auto certificate = signing_manager->CreateCertificate( proposal.value(), { vote.value() } );
+        if ( certificate.has_error() )
+        {
+            signing_manager->Close();
+            return outcome::failure( certificate.error() );
+        }
+        signing_manager->Close();
+        return certificate.value();
+    }
+
+    void PersistCertificateAtSlot( const std::string &slot, const ConsensusCertificate &certificate )
+    {
+        std::string serialized;
+        ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+        crdt::GlobalDB::Buffer value;
+        value.put( serialized );
+        ASSERT_TRUE( db_->Put( { "/cert/" + slot }, value, {} ).has_value() );
+    }
+
+    outcome::result<void> FetchAndProcess( const std::shared_ptr<GeniusTransaction> &transaction )
+    {
+        base::Buffer serialized;
+        serialized.put( transaction->SerializeByteVector() );
+        return CertificateFallbackTestAccess::FetchAndProcessTransaction(
+            *tm_,
+            TransactionManager::GetTransactionPath( *transaction ),
+            std::move( serialized ) );
     }
 };
 
@@ -291,8 +415,7 @@ TEST_F( CertificateFallbackTest, HappyPath_ValidEmbeddedTx_ReturnsApprove )
     const auto subject = MakeNonceSubject( account_->GetAddress(), 1, tx_hash, embedded );
     const auto cert    = BuildCertificate( subject, "proposal-happy-01" );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 }
@@ -313,8 +436,7 @@ TEST_F( CertificateFallbackTest, HappyPath_TxStoredAfterFallback )
     // Before: tx is not in the local store
     EXPECT_EQ( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 
@@ -337,8 +459,7 @@ TEST_F( CertificateFallbackTest, HappyPath_TrackedTxIsConfirmed )
     const auto subject = MakeNonceSubject( account_->GetAddress(), 3, tx_hash, embedded );
     const auto cert    = BuildCertificate( subject, "proposal-confirmed-01" );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert );
     ASSERT_TRUE( result.has_value() );
 
     const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, tx_hash );
@@ -357,14 +478,16 @@ TEST_F( CertificateFallbackTest, HappyPath_TrackedTxIsConfirmed )
  */
 TEST_F( CertificateFallbackTest, EdgeCase_EmptyEmbeddedTransaction_ReturnsApprove )
 {
-    const auto subject = ConsensusManager::CreateNonceSubject(
-                             account_->GetAddress(), 10, "fake-hash-empty",
-                             EmbeddedTransaction{}, std::nullopt, std::nullopt )
+    const auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                               10,
+                                                               "fake-hash-empty",
+                                                               EmbeddedTransaction{},
+                                                               std::nullopt,
+                                                               std::nullopt )
                              .value();
     const auto cert = BuildCertificate( subject, "proposal-empty-01" );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, "fake-hash-empty", cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, "fake-hash-empty", cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 }
@@ -377,13 +500,11 @@ TEST_F( CertificateFallbackTest, EdgeCase_EmptyEmbeddedTransaction_ReturnsApprov
 TEST_F( CertificateFallbackTest, EdgeCase_NonNonceSubject_ReturnsApprove )
 {
     const std::vector<uint8_t> payload = { 0x01, 0x02, 0x03 };
-    const auto                 subject = ConsensusManager::CreateGenericSubject(
-                                              account_->GetAddress(), "gnus.bridge_event.v1", payload )
-                                              .value();
+    const auto                 subject =
+        ConsensusManager::CreateGenericSubject( account_->GetAddress(), "gnus.bridge_event.v1", payload ).value();
     const auto cert = BuildCertificate( subject, "proposal-generic-01" );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, "fake-hash-generic", cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, "fake-hash-generic", cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 }
@@ -403,8 +524,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_HashMismatch_ReturnsApprove )
     const auto subject = MakeNonceSubject( account_->GetAddress(), 11, mismatched_hash, embedded );
     const auto cert    = BuildCertificate( subject, "proposal-mismatch-01" );
 
-    const auto result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, mismatched_hash, cert );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, mismatched_hash, cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 
@@ -428,8 +548,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_ParameterHashDiffersFromSubject_Return
     const auto cert    = BuildCertificate( subject, "proposal-param-diff-01" );
 
     const std::string wrong_param_hash = "some-other-hash-not-in-store";
-    const auto        result =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, wrong_param_hash, cert );
+    const auto        result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, wrong_param_hash, cert );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 }
@@ -449,8 +568,7 @@ TEST_F( CertificateFallbackTest, Regression_TxAlreadyInStore_ExistingPathApprove
     const auto subject1 = MakeNonceSubject( account_->GetAddress(), 20, tx_hash, embedded );
     const auto cert1    = BuildCertificate( subject1, "proposal-regression-first" );
 
-    const auto result1 =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert1 );
+    const auto result1 = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert1 );
     ASSERT_TRUE( result1.has_value() );
     EXPECT_EQ( result1.value(), ConsensusManager::Check::Approve );
 
@@ -461,8 +579,7 @@ TEST_F( CertificateFallbackTest, Regression_TxAlreadyInStore_ExistingPathApprove
     const auto subject2 = MakeNonceSubject( account_->GetAddress(), 20, tx_hash, embedded );
     const auto cert2    = BuildCertificate( subject2, "proposal-regression-second" );
 
-    const auto result2 =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert2 );
+    const auto result2 = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert2 );
     ASSERT_TRUE( result2.has_value() );
     EXPECT_EQ( result2.value(), ConsensusManager::Check::Approve );
 }
@@ -481,8 +598,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
     const auto subject_a = MakeNonceSubject( account_->GetAddress(), 30, tx_hash, embedded );
     const auto cert_a    = BuildCertificate( subject_a, "proposal-multi-a" );
 
-    const auto result_a =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert_a );
+    const auto result_a = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert_a );
     ASSERT_TRUE( result_a.has_value() );
     EXPECT_EQ( result_a.value(), ConsensusManager::Check::Approve );
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
@@ -491,8 +607,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
     const auto subject_b = MakeNonceSubject( account_->GetAddress(), 30, tx_hash, embedded );
     const auto cert_b    = BuildCertificate( subject_b, "proposal-multi-b" );
 
-    const auto result_b =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert_b );
+    const auto result_b = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, tx_hash, cert_b );
     ASSERT_TRUE( result_b.has_value() );
     EXPECT_EQ( result_b.value(), ConsensusManager::Check::Approve );
 
@@ -508,7 +623,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
 TEST_F( CertificateFallbackTest, ReplayProtection_MissingPreviousTransactionRemainsPending )
 {
     const auto previous_hash = std::string( "missing-previous-transaction" );
-    const auto candidate = MakeTransfer( account_->GetAddress(), 1, previous_hash );
+    const auto candidate     = MakeTransfer( account_->GetAddress(), 1, previous_hash );
 
     PersistLegacyCertificateRecord( previous_hash );
 
@@ -532,4 +647,63 @@ TEST_F( CertificateFallbackTest, ReplayProtection_RejectsLegacyHashCertificateRe
 
     EXPECT_EQ( CertificateFallbackTestAccess::EvaluateReplayProtection( *tm_, *candidate ),
                ConsensusManager::Check::Pending );
+}
+
+/**
+ * A Mint V2 burn identifies a shared canonical slot even when separate
+ * proposers create distinct transaction envelopes. A valid, signed certificate
+ * for the winning transaction must not confirm the loser merely because both
+ * derive that same slot.
+ */
+TEST_F( CertificateFallbackTest, SharedMintSlotConfirmsOnlyTheCertifiedTransaction )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 70 );
+    const auto loser  = MakeCompetingMintV2( account_->GetAddress(), 71 );
+    ASSERT_NE( winner->GetHash(), loser->GetHash() );
+    ASSERT_EQ( winner->GetSlotID(), loser->GetSlotID() );
+
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+
+    // The Blockchain-side lookup validates the persisted authoritative record.
+    const auto loaded = blockchain_->GetCertificateBySlot( winner->GetSlotID() );
+    ASSERT_TRUE( loaded.has_value() );
+    EXPECT_TRUE( TransactionManager::CertificateMatchesTransaction( loaded.value(), *winner ) );
+    EXPECT_FALSE( TransactionManager::CertificateMatchesTransaction( loaded.value(), *loser ) );
+
+    ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+    ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+
+    const auto winner_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    const auto loser_tracked  = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() );
+    ASSERT_TRUE( winner_tracked.has_value() );
+    ASSERT_TRUE( loser_tracked.has_value() );
+    EXPECT_EQ( winner_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( loser_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+}
+
+/**
+ * Missing and malformed authoritative slot records are not finality evidence.
+ * They leave incoming transactions in VERIFYING rather than confirming them.
+ */
+TEST_F( CertificateFallbackTest, MissingOrMalformedMintSlotRecordFailsClosed )
+{
+    const auto missing_record   = MakeCompetingMintV2( account_->GetAddress(), 80 );
+    const auto malformed_record = MakeCompetingMintV2( account_->GetAddress(), 81 );
+    ASSERT_EQ( missing_record->GetSlotID(), malformed_record->GetSlotID() );
+
+    ASSERT_TRUE( FetchAndProcess( missing_record ).has_value() );
+    const auto missing_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, missing_record->GetHash() );
+    ASSERT_TRUE( missing_tracked.has_value() );
+    EXPECT_EQ( missing_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+
+    crdt::GlobalDB::Buffer malformed;
+    malformed.put( "not-a-certificate" );
+    ASSERT_TRUE( db_->Put( { "/cert/" + malformed_record->GetSlotID() }, malformed, {} ).has_value() );
+    ASSERT_TRUE( FetchAndProcess( malformed_record ).has_value() );
+    const auto malformed_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_,
+                                                                                      malformed_record->GetHash() );
+    ASSERT_TRUE( malformed_tracked.has_value() );
+    EXPECT_EQ( malformed_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
 }

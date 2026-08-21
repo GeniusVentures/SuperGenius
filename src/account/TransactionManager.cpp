@@ -1021,8 +1021,15 @@ namespace sgns
 
         auto persisted_transaction_result = FetchTransaction( globaldb_m, GetTransactionPath( persisted_hash ) );
         if ( persisted_transaction_result.has_error() || !persisted_transaction_result.value() ||
-             persisted_transaction_result.value()->GetHash() != persisted_hash ||
-             !blockchain_->CheckCertificateForSlot( persisted_transaction_result.value()->GetSlotID() ) )
+             persisted_transaction_result.value()->GetHash() != persisted_hash )
+        {
+            return "";
+        }
+
+        const auto &persisted_transaction = *persisted_transaction_result.value();
+        auto        certificate_result    = blockchain_->GetCertificateBySlot( persisted_transaction.GetSlotID() );
+        if ( certificate_result.has_error() ||
+             !CertificateMatchesTransaction( certificate_result.value(), persisted_transaction ) )
         {
             return "";
         }
@@ -1070,7 +1077,9 @@ namespace sgns
                     continue;
                 }
 
-                if ( !blockchain_->CheckCertificateForSlot( candidate->GetSlotID() ) )
+                auto certificate_result = blockchain_->GetCertificateBySlot( candidate->GetSlotID() );
+                if ( certificate_result.has_error() ||
+                     !CertificateMatchesTransaction( certificate_result.value(), *candidate ) )
                 {
                     continue;
                 }
@@ -1505,6 +1514,33 @@ namespace sgns
         }
     }
 
+    bool TransactionManager::CertificateMatchesTransaction( const ConsensusCertificate &certificate,
+                                                            const GeniusTransaction    &transaction )
+    {
+        const auto &subject       = certificate.proposal().subject();
+        auto        nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
+        {
+            return false;
+        }
+
+        // A shared slot establishes that something won its consensus round. The
+        // explicit nonce payload and independently decoded embedded transaction
+        // establish that this transaction was that winner.
+        if ( subject.account_id() != transaction.GetSrcAddress() ||
+             nonce_subject.value().nonce() != transaction.GetNonce() ||
+             nonce_subject.value().tx_hash() != transaction.GetHash() )
+        {
+            return false;
+        }
+
+        auto embedded_transaction = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
+        return embedded_transaction.has_value() && embedded_transaction.value() &&
+               embedded_transaction.value()->GetHash() == transaction.GetHash() &&
+               embedded_transaction.value()->GetSlotID() == transaction.GetSlotID();
+    }
+
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
@@ -1802,9 +1838,11 @@ namespace sgns
             full_node_m,
             tx_key );
 
-        auto next_tx_state = TransactionStatus::VERIFYING;
+        auto next_tx_state      = TransactionStatus::VERIFYING;
+        auto certificate_result = blockchain_->GetCertificateBySlot( transaction->GetSlotID() );
 
-        if ( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) )
+        if ( certificate_result.has_value() &&
+             CertificateMatchesTransaction( certificate_result.value(), *transaction ) )
         {
             TransactionManagerLogger()->debug(
                 "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
@@ -1852,8 +1890,7 @@ namespace sgns
         {
             input_owner = transfer_tx->GetUncleHash();
         }
-        BOOST_OUTCOME_TRY(
-            account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
         return outcome::success();
     }
 
@@ -3323,8 +3360,10 @@ namespace sgns
             full_node_m,
             key );
 
-        auto next_tx_state = TransactionStatus::VERIFYING;
-        auto has_cert      = blockchain_->CheckCertificateForSlot( new_tx->GetSlotID() );
+        auto next_tx_state      = TransactionStatus::VERIFYING;
+        auto certificate_result = blockchain_->GetCertificateBySlot( new_tx->GetSlotID() );
+        auto has_cert           = certificate_result.has_value() &&
+                        CertificateMatchesTransaction( certificate_result.value(), *new_tx );
 
         if ( has_cert )
         {
@@ -3646,12 +3685,11 @@ namespace sgns
                 return;
             }
 
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] {}: Proposal timeout — removing remote temp entry tx={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx_hash );
+            TransactionManagerLogger()->info( "[{} - full: {}] {}: Proposal timeout — removing remote temp entry tx={}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__,
+                                              tx_hash );
             tx_processed_m.erase( it );
         }
         // D-10: Entry not in map OR entry status is not VERIFYING → silently skip.
@@ -4471,7 +4509,8 @@ namespace sgns
 
             auto previous_cert_result = blockchain_->GetCertificateBySlot(
                 previous_transaction_result.value()->GetSlotID() );
-            if ( previous_cert_result.has_error() )
+            if ( previous_cert_result.has_error() ||
+                 !CertificateMatchesTransaction( previous_cert_result.value(), *previous_transaction_result.value() ) )
             {
                 TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
