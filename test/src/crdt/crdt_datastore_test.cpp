@@ -1,5 +1,7 @@
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/atomic_transaction.hpp"
+#include "base/hexutil.hpp"
+#include "crypto/hasher.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
 #include "outcome/outcome.hpp"
@@ -34,6 +36,20 @@ namespace sgns::crdt
     using libp2p::multi::Multihash;
 
     namespace fs = boost::filesystem;
+
+    namespace
+    {
+        std::string ImmutableValueHash( const std::string &value )
+        {
+            const auto hash = crypto::sha2_256( value.data(), value.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        }
+
+        std::string LowestHashValue( const std::string &first, const std::string &second )
+        {
+            return ImmutableValueHash( first ) < ImmutableValueHash( second ) ? first : second;
+        }
+    } // namespace
 
     class CrdtDatastoreTest : public ::testing::Test
     {
@@ -172,6 +188,55 @@ namespace sgns::crdt
         EXPECT_TRUE( buffer.toString() == valueBuffer.toString() );
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->DeleteKey( newKey, { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
+    }
+
+    TEST_F( CrdtDatastoreTest, ConvergentImmutableWriteIsIdempotentAndHashOrdered )
+    {
+        const HierarchicalKey key( "immutable/certificate-slot" );
+        const std::string     first_value  = "serialized-certificate-alpha";
+        const std::string     second_value = "serialized-certificate-beta";
+        const auto            expected     = LowestHashValue( first_value, second_value );
+
+        CrdtBuffer first_buffer;
+        first_buffer.put( first_value );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( key, first_buffer, { "topic" } ) );
+
+        EXPECT_OUTCOME_TRUE( stored_value, crdtDatastore_->GetKey( key ) );
+        EXPECT_EQ( stored_value.toString(), first_value );
+
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( key, first_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( replay_value, crdtDatastore_->GetKey( key ) );
+        EXPECT_EQ( replay_value.toString(), first_value );
+
+        CrdtBuffer second_buffer;
+        second_buffer.put( second_value );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( key, second_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( lowest_value, crdtDatastore_->GetKey( key ) );
+        EXPECT_EQ( lowest_value.toString(), expected );
+    }
+
+    TEST_F( CrdtDatastoreTest, ConvergentImmutableWriteKeepsLowestHashRegardlessOfArrivalOrder )
+    {
+        const std::string first_value  = "serialized-certificate-gamma";
+        const std::string second_value = "serialized-certificate-delta";
+        const auto        expected     = LowestHashValue( first_value, second_value );
+
+        CrdtBuffer first_buffer;
+        first_buffer.put( first_value );
+        CrdtBuffer second_buffer;
+        second_buffer.put( second_value );
+
+        const HierarchicalKey first_key( "immutable/first-arrival" );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( first_key, first_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( first_key, second_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( first_result, crdtDatastore_->GetKey( first_key ) );
+        EXPECT_EQ( first_result.toString(), expected );
+
+        const HierarchicalKey second_key( "immutable/second-arrival" );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( second_key, second_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( second_key, first_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( second_result, crdtDatastore_->GetKey( second_key ) );
+        EXPECT_EQ( second_result.toString(), expected );
     }
 
     TEST_F( CrdtDatastoreTest, TestDeleteCreatesDifferentCIDAndHidesFromQuery )
