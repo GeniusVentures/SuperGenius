@@ -38,13 +38,17 @@ target_link_libraries(processing_validation_core_test
     sgproccapture
 )
 
-# Phase 19 (VALD-02): points the new Vald02* TEST cases at Phase 13's real, already-checked-in
-# cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not copied or
-# duplicated into SuperGenius (D-01). Four "../" levels walk from this directory
+# Phase 19 (VALD-02): points the new Vald02* TEST cases at this phase's fresh, real, already
+# checked-in cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not
+# copied or duplicated into SuperGenius (D-01-REVISED). Four "../" levels walk from this directory
 # (SuperGenius/test/src/processing) up through SuperGenius/test, SuperGenius/, to the outer repo
-# root, landing in .planning/workstreams/sgproc-render/....
+# root, landing in .planning/workstreams/sgproc-render/.... Originally pointed at Phase 13's
+# archived captures dir; updated to this phase's own captures/ dir after Phase 13's original .cap
+# files were found to be unreadable by current tooling (a pre-Phase-16 manifest-format backward
+# compatibility regression, unrelated to this phase -- see 19-CONTEXT.md D-01-REVISED) and a fresh
+# 2-machine capture was taken instead.
 target_compile_definitions(processing_validation_core_test PRIVATE
-    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../../../.planning/workstreams/sgproc-render/phases/13-re-validation-scope-boundary-documentation/captures"
+    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../../../.planning/workstreams/sgproc-render/phases/19-validation-re-verification/captures"
 )
 
 addtest(processing_result_durability_test

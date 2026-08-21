@@ -313,8 +313,8 @@ TEST(ProcessingValidationCoreTest, DifferingHashesExceedsToleranceFail)
 
 /**
  * @given Phase 13's real Mac/Windows MNN float32 .cap fixture pair (D-01: VALD-01's exact
- *        already-characterized pair, xhw-mnn-float_Fuus-Mac-mini.local---macOS_20260812T232347.cap vs
- *        xhw-mnn-float_Mofu---Windows_20260812T232430.cap)
+ *        already-characterized pair, mnn-float_Fuus-Mac-mini.local---macOS_20260821T221542.cap vs
+ *        mnn-float_Mofu---Windows_20260821T221735.cap)
  * @when Both files are parsed independently via DeserializeCaptureFile and each of the 15 chunk hashes
  *       is compared byte-for-byte between the two artifacts
  * @then The resulting per-chunk match pattern is identical to the already-published
@@ -325,9 +325,9 @@ TEST(ProcessingValidationCoreTest, DifferingHashesExceedsToleranceFail)
 TEST(ProcessingValidationCoreTest, Vald02ChunkHashSelfCheckMatchesPublishedRefit)
 {
     const std::string macPath =
-        std::string( VALD02_CAPTURES_DIR ) + "/xhw-mnn-float_Fuus-Mac-mini.local---macOS_20260812T232347.cap";
+        std::string( VALD02_CAPTURES_DIR ) + "/mnn-float_Fuus-Mac-mini.local---macOS_20260821T221542.cap";
     const std::string winPath =
-        std::string( VALD02_CAPTURES_DIR ) + "/xhw-mnn-float_Mofu---Windows_20260812T232430.cap";
+        std::string( VALD02_CAPTURES_DIR ) + "/mnn-float_Mofu---Windows_20260821T221735.cap";
 
     std::vector<uint8_t> bytesA;
     std::vector<uint8_t> bytesB;
@@ -380,9 +380,9 @@ TEST(ProcessingValidationCoreTest, Vald02ChunkHashSelfCheckMatchesPublishedRefit
 TEST(ProcessingValidationCoreTest, Vald02FullFixtureValidateResultsToleranceOutcome)
 {
     const std::string macPath =
-        std::string( VALD02_CAPTURES_DIR ) + "/xhw-mnn-float_Fuus-Mac-mini.local---macOS_20260812T232347.cap";
+        std::string( VALD02_CAPTURES_DIR ) + "/mnn-float_Fuus-Mac-mini.local---macOS_20260821T221542.cap";
     const std::string winPath =
-        std::string( VALD02_CAPTURES_DIR ) + "/xhw-mnn-float_Mofu---Windows_20260812T232430.cap";
+        std::string( VALD02_CAPTURES_DIR ) + "/mnn-float_Mofu---Windows_20260821T221735.cap";
 
     std::vector<uint8_t> bytesA;
     std::vector<uint8_t> bytesB;
