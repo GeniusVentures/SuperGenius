@@ -878,7 +878,12 @@ namespace sgns
         for ( auto &topic : topics )
         {
             logger_->debug( "Sending account packet to {}", topic );
-            pubsub_->Publish( topic, serialized_proto );
+            auto publish_result = pubsub_->Publish( topic, serialized_proto );
+            if ( publish_result.has_error() )
+            {
+                logger_->error( "Failed to publish account packet to {}: {}", topic, publish_result.error().message() );
+                return outcome::failure( publish_result.error() );
+            }
         }
         return outcome::success();
     }

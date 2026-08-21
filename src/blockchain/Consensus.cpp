@@ -216,7 +216,11 @@ namespace sgns
         }
 
         ConsensusManagerLogger()->debug( "{}: Sending consensus packet to {}", __func__, consensus_messages_topic_ );
-        pubsub_->Publish( consensus_messages_topic_, serialized_proto );
+        auto publish_result = pubsub_->Publish( consensus_messages_topic_, serialized_proto );
+        if ( publish_result.has_error() )
+        {
+            return outcome::failure( publish_result.error() );
+        }
         ConsensusManagerLogger()->debug( "{}: Consensus packet published (bytes={})",
                                          __func__,
                                          serialized_proto.size() );
@@ -1094,43 +1098,28 @@ namespace sgns
         {
             return outcome::failure( std::errc::io_error );
         }
-        auto certificates = db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY );
-        if ( certificates.has_error() )
+        const auto key = std::string( CERTIFICATE_BASE_PATH_KEY ) + slot_key;
+        auto value = db_->Get( { key } );
+        if ( value.has_error() )
         {
-            return outcome::failure( certificates.error() );
+            if ( value.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return false;
+            }
+            return outcome::failure( value.error() );
         }
-        for ( const auto &[key, value] : certificates.value() )
+        Certificate certificate;
+        if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
+             !ValidateCertificateKey( certificate, key ) )
         {
-            auto key_string = db_->KeyToString( key );
-            if ( key_string.has_error() )
-            {
-                return outcome::failure( key_string.error() );
-            }
-            if ( key_string.value().rfind( std::string( CERTIFICATE_BASE_PATH_KEY ), 0 ) != 0 )
-            {
-                return outcome::failure( std::errc::invalid_argument );
-            }
-            Certificate certificate;
-            if ( !certificate.ParseFromArray( value.data(), value.size() ) ||
-                 !ValidateLegacyCertificateKey( certificate, key_string.value() ) )
-            {
-                return outcome::failure( std::errc::invalid_argument );
-            }
-            const auto validation = ValidateCertificate( certificate );
-            if ( validation == Check::Pending || validation == Check::Stalled )
-            {
-                return outcome::failure( std::errc::resource_unavailable_try_again );
-            }
-            if ( validation != Check::Approve )
-            {
-                continue;
-            }
-            if ( GetSlotKey( certificate.proposal() ) == slot_key )
-            {
-                return true;
-            }
+            return outcome::failure( std::errc::invalid_argument );
         }
-        return false;
+        const auto validation = ValidateCertificate( certificate );
+        if ( validation == Check::Pending || validation == Check::Stalled )
+        {
+            return outcome::failure( std::errc::resource_unavailable_try_again );
+        }
+        return validation == Check::Approve;
     }
 
     outcome::result<bool> ConsensusManager::ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key )
@@ -1977,25 +1966,6 @@ namespace sgns
                                              certificate.proposal_id() );
             return outcome::failure( std::errc::invalid_argument );
         }
-        ConsensusMessage message;
-        *message.mutable_certificate() = certificate;
-        auto result                    = Publish( message );
-        if ( result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: publish error={}", __func__, result.error().message() );
-            return result;
-        }
-
-        auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: subject hash {} error proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                             certificate.proposal_id().substr( 0, 8 ) );
-            return outcome::failure( subject_hash_result.error() );
-        }
-
         std::string serialized;
         if ( !certificate.SerializeToString( &serialized ) )
         {
@@ -2003,12 +1973,39 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const auto             key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash_result.value();
+        const auto key = GetExpectedCertificateSlotKey( certificate );
+        if ( key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
         crdt::HierarchicalKey  cert_key( key );
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
 
-        auto cert_put = db_->Put( cert_key, cert_value, { consensus_datastore_topic_ } );
+        auto existing = db_->Get( { key } );
+        if ( existing.has_value() )
+        {
+            Certificate existing_certificate;
+            if ( !existing_certificate.ParseFromArray( existing.value().data(), existing.value().size() ) ||
+                 !ValidateCertificateKey( existing_certificate, key ) ||
+                 ValidateCertificate( existing_certificate ) != Check::Approve )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto existing_hash = crypto::sha2_256( existing.value().data(), existing.value().size() );
+            const auto candidate_hash = crypto::sha2_256( serialized.data(), serialized.size() );
+            if ( base::hex_lower( gsl::span<const uint8_t>( existing_hash.data(), existing_hash.size() ) ) <
+                 base::hex_lower( gsl::span<const uint8_t>( candidate_hash.data(), candidate_hash.size() ) ) )
+            {
+                return outcome::success();
+            }
+        }
+        else if ( existing.error() != storage::DatabaseError::NOT_FOUND )
+        {
+            return outcome::failure( existing.error() );
+        }
+
+        auto cert_put = db_->PutConvergentImmutable( cert_key, cert_value, { consensus_datastore_topic_ } );
         if ( cert_put.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: cert put for hash {} error={}",
@@ -2018,11 +2015,19 @@ namespace sgns
             return outcome::failure( cert_put.error() );
         }
 
+        ConsensusMessage message;
+        *message.mutable_certificate() = certificate;
+        auto result                    = Publish( message );
+        if ( result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate persisted but notification failed: {}", __func__, result.error().message() );
+            return result;
+        }
         ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} and proposal_id={}",
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
-        return result;
+        return outcome::success();
     }
 
     void ConsensusManager::HandleProposal( const Proposal &proposal )
@@ -2111,7 +2116,12 @@ namespace sgns
             return;
         }
 
-        if ( CheckCertificateForSubject( subject_hash.value() ) )
+        auto accepted_certificate = HasAcceptedCertificateForSlot( GetSlotKey( proposal ) );
+        if ( accepted_certificate.has_error() )
+        {
+            return;
+        }
+        if ( accepted_certificate.value() )
         {
             ConsensusManagerLogger()->debug( "{}: ignored: subject already certified hash={} proposal_id={}",
                                              __func__,
@@ -2298,12 +2308,16 @@ namespace sgns
 
         for ( auto &state : to_process )
         {
-            auto subject_hash = GetSubjectHash( state.proposal.subject() );
-            if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
+            auto accepted_certificate = HasAcceptedCertificateForSlot( state.slot_key );
+            if ( accepted_certificate.has_error() )
             {
-                ConsensusManagerLogger()->debug( "{}: hash {} already certified, clearing proposal_id={}",
+                continue;
+            }
+            if ( accepted_certificate.value() )
+            {
+                ConsensusManagerLogger()->debug( "{}: slot {} already certified, clearing proposal_id={}",
                                                  __func__,
-                                                 subject_hash.value().substr( 0, 8 ),
+                                                 state.slot_key.substr( 0, 8 ),
                                                  state.proposal.proposal_id().substr( 0, 8 ) );
                 ClearProposalSlot( state.proposal );
                 continue;
@@ -2488,9 +2502,9 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( !ValidateLegacyCertificateKey( certificate, element.key() ) )
+        if ( !ValidateCertificateKey( certificate, element.key() ) )
         {
-            ConsensusManagerLogger()->error( "{}: legacy key binding failed, rejecting: {}", __func__, element.key() );
+            ConsensusManagerLogger()->error( "{}: slot key binding failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
         }
 
@@ -2617,14 +2631,13 @@ namespace sgns
         return certificate.has_proposal() && !GetSlotKey( certificate.proposal() ).empty();
     }
 
-    bool ConsensusManager::ValidateLegacyCertificateKey( const Certificate &certificate, std::string_view key )
+    bool ConsensusManager::ValidateCertificateKey( const Certificate &certificate, std::string_view key )
     {
         if ( !ValidateCertificateBinding( certificate ) )
         {
             return false;
         }
-        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
-        return subject_hash.has_value() && key == std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash.value();
+        return key == GetExpectedCertificateSlotKey( certificate );
     }
 
     std::string ConsensusManager::GetExpectedCertificateSlotKey( const Certificate &certificate )
@@ -2688,12 +2701,12 @@ namespace sgns
                 return;
             }
             auto &proposal_state = it->second;
-            auto  subject_hash   = GetSubjectHash( proposal_state.proposal.subject() );
-            if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
+            auto accepted_certificate = HasAcceptedCertificateForSlot( proposal_state.slot_key );
+            if ( accepted_certificate.has_value() && accepted_certificate.value() )
             {
-                ConsensusManagerLogger()->debug( "{}: ignored: vote for already certified hash {} proposal_id={}",
+                ConsensusManagerLogger()->debug( "{}: ignored: vote for already certified slot {} proposal_id={}",
                                                  __func__,
-                                                 subject_hash.value().substr( 0, 8 ),
+                                                 proposal_state.slot_key.substr( 0, 8 ),
                                                  vote.proposal_id().substr( 0, 8 ) );
                 pending_votes_.erase( vote.proposal_id() );
                 return;
@@ -3554,7 +3567,7 @@ namespace sgns
             }
             Certificate certificate;
             if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
-                 !ValidateLegacyCertificateKey( certificate, entry.key ) ||
+                 !ValidateCertificateKey( certificate, entry.key ) ||
                  ValidateCertificate( certificate ) != Check::Approve )
             {
                 certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
@@ -3615,6 +3628,9 @@ namespace sgns
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
         const std::string &subject_hash ) const
     {
+        // This compatibility entry point only accepts a subject hash when it is
+        // already the canonical slot (generic transaction callers are migrated
+        // in the consumer plan). It never reads a legacy subject-hash record.
         const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
 
         BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
@@ -3626,17 +3642,11 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto current_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( current_hash.has_error() )
+        if ( GetExpectedCertificateSlotKey( certificate ) != key )
         {
-            return outcome::failure( current_hash.error() );
-        }
-        if ( current_hash.value() != subject_hash )
-        {
-            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}",
+            ConsensusManagerLogger()->error( "{}: certificate slot key mismatch expected={}",
                                              __func__,
-                                             subject_hash,
-                                             current_hash.value() );
+                                             key );
             return outcome::failure( std::errc::invalid_argument );
         }
         return certificate;
