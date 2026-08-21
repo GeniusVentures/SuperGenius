@@ -35,6 +35,16 @@ addtest(processing_validation_core_test
 target_link_libraries(processing_validation_core_test
     processing_service
     SGProcessingProto
+    sgproccapture
+)
+
+# Phase 19 (VALD-02): points the new Vald02* TEST cases at Phase 13's real, already-checked-in
+# cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not copied or
+# duplicated into SuperGenius (D-01). Four "../" levels walk from this directory
+# (SuperGenius/test/src/processing) up through SuperGenius/test, SuperGenius/, to the outer repo
+# root, landing in .planning/workstreams/sgproc-render/....
+target_compile_definitions(processing_validation_core_test PRIVATE
+    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../../../.planning/workstreams/sgproc-render/phases/13-re-validation-scope-boundary-documentation/captures"
 )
 
 addtest(processing_result_durability_test
