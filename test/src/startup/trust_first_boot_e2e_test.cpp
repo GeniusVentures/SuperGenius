@@ -6,13 +6,14 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <fstream>
+#include <algorithm>
 #include <deque>
 #include <mutex>
 #include <sstream>
 
-#include "ProofSystem/EthereumKeyGenerator.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/GeniusSigner.hpp"
+#include "base/hexutil.hpp"
 #include "account/TrustStartupController.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -36,6 +37,18 @@ namespace
 
     constexpr char BOOTSTRAPPER_PRIVATE_KEY[] =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+
+    sgns::GeniusSigner::PrivateKey BootstrapperPrivateKey()
+    {
+        auto key_bytes = sgns::base::unhex( BOOTSTRAPPER_PRIVATE_KEY );
+        EXPECT_FALSE( key_bytes.has_error() );
+        sgns::GeniusSigner::PrivateKey secret_key{};
+        if ( !key_bytes.has_error() && key_bytes.value().size() == secret_key.size() )
+        {
+            std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
+        }
+        return secret_key;
+    }
 
     void WriteNetworkConfig( const boost::filesystem::path &path,
                              const std::optional<std::string> &bootstrap = std::nullopt )
@@ -421,7 +434,7 @@ namespace
         boost::filesystem::create_directories( path );
         auto cleanup = [&] { boost::filesystem::remove_all( path ); };
 
-        sgns::GeniusSigner bootstrapper{ ethereum::EthereumKeyGenerator( BOOTSTRAPPER_PRIVATE_KEY ) };
+        sgns::GeniusSigner bootstrapper{ BootstrapperPrivateKey() };
         auto peer_a       = sgns::GeniusSigner::Generate();
         auto peer_b       = sgns::GeniusSigner::Generate();
         auto non_member   = sgns::GeniusSigner::Generate();

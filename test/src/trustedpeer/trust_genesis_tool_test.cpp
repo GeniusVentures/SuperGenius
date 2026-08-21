@@ -15,6 +15,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusSigner.hpp"
+#include "base/hexutil.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
@@ -31,6 +32,18 @@ namespace
 
     constexpr char PRIVATE_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
+    GeniusSigner::PrivateKey PrivateKeyFromHex()
+    {
+        auto key_bytes = sgns::base::unhex( PRIVATE_KEY );
+        EXPECT_FALSE( key_bytes.has_error() );
+        GeniusSigner::PrivateKey secret_key{};
+        if ( !key_bytes.has_error() && key_bytes.value().size() == secret_key.size() )
+        {
+            std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
+        }
+        return secret_key;
+    }
+
     class TrustGenesisToolTest : public ::testing::Test
     {
     protected:
@@ -41,7 +54,7 @@ namespace
             key_path_ = path_ / "bootstrap.key";
             WriteKeyFile();
 
-            signers_.emplace_back( ethereum::EthereumKeyGenerator( PRIVATE_KEY ) );
+            signers_.emplace_back( PrivateKeyFromHex() );
             signers_.push_back( GeniusSigner::Generate() );
             signers_.push_back( GeniusSigner::Generate() );
             signers_.push_back( GeniusSigner::Generate() );
