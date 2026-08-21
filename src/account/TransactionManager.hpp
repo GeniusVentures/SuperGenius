@@ -69,13 +69,13 @@ namespace sgns
          */
         enum class TransactionStatus : uint8_t
         {
-            CREATED,   ///< Transaction created but not yet sent
-            SENDING,   ///< Transaction is being sent
-            CONFIRMED, ///< Transaction confirmed
-            VERIFYING, ///< Transaction being verified
+            CREATED,     ///< Transaction created but not yet sent
+            SENDING,     ///< Transaction is being sent
+            CONFIRMED,   ///< Transaction confirmed
+            VERIFYING,   ///< Transaction being verified
             UNCONFIRMED, ///< Local outgoing transaction expired inconclusively
-            FAILED,    ///< Transaction failed
-            INVALID    ///< Invalid transaction
+            FAILED,      ///< Transaction failed
+            INVALID      ///< Invalid transaction
         };
 
         /**
@@ -277,6 +277,16 @@ namespace sgns
          */
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
             const EmbeddedTransaction &embedded );
+
+        /**
+         * @brief Verifies that an already validated certificate certifies @p transaction itself.
+         *
+         * Callers must locate the record through the transaction-derived canonical
+         * slot first. This supplies the second, exact-subject check required for
+         * shared slots, so a competing transaction cannot inherit finality.
+         */
+        static bool CertificateMatchesTransaction( const ConsensusCertificate &certificate,
+                                                   const GeniusTransaction    &transaction );
 
     protected:
         friend class GeniusNode;
@@ -676,17 +686,17 @@ namespace sgns
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
-        outcome::result<std::string>             GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
         ConsensusManager::ValidationResult ValidateTransactionForConsensus(
             const std::shared_ptr<GeniusTransaction> &tx ) const;
-        bool CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
-        bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
-        bool CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        bool CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
+        bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
+        bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+        bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
+        bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        bool CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        bool                   CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const;
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
             const std::shared_ptr<GeniusTransaction> &tx ) const;
         std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<GeniusTransaction> &tx ) const;
