@@ -28,7 +28,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 8: Canonical Slot & Certificate Binding** - Make every competing verified mint share its existing canonical slot and reject certificate/proposal mismatches. (completed 2026-08-20)
 - [x] **Phase 9: Durable One-Vote Finality** - Lock each validator to one recoverable, non-overlapping vote per canonical slot. (completed 2026-08-20)
-- [ ] **Phase 10: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority.
+- [x] **Phase 10: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority. (completed 2026-08-21)
 - [ ] **Phase 11: Convergent Certificate Consumption & Mint Recovery** - Consume accepted slot certificates once and recover mint application safely.
 - [ ] **Phase 12: Multi-Node Finality Fault Proof** - Prove the complete production path under contention, loss, delayed delivery, and restart.
 
@@ -82,16 +82,16 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 10-02-PLAN.md — Publish and recover authoritative slot certificates through deterministic selected-publisher authority.
+- [x] 10-02-PLAN.md — Publish and recover authoritative slot certificates through deterministic selected-publisher authority.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 10-03-PLAN.md — Replace Consensus and Blockchain certificate lookup with validated canonical-slot authority.
-- [ ] 10-05-PLAN.md — Migrate registry batch certificate loading to generic slot authority without redesigning batch identity.
+- [x] 10-03-PLAN.md — Replace Consensus and Blockchain certificate lookup with validated canonical-slot authority.
+- [x] 10-05-PLAN.md — Migrate registry batch certificate loading to generic slot authority without redesigning batch identity.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 10-04-PLAN.md — Migrate transaction-backed and witness consumers to transaction-derived slot lookup.
+- [x] 10-04-PLAN.md — Migrate transaction-backed and witness consumers to transaction-derived slot lookup.
 
 ### Phase 11: Convergent Certificate Consumption & Mint Recovery
 
@@ -133,7 +133,7 @@ Plans:
 | 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
 | 8. Canonical Slot & Certificate Binding | v3.0 | 1/1 | Complete   | 2026-08-20 |
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
-| 10. Authoritative Slot Certificate Publication | v3.0 | 1/5 | In Progress|  |
+| 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
 | 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
 

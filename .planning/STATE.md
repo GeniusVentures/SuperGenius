@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-08-21T17:11:52.199Z"
+status: ready_to_plan
+last_updated: 2026-08-21T19:11:46.328Z
 last_activity: 2026-08-21
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 44
   percent: 40
+stopped_at: Phase 10 complete (7/5) — ready to discuss Phase 11
 ---
 
 # Project State
@@ -20,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 10 — Authoritative Slot Certificate Publication
+**Current focus:** Phase 11 — convergent certificate consumption & mint recovery
 
 ## Current Position
 
-Phase: 10 (Authoritative Slot Certificate Publication) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
+Phase: 11
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-21
 
 Progress: [█████░░░░░] 50%
@@ -35,7 +36,7 @@ Progress: [█████░░░░░] 50%
 
 **Velocity:**
 
-- Total plans completed: 8 (5 prior milestone + 3 v3.0)
+- Total plans completed: 15 (5 prior milestone + 3 v3.0)
 - v3.0 plans completed: 3
 - Average duration: Not yet measured for v3.0
 
@@ -48,6 +49,7 @@ Progress: [█████░░░░░] 50%
 | 10. Authoritative Slot Certificate Publication | 0 | - | - |
 | 11. Convergent Certificate Consumption & Mint Recovery | 0 | - | - |
 | 12. Multi-Node Finality Fault Proof | 0 | - | - |
+| 10 | 7 | - | - |
 
 **Recent Trend:** Not yet measured for v3.0.
 | Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
