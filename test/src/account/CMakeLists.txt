@@ -113,6 +113,28 @@ else()
     )
 endif()
 
+addtest(transaction_manager_certificate_fallback_test
+    transaction_manager_certificate_fallback_test.cpp
+)
+
+target_link_libraries(transaction_manager_certificate_fallback_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )

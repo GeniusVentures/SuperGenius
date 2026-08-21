@@ -22,6 +22,7 @@
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <gsl/span>
 #include "testutil/storage/base_crdt_test.hpp"
 
@@ -64,6 +65,13 @@ namespace sgns
             const std::string  &hash )
         {
             return tm.GetTrackedTxByHash( hash );
+        }
+
+        static ConsensusManager::Check EvaluateReplayProtection(
+            TransactionManager          &tm,
+            const GeniusTransaction     &transaction )
+        {
+            return tm.EvaluateTransactionReplayProtection( transaction ).validation.check;
         }
     };
 }  // namespace sgns
@@ -181,6 +189,21 @@ namespace
             account_id, nonce, tx_hash, embedded, std::nullopt, std::nullopt );
         return result.value();
     }
+
+    std::shared_ptr<TransferTransaction> MakeTransfer( const std::string &source_address,
+                                                        uint64_t           nonce,
+                                                        const std::string &previous_hash = {} )
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "transfer" );
+        dag.set_source_addr( source_address );
+        dag.set_nonce( nonce );
+        dag.set_previous_hash( previous_hash );
+        dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch() ).count() ) );
+        return std::make_shared<TransferTransaction>(
+            TransferTransaction::New( {}, {}, std::move( dag ) ) );
+    }
 }  // anonymous namespace
 
 /**
@@ -192,6 +215,14 @@ class CertificateFallbackTest : public test::CRDTFixture
 public:
     CertificateFallbackTest() : CRDTFixture( "cert_fallback_test" )
     {
+    }
+
+    void SetUp() override
+    {
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
         // Create a GeniusAccount for the TransactionManager (random key, no crypto derivation)
         account_ = GeniusAccount::New( kTestTokenId, base_path / "account" );
         assert( account_ != nullptr );
@@ -224,6 +255,21 @@ public:
     std::shared_ptr<GeniusAccount>        account_;
     std::shared_ptr<Blockchain>           blockchain_;
     std::shared_ptr<TransactionManager>   tm_;
+
+    void PersistTransaction( const std::shared_ptr<GeniusTransaction> &transaction )
+    {
+        ASSERT_TRUE( transaction );
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( transaction->SerializeByteVector() );
+        ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized, {} ).has_value() );
+    }
+
+    void PersistLegacyCertificateRecord( const std::string &transaction_hash )
+    {
+        crdt::GlobalDB::Buffer legacy_value;
+        legacy_value.put( "legacy-certificate-record" );
+        ASSERT_TRUE( db_->Put( { "/cert/" + transaction_hash }, legacy_value, {} ).has_value() );
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -452,4 +498,38 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
 
     // Tx still in store (not duplicated or corrupted by second cert)
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
+}
+
+/**
+ * A hash-only prior transaction dependency remains pending when the producer
+ * transaction has not been recovered from CRDT. A certificate hash record
+ * alone is never a finality authority key.
+ */
+TEST_F( CertificateFallbackTest, ReplayProtection_MissingPreviousTransactionRemainsPending )
+{
+    const auto previous_hash = std::string( "missing-previous-transaction" );
+    const auto candidate = MakeTransfer( account_->GetAddress(), 1, previous_hash );
+
+    PersistLegacyCertificateRecord( previous_hash );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::EvaluateReplayProtection( *tm_, *candidate ),
+               ConsensusManager::Check::Pending );
+}
+
+/**
+ * Even after the previous transaction is available in CRDT, only its derived
+ * slot can establish finality. A legacy /cert/<transaction-hash> record must
+ * leave the nonce dependency pending when no authoritative slot record exists.
+ */
+TEST_F( CertificateFallbackTest, ReplayProtection_RejectsLegacyHashCertificateRecord )
+{
+    const auto previous = MakeTransfer( account_->GetAddress(), 0 );
+    ASSERT_FALSE( previous->GetHash().empty() );
+    PersistTransaction( previous );
+    PersistLegacyCertificateRecord( previous->GetHash() );
+
+    const auto candidate = MakeTransfer( account_->GetAddress(), 1, previous->GetHash() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::EvaluateReplayProtection( *tm_, *candidate ),
+               ConsensusManager::Check::Pending );
 }
