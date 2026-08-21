@@ -3625,13 +3625,13 @@ namespace sgns
         (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
     }
 
-    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
-        const std::string &subject_hash ) const
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySlot( const std::string &slot_key ) const
     {
-        // This compatibility entry point only accepts a subject hash when it is
-        // already the canonical slot (generic transaction callers are migrated
-        // in the consumer plan). It never reads a legacy subject-hash record.
-        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
+        if ( slot_key.empty() || !db_ )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + slot_key;
 
         BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
 
@@ -3649,36 +3649,47 @@ namespace sgns
                                              key );
             return outcome::failure( std::errc::invalid_argument );
         }
+        if ( ValidateCertificate( certificate ) != Check::Approve )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
         return certificate;
     }
 
-    bool ConsensusManager::CheckCertificateForSubject( const std::string &subject_hash ) const
+    bool ConsensusManager::CheckCertificateForSlot( const std::string &slot_key ) const
     {
-        auto certificate_result = GetCertificateBySubjectHash( subject_hash );
-        if ( certificate_result.has_error() )
-        {
-            return false;
-        }
-        auto certificate_check = ValidateCertificate( certificate_result.value() );
-        return certificate_check == Check::Approve;
+        return GetCertificateBySlot( slot_key ).has_value();
+    }
+
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
+        const std::string &slot_key ) const
+    {
+        return GetCertificateBySlot( slot_key );
+    }
+
+    bool ConsensusManager::CheckCertificateForSubject( const std::string &slot_key ) const
+    {
+        return CheckCertificateForSlot( slot_key );
     }
 
     bool ConsensusManager::CheckCertificateForSubject( const ConsensusManager::Subject &subject ) const
     {
-        auto current_hash = GetSubjectHash( subject );
-        if ( current_hash.has_error() )
+        Proposal slot_proposal;
+        *slot_proposal.mutable_subject() = subject;
+        const auto slot_key = GetSlotKey( slot_proposal );
+        if ( slot_key.empty() )
         {
-            ConsensusManagerLogger()->error( "{}: Failed to get the hash for the subject, error: {}",
+            ConsensusManagerLogger()->error( "{}: Failed to derive a slot for subject {}",
                                              __func__,
-                                             current_hash.error().message() );
+                                             GetPrintableSubjectHash( subject ) );
             return false;
         }
-        auto certificate_result = GetCertificateBySubjectHash( current_hash.value() );
+        auto certificate_result = GetCertificateBySlot( slot_key );
         if ( certificate_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: Failed to get the certificate for the hash {}, error: {}",
+            ConsensusManagerLogger()->error( "{}: Failed to get the certificate for slot {}, error: {}",
                                              __func__,
-                                             GetPrintableSubjectHash( subject ),
+                                             slot_key,
                                              certificate_result.error().message() );
             return false;
         }
