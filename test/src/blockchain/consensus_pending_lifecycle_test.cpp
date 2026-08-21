@@ -134,6 +134,15 @@ namespace sgns
             ASSERT_TRUE( manager->db_->PutConvergentImmutable( { key }, value, {} ).has_value() );
         }
 
+        static void WriteCertificateAtKey( const std::shared_ptr<ConsensusManager> &manager,
+                                           const std::string                       &key,
+                                           const std::string                       &serialized )
+        {
+            crdt::GlobalDB::Buffer value;
+            value.put( serialized );
+            ASSERT_TRUE( manager->db_->Put( { key }, value, {} ).has_value() );
+        }
+
         static ConsensusManager::Proposal ResignWithLaterTimestamp(
             const std::shared_ptr<sgns::GeniusAccount> &account,
             ConsensusManager::Proposal                   proposal )
@@ -796,6 +805,76 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     // Keyless pubsub ingress accepts the same exactly-bound certificate without inventing a storage key.
     sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, certificate );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnApprovedBoundCertificate )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 91, "0xslot-lookup-approved" );
+    auto vote = manager->CreateVote(
+        proposal.proposal_id(), account->GetAddress(), true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote.has_value() );
+    auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, certificate.value() );
+    auto loaded = manager->GetCertificateBySlot( slot );
+    ASSERT_TRUE( loaded.has_value() );
+    EXPECT_EQ( loaded.value().proposal_id(), proposal.proposal_id() );
+    EXPECT_TRUE( manager->CheckCertificateForSlot( slot ) );
+    EXPECT_FALSE( manager->CheckCertificateForSlot( "missing-authoritative-slot" ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupRejectsLegacyMalformedAndMismatchedRecords )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 92, "0xslot-lookup-negative" );
+    auto vote = manager->CreateVote(
+        proposal.proposal_id(), account->GetAddress(), true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote.has_value() );
+    auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+    std::string serialized;
+    ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
+
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( proposal.subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+    const auto canonical_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    const auto legacy_key = std::string( "/cert/" ) + subject_hash.value();
+    ASSERT_NE( legacy_key, sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() ) );
+
+    // A valid certificate under a legacy subject-hash suffix does not become authority.
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, legacy_key, serialized );
+    EXPECT_FALSE( manager->GetCertificateBySlot( canonical_slot ).has_value() );
+
+    const std::string malformed_slot = "malformed-authoritative-slot";
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey(
+        manager, std::string( "/cert/" ) + malformed_slot, "not-a-certificate" );
+    EXPECT_FALSE( manager->GetCertificateBySlot( malformed_slot ).has_value() );
+    EXPECT_FALSE( manager->CheckCertificateForSlot( malformed_slot ) );
+
+    const std::string mismatched_slot = "mismatched-authoritative-slot";
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey(
+        manager, std::string( "/cert/" ) + mismatched_slot, serialized );
+    EXPECT_FALSE( manager->GetCertificateBySlot( mismatched_slot ).has_value() );
+    EXPECT_FALSE( manager->CheckCertificateForSlot( mismatched_slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
