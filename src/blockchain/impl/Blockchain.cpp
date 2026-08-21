@@ -1754,10 +1754,6 @@ namespace sgns
 
     outcome::result<void> Blockchain::TryResumeProposal( const std::string &hash )
     {
-        if ( consensus_manager_->CheckCertificateForSubject( hash ) )
-        {
-            return outcome::success();
-        }
         return consensus_manager_->ResumeProposalHandling( hash );
     }
 
@@ -1767,9 +1763,14 @@ namespace sgns
         return consensus_manager_->WakePendingDependency( dependency );
     }
 
-    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
+    bool Blockchain::CheckCertificateForSlot( const std::string &slot_key ) const
     {
-        return consensus_manager_->CheckCertificateForSubject( subject_hash );
+        return consensus_manager_->CheckCertificateForSlot( slot_key );
+    }
+
+    bool Blockchain::CheckCertificate( const std::string &slot_key ) const
+    {
+        return CheckCertificateForSlot( slot_key );
     }
 
     bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
@@ -1777,10 +1778,15 @@ namespace sgns
         return consensus_manager_->CheckCertificateForSubject( subject );
     }
 
-    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
-        const std::string &subject_hash ) const
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySlot( const std::string &slot_key ) const
     {
-        return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
+        return consensus_manager_->GetCertificateBySlot( slot_key );
+    }
+
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
+        const std::string &slot_key ) const
+    {
+        return GetCertificateBySlot( slot_key );
     }
 
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b ) const

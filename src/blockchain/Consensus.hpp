@@ -502,20 +502,28 @@ namespace sgns
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         /**
-         * @brief Retrieves a certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Certificate when present, or an error.
+         * @brief Retrieves the validated authoritative certificate for a canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return Certificate when the exact authoritative record is present and approved, or an error.
          */
-        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+        outcome::result<Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
         /**
-         * @brief Checks whether a certificate exists for a subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return `true` if a certificate exists, otherwise `false`.
+         * @brief Checks whether an approved authoritative certificate exists for a canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` only when the exact authoritative record is approved.
          */
-        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
+        bool CheckCertificateForSlot( const std::string &slot_key ) const;
         /**
-         * @brief Checks whether a certificate exists for a subject.
-         * @param[in] subject Subject instance to hash and lookup.
+         * @deprecated Transaction consumers must derive a slot before lookup.
+         * This compatibility wrapper treats its argument as a slot and never
+         * reads a subject-hash certificate key.
+         */
+        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &slot_key ) const;
+        /** @deprecated Use CheckCertificateForSlot with a derived slot. */
+        bool CheckCertificateForSubject( const std::string &slot_key ) const;
+        /**
+         * @brief Checks whether a certificate exists for the exact supplied subject.
+         * @param[in] subject Subject instance used to derive a canonical slot.
          * @return `true` if a certificate exists, otherwise `false`.
          */
         bool CheckCertificateForSubject( const Subject &subject ) const;

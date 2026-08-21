@@ -245,11 +245,17 @@ namespace sgns
          */
         outcome::result<void> TryResumePendingDependency( const ConsensusManager::PendingDependencyKey &dependency );
         /**
-         * @brief Checks whether any certificate exists for subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return `true` when certificate exists.
+         * @brief Checks whether an approved certificate exists for canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` when the authoritative slot record is approved.
          */
-        bool CheckCertificate( const std::string &subject_hash ) const;
+        bool CheckCertificateForSlot( const std::string &slot_key ) const;
+        /**
+         * @deprecated Transaction consumers must derive a slot before lookup.
+         * This compatibility wrapper treats its argument as a slot and never
+         * reads a subject-hash certificate key.
+         */
+        bool CheckCertificate( const std::string &slot_key ) const;
         /**
          * @brief Performs strict certificate check for a specific subject object.
          * @param[in] subject Subject to evaluate.
@@ -257,12 +263,13 @@ namespace sgns
          */
         bool CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
         /**
-         * @brief Loads certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
+         * @brief Loads the validated authoritative certificate by canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return Certificate on success, otherwise an error.
          */
-        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
+        /** @deprecated Use GetCertificateBySlot with a derived slot. */
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash( const std::string &slot_key ) const;
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
