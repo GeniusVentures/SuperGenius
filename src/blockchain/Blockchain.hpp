@@ -141,6 +141,15 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         /**
+         * @brief Returns the CRDT database used for authoritative transaction evidence.
+         * @return Shared GlobalDB instance, or null when the blockchain has no database.
+         */
+        std::shared_ptr<crdt::GlobalDB> GetGlobalDB() const
+        {
+            return db_;
+        }
+
+        /**
          * @brief Forces full-node mode behavior for bootstrap/generation flow.
          */
         void SetFullNodeMode();

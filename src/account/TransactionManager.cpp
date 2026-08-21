@@ -1014,7 +1014,15 @@ namespace sgns
         }
 
         const auto &persisted_hash = persisted_hash_result.value();
-        if ( persisted_hash.empty() || !blockchain_->CheckCertificate( persisted_hash ) )
+        if ( persisted_hash.empty() )
+        {
+            return "";
+        }
+
+        auto persisted_transaction_result = FetchTransaction( globaldb_m, GetTransactionPath( persisted_hash ) );
+        if ( persisted_transaction_result.has_error() || !persisted_transaction_result.value() ||
+             persisted_transaction_result.value()->GetHash() != persisted_hash ||
+             !blockchain_->CheckCertificateForSlot( persisted_transaction_result.value()->GetSlotID() ) )
         {
             return "";
         }
@@ -1062,7 +1070,7 @@ namespace sgns
                     continue;
                 }
 
-                if ( !blockchain_->CheckCertificate( candidate->GetHash() ) )
+                if ( !blockchain_->CheckCertificateForSlot( candidate->GetSlotID() ) )
                 {
                     continue;
                 }
@@ -1796,7 +1804,7 @@ namespace sgns
 
         auto next_tx_state = TransactionStatus::VERIFYING;
 
-        if ( blockchain_->CheckCertificate( transaction->GetHash() ) )
+        if ( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) )
         {
             TransactionManagerLogger()->debug(
                 "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
@@ -3316,7 +3324,7 @@ namespace sgns
             key );
 
         auto next_tx_state = TransactionStatus::VERIFYING;
-        auto has_cert      = blockchain_->CheckCertificate( new_tx->GetHash() );
+        auto has_cert      = blockchain_->CheckCertificateForSlot( new_tx->GetSlotID() );
 
         if ( has_cert )
         {
@@ -4448,7 +4456,21 @@ namespace sgns
                                                    tx.GetHash() );
                 return { ConsensusManager::ValidationResult::Reject() };
             }
-            auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
+            auto previous_transaction_result = FetchTransaction( globaldb_m, GetTransactionPath( previous_hash ) );
+            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                 previous_transaction_result.value()->GetHash() != previous_hash )
+            {
+                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous transaction for hash {}",
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   __func__,
+                                                   previous_hash );
+                return { ConsensusManager::ValidationResult::Pending(
+                    { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
+            }
+
+            auto previous_cert_result = blockchain_->GetCertificateBySlot(
+                previous_transaction_result.value()->GetSlotID() );
             if ( previous_cert_result.has_error() )
             {
                 TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
