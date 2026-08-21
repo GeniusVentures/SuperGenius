@@ -749,10 +749,24 @@ namespace sgns
         return selected;
     }
 
-    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySubjectHash(
-        const std::string &subject_hash ) const
+    outcome::result<std::string> ValidatorRegistry::GetPendingCertificateSlot( const std::string &subject_hash ) const
     {
-        const auto cert_key = std::string( "/cert/" ) + subject_hash;
+        std::lock_guard<std::mutex> lock( batch_mutex_ );
+        auto                        it = pending_certificate_slots_by_subject_.find( subject_hash );
+        if ( it == pending_certificate_slots_by_subject_.end() || it->second.empty() )
+        {
+            return outcome::failure( std::errc::resource_unavailable_try_again );
+        }
+        return it->second;
+    }
+
+    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySlot( const std::string &slot_key ) const
+    {
+        if ( slot_key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto cert_key = std::string( "/cert/" ) + slot_key;
         auto       cert_get = db_->Get( crdt::HierarchicalKey( cert_key ) );
         if ( cert_get.has_error() )
         {
@@ -762,6 +776,10 @@ namespace sgns
         sgns::ConsensusCertificate certificate;
         std::string                serialized = std::string( cert_get.value().toString() );
         if ( !certificate.ParseFromString( serialized ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( ConsensusManager::GetSlotKey( certificate.proposal() ) != slot_key )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -781,11 +799,17 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( auto subject_hash_result, ExtractConsensusSubjectHash( certificate.proposal().subject() ) );
+        const auto slot_key = ConsensusManager::GetSlotKey( certificate.proposal() );
+        if ( slot_key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
 
         const auto key = BuildBatchKey( certificate.registry_cid(), certificate.registry_epoch() );
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             pending_certificate_subjects_by_base_[key].insert( subject_hash_result );
+            pending_certificate_slots_by_subject_[subject_hash_result] = slot_key;
         }
 
         return TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
@@ -949,7 +973,14 @@ namespace sgns
         certificates.reserve( selected_result.value().size() );
         for ( const auto &tx_subject_hash : selected_result.value() )
         {
-            auto cert_result = LoadCertificateBySubjectHash( tx_subject_hash );
+            auto slot_result = GetPendingCertificateSlot( tx_subject_hash );
+            if ( slot_result.has_error() )
+            {
+                std::lock_guard<std::mutex> lock( batch_mutex_ );
+                applying_batch_subject_ids_.erase( subject_hash );
+                return BatchCertificateDecision::Reject;
+            }
+            auto cert_result = LoadCertificateBySlot( slot_result.value() );
             if ( cert_result.has_error() )
             {
                 std::lock_guard<std::mutex> lock( batch_mutex_ );
@@ -1298,7 +1329,15 @@ namespace sgns
                 std::unordered_map<std::string, int64_t> unregistered_scores;
                 for ( const auto &subject_hash : subject_hashes )
                 {
-                    auto certificate_result = LoadCertificateBySubjectHash( subject_hash );
+                    auto slot_result = GetPendingCertificateSlot( subject_hash );
+                    if ( slot_result.has_error() )
+                    {
+                        logger_->error( "{}: missing slot association for batch hash={}",
+                                        __func__,
+                                        subject_hash.substr( 0, 8 ) );
+                        return false;
+                    }
+                    auto certificate_result = LoadCertificateBySlot( slot_result.value() );
                     if ( certificate_result.has_error() )
                     {
                         logger_->error( "{}: missing certificate for batch hash={}",
