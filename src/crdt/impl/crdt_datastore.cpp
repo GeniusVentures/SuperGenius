@@ -1313,6 +1313,21 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
+    outcome::result<CID> CrdtDatastore::PutConvergentImmutableKey(
+        const HierarchicalKey                 &aKey,
+        const Buffer                          &aValue,
+        const std::unordered_set<std::string> &topics )
+    {
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( deltaResult.error() );
+        }
+
+        deltaResult.value()->set_priority( CrdtSet::ConvergentImmutablePriority );
+        return Publish( deltaResult.value(), topics );
+    }
+
     outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey                 &aKey,
                                                    const std::unordered_set<std::string> &topics )
     {
@@ -1433,7 +1448,10 @@ namespace sgns::crdt
         auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
-        aDelta->set_priority( height );
+        if ( aDelta->priority() != CrdtSet::ConvergentImmutablePriority )
+        {
+            aDelta->set_priority( height );
+        }
 
         std::vector<std::pair<CID, std::string>> headsWithTopics;
 

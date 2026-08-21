@@ -1,5 +1,7 @@
 #include "crdt/crdt_set.hpp"
+#include "base/hexutil.hpp"
 #include "base/logger.hpp"
+#include "crypto/hasher.hpp"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
@@ -11,6 +13,12 @@ namespace sgns::crdt
 {
     namespace
     {
+        std::string ConvergentImmutableValueHash( std::string_view serialized_value )
+        {
+            const auto hash = crypto::sha2_256( serialized_value.data(), serialized_value.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        }
+
         std::string LogicalKeyFromDatastoreKey( const std::string &keysNamespacePrefix,
                                                 const std::string &datastoreKey )
         {
@@ -628,6 +636,13 @@ namespace sgns::crdt
             }
 
             if ( valueResult.value() == std::string( aValue.toString() ) )
+            {
+                return outcome::success();
+            }
+
+            if ( aPriority == ConvergentImmutablePriority &&
+                 ConvergentImmutableValueHash( aValue.toString() ) >=
+                     ConvergentImmutableValueHash( valueResult.value() ) )
             {
                 return outcome::success();
             }

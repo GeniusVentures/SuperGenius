@@ -99,6 +99,11 @@ namespace sgns::crdt
                                   const Buffer                          &value,
                                   const std::unordered_set<std::string> &topics );
 
+        /** Writes an authoritative immutable record that converges by SHA-256 content ordering. */
+        outcome::result<CID> PutConvergentImmutable( const HierarchicalKey                 &key,
+                                                      const Buffer                          &value,
+                                                      const std::unordered_set<std::string> &topics );
+
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction

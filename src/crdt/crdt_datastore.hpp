@@ -158,6 +158,11 @@ namespace sgns::crdt
                                      const Buffer                          &aValue,
                                      const std::unordered_set<std::string> &topics );
 
+        /** Stores bytes through the replicated content-hash-convergent immutable path. */
+        outcome::result<CID> PutConvergentImmutableKey( const HierarchicalKey                 &aKey,
+                                                        const Buffer                          &aValue,
+                                                        const std::unordered_set<std::string> &topics );
+
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
         * @return true if key found or false if not found or outcome::failure on error

@@ -213,6 +213,12 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutConvergentImmutableKey( key, second_buffer, { "topic" } ) );
         EXPECT_OUTCOME_TRUE( lowest_value, crdtDatastore_->GetKey( key ) );
         EXPECT_EQ( lowest_value.toString(), expected );
+
+        CrdtBuffer ordinary_buffer;
+        ordinary_buffer.put( "ordinary-write-must-not-replace-immutable" );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key, ordinary_buffer, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( immutable_value, crdtDatastore_->GetKey( key ) );
+        EXPECT_EQ( immutable_value.toString(), expected );
     }
 
     TEST_F( CrdtDatastoreTest, ConvergentImmutableWriteKeepsLowestHashRegardlessOfArrivalOrder )
