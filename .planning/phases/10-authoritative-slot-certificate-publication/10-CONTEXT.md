@@ -18,25 +18,26 @@ Move certificate authority from subject-hash storage to the generic `/cert/<cano
 - **D-01:** Preserve the existing proposal-derived, deterministic consensus-round aggregator rotation. Phase 10 introduces no new publisher-selection or timeout mechanism.
 - **D-02:** Only the locally selected current-round aggregator may enter the authoritative certificate write path. Receiving a certificate through PubSub never grants authority and never writes the CRDT key.
 - **D-03:** A non-selected validator that sees quorum retains the evidence but neither writes nor advertises. It waits until a later normal round makes it eligible.
-- **D-04:** The first valid certificate persisted for a slot is final. A replay of the same certificate is harmless; a different payload for an occupied slot is a safety conflict and must never overwrite it.
+- **D-04:** An identical certificate replay is harmless. If concurrent valid certificate encodings contend for one slot, every replica deterministically resolves them by certificate-hash ordering rather than local first-seen order; the result must converge and never use an overwrite race. Phase 9 still prevents distinct winning proposals from normally reaching this state.
 
 ### Persistence and advertisement
 
 - **D-05:** The selected aggregator validates the certificate, persists `/cert/<slot>`, and only then sends the PubSub notification. A successful durable write result is sufficient; Phase 10 does not add a readback-before-advertise requirement.
 - **D-06:** PubSub is best-effort cleanup acceleration, not finality. Publish the full certificate as today, but a failed publish is logged and not retried; normal CRDT replication/recovery is the fallback.
 - **D-07:** The publisher has no special completion shortcut. After its write, it follows the same certificate receipt/recovery path as every other node.
+- **D-08:** Add the smallest production PubSub publish-result/error contract needed to log an actual failed certificate notification. Do not retry the notification or change CRDT finality semantics.
 
 ### Failover
 
-- **D-08:** Existing consensus-round rotation is the complete, protocol-visible failover rule. A later round's selected aggregator may publish only when no authoritative slot record exists.
-- **D-09:** A successor requires the same fully validated quorum evidence for the exact winning proposal. It must fail closed and wait/retry if it cannot reliably determine whether the slot is already occupied.
-- **D-10:** If publishers are unavailable for successive rounds, recovery continues through ordinary rotation with that same validated evidence. No new lease, timeout, or retry cap is introduced.
+- **D-09:** Existing consensus-round rotation is the complete, protocol-visible failover rule. A later round's selected aggregator may publish only when no authoritative slot record exists.
+- **D-10:** A successor requires the same fully validated quorum evidence for the exact winning proposal. It must fail closed and wait/retry if it cannot reliably determine whether the slot is already occupied.
+- **D-11:** If publishers are unavailable for successive rounds, recovery continues through ordinary rotation with that same validated evidence. No new lease, timeout, or retry cap is introduced.
 
 ### Consumer lookup migration
 
-- **D-11:** Transaction-backed consumers derive the authoritative certificate key directly from the transaction's `GetSlotID()`. No subject-hash-to-slot locator and no subject-hash certificate authority are introduced.
-- **D-12:** A caller that retained only a transaction hash retrieves the transaction from CRDT, derives its slot, and then performs authoritative lookup. If it cannot retrieve the transaction, finality is unavailable and normal recovery retries; it never falls back to a subject-hash certificate key.
-- **D-13:** Registry-batch identity semantics are not redesigned in this phase. Existing generic `GetSlotKey` behavior remains the integration point for non-transaction subjects using the slot-keyed namespace.
+- **D-12:** Transaction-backed consumers derive the authoritative certificate key directly from the transaction's `GetSlotID()`. No subject-hash-to-slot locator and no subject-hash certificate authority are introduced.
+- **D-13:** A caller that retained only a transaction hash retrieves the transaction from CRDT, derives its slot, and then performs authoritative lookup. If it cannot retrieve the transaction, finality is unavailable and normal recovery retries; it never falls back to a subject-hash certificate key.
+- **D-14:** Registry-batch identity semantics are not redesigned in this phase. Existing generic `GetSlotKey` behavior remains the integration point for non-transaction subjects using the slot-keyed namespace.
 
 ### the agent's Discretion
 
