@@ -46,12 +46,17 @@ namespace
     void PrintHelp( std::ostream &out )
     {
         out << "Usage: sgns-trust <operation> [options]\n"
+               "\nOffline operations:\n"
+               "  make-manifest    build canonical genesis manifest bytes from plain values\n"
                "\nLocal operations:\n"
                "  genesis          review and submit one trusted-peer genesis\n"
                "  list             list authenticated current-head candidates\n"
                "  propose-policy   explicitly propose one policy successor\n"
                "  propose-burn     explicitly propose one burn successor\n"
-               "  approve          explicitly approve one exact candidate ID\n";
+               "  approve          explicitly approve one exact candidate ID\n"
+               "\nmake-manifest options:\n"
+               "  --network-id N --bootstrapper ADDRESS --peers ADDR[,ADDR...] --out PATH\n"
+               "  [--membership-threshold N] [--burn-threshold N]   (default: majority/burn floors)\n";
     }
 
     struct Arguments
@@ -101,11 +106,41 @@ namespace
 
     bool ValidateOptions( const Arguments &arguments, std::ostream &errors )
     {
-        static const std::set<std::string> operations{ "genesis", "list", "propose-policy", "propose-burn", "approve" };
+        static const std::set<std::string> operations{ "genesis",       "list",         "propose-policy",
+                                                       "propose-burn",  "approve",      "make-manifest" };
         if ( operations.count( arguments.operation ) == 0 )
         {
             errors << "unknown local operation: " << arguments.operation << '\n';
             return false;
+        }
+
+        if ( arguments.operation == "make-manifest" )
+        {
+            static const std::set<std::string> allowed{ "--network-id",  "--bootstrapper", "--peers",
+                                                        "--membership-threshold", "--burn-threshold", "--out" };
+            for ( const auto &[option, unused] : arguments.values )
+            {
+                (void)unused;
+                if ( allowed.count( option ) == 0 )
+                {
+                    errors << "option is not valid for make-manifest: " << option << '\n';
+                    return false;
+                }
+            }
+            if ( !arguments.flags.empty() )
+            {
+                errors << "flags are not valid for make-manifest\n";
+                return false;
+            }
+            for ( const auto *required : { "--network-id", "--bootstrapper", "--peers", "--out" } )
+            {
+                if ( arguments.values.count( required ) == 0 )
+                {
+                    errors << "required option missing: " << required << '\n';
+                    return false;
+                }
+            }
+            return true;
         }
 
         std::set<std::string> allowed{ "--manifest", "--network-config", "--database", "--topic" };
@@ -190,6 +225,105 @@ namespace
         if ( parsed.ec != std::errc() || parsed.ptr != value.data() + value.size() )
             return std::nullopt;
         return result;
+    }
+
+    int MakeManifest( const Arguments &arguments )
+    {
+        GenesisManifest manifest;
+
+        const auto network_id = ParseUint64( arguments.values.at( "--network-id" ) );
+        if ( !network_id || *network_id == 0 || *network_id > 65535 )
+        {
+            std::cerr << "invalid --network-id (expected 1..65535)\n";
+            return EXIT_FAILURE;
+        }
+        manifest.network_id = static_cast<uint16_t>( *network_id );
+
+        manifest.bootstrapper_public_key = arguments.values.at( "--bootstrapper" );
+
+        std::istringstream peers_input( arguments.values.at( "--peers" ) );
+        std::string        peer;
+        while ( std::getline( peers_input, peer, ',' ) )
+        {
+            if ( !peer.empty() )
+            {
+                manifest.peers.push_back( peer );
+            }
+        }
+        if ( manifest.peers.empty() )
+        {
+            std::cerr << "--peers must list at least one address\n";
+            return EXIT_FAILURE;
+        }
+
+        const auto peer_count = static_cast<uint64_t>( manifest.peers.size() );
+        manifest.membership_threshold = peer_count / 2 + 1;
+        manifest.burn_threshold       = peer_count - peer_count / 3;
+        if ( const auto value = arguments.values.find( "--membership-threshold" );
+             value != arguments.values.end() )
+        {
+            const auto threshold = ParseUint64( value->second );
+            if ( !threshold )
+            {
+                std::cerr << "invalid --membership-threshold\n";
+                return EXIT_FAILURE;
+            }
+            manifest.membership_threshold = *threshold;
+        }
+        if ( const auto value = arguments.values.find( "--burn-threshold" ); value != arguments.values.end() )
+        {
+            const auto threshold = ParseUint64( value->second );
+            if ( !threshold )
+            {
+                std::cerr << "invalid --burn-threshold\n";
+                return EXIT_FAILURE;
+            }
+            manifest.burn_threshold = *threshold;
+        }
+
+        // Canonicalized() validates addresses, enforces the quorum floors, and sorts
+        // the peer list; CanonicalBytes()/Fingerprint() pin policy_version=1 and the
+        // default initial burn (100 basis points), matching what nodes derive locally.
+        const auto canonical = manifest.Canonicalized();
+        const auto bytes     = canonical ? canonical->CanonicalBytes() : std::nullopt;
+        const auto fingerprint = canonical ? canonical->Fingerprint() : std::nullopt;
+        if ( !canonical || !bytes || !fingerprint )
+        {
+            std::cerr << "invalid manifest: check addresses (128-hex), thresholds "
+                         "(membership >= peers/2+1, burn >= peers-peers/3, both <= peer count), "
+                         "and peer count (1..256)\n";
+            return EXIT_FAILURE;
+        }
+
+        const std::string &out_path = arguments.values.at( "--out" );
+        std::ofstream      out( out_path, std::ios::binary | std::ios::trunc );
+        if ( !out.good() )
+        {
+            std::cerr << "cannot write manifest to " << out_path << '\n';
+            return EXIT_FAILURE;
+        }
+        out.write( reinterpret_cast<const char *>( bytes->data() ), static_cast<std::streamsize>( bytes->size() ) );
+        out.close();
+        if ( !out.good() )
+        {
+            std::cerr << "failed writing manifest to " << out_path << '\n';
+            return EXIT_FAILURE;
+        }
+
+        std::cout << "manifest written to " << out_path << '\n'
+                  << "network: " << canonical->network_id << '\n'
+                  << "bootstrapper: " << canonical->bootstrapper_public_key << '\n'
+                  << "policy version: " << canonical->policy_version << '\n'
+                  << "membership threshold: " << canonical->membership_threshold << '\n'
+                  << "burn threshold: " << canonical->burn_threshold << '\n'
+                  << "initial burn basis points: " << canonical->initial_burn_basis_points << '\n'
+                  << "ordered peers:\n";
+        for ( const auto &ordered_peer : canonical->peers )
+        {
+            std::cout << "  " << ordered_peer << '\n';
+        }
+        std::cout << "fingerprint: " << *fingerprint << '\n';
+        return EXIT_SUCCESS;
     }
 
     std::optional<sgns::securecrdt::CandidateId> ParseCandidateId( const std::string &value )
@@ -363,6 +497,11 @@ int main( int argc, char **argv )
     {
         PrintHelp( std::cerr );
         return EXIT_FAILURE;
+    }
+
+    if ( arguments->operation == "make-manifest" )
+    {
+        return MakeManifest( *arguments );
     }
 
     auto manifest_bytes = ReadBoundedFile( arguments->values.at( "--manifest" ), 65536 );
