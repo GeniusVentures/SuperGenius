@@ -18,6 +18,7 @@ target_link_libraries(crdt_set
     rocksdb
     hierarchical_key
     crdt_delta
+    hasher
     PRIVATE
     logger
 )

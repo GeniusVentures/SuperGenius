@@ -536,6 +536,13 @@ namespace sgns::crdt
         return crdt_datastore->PutKey( key, value, topics );
     }
 
+    outcome::result<CID> GlobalDB::PutConvergentImmutable( const HierarchicalKey                 &key,
+                                                            const Buffer                          &value,
+                                                            const std::unordered_set<std::string> &topics )
+    {
+        return m_crdtDatastore->PutConvergentImmutableKey( key, value, topics );
+    }
+
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
