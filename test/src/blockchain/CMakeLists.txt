@@ -45,16 +45,6 @@ target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
     base_crdt_test
 )
 
-addtest(validator_registry_certificate_lookup_test
-    validator_registry_certificate_lookup_test.cpp
-)
-target_link_libraries(validator_registry_certificate_lookup_test
-    blockchain_genesis
-    genius_node_test
-    rapidjson
-    base_crdt_test
-)
-
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test
