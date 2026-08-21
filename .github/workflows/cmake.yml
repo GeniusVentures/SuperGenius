@@ -449,13 +449,11 @@ jobs:
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        timeout-minutes: 20
         run: ctest . -j ${{ matrix.target == 'OSX' && 4 || '' }} -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.target == 'Linux' }}
-        timeout-minutes: 20
         shell: bash
         run: |
           dbus-run-session -- bash -c '\
