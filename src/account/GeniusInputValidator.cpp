@@ -18,6 +18,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusTransaction.hpp"
+#include "account/TransactionManager.hpp"
 #include "account/TokenID.hpp"
 #include "account/UTXOManager.hpp"
 #include "account/UTXOMerkle.hpp"
@@ -451,11 +452,23 @@ namespace sgns
 
             std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
 
-            auto producer_cert_result = blockchain->GetCertificateBySubjectHash( input.txid_hash_.toReadableString() );
+            const auto producer_hash = input.txid_hash_.toReadableString();
+            auto producer_transaction_result = TransactionManager::FetchTransaction(
+                blockchain->GetGlobalDB(), TransactionManager::GetTransactionPath( producer_hash ) );
+            if ( producer_transaction_result.has_error() || !producer_transaction_result.value() ||
+                 producer_transaction_result.value()->GetHash() != producer_hash )
+            {
+                logger->error( "ValidateWitness(Genius) missing producer transaction for input tx={}",
+                               PreviewValue( producer_hash ) );
+                return false;
+            }
+
+            auto producer_cert_result = blockchain->GetCertificateBySlot(
+                producer_transaction_result.value()->GetSlotID() );
             if ( producer_cert_result.has_error() )
             {
                 logger->error( "ValidateWitness(Genius) missing producer certificate for input tx={}",
-                               PreviewValue( input.txid_hash_.toReadableString() ) );
+                               PreviewValue( producer_hash ) );
                 return false;
             }
             const auto &producer_subject = producer_cert_result.value().proposal().subject();
