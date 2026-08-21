@@ -12,7 +12,6 @@
 #include <limits>
 #include <set>
 #include <system_error>
-#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -919,41 +918,6 @@ namespace sgns
         return selected;
     }
 
-    outcome::result<std::string> ValidatorRegistry::GetPendingCertificateSlot( const std::string &subject_hash ) const
-    {
-        std::lock_guard<std::mutex> lock( batch_mutex_ );
-        auto                        it = pending_certificate_slots_by_subject_.find( subject_hash );
-        if ( it == pending_certificate_slots_by_subject_.end() || it->second.empty() )
-        {
-            return outcome::failure( std::errc::resource_unavailable_try_again );
-        }
-        return it->second;
-    }
-
-    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySlot( const std::string &slot_key ) const
-    {
-        if ( slot_key.empty() )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        const auto cert_key = std::string( "/cert/" ) + slot_key;
-        auto       cert_get = db_->Get( crdt::HierarchicalKey( cert_key ) );
-        if ( cert_get.has_error() )
-        {
-            return outcome::failure( cert_get.error() );
-        }
-
-        sgns::ConsensusCertificate certificate;
-        if ( !certificate.ParseFromString( cert_get.toString() ) )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        if ( ConsensusManager::GetSlotKey( certificate.proposal() ) != slot_key )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        return certificate;
-    }
 
     outcome::result<void> ValidatorRegistry::OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate )
     {
@@ -962,26 +926,12 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        if ( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
-        {
-            return outcome::success();
-        }
-
-        BOOST_OUTCOME_TRY( auto subject_hash_result, ExtractConsensusSubjectHash( certificate.proposal().subject() ) );
-        const auto slot_key = ConsensusManager::GetSlotKey( certificate.proposal() );
-        if ( slot_key.empty() )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        const auto key = BuildBatchKey( certificate.registry_cid(), certificate.registry_epoch() );
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            pending_certificate_subjects_by_base_[key].insert( subject_hash_result );
-            pending_certificate_slots_by_subject_[subject_hash_result] = slot_key;
-        }
-
-        return TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
+        // Registry batches currently identify their members by subject hash, while
+        // certificate finality is authoritative only by canonical slot.  A durable,
+        // replay-safe subject-to-slot representation is intentionally deferred; do
+        // not derive it from this process-local notification.
+        logger_->debug( "{}: registry certificate batching deferred", __func__ );
+        return outcome::success();
     }
 
     outcome::result<void> ValidatorRegistry::TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid,
@@ -1048,156 +998,20 @@ namespace sgns
         {
             return BatchSubjectDecision::Reject;
         }
-
-        const auto &payload         = payload_result.value();
-        auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
-                                                           payload.base_registry_epoch(),
-                                                           payload.certificate_count(),
-                                                           std::string( payload.batch_root() ) );
-        if ( selected_result.has_error() )
-        {
-            if ( selected_result.error() == std::errc::resource_unavailable_try_again )
-            {
-                return BatchSubjectDecision::Pending;
-            }
-            return BatchSubjectDecision::Reject;
-        }
-
-        auto registry_result = LoadRegistryByCid( payload.base_registry_cid() );
-        if ( registry_result.has_error() )
-        {
-            return BatchSubjectDecision::Pending;
-        }
-
-        if ( registry_result.value().epoch() != payload.base_registry_epoch() )
-        {
-            return BatchSubjectDecision::Reject;
-        }
-
-        return BatchSubjectDecision::Approve;
+        logger_->warn( "{}: registry batch validation is deferred until batch members carry durable canonical slots",
+                       __func__ );
+        return outcome::success( BatchSubjectDecision::Reject );
     }
 
     ValidatorRegistry::BatchCertificateDecision ValidatorRegistry::HandleBatchCertificate(
         const std::string                &subject_hash,
         const sgns::ConsensusCertificate &certificate )
     {
-        ActiveBatchHandlerGuard active_handler( *this );
-        if ( !active_handler )
-        {
-            return BatchCertificateDecision::Stalled;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            if ( finalized_batch_subject_ids_.find( subject_hash ) != finalized_batch_subject_ids_.end() ||
-                 applying_batch_subject_ids_.find( subject_hash ) != applying_batch_subject_ids_.end() )
-            {
-                return BatchCertificateDecision::Approve;
-            }
-            applying_batch_subject_ids_.insert( subject_hash );
-        }
-        const auto stop_applying = [this, &subject_hash]( BatchCertificateDecision decision )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return decision;
-        };
-
-        auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
-        if ( payload_result.has_error() )
-        {
-            return stop_applying( BatchCertificateDecision::Reject );
-        }
-
-        const auto &payload              = payload_result.value();
-        auto        base_registry_result = LoadRegistryByCid( payload.base_registry_cid() );
-        if ( base_registry_result.has_error() )
-        {
-            return stop_applying( BatchCertificateDecision::Stalled );
-        }
-        if ( base_registry_result.value().epoch() != payload.base_registry_epoch() ||
-             !ValidateCertificate( certificate, base_registry_result.value(), payload.base_registry_cid() ) )
-        {
-            return stop_applying( BatchCertificateDecision::Reject );
-        }
-
-        auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
-                                                    payload.base_registry_epoch(),
-                                                    payload.certificate_count(),
-                                                    std::string( payload.batch_root() ) );
-        if ( selected_result.has_error() )
-        {
-            return stop_applying( BatchCertificateDecision::Reject );
-        }
-
-        auto registry_result = BuildRegistryFromBatchCertificates( base_registry_result.value(),
-                                                                   payload,
-                                                                   selected_result.value() );
-        if ( registry_result.has_error() )
-        {
-            auto slot_result = GetPendingCertificateSlot( tx_subject_hash );
-            if ( slot_result.has_error() )
-            {
-                std::lock_guard<std::mutex> lock( batch_mutex_ );
-                applying_batch_subject_ids_.erase( subject_hash );
-                return BatchCertificateDecision::Reject;
-            }
-            auto cert_result = LoadCertificateBySlot( slot_result.value() );
-            if ( cert_result.has_error() )
-            {
-                std::lock_guard<std::mutex> lock( batch_mutex_ );
-                applying_batch_subject_ids_.erase( subject_hash );
-                return BatchCertificateDecision::Reject;
-            }
-            certificates.push_back( cert_result.value() );
-        }
-
-        std::unordered_map<std::string, int64_t> registered_scores;
-        std::unordered_map<std::string, int64_t> unregistered_scores;
-        for ( const auto &tx_cert : certificates )
-        {
-            auto votes = ExtractCertificateVotes( tx_cert, base_registry_result.value() );
-            for ( const auto &[validator_id, approve] : votes.registered_votes )
-            {
-                registered_scores[validator_id] += approve ? 1 : -1;
-            }
-            for ( const auto &[validator_id, approve] : votes.unregistered_votes )
-            {
-                unregistered_scores[validator_id] += approve ? 1 : -1;
-            }
-        }
-
-        std::unordered_map<std::string, bool> registered_votes;
-        std::unordered_map<std::string, bool> unregistered_votes;
-        for ( const auto &[validator_id, score] : registered_scores )
-        {
-            registered_votes[validator_id] = score >= 0;
-        }
-        for ( const auto &[validator_id, score] : unregistered_scores )
-        {
-            unregistered_votes[validator_id] = score >= 0;
-        }
-
-        RegistryUpdate update;
-        update.set_prev_registry_hash( payload.base_registry_cid() );
-        *update.mutable_registry() = registry_result.value();
-        std::string serialized_cert;
-        if ( !certificate.SerializeToString( &serialized_cert ) )
-        {
-            logger_->error( "{}: failed to serialize certificate", __func__ );
-            return stop_applying( BatchCertificateDecision::Reject );
-        }
-        update.set_certificate( serialized_cert );
-        for ( const auto &tx_subject_hash : selected_result.value() )
-        {
-            update.add_batch_certificate_subject_hashes( tx_subject_hash );
-        }
-
-        if ( !EnqueueRegistryWrite( subject_hash, std::move( update ) ) )
-        {
-            return stop_applying( BatchCertificateDecision::Stalled );
-        }
-        return BatchCertificateDecision::Approve;
+        logger_->warn( "{}: rejecting deferred registry batch certificate subject_hash={} proposal_id={}",
+                       __func__,
+                       subject_hash.substr( 0, 8 ),
+                       certificate.proposal_id().substr( 0, 8 ) );
+        return BatchCertificateDecision::Reject;
     }
 
     outcome::result<std::optional<uint64_t>> ValidatorRegistry::GetValidatorWeight(
@@ -1457,96 +1271,14 @@ namespace sgns
                                      : outcome::failure( std::errc::invalid_argument );
             if ( batch_payload.has_value() )
             {
-                const auto &payload = batch_payload.value();
-                if ( payload.base_registry_cid() != update.prev_registry_hash() ||
-                     payload.base_registry_epoch() != base_registry->epoch() ||
-                     payload.target_registry_epoch() != base_registry->epoch() + 1 )
-                {
-                    logger_->error( "{}: batch subject metadata mismatch", __func__ );
-                    return false;
-                }
-                if ( update.batch_certificate_subject_hashes_size() != static_cast<int>( payload.certificate_count() ) )
-                {
-                    logger_->error( "{}: batch subject certificate count mismatch", __func__ );
-                    return false;
-                }
-                std::vector<std::string> subject_hashes;
-                subject_hashes.reserve( static_cast<size_t>( update.batch_certificate_subject_hashes_size() ) );
-                for ( const auto &subject_hash : update.batch_certificate_subject_hashes() )
-                {
-                    subject_hashes.push_back( subject_hash );
-                }
-                std::sort( subject_hashes.begin(), subject_hashes.end() );
-                auto root_result = ComputeBatchRoot( subject_hashes );
-                if ( root_result.has_error() )
-                {
-                    return false;
-                }
-                const auto payload_root = std::string( payload.batch_root() );
-                if ( payload_root != root_result.value() )
-                {
-                    logger_->error( "{}: batch root mismatch", __func__ );
-                    return false;
-                }
-
-                std::unordered_map<std::string, int64_t> registered_scores;
-                std::unordered_map<std::string, int64_t> unregistered_scores;
-                for ( const auto &subject_hash : subject_hashes )
-                {
-                    auto slot_result = GetPendingCertificateSlot( subject_hash );
-                    if ( slot_result.has_error() )
-                    {
-                        logger_->error( "{}: missing slot association for batch hash={}",
-                                        __func__,
-                                        subject_hash.substr( 0, 8 ) );
-                        return false;
-                    }
-                    auto certificate_result = LoadCertificateBySlot( slot_result.value() );
-                    if ( certificate_result.has_error() )
-                    {
-                        logger_->error( "{}: missing certificate for batch hash={}",
-                                        __func__,
-                                        subject_hash.substr( 0, 8 ) );
-                        return false;
-                    }
-                    const auto &tx_cert = certificate_result.value();
-                    if ( tx_cert.registry_cid() != payload.base_registry_cid() ||
-                         tx_cert.registry_epoch() != payload.base_registry_epoch() )
-                    {
-                        logger_->error( "{}: batch certificate registry mismatch", __func__ );
-                        return false;
-                    }
-                    auto votes = ExtractCertificateVotes( tx_cert, *base_registry );
-                    for ( const auto &[validator_id, approve] : votes.registered_votes )
-                    {
-                        registered_scores[validator_id] += approve ? 1 : -1;
-                    }
-                    for ( const auto &[validator_id, approve] : votes.unregistered_votes )
-                    {
-                        unregistered_scores[validator_id] += approve ? 1 : -1;
-                    }
-                }
-
-                std::unordered_map<std::string, bool> registered_votes;
-                std::unordered_map<std::string, bool> unregistered_votes;
-                for ( const auto &[validator_id, score] : registered_scores )
-                {
-                    registered_votes[validator_id] = score >= 0;
-                }
-                for ( const auto &[validator_id, score] : unregistered_scores )
-                {
-                    unregistered_votes[validator_id] = score >= 0;
-                }
-                expected = BuildRegistryFromAggregatedVotes( *base_registry, registered_votes, unregistered_votes );
+                logger_->error( "{}: registry batch certificate validation is deferred until batch members carry durable canonical slots",
+                                __func__ );
+                return false;
             }
-            else
-            {
-                auto votes = ExtractCertificateVotes( certificate, *base_registry );
-                expected   = BuildRegistryFromCertificate( *base_registry,
-                                                           certificate,
-                                                           votes.registered_votes,
-                                                           votes.unregistered_votes );
-            }
+            auto votes = ExtractCertificateVotes( certificate, *base_registry );
+            expected   = BuildRegistryFromCertificate( *base_registry, certificate,
+                                                      votes.registered_votes,
+                                                      votes.unregistered_votes );
             Registry provided = update.registry();
             NormalizeRegistry( provided );
             NormalizeRegistry( expected );
