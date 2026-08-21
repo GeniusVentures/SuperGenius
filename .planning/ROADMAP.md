@@ -78,7 +78,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 Plans:
 **Wave 1**
 
-- [ ] 10-01-PLAN.md — Add immutable CRDT record semantics for authoritative certificate collision safety.
+- [x] 10-01-PLAN.md — Add immutable CRDT record semantics for authoritative certificate collision safety.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -133,7 +133,7 @@ Plans:
 | 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
 | 8. Canonical Slot & Certificate Binding | v3.0 | 1/1 | Complete   | 2026-08-20 |
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
-| 10. Authoritative Slot Certificate Publication | v3.0 | 0/5 | Not started | - |
+| 10. Authoritative Slot Certificate Publication | v3.0 | 1/5 | In Progress|  |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 0/TBD | Not started | - |
 | 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
 
