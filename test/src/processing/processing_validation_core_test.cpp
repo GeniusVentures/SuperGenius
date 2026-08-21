@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 
 #include "processing/processing_validation_core.hpp"
 #include "ParameterType.hpp"
@@ -379,6 +380,13 @@ TEST(ProcessingValidationCoreTest, Vald02ChunkHashSelfCheckMatchesPublishedRefit
  */
 TEST(ProcessingValidationCoreTest, Vald02FullFixtureValidateResultsToleranceOutcome)
 {
+    // Task 2 evidence capture: raise this process's log level so
+    // AttemptToleranceFallback's existing "maxAbsDelta=... maxRelDelta=... withinTolerance=..."
+    // debug log line (processing_validation_core.cpp, unmodified) becomes visible in ctest -V's
+    // captured console output for chunk 10 -- test-file-scoped logging verbosity only, no
+    // production code/behavior change.
+    spdlog::set_level( spdlog::level::debug );
+
     const std::string macPath =
         std::string( VALD02_CAPTURES_DIR ) + "/mnn-float_Fuus-Mac-mini.local---macOS_20260821T221542.cap";
     const std::string winPath =
