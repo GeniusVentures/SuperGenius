@@ -54,6 +54,22 @@ namespace sgns::test::anvil
     /** @brief High port used by the test Anvil instance to avoid default-8545 collisions (D-15). */
     inline constexpr unsigned int kAnvilStartPort = 18545u;
 
+    /**
+     * @brief Per-fixture Anvil port bands, kAnvilPortSearchSpan apart so they cannot overlap.
+     *
+     * FindAvailablePort() binds a probe, closes it, and only then is anvil spawned, so the
+     * window between the close and anvil's own bind spans a process spawn plus anvil's fork
+     * URL fetch -- seconds. Two fixtures probing the same base both see it free, and the
+     * loser's WaitForReady() then talks to the WINNER's anvil (it only checks that the child
+     * is running and that some RPC answers), so both test processes transact on one shared
+     * chain. Giving each fixture its own band removes the overlap between in-repo fixtures.
+     * It does not defend against a foreign process on the same port; for that the probe
+     * would have to hold its acceptor until anvil inherits the port.
+     */
+    inline constexpr unsigned int kAnvilPortBandRace    = kAnvilStartPort;          //!< bridge_race_*
+    inline constexpr unsigned int kAnvilPortBandE2E     = kAnvilStartPort + 200u;   //!< bridge_anvil_e2e
+    inline constexpr unsigned int kAnvilPortBandCatchup = kAnvilStartPort + 400u;   //!< bridge_anvil_catchup
+
     /** @brief Number of consecutive ports considered when the preferred Anvil port is occupied. */
     inline constexpr unsigned int kAnvilPortSearchSpan = 100u;
 
