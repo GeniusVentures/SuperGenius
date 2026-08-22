@@ -43,7 +43,7 @@ namespace sgns::crdt
     {
       auto options = std::make_shared<CrdtOptions>();
       options->logger = base::createLogger("CrdtDatastore");
-      options->rebroadcastIntervalMilliseconds = 60000; // 10s
+      options->rebroadcastIntervalMilliseconds = 10000;
       options->dagSyncerTimeoutSec = 300; // 5 mins
       options->numWorkers = 1;
       return options;
