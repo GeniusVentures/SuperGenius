@@ -290,7 +290,8 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     spdlog::info( "bridge_anvil: fork_url={}", fork_url );
 
     // D-01: start Anvil subprocess forking Sepolia.
-    ASSERT_TRUE( s_anvil.Start( fork_url ) ) << "Failed to start anvil subprocess";
+    ASSERT_TRUE( s_anvil.Start( fork_url, sgns::test::anvil::kAnvilPortBandE2E ) )
+        << "Failed to start anvil subprocess";
 
     // D-04: poll Anvil readiness via cast block-number.
     ASSERT_TRUE( s_anvil.WaitForReady() ) << "Anvil did not become ready";

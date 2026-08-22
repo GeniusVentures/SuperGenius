@@ -135,3 +135,20 @@ else()
 endif()
 
 set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 180)
+
+# All five bridge_race targets share bridge_race_fixture.hpp, which owns the
+# bridge_race_node1..11 data directories and remove_all()s them in SetUpTestSuite, and each
+# target starts its own Sepolia-forking Anvil. Run two concurrently and one deletes the
+# other's live RocksDB tree -- including the LOCK file, after which both processes believe
+# they hold exclusive ownership of the same paths. DeriveNodeKey() is also deterministic, so
+# every target derives the same 11 account addresses. Beyond correctness, 5 x (11 GeniusNodes
+# + a forking Anvil) does not fit the fixture's 90s readiness budget on a developer box.
+# ctest never co-schedules two tests holding the same RESOURCE_LOCK name.
+set_tests_properties(
+    bridge_race_single_burn_test
+    bridge_race_batch_test
+    bridge_race_fault_rpc_test
+    bridge_race_fault_kill_test
+    bridge_race_fault_partition_test
+    PROPERTIES RESOURCE_LOCK bridge_race_cluster
+)
