@@ -481,7 +481,11 @@ namespace sgns
             logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
                            account_->GetAddress().substr( 0, 8 ) );
 
+            // Passive pass: resolves immediately if a registry head already reached us.
             validator_registry_->RetryInitializationIfNeeded();
+            // Active pass: the passive pass reads only our own head list, and nothing
+            // populates it until a full node volunteers a broadcast. Ask for one.
+            RequestValidatorRegistryWhileDeferred();
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
         start_deferred_.store( false );
@@ -667,6 +671,39 @@ namespace sgns
         {
             logger_->warn( "[{}] Failed to request validator registry during blockchain init",
                            account_->GetAddress().substr( 0, 8 ) );
+        }
+    }
+
+    void Blockchain::RequestValidatorRegistryWhileDeferred()
+    {
+        const std::unordered_set<std::string> topics{ std::string( ValidatorRegistry::ValidatorTopic() ) };
+
+        auto request_result = account_->RequestHeads( topics );
+        if ( request_result.has_error() )
+        {
+            // Expected until a peer has grafted onto the requests topic.
+            logger_->debug( "[{}] Validator registry head request not sent yet: {}",
+                            account_->GetAddress().substr( 0, 8 ),
+                            request_result.error().message() );
+            return;
+        }
+
+        logger_->info( "[{}] Requested head re-announcement for topic {}",
+                       account_->GetAddress().substr( 0, 8 ),
+                       ValidatorRegistry::ValidatorTopic() );
+
+        // A peer exists (the head request went out), so the direct registry-CID request can
+        // now succeed.
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch() )
+                                .count();
+        auto last_ms = last_registry_block_request_ms_.load( std::memory_order_relaxed );
+        if ( ( last_ms == 0 ) || ( now_ms - last_ms >= REGISTRY_BLOCK_REQUEST_MIN_INTERVAL_MS ) )
+        {
+            if ( last_registry_block_request_ms_.compare_exchange_strong( last_ms, now_ms ) )
+            {
+                RequestValidatorRegistry();
+            }
         }
     }
 
