@@ -47,7 +47,8 @@ namespace sgns
         using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, GeniusSigner::PrivateKey>;
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
-        static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static constexpr std::chrono::milliseconds NONCE_CACHE_DURATION = std::chrono::seconds(
+            5 ); ///< How long a fetched nonce stays usable from cache
 
         /**
          * @brief   Factory function type for creating secure storage instances.
@@ -267,17 +268,17 @@ namespace sgns
 
         /**
          * @brief       Get confirmed nonce from the network
-         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @param[in]   timeout How long to wait for the confirmed nonce
          * @return      The confirmed nonce if success, error otherwise
          */
-        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
+        outcome::result<uint64_t> GetConfirmedNonce( std::chrono::milliseconds timeout ) const;
 
         /**
          * @brief       Fetch the latest nonce from the network without relying on cached values
-         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @param[in]   timeout How long to wait for the nonce
          * @return      Error if no response received, optional nonce if success
          */
-        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( uint64_t timeout_ms ) const;
+        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( std::chrono::milliseconds timeout ) const;
 
         /**
          * @brief       Get the next available nonce without reserving it
@@ -298,32 +299,33 @@ namespace sgns
         void ReleaseNonce( uint64_t nonce );
 
         outcome::result<void> RequestGenesis(
-            uint64_t                                            timeout_ms = 8000,
-            std::function<void( outcome::result<std::string> )> callback   = nullptr ) const;
+            std::chrono::milliseconds                           timeout  = std::chrono::seconds( 8 ),
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         outcome::result<void> RequestAccountCreation(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::function<void( outcome::result<std::string> )> callback ) const;
         outcome::result<void> RequestValidatorRegistry(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::function<void( outcome::result<std::string> )> callback ) const;
         outcome::result<void> RequestRegularBlock(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         outcome::result<void> RequestTransaction(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             const std::string                                  &tx_hash,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
          * @brief       Request UTXOs for a specific address and return the selected response
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   address Address to request UTXOs for
-         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @param[in]   silent_time Time to wait for subsequent responses after the first one
          * @return      Set of UTXO strings based on selection criteria, or error otherwise
          */
-        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
-                                                                       const std::string &address,
-                                                                       uint64_t           silent_time_ms = 150 ) const;
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs(
+            std::chrono::milliseconds timeout,
+            const std::string        &address,
+            std::chrono::milliseconds silent_time = std::chrono::milliseconds( 150 ) ) const;
         /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Set of topic names to request heads for

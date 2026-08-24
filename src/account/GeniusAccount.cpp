@@ -971,15 +971,15 @@ namespace sgns
         return outcome::failure( std::errc::no_message );
     }
 
-    outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
+    outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( std::chrono::milliseconds timeout ) const
     {
         if ( !messenger_ )
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        genius_account_logger()->debug( "Fetching nonce from the network with timeout {} ms", timeout_ms );
+        genius_account_logger()->debug( "Fetching nonce from the network with timeout {} ms", timeout.count() );
 
-        auto result = messenger_->GetLatestNonce( timeout_ms );
+        auto result = messenger_->GetLatestNonce( timeout );
         if ( result.has_value() )
         {
             genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
@@ -994,7 +994,7 @@ namespace sgns
         return outcome::failure( result.error() );
     }
 
-    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
+    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( std::chrono::milliseconds timeout ) const
     {
         if ( !messenger_ )
         {
@@ -1005,16 +1005,16 @@ namespace sgns
         // Check if we have a fresh cached result (within 5 seconds)
         if ( cached_nonce_result_.has_value() )
         {
-            auto     now = std::chrono::steady_clock::now();
-            uint64_t cache_age_ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ ).count();
+            const auto now       = std::chrono::steady_clock::now();
+            const auto cache_age = std::chrono::duration_cast<std::chrono::milliseconds>( now -
+                                                                                          cached_nonce_timestamp_ );
 
-            if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
+            if ( cache_age < NONCE_CACHE_DURATION )
             {
-                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
+                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age.count() );
                 return cached_nonce_result_.value();
             }
-            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age_ms );
+            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age.count() );
         }
 
         // If a request is already in progress, wait for it
@@ -1040,9 +1040,9 @@ namespace sgns
         // Release lock while making the network call
         lock.unlock();
 
-        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout_ms );
+        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout.count() );
 
-        auto latest_nonce_result = messenger_->GetLatestNonce( timeout_ms );
+        auto latest_nonce_result = messenger_->GetLatestNonce( timeout );
 
         outcome::result<uint64_t> result = outcome::failure( std::errc::io_error );
         if ( latest_nonce_result.has_value() )
@@ -1089,7 +1089,7 @@ namespace sgns
     }
 
     outcome::result<void> GeniusAccount::RequestGenesis(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1098,11 +1098,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        return messenger_->RequestGenesis( timeout_ms, std::move( callback ) );
+        return messenger_->RequestGenesis( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestAccountCreation(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1111,11 +1111,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
+        return messenger_->RequestAccountCreation( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestValidatorRegistry(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1124,7 +1124,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Validator Registry block from the network" );
 
-        return messenger_->RequestValidatorRegistry( timeout_ms, std::move( callback ) );
+        return messenger_->RequestValidatorRegistry( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestHeads( const std::unordered_set<std::string> &topics ) const
@@ -1139,7 +1139,7 @@ namespace sgns
     }
 
     outcome::result<void> GeniusAccount::RequestRegularBlock(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         const std::string                                  &cid,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
@@ -1149,11 +1149,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting block by CID {}", cid );
 
-        return messenger_->RequestRegularBlock( timeout_ms, cid, std::move( callback ) );
+        return messenger_->RequestRegularBlock( timeout, cid, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestTransaction(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         const std::string                                  &tx_hash,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
@@ -1163,12 +1163,13 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting transaction {:.8}", tx_hash );
 
-        return messenger_->RequestTransaction( timeout_ms, tx_hash, std::move( callback ) );
+        return messenger_->RequestTransaction( timeout, tx_hash, std::move( callback ) );
     }
 
-    outcome::result<std::unordered_set<std::string>> GeniusAccount::RequestUTXOs( uint64_t           timeout_ms,
-                                                                                  const std::string &address,
-                                                                                  uint64_t silent_time_ms ) const
+    outcome::result<std::unordered_set<std::string>> GeniusAccount::RequestUTXOs(
+        std::chrono::milliseconds timeout,
+        const std::string        &address,
+        std::chrono::milliseconds silent_time ) const
     {
         if ( !messenger_ )
         {
@@ -1176,7 +1177,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting UTXOs for {:.8}", address );
 
-        return messenger_->RequestUTXOs( timeout_ms, address, silent_time_ms );
+        return messenger_->RequestUTXOs( timeout, address, silent_time );
     }
 
     void GeniusAccount::SetGetBlockChainCIDMethod(
