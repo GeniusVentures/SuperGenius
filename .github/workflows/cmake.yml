@@ -432,7 +432,7 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' }}
         uses: actions/cache/restore@v6
         with:
-          path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
+          path: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
           key: ctest-cost-${{ matrix.id }}-${{ matrix.build-type }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ctest-cost-${{ matrix.id }}-${{ matrix.build-type }}-
@@ -509,5 +509,5 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' && (success() || failure()) }}
         uses: actions/cache/save@v6
         with:
-          path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
+          path: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
           key: ctest-cost-${{ matrix.id }}-${{ matrix.build-type }}-${{ github.run_id }}-${{ github.run_attempt }}
