@@ -3538,6 +3538,11 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
+        // Timer and post-registration recovery can run concurrently. Keep one
+        // durable readback-to-handler dispatch in flight so a stalled entry is
+        // claimed by this manager until it is explicitly stalled again or done.
+        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+
         auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN,
                                                                             std::chrono::seconds( 15 ) );
         if ( recovered > 0 )

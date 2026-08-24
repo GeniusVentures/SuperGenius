@@ -20,8 +20,11 @@
 #include <atomic>
 #include <array>
 #include <chrono>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -1752,5 +1755,91 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
 
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_EQ( handler_calls.load(), 1 );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegistrationAndTimerDispatch )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                89,
+                                                                "0xconcurrent-certificate-recovery",
+                                                                sgns::EmbeddedTransaction{},
+                                                                MakeTestCommitment(),
+                                                                MakeTestWitness() );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = manager->CreateProposal(
+        subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    auto vote = manager->CreateVote(
+        proposal.value().proposal_id(), account->GetAddress(), true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote.has_value() );
+    auto certificate = manager->CreateCertificate( proposal.value(), { vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
+
+    std::string serialized;
+    ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
+    sgns::base::Buffer callback_value;
+    callback_value.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived( manager, { key, std::move( callback_value ) } );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, certificate.value() );
+
+    std::mutex              handler_mutex;
+    std::condition_variable handler_cv;
+    bool                    handler_started = false;
+    bool                    allow_handler   = false;
+    std::atomic<int>        handler_calls{ 0 };
+    std::atomic<bool>       registration_succeeded{ false };
+
+    std::thread registration_thread(
+        [&]
+        {
+            registration_succeeded.store( manager->RegisterCertificateHandler(
+                sgns::NONCE_SUBJECT_TYPE,
+                [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+                {
+                    ++handler_calls;
+                    std::unique_lock lock( handler_mutex );
+                    handler_started = true;
+                    handler_cv.notify_all();
+                    handler_cv.wait( lock, [&] { return allow_handler; } );
+                    return outcome::success( sgns::ConsensusManager::Check::Approve );
+                } ) );
+        } );
+
+    std::unique_lock handler_lock( handler_mutex );
+    const bool started = handler_cv.wait_for( handler_lock, std::chrono::seconds( 5 ), [&] { return handler_started; } );
+    if ( !started )
+    {
+        allow_handler = true;
+        handler_lock.unlock();
+        handler_cv.notify_all();
+        registration_thread.join();
+        FAIL() << "handler registration did not enter certificate recovery";
+        sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+        return;
+    }
+
+    // This represents the timer retry arriving while registration-triggered
+    // recovery owns the dispatch. It must observe completion, not invoke again.
+    std::thread timer_recovery_thread(
+        [&] { sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager ); } );
+    allow_handler = true;
+    handler_lock.unlock();
+    handler_cv.notify_all();
+    registration_thread.join();
+    timer_recovery_thread.join();
+
+    EXPECT_TRUE( registration_succeeded.load() );
+    EXPECT_EQ( handler_calls.load(), 1 );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, key ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
