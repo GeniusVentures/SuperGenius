@@ -86,6 +86,35 @@ namespace sgns
         {
             return tm.FetchExactTransactionFromCRDT( tx_hash );
         }
+
+        static std::shared_ptr<ConsensusManager> ConsensusManagerOf( Blockchain &blockchain )
+        {
+            return blockchain.consensus_manager_;
+        }
+
+        static void CertificateReceived( const std::shared_ptr<ConsensusManager>          &manager,
+                                         crdt::CRDTCallbackManager::NewDataPair             new_data )
+        {
+            manager->CertificateReceived( std::move( new_data ), std::string{} );
+        }
+
+        static void RecoverPendingCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->RecoverPendingCertificateWork();
+        }
+
+        static bool HasCertificateWorkState( const std::shared_ptr<ConsensusManager> &manager,
+                                             const std::string                       &key,
+                                             crdt::CRDTWorkJournal::State            state )
+        {
+            const auto entry = manager->certificate_work_journal_->GetEntry( key );
+            return entry.has_value() && entry->state == state;
+        }
+
+        static void SetBridgeExecutedMarkerWriteFailure( TransactionManager &tm, bool fail )
+        {
+            tm.SetBridgeExecutedMarkerWriteFailureForTest( fail );
+        }
     };
 } // namespace sgns
 
@@ -791,4 +820,73 @@ TEST_F( CertificateFallbackTest, MissingOrMalformedMintSlotRecordFailsClosed )
                                                                                       malformed_record->GetHash() );
     ASSERT_TRUE( malformed_tracked.has_value() );
     EXPECT_EQ( malformed_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+}
+
+/**
+ * D-02/D-06/D-07/D-08: A pre-commit callback must not execute a certified Mint.
+ * Once its exact canonical certificate is durable, the registered TransactionManager
+ * handler applies UTXOs before attempting the bridge marker. A marker-only failure
+ * leaves shared certificate work stalled for a duplicate-safe durable replay.
+ */
+TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThenRecoversExactlyOnce )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 120 );
+    ASSERT_TRUE( winner );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    const auto certificate_key = ConsensusManager::GetExpectedCertificateSlotKey( certificate.value() );
+    ASSERT_EQ( certificate_key, std::string( "/cert/" ) + winner->GetSlotID() );
+
+    std::string serialized;
+    ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
+    crdt::GlobalDB::Buffer callback_value;
+    callback_value.put( serialized );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager,
+        crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( callback_value ) } );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+        manager, certificate_key, crdt::CRDTWorkJournal::State::Stalled ) );
+
+    // The callback is pre-commit only. Durable readback below is the sole path
+    // allowed to dispatch the TransactionManager's registered certificate handler.
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+    CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, true );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+
+    const auto marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
+    crdt::GlobalDB::Buffer marker_key_buffer;
+    marker_key_buffer.put( marker_key );
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
+    EXPECT_EQ( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).size(), 1u );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
+    const auto stalled_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( stalled_tracked.has_value() );
+    EXPECT_NE( stalled_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+        manager, certificate_key, crdt::CRDTWorkJournal::State::Stalled ) );
+
+    CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, false );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_value() );
+    const auto confirmed_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( confirmed_tracked.has_value() );
+    EXPECT_EQ( confirmed_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+        manager, certificate_key, crdt::CRDTWorkJournal::State::Done ) );
+
+    // Duplicate certificate delivery must repeat only durable recovery, never Mint effects.
+    crdt::GlobalDB::Buffer duplicate_callback_value;
+    duplicate_callback_value.put( serialized );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager,
+        crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( duplicate_callback_value ) } );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_EQ( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).size(), 1u );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+        manager, certificate_key, crdt::CRDTWorkJournal::State::Done ) );
 }
