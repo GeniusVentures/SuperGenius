@@ -1166,6 +1166,143 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults )
+{
+    constexpr std::array<const char *, 3> private_keys = {
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" };
+    std::array<MultiValidatorNode, 3> nodes;
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        nodes[index] = MakeMultiValidatorNode( index + 10, private_keys[index] );
+    }
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
+        nodes[0].account, nodes[1].account, nodes[2].account };
+    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+    for ( auto &node : nodes )
+    {
+        node.registry = MakeMultiValidatorRegistry( node, update, accounts.front()->GetAddress() );
+        node.manager = MakeMultiValidatorManager( node, node.registry );
+        ASSERT_TRUE( node.manager );
+    }
+    sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject &subject )
+        {
+            const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+            if ( nonce.has_error() || nonce.value().transaction().transaction_case() != sgns::EmbeddedTransaction::kMintV2 )
+            {
+                return std::string{};
+            }
+            const auto bytes = nonce.value().transaction().mint_v2().SerializeAsString();
+            const auto mint = sgns::MintTransactionV2::DeSerializeByteVector(
+                std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            return mint ? mint->GetSlotID() : std::string{};
+        } );
+
+    const auto first_mint  = MakeMultiValidatorMint( 201 );
+    const auto second_mint = MakeMultiValidatorMint( 202 );
+    ASSERT_NE( first_mint->GetHash(), second_mint->GetHash() );
+    ASSERT_EQ( first_mint->GetSlotID(), second_mint->GetSlotID() );
+    const auto make_proposal = [&]( const std::shared_ptr<sgns::MintTransactionV2> &mint )
+    {
+        auto subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                    mint->GetNonce(),
+                                                                    mint->GetHash(),
+                                                                    mint->SerializeToEmbeddedTransaction(),
+                                                                    std::nullopt,
+                                                                    std::nullopt );
+        EXPECT_TRUE( subject.has_value() );
+        return nodes.front().manager->CreateProposal(
+            subject.value(), accounts.front()->GetAddress(), nodes.front().registry->GetRegistryCid(), 1 );
+    };
+    const auto first_proposal  = make_proposal( first_mint );
+    const auto second_proposal = make_proposal( second_mint );
+    ASSERT_TRUE( first_proposal.has_value() );
+    ASSERT_TRUE( second_proposal.has_value() );
+    const auto sign_vote = [&]( const sgns::ConsensusManager::Proposal &proposal,
+                                const std::shared_ptr<sgns::GeniusAccount> &account )
+    {
+        return nodes.front().manager->CreateVote(
+            proposal.proposal_id(), account->GetAddress(), true,
+            [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    };
+
+    // This isolated consensus-fault fixture deliberately overlaps validator 0.
+    // It is not used by the normal Phase 9 one-vote proof above.
+    const auto first_vote_0  = sign_vote( first_proposal.value(), accounts[0] );
+    const auto first_vote_1  = sign_vote( first_proposal.value(), accounts[1] );
+    const auto second_vote_0 = sign_vote( second_proposal.value(), accounts[0] );
+    const auto second_vote_2 = sign_vote( second_proposal.value(), accounts[2] );
+    ASSERT_TRUE( first_vote_0.has_value() );
+    ASSERT_TRUE( first_vote_1.has_value() );
+    ASSERT_TRUE( second_vote_0.has_value() );
+    ASSERT_TRUE( second_vote_2.has_value() );
+    EXPECT_EQ( first_vote_0.value().voter_id(), second_vote_0.value().voter_id() );
+    EXPECT_NE( first_vote_0.value().proposal_id(), second_vote_0.value().proposal_id() );
+    const auto first_certificate = nodes.front().manager->CreateCertificate(
+        first_proposal.value(), { first_vote_0.value(), first_vote_1.value() } );
+    const auto second_certificate = nodes.front().manager->CreateCertificate(
+        second_proposal.value(), { second_vote_0.value(), second_vote_2.value() } );
+    ASSERT_TRUE( first_certificate.has_value() );
+    ASSERT_TRUE( second_certificate.has_value() );
+    EXPECT_EQ( first_certificate.value().registry_cid(), second_certificate.value().registry_cid() );
+    EXPECT_EQ( first_certificate.value().registry_epoch(), second_certificate.value().registry_epoch() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
+                                                                                first_certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
+                                                                                second_certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+
+    std::string first_serialized;
+    std::string second_serialized;
+    ASSERT_TRUE( first_certificate.value().SerializeToString( &first_serialized ) );
+    ASSERT_TRUE( second_certificate.value().SerializeToString( &second_serialized ) );
+    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( first_certificate.value() );
+    ASSERT_EQ( key, sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second_certificate.value() ) );
+    const auto verify_order = [&]( const std::string &existing, const std::string &candidate )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( nodes.front().manager, key, existing );
+        sgns::crdt::pb::Element element;
+        element.set_key( key );
+        element.set_value( candidate );
+        const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( nodes.front().manager, element );
+        if ( SerializedCertificateHash( existing ) < SerializedCertificateHash( candidate ) )
+        {
+            ASSERT_TRUE( filtered.has_value() );
+            EXPECT_TRUE( filtered->empty() );
+        }
+        else
+        {
+            EXPECT_FALSE( filtered.has_value() );
+        }
+    };
+    // Both directions execute the critical Mint-equivocation diagnostic while
+    // retaining the normal lower-hash CRDT decision.
+    verify_order( first_serialized, second_serialized );
+    verify_order( second_serialized, first_serialized );
+
+    const auto same_mint_alternate = nodes.front().manager->CreateCertificate(
+        first_proposal.value(), { first_vote_1.value(), first_vote_0.value() } );
+    ASSERT_TRUE( same_mint_alternate.has_value() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
+                                                                                same_mint_alternate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+    std::string same_mint_serialized;
+    ASSERT_TRUE( same_mint_alternate.value().SerializeToString( &same_mint_serialized ) );
+    ASSERT_NE( same_mint_serialized, first_serialized );
+    verify_order( first_serialized, same_mint_serialized );
+
+    for ( auto &node : nodes )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        node.pubsub->Stop();
+    }
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnApprovedBoundCertificate )
 {
     auto account = MakeSigningAccount();
