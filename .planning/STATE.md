@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Phase 11 context gathered
-last_updated: "2026-08-24T12:45:17.502Z"
-last_activity: 2026-08-24 -- Phase 11 planning complete
+last_updated: "2026-08-24T13:04:36.274Z"
+last_activity: 2026-08-24
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 60
 ---
 
@@ -21,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 11 — convergent certificate consumption & mint recovery
+**Current focus:** Phase 11 — convergent-certificate-consumption-mint-recovery
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
+Phase: 11 (convergent-certificate-consumption-mint-recovery) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-24 -- Phase 11 planning complete
+Last activity: 2026-08-24
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -54,6 +53,7 @@ Progress: [█████░░░░░] 50%
 **Recent Trend:** Not yet measured for v3.0.
 | Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
 | Phase 10 P01 | 10m | 2 tasks | 9 files |
+| Phase 11 P01 | 6 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +67,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 08]: Reject invalid certificate bindings before submit, cleanup, callbacks, registry finalization, or handler dispatch.
 - [Phase 08]: Use in-memory secure storage in the pending-lifecycle fixture before creating the signing account.
 - [Phase 10]: Immutable authority records converge by the lowest SHA-256 lowercase-hex serialized bytes. — A reserved replicated CRDT priority avoids local first-seen and read-then-write semantics.
+- [Phase 11]: Certificate handlers trigger committed recovery after releasing certificate_handlers_mutex_. — Preserves the CRDTWorkJournal as the sole retry boundary and avoids handler-map lock re-entry.
+- [Phase 11]: No-handler durable certificates retain stalled work and their active vote lock. — A registered handler must process committed readback successfully before certificate work completes.
 
 ### Pending Todos
 
@@ -85,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-21T20:39:30.241Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-convergent-certificate-consumption-mint-recovery/11-CONTEXT.md
+Last session: 2026-08-24T13:04:36.076Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None

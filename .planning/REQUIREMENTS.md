@@ -24,7 +24,7 @@
 - [x] **CERT-02**: At most the deterministic protocol-selected publisher writes an authoritative certificate for a slot; receiving a certificate through PubSub never makes a peer write that CRDT key.
 - [x] **CERT-03**: The publisher durably writes and verifies the authoritative slot certificate before advertising it on PubSub.
 - [x] **CERT-04**: If the selected publisher stalls, deterministic and protocol-verifiable failover can publish the same valid certificate only after the defined recovery condition, without allowing competing certificate contents.
-- [ ] **CERT-05**: PubSub, CRDT synchronization, local completion, and restart recovery converge through one idempotent certificate-acceptance path; a different valid-looking certificate for an occupied slot is a safety conflict and never overwrites or unlocks the slot.
+- [x] **CERT-05**: PubSub, CRDT synchronization, local completion, and restart recovery converge through one idempotent certificate-acceptance path; a different valid-looking certificate for an occupied slot is a safety conflict and never overwrites or unlocks the slot.
 - [x] **COMP-01**: Existing consumers that start with a subject hash are migrated to obtain the corresponding slot before certificate lookup, or use only a non-authoritative hash-to-slot locator; certificate authority remains slot-keyed.
 
 ### Exactly-Once Mint Application
@@ -71,7 +71,7 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | CERT-02 | Phase 10 | Complete |
 | CERT-03 | Phase 10 | Complete |
 | CERT-04 | Phase 10 | Complete |
-| CERT-05 | Phase 11 | Pending |
+| CERT-05 | Phase 11 | Complete |
 | COMP-01 | Phase 10 | Complete |
 | MINT-01 | Phase 11 | Pending |
 | MINT-02 | Phase 11 | Pending |
