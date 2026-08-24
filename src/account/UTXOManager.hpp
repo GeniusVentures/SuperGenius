@@ -419,6 +419,7 @@ namespace sgns
 
     private:
         friend class CertificateFallbackTestAccess;
+        friend class UTXOManagerTestAccess;
 
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";
@@ -439,9 +440,14 @@ namespace sgns
                                                  const std::string                                 &address,
                                                  const std::vector<std::pair<OutPoint, UTXOEntry>> &entries );
 
+        /// @brief Captures and persists an address snapshot while utxos_mutex_ is exclusively held.
+        outcome::result<void> StoreUTXOsLocked( const std::string    &address,
+                                                std::function<void()> before_store_hook = {} );
+
         // Friend-only fault and barrier seams for certificate durability regression coverage.
         void SetFailNextPutUTXOStoreForTest( bool fail );
         void SetPutUTXOBeforeStoreHookForTest( std::function<void()> hook );
+        void SetConsumeUTXOsBeforeStoreHookForTest( std::function<void()> hook );
 
         /**
          * @brief       Selects UTXOs to cover a required amount for a specific token, excluding reserved outpoints, and returns the selected inputs along with the total selected amount.
@@ -473,6 +479,7 @@ namespace sgns
         std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
         bool                                                    fail_next_put_utxo_store_for_test_{ false };
         std::function<void()>                                   put_utxo_before_store_hook_for_test_;
+        std::function<void()>                                   consume_utxos_before_store_hook_for_test_;
     };
 
 }
