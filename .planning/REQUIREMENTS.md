@@ -30,7 +30,7 @@
 ### Exactly-Once Mint Application
 
 - [x] **MINT-01**: A durably accepted slot certificate drives its winning mint transaction at most once on each node, including duplicate delivery and restart.
-- [ ] **MINT-02**: Recovery records distinguish certified, applying, and applied work (or provide an equivalent atomic boundary), so a crash cannot create a second mint effect or silently lose a certified mint.
+- [x] **MINT-02**: Recovery records distinguish certified, applying, and applied work (or provide an equivalent atomic boundary), so a crash cannot create a second mint effect or silently lose a certified mint.
 
 ### Production-Path Regression Coverage
 
@@ -74,7 +74,7 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | CERT-05 | Phase 11 | Complete |
 | COMP-01 | Phase 10 | Complete |
 | MINT-01 | Phase 11 | Complete |
-| MINT-02 | Phase 11 | Pending |
+| MINT-02 | Phase 11 | Complete |
 | TEST-01 | Phase 12 | Pending |
 | TEST-02 | Phase 12 | Pending |
 | TEST-03 | Phase 12 | Pending |
