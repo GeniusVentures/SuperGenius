@@ -380,6 +380,16 @@ namespace sgns
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
 
         /**
+         * @brief Finds an exact-hash transaction at its normal CRDT path across
+         *        every monitored network.
+         *
+         * A decoded value is a candidate only when its intrinsic hash matches
+         * @p tx_hash; mismatched or unavailable CRDT values are not authority.
+         */
+        outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
+            const std::string &tx_hash ) const;
+
+        /**
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
