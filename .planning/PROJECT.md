@@ -39,14 +39,14 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 - ✓ `auto_dht` + `port_seed` (renamed from `base_port`) read from `network_config.json` in `InitNetwork()` — config-wins precedence, safe defaults, port-resolution Doxygen (CFG-01, CFG-04) — **Validated in Phase 1**
 - ✓ `node_type` read from `sgns_config.json` in `LoadSgnsConfig()` (case-insensitive `NodeTypeFromString`, default Light) → `NodeType` enum; `is_full_node_` derived (Full/Archive→true, Light→false) in the reordered ctor; canonical `New(dev_config, AccountSource)` variant factory with `FromPublicKey` public (CFG-02, CFG-03, INTF-01, INTF-02, INTF-03) — **Validated in Phase 2** *(old factories retained until Phase 3 deletion per D-01)*
 - ✓ All ~25 `NewFromPrivateKey` call sites migrated to `New(dev_config, FromPrivateKey{...})`; old factories + old private ctor deleted (INTF-04); shared `WriteNetworkConfig`/`WriteSgnsConfig` helpers; full build + CTest green (MIG-01, MIG-02, MIG-03, MIG-04) — **Validated in Phase 3**
+- ✓ Canonical bridge-burn identity is shared by competing Mint proposals and derived from verified burn facts, never proposer address or nonce — **Validated in Phase 8**
+- ✓ Certificate publication has deterministic verifiable authority, persistence-before-advertisement, and safe failover — **Validated in Phase 10**
+- ✓ Local completion, PubSub receipt, CRDT synchronization, and restart recovery converge through one durable canonical-certificate path; honest validators produce one same-slot winner — **Validated in Phases 9–11**
 
 ### Active
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] Canonical bridge-burn identity is shared by competing mint proposals and is derived from verified burn facts, never proposer address or nonce.
-- [ ] Certificate publication has a verifiable authority rule, persistence-before-advertisement ordering, and a safe failover policy.
-- [ ] All certificate ingress paths converge on one durable finality record without receiver-side duplicate CRDT writes.
 - [ ] A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart.
 
 ### Out of Scope
@@ -65,7 +65,7 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 ## Context
 
-**Current State:** v1.0’s GeniusNode construction refactor remains the validated `develop` baseline. An unmerged v2.0 exploratory branch attempted slot-scoped finality through broad phases 9–12, but introduced a multi-writer CRDT certificate-store race and remains blocked by crashes, timeouts, and mint/sync failures. v3.0 starts clean from `develop`; the old worktree remains preserved for forensic reference only.
+**Current State:** v3.0 rebuilt canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery from the `develop` baseline. Phase 12 remains to prove those guarantees across production-path multi-node faults; the old exploratory worktree remains forensic reference only.
 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
@@ -102,9 +102,9 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 | `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
 | Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ (all three defaults verified: `auto_dht=true`/`port_seed=40001` Phase 1, `node_type=Light` Phase 2) |
 | Restart canonical-finality work from `develop` | The unmerged Phase 9–12 branch has a large blast radius and a publication-authority design flaw; retain its observations, not its implementation | — Pending |
-| Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | — Pending |
-| Store authoritative certificates by canonical slot | Same-slot contenders must meet one generic certificate authority, while the certificate itself retains exact-proposal binding; no bridge-only finality record is introduced | — Pending |
-| Persist one local active vote per slot before publication | Volatile slot arbitration is insufficient after restart or cleanup; a published vote remains locked until matching durable finality or cryptographic expiry | — Pending |
+| Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | Phase 10 ✓ |
+| Store authoritative certificates by canonical slot | Same-slot contenders must meet one generic certificate authority, while the certificate itself retains exact-proposal binding; no bridge-only finality record is introduced | Phase 10 ✓ |
+| Persist one local active vote per slot before publication | Volatile slot arbitration is insufficient after restart or cleanup; a published vote remains locked until matching durable finality or cryptographic expiry | Phase 9 ✓ |
 
 ## Evolution
 
@@ -124,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-20 after starting milestone v3.0 from the `develop` baseline*
+*Last updated: 2026-08-24 after completing Phase 11 of milestone v3.0*
