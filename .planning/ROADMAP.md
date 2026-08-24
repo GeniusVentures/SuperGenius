@@ -134,7 +134,7 @@ Plans:
 | 8. Canonical Slot & Certificate Binding | v3.0 | 1/1 | Complete   | 2026-08-20 |
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
-| 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 1/3 | In Progress|  |
+| 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 2/3 | In Progress|  |
 | 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
 
 ---
