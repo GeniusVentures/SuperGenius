@@ -290,6 +290,27 @@ namespace sgns
             manager->Close();
         }
 
+        static void SetTimerWorkHook( const std::shared_ptr<ConsensusManager> &manager, std::function<void()> hook )
+        {
+            std::lock_guard lock( manager->timer_mutex_ );
+            manager->timer_work_hook_for_test_ = std::move( hook );
+        }
+
+        static void RequestTimerWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            {
+                std::lock_guard lock( manager->timer_mutex_ );
+                manager->certificates_pending_.store( true );
+            }
+            manager->timer_cv_.notify_all();
+        }
+
+        static bool IsRoundTimerJoinable( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->close_mutex_ );
+            return manager->round_timer_.joinable();
+        }
+
         static bool CertificatesPending( const std::shared_ptr<ConsensusManager> &manager )
         {
             return manager && manager->certificates_pending_.load();
@@ -650,6 +671,91 @@ TEST( ConsensusPendingLifecycleContractTest, HarnessIsDiscoverable )
     ASSERT_EQ( behaviors.size(), kConsensusPendingBehaviors.size() );
     EXPECT_STREQ( sgns::ConsensusPendingLifecycleTestAccess::Scope(), "consensus pending lifecycle" );
     EXPECT_FALSE( sgns::NONCE_SUBJECT_TYPE.empty() );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, TimerWorkCanReleaseTheLastExternalManagerOwner )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    std::weak_ptr<sgns::ConsensusManager> weak_manager = manager;
+
+    std::mutex              release_mutex;
+    std::condition_variable release_cv;
+    bool                    external_owner_released = false;
+    sgns::ConsensusPendingLifecycleTestAccess::SetTimerWorkHook(
+        manager,
+        [&]()
+        {
+            manager.reset();
+            {
+                std::lock_guard lock( release_mutex );
+                external_owner_released = true;
+            }
+            release_cv.notify_all();
+        } );
+    sgns::ConsensusPendingLifecycleTestAccess::RequestTimerWork( manager );
+
+    {
+        std::unique_lock lock( release_mutex );
+        ASSERT_TRUE( release_cv.wait_for( lock,
+                                          std::chrono::seconds( 5 ),
+                                          [&] { return external_owner_released; } ) );
+    }
+    ASSERT_WAIT_FOR_CONDITION( [&] { return weak_manager.expired(); },
+                               std::chrono::seconds( 2 ),
+                               "timer thread released the last manager owner",
+                               nullptr );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ConcurrentCloseCallsTransferTimerOwnershipOnlyOnce )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+
+    constexpr std::size_t kCloseCallers = 8;
+    std::mutex              start_mutex;
+    std::condition_variable start_cv;
+    bool                    start     = false;
+    std::atomic<std::size_t> ready{ 0 };
+    std::vector<std::thread> closers;
+    closers.reserve( kCloseCallers );
+    for ( std::size_t i = 0; i < kCloseCallers; ++i )
+    {
+        closers.emplace_back(
+            [manager, &start_mutex, &start_cv, &start, &ready]()
+            {
+                ready.fetch_add( 1 );
+                start_cv.notify_one();
+                std::unique_lock lock( start_mutex );
+                start_cv.wait( lock, [&] { return start; } );
+                lock.unlock();
+                manager->Close();
+            } );
+    }
+
+    bool all_callers_ready = false;
+    {
+        std::unique_lock lock( start_mutex );
+        all_callers_ready = start_cv.wait_for( lock,
+                                               std::chrono::seconds( 2 ),
+                                               [&] { return ready.load() == kCloseCallers; } );
+        start = true;
+    }
+    start_cv.notify_all();
+    for ( auto &closer : closers )
+    {
+        closer.join();
+    }
+
+    ASSERT_TRUE( all_callers_ready );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::IsRoundTimerJoinable( manager ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
 TEST( ConsensusPendingLifecycleContractTest, ValidationResultPreservesTerminalChecks )

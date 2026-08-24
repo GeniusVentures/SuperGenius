@@ -125,8 +125,7 @@ namespace sgns
 
     ConsensusManager::~ConsensusManager()
     {
-        stop_timer_.store( true );
-        timer_cv_.notify_all();
+        Close();
         ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
@@ -134,29 +133,33 @@ namespace sgns
     {
         stop_timer_.store( true );
         timer_cv_.notify_all();
-        if ( round_timer_.joinable() )
+
+        std::thread timer;
         {
+            std::lock_guard lock( close_mutex_ );
+            if ( !round_timer_.joinable() )
+            {
+                return;
+            }
+
             if ( round_timer_.get_id() == std::this_thread::get_id() )
             {
-                // A certificate callback can release the final TransactionManager
-                // and Blockchain references on this timer thread. That destruction
-                // closes the ConsensusManager, so joining here would self-join.
+                // A timer callback can release the final owner. A thread cannot
+                // join itself, so detach only in this self-teardown path.
                 round_timer_.detach();
+                return;
             }
-            else
-            {
-                round_timer_.join();
-            }
+
+            timer = std::move( round_timer_ );
         }
+
+        timer.join();
     }
 
     void ConsensusManager::StartRoundTimer()
     {
-        if ( round_timer_.joinable() )
-        {
-            return;
-        }
-        if ( stop_timer_.load() )
+        std::lock_guard close_lock( close_mutex_ );
+        if ( round_timer_.joinable() || stop_timer_.load() )
         {
             return;
         }
@@ -202,6 +205,17 @@ namespace sgns
                         return;
                     }
                     lock.unlock();
+
+                    std::function<void()> timer_work_hook;
+                    {
+                        std::lock_guard timer_lock( self->timer_mutex_ );
+                        timer_work_hook = self->timer_work_hook_for_test_;
+                    }
+                    if ( timer_work_hook )
+                    {
+                        timer_work_hook();
+                    }
+
                     if ( self->certificates_pending_.load() )
                     {
                         self->ProcessCertificates();
