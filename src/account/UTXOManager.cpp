@@ -162,32 +162,46 @@ namespace sgns
         new_utxo.SetOwnerAddress( address );
         const OutPoint outpoint{ new_utxo.GetTxID(), new_utxo.GetOutputIdx() };
 
+        std::unique_lock lock( utxos_mutex_ );
+        if ( auto existing = utxo_outpoints_.find( outpoint ); existing != utxo_outpoints_.end() )
         {
-            std::unique_lock lock( utxos_mutex_ );
-            if ( auto existing = utxo_outpoints_.find( outpoint ); existing != utxo_outpoints_.end() )
-            {
-                return false;
-            }
-
-            UTXOEntry entry;
-            entry.state               = UTXOState::UTXO_READY;
-            entry.utxo                = new_utxo;
-            entry.created_epoch       = 0;
-            entry.spent_epoch         = std::nullopt;
-            entry.spent_by_txid       = std::nullopt;
-            entry.type                = type;
-            utxo_outpoints_[outpoint] = entry;
-            address_outpoints_[address].push_back( outpoint );
+            // The lock is released only after the creator has either committed its
+            // snapshot or rolled this outpoint back. A duplicate therefore proves
+            // durable progress rather than merely observing an in-flight insertion.
+            return false;
         }
 
-        auto store_result = StoreUTXOs( address );
+        UTXOEntry entry;
+        entry.state               = UTXOState::UTXO_READY;
+        entry.utxo                = new_utxo;
+        entry.created_epoch       = 0;
+        entry.spent_epoch         = std::nullopt;
+        entry.spent_by_txid       = std::nullopt;
+        entry.type                = type;
+        utxo_outpoints_[outpoint] = entry;
+        address_outpoints_[address].push_back( outpoint );
+
+        if ( put_utxo_before_store_hook_for_test_ )
+        {
+            put_utxo_before_store_hook_for_test_();
+        }
+
+        outcome::result<void> store_result = outcome::success();
+        if ( fail_next_put_utxo_store_for_test_ )
+        {
+            fail_next_put_utxo_store_for_test_ = false;
+            store_result                       = outcome::failure( std::errc::io_error );
+        }
+        else
+        {
+            store_result = StoreUTXOSnapshot( db_, address, SnapshotAddressUTXOsLocked( address ) );
+        }
         if ( store_result.has_error() )
         {
             // An outpoint is only idempotently complete after the address snapshot
             // has reached storage. Leaving this insertion in memory would make a
             // retry return false and allow its caller to advance durable work that
             // is still missing after a restart.
-            std::unique_lock lock( utxos_mutex_ );
             utxo_outpoints_.erase( outpoint );
             if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
             {
@@ -599,7 +613,7 @@ namespace sgns
 
             const auto &owner_address          = utxo_it->second.utxo.GetOwnerAddress();
             const bool  delegated_escrow_spend = owner_address != address && input.output_idx_ == 0 &&
-                                                 utxo_address::IsEscrowLockAddress( owner_address );
+                                                utxo_address::IsEscrowLockAddress( owner_address );
 
             if ( owner_address != address && !delegated_escrow_spend )
             {
@@ -823,9 +837,38 @@ namespace sgns
         db_.reset();
     }
 
-    outcome::result<void> UTXOManager::StoreUTXOs( const std::string &address )
+    std::vector<std::pair<OutPoint, UTXOManager::UTXOEntry>> UTXOManager::SnapshotAddressUTXOsLocked(
+        const std::string &address ) const
     {
-        auto db = AcquireStorage();
+        std::vector<std::pair<OutPoint, UTXOEntry>> entries;
+        entries.reserve( utxo_outpoints_.size() );
+        for ( const auto &[outpoint, entry] : utxo_outpoints_ )
+        {
+            if ( entry.utxo.GetOwnerAddress() == address )
+            {
+                entries.emplace_back( outpoint, entry );
+            }
+        }
+        return entries;
+    }
+
+    void UTXOManager::SetFailNextPutUTXOStoreForTest( bool fail )
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        fail_next_put_utxo_store_for_test_ = fail;
+    }
+
+    void UTXOManager::SetPutUTXOBeforeStoreHookForTest( std::function<void()> hook )
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        put_utxo_before_store_hook_for_test_ = std::move( hook );
+    }
+
+    outcome::result<void> UTXOManager::StoreUTXOSnapshot(
+        const std::shared_ptr<storage::rocksdb>           &db,
+        const std::string                                 &address,
+        const std::vector<std::pair<OutPoint, UTXOEntry>> &entries_to_store )
+    {
         if ( db == nullptr )
         {
             logger_->error( "Tried to store UTXOs without loading DB" );
@@ -852,20 +895,6 @@ namespace sgns
                     logger_->error( "Failed to remove old UTXO record for address {}", address );
                     return rem_res.error();
                 }
-            }
-        }
-
-        std::vector<std::pair<OutPoint, UTXOEntry>> entries_to_store;
-        {
-            std::shared_lock lock( utxos_mutex_ );
-            entries_to_store.reserve( utxo_outpoints_.size() );
-            for ( const auto &[outpoint, entry] : utxo_outpoints_ )
-            {
-                if ( entry.utxo.GetOwnerAddress() != address )
-                {
-                    continue;
-                }
-                entries_to_store.emplace_back( outpoint, entry );
             }
         }
 
@@ -921,6 +950,18 @@ namespace sgns
 
         logger_->info( "Stored {} UTXOs for address {}", stored, address );
         return outcome::success();
+    }
+
+    outcome::result<void> UTXOManager::StoreUTXOs( const std::string &address )
+    {
+        std::shared_ptr<storage::rocksdb>           db;
+        std::vector<std::pair<OutPoint, UTXOEntry>> entries_to_store;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            db               = db_;
+            entries_to_store = SnapshotAddressUTXOsLocked( address );
+        }
+        return StoreUTXOSnapshot( db, address, entries_to_store );
     }
 
     outcome::result<void> UTXOManager::CreateCheckpoint( uint64_t             epoch,

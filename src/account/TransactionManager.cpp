@@ -1785,7 +1785,8 @@ namespace sgns
         }
 
         auto embedded_transaction = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        return embedded_transaction.has_value() && embedded_transaction.value() && embedded_transaction.value()->CheckHash() &&
+        return embedded_transaction.has_value() && embedded_transaction.value() &&
+               embedded_transaction.value()->CheckHash() &&
                embedded_transaction.value()->GetHash() == transaction.GetHash() &&
                embedded_transaction.value()->GetSlotID() == transaction.GetSlotID();
     }
@@ -1903,8 +1904,8 @@ namespace sgns
         return DeSerializeTransaction( transaction_data );
     }
 
-    outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> TransactionManager::FetchExactTransactionFromCRDT(
-        const std::string &tx_hash ) const
+    outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> TransactionManager::
+        FetchExactTransactionFromCRDT( const std::string &tx_hash ) const
     {
         if ( !globaldb_m )
         {
@@ -2039,6 +2040,10 @@ namespace sgns
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
         }
+        if ( fetch_and_process_before_state_change_hook_for_test_ )
+        {
+            fetch_and_process_before_state_change_hook_for_test_();
+        }
         BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
 
         return outcome::success();
@@ -2138,9 +2143,10 @@ namespace sgns
 
             if ( !inputs.empty() )
             {
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs,
-                                                                              mint_tx_v2->GetSrcAddress(),
-                                                                              sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                BOOST_OUTCOME_TRY(
+                    account_m->GetUTXOManager().ConsumeUTXOs( inputs,
+                                                              mint_tx_v2->GetSrcAddress(),
+                                                              sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
@@ -2171,6 +2177,11 @@ namespace sgns
     void TransactionManager::SetBridgeExecutedMarkerWriteFailureForTest( bool fail )
     {
         fail_bridge_executed_marker_write_for_test_ = fail;
+    }
+
+    void TransactionManager::SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook )
+    {
+        fetch_and_process_before_state_change_hook_for_test_ = std::move( hook );
     }
 
     outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
