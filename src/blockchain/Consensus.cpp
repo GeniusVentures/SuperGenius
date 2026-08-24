@@ -280,8 +280,13 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Registering certificate handler subject_type={}",
                                          __func__,
                                          subject_type );
-        std::unique_lock lock( certificate_handlers_mutex_ );
-        certificate_subject_handlers_[type_hash.value()] = std::move( handler );
+        {
+            std::unique_lock lock( certificate_handlers_mutex_ );
+            certificate_subject_handlers_[type_hash.value()] = std::move( handler );
+        }
+        // A durable certificate may have arrived before its consumer was constructed.
+        // Recover only after releasing the handler map lock because dispatch reads it.
+        RecoverPendingCertificateWork();
         return true;
     }
 
@@ -3574,18 +3579,6 @@ namespace sgns
                 continue;
             }
 
-            const auto slot_key = GetSlotKey( certificate.proposal() );
-            auto release         = ReleaseActiveVoteForAcceptedSlot( slot_key );
-            if ( release.has_error() )
-            {
-                // A read/decode/remove failure leaves the durable certificate work retryable.
-                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
-                continue;
-            }
-
-            // A successful durable readback proves finality even when this node never
-            // held a local active-vote record (or already removed it on an earlier replay).
-            ClearProposalSlot( certificate.proposal() );
             ProcessCommittedCertificate( entry.key, certificate );
         }
     }
@@ -3607,13 +3600,25 @@ namespace sgns
             auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
             if ( it == certificate_subject_handlers_.end() )
             {
-                (void) certificate_work_journal_->MarkDone( key );
+                certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
                 ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
-                (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
                 return;
             }
             handler = it->second;
         }
+
+        const auto slot_key = GetSlotKey( certificate.proposal() );
+        auto release         = ReleaseActiveVoteForAcceptedSlot( slot_key );
+        if ( release.has_error() )
+        {
+            // A read/decode/remove failure leaves the durable certificate work retryable.
+            certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
+
+        // A successful durable readback proves finality even when this node never
+        // held a local active-vote record (or already removed it on an earlier replay).
+        ClearProposalSlot( certificate.proposal() );
 
         auto certificate_handler_result = handler( subject_hash.value(), certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
