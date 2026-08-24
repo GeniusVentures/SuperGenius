@@ -9,8 +9,11 @@
 
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -43,6 +46,49 @@ namespace sgns
         /// v1 BridgeSourceBurned and v2 BridgeOutInitiated topic0 so witness
         /// validation accepts mints created from either event version.
         std::vector<std::string> accepted_topic0_hashes;
+    };
+
+    /**
+     * @brief Structured, claim-bound evidence of which RPC endpoints actually
+     *        verified a specific bridge claim (issue #364).
+     *
+     * Replaces the previous boolean-only verification result. An endpoint is
+     * recorded here only after it passes *every* required check for the exact
+     * claim: RPC request completed, receipt parsed, receipt status succeeded,
+     * expected bridge contract matched and an accepted topic0 matched.
+     *
+     * Vote slot hashes are populated exclusively from this evidence, never from
+     * endpoint configuration, so a signed vote can no longer claim a DIRECT_API
+     * or PUBLIC confirmation from an endpoint that failed, timed out, returned a
+     * malformed receipt, or matched the wrong bridge contract.
+     */
+    struct RpcVerificationEvidence
+    {
+        /// True only when the weighted successful endpoints reached the quorum.
+        bool valid = false;
+
+        /// SHA-256 of the URL of a DIRECT_API endpoint that successfully verified
+        /// the claim (empty when no direct endpoint confirmed it).
+        std::optional<std::vector<uint8_t>> successful_direct_api;
+
+        /// SHA-256 of the URLs of distinct PUBLIC endpoints that successfully
+        /// verified the claim, in the order they confirmed.
+        std::vector<std::vector<uint8_t>> successful_public;
+
+        /// Summed consensus_weight of the successful endpoints only.
+        int32_t successful_weight = 0;
+
+        /**
+         * @brief Returns the hash for a vote slot, drawn solely from successful endpoints.
+         *
+         * - slot 0: the successful DIRECT_API endpoint, or empty;
+         * - slot 1: the first successful PUBLIC endpoint, or empty;
+         * - slot 2: a second, distinct successful PUBLIC endpoint, or empty.
+         *
+         * @param[in] slot_index Vote slot (0, 1 or 2).
+         * @return 32-byte SHA-256 of the endpoint URL, or an empty vector (abstain).
+         */
+        [[nodiscard]] std::vector<uint8_t> SlotHash( size_t slot_index ) const;
     };
 
     /**
@@ -179,25 +225,28 @@ namespace sgns
         }
 
         /**
-         * @brief Returns the SHA-256 hash of an endpoint URL for a vote slot (Phase 6, D-01).
+         * @brief Derives the claim key that binds verification evidence to a subject.
          *
-         * Slot semantics (per the slot-based RPC-hash voting model):
-         * - slot 0: first DIRECT_API endpoint (consensus_weight >= 50, D-02).
-         * - slot 1: first PUBLIC endpoint (consensus_weight < 50).
-         * - slot 2: second PUBLIC endpoint (consensus_weight < 50).
+         * The key is the canonical subject id (ConsensusManager::ComputeSubjectId),
+         * so evidence produced while validating one proposal's subject can never be
+         * read back for a different claim (issue #364, "Claim binding").
          *
-         * The hash is over the endpoint's raw @c url string (UTF-8), NOT the
-         * resolved URL nor the bridge_contract_address/event_topic0 fields, so the
-         * hash is stable across config reloads and deterministic across peers that
-         * share config (T-06-03). An empty vector signals abstention (D-05).
-         *
-         * @param[in] slot_index  Vote slot (0, 1, or 2).
-         * @param[in] chain_id    Source chain identifier.
-         * @return 32-byte SHA-256 of the qualifying endpoint URL, or an empty vector
-         *         when no qualifying endpoint exists or the slot/chain is unknown.
+         * @param[in] subject Consensus subject carrying the bridge claim.
+         * @return Canonical claim key, or std::nullopt when the subject cannot be canonicalised.
          */
-        [[nodiscard]] std::vector<uint8_t> GetSlotHash( size_t           slot_index,
-                                                        const std::string &chain_id ) const noexcept;
+        [[nodiscard]] static std::optional<std::string> ClaimKey( const ConsensusSubject &subject );
+
+        /**
+         * @brief Consumes the verification evidence recorded for a claim.
+         *
+         * Evidence is stored by ValidateWitness() once the RPC quorum has run for
+         * that exact subject, and is *removed* by this call so it can back exactly
+         * one vote and can never be reused for another claim. Thread-safe.
+         *
+         * @param[in] claim_key Key produced by ClaimKey() for the same subject.
+         * @return Recorded evidence, or std::nullopt when no evidence exists for the claim.
+         */
+        [[nodiscard]] std::optional<RpcVerificationEvidence> TakeEvidence( const std::string &claim_key ) const;
 
         /**
          * @brief Returns the first configured chain id, if any (Phase 6, D-01).
@@ -241,7 +290,36 @@ namespace sgns
         bool VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                              const std::string                        &source_reference ) const;
 
+        /**
+         * @brief Runs the weighted RPC quorum and reports which endpoints confirmed the claim.
+         *
+         * Every configured endpoint is queried; an endpoint contributes its weight
+         * (and its URL hash to the evidence) only after the RPC call completed, the
+         * receipt parsed, the receipt status succeeded, the expected bridge contract
+         * matched and an accepted topic0 matched. Evidence.valid is true only when
+         * the summed successful weight reaches the quorum threshold.
+         *
+         * @param[in] tx Transaction claiming the public-chain event.
+         * @param[in] source_reference Public-chain transaction hash or external source reference.
+         * @return Claim-bound verification evidence.
+         */
+        RpcVerificationEvidence GatherVerificationEvidence( const std::shared_ptr<GeniusTransaction> &tx,
+                                                            const std::string &source_reference ) const;
+
+        /// @brief Records evidence for a claim, evicting the oldest entry when full.
+        void StoreEvidence( const std::string &claim_key, RpcVerificationEvidence evidence ) const;
+
+        /// @brief Upper bound on cached, not-yet-consumed evidence entries.
+        static constexpr size_t kMaxCachedEvidence = 256;
+
         std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
+
+        /// @brief Claim-bound verification evidence awaiting consumption by CreateVote.
+        /// Keyed by ClaimKey(subject); entries are erased on TakeEvidence() and
+        /// FIFO-evicted past kMaxCachedEvidence so a stalled claim cannot leak.
+        mutable std::unordered_map<std::string, RpcVerificationEvidence> evidence_by_claim_;
+        mutable std::deque<std::string>                                  evidence_order_;
+        mutable std::mutex                                               evidence_mutex_;
 
         /// Chain IDs this validator registered for (self-deregistered on destruction).
         std::vector<std::string> registered_chain_ids_;

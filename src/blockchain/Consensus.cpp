@@ -619,7 +619,8 @@ namespace sgns
 
         if ( should_vote )
         {
-            auto vote_result = CreateVote( proposal_id, account_address_, true, signer_ );
+            auto vote_result =
+                CreateVote( proposal_id, account_address_, true, signer_, &proposal.subject() );
             if ( vote_result.has_value() )
             {
                 (void) SubmitVote( vote_result.value() );
@@ -1070,7 +1071,8 @@ namespace sgns
     outcome::result<ConsensusManager::Vote> ConsensusManager::CreateVote( const std::string &proposal_id,
                                                                           const std::string &voter_id,
                                                                           bool               approve,
-                                                                          Signer             sign )
+                                                                          Signer             sign,
+                                                                          const Subject     *subject )
     {
         Vote vote;
         vote.set_proposal_id( proposal_id );
@@ -1082,15 +1084,26 @@ namespace sgns
 
         // Phase 6 (D-01): populate slot_N_hash fields before signing so the
         // signature commits to them (T-06-01). No-op when no populator is set.
+        // #364: the subject is required — slot hashes must come from the evidence
+        // gathered while verifying THIS claim, never from endpoint configuration.
+        // Without a subject there is nothing to bind to, so the vote abstains from
+        // every slot (fail closed).
         SlotHashPopulator slot_hash_populator;
         {
             std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
             slot_hash_populator = slot_hash_populator_;
         }
-        if ( slot_hash_populator )
+        if ( slot_hash_populator && subject != nullptr )
         {
-            slot_hash_populator( vote );
+            slot_hash_populator( vote, *subject );
             ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
+                                             __func__,
+                                             proposal_id.substr( 0, 8 ) );
+        }
+        else if ( slot_hash_populator )
+        {
+            ConsensusManagerLogger()->debug( "{}: no subject supplied; abstaining from all RPC slots "
+                                             "for proposal_id={}",
                                              __func__,
                                              proposal_id.substr( 0, 8 ) );
         }

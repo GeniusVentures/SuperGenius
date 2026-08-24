@@ -823,23 +823,38 @@ namespace sgns
 
                 blockchain_->SetSlotHashPopulator(
                     [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
-                     logger                   = node_logger_]( sgns::ConsensusVote &vote )
+                     logger                   = node_logger_]( sgns::ConsensusVote          &vote,
+                                                               const sgns::ConsensusSubject &subject )
                     {
                         auto transaction_manager = weak_transaction_manager.lock();
                         if ( !transaction_manager )
                         {
                             return;
                         }
-                        auto      &validator = transaction_manager->GetPublicChainInputValidator();
-                        const auto chain_id  = validator.GetFirstConfiguredChainId();
-                        if ( !chain_id.has_value() )
+                        auto &validator = transaction_manager->GetPublicChainInputValidator();
+
+                        // #364: slots are populated ONLY from evidence recorded while
+                        // verifying this exact claim. No evidence (claim not verified
+                        // locally, evidence already consumed, or a different claim)
+                        // means every slot abstains.
+                        const auto claim_key = sgns::PublicChainInputValidator::ClaimKey( subject );
+                        if ( !claim_key.has_value() )
                         {
-                            logger->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                            logger->debug( "SlotHashPopulator: no claim key for subject; abstaining" );
                             return;
                         }
-                        const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
-                        const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
-                        const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+
+                        const auto evidence = validator.TakeEvidence( claim_key.value() );
+                        if ( !evidence.has_value() )
+                        {
+                            logger->debug( "SlotHashPopulator: no verification evidence for claim={}; abstaining",
+                                           claim_key.value().substr( 0, 8 ) );
+                            return;
+                        }
+
+                        const auto slot0 = evidence->SlotHash( 0 );
+                        const auto slot1 = evidence->SlotHash( 1 );
+                        const auto slot2 = evidence->SlotHash( 2 );
                         if ( !slot0.empty() )
                         {
                             vote.set_slot_0_hash( slot0.data(), slot0.size() );
@@ -853,8 +868,9 @@ namespace sgns
                             vote.set_slot_2_hash( slot2.data(), slot2.size() );
                         }
 
-                        logger->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
-                                       chain_id.value(),
+                        logger->debug( "SlotHashPopulator: claim={} weight={} slot0={} slot1={} slot2={}",
+                                       claim_key.value().substr( 0, 8 ),
+                                       evidence->successful_weight,
                                        !slot0.empty(),
                                        !slot1.empty(),
                                        !slot2.empty() );

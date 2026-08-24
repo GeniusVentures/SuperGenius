@@ -72,8 +72,10 @@ namespace sgns
          *             The callback is invoked AFTER proposal_id/voter_id/approve/
          *             timestamp are set but BEFORE VoteSigningBytes, so the
          *             resulting signature commits to the slot hashes (T-06-01).
+         *             The proposal's subject is passed so the populator can bind
+         *             slot hashes to the exact claim that was verified (#364).
          */
-        using SlotHashPopulator = std::function<void( ConsensusVote &vote )>;
+        using SlotHashPopulator = std::function<void( ConsensusVote &vote, const Subject &subject )>;
 
         /**
          * @brief Creates a ConsensusManager instance.
@@ -326,12 +328,16 @@ namespace sgns
          * @param[in] voter_id Validator identifier of the voter.
          * @param[in] approve `true` for approval vote, `false` for rejection vote.
          * @param[in] sign Signing callback.
+         * @param[in] subject Subject of the proposal being voted on. Required to bind
+         *            RPC slot hashes to the exact verified claim (#364). When null,
+         *            the vote fails closed and carries no slot hashes.
          * @return Signed vote on success, otherwise an error.
          */
         outcome::result<Vote> CreateVote( const std::string &proposal_id,
                                           const std::string &voter_id,
                                           bool               approve,
-                                          Signer             sign );
+                                          Signer             sign,
+                                          const Subject     *subject = nullptr );
 
         /**
          * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).

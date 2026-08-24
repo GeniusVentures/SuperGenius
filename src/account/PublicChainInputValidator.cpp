@@ -116,9 +116,23 @@ namespace sgns
             source_reference = tx->GetUncleHash();
         }
 
-        const bool verified = VerifyPublicChainSmartContract( tx, source_reference );
+        const auto evidence = GatherVerificationEvidence( tx, source_reference );
+        const bool verified = evidence.valid;
         if ( verified )
         {
+            // Bind the evidence to this exact subject so CreateVote can populate
+            // the vote's slot hashes from endpoints that actually verified THIS
+            // claim (issue #364). Evidence for a rejected claim is never stored.
+            if ( auto claim_key = ClaimKey( subject ); claim_key.has_value() )
+            {
+                StoreEvidence( claim_key.value(), evidence );
+            }
+            else
+            {
+                logger->warn( "ValidateWitness(PublicChain) could not derive claim key for tx={}; "
+                              "vote will abstain from all RPC slots",
+                              PreviewValue( tx->GetHash() ) );
+            }
             logger->info( "ValidateWitness(PublicChain) succeeded for tx={} source={}",
                           PreviewValue( tx->GetHash() ), PreviewValue( source_reference ) );
         }
@@ -215,128 +229,119 @@ namespace sgns
                       chain_id, added, upgraded, existing.size() );
     }
 
-    std::vector<uint8_t>
-        PublicChainInputValidator::GetSlotHash( size_t slot_index, const std::string &chain_id ) const noexcept
+    std::vector<uint8_t> RpcVerificationEvidence::SlotHash( size_t slot_index ) const
     {
-        auto logger = InputValidatorLogger();
-
-        // Phase 6 (D-01): consensus_weight threshold separating DIRECT_API from PUBLIC slots.
-        static constexpr uint8_t kDirectApiWeightThreshold = 50;
-
-        const auto chain_it = rpc_endpoints_.find( chain_id );
-        if ( chain_it == rpc_endpoints_.end() )
-        {
-            logger->debug( "GetSlotHash: no endpoints for chain_id={} slot={}", chain_id, slot_index );
-            return {};
-        }
-
-        const auto &endpoints = chain_it->second;
-        std::vector<uint8_t>  result;
-
-        // Slot selection does not modify endpoint state and SHA-256 over an
-        // in-memory string does not throw, so the whole accessor is noexcept.
-        const auto hash_url = []( const std::string &url ) noexcept -> std::vector<uint8_t> {
-            const auto digest = crypto::sha2_256(
-                reinterpret_cast<const uint8_t *>( url.data() ), url.size() );
-            return std::vector<uint8_t>( digest.begin(), digest.end() );
-        };
-
+        // Slots are drawn exclusively from endpoints that actually verified the
+        // claim (issue #364). A configured-but-failed endpoint is simply absent
+        // from the evidence, so its slot stays empty (abstain).
         switch ( slot_index )
         {
             case 0:
-            {
-                // First DIRECT_API endpoint (consensus_weight >= 50).
-                for ( const auto &ep : endpoints )
-                {
-                    if ( ep.consensus_weight >= kDirectApiWeightThreshold )
-                    {
-                        result = hash_url( ep.url );
-                        break;
-                    }
-                }
-                break;
-            }
+                return successful_direct_api.value_or( std::vector<uint8_t>{} );
             case 1:
-            {
-                // First PUBLIC endpoint (consensus_weight < 50).
-                for ( const auto &ep : endpoints )
-                {
-                    if ( ep.consensus_weight < kDirectApiWeightThreshold )
-                    {
-                        result = hash_url( ep.url );
-                        break;
-                    }
-                }
-                break;
-            }
+                return successful_public.size() >= 1 ? successful_public[0] : std::vector<uint8_t>{};
             case 2:
-            {
-                // Second PUBLIC endpoint (consensus_weight < 50).
-                size_t public_seen = 0;
-                for ( const auto &ep : endpoints )
-                {
-                    if ( ep.consensus_weight < kDirectApiWeightThreshold )
-                    {
-                        ++public_seen;
-                        if ( public_seen == 2 )
-                        {
-                            result = hash_url( ep.url );
-                            break;
-                        }
-                    }
-                }
-                break;
-            }
+                // Distinct from slot 1: successful_public holds URL-distinct endpoints.
+                return successful_public.size() >= 2 ? successful_public[1] : std::vector<uint8_t>{};
             default:
-            {
-                // Unknown slot index: fail-closed -> abstention (empty vector).
-                logger->debug( "GetSlotHash: unknown slot_index={} chain_id={}", slot_index, chain_id );
                 return {};
-            }
         }
-
-        if ( result.empty() )
-        {
-            logger->debug( "GetSlotHash: no qualifying endpoint for slot={} chain_id={} (abstain)", slot_index, chain_id );
-        }
-        return result;
     }
 
+    std::optional<std::string> PublicChainInputValidator::ClaimKey( const ConsensusSubject &subject )
+    {
+        auto subject_id = ConsensusManager::ComputeSubjectId( subject );
+        if ( subject_id.has_error() || subject_id.value().empty() )
+        {
+            return std::nullopt;
+        }
+        return subject_id.value();
+    }
 
+    void PublicChainInputValidator::StoreEvidence( const std::string       &claim_key,
+                                                   RpcVerificationEvidence  evidence ) const
+    {
+        std::lock_guard lock( evidence_mutex_ );
+        if ( evidence_by_claim_.emplace( claim_key, std::move( evidence ) ).second )
+        {
+            evidence_order_.push_back( claim_key );
+        }
+        else
+        {
+            // Re-validation of the same claim replaces the stale evidence in place.
+            evidence_by_claim_[claim_key] = std::move( evidence );
+        }
+
+        while ( evidence_order_.size() > kMaxCachedEvidence )
+        {
+            evidence_by_claim_.erase( evidence_order_.front() );
+            evidence_order_.pop_front();
+        }
+    }
+
+    std::optional<RpcVerificationEvidence>
+        PublicChainInputValidator::TakeEvidence( const std::string &claim_key ) const
+    {
+        std::lock_guard lock( evidence_mutex_ );
+        auto            it = evidence_by_claim_.find( claim_key );
+        if ( it == evidence_by_claim_.end() )
+        {
+            return std::nullopt;
+        }
+        RpcVerificationEvidence evidence = std::move( it->second );
+        evidence_by_claim_.erase( it );
+        evidence_order_.erase( std::remove( evidence_order_.begin(), evidence_order_.end(), claim_key ),
+                               evidence_order_.end() );
+        return evidence;
+    }
 
     bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                                                     const std::string                        &source_reference ) const
     {
-        auto logger = InputValidatorLogger();
-        logger->trace( "VerifyPublicChainSmartContract: tx={} chain_id={} source={}",
+        return GatherVerificationEvidence( tx, source_reference ).valid;
+    }
+
+    RpcVerificationEvidence
+        PublicChainInputValidator::GatherVerificationEvidence( const std::shared_ptr<GeniusTransaction> &tx,
+                                                               const std::string &source_reference ) const
+    {
+        auto                    logger = InputValidatorLogger();
+        RpcVerificationEvidence evidence;
+
+        logger->trace( "GatherVerificationEvidence: tx={} chain_id={} source={}",
                        tx ? PreviewValue( tx->GetHash() ) : "<null>",
                        tx ? tx->GetChainId() : "<null>",
                        PreviewValue( source_reference ) );
 
         if ( source_reference.empty() )
         {
-            logger->debug( "VerifyPublicChainSmartContract skipped because source reference is empty" );
-            return true;
+            // Nothing to verify against a public chain: the claim is accepted but
+            // no endpoint confirmed anything, so every slot stays empty.
+            logger->debug( "GatherVerificationEvidence skipped because source reference is empty" );
+            evidence.valid = true;
+            return evidence;
         }
 
         const auto chain_id = tx->GetChainId();
         if ( chain_id.empty() || chain_id == "supergenius" )
         {
-            logger->debug( "VerifyPublicChainSmartContract bypassed for local chain_id={}", chain_id );
-            return true;
+            logger->debug( "GatherVerificationEvidence bypassed for local chain_id={}", chain_id );
+            evidence.valid = true;
+            return evidence;
         }
 
         auto chain_it = rpc_endpoints_.find( chain_id );
         if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
         {
-            logger->error( "VerifyPublicChainSmartContract has no RPC endpoints for chain_id={}", chain_id );
-            return false;
+            logger->error( "GatherVerificationEvidence has no RPC endpoints for chain_id={}", chain_id );
+            return evidence;
         }
 
         const auto &endpoints = chain_it->second;
 
-        static constexpr int32_t kRequiredConsensusWeight = 75;
-        static constexpr auto    kTimeout                 = std::chrono::seconds( 10 );
+        static constexpr int32_t kRequiredConsensusWeight  = 75;
+        static constexpr uint8_t kDirectApiWeightThreshold = 50;
+        static constexpr auto    kTimeout                  = std::chrono::seconds( 10 );
 
         // Resolve transport factory: use injected factory if set (D-07, D-14),
         // otherwise default to real RpcHttpTransport (production path per D-16).
@@ -348,47 +353,55 @@ namespace sgns
                                  return std::make_unique<eth::rpc::RpcHttpTransport>( url, opts );
                              };
 
-        int32_t total_weight   = 0;
-        int32_t success_weight = 0;
-        size_t  tried          = 0;
+        const auto hash_url = []( const std::string &url ) {
+            const auto digest = crypto::sha2_256( reinterpret_cast<const uint8_t *>( url.data() ), url.size() );
+            return std::vector<uint8_t>( digest.begin(), digest.end() );
+        };
 
+        int32_t total_weight = 0;
+        size_t  tried        = 0;
+
+        // Every configured endpoint is queried, with no early exit once the quorum
+        // weight is reached: slot 2 requires a *second* distinct successful public
+        // endpoint, and a direct endpoint may appear after the public ones. Bailing
+        // out early would leave slots empty for endpoints that did confirm.
         for ( const auto &ep : endpoints )
         {
             total_weight += ep.consensus_weight;
-
-            auto transport = factory( ep.url, kTimeout );
+            ++tried;
 
             eth::Hash256 tx_hash_parsed{};
             if ( !rlp::base::parse::hex_array( source_reference, tx_hash_parsed ) )
             {
-                logger->error( "VerifyPublicChainSmartContract failed to parse source reference {}",
+                logger->error( "GatherVerificationEvidence failed to parse source reference {}",
                                PreviewValue( source_reference ) );
-                ++tried;
                 continue;
             }
 
-            const auto request  = eth::rpc::make_get_transaction_receipt_request( tx_hash_parsed, 1 );
-            const auto response = transport->call( request );
+            auto       transport = factory( ep.url, kTimeout );
+            const auto request   = eth::rpc::make_get_transaction_receipt_request( tx_hash_parsed, 1 );
+            const auto response  = transport->call( request );
             if ( !response.has_value() )
             {
-                logger->debug( "VerifyPublicChainSmartContract RPC transport failed for url={}", ep.url );
-                ++tried;
+                logger->debug( "GatherVerificationEvidence RPC transport failed for url={}", ep.url );
                 continue;
             }
 
             const auto receipt = eth::rpc::parse_transaction_receipt_response( response.value() );
             if ( !receipt.has_value() )
             {
-                logger->debug( "VerifyPublicChainSmartContract failed to parse receipt from url={}", ep.url );
-                ++tried;
+                logger->debug( "GatherVerificationEvidence failed to parse receipt from url={}", ep.url );
                 continue;
             }
 
             if ( !receipt->receipt.status.has_value() || !receipt->receipt.status.value() )
             {
-                logger->error( "VerifyPublicChainSmartContract receipt status failed for tx={} via url={}",
+                // A reverted source transaction invalidates the claim outright, no
+                // matter what the other endpoints report. Discard any evidence
+                // gathered so far so no slot can be populated for a bad claim.
+                logger->error( "GatherVerificationEvidence receipt status failed for tx={} via url={}",
                                PreviewValue( source_reference ), ep.url );
-                return false;
+                return RpcVerificationEvidence{};
             }
 
             // Defense-in-depth: verify receipt logs match expected bridge contract and event topic0.
@@ -423,31 +436,53 @@ namespace sgns
                     // while fetched endpoints carry {v1, v2}; a valid v2 receipt
                     // legitimately mismatches the v1-only endpoint and must still
                     // reach quorum on the v1+v2 endpoints. Treat the mismatch as
-                    // "this endpoint did not confirm" and continue.
-                    logger->debug( "VerifyPublicChainSmartContract topic mismatch bridge={} tx={} url={} "
+                    // "this endpoint did not confirm" and continue — it earns no
+                    // weight and no slot.
+                    logger->debug( "GatherVerificationEvidence topic mismatch bridge={} tx={} url={} "
                                    "— endpoint covers {} topic0 hash(es); continuing quorum evaluation",
                                    ep.bridge_contract_address,
                                    PreviewValue( source_reference ),
                                    ep.url,
                                    ep.accepted_topic0_hashes.size() );
-                    ++tried;
                     continue;
                 }
             }
 
-            success_weight += ep.consensus_weight;
-            ++tried;
-
-            if ( success_weight >= kRequiredConsensusWeight )
+            // The endpoint passed every required check for this exact claim.
+            evidence.successful_weight += ep.consensus_weight;
+            if ( ep.consensus_weight >= kDirectApiWeightThreshold )
             {
-                logger->info( "VerifyPublicChainSmartContract succeeded: {}/{} weight via {} endpoints for tx={}",
-                              success_weight, total_weight, tried, PreviewValue( source_reference ) );
-                return true;
+                if ( !evidence.successful_direct_api.has_value() )
+                {
+                    evidence.successful_direct_api = hash_url( ep.url );
+                }
+            }
+            else if ( evidence.successful_public.size() < 2 )
+            {
+                evidence.successful_public.push_back( hash_url( ep.url ) );
             }
         }
 
-        logger->error( "VerifyPublicChainSmartContract insufficient consensus for tx={}: {}/{} weight (need >= {})",
-                       PreviewValue( source_reference ), success_weight, total_weight, kRequiredConsensusWeight );
-        return false;
+        evidence.valid = evidence.successful_weight >= kRequiredConsensusWeight;
+        if ( evidence.valid )
+        {
+            logger->info( "GatherVerificationEvidence succeeded: {}/{} weight over {} endpoints for tx={} "
+                          "(direct_api={} public={})",
+                          evidence.successful_weight,
+                          total_weight,
+                          tried,
+                          PreviewValue( source_reference ),
+                          evidence.successful_direct_api.has_value(),
+                          evidence.successful_public.size() );
+        }
+        else
+        {
+            logger->error( "GatherVerificationEvidence insufficient consensus for tx={}: {}/{} weight (need >= {})",
+                           PreviewValue( source_reference ),
+                           evidence.successful_weight,
+                           total_weight,
+                           kRequiredConsensusWeight );
+        }
+        return evidence;
     }
 } // namespace sgns
