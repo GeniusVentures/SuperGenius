@@ -1,6 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <thread>
+#include <utility>
 
 #include "base/blob.hpp" // for sgns::base::Hash256
 #include "account/UTXOManager.hpp"
@@ -11,6 +18,23 @@
 
 using namespace sgns;
 using namespace sgns::base;
+
+namespace sgns
+{
+    class UTXOManagerTestAccess
+    {
+    public:
+        static void SetConsumeUTXOsBeforeStoreHook( UTXOManager &manager, std::function<void()> hook )
+        {
+            manager.SetConsumeUTXOsBeforeStoreHookForTest( std::move( hook ) );
+        }
+
+        static void SetPutUTXOBeforeStoreHook( UTXOManager &manager, std::function<void()> hook )
+        {
+            manager.SetPutUTXOBeforeStoreHookForTest( std::move( hook ) );
+        }
+    };
+} // namespace sgns
 
 // Test constants
 static constexpr std::string_view PRIV_KEY = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
@@ -188,6 +212,96 @@ TEST_F( UTXOManagerTest, Storage )
 
     auto utxos = utxo_manager->GetUTXOs();
     EXPECT_EQ( utxos.size(), 2 );
+}
+
+TEST_F( UTXOManagerTest, ConsumeSnapshotSerializesWithMintPersistenceAndReload )
+{
+    const std::array<uint8_t, 1> spend_seed{ 0x51 };
+    const std::array<uint8_t, 1> mint_seed{ 0x52 };
+    const auto                   spend_hash = crypto::sha2_256( gsl::span<const uint8_t>( spend_seed ) );
+    const auto                   mint_hash  = crypto::sha2_256( gsl::span<const uint8_t>( mint_seed ) );
+    const GeniusUTXO             spend_utxo( spend_hash, 0, 25, TOKEN_1 );
+    const GeniusUTXO             mint_utxo( mint_hash, 0, 75, TOKEN_1 );
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( spend_utxo ).value() );
+
+    std::mutex              barrier_mutex;
+    std::condition_variable barrier_cv;
+    bool                    consume_snapshot_captured = false;
+    bool                    release_consumer          = false;
+    UTXOManagerTestAccess::SetConsumeUTXOsBeforeStoreHook( *utxo_manager,
+                                                           [&]
+                                                           {
+                                                               std::unique_lock barrier_lock( barrier_mutex );
+                                                               consume_snapshot_captured = true;
+                                                               barrier_cv.notify_all();
+                                                               barrier_cv.wait( barrier_lock,
+                                                                                [&] { return release_consumer; } );
+                                                           } );
+
+    std::promise<void> mint_store_reached;
+    auto               mint_store_reached_future = mint_store_reached.get_future();
+    UTXOManagerTestAccess::SetPutUTXOBeforeStoreHook( *utxo_manager, [&] { mint_store_reached.set_value(); } );
+
+    InputUTXOInfo spend_input;
+    spend_input.txid_hash_  = spend_hash;
+    spend_input.output_idx_ = 0;
+
+    bool        consumer_succeeded = false;
+    bool        mint_succeeded     = false;
+    std::thread consumer_thread(
+        [&]
+        {
+            auto result        = utxo_manager->ConsumeUTXOs( { spend_input } );
+            consumer_succeeded = result.has_value() && result.value();
+        } );
+
+    {
+        std::unique_lock barrier_lock( barrier_mutex );
+        barrier_cv.wait( barrier_lock, [&] { return consume_snapshot_captured; } );
+    }
+
+    std::thread mint_thread(
+        [&]
+        {
+            auto result    = utxo_manager->PutUTXO( mint_utxo );
+            mint_succeeded = result.has_value() && result.value();
+        } );
+
+    // The Consume snapshot is captured while its exclusive lock remains held,
+    // so Mint cannot reach its persistence hook until the consumer commits.
+    EXPECT_EQ( mint_store_reached_future.wait_for( std::chrono::milliseconds( 50 ) ), std::future_status::timeout );
+
+    {
+        std::lock_guard barrier_lock( barrier_mutex );
+        release_consumer = true;
+    }
+    barrier_cv.notify_all();
+    consumer_thread.join();
+    mint_thread.join();
+
+    EXPECT_TRUE( consumer_succeeded );
+    EXPECT_TRUE( mint_succeeded );
+    EXPECT_EQ( mint_store_reached_future.wait_for( std::chrono::milliseconds( 0 ) ), std::future_status::ready );
+
+    UTXOManagerTestAccess::SetConsumeUTXOsBeforeStoreHook( *utxo_manager, {} );
+    UTXOManagerTestAccess::SetPutUTXOBeforeStoreHook( *utxo_manager, {} );
+
+    auto reloaded_manager = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded_manager->LoadUTXOs( db_ ).has_value() );
+    EXPECT_FALSE( reloaded_manager->GetUnconsumedUTXO( spend_hash, 0 ).has_value() );
+    EXPECT_TRUE( reloaded_manager->GetUnconsumedUTXO( mint_hash, 0 ).has_value() );
 }
 
 TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
