@@ -1529,7 +1529,7 @@ namespace sgns
         // A shared slot establishes that something won its consensus round. The
         // explicit nonce payload and independently decoded embedded transaction
         // establish that this transaction was that winner.
-        if ( subject.account_id() != transaction.GetSrcAddress() ||
+        if ( !transaction.CheckHash() || subject.account_id() != transaction.GetSrcAddress() ||
              nonce_subject.value().nonce() != transaction.GetNonce() ||
              nonce_subject.value().tx_hash() != transaction.GetHash() )
         {
@@ -1537,7 +1537,7 @@ namespace sgns
         }
 
         auto embedded_transaction = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        return embedded_transaction.has_value() && embedded_transaction.value() &&
+        return embedded_transaction.has_value() && embedded_transaction.value() && embedded_transaction.value()->CheckHash() &&
                embedded_transaction.value()->GetHash() == transaction.GetHash() &&
                embedded_transaction.value()->GetSlotID() == transaction.GetSlotID();
     }
@@ -1730,13 +1730,13 @@ namespace sgns
                 continue;
             }
 
-            if ( transaction.value()->GetHash() == tx_hash )
+            if ( transaction.value()->GetHash() == tx_hash && transaction.value()->CheckHash() )
             {
                 return std::optional<std::shared_ptr<GeniusTransaction>>{ transaction.value() };
             }
 
             TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Ignoring CRDT transaction with mismatched hash at {}",
+                "[{} - full: {}] {}: Ignoring CRDT transaction with mismatched or invalid hash at {}",
                 account_m->GetAddress().substr( 0, 8 ),
                 full_node_m,
                 __func__,

@@ -781,6 +781,44 @@ TEST_F( CertificateFallbackTest, ExactCrdtLookupIgnoresMismatchedPayloadHash )
 }
 
 /**
+ * CRDT storage is untrusted candidate data. A payload can claim the
+ * certificate's data_hash while changing fields that are outside the Mint V2
+ * slot identity, so exact hash-string comparison alone is insufficient.
+ */
+TEST_F( CertificateFallbackTest, ExactCrdtLookupRejectsForgedHashPayloadBeforeCertificateConsumption )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 95 );
+    ASSERT_TRUE( winner );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+
+    auto forged = winner->SerializeToEmbeddedTransaction();
+    auto *extra_output = forged.mutable_mint_v2()->mutable_utxo_params()->add_outputs();
+    extra_output->set_encrypted_amount( winner->GetAmount() + 1 );
+    extra_output->set_dest_addr( "forged-mint-destination" );
+    extra_output->set_token_id( kTestTokenId.bytes().data(), kTestTokenId.size() );
+    // Keep the original data_hash so GetHash() still claims the certified hash.
+    ASSERT_EQ( forged.mint_v2().dag_struct().data_hash(), winner->GetHash() );
+
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( forged.mint_v2().SerializeAsString() );
+    ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *winner ) }, serialized, {} ).has_value() );
+
+    const auto recovered = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, winner->GetHash() );
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_FALSE( recovered.value().has_value() );
+
+    // The valid embedded winner is the constrained fallback; the forged CRDT
+    // payload must never contribute its additional output.
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+    const auto outputs = account_->GetUTXOManager().GetUTXOs( account_->GetAddress() );
+    ASSERT_EQ( outputs.size(), 1u );
+    EXPECT_EQ( outputs.front().GetAmount(), winner->GetAmount() );
+}
+
+/**
  * An accepted certificate for a Mint winner cannot promote an already tracked
  * contender that shares the winner's canonical slot.
  */
