@@ -1968,14 +1968,14 @@ namespace sgns
             for ( std::uint32_t i = 0; i < outputs.size(); ++i )
             {
                 GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
             }
 
             if ( !inputs.empty() )
             {
-                account_m->GetUTXOManager().ConsumeUTXOs( inputs,
-                                                          mint_tx_v2->GetSrcAddress(),
-                                                          sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs,
+                                                                              mint_tx_v2->GetSrcAddress(),
+                                                                              sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
@@ -2002,6 +2002,34 @@ namespace sgns
                                           std::to_string( mint_tx->GetAmount() ),
                                           std::to_string( account_m->GetUTXOManager().GetBalance() ) );
 
+        return outcome::success();
+    }
+
+    void TransactionManager::SetBridgeExecutedMarkerWriteFailureForTest( bool fail )
+    {
+        fail_bridge_executed_marker_write_for_test_ = fail;
+    }
+
+    outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
+    {
+        if ( fail_bridge_executed_marker_write_for_test_ )
+        {
+            return outcome::failure( std::errc::io_error );
+        }
+
+        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::no_such_file_or_directory );
+        }
+
+        const std::string reservation_key = mint_tx.GetChainId() + std::string( kBridgeKeySeparator ) +
+                                            mint_tx.dag_st.uncle_hash();
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( "1" );
+        BOOST_OUTCOME_TRY( datastore->put( key_buffer, value_buffer ) );
         return outcome::success();
     }
 
@@ -5366,6 +5394,43 @@ namespace sgns
             break;
             case TransactionStatus::CONFIRMED:
             {
+                if ( auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
+                {
+                    {
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        auto             it = tx_processed_m.find( key );
+                        if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                        {
+                            // Marker and effects were already durable on a prior delivery.
+                            return outcome::success();
+                        }
+                        // Keep failed certificate work explicitly retryable until every local
+                        // persistence boundary has succeeded.
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
+                    }
+
+                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                    BOOST_OUTCOME_TRY( PersistBridgeExecutedMarker( *mint_tx ) );
+
+                    {
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
+                    }
+
+                    metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
+                    TransactionManagerLogger()->info( "[{} - full: {}] {}: Tracking entry confirmed tx={}",
+                                                      account_m->GetAddress().substr( 0, 8 ),
+                                                      full_node_m,
+                                                      __func__,
+                                                      tx->GetHash() );
+                    account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
+                    {
+                        std::lock_guard missing_lock( missing_tx_mutex_ );
+                        missing_tx_hashes_.erase( tx->GetHash() );
+                    }
+                    break;
+                }
+
                 std::unique_lock tx_lock( tx_mutex_m );
                 auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
@@ -5379,36 +5444,6 @@ namespace sgns
                     break;
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
-
-                // Clear bridge mint reservation and persist executed state
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    if ( mint_tx )
-                    {
-                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) +
-                                                            tx->dag_st.uncle_hash();
-                        // Persist executed state to RocksDB — survives restart
-                        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
-                        if ( datastore )
-                        {
-                            crdt::GlobalDB::Buffer key_buffer;
-                            key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
-                            crdt::GlobalDB::Buffer value_buffer;
-                            value_buffer.put( "1" );
-                            auto put_result = datastore->put( key_buffer, value_buffer );
-                            if ( put_result.has_error() )
-                            {
-                                TransactionManagerLogger()->error(
-                                    "[{} - full: {}] {}: Failed to persist executed bridge mint for {}",
-                                    account_m->GetAddress().substr( 0, 8 ),
-                                    full_node_m,
-                                    __func__,
-                                    reservation_key );
-                            }
-                        }
-                    }
-                }
 
                 // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
                 metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );

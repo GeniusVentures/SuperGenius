@@ -111,6 +111,16 @@ namespace sgns
             return entry.has_value() && entry->state == state;
         }
 
+        static bool HasNoCertificateWork( const std::shared_ptr<ConsensusManager> &manager, const std::string &key )
+        {
+            return !manager->certificate_work_journal_->GetEntry( key ).has_value();
+        }
+
+        static std::string GetExpectedCertificateSlotKey( const ConsensusCertificate &certificate )
+        {
+            return ConsensusManager::GetExpectedCertificateSlotKey( certificate );
+        }
+
         static void SetBridgeExecutedMarkerWriteFailure( TransactionManager &tm, bool fail )
         {
             tm.SetBridgeExecutedMarkerWriteFailureForTest( fail );
@@ -837,7 +847,7 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
 
     const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
     ASSERT_TRUE( manager );
-    const auto certificate_key = ConsensusManager::GetExpectedCertificateSlotKey( certificate.value() );
+    const auto certificate_key = CertificateFallbackTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
     ASSERT_EQ( certificate_key, std::string( "/cert/" ) + winner->GetSlotID() );
 
     std::string serialized;
@@ -875,8 +885,7 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     const auto confirmed_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     ASSERT_TRUE( confirmed_tracked.has_value() );
     EXPECT_EQ( confirmed_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
-        manager, certificate_key, crdt::CRDTWorkJournal::State::Done ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
 
     // Duplicate certificate delivery must repeat only durable recovery, never Mint effects.
     crdt::GlobalDB::Buffer duplicate_callback_value;
@@ -887,6 +896,5 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_EQ( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).size(), 1u );
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
-    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
-        manager, certificate_key, crdt::CRDTWorkJournal::State::Done ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
 }

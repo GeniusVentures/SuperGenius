@@ -549,6 +549,7 @@ namespace sgns
         friend class ConsensusManagerTestAccess;
         friend class ConsensusPendingLifecycleTestAccess;
         friend class ConsensusSlotKeyTestAccess;
+        friend class CertificateFallbackTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
