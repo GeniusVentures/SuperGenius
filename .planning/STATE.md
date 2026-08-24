@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-08-24T13:19:19.179Z"
+status: verifying
+last_updated: "2026-08-24T13:31:45.044Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 12
-  percent: 60
+  completed_plans: 13
+  percent: 80
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 11 (convergent-certificate-consumption-mint-recovery) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-24
 
 Progress: [██████████] 100%
@@ -55,6 +55,7 @@ Progress: [██████████] 100%
 | Phase 10 P01 | 10m | 2 tasks | 9 files |
 | Phase 11 P01 | 6 min | 2 tasks | 2 files |
 | Phase 11 P02 | 10 min | 2 tasks | 3 files |
+| Phase 11 P03 | 8 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Progress: [██████████] 100%
 - [Phase 11]: No-handler durable certificates retain stalled work and their active vote lock. — A registered handler must process committed readback successfully before certificate work completes.
 - [Phase 11]: Certificate-first processing selects tracked state, exact CRDT evidence, then only a validated embedded fallback.
 - [Phase 11]: Every certificate-first candidate must satisfy Phase 10 exact account, nonce, hash, embedded-hash, and slot binding before confirmation.
+- [Phase 11]: Use the existing certificate work journal as the sole retry mechanism; no Mint or finality journal was added. — Certificate recovery already provides the durable retry boundary.
+- [Phase 11]: For Mint V2, keep transaction tracking VERIFYING until idempotent effects and the existing bridge marker both persist. — Terminal confirmation must not outrun durable local effects.
+- [Phase 11]: Expose only friend-scoped test access to the fixture-owned ConsensusManager; production APIs remain unchanged. — The regression needs real ingress access without a production getter.
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T13:18:25.026Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-08-24T13:31:45.040Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
