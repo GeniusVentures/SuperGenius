@@ -138,16 +138,14 @@ namespace
      * @return EmbeddedTransaction with a properly hashed TransferTx.
      */
     EmbeddedTransaction MakeMinimalEmbeddedTransfer( TransactionManager &tm,
-                                                     std::string_view    source    = {},
-                                                     uint64_t            nonce     = 0,
-                                                     uint64_t            timestamp = 0 )
+                                                      const std::string  &source_address,
+                                                      uint64_t            nonce )
     {
         // Step 1: Create a bare TransferTx proto (no data_hash)
         SGTransaction::TransferTx bare_tx;
         bare_tx.mutable_dag_struct()->set_type( "transfer" );
-        bare_tx.mutable_dag_struct()->set_source_addr( source.data(), source.size() );
+        bare_tx.mutable_dag_struct()->set_source_addr( source_address );
         bare_tx.mutable_dag_struct()->set_nonce( nonce );
-        bare_tx.mutable_dag_struct()->set_timestamp( timestamp );
 
         EmbeddedTransaction bare_embedded;
         *bare_embedded.mutable_transfer() = bare_tx;
@@ -427,7 +425,7 @@ std::unique_ptr<SharedCrdtEnvironment> CertificateFallbackTest::crdt_;
  */
 TEST_F( CertificateFallbackTest, HappyPath_FallbackDeserializesStoresAndConfirmsTx )
 {
-    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 1 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
@@ -445,7 +443,7 @@ TEST_F( CertificateFallbackTest, HappyPath_FallbackDeserializesStoresAndConfirms
  */
 TEST_F( CertificateFallbackTest, HappyPath_TxStoredAfterFallback )
 {
-    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 2 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
@@ -471,7 +469,7 @@ TEST_F( CertificateFallbackTest, HappyPath_TxStoredAfterFallback )
  */
 TEST_F( CertificateFallbackTest, HappyPath_TrackedTxIsConfirmed )
 {
-    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 3 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
@@ -534,7 +532,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_NonNonceSubject_ReturnsApprove )
  */
 TEST_F( CertificateFallbackTest, EdgeCase_HashMismatch_ReturnsApprove )
 {
-    const auto        embedded        = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded        = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 11 );
     const std::string real_hash       = ComputeEmbeddedTxHash( *tm_, embedded );
     const std::string mismatched_hash = "definitely-not-the-real-hash-value";
 
@@ -557,7 +555,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_HashMismatch_ReturnsApprove )
  */
 TEST_F( CertificateFallbackTest, EdgeCase_ParameterHashDiffersFromSubject_ReturnsApprove )
 {
-    const auto        embedded  = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded  = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 12 );
     const std::string real_hash = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( real_hash.empty() );
 
@@ -586,7 +584,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_ParameterHashDiffersFromSubject_Return
  */
 TEST_F( CertificateFallbackTest, Regression_TxAlreadyInStore_ExistingPathApproves )
 {
-    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 20 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
@@ -616,7 +614,7 @@ TEST_F( CertificateFallbackTest, Regression_TxAlreadyInStore_ExistingPathApprove
  */
 TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
 {
-    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_ );
+    const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 30 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
@@ -993,6 +991,25 @@ TEST_F( CertificateFallbackTest, CertificateFirstRecoversExactWinnerFromCRDT )
     const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     ASSERT_TRUE( tracked.has_value() );
     EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+/**
+ * The key path is only a lookup hint: a decoded CRDT payload must still carry
+ * the requested hash before it can become a certificate-first candidate.
+ */
+TEST_F( CertificateFallbackTest, ExactCrdtLookupIgnoresMismatchedPayloadHash )
+{
+    const auto requested = MakeCompetingMintV2( account_->GetAddress(), 93 );
+    const auto mismatched = MakeCompetingMintV2( account_->GetAddress(), 94 );
+    ASSERT_NE( requested->GetHash(), mismatched->GetHash() );
+
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( mismatched->SerializeByteVector() );
+    ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *requested ) }, serialized, {} ).has_value() );
+
+    const auto recovered = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, requested->GetHash() );
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_FALSE( recovered.value().has_value() );
 }
 
 /**
