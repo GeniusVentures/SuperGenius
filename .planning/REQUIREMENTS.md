@@ -83,6 +83,7 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | TEST-06 | Phase 12 | Pending |
 
 **Coverage:**
+
 - v3.0 requirements: 21 total
 - Mapped to phases: 21
 - Unmapped: 0

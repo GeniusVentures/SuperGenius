@@ -3,7 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-24T17:54:38.540Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-08-24T18:04:03.547Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 5
@@ -24,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 ## Current Position
 
-Phase: 11 (convergent-certificate-consumption-mint-recovery) — EXECUTING
-Plan: 2 of 4
+Phase: 12
+Plan: Not started
 Status: Ready to execute
 Last activity: 2026-08-24
 
@@ -35,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 15 (5 prior milestone + 3 v3.0)
+- Total plans completed: 25 (5 prior milestone + 3 v3.0)
 - v3.0 plans completed: 3
 - Average duration: Not yet measured for v3.0
 
@@ -49,6 +50,7 @@ Progress: [██████████] 100%
 | 11. Convergent Certificate Consumption & Mint Recovery | 0 | - | - |
 | 12. Multi-Node Finality Fault Proof | 0 | - | - |
 | 10 | 7 | - | - |
+| 11 | 5 | - | - |
 
 **Recent Trend:** Not yet measured for v3.0.
 | Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
