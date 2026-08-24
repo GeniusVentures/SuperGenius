@@ -174,7 +174,26 @@ namespace sgns
             address_outpoints_[address].push_back( outpoint );
         }
 
-        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
+        auto store_result = StoreUTXOs( address );
+        if ( store_result.has_error() )
+        {
+            // An outpoint is only idempotently complete after the address snapshot
+            // has reached storage. Leaving this insertion in memory would make a
+            // retry return false and allow its caller to advance durable work that
+            // is still missing after a restart.
+            std::unique_lock lock( utxos_mutex_ );
+            utxo_outpoints_.erase( outpoint );
+            if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+            {
+                auto &outpoints = address_it->second;
+                outpoints.erase( std::remove( outpoints.begin(), outpoints.end(), outpoint ), outpoints.end() );
+                if ( outpoints.empty() )
+                {
+                    address_outpoints_.erase( address_it );
+                }
+            }
+            return outcome::failure( store_result.error() );
+        }
         return true;
     }
 
