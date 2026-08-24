@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Completed 11-04-PLAN.md
-last_updated: "2026-08-24T18:04:03.547Z"
+stopped_at: Phase 12 context gathered
+last_updated: "2026-08-24T21:27:49.184Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 5
@@ -98,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T17:54:38.536Z
-Stopped at: Completed 11-04-PLAN.md
-Resume file: None
+Last session: 2026-08-24T21:27:49.180Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-CONTEXT.md
