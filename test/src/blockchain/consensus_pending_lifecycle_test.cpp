@@ -1563,6 +1563,10 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     ASSERT_TRUE( registry );
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const std::string &, const sgns::ConsensusManager::Certificate & )
+        { return outcome::success( sgns::ConsensusManager::Check::Approve ); } ) );
 
     auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                 86,
