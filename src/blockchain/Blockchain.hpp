@@ -8,6 +8,7 @@
 #ifndef SGNS_BLOCKCHAIN_HPP
 #define SGNS_BLOCKCHAIN_HPP
 
+#include <chrono>
 #include <memory>
 #include <map>
 #include <functional>
@@ -472,9 +473,9 @@ namespace sgns
          * @brief Watches CID download completion with timeout handling.
          * @param[in] cid CID being tracked.
          * @param[in] error_on_failure Error code to emit on timeout/failure.
-         * @param[in] timeout_ms Timeout in milliseconds.
+         * @param[in] timeout How long to wait for the download before emitting the error.
          */
-        void WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
+        void WatchCIDDownload( const std::string &cid, Error error_on_failure, std::chrono::milliseconds timeout );
         /**
          * @brief Ensures validator registry is initialized and available.
          * @return outcome::success when registry is ready, otherwise an error.
@@ -510,13 +511,14 @@ namespace sgns
             "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
         static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX =
             "gnus-account-creation-cid-";                          ///< Prefix for account-creation CID keys.
-        static constexpr uint64_t TIMEOUT_GENESIS_BLOCK_MS = 8000; ///< Genesis CID download timeout in milliseconds.
-        /// Floor between direct registry-CID re-requests. Above TIMEOUT_GENESIS_BLOCK_MS
-        /// because each request occupies the messenger's single worker for up to that long
-        /// and the task queue is unbounded, so a faster cadence would only build a backlog.
-        static constexpr int64_t REGISTRY_BLOCK_REQUEST_MIN_INTERVAL_MS = 20000;
-        static constexpr uint64_t TIMEOUT_ACC_CREATION_BLOCK_MS =
-            8000; ///< Account-creation CID download timeout in milliseconds.
+        static constexpr std::chrono::milliseconds TIMEOUT_GENESIS_BLOCK = std::chrono::seconds(
+            8 ); ///< Genesis CID download timeout.
+        /// Floor between direct registry-CID re-requests. Above TIMEOUT_GENESIS_BLOCK because
+        /// each request occupies the messenger's single worker for up to that long and the
+        /// task queue is unbounded, so a faster cadence would only build a backlog.
+        static constexpr std::chrono::milliseconds REGISTRY_BLOCK_REQUEST_MIN_INTERVAL = std::chrono::seconds( 20 );
+        static constexpr std::chrono::milliseconds TIMEOUT_ACC_CREATION_BLOCK          = std::chrono::seconds(
+            8 ); ///< Account-creation CID download timeout.
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
@@ -590,8 +592,8 @@ namespace sgns
 
         std::atomic<bool> stop_started_{ false };                   ///< Makes account-bound teardown one-shot.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
-        std::atomic<int64_t> last_registry_block_request_ms_{
-            0 }; ///< steady_clock ms of the last direct registry-CID request; 0 = never.
+        std::atomic<std::chrono::steady_clock::time_point> last_registry_block_request_{
+            {} }; ///< When the last direct registry-CID request went out; default = never.
         std::atomic<bool> start_deferred_{
             false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
         bool genesis_ready_          = false; ///< Indicates genesis block is ready.

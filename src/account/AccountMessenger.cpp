@@ -309,14 +309,15 @@ namespace sgns
         return send_ret;
     }
 
-    outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms )
+    outcome::result<uint64_t> AccountMessenger::GetLatestNonce( std::chrono::milliseconds timeout,
+                                                                std::chrono::milliseconds silent_time )
     {
         auto promise = std::make_shared<std::promise<outcome::result<uint64_t>>>();
         auto future  = promise->get_future();
 
         EnqueueTask( { RequestType::Nonce,
-                       timeout_ms,
-                       silent_time_ms,
+                       timeout,
+                       silent_time,
                        0,
                        std::string{},
                        std::string{},
@@ -328,12 +329,12 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestGenesis(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback )
     {
         EnqueueTask( { RequestType::Genesis,
-                       timeout_ms,
-                       150,
+                       timeout,
+                       std::chrono::milliseconds( 150 ),
                        0,
                        std::string{},
                        std::string{},
@@ -344,13 +345,13 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestRegularBlock(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::string                                         cid,
         std::function<void( outcome::result<std::string> )> callback )
     {
         EnqueueTask( { RequestType::BlockByCid,
-                       timeout_ms,
-                       150,
+                       timeout,
+                       std::chrono::milliseconds( 150 ),
                        0,
                        std::move( cid ),
                        std::string{},
@@ -361,13 +362,13 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestTransaction(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::string                                         tx_hash,
         std::function<void( outcome::result<std::string> )> callback )
     {
         EnqueueTask( { RequestType::Transaction,
-                       timeout_ms,
-                       150,
+                       timeout,
+                       std::chrono::milliseconds( 150 ),
                        0,
                        std::move( tx_hash ),
                        std::string{},
@@ -377,16 +378,17 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<std::unordered_set<std::string>> AccountMessenger::RequestUTXOs( uint64_t           timeout_ms,
-                                                                                     const std::string &address,
-                                                                                     uint64_t           silent_time_ms )
+    outcome::result<std::unordered_set<std::string>> AccountMessenger::RequestUTXOs(
+        std::chrono::milliseconds timeout,
+        const std::string        &address,
+        std::chrono::milliseconds silent_time )
     {
         auto promise = std::make_shared<std::promise<outcome::result<std::unordered_set<std::string>>>>();
         auto future  = promise->get_future();
 
         EnqueueTask( { RequestType::UTXO,
-                       timeout_ms,
-                       silent_time_ms,
+                       timeout,
+                       silent_time,
                        0,
                        std::string{},
                        address,
@@ -531,8 +533,8 @@ namespace sgns
         }
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
-                                                                   signed_req.signature(),
-                                                                   serialized_vec );
+                                                                                   signed_req.signature(),
+                                                                                   serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on BlockRequest from {}", req.requester_address() );
@@ -561,8 +563,8 @@ namespace sgns
         }
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
-                                                                   signed_req.signature(),
-                                                                   serialized_vec );
+                                                                                   signed_req.signature(),
+                                                                                   serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on BlockCidRequest from {}", req.requester_address() );
@@ -589,8 +591,8 @@ namespace sgns
         }
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
-                                                                   signed_req.signature(),
-                                                                   serialized_vec );
+                                                                                   signed_req.signature(),
+                                                                                   serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on TransactionRequest from {}", req.requester_address() );
@@ -767,8 +769,8 @@ namespace sgns
 
         std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( resp.responder_address(),
-                                                                   signed_resp.signature(),
-                                                                   data_vec );
+                                                                                   signed_resp.signature(),
+                                                                                   data_vec );
 
         if ( verify_signature_result.has_error() )
         {
@@ -841,12 +843,12 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestAccountCreation(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback )
     {
         EnqueueTask( { RequestType::AccountCreation,
-                       timeout_ms,
-                       150,
+                       timeout,
+                       std::chrono::milliseconds( 150 ),
                        1,
                        std::string{},
                        std::string{},
@@ -857,12 +859,12 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::RequestValidatorRegistry(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback )
     {
         EnqueueTask( { RequestType::ValidatorRegistry,
-                       timeout_ms,
-                       150,
+                       timeout,
+                       std::chrono::milliseconds( 150 ),
                        2,
                        std::string{},
                        std::string{},
@@ -910,7 +912,7 @@ namespace sgns
             {
                 case RequestType::Nonce:
                 {
-                    auto res = PerformNonceRequest( task.timeout_ms, task.silent_time_ms );
+                    auto res = PerformNonceRequest( task.timeout, task.silent_time );
                     if ( task.nonce_promise )
                     {
                         task.nonce_promise->set_value( res );
@@ -921,7 +923,7 @@ namespace sgns
                 case RequestType::AccountCreation:
                 case RequestType::ValidatorRegistry:
                 {
-                    auto res = PerformBlockRequest( task.timeout_ms, BlockIndexRequest{ task.block_index } );
+                    auto res = PerformBlockRequest( task.timeout, BlockIndexRequest{ task.block_index } );
                     if ( task.callback )
                     {
                         if ( res.has_error() )
@@ -948,7 +950,7 @@ namespace sgns
                 }
                 case RequestType::BlockByCid:
                 {
-                    auto res = PerformBlockRequest( task.timeout_ms, BlockCidRequest{ task.cid } );
+                    auto res = PerformBlockRequest( task.timeout, BlockCidRequest{ task.cid } );
                     if ( task.callback )
                     {
                         if ( res.has_error() )
@@ -975,7 +977,7 @@ namespace sgns
                 }
                 case RequestType::Transaction:
                 {
-                    auto res = PerformBlockRequest( task.timeout_ms, TransactionHashRequest{ task.cid } );
+                    auto res = PerformBlockRequest( task.timeout, TransactionHashRequest{ task.cid } );
                     if ( task.callback )
                     {
                         if ( res.has_error() )
@@ -1002,7 +1004,7 @@ namespace sgns
                 }
                 case RequestType::UTXO:
                 {
-                    auto res = PerformUTXORequest( task.timeout_ms, task.utxo_address, task.silent_time_ms );
+                    auto res = PerformUTXORequest( task.timeout, task.utxo_address, task.silent_time );
                     if ( task.utxo_promise )
                     {
                         task.utxo_promise->set_value( res );
@@ -1029,20 +1031,21 @@ namespace sgns
         return pubsub_->getPeerCount( requests_topic_ ) != 0;
     }
 
-    outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms )
+    outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( std::chrono::milliseconds timeout,
+                                                                     std::chrono::milliseconds silent_time )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
 
-        std::string              to_hash = address_ + std::to_string( random_value );
-        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
+        std::string to_hash = address_ + std::to_string( random_value );
+        auto        hash    = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
 
         logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
                         address_.substr( 0, 8 ),
-                        timeout_ms,
+                        timeout.count(),
                         req_id );
 
         {
@@ -1059,8 +1062,7 @@ namespace sgns
         }
 
         const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
+        const auto full_timeout = timeout;
 
         bool first_seen = false;
 
@@ -1147,14 +1149,14 @@ namespace sgns
         return max_nonce;
     }
 
-    outcome::result<std::set<std::string>> AccountMessenger::PerformBlockRequest( uint64_t          timeout_ms,
-                                                                                  const BlockQuery &query )
+    outcome::result<std::set<std::string>> AccountMessenger::PerformBlockRequest( std::chrono::milliseconds timeout,
+                                                                                  const BlockQuery         &query )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
 
-        std::string              to_hash = address_ + std::to_string( random_value );
-        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
+        std::string to_hash = address_ + std::to_string( random_value );
+        auto        hash    = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1196,7 +1198,7 @@ namespace sgns
         }
 
         const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto full_timeout = timeout;
         while ( !HasRequestPeers() )
         {
             if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
@@ -1212,14 +1214,14 @@ namespace sgns
                         label,
                         target,
                         req_id,
-                        timeout_ms );
+                        timeout.count() );
 
         if ( request_result.has_error() )
         {
             logger_->error( "[{}] Failed to request {} {}", address_.substr( 0, 8 ), label, target );
             return request_result.error();
         }
-        const auto silent_time  = std::chrono::milliseconds( 150 );
+        const auto silent_time = std::chrono::milliseconds( 150 );
 
         bool first_seen = false;
 
@@ -1280,15 +1282,16 @@ namespace sgns
         return outcome::success( cids );
     }
 
-    outcome::result<std::unordered_set<std::string>> AccountMessenger::PerformUTXORequest( uint64_t timeout_ms,
-                                                                                           const std::string &address,
-                                                                                           uint64_t silent_time_ms )
+    outcome::result<std::unordered_set<std::string>> AccountMessenger::PerformUTXORequest(
+        std::chrono::milliseconds timeout,
+        const std::string        &address,
+        std::chrono::milliseconds silent_time )
     {
         std::mt19937_64 gen( rd_() );
         uint64_t        random_value = gen();
 
-        std::string              to_hash = address_ + std::to_string( random_value );
-        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
+        std::string to_hash = address_ + std::to_string( random_value );
+        auto        hash    = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1297,7 +1300,7 @@ namespace sgns
                         address_.substr( 0, 8 ),
                         address.substr( 0, 8 ),
                         req_id,
-                        timeout_ms );
+                        timeout.count() );
 
         {
             std::lock_guard lock( utxo_responses_mutex_ );
@@ -1317,8 +1320,7 @@ namespace sgns
         }
 
         const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
+        const auto full_timeout = timeout;
 
         bool first_seen = false;
 
@@ -1578,7 +1580,7 @@ namespace sgns
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
         auto account_topic            = req.requester_address() + std::string( ACCOUNT_COMM ) +
-                             sgns::version::GetNetAndVersionAppendix();
+                                        sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
 
@@ -1656,8 +1658,8 @@ namespace sgns
 
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
-                                                                   signed_req.signature(),
-                                                                   serialized_vec );
+                                                                                   signed_req.signature(),
+                                                                                   serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on UTXORequest from {}", req.requester_address() );
@@ -1743,8 +1745,8 @@ namespace sgns
 
         std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( resp.responder_address(),
-                                                                   signed_resp.signature(),
-                                                                   data_vec );
+                                                                                   signed_resp.signature(),
+                                                                                   data_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on UTXOResponse from {}", resp.responder_address() );
@@ -1786,8 +1788,8 @@ namespace sgns
 
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         auto                 verify_signature_result = methods_.verify_signature_( req.requester_address(),
-                                                                   signed_req.signature(),
-                                                                   serialized_vec );
+                                                                                   signed_req.signature(),
+                                                                                   serialized_vec );
         if ( verify_signature_result.has_error() || !verify_signature_result.value() )
         {
             logger_->error( "Invalid signature on HeadRequest from {}", req.requester_address() );

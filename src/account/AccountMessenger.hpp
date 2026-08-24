@@ -91,7 +91,7 @@ namespace sgns
 
         /**
          * @brief       Factory constructor of new AccountMessenger
-         * @param[in]   address Own address 
+         * @param[in]   address Own address
          * @param[in]   pubsub pubsub instance
          * @param[in]   methods interface methods @ref InterfaceMethods
          * @return      Valid pointer if succeeds, nullptr otherwise
@@ -105,66 +105,69 @@ namespace sgns
         ~AccountMessenger();
         /**
          * @brief       Get the Latest Nonce from the network
-         * @param[in]   timeout_ms Timeout in miliseconds to get the latest nonce 
-         * @param[in]   silent_time_ms Time tyo wait for subsequential nonce responses after first was received
+         * @param[in]   timeout How long to wait for the latest nonce
+         * @param[in]   silent_time How long to wait for further nonce responses after the first
          * @return      Nonce value if success, error otherwise
          */
-        outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms = 150 );
+        outcome::result<uint64_t> GetLatestNonce(
+            std::chrono::milliseconds timeout,
+            std::chrono::milliseconds silent_time = std::chrono::milliseconds( 150 ) );
 
         /**
          * @brief       Request genesis block from the network (retries until timeout)
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   callback Function to be called for each CID found (empty string if none)
          * @return      success if at least one response arrives before timeout, error otherwise
          */
-        outcome::result<void> RequestGenesis( uint64_t                                            timeout_ms,
+        outcome::result<void> RequestGenesis( std::chrono::milliseconds                           timeout,
                                               std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Request account creation from the network and invoke callback with found CIDs
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   callback Function to be called for each CID found (signature: void(std::string))
          * @return      success on scheduled request, error otherwise
          */
-        outcome::result<void> RequestAccountCreation( uint64_t                                            timeout_ms,
+        outcome::result<void> RequestAccountCreation( std::chrono::milliseconds                           timeout,
                                                       std::function<void( outcome::result<std::string> )> callback );
-        outcome::result<void> RequestValidatorRegistry( uint64_t                                            timeout_ms,
+        outcome::result<void> RequestValidatorRegistry( std::chrono::milliseconds                           timeout,
                                                         std::function<void( outcome::result<std::string> )> callback );
 
         /**
          * @brief       Request a block by CID from the network (retries until timeout)
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   cid CID to request
          * @param[in]   callback Callback invoked with the CID result (or error)
          * @return      success on scheduled request, error otherwise
          */
         outcome::result<void> RequestRegularBlock(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::string                                         cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Request a transaction by hash from the network (retries until timeout)
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   tx_hash Transaction hash to request
          * @param[in]   callback Callback invoked with the CID result (or error)
          * @return      success on scheduled request, error otherwise
          */
         outcome::result<void> RequestTransaction(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::string                                         tx_hash,
             std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Request UTXOs for a specific address and return the selected response
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   address Address to request UTXOs for
-         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @param[in]   silent_time Time to wait for subsequent responses after the first one
          * @return      Set of UTXO strings based on selection criteria, or error otherwise
          */
-        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
-                                                                       const std::string &address,
-                                                                       uint64_t           silent_time_ms = 150 );
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs(
+            std::chrono::milliseconds timeout,
+            const std::string        &address,
+            std::chrono::milliseconds silent_time = std::chrono::milliseconds( 150 ) );
 
         /**
          * @brief       Register global block response handler
@@ -278,14 +281,14 @@ namespace sgns
 
         struct RequestTask
         {
-            RequestType                                                                     type;
-            uint64_t                                                                        timeout_ms;
-            uint64_t                                                                        silent_time_ms{ 150 };
-            uint8_t                                                                         block_index{ 0 };
-            std::string                                                                     cid;
-            std::string                                                                     utxo_address;
-            std::function<void( outcome::result<std::string> )>                             callback;
-            std::shared_ptr<std::promise<outcome::result<uint64_t>>>                        nonce_promise;
+            RequestType                                              type;
+            std::chrono::milliseconds                                timeout;
+            std::chrono::milliseconds                                silent_time{ std::chrono::milliseconds( 150 ) };
+            uint8_t                                                  block_index{ 0 };
+            std::string                                              cid;
+            std::string                                              utxo_address;
+            std::function<void( outcome::result<std::string> )>      callback;
+            std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
             std::shared_ptr<std::promise<outcome::result<std::unordered_set<std::string>>>> utxo_promise;
         };
 
@@ -295,17 +298,19 @@ namespace sgns
         std::queue<RequestTask> request_queue_;
         std::atomic<bool>       stop_worker_{ false };
 
-        void                                   WorkerLoop();
-        void                                   EnqueueTask( RequestTask task );
-        outcome::result<uint64_t>              PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
-        outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, const BlockQuery &query );
-        outcome::result<std::unordered_set<std::string>> PerformUTXORequest( uint64_t           timeout_ms,
-                                                                             const std::string &address,
-                                                                             uint64_t           silent_time_ms );
-        bool HasRequestPeers() const;
+        void                                             WorkerLoop();
+        void                                             EnqueueTask( RequestTask task );
+        outcome::result<uint64_t>                        PerformNonceRequest( std::chrono::milliseconds timeout,
+                                                                              std::chrono::milliseconds silent_time );
+        outcome::result<std::set<std::string>>           PerformBlockRequest( std::chrono::milliseconds timeout,
+                                                                              const BlockQuery         &query );
+        outcome::result<std::unordered_set<std::string>> PerformUTXORequest( std::chrono::milliseconds timeout,
+                                                                             const std::string        &address,
+                                                                             std::chrono::milliseconds silent_time );
+        bool                                             HasRequestPeers() const;
 
         /**
-         * @brief       Private constructor of the Account Messenger 
+         * @brief       Private constructor of the Account Messenger
          * @param[in]   address Own address
          * @param[in]   pubsub pubsub instance
          * @param[in]   methods interface methods

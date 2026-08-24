@@ -2444,7 +2444,7 @@ namespace sgns
             m_logger->debug( "Requesting transaction with hash {} (this: {})",
                              tx_hash,
                              reinterpret_cast<uint64_t>( this ) );
-            auto request_result = account_m->RequestTransaction( request_timeout.count(), tx_hash );
+            auto request_result = account_m->RequestTransaction( request_timeout, tx_hash );
             if ( request_result.has_error() )
             {
                 m_logger->error( "Failed to request transaction with hash {}", tx_hash );
@@ -2473,15 +2473,14 @@ namespace sgns
         const bool regular_node_retry_is_on_cooldown = !ReplicatesAllAccounts( node_type_m ) &&
                                                        last_nonce_request_time_ !=
                                                            std::chrono::steady_clock::time_point{} &&
-                                                       now < last_nonce_request_time_ +
-                                                                 std::chrono::milliseconds( NONCE_REQUEST_TIMEOUT_MS );
+                                                       now < last_nonce_request_time_ + NONCE_REQUEST_TIMEOUT;
         if ( regular_node_retry_is_on_cooldown )
         {
             return false;
         }
         last_nonce_request_time_ = now;
 
-        auto nonce_from_network_result = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
+        auto nonce_from_network_result = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT );
         if ( nonce_from_network_result.has_error() )
         {
             m_logger->error( "Failed to fetch network nonce: {}", nonce_from_network_result.error().message() );
@@ -2523,7 +2522,7 @@ namespace sgns
     {
         m_logger->debug( "Checking if my nonce is updated" );
 
-        auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
+        auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT );
         uint64_t confirmed_nonce = 0;
         if ( nonce_result.has_value() )
         {

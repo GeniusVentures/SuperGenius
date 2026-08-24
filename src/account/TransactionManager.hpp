@@ -55,7 +55,8 @@ namespace sgns
     public:
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
+        static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
+            5 ); ///< Unified timeout for all nonce requests
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
         /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
