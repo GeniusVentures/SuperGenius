@@ -23,6 +23,29 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string SerializedCertificateHash( std::string_view serialized )
+        {
+            const auto hash = crypto::sha2_256( serialized.data(), serialized.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        }
+
+        std::optional<std::string> VerifiedMintV2TransactionHash( const ConsensusManager::Certificate &certificate )
+        {
+            if ( !certificate.has_proposal() )
+            {
+                return std::nullopt;
+            }
+            const auto nonce = ConsensusManager::DecodeNonceSubject( certificate.proposal().subject() );
+            if ( nonce.has_error() || nonce.value().tx_hash().empty() ||
+                 nonce.value().transaction().transaction_case() != EmbeddedTransaction::kMintV2 )
+            {
+                return std::nullopt;
+            }
+            return nonce.value().tx_hash();
+        }
+    } // namespace
 
     base::Logger ConsensusManagerLogger()
     {
@@ -2021,10 +2044,7 @@ namespace sgns
             {
                 return outcome::failure( std::errc::invalid_argument );
             }
-            const auto existing_hash = crypto::sha2_256( existing.value().data(), existing.value().size() );
-            const auto candidate_hash = crypto::sha2_256( serialized.data(), serialized.size() );
-            if ( base::hex_lower( gsl::span<const uint8_t>( existing_hash.data(), existing_hash.size() ) ) <
-                 base::hex_lower( gsl::span<const uint8_t>( candidate_hash.data(), candidate_hash.size() ) ) )
+            if ( SerializedCertificateHash( existing.value().toString() ) < SerializedCertificateHash( serialized ) )
             {
                 return outcome::success();
             }
@@ -2537,9 +2557,49 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( ValidateCertificate( certificate ) == Check::Reject )
+        if ( ValidateCertificate( certificate ) != Check::Approve )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
+        auto existing = db_->Get( { element.key() } );
+        if ( existing.has_error() )
+        {
+            if ( existing.error() != storage::DatabaseError::NOT_FOUND )
+            {
+                ConsensusManagerLogger()->error( "{}: existing certificate read failed, rejecting: {}", __func__, element.key() );
+                return std::vector<crdt::pb::Element>{};
+            }
+            ConsensusManagerLogger()->debug( "{}: certificate accepted key={}", __func__, element.key() );
+            return std::nullopt;
+        }
+
+        Certificate existing_certificate;
+        const auto existing_serialized = std::string( existing.value().toString() );
+        if ( !existing_certificate.ParseFromString( existing_serialized ) ||
+             !ValidateCertificateKey( existing_certificate, element.key() ) ||
+             ValidateCertificate( existing_certificate ) != Check::Approve )
+        {
+            ConsensusManagerLogger()->error( "{}: invalid existing certificate, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
+        const auto candidate_mint_hash = VerifiedMintV2TransactionHash( certificate );
+        const auto existing_mint_hash  = VerifiedMintV2TransactionHash( existing_certificate );
+        if ( candidate_mint_hash && existing_mint_hash && candidate_mint_hash != existing_mint_hash )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: consensus equivocation canonical_slot={} existing_tx_hash={} candidate_tx_hash={}",
+                __func__,
+                element.key(),
+                *existing_mint_hash,
+                *candidate_mint_hash );
+        }
+
+        if ( SerializedCertificateHash( existing_serialized ) < SerializedCertificateHash( element.value() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: higher serialized certificate hash rejected key={}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
         }
 
