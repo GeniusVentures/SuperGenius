@@ -991,6 +991,8 @@ namespace sgns
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
+        std::mutex                close_mutex_;                   ///< Serializes round timer ownership during shutdown.
+        std::function<void()>     timer_work_hook_for_test_;      ///< Friend-scoped timer work seam, guarded by `timer_mutex_`.
         std::thread               round_timer_;                   ///< Background thread driving round-based retries.
     };
 }
