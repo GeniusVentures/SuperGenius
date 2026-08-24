@@ -10,17 +10,23 @@
 #include <gtest/gtest.h>
 
 #include "account/GeniusAccount.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include <atomic>
 #include <array>
+#include <boost/filesystem.hpp>
 #include <chrono>
 #include <condition_variable>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -89,6 +95,12 @@ namespace sgns
             const crdt::pb::Element                 &element )
         {
             return manager->FilterCertificate( element );
+        }
+
+        static ConsensusManager::Check ValidateCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                                             const ConsensusManager::Certificate     &certificate )
+        {
+            return manager->ValidateCertificate( certificate );
         }
 
         static void CertificateReceived( const std::shared_ptr<ConsensusManager> &manager,
@@ -587,6 +599,163 @@ namespace
                 account->GetAddress() );
             EXPECT_TRUE( manager );
             return manager;
+        }
+
+        struct MultiValidatorNode
+        {
+            std::string                                      path;
+            std::shared_ptr<boost::asio::io_context>         io;
+            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub;
+            std::shared_ptr<sgns::crdt::GlobalDB>            db;
+            std::shared_ptr<sgns::GeniusAccount>             account;
+            std::shared_ptr<sgns::ValidatorRegistry>         registry;
+            std::shared_ptr<sgns::ConsensusManager>          manager;
+        };
+
+        MultiValidatorNode MakeMultiValidatorNode( size_t index, const std::string &private_key )
+        {
+            const auto path = getPathString() + "/multi-validator-" + std::to_string( index );
+            boost::filesystem::create_directories( path );
+
+            MultiValidatorNode node;
+            node.path    = path;
+            node.io      = std::make_shared<boost::asio::io_context>();
+            auto keypair = sgns::crdt::KeyPairFileStorage( path + "/keypair" ).GetKeyPair();
+            if ( keypair.has_error() )
+            {
+                ADD_FAILURE() << "failed to create multi-validator keypair";
+                return node;
+            }
+            node.pubsub = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keypair.value() );
+            if ( !node.pubsub )
+            {
+                ADD_FAILURE() << "failed to create multi-validator pubsub";
+                return node;
+            }
+            const auto start_result = node.pubsub->Start( static_cast<uint16_t>( 54001U + index ),
+                                                          { node.pubsub->GetLocalAddress() } )
+                                          .get();
+            if ( start_result )
+            {
+                ADD_FAILURE() << "failed to start multi-validator pubsub: " << start_result.message();
+                return node;
+            }
+
+            auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( node.io ),
+                libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+            auto graphsync = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( node.pubsub->GetHost(),
+                                                                                            scheduler );
+            auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            auto db_result = sgns::crdt::GlobalDB::New( node.io,
+                                                        path + "/rocksdb",
+                                                        node.pubsub,
+                                                        sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                        graphsync,
+                                                        scheduler,
+                                                        generator );
+            if ( db_result.has_error() )
+            {
+                ADD_FAILURE() << "failed to create multi-validator GlobalDB: " << db_result.error().message();
+                return node;
+            }
+            node.db = std::move( db_result.value() );
+            node.db->Start();
+
+            node.account = sgns::GeniusAccount::NewFromPrivateKey(
+                sgns::TokenID::FromBytes( { 0x00 } ), private_key.c_str(), path + "/account", false );
+            if ( !node.account )
+            {
+                ADD_FAILURE() << "failed to create multi-validator signing account";
+            }
+            return node;
+        }
+
+        static sgns::ValidatorRegistry::RegistryUpdate MakeThreeValidatorRegistryUpdate(
+            const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> &accounts )
+        {
+            sgns::ValidatorRegistry::RegistryUpdate update;
+            update.mutable_registry()->set_epoch( 1 );
+            for ( const auto &account : accounts )
+            {
+                auto *validator = update.mutable_registry()->add_validators();
+                validator->set_validator_id( account->GetAddress() );
+                validator->set_weight( 1 );
+                validator->set_role( sgns::ValidatorRegistry::Role::REGULAR );
+                validator->set_status( sgns::ValidatorRegistry::Status::ACTIVE );
+            }
+
+            sgns::validator::RegistrySigningPayload payload;
+            *payload.mutable_registry() = update.registry();
+            payload.set_prev_registry_hash( update.prev_registry_hash() );
+            std::string serialized;
+            EXPECT_TRUE( payload.SerializeToString( &serialized ) );
+            auto signature = accounts.front()->Sign( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
+            auto *entry    = update.add_signatures();
+            entry->set_validator_id( accounts.front()->GetAddress() );
+            entry->set_signature( signature.data(), signature.size() );
+            return update;
+        }
+
+        static std::shared_ptr<sgns::ValidatorRegistry> MakeMultiValidatorRegistry(
+            const MultiValidatorNode                                &node,
+            const sgns::ValidatorRegistry::RegistryUpdate           &update,
+            const std::string                                       &genesis_authority )
+        {
+            auto registry = sgns::ValidatorRegistry::New(
+                node.db,
+                2,
+                3,
+                sgns::ValidatorRegistry::WeightConfig{},
+                genesis_authority,
+                []( const std::string &, std::function<void( outcome::result<std::string> )> cb )
+                { cb( outcome::failure( std::errc::not_supported ) ); } );
+            EXPECT_TRUE( registry );
+            EXPECT_TRUE( registry->StoreRegistryUpdate( update ).has_value() );
+            ASSERT_WAIT_FOR_CONDITION(
+                [&registry]()
+                {
+                    auto current = registry->LoadCurrentRegistry();
+                    return current.has_value() && !registry->GetRegistryCid().empty();
+                },
+                std::chrono::milliseconds( 2000 ),
+                "three-validator registry initialized",
+                nullptr );
+            return registry;
+        }
+
+        static std::shared_ptr<sgns::ConsensusManager> MakeMultiValidatorManager(
+            const MultiValidatorNode                        &node,
+            const std::shared_ptr<sgns::ValidatorRegistry> &registry )
+        {
+            auto manager = sgns::ConsensusManager::New(
+                registry,
+                node.db,
+                node.pubsub,
+                [account = node.account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+                node.account->GetAddress() );
+            EXPECT_TRUE( manager );
+            return manager;
+        }
+
+        static std::shared_ptr<sgns::MintTransactionV2> MakeMultiValidatorMint( uint64_t nonce )
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_type( "mint-v2" );
+            dag.set_source_addr( "multi-validator-mint-source" );
+            dag.set_nonce( nonce );
+            dag.set_timestamp( static_cast<int64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ) );
+            const auto burn_hash = sgns::base::Hash256::fromReadableString( std::string( 64, 'b' ) );
+            EXPECT_TRUE( burn_hash.has_value() );
+            return std::make_shared<sgns::MintTransactionV2>( sgns::MintTransactionV2::New(
+                42,
+                "source-chain",
+                sgns::TokenID::FromBytes( { 0x00 } ),
+                std::move( dag ),
+                { { burn_hash.value(), 0, {} } },
+                "multi-validator-mint-destination" ) );
         }
 
         static sgns::UTXOTransitionCommitment MakeTestCommitment()
@@ -1478,6 +1647,161 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
     ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).size(), 1U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).front(), record.vote_bytes() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersistsOneHonestQuorumWinner )
+{
+    // With this shared three-validator 2-of-3 snapshot, two different 2-of-3
+    // certificates must overlap. A second quorum for the losing Mint would therefore
+    // require an overlapping validator to equivocate; this normal Phase 9 proof never
+    // manufactures such a double-signed vote.
+    constexpr std::array<const char *, 3> private_keys = {
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" };
+
+    std::array<MultiValidatorNode, 3> nodes;
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        nodes[index] = MakeMultiValidatorNode( index, private_keys[index] );
+    }
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
+        nodes[0].account, nodes[1].account, nodes[2].account };
+    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+
+    std::string shared_registry_cid;
+    for ( auto &node : nodes )
+    {
+        node.registry = MakeMultiValidatorRegistry( node, update, accounts.front()->GetAddress() );
+        ASSERT_TRUE( node.registry );
+        const auto current = node.registry->LoadCurrentRegistry();
+        ASSERT_TRUE( current.has_value() );
+        EXPECT_EQ( current.value().epoch(), 1U );
+        EXPECT_EQ( sgns::ValidatorRegistry::TotalWeight( current.value() ), 3U );
+        EXPECT_EQ( node.registry->QuorumThreshold( 3 ), 2U );
+        EXPECT_FALSE( node.registry->IsQuorum( 1, 3 ) );
+        EXPECT_TRUE( node.registry->IsQuorum( 2, 3 ) );
+        if ( shared_registry_cid.empty() )
+        {
+            shared_registry_cid = node.registry->GetRegistryCid();
+        }
+        EXPECT_EQ( node.registry->GetRegistryCid(), shared_registry_cid );
+        EXPECT_EQ( node.registry->GetRegistryEpoch(), 1U );
+        node.manager = MakeMultiValidatorManager( node, node.registry );
+        ASSERT_TRUE( node.manager );
+    }
+
+    const auto first_mint  = MakeMultiValidatorMint( 101 );
+    const auto second_mint = MakeMultiValidatorMint( 102 );
+    ASSERT_TRUE( first_mint );
+    ASSERT_TRUE( second_mint );
+    ASSERT_NE( first_mint->GetHash(), second_mint->GetHash() );
+    ASSERT_EQ( first_mint->GetSlotID(), second_mint->GetSlotID() );
+    sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject &subject )
+        {
+            const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+            if ( nonce.has_error() || nonce.value().transaction().transaction_case() != sgns::EmbeddedTransaction::kMintV2 )
+            {
+                return std::string{};
+            }
+            const auto bytes = nonce.value().transaction().mint_v2().SerializeAsString();
+            const auto mint = sgns::MintTransactionV2::DeSerializeByteVector(
+                std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            return mint ? mint->GetSlotID() : std::string{};
+        } );
+
+    const auto first_subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                            first_mint->GetNonce(),
+                                                                            first_mint->GetHash(),
+                                                                            first_mint->SerializeToEmbeddedTransaction(),
+                                                                            std::nullopt,
+                                                                            std::nullopt );
+    const auto second_subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                             second_mint->GetNonce(),
+                                                                             second_mint->GetHash(),
+                                                                             second_mint->SerializeToEmbeddedTransaction(),
+                                                                             std::nullopt,
+                                                                             std::nullopt );
+    ASSERT_TRUE( first_subject.has_value() );
+    ASSERT_TRUE( second_subject.has_value() );
+    const auto first_proposal = nodes.front().manager->CreateProposal(
+        first_subject.value(), accounts.front()->GetAddress(), shared_registry_cid, 1 );
+    const auto second_proposal = nodes.front().manager->CreateProposal(
+        second_subject.value(), accounts.front()->GetAddress(), shared_registry_cid, 1 );
+    ASSERT_TRUE( first_proposal.has_value() );
+    ASSERT_TRUE( second_proposal.has_value() );
+    ASSERT_NE( first_proposal.value().proposal_id(), second_proposal.value().proposal_id() );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( first_proposal.value() );
+    ASSERT_EQ( slot, sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( second_proposal.value() ) );
+
+    std::vector<sgns::ConsensusManager::Vote> normal_votes;
+    std::vector<std::string>                  persisted_vote_bytes;
+    std::string                               selected_proposal_id;
+    for ( auto &node : nodes )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( node.manager, first_proposal.value() );
+        sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( node.manager, second_proposal.value() );
+        sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( node.manager, slot );
+        sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( node.manager );
+
+        ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).size(), 1U );
+        const auto bytes = sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).front();
+        auto record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( node.manager, slot );
+        ASSERT_TRUE( record_bytes.has_value() );
+        sgns::ActiveVoteRecord record;
+        ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
+        EXPECT_EQ( record.canonical_slot(), slot );
+        EXPECT_EQ( record.vote_bytes(), bytes );
+        sgns::ConsensusManager::Vote vote;
+        ASSERT_TRUE( vote.ParseFromString( bytes ) );
+        if ( selected_proposal_id.empty() )
+        {
+            selected_proposal_id = vote.proposal_id();
+        }
+        EXPECT_EQ( vote.proposal_id(), selected_proposal_id );
+        normal_votes.push_back( std::move( vote ) );
+        persisted_vote_bytes.push_back( record.vote_bytes() );
+
+        // Reconstruct this validator against its own prior GlobalDB immediately.
+        // RecoverActiveVotes must retain the one exact durable vote and never create
+        // a competing vote after restart.
+        const auto node_index = static_cast<size_t>( &node - nodes.data() );
+        sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        node.manager.reset();
+        node.manager = MakeMultiValidatorManager( node, node.registry );
+        ASSERT_TRUE( node.manager );
+        sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( node.manager );
+        sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( node.manager, slot );
+        sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( node.manager );
+        ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).size(), 1U );
+        EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).front(),
+                   persisted_vote_bytes[node_index] );
+    }
+
+    const auto &winner = selected_proposal_id == first_proposal.value().proposal_id() ? first_proposal.value()
+                                                                                       : second_proposal.value();
+    const auto &loser  = selected_proposal_id == first_proposal.value().proposal_id() ? second_proposal.value()
+                                                                                       : first_proposal.value();
+    const auto winner_certificate = nodes.front().manager->CreateCertificate( winner, normal_votes );
+    ASSERT_TRUE( winner_certificate.has_value() );
+    EXPECT_EQ( winner_certificate.value().approved_weight(), 3U );
+    const auto loser_tally = nodes.front().manager->TallyVotes( loser, normal_votes );
+    ASSERT_TRUE( loser_tally.has_value() );
+    EXPECT_FALSE( loser_tally.value().has_quorum );
+    const auto loser_certificate = nodes.front().manager->CreateCertificate( loser, normal_votes );
+    ASSERT_TRUE( loser_certificate.has_value() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
+                                                                                loser_certificate.value() ),
+               sgns::ConsensusManager::Check::Reject );
+
+    for ( auto &node : nodes )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        node.pubsub->Stop();
+    }
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
 }
 
 TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorizeAReplacement )
