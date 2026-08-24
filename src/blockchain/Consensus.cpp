@@ -136,7 +136,17 @@ namespace sgns
         timer_cv_.notify_all();
         if ( round_timer_.joinable() )
         {
-            round_timer_.join();
+            if ( round_timer_.get_id() == std::this_thread::get_id() )
+            {
+                // A certificate callback can release the final TransactionManager
+                // and Blockchain references on this timer thread. That destruction
+                // closes the ConsensusManager, so joining here would self-join.
+                round_timer_.detach();
+            }
+            else
+            {
+                round_timer_.join();
+            }
         }
     }
 
