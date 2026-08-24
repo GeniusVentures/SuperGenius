@@ -29,6 +29,7 @@
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
+#include "storage/database_error.hpp"
 
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
@@ -1702,6 +1703,47 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto transaction_data, db->Get( { std::string( transaction_key ) } ) );
 
         return DeSerializeTransaction( transaction_data );
+    }
+
+    outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> TransactionManager::FetchExactTransactionFromCRDT(
+        const std::string &tx_hash ) const
+    {
+        if ( !globaldb_m )
+        {
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        for ( const auto network_id : GetMonitoredNetworkIDs() )
+        {
+            const auto transaction_key = GetTransactionPath( network_id, tx_hash );
+            auto       transaction     = FetchTransaction( globaldb_m, transaction_key );
+            if ( transaction.has_error() )
+            {
+                if ( transaction.error() != storage::DatabaseError::NOT_FOUND )
+                {
+                    return outcome::failure( transaction.error() );
+                }
+                continue;
+            }
+            if ( !transaction.value() )
+            {
+                continue;
+            }
+
+            if ( transaction.value()->GetHash() == tx_hash )
+            {
+                return std::optional<std::shared_ptr<GeniusTransaction>>{ transaction.value() };
+            }
+
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Ignoring CRDT transaction with mismatched hash at {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                transaction_key );
+        }
+
+        return std::optional<std::shared_ptr<GeniusTransaction>>{};
     }
 
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeTransaction(
@@ -3707,8 +3749,17 @@ namespace sgns
         auto tx = GetTransactionByHash( tx_hash );
         if ( !tx )
         {
+            BOOST_OUTCOME_TRY( auto crdt_transaction, FetchExactTransactionFromCRDT( tx_hash ) );
+            if ( crdt_transaction.has_value() )
+            {
+                tx = crdt_transaction.value();
+            }
+        }
+
+        if ( !tx )
+        {
             // CONFLICT-01 / NONCE-01: Standalone validator without local transaction state.
-            // Deserialize from the certificate's embedded proposal (Phase 1 transaction).
+            // Fall back only to the certificate's exact embedded proposal.
             auto nonce_subject_result = ConsensusManager::DecodeNonceSubject( certificate.proposal().subject() );
             if ( nonce_subject_result.has_error() )
             {
@@ -3765,6 +3816,18 @@ namespace sgns
                 return ConsensusManager::Check::Approve;
             }
 
+            if ( !CertificateMatchesTransaction( certificate, *tx ) )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Certificate does not bind to embedded transaction {}, accepting without processing",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx_hash );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
+                return ConsensusManager::Check::Approve;
+            }
+
             auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
             if ( result.has_error() )
             {
@@ -3793,6 +3856,17 @@ namespace sgns
         }
         else
         {
+            if ( !CertificateMatchesTransaction( certificate, *tx ) )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Certificate does not bind to transaction {}, accepting without confirmation",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx_hash );
+                return ConsensusManager::Check::Approve;
+            }
+
             // TRACK-01: Confirm via ChangeTransactionState lifecycle (promote temp embedded-tx entry)
             {
                 auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
