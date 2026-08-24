@@ -9,8 +9,12 @@
  */
 
 #include <gtest/gtest.h>
+#include <condition_variable>
 #include <chrono>
+#include <functional>
+#include <mutex>
 #include <string>
+#include <thread>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -92,8 +96,8 @@ namespace sgns
             return blockchain.consensus_manager_;
         }
 
-        static void CertificateReceived( const std::shared_ptr<ConsensusManager>          &manager,
-                                         crdt::CRDTCallbackManager::NewDataPair             new_data )
+        static void CertificateReceived( const std::shared_ptr<ConsensusManager> &manager,
+                                         crdt::CRDTCallbackManager::NewDataPair   new_data )
         {
             manager->CertificateReceived( std::move( new_data ), std::string{} );
         }
@@ -105,7 +109,7 @@ namespace sgns
 
         static bool HasCertificateWorkState( const std::shared_ptr<ConsensusManager> &manager,
                                              const std::string                       &key,
-                                             crdt::CRDTWorkJournal::State            state )
+                                             crdt::CRDTWorkJournal::State             state )
         {
             const auto entry = manager->certificate_work_journal_->GetEntry( key );
             return entry.has_value() && entry->state == state;
@@ -124,6 +128,21 @@ namespace sgns
         static void SetBridgeExecutedMarkerWriteFailure( TransactionManager &tm, bool fail )
         {
             tm.SetBridgeExecutedMarkerWriteFailureForTest( fail );
+        }
+
+        static void SetFetchAndProcessBeforeStateChangeHook( TransactionManager &tm, std::function<void()> hook )
+        {
+            tm.SetFetchAndProcessBeforeStateChangeHookForTest( std::move( hook ) );
+        }
+
+        static void SetFailNextPutUTXOStore( UTXOManager &utxo_manager, bool fail )
+        {
+            utxo_manager.SetFailNextPutUTXOStoreForTest( fail );
+        }
+
+        static void SetPutUTXOBeforeStoreHook( UTXOManager &utxo_manager, std::function<void()> hook )
+        {
+            utxo_manager.SetPutUTXOBeforeStoreHookForTest( std::move( hook ) );
         }
     };
 } // namespace sgns
@@ -172,8 +191,8 @@ namespace
      * @return EmbeddedTransaction with a properly hashed TransferTx.
      */
     EmbeddedTransaction MakeMinimalEmbeddedTransfer( TransactionManager &tm,
-                                                      const std::string  &source_address,
-                                                      uint64_t            nonce )
+                                                     const std::string  &source_address,
+                                                     uint64_t            nonce )
     {
         // Step 1: Create a bare TransferTx proto (no data_hash)
         SGTransaction::TransferTx bare_tx;
@@ -752,7 +771,9 @@ TEST_F( CertificateFallbackTest, CertificateFirstRecoversExactWinnerFromCRDT )
 
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
-    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               winner->GetHash(),
+                                                                               certificate.value() );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 
@@ -767,7 +788,7 @@ TEST_F( CertificateFallbackTest, CertificateFirstRecoversExactWinnerFromCRDT )
  */
 TEST_F( CertificateFallbackTest, ExactCrdtLookupIgnoresMismatchedPayloadHash )
 {
-    const auto requested = MakeCompetingMintV2( account_->GetAddress(), 93 );
+    const auto requested  = MakeCompetingMintV2( account_->GetAddress(), 93 );
     const auto mismatched = MakeCompetingMintV2( account_->GetAddress(), 94 );
     ASSERT_NE( requested->GetHash(), mismatched->GetHash() );
 
@@ -792,7 +813,7 @@ TEST_F( CertificateFallbackTest, ExactCrdtLookupRejectsForgedHashPayloadBeforeCe
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
 
-    auto forged = winner->SerializeToEmbeddedTransaction();
+    auto  forged       = winner->SerializeToEmbeddedTransaction();
     auto *extra_output = forged.mutable_mint_v2()->mutable_utxo_params()->add_outputs();
     extra_output->set_encrypted_amount( winner->GetAmount() + 1 );
     extra_output->set_dest_addr( "forged-mint-destination" );
@@ -810,7 +831,9 @@ TEST_F( CertificateFallbackTest, ExactCrdtLookupRejectsForgedHashPayloadBeforeCe
 
     // The valid embedded winner is the constrained fallback; the forged CRDT
     // payload must never contribute its additional output.
-    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               winner->GetHash(),
+                                                                               certificate.value() );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
     const auto outputs = account_->GetUTXOManager().GetUTXOs( account_->GetAddress() );
@@ -836,7 +859,9 @@ TEST_F( CertificateFallbackTest, CertificateFirstRejectsTrackedSameSlotLoser )
 
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
-    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, loser->GetHash(), certificate.value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               loser->GetHash(),
+                                                                               certificate.value() );
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
 
@@ -895,8 +920,9 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     CertificateFallbackTestAccess::CertificateReceived(
         manager,
         crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( callback_value ) } );
-    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
-        manager, certificate_key, crdt::CRDTWorkJournal::State::Stalled ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState( manager,
+                                                                         certificate_key,
+                                                                         crdt::CRDTWorkJournal::State::Stalled ) );
 
     // The callback is pre-commit only. Durable readback below is the sole path
     // allowed to dispatch the TransactionManager's registered certificate handler.
@@ -904,7 +930,7 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, true );
     CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
 
-    const auto marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
+    const auto             marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
     crdt::GlobalDB::Buffer marker_key_buffer;
     marker_key_buffer.put( marker_key );
     EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
@@ -913,8 +939,9 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     const auto stalled_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     ASSERT_TRUE( stalled_tracked.has_value() );
     EXPECT_NE( stalled_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
-        manager, certificate_key, crdt::CRDTWorkJournal::State::Stalled ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState( manager,
+                                                                         certificate_key,
+                                                                         crdt::CRDTWorkJournal::State::Stalled ) );
 
     CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, false );
     CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
@@ -949,12 +976,14 @@ TEST_F( CertificateFallbackTest, CertificateFirstUtxoStoreFailureRetriesFromDura
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
 
-    const auto marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
+    const auto             marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
     crdt::GlobalDB::Buffer marker_key_buffer;
     marker_key_buffer.put( marker_key );
 
     account_->GetUTXOManager().ReleaseStorage();
-    const auto failed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    const auto failed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               winner->GetHash(),
+                                                                               certificate.value() );
     EXPECT_TRUE( failed.has_error() );
     EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
     EXPECT_TRUE( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).empty() );
@@ -963,8 +992,9 @@ TEST_F( CertificateFallbackTest, CertificateFirstUtxoStoreFailureRetriesFromDura
     ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
     EXPECT_TRUE( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).empty() );
 
-    const auto recovered =
-        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    const auto recovered = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                  winner->GetHash(),
+                                                                                  certificate.value() );
     ASSERT_TRUE( recovered.has_value() );
     EXPECT_EQ( recovered.value(), ConsensusManager::Check::Approve );
     EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_value() );
@@ -973,4 +1003,122 @@ TEST_F( CertificateFallbackTest, CertificateFirstUtxoStoreFailureRetriesFromDura
     const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     ASSERT_TRUE( tracked.has_value() );
     EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+/**
+ * A second ingress must not interpret an output inserted by a failing first
+ * ingress as durable idempotent progress. The friend-only UTXO seam blocks the
+ * first snapshot while it owns the registry lock, then fails that exact store.
+ * The normal CRDT path is paused immediately before its state transition while
+ * certificate ingress owns the in-flight UTXO snapshot.
+ */
+TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxoProgress )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 122 );
+    ASSERT_TRUE( winner );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+
+    const auto             marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
+    crdt::GlobalDB::Buffer marker_key_buffer;
+    marker_key_buffer.put( marker_key );
+
+    auto                                                   &utxo_manager = account_->GetUTXOManager();
+    std::mutex                                              barrier_mutex;
+    std::condition_variable                                 barrier_cv;
+    bool                                                    crdt_ready          = false;
+    bool                                                    release_crdt        = false;
+    bool                                                    first_store_entered = false;
+    bool                                                    release_first_store = false;
+    std::size_t                                             hook_calls          = 0;
+    std::optional<outcome::result<ConsensusManager::Check>> first_result;
+    std::optional<outcome::result<void>>                    crdt_result;
+
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+    CertificateFallbackTestAccess::SetFailNextPutUTXOStore( utxo_manager, true );
+    CertificateFallbackTestAccess::SetFetchAndProcessBeforeStateChangeHook(
+        *tm_,
+        [&]
+        {
+            std::unique_lock lock( barrier_mutex );
+            crdt_ready = true;
+            barrier_cv.notify_all();
+            barrier_cv.wait( lock, [&] { return release_crdt; } );
+        } );
+    CertificateFallbackTestAccess::SetPutUTXOBeforeStoreHook(
+        utxo_manager,
+        [&]
+        {
+            std::unique_lock lock( barrier_mutex );
+            if ( hook_calls++ != 0 )
+            {
+                return;
+            }
+            first_store_entered = true;
+            barrier_cv.notify_all();
+            barrier_cv.wait( lock, [&] { return release_first_store; } );
+        } );
+
+    std::thread crdt_ingress(
+        [&]
+        {
+            base::Buffer serialized;
+            serialized.put( winner->SerializeByteVector() );
+            crdt_result = CertificateFallbackTestAccess::FetchAndProcessTransaction(
+                *tm_,
+                TransactionManager::GetTransactionPath( *winner ),
+                std::move( serialized ) );
+        } );
+
+    {
+        std::unique_lock lock( barrier_mutex );
+        barrier_cv.wait( lock, [&] { return crdt_ready; } );
+    }
+
+    std::thread first_ingress(
+        [&]
+        {
+            first_result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                  winner->GetHash(),
+                                                                                  certificate.value() );
+        } );
+
+    {
+        std::unique_lock lock( barrier_mutex );
+        barrier_cv.wait( lock, [&] { return first_store_entered; } );
+    }
+
+    {
+        std::lock_guard lock( barrier_mutex );
+        release_crdt = true;
+    }
+    barrier_cv.notify_all();
+
+    // While the first insertion is still awaiting its durable snapshot, no
+    // normal CRDT confirmation may create bridge completion evidence or a terminal state.
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
+    const auto in_flight = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( in_flight.has_value() );
+    EXPECT_NE( in_flight->status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    {
+        std::lock_guard lock( barrier_mutex );
+        release_first_store = true;
+    }
+    barrier_cv.notify_all();
+    first_ingress.join();
+    crdt_ingress.join();
+    CertificateFallbackTestAccess::SetPutUTXOBeforeStoreHook( utxo_manager, {} );
+    CertificateFallbackTestAccess::SetFetchAndProcessBeforeStateChangeHook( *tm_, {} );
+
+    ASSERT_TRUE( first_result.has_value() );
+    EXPECT_TRUE( first_result->has_error() );
+    ASSERT_TRUE( crdt_result.has_value() );
+    EXPECT_TRUE( crdt_result->has_value() );
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_value() );
+    EXPECT_EQ( utxo_manager.GetUTXOs( account_->GetAddress() ).size(), 1u );
+
+    const auto confirmed = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( confirmed.has_value() );
+    EXPECT_EQ( confirmed->status, TransactionManager::TransactionStatus::CONFIRMED );
 }

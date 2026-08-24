@@ -15,6 +15,7 @@
 #include "storage/rocksdb/rocksdb.hpp"
 
 #include <optional>
+#include <functional>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -51,9 +52,9 @@ namespace sgns
          */
         enum class UTXOState : uint8_t
         {
-            UTXO_READY = 0,        ///< UTXO is unspent and available for use
-            UTXO_CONSUMED = 1,     ///< UTXO has been consumed by a transaction and is no longer available
-            UTXO_RESERVED = 2      ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
+            UTXO_READY    = 0, ///< UTXO is unspent and available for use
+            UTXO_CONSUMED = 1, ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_RESERVED = 2  ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
         };
 
         /**
@@ -417,6 +418,8 @@ namespace sgns
         outcome::result<std::optional<UTXOCheckpoint>> LoadLatestCheckpoint( const std::string &address ) const;
 
     private:
+        friend class CertificateFallbackTestAccess;
+
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";
         ///< Prefix for UTXO checkpoint keys in RocksDB
@@ -427,6 +430,18 @@ namespace sgns
          * @return      The database handle as a shared pointer
          */
         std::shared_ptr<storage::rocksdb> AcquireStorage() const;
+
+        /// @brief Captures one address's registry entries while utxos_mutex_ is held.
+        std::vector<std::pair<OutPoint, UTXOEntry>> SnapshotAddressUTXOsLocked( const std::string &address ) const;
+
+        /// @brief Persists a stable address snapshot without reading mutable registry state.
+        outcome::result<void> StoreUTXOSnapshot( const std::shared_ptr<storage::rocksdb>           &db,
+                                                 const std::string                                 &address,
+                                                 const std::vector<std::pair<OutPoint, UTXOEntry>> &entries );
+
+        // Friend-only fault and barrier seams for certificate durability regression coverage.
+        void SetFailNextPutUTXOStoreForTest( bool fail );
+        void SetPutUTXOBeforeStoreHookForTest( std::function<void()> hook );
 
         /**
          * @brief       Selects UTXOs to cover a required amount for a specific token, excluding reserved outpoints, and returns the selected inputs along with the total selected amount.
@@ -456,6 +471,8 @@ namespace sgns
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
         /// Transient local ownership for reservations; never persisted or used for consensus validity.
         std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
+        bool                                                    fail_next_put_utxo_store_for_test_{ false };
+        std::function<void()>                                   put_utxo_before_store_hook_for_test_;
     };
 
 }
