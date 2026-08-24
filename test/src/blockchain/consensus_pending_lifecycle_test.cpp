@@ -11,10 +11,12 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransactionV2.hpp"
+#include "base/hexutil.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/keypair_file_storage.hpp"
+#include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
@@ -485,6 +487,12 @@ namespace
     std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
     {
         return std::vector<uint8_t>{ 0x07, 0x02 };
+    }
+
+    std::string SerializedCertificateHash( std::string_view serialized )
+    {
+        const auto hash = sgns::crypto::sha2_256( serialized.data(), serialized.size() );
+        return sgns::base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
     class ConsensusPendingLifecycleTest : public test::CRDTFixture
@@ -1106,6 +1114,55 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     // Keyless pubsub ingress accepts the same exactly-bound certificate without inventing a storage key.
     sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, certificate );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupiedSlotBeforeCrdtApply )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeSigningProposal( manager, registry, account, 90, "0xoccupied-slot-ordering" );
+    auto vote = manager->CreateVote( proposal.proposal_id(),
+                                     account->GetAddress(),
+                                     true,
+                                     [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote.has_value() );
+    auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+
+    auto existing = certificate.value();
+    std::string existing_serialized;
+    ASSERT_TRUE( existing.SerializeToString( &existing_serialized ) );
+    sgns::ConsensusManager::Certificate candidate;
+    std::string candidate_serialized;
+    for ( uint64_t offset = 1; offset < 128; ++offset )
+    {
+        candidate = certificate.value();
+        candidate.set_timestamp( certificate.value().timestamp() + offset );
+        ASSERT_TRUE( candidate.SerializeToString( &candidate_serialized ) );
+        if ( SerializedCertificateHash( existing_serialized ) < SerializedCertificateHash( candidate_serialized ) )
+        {
+            break;
+        }
+    }
+    ASSERT_LT( SerializedCertificateHash( existing_serialized ), SerializedCertificateHash( candidate_serialized ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, existing );
+    sgns::crdt::pb::Element element;
+    element.set_key( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( existing ) );
+    element.set_value( candidate_serialized );
+    const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
+    ASSERT_TRUE( filtered.has_value() );
+    EXPECT_TRUE( filtered->empty() );
+
+    auto stored = manager->GetCertificateBySlot( sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ) );
+    ASSERT_TRUE( stored.has_value() );
+    EXPECT_EQ( stored.value().SerializeAsString(), existing_serialized );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
