@@ -898,3 +898,41 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
     EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
 }
+
+/**
+ * A failed UTXO snapshot must not leave an in-memory outpoint that turns the
+ * next certificate replay into a false idempotent success. Reloading the
+ * manager exercises the same durable view a restart would use.
+ */
+TEST_F( CertificateFallbackTest, CertificateFirstUtxoStoreFailureRetriesFromDurableState )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 121 );
+    ASSERT_TRUE( winner );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+
+    const auto marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
+    crdt::GlobalDB::Buffer marker_key_buffer;
+    marker_key_buffer.put( marker_key );
+
+    account_->GetUTXOManager().ReleaseStorage();
+    const auto failed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    EXPECT_TRUE( failed.has_error() );
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
+    EXPECT_TRUE( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).empty() );
+
+    // Reloading after the failed write must still observe no durable output.
+    ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
+    EXPECT_TRUE( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).empty() );
+
+    const auto recovered =
+        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_EQ( recovered.value(), ConsensusManager::Check::Approve );
+    EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_value() );
+    EXPECT_EQ( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).size(), 1u );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+}
