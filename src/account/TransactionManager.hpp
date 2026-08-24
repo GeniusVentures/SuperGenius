@@ -652,7 +652,8 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
-        bool                   fail_bridge_executed_marker_write_for_test_ = false;
+        bool                  fail_bridge_executed_marker_write_for_test_ = false;
+        std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
 
         /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
         ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
@@ -683,7 +684,8 @@ namespace sgns
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
 
-        void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
+        void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
+        void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
         outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
