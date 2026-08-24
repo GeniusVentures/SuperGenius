@@ -942,6 +942,7 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
         std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
+        std::mutex certificate_recovery_mutex_; ///< Serializes certificate recovery readback and dispatch.
         std::unordered_map<std::string, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
