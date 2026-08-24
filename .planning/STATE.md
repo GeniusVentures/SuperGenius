@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-08-24T17:27:05.064Z"
-last_activity: 2026-08-24 -- Phase 11 planning complete
+last_updated: "2026-08-24T17:54:38.540Z"
+last_activity: 2026-08-24
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 14
+  completed_plans: 15
   percent: 80
 ---
 
@@ -26,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 11 (convergent-certificate-consumption-mint-recovery) — EXECUTING
-Plan: 3 of 3
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-24 -- Phase 11 planning complete
+Last activity: 2026-08-24
 
 Progress: [██████████] 100%
 
@@ -57,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 11 P01 | 6 min | 2 tasks | 2 files |
 | Phase 11 P02 | 10 min | 2 tasks | 3 files |
 | Phase 11 P03 | 8 min | 2 tasks | 5 files |
+| Phase 11 P04 | 17m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +77,7 @@ Progress: [██████████] 100%
 - [Phase 11]: Use the existing certificate work journal as the sole retry mechanism; no Mint or finality journal was added. — Certificate recovery already provides the durable retry boundary.
 - [Phase 11]: For Mint V2, keep transaction tracking VERIFYING until idempotent effects and the existing bridge marker both persist. — Terminal confirmation must not outrun durable local effects.
 - [Phase 11]: Expose only friend-scoped test access to the fixture-owned ConsensusManager; production APIs remain unchanged. — The regression needs real ingress access without a production getter.
+- [Phase 11]: Reuse the existing lower serialized SHA-256 certificate ordering in SubmitCertificate and FilterCertificate; different verified Mint hashes only emit a consensus-fault diagnostic.
 
 ### Pending Todos
 
@@ -95,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T13:31:45.040Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-08-24T17:54:38.536Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
