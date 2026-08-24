@@ -34,6 +34,7 @@
 namespace sgns
 {
     class ValidatorRegistry;
+    class CertificateFallbackTestAccess;
 
     class Migration3_5_0To3_6_0;
     class Migration3_6_0To3_7_0;

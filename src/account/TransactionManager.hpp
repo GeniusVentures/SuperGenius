@@ -44,6 +44,8 @@ namespace sgns::account
 
 namespace sgns
 {
+    class MintTransactionV2;
+
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -650,6 +652,7 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
+        bool                   fail_bridge_executed_marker_write_for_test_ = false;
 
         /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
         ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
@@ -679,6 +682,9 @@ namespace sgns
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
+
+        void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
+        outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
