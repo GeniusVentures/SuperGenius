@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-24T13:04:36.274Z"
+last_updated: "2026-08-24T13:19:19.179Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 11
-  completed_plans: 11
+  completed_plans: 12
   percent: 60
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 11 (convergent-certificate-consumption-mint-recovery) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-24
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 | Phase 08-canonical-slot-certificate-binding P01 | 48m | 2 tasks | 4 files |
 | Phase 10 P01 | 10m | 2 tasks | 9 files |
 | Phase 11 P01 | 6 min | 2 tasks | 2 files |
+| Phase 11 P02 | 10 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Progress: [██████████] 100%
 - [Phase 10]: Immutable authority records converge by the lowest SHA-256 lowercase-hex serialized bytes. — A reserved replicated CRDT priority avoids local first-seen and read-then-write semantics.
 - [Phase 11]: Certificate handlers trigger committed recovery after releasing certificate_handlers_mutex_. — Preserves the CRDTWorkJournal as the sole retry boundary and avoids handler-map lock re-entry.
 - [Phase 11]: No-handler durable certificates retain stalled work and their active vote lock. — A registered handler must process committed readback successfully before certificate work completes.
+- [Phase 11]: Certificate-first processing selects tracked state, exact CRDT evidence, then only a validated embedded fallback.
+- [Phase 11]: Every certificate-first candidate must satisfy Phase 10 exact account, nonce, hash, embedded-hash, and slot binding before confirmation.
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T13:04:36.076Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-08-24T13:18:25.026Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
