@@ -79,6 +79,13 @@ namespace sgns
         {
             return tm.FetchAndProcessTransaction( key, std::move( data ) );
         }
+
+        static outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
+            TransactionManager &tm,
+            const std::string  &tx_hash )
+        {
+            return tm.FetchExactTransactionFromCRDT( tx_hash );
+        }
     };
 } // namespace sgns
 
@@ -681,6 +688,61 @@ TEST_F( CertificateFallbackTest, SharedMintSlotConfirmsOnlyTheCertifiedTransacti
     ASSERT_TRUE( loser_tracked.has_value() );
     EXPECT_EQ( winner_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
     EXPECT_EQ( loser_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+}
+
+/**
+ * Certificate-first delivery must recover the exact winner from its normal
+ * CRDT transaction path before considering the certificate-embedded copy.
+ */
+TEST_F( CertificateFallbackTest, CertificateFirstRecoversExactWinnerFromCRDT )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 90 );
+    ASSERT_FALSE( winner->GetHash().empty() );
+    PersistTransaction( winner );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, winner->GetHash() ), nullptr );
+
+    const auto recovered = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, winner->GetHash() );
+    ASSERT_TRUE( recovered.has_value() );
+    ASSERT_TRUE( recovered.value().has_value() );
+    EXPECT_EQ( recovered.value().value()->GetHash(), winner->GetHash() );
+
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+/**
+ * An accepted certificate for a Mint winner cannot promote an already tracked
+ * contender that shares the winner's canonical slot.
+ */
+TEST_F( CertificateFallbackTest, CertificateFirstRejectsTrackedSameSlotLoser )
+{
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 91 );
+    const auto loser  = MakeCompetingMintV2( account_->GetAddress(), 92 );
+    ASSERT_NE( winner->GetHash(), loser->GetHash() );
+    ASSERT_EQ( winner->GetSlotID(), loser->GetSlotID() );
+
+    ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+    const auto before = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() );
+    ASSERT_TRUE( before.has_value() );
+    EXPECT_EQ( before->status, TransactionManager::TransactionStatus::VERIFYING );
+
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, loser->GetHash(), certificate.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+
+    const auto after = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() );
+    ASSERT_TRUE( after.has_value() );
+    EXPECT_EQ( after->status, TransactionManager::TransactionStatus::VERIFYING );
 }
 
 /**
