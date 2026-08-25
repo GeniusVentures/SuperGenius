@@ -829,6 +829,9 @@ namespace sgns
             std::shared_ptr<GeniusAccount>      account;
             std::shared_ptr<TransactionManager> manager;
             uint64_t                            generation = 0;
+            /// Catchup-callback owner generation sampled under the same lifecycle
+            /// lock as the rest of the tuple — always consistent with `generation`.
+            uint64_t                            catchup_generation = 0;
         };
 
         /** Immutable address/key binding used by node-scoped trust policy. */
