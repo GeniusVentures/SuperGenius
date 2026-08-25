@@ -74,7 +74,7 @@ namespace
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/child_tokens_node_" + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { self_address, "0.35", tokenValue, tokenId, outPath };
 
         removeAllWithRetry( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
@@ -355,6 +355,11 @@ protected:
     }
 };
 
+/// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
+static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+/// Developer cut every node created by CreateNode is configured with ("0.35").
+static constexpr uint64_t DEVELOPER_CUT = 350000;
+
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
     auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true, true );
@@ -539,23 +544,40 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     uint64_t burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     uint64_t available   = cost - burn_amount;
 
-    uint64_t expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
+    // node_proc1 and node_proc2 run apps from *different* developers (0xadfe and 0xaffa), each
+    // taking the same 0.35 cut. This is precisely what issue #148 got wrong: the release used to
+    // name a single developer on the escrow hold, so one developer collected everything. It now
+    // credits each developer out of its own peer's share, in that peer's child token.
+    //
+    // Each peer is entitled to (1 - 0.35) of its own half of the available amount. Payouts are
+    // apportioned by largest remainder, so the sub-minion dust adds at most one minion to any one
+    // credit -- there are four credits here, two peers and two developers.
+    const uint64_t peer_entitlement = ( available * ( DEVELOPER_CUT_SCALE - DEVELOPER_CUT ) ) /
+                                      ( 2 * DEVELOPER_CUT_SCALE );
 
     assertWaitForCondition(
         [&]()
         {
-            return ( node_proc1->GetBalance() + node_proc2->GetBalance() ) ==
-                   ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
+            auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( bal_p1_init + bal_p2_init );
+            return ( gain >= 2 * peer_entitlement ) && ( gain <= 2 * peer_entitlement + 2 );
         },
         std::chrono::milliseconds( 40000 ),
         "Other nodes balance not updated in time" );
-    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
-    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) +
-                   node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
 
-    uint64_t dev_payment = available - 2 * expected_peer_gain;
+    const auto p1_gain = node_proc1->GetBalance() - bal_p1_init;
+    const auto p2_gain = node_proc2->GetBalance() - bal_p2_init;
+    ASSERT_GE( p1_gain, peer_entitlement );
+    ASSERT_LE( p1_gain, peer_entitlement + 1 );
+    ASSERT_GE( p2_gain, peer_entitlement );
+    ASSERT_LE( p2_gain, peer_entitlement + 1 );
+
+    // Each peer is paid in its own child token, and nothing leaks into the other's.
+    ASSERT_EQ( tok_p1_init + p1_gain, node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) );
+    ASSERT_EQ( tok_p2_init + p2_gain, node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+
+    // Whatever the peers did not take went to the two developers: the outputs sum to the escrow
+    // exactly, so this closes the books on the whole release.
+    const uint64_t dev_payment = available - p1_gain - p2_gain;
     ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment +
                    burn_amount );

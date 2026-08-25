@@ -165,8 +165,8 @@ namespace sgns
             full_node_.reset();
         }
 
-        DevConfig                   full_config_   = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), {} };
-        DevConfig                   client_config_ = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), {} };
+        DevConfig                   full_config_   = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), {} };
+        DevConfig                   client_config_ = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), {} };
         std::shared_ptr<GeniusNode> full_node_;
         std::shared_ptr<GeniusNode> client_node_;
         std::string                 bootstrap_address_;
