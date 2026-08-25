@@ -32,6 +32,7 @@ namespace sgns
 {
     class ValidatorRegistry;
     class CertificateFallbackTestAccess;
+    class MultiNodeFinalityFaultTestAccess;
 
     class Migration3_5_0To3_6_0;
     class Migration3_6_0To3_7_0;
@@ -293,6 +294,7 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
         friend class CertificateFallbackTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
