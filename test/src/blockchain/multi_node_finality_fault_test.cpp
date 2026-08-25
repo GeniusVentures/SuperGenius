@@ -447,6 +447,11 @@ TEST_F( FinalityFaultNetwork, SameBurnContentionUsesOneCanonicalSlotAndExactMint
     for ( auto *source : { &first, &second, &third } )
         for ( auto *target : { &first, &second, &third } )
             if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+    // GossipPubSub does not replay publications made before a peer link exists.
+    // Re-advertise the same public proposals after the real link barrier; this
+    // exercises ordinary production ingress without synthesizing delivery.
+    ASSERT_TRUE( first.consensus->SubmitProposal( first_proposal.value() ).has_value() );
+    ASSERT_TRUE( second.consensus->SubmitProposal( second_proposal.value() ).has_value() );
     ASSERT_WAIT_FOR_CONDITION( [&] {
         return first.consensus->CheckCertificateForSlot( canonical_slot ) &&
                second.consensus->CheckCertificateForSlot( canonical_slot ) &&
@@ -610,6 +615,4 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
                HasBridgeMarker( third, *winner ) && HasBridgeMarker( passive, *winner );
     }, std::chrono::seconds( 20 ), "late contender remained absent after reopened-store recovery", nullptr );
     StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
-
-    FAIL() << "RED: late-contender and passive-recipient acceptance proof is intentionally failing before the green gate";
 }
