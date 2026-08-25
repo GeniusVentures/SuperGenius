@@ -352,20 +352,19 @@ ASSERT_TRUE(network.Peer(peer_index).HasExactlyOneBridgeMarker(winner));
 
 | # | Claim | Section | Risk if Wrong |
 |---|---|---|---|
-| A1 | `GossipPubSub` exposes no repository-visible public peer-disconnect method beyond stopping/recreating a peer; verify the external dependency API before adding an independent transient-disconnect helper. | Open Questions | A plan could choose an unavailable API or accidentally replace real lifecycle disconnection with a mock. |
-| A2 | The smallest four-peer fixture can compose `TransactionManager`/`Blockchain` consumer wiring without using `GeniusNode`; confirm current constructor/wiring requirements while implementing the first harness task. | Architecture Patterns | The harness may need one additional existing component fixture or a narrow test factory. |
+| A1 | **(RESOLVED — Plan 12-01 Task 1 compatibility gate)** Inspect installed headers before harness work: use an installed public disconnect operation only when it preserves real transport; otherwise use actual `StopPeer`/`RestartPeer` from the retained root plus `AddPeers`. | Compatibility gate | The plan forbids unsupported APIs and mocks; the selected path must compile before harness construction. |
+| A2 | **(RESOLVED — Plan 12-01 Task 1 compatibility gate)** Compile an existing production `Blockchain`/`TransactionManager` certificate-consumer construction route before harness work; if direct composition is unavailable, use a narrow test-only factory containing only production constructors and registration calls. | Compatibility gate | The plan forbids direct ingress/Mint shortcuts; no harness scenario proceeds until one production-consumer path compiles. |
 
-## Open Questions
+## Resolved Compatibility and Audit Decisions
 
-1. **Which public real-transport API should create an in-place disconnection without destroying a peer?**
-   - What we know: Repository usage exposes `AddPeers` for connection and `Stop` for lifecycle loss; no repository-visible `Disconnect`/`RemovePeer` call was found. [VERIFIED: codebase inspection]
-   - What's unclear: The external `GossipPubSub`/libp2p dependency may expose a host-level disconnect API that is not vendored in this repository. [ASSUMED]
-   - Recommendation: Inspect the installed dependency headers before implementation. If no supported API exists, model loss by actual `StopPeer` and model reconnection by `RestartPeer` plus `AddPeers`, which preserves D-04’s real lifecycle constraint; do not invent a mock. [VERIFIED: codebase inspection]
+1. **(RESOLVED — Plan 12-01 Task 1 compatibility gate) Which real-transport API creates topology loss?**
+   - Resolution: Inspect the installed `GossipPubSub`/host headers before harness construction and use only a supported public operation. If none is available, model loss by actual `StopPeer`, recreate from the retained root, and reconnect with `AddPeers`; this is the required D-04 fallback and never a mock. The selected path must compile before the harness scenario is written. [VERIFIED: codebase inspection]
 
-2. **Where should the cross-scenario TEST-06 audit evidence live?**
-   - What we know: D-08 requires a fifth named audit scenario, while individual GoogleTest cases must remain independently runnable. [VERIFIED: codebase inspection]
-   - What's unclear: A counter aggregate cannot safely depend on test execution order. [ASSUMED]
-   - Recommendation: Make the fifth test self-contained and make every other scenario assert its own route counters; the fifth test is the explicit trace/audit rather than a post-suite accumulator. [ASSUMED]
+2. **(RESOLVED — Plan 12-01 Task 1 compatibility gate) Which component composition registers the Mint consumer?**
+   - Resolution: First compile the closest existing production `Blockchain`/`TransactionManager` construction and certificate-consumer registration route without `GeniusNode`. If it cannot be composed directly, use a narrow test-only factory limited to those existing constructors and registration APIs; it must not call direct certificate handlers, Mint completion, or datastore writes. This compatibility proof must pass before harness scenarios use the component. [VERIFIED: codebase inspection]
+
+3. **(RESOLVED) Where should TEST-06 audit evidence live?**
+   - Resolution: `ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress` is a self-contained fifth named test, and every other scenario asserts its own route counters. No test depends on a cross-test aggregate or execution order. [VERIFIED: codebase inspection]
 
 ## Environment Availability
 
