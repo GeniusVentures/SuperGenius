@@ -344,6 +344,7 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -659,6 +660,17 @@ namespace sgns
         ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
         std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
 
+                struct FinalityFaultBarrier
+        {
+            bool armed    = false;
+            bool entered  = false;
+            bool released = false;
+        };
+        mutable std::mutex      fault_test_mutex_;
+        std::condition_variable fault_test_cv_;
+        uint64_t                mint_effects_for_test_ = 0;
+        FinalityFaultBarrier    mint_effects_barrier_;
+
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
         static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;
@@ -687,6 +699,7 @@ namespace sgns
         void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
         outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
+        void EnterFinalityFaultBarrier();
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
