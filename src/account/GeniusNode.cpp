@@ -2297,8 +2297,7 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto result_pair,
-                           manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+        BOOST_OUTCOME_TRY( auto result_pair, manager->HoldEscrow( funds, uuidstring ) );
 
         //TODO - Make it async to post the job data in case the transaction gets confirmed.
         auto [tx_id, escrow_data_pair] = result_pair;
