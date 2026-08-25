@@ -11,6 +11,7 @@
 #include <boost/asio.hpp>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -62,10 +63,10 @@ protected:
 
         // node_main: non-processor, light node. Config-driven construction (Phase 3).
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
@@ -80,7 +81,7 @@ protected:
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
@@ -95,17 +96,9 @@ protected:
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->AddPeers( bootstrappers );
 
-        sgns::test::assertWaitForCondition( [&]
-                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node_proc1 not ready" );
-        sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node_main not ready" );
-        sgns::test::assertWaitForCondition( [&]
-                                            { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node_proc2 not ready" );
+        sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 );
+        sgns::test::MakeNodeReadyWithLocalTrust( node_main );
+        sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 );
     }
 
     static void TearDownTestSuite()

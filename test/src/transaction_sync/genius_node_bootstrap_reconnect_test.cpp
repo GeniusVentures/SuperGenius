@@ -14,6 +14,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/remove_all.hpp"
@@ -107,7 +108,11 @@ namespace sgns
                 config << R"({ "pubsub_port": ")" << kBootstrapPubsubPort
                        << R"(", "auto_dht": false, "upnp_enabled": false })";
             }
-            ASSERT_TRUE( GeniusNode::WriteSgnsConfig( full_config_.BaseWritePath, "Full", false ).has_value() );
+            sgns::test::WriteLocalTrustSgnsConfig( full_config_.BaseWritePath,
+                                                   "Full",
+                                                   /*is_processor=*/false,
+                                                   /*rpc_catchup=*/true,
+                                                   std::string( FULL_NODE_PRIVATE_KEY ) );
             {
                 std::ofstream config( full_config_.BaseWritePath + "bridge_chains_config.json" );
                 ASSERT_TRUE( config.good() );
@@ -118,10 +123,7 @@ namespace sgns
             ASSERT_TRUE( full_node_ );
             Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
-            ASSERT_NO_FATAL_FAILURE(
-                test::assertWaitForCondition( [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
-                                              std::chrono::seconds( 50 ),
-                                              "bootstrap full node did not become ready" ) );
+            ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( full_node_ ) );
 
             // The node must still be booted once here: the PeerId inside bootstrap_address_
             // comes from the randomly generated, per-directory pubs_processor keypair, so it
@@ -141,10 +143,14 @@ namespace sgns
                 config << "{}";
             }
             {
+                const std::string client_self =
+                    sgns::test::TrustAddressFromPrivateKey( client_config_.BaseWritePath, std::string( CLIENT_PRIVATE_KEY ) );
                 std::ofstream config( client_config_.BaseWritePath + "sgns_config.json" );
                 ASSERT_TRUE( config.good() );
                 config << "{ \"node_type\": \"Light\", \"is_processor\": false, \"bootstrap_fullnodes\": [\""
-                       << bootstrap_address_ << "\"] }";
+                       << bootstrap_address_ << "\"], \"trusted_peers\": [\"" << client_self
+                       << "\"], \"bootstrapper_node\": \"" << client_self
+                       << "\", \"trusted_peer_quorum_threshold\": 1, \"burn_config_quorum_threshold\": 1 }";
             }
             {
                 std::ofstream config( client_config_.BaseWritePath + "network_config.json" );
@@ -195,14 +201,8 @@ namespace sgns
         ASSERT_TRUE( full_node_ );
         Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
-        ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
-            [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::seconds( 50 ),
-            "late bootstrap full node did not become ready" ) );
-        ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
-            [&]() { return client_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::seconds( 50 ),
-            "configured bootstrap client did not become ready" ) );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( full_node_ ) );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( client_node_ ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {
@@ -227,10 +227,7 @@ namespace sgns
         ASSERT_TRUE( full_node_ );
         Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
 
-        ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
-            [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::seconds( 50 ),
-            "restarted bootstrap full node did not become ready" ) );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( full_node_ ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {

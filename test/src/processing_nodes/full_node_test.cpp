@@ -8,6 +8,7 @@
 #include <fstream>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
@@ -49,7 +50,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     }
 
     GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false, privKey );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )
@@ -82,12 +83,8 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             sharedKey );
     originalNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "fullnode not synced" );
-    test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "Recovery node initial balance not updated in time" );
+    sgns::test::MakeNodeReadyWithLocalTrust( fullNode );
+    sgns::test::MakeNodeReadyWithLocalTrust( originalNode );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();

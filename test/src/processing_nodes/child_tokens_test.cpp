@@ -21,6 +21,7 @@
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/genius_node_test_access.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -93,7 +94,7 @@ namespace
                          } );
 
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false, key );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node, 1.0 );
 
@@ -107,6 +108,7 @@ namespace
 
     void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
     {
+        sgns::test::MakeNodeReadyWithLocalTrust( node );
         test::assertWaitForCondition(
             [&]()
             {
