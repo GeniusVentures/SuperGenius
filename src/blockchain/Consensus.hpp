@@ -550,6 +550,7 @@ namespace sgns
         friend class ConsensusPendingLifecycleTestAccess;
         friend class ConsensusSlotKeyTestAccess;
         friend class CertificateFallbackTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
@@ -631,6 +632,25 @@ namespace sgns
             Vote                             vote;
             uint64_t                         acceptance_deadline_ms = 0;
             std::chrono::steady_clock::time_point next_retry_at{};
+        };
+
+        /** @brief Friend-only Phase 12 observation state; never a protocol control surface. */
+        struct FinalityFaultCounters
+        {
+            uint64_t vote_publications                    = 0;
+            uint64_t certificate_write_attempts           = 0;
+            uint64_t certificate_write_successes          = 0;
+            uint64_t certificate_notification_publications = 0;
+            uint64_t certificate_notifications_received   = 0;
+            uint64_t accepted_certificate_readbacks       = 0;
+        };
+
+        /** @brief A post-action test pause released only by the friend test accessor. */
+        struct FinalityFaultBarrier
+        {
+            bool armed    = false;
+            bool entered  = false;
+            bool released = false;
         };
 
         /**
@@ -812,6 +832,7 @@ namespace sgns
                                                                          const Proposal &proposal,
                                                                          const Vote &vote,
                                                                          uint64_t acceptance_deadline_ms );
+        void EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier );
         void RecoverActiveVotes();
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**
@@ -974,6 +995,12 @@ namespace sgns
         bool fail_active_vote_removal_for_test_ = false; ///< Friend-scoped durable-release failure seam.
         bool fail_accepted_certificate_scan_for_test_ = false; ///< Friend-scoped finalized-slot scan failure seam.
         std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
+        mutable std::mutex      fault_test_mutex_; ///< Guards Phase 12 friend-only counters and barriers.
+        std::condition_variable fault_test_cv_;    ///< Wakes friend-only post-durability barrier observers.
+        FinalityFaultCounters   fault_test_counters_;
+        FinalityFaultBarrier    active_vote_persisted_barrier_;
+        FinalityFaultBarrier    certificate_persisted_barrier_;
+        FinalityFaultBarrier    accepted_certificate_barrier_;
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.

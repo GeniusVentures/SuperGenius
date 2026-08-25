@@ -271,6 +271,11 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Consensus packet published (bytes={})",
                                          __func__,
                                          serialized_proto.size() );
+        if ( message.has_certificate() )
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.certificate_notification_publications;
+        }
 
         return outcome::success();
     }
@@ -1297,7 +1302,13 @@ namespace sgns
             {
                 return outcome::failure( std::errc::operation_not_permitted );
             }
-            return DecodeActiveVoteRecord( slot_key, existing_bytes );
+            auto decoded = DecodeActiveVoteRecord( slot_key, existing_bytes );
+            if ( decoded.has_error() )
+            {
+                return outcome::failure( decoded.error() );
+            }
+            EnterFinalityFaultBarrier( active_vote_persisted_barrier_ );
+            return decoded;
         }
         if ( existing.error() != storage::DatabaseError::NOT_FOUND )
         {
@@ -1311,7 +1322,27 @@ namespace sgns
         {
             return outcome::failure( put.error() );
         }
-        return DecodeActiveVoteRecord( slot_key, encoded );
+        auto decoded = DecodeActiveVoteRecord( slot_key, encoded );
+        if ( decoded.has_error() )
+        {
+            return outcome::failure( decoded.error() );
+        }
+        EnterFinalityFaultBarrier( active_vote_persisted_barrier_ );
+        return decoded;
+    }
+
+    void ConsensusManager::EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier )
+    {
+        std::unique_lock lock( fault_test_mutex_ );
+        if ( !barrier.armed )
+        {
+            return;
+        }
+        barrier.entered = true;
+        fault_test_cv_.notify_all();
+        (void) fault_test_cv_.wait_for(
+            lock, std::chrono::seconds( 30 ), [&] { return barrier.released || !barrier.armed || stop_timer_.load(); } );
+        barrier.entered = false;
     }
 
     void ConsensusManager::RecoverActiveVotes()
@@ -1515,7 +1546,12 @@ namespace sgns
                 continue;
             }
             active_vote_announcements_for_test_.push_back( bytes );
-            (void) SubmitVote( active_vote.vote );
+            auto submit_result = SubmitVote( active_vote.vote );
+            if ( submit_result.has_value() )
+            {
+                std::lock_guard lock( fault_test_mutex_ );
+                ++fault_test_counters_.vote_publications;
+            }
         }
     }
 
@@ -2054,6 +2090,10 @@ namespace sgns
             return outcome::failure( existing.error() );
         }
 
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.certificate_write_attempts;
+        }
         auto cert_put = db_->PutConvergentImmutable( cert_key, cert_value, { consensus_datastore_topic_ } );
         if ( cert_put.has_error() )
         {
@@ -2063,6 +2103,11 @@ namespace sgns
                                              cert_put.error().message() );
             return outcome::failure( cert_put.error() );
         }
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.certificate_write_successes;
+        }
+        EnterFinalityFaultBarrier( certificate_persisted_barrier_ );
 
         ConsensusMessage message;
         *message.mutable_certificate() = certificate;
@@ -2615,6 +2660,10 @@ namespace sgns
         (void) value;
         // CrdtSet invokes this callback before committing its batch. Receipt therefore
         // cannot authorize certificate handling or removal of the local vote lock.
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.certificate_notifications_received;
+        }
         certificate_work_journal_->MarkSeen( key );
         certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
         timer_cv_.notify_all();
@@ -3708,6 +3757,12 @@ namespace sgns
         // A successful durable readback proves finality even when this node never
         // held a local active-vote record (or already removed it on an earlier replay).
         ClearProposalSlot( certificate.proposal() );
+
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.accepted_certificate_readbacks;
+        }
+        EnterFinalityFaultBarrier( accepted_certificate_barrier_ );
 
         auto certificate_handler_result = handler( subject_hash.value(), certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )

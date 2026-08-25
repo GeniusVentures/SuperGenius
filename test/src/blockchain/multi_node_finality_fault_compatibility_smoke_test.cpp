@@ -34,9 +34,166 @@ namespace sgns
     class MultiNodeFinalityFaultTestAccess
     {
     public:
+        static void ResetConsensus( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager->fault_test_counters_ = {};
+            manager->active_vote_persisted_barrier_ = {};
+            manager->certificate_persisted_barrier_ = {};
+            manager->accepted_certificate_barrier_ = {};
+        }
+
+        static void ArmActiveVotePersistenceBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            SetArmed( manager, manager ? &ConsensusManager::active_vote_persisted_barrier_ : nullptr );
+        }
+
+        static void ArmCertificatePersistenceBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            SetArmed( manager, manager ? &ConsensusManager::certificate_persisted_barrier_ : nullptr );
+        }
+
+        static void ArmAcceptedCertificateBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            SetArmed( manager, manager ? &ConsensusManager::accepted_certificate_barrier_ : nullptr );
+        }
+
+        static void ReleaseAllConsensusBarriers( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return;
+            {
+                std::lock_guard lock( manager->fault_test_mutex_ );
+                for ( auto *barrier : { &manager->active_vote_persisted_barrier_,
+                                        &manager->certificate_persisted_barrier_,
+                                        &manager->accepted_certificate_barrier_ } )
+                {
+                    barrier->released = true;
+                    barrier->armed = false;
+                }
+            }
+            manager->fault_test_cv_.notify_all();
+        }
+
+        static bool ActiveVotePersistenceBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return BarrierEntered( manager, manager ? &ConsensusManager::active_vote_persisted_barrier_ : nullptr );
+        }
+
+        static bool CertificatePersistenceBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return BarrierEntered( manager, manager ? &ConsensusManager::certificate_persisted_barrier_ : nullptr );
+        }
+
+        static bool AcceptedCertificateBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return BarrierEntered( manager, manager ? &ConsensusManager::accepted_certificate_barrier_ : nullptr );
+        }
+
         static uint64_t VotePublications( const std::shared_ptr<ConsensusManager> &manager )
         {
-            return manager ? manager->fault_test_counters_.vote_publications : 0;
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::vote_publications ) : 0;
+        }
+
+        static uint64_t CertificateWriteAttempts( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::certificate_write_attempts ) : 0;
+        }
+
+        static uint64_t CertificateWriteSuccesses( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::certificate_write_successes ) : 0;
+        }
+
+        static uint64_t CertificateNotificationPublications( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::certificate_notification_publications ) : 0;
+        }
+
+        static uint64_t CertificateNotificationsReceived( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::certificate_notifications_received ) : 0;
+        }
+
+        static uint64_t AcceptedCertificateReadbacks( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? ReadCounter( manager, &ConsensusManager::FinalityFaultCounters::accepted_certificate_readbacks ) : 0;
+        }
+
+        static uint64_t CurrentRound( const std::shared_ptr<ConsensusManager> &manager, uint64_t proposal_timestamp_ms )
+        {
+            return manager ? manager->GetCurrentRound( proposal_timestamp_ms ) : 0;
+        }
+
+        static bool CertificatesPending( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager && manager->certificates_pending_.load();
+        }
+
+        static int AggregatorRole( const std::shared_ptr<ConsensusManager> &manager,
+                                   const ConsensusManager::Proposal &proposal,
+                                   const ValidatorRegistry::Registry &registry )
+        {
+            return manager ? static_cast<int>( manager->GetAggregatorRole( proposal, registry ) ) : -1;
+        }
+
+        static void ResetMintEffects( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.fault_test_mutex_ );
+            manager.mint_effects_for_test_ = 0;
+            manager.mint_effects_barrier_ = {};
+        }
+
+        static uint64_t MintEffects( const TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.fault_test_mutex_ );
+            return manager.mint_effects_for_test_;
+        }
+
+        static void ArmMintEffectsBarrier( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.fault_test_mutex_ );
+            manager.mint_effects_barrier_ = { true, false, false };
+        }
+
+        static bool MintEffectsBarrierEntered( const TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.fault_test_mutex_ );
+            return manager.mint_effects_barrier_.entered;
+        }
+
+        static void ReleaseMintEffectsBarrier( TransactionManager &manager )
+        {
+            {
+                std::lock_guard lock( manager.fault_test_mutex_ );
+                manager.mint_effects_barrier_.released = true;
+                manager.mint_effects_barrier_.armed = false;
+            }
+            manager.fault_test_cv_.notify_all();
+        }
+
+    private:
+        using BarrierMember = ConsensusManager::FinalityFaultBarrier ConsensusManager::*;
+        using CounterMember = uint64_t ConsensusManager::FinalityFaultCounters::*;
+
+        static void SetArmed( const std::shared_ptr<ConsensusManager> &manager, BarrierMember member )
+        {
+            if ( !manager || !member ) return;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager.get()->*member = { true, false, false };
+        }
+
+        static bool BarrierEntered( const std::shared_ptr<ConsensusManager> &manager, BarrierMember member )
+        {
+            if ( !manager || !member ) return false;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return ( manager.get()->*member ).entered;
+        }
+
+        static uint64_t ReadCounter( const std::shared_ptr<ConsensusManager> &manager, CounterMember member )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->fault_test_counters_.*member;
         }
     };
 } // namespace sgns
