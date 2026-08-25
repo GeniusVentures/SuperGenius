@@ -43,7 +43,6 @@
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
 
-#include <ProofSystem/EthereumKeyGenerator.hpp>
 #include "account/ChainContractPair.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
@@ -51,6 +50,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 
@@ -372,41 +372,6 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         spdlog::info( "catchup_e2e: Anvil fork block = {}", s_fork_block );
     }
 
-    // PRE-NODE BURN SEEDING: derive the SGNS destination from the private key
-    // and send kNumCatchupBurns real bridgeOut() burns to the local Anvil fork
-    // BEFORE creating any node. The node's async init fires the catch-up scan on
-    // the io_context thread — if burns are seeded after node creation, the scan
-    // races ahead and misses them.
-    {
-        ethereum::EthereumKeyGenerator key_gen( kAnvilAccountHexKeys[0] );
-        const std::string              sgns_dest = key_gen.GetEntirePubValue();
-        spdlog::info( "catchup_e2e: derived SGNS destination {} from private key", sgns_dest.substr( 0, 16 ) );
-
-        // The burns above pay the source key's OWN public point. Seed the receiving
-        // account with that exact key so node_main (created FromPrivateKey-from-storage
-        // below) owns the burn recipient and the minted funds are spendable by it.
-        // NewFromPrivateKey's legacy derivation produces a different address and
-        // would never see these mints.
-        s_receiving_address = sgns::test::anvil::SeedAccountWithExactKey( kAnvilAccountHexKeys[0] );
-        ASSERT_FALSE( s_receiving_address.empty() )
-            << "Could not seed the receiving account with the exact burn-recipient key";
-        ASSERT_EQ( s_receiving_address, sgns_dest )
-            << "Seeded receiving account must own the burn destination";
-
-        spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
-        for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
-        {
-            const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
-                                                                              static_cast<uint64_t>( kMintAmount ),
-                                                                              sgns_dest );
-            ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
-            s_pre_node_burn_hashes.push_back( tx_hash );
-            spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
-        }
-        ASSERT_EQ( s_pre_node_burn_hashes.size(), kNumCatchupBurns )
-            << "Did not seed the expected number of pre-node burns";
-    }
-
     // Per-node BaseWritePath from binary location (Plan 04.1-01 pattern), distinct subdirs.
     const std::string binary_path = boost::dll::program_location().parent_path().string();
     s_configs[0].BaseWritePath    = binary_path + kNode1Dir;
@@ -430,38 +395,6 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
                R"("],"status":"active"}])";
     };
 
-    // Create the Light nodes FIRST and register them as genesis validators before the
-    // Full node exists. A node starts initializing its blockchain inside New(), and that
-    // init defers forever ("validator registry not initialized") unless the genesis
-    // validator set is already registered — creating node_main first races its own
-    // registration, so the cluster never reaches READY. The burn seeding happens AFTER
-    // the genesis validators are registered so the catch-up scan discovers the burns
-    // when it fires at READY.
-    const char *kWNodeType[] = { "Full", "Light", "Light" };
-
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
-    node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
-    node_proc1->SetChainlistFetcher( chainlist_fetcher );
-
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, kWNodeType[2], /*is_processor=*/false );
-    node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
-    node_proc2->SetChainlistFetcher( chainlist_fetcher );
-
-    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { node_proc1->GetAddress(), node_proc2->GetAddress() } );
-
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
-    // Load node_main from the pre-seeded storage so it carries the EXACT
-    // burn-recipient key (see SeedAccountWithExactKey above) — its address IS the
-    // destination the pre-node burns pay, so the auto-minted funds are its own.
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
-    node_main->SetChainlistFetcher( chainlist_fetcher );
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
-    spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
-                  node_main->GetAddress().substr( 0, 16 ) );
-
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
     node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
@@ -470,10 +403,7 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // eth_getLogs independently on its own thread — no state machine coupling.
     // The watcher snapshots catchup_chains_ (populated by OnRpcEndpointsReady)
     // on each poll cycle and mints any discovered burns via MintTokens.
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
-                               kNodeReadyTimeout,
-                               "node_main READY",
-                               nullptr );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_main );
 
     // Prime the validator URL map NOW (TM guaranteed READY) so the catch-up
     // scan queries eth_getLogs against http://127.0.0.1:18545 instead of real
@@ -492,27 +422,44 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         ep_public2.consensus_weight          = 0;
 
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
-        {
-            ( i == 0u ? node_main : ( i == 1u ? node_proc1 : node_proc2 ) )
-                ->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
-        }
-        spdlog::info( "catchup_e2e: primed {} nodes with {} Anvil RPC endpoints at {}",
-                      kNodeCount,
+        // Prime node_main NOW (its TM is READY) so the catch-up scan queries
+        // eth_getLogs against the local Anvil instead of real Sepolia. The
+        // processors are still in their trust lifecycle here and would drop the
+        // call ("ConfigureRpcEndpoint called before transaction manager is
+        // ready"); they are primed after reaching READY below.
+        node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        spdlog::info( "catchup_e2e: primed node_main with {} Anvil RPC endpoints at {}",
                       anvil_eps.size(),
                       s_anvil.RpcUrl() );
     }
 
     // Wait for processor nodes to sync and reach READY.
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_proc1->GetState() == GeniusNode::NodeState::READY &&
-                   node_proc2->GetState() == GeniusNode::NodeState::READY;
-        },
-        kNodeReadyTimeout,
-        "processor nodes READY",
-        nullptr );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 );
+
+    // Now that the processors' transaction managers are ready, prime their
+    // validator URL maps as well so slot-based witness consensus on the mints
+    // reaches the 75-weight quorum against the local Anvil endpoint.
+    {
+        sgns::WeightedRpcEndpoint ep_direct;
+        ep_direct.url                     = s_anvil.RpcUrl();
+        ep_direct.consensus_weight        = 100;
+        ep_direct.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
+        ep_direct.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
+
+        sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
+        ep_public1.consensus_weight = 0;
+
+        sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
+        ep_public2.consensus_weight = 0;
+
+        std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
+        node_proc1->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        node_proc2->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        spdlog::info( "catchup_e2e: primed processor nodes with {} Anvil RPC endpoints at {}",
+                      anvil_eps.size(),
+                      s_anvil.RpcUrl() );
+    }
 
     spdlog::info( "catchup_e2e: 3-node cluster ready; auto-mint path armed" );
 }
