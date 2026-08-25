@@ -318,6 +318,7 @@ namespace sgns
         }
 
         cv_.notify_all();
+        fault_test_cv_.notify_all();
     }
 
     void TransactionManager::Start()
@@ -2044,18 +2045,21 @@ namespace sgns
         return outcome::success();
     }
 
-    void TransactionManager::EnterFinalityFaultBarrier()
+    bool TransactionManager::EnterFinalityFaultBarrier()
     {
         std::unique_lock lock( fault_test_mutex_ );
         if ( !mint_effects_barrier_.armed )
         {
-            return;
+            return !stopped_.load();
         }
         mint_effects_barrier_.entered = true;
         fault_test_cv_.notify_all();
         (void) fault_test_cv_.wait_for(
-            lock, std::chrono::seconds( 30 ), [&] { return mint_effects_barrier_.released || !mint_effects_barrier_.armed; } );
+            lock, std::chrono::seconds( 30 ), [&] {
+                return mint_effects_barrier_.released || !mint_effects_barrier_.armed || stopped_.load();
+            } );
         mint_effects_barrier_.entered = false;
+        return !stopped_.load();
     }
 
     outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
@@ -5439,7 +5443,10 @@ namespace sgns
                         std::lock_guard lock( fault_test_mutex_ );
                         ++mint_effects_for_test_;
                     }
-                    EnterFinalityFaultBarrier();
+                    if ( !EnterFinalityFaultBarrier() )
+                    {
+                        return outcome::failure( std::errc::operation_canceled );
+                    }
                     BOOST_OUTCOME_TRY( PersistBridgeExecutedMarker( *mint_tx ) );
 
                     {

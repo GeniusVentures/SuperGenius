@@ -832,7 +832,7 @@ namespace sgns
                                                                          const Proposal &proposal,
                                                                          const Vote &vote,
                                                                          uint64_t acceptance_deadline_ms );
-        void EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier );
+        bool EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier );
         void RecoverActiveVotes();
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**

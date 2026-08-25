@@ -598,7 +598,7 @@ namespace sgns
         void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
         outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
-        void EnterFinalityFaultBarrier();
+        bool EnterFinalityFaultBarrier();
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );

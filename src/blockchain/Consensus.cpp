@@ -156,6 +156,7 @@ namespace sgns
     {
         stop_timer_.store( true );
         timer_cv_.notify_all();
+        fault_test_cv_.notify_all();
 
         std::thread timer;
         {
@@ -1331,18 +1332,19 @@ namespace sgns
         return decoded;
     }
 
-    void ConsensusManager::EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier )
+    bool ConsensusManager::EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier )
     {
         std::unique_lock lock( fault_test_mutex_ );
         if ( !barrier.armed )
         {
-            return;
+            return !stop_timer_.load();
         }
         barrier.entered = true;
         fault_test_cv_.notify_all();
         (void) fault_test_cv_.wait_for(
             lock, std::chrono::seconds( 30 ), [&] { return barrier.released || !barrier.armed || stop_timer_.load(); } );
         barrier.entered = false;
+        return !stop_timer_.load();
     }
 
     void ConsensusManager::RecoverActiveVotes()
@@ -1503,6 +1505,10 @@ namespace sgns
                                                      __func__, slot_key, active_vote.error().message() );
                     continue;
                 }
+                if ( stop_timer_.load() )
+                {
+                    return;
+                }
                 slot_state.active_vote_locked = true;
                 slot_state.voted_proposal_ids.insert( active_vote.value().proposal.proposal_id() );
                 active_vote.value().next_retry_at = now_steady + active_vote_retry_interval_;
@@ -1540,6 +1546,10 @@ namespace sgns
         }
         for ( const auto &active_vote : publish )
         {
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
             std::string bytes;
             if ( !active_vote.vote.SerializeToString( &bytes ) )
             {
@@ -2107,7 +2117,10 @@ namespace sgns
             std::lock_guard lock( fault_test_mutex_ );
             ++fault_test_counters_.certificate_write_successes;
         }
-        EnterFinalityFaultBarrier( certificate_persisted_barrier_ );
+        if ( !EnterFinalityFaultBarrier( certificate_persisted_barrier_ ) )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
 
         ConsensusMessage message;
         *message.mutable_certificate() = certificate;
@@ -3762,7 +3775,11 @@ namespace sgns
             std::lock_guard lock( fault_test_mutex_ );
             ++fault_test_counters_.accepted_certificate_readbacks;
         }
-        EnterFinalityFaultBarrier( accepted_certificate_barrier_ );
+        if ( !EnterFinalityFaultBarrier( accepted_certificate_barrier_ ) )
+        {
+            certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
 
         auto certificate_handler_result = handler( subject_hash.value(), certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
