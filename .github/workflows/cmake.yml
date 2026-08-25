@@ -444,16 +444,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/macos-crash-reports"
           touch "$RUNNER_TEMP/macos-tests-started"
 
-      # Network-heavy integration tests create several threaded nodes each.
-      # Keep macOS runner pressure bounded while teardown races are exercised.
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        run: ctest . -j ${{ matrix.target == 'OSX' && 4 || '' }} -C ${{ matrix.build-type }} --output-on-failure
+        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        if: ${{ matrix.target == 'Linux' }}
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
         shell: bash
         run: |
           dbus-run-session -- bash -c '\
@@ -464,7 +462,7 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j -C ${{ matrix.build-type }} --output-on-failure'
+            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure'
 
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics
@@ -499,7 +497,7 @@ jobs:
 
       - name: Upload macOS crash diagnostics
         if: ${{ failure() && steps.collect_macos_crash_diagnostics.outputs.reports_found == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-${{ matrix.build-type }}-crash-reports-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/macos-crash-reports/
