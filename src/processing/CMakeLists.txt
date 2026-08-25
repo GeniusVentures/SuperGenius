@@ -59,6 +59,7 @@ target_link_libraries(processing_service
     SGProcessingProto
     PRIVATE
     crdt_globaldb
+    hexutil
     ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager

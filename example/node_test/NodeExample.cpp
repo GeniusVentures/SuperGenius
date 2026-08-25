@@ -478,12 +478,12 @@ static std::string generate_eth_private_key()
     return oss.str();
 }
 
-GeniusNodeConfig DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
+GeniusNodeConfig DEV_CONFIG{ "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
 
 int main( int argc, char *argv[] )
 {
-    bool        start_processing = false; // Default behavior for "process"
-    bool        terminal_mode    = false;
+    bool start_processing = false; // Default behavior for "process"
+    bool terminal_mode    = false;
 
     //full node flag is now defined in the sgns_config.json file, so we don't need to pass it as a command line argument anymore
     std::string path_override;
@@ -525,8 +525,7 @@ int main( int argc, char *argv[] )
 
     // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
     // the shipped network_config.json (both operator-managed, like a real deployment).
-    auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
+    auto node_instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
 
     std::thread status_thread;
 

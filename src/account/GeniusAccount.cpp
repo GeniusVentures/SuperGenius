@@ -278,14 +278,9 @@ namespace sgns
 {
     bool GeniusAccount::IsValidPublicKey( std::string_view key ) noexcept
     {
-        if ( key.length() != PUBLIC_KEY_HEX_LENGTH )
-        {
-            return false;
-        }
-        return std::all_of(
-            key.begin(),
-            key.end(),
-            []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
+        // Public keys are rendered by base::hex_lower, so only the lowercase form is a real key;
+        // see sgns::base::IsHexAddress, which also pins the PUBLIC_KEY_HEX_LENGTH.
+        return base::IsHexAddress( key );
     }
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED{
@@ -1022,7 +1017,8 @@ namespace sgns
                 genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age.count() );
                 return cached_nonce_result_.value();
             }
-            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age.count() );
+            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce",
+                                            cache_age.count() );
         }
 
         // If a request is already in progress, wait for it

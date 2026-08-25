@@ -59,11 +59,15 @@ namespace sgns::processing
          * @param[in]   task_queue A shared pointer to the task queue used for retrieving tasks
          * @param[in]   maximalProcessingSubTaskCount The maximum number of subtasks that can be processed concurrently
          * @param[in]   tokenId The Token ID used on the results
+         * @param[in]   developerAddress Payout address of the developer of the app running on this node
+         * @param[in]   developerCut The developer's share of each subtask payout, scaled by 1e6
          * @return      A shared pointer to the created ProcessingCoreImpl instance or nullptr if creation failed
          */
         static std::shared_ptr<ProcessingCoreImpl> New( std::shared_ptr<ProcessingTaskQueue> task_queue,
-                                                        uint32_t maximalProcessingSubTaskCount,
-                                                        TokenID  tokenId );
+                                                        uint32_t           maximalProcessingSubTaskCount,
+                                                        TokenID            tokenId,
+                                                        const std::string &developerAddress,
+                                                        uint64_t           developerCut );
 
         ~ProcessingCoreImpl() = default;
 
@@ -78,10 +82,14 @@ namespace sgns::processing
          * @param[in]   task_queue A shared pointer to the task queue used for retrieving tasks
          * @param[in]   maximalProcessingSubTaskCount The maximum number of subtasks that can be processed concurrently
          * @param[in]   tokenId The Token ID used on the results
+         * @param[in]   developerAddress Payout address of the developer of the app running on this node
+         * @param[in]   developerCut The developer's share of each subtask payout, scaled by 1e6
          */
         explicit ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
                                      uint32_t                             maximalProcessingSubTaskCount,
-                                     TokenID                              tokenId );
+                                     TokenID                              tokenId,
+                                     std::string                          developerAddress,
+                                     uint64_t                             developerCut );
 
         /**
          * @brief       Increments the count of currently processing subtasks. Returns failure if the count exceeds the maximum allowed.
@@ -98,6 +106,10 @@ namespace sgns::processing
         std::shared_ptr<ProcessingTaskQueue> task_queue_;
         /// The Token ID to be used on the results of the processed subtasks
         TokenID token_ID_;
+        /// Payout address of the developer of the app running on this node, stamped on every result
+        std::string developer_address_;
+        /// The developer's share of each subtask payout, scaled by 1e6, stamped on every result
+        uint64_t developer_cut_;
         /// The maximum number of subtasks that can be processed concurrently.
         uint32_t max_processing_subtask_count_;
 
