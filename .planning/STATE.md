@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-25T16:53:17.598Z"
+last_updated: "2026-08-25T17:12:09.331Z"
 last_activity: 2026-08-25
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 15
-  completed_plans: 16
+  completed_plans: 17
   percent: 80
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (Multi-Node Finality Fault Proof) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-25
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 11 P03 | 8 min | 2 tasks | 5 files |
 | Phase 11 P04 | 17m | 2 tasks | 2 files |
 | Phase 12 P01 | 64m | 2 tasks | 9 files |
+| Phase 12 P02 | 17m | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Progress: [██████████] 100%
 - [Phase 11]: Reuse the existing lower serialized SHA-256 certificate ordering in SubmitCertificate and FilterCertificate; different verified Mint hashes only emit a consensus-fault diagnostic.
 - [Phase 12]: Use StopPeer/recreate plus AddPeers as the Phase 12 real-transport recovery path.
 - [Phase 12]: Use the existing test-chain IInputValidator and a fresh Mint nonce 0 for normal production-route audit ingress.
+- [Phase 12]: Re-advertise unchanged signed proposals through public SubmitProposal after AddPeers because offline GossipPubSub broadcasts are not replayed. — Preserves isolated initial submission and real production ingress.
+- [Phase 12]: Use durable active-vote identity rather than retry publication totals to prove late contender rejection. — Vote counters include normal retry broadcasts and cannot establish unique ownership.
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-25T16:53:17.593Z
+Last session: 2026-08-25T17:12:09.327Z
 Stopped at: Completed 12-01-PLAN.md
 Resume file: None
