@@ -120,7 +120,20 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 12-01-PLAN.md — Add safe production-boundary instrumentation and a persistent four-peer real-route audit harness.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 12-02-PLAN.md — Prove same-burn contention, late-contender safety, and passive-recipient receive-only recovery.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 12-03-PLAN.md — Prove restart-boundary recovery and persistence-before-advertisement publisher failover.
 
 ## Progress
 
