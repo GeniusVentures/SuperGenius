@@ -8,6 +8,7 @@
 #ifndef SGNS_BLOCKCHAIN_HPP
 #define SGNS_BLOCKCHAIN_HPP
 
+#include <chrono>
 #include <memory>
 #include <map>
 #include <functional>
@@ -23,6 +24,7 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "blockchain/impl/proto/SGBlockchain.pb.h"
 #include "blockchain/Consensus.hpp"
 #include "base/buffer.hpp"
@@ -76,12 +78,15 @@ namespace sgns
          * @param[in] account GeniusAccount instance.
          * @param[in] pubsub PubSub instance used by consensus manager.
          * @param[in] callback Called when initialization completes.
+         * @param[in] node_type Deployment role, forwarded to the consensus manager. Archive nodes
+         *            abstain from self-voting; defaults to Full so existing call sites are unaffected.
          * @return Shared pointer to blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                BlockchainCallback                         callback );
+                                                BlockchainCallback                         callback,
+                                                NodeType                                   node_type = NodeType::Full );
 
         /**
          * @brief Destroys the blockchain instance.
@@ -468,15 +473,31 @@ namespace sgns
          * @brief Watches CID download completion with timeout handling.
          * @param[in] cid CID being tracked.
          * @param[in] error_on_failure Error code to emit on timeout/failure.
-         * @param[in] timeout_ms Timeout in milliseconds.
+         * @param[in] timeout How long to wait for the download before emitting the error.
          */
-        void WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
+        void WatchCIDDownload( const std::string &cid, Error error_on_failure, std::chrono::milliseconds timeout );
         /**
          * @brief Ensures validator registry is initialized and available.
          * @return outcome::success when registry is ready, otherwise an error.
          */
         outcome::result<void> EnsureValidatorRegistry() const;
         void                  RequestValidatorRegistry();
+
+        /**
+         * @brief Re-issues the validator registry pulls while Start() is deferred.
+         *
+         * ValidatorRegistry::RetryInitializationIfNeeded() only inspects our OWN head list,
+         * which on a fresh client is populated exclusively by a gossip broadcast from a full
+         * node -- and nothing reacts to us connecting or grafting. Without this the client
+         * cannot ask, so it converges only if the full node happens to broadcast while we
+         * are already grafted, and otherwise waits for the periodic rebroadcast.
+         *
+         * Genesis and account creation are already re-requested on every deferred Start();
+         * the registry was the one dependency whose pull fired once in New(), before any
+         * peer was reachable, with its failure swallowed by an empty callback. This
+         * restores the symmetry.
+         */
+        void                  RequestValidatorRegistryWhileDeferred();
 
         static constexpr std::string_view BLOCKCHAIN_TOPIC =
             "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
@@ -490,9 +511,14 @@ namespace sgns
             "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
         static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX =
             "gnus-account-creation-cid-";                          ///< Prefix for account-creation CID keys.
-        static constexpr uint64_t TIMEOUT_GENESIS_BLOCK_MS = 8000; ///< Genesis CID download timeout in milliseconds.
-        static constexpr uint64_t TIMEOUT_ACC_CREATION_BLOCK_MS =
-            8000; ///< Account-creation CID download timeout in milliseconds.
+        static constexpr std::chrono::milliseconds TIMEOUT_GENESIS_BLOCK = std::chrono::seconds(
+            8 ); ///< Genesis CID download timeout.
+        /// Floor between direct registry-CID re-requests. Above TIMEOUT_GENESIS_BLOCK because
+        /// each request occupies the messenger's single worker for up to that long and the
+        /// task queue is unbounded, so a faster cadence would only build a backlog.
+        static constexpr std::chrono::milliseconds REGISTRY_BLOCK_REQUEST_MIN_INTERVAL = std::chrono::seconds( 20 );
+        static constexpr std::chrono::milliseconds TIMEOUT_ACC_CREATION_BLOCK          = std::chrono::seconds(
+            8 ); ///< Account-creation CID download timeout.
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
@@ -566,6 +592,8 @@ namespace sgns
 
         std::atomic<bool> stop_started_{ false };                   ///< Makes account-bound teardown one-shot.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
+        std::atomic<std::chrono::steady_clock::time_point> last_registry_block_request_{
+            {} }; ///< When the last direct registry-CID request went out; default = never.
         std::atomic<bool> start_deferred_{
             false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
         bool genesis_ready_          = false; ///< Indicates genesis block is ready.

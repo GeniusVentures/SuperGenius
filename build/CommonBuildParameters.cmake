@@ -22,9 +22,9 @@ else()
 endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
-	add_definitions(-DSGNS_DEBUGLOGS)
+    add_definitions(-DSGNS_DEBUGLOGS)
 elseif (DEFINED SGNS_PRINT_LOGS)
-	add_definitions(-DSGNS_DEBUGLOGS)
+    add_definitions(-DSGNS_DEBUGLOGS)
 endif()
 
 set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
@@ -280,6 +280,10 @@ set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecation warnings" FORCE)
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 find_package(RapidJSON CONFIG REQUIRED)
+
+# Enable RapidJSON's std::string overloads (Value::Get<std::string>, SetString(std::string),
+# Document::Parse(std::string), ...)
+add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
 
 # secp256k1
 set(libsecp256k1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")

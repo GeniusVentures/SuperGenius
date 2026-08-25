@@ -12,6 +12,7 @@
 #include <atomic>
 
 #include "IMigrationStep.hpp"
+#include "account/NodeType.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
@@ -46,7 +47,8 @@ namespace sgns
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
-                               std::shared_ptr<GeniusAccount>                                  account );
+                               std::shared_ptr<GeniusAccount>                                  account,
+                               NodeType                                                        node_type );
 
         /**
          * @brief Destroys the migration step.
@@ -129,6 +131,9 @@ namespace sgns
         base::Logger logger_ = base::createLogger( "MigrationStep" );               ///< Logger for this step.
         /// The account must outlive Blockchain, which reads its address in Blockchain::Stop().
         std::shared_ptr<GeniusAccount>  account_;    ///< Local account being migrated.
+        /// Deployment role. Forwarded to Blockchain so an Archive does not self-vote during the
+        /// several minutes this migration keeps a live consensus manager running.
+        NodeType                        node_type_ = NodeType::Light;
         std::shared_ptr<crdt::GlobalDB> db_3_5_0_;   ///< Target 3.5.0 database.
         std::shared_ptr<crdt::GlobalDB> db_3_4_0_;   ///< Legacy 3.4.0 database.
         std::shared_ptr<Blockchain>     blockchain_; ///< Blockchain instance used during migration.

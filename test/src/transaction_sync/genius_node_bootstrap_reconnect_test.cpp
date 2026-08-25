@@ -69,6 +69,19 @@ namespace sgns
     protected:
         static constexpr std::string_view FULL_NODE_PRIVATE_KEY =
             "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780";
+        /**
+         * @brief Fixed PubSub port for the bootstrap full node.
+         *
+         * The client is configured with the bootstrap multiaddress BEFORE the bootstrap
+         * exists, so the port has to be known up front and has to survive the
+         * destroy/recreate cycle in the test body. It must NOT come from the OS ephemeral
+         * pool, and every other node test draws from it (port_seed=0), while libp2p's
+         * listener sets SO_REUSEPORT unconditionally, so re-binding a port another
+         * live process already holds SUCCEEDS silently and the kernel then splits inbound
+         * SYNs between the two listeners by 4-tuple hash.
+         */
+        static constexpr unsigned int kBootstrapPubsubPort = 21000u;
+
         static constexpr std::string_view CLIENT_PRIVATE_KEY =
             "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02";
 
@@ -85,7 +98,15 @@ namespace sgns
             test::removeAllWithRetry( full_config_.BaseWritePath );
             test::removeAllWithRetry( client_config_.BaseWritePath );
 
-            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 0, false ).has_value() );
+            // WriteNetworkConfig can only emit port_seed, and a seed still resolves into the
+            // ephemeral pool.
+            std::filesystem::create_directories( full_config_.BaseWritePath );
+            {
+                std::ofstream config( full_config_.BaseWritePath + "network_config.json" );
+                ASSERT_TRUE( config.good() );
+                config << R"({ "pubsub_port": ")" << kBootstrapPubsubPort
+                       << R"(", "auto_dht": false, "upnp_enabled": false })";
+            }
             ASSERT_TRUE( GeniusNode::WriteSgnsConfig( full_config_.BaseWritePath, "Full", false ).has_value() );
             {
                 std::ofstream config( full_config_.BaseWritePath + "bridge_chains_config.json" );
@@ -102,15 +123,15 @@ namespace sgns
                                               std::chrono::seconds( 50 ),
                                               "bootstrap full node did not become ready" ) );
 
+            // The node must still be booted once here: the PeerId inside bootstrap_address_
+            // comes from the randomly generated, per-directory pubs_processor keypair, so it
+            // can only be learned from a live node. That key file is not deleted before the
+            // node is recreated, so the identity -- and now the port -- are stable.
             bootstrap_address_ = full_node_->GetPubSub()->GetInterfaceAddress();
             ASSERT_FALSE( bootstrap_address_.empty() );
-            ASSERT_NE( full_node_->GetPubsubPort(), 0u );
-            {
-                std::ofstream config( full_config_.BaseWritePath + "network_config.json" );
-                ASSERT_TRUE( config.good() );
-                config << "{ \"pubsub_port\": \"" << full_node_->GetPubsubPort()
-                       << "\", \"auto_dht\": false, \"upnp_enabled\": false }";
-            }
+            // Fails loudly if the pubsub_port override ever regresses and the node silently
+            // falls back to an ephemeral port, which is what made this test flaky.
+            ASSERT_EQ( full_node_->GetPubsubPort(), kBootstrapPubsubPort );
             full_node_.reset();
 
             std::filesystem::create_directories( client_config_.BaseWritePath );

@@ -31,12 +31,12 @@
 #include <string_view>
 #include <vector>
 
-#include <openssl/sha.h>
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
 
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 #include "account/ChainContractPair.hpp"
+#include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -72,9 +72,6 @@ protected:
 
     /** @brief Base mint amount per burn (base units). */
     static constexpr unsigned int kMintAmount = 1u;
-
-    /** @brief PubSub port base for the race fixture (next free block after catchup suite's 40031-40033). */
-    static constexpr unsigned int kNodePortBase = 40041u;
 
     /**
      * @brief Node READY timeout (D-15/Pitfall 2 — 11-node startup cost exceeds the
@@ -177,9 +174,7 @@ protected:
         for ( unsigned int attempt = 0u; attempt < 8u; ++attempt )
         {
             const std::string input = std::string( kSeed ) + std::to_string( index ) + "#" + std::to_string( attempt );
-            std::vector<unsigned char> input_bytes( input.begin(), input.end() );
-            std::vector<unsigned char> digest( SHA256_DIGEST_LENGTH );
-            SHA256( input_bytes.data(), input_bytes.size(), digest.data() );
+            const sgns::base::Hash256 digest = sgns::crypto::sha2_256( input.data(), input.size() );
 
             bool all_zero = true;
             for ( unsigned char byte : digest )
@@ -207,7 +202,7 @@ protected:
         }
         // Unreachable in practice — SHA-256 producing an all-zero digest 8 times running
         // is not something any test run will encounter.
-        return std::string( SHA256_DIGEST_LENGTH * 2u, '1' );
+        return std::string( sgns::base::Hash256::size() * 2u, '1' );
     }
 
     /**
@@ -248,7 +243,8 @@ protected:
         const std::string fork_url = sgns::test::anvil::SepoliaForkUrl();
         spdlog::info( "bridge_race: fork_url={}", fork_url );
 
-        ASSERT_TRUE( s_anvil.Start( fork_url ) ) << "Failed to start anvil subprocess";
+        ASSERT_TRUE( s_anvil.Start( fork_url, sgns::test::anvil::kAnvilPortBandRace ) )
+            << "Failed to start anvil subprocess";
         ASSERT_TRUE( s_anvil.WaitForReady() ) << "Anvil did not become ready";
 
         if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
@@ -321,8 +317,14 @@ protected:
             s_configs[i].TokenID          = sgns::TokenID::FromBytes( { 0x00 } );
             s_configs[i].BaseWritePath    = base_write_path;
 
-            const unsigned int port = kNodePortBase + i;
-            sgns::GeniusNode::WriteNetworkConfig( base_write_path, static_cast<uint16_t>( port ), /*auto_dht=*/true );
+            // port_seed=0 asks the OS for a port. Nothing here needs it up front: the star
+            // bootstrap reads the Full node's live address after construction. The old
+            // 40041+i was a *seed*, not a port -- GenerateRandomPort() expanded it to
+            // 40041-40351, which overlaps both the kernel ephemeral pool (32768-60999) and
+            // the production default band (GeniusNode.cpp:273, seed 40001 -> 40001-40301),
+            // and every bridge_race target derived the same 11 ports because DeriveNodeKey()
+            // yields the same addresses. Same fix the catchup fixture already took.
+            sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/0, /*auto_dht=*/true );
             sgns::GeniusNode::WriteSgnsConfig( base_write_path, node_type, /*is_processor=*/false );
             WriteBridgeChainsConfig( base_write_path );
         };

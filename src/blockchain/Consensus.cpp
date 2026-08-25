@@ -100,7 +100,8 @@ namespace sgns
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                              Signer                                     signer,
                                                              std::string                                address,
-                                                             std::string consensus_topic )
+                                                             std::string                                consensus_topic,
+                                                             NodeType                                   node_type )
     {
         if ( !registry )
         {
@@ -133,7 +134,8 @@ namespace sgns
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
                                                                                  std::move( address ),
-                                                                                 std::move( consensus_topic ) ) );
+                                                                                 std::move( consensus_topic ),
+                                                                                 node_type ) );
         instance->certificate_work_journal_ = instance->db_->GetWorkJournal();
 
         if ( !instance->certificate_work_journal_ )
@@ -159,6 +161,10 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}",
                                          __func__,
                                          instance->consensus_messages_topic_ );
+        ConsensusManagerLogger()->info( "{}: role={} self-voting={}",
+                                        __func__,
+                                        NodeTypeToString( node_type ),
+                                        instance->participates_in_consensus_ ? "enabled" : "disabled" );
         instance->StartRoundTimer();
         if ( !instance->RegisterCertificateFilter() )
         {
@@ -174,12 +180,16 @@ namespace sgns
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         Signer                                     signer,
                                         std::string                                address,
-                                        std::string                                consensus_topic ) :
+                                        std::string                                consensus_topic,
+                                        NodeType                                   node_type ) :
         registry_( std::move( registry ) ),       //
         db_( std::move( db ) ),                   //
         pubsub_( std::move( pubsub ) ),           //
         signer_( std::move( signer ) ),           //
         account_address_( std::move( address ) ), //
+        // ::sgns:: qualified: the member accessor of the same name would otherwise shadow the
+        // free predicate in class scope.
+        participates_in_consensus_( ::sgns::ParticipatesInConsensus( node_type ) ),
         consensus_messages_topic_( fmt::format( "{}{}{}",
                                                 CONSENSUS_CHANNEL_PREFIX,
                                                 sgns::version::GetNetAndVersionAppendix(),
@@ -615,6 +625,17 @@ namespace sgns
         for ( const auto &vote : pending_votes )
         {
             HandleVote( vote );
+        }
+
+        // Archive nodes are passive replicas
+        if ( should_vote && !participates_in_consensus_ )
+        {
+            ConsensusManagerLogger()->debug( "{}: abstaining from self-vote for hash {}, id={}, slot_key={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal_id.substr( 0, 8 ),
+                                             slot_key );
+            should_vote = false;
         }
 
         if ( should_vote )
@@ -1674,6 +1695,15 @@ namespace sgns
 
     void ConsensusManager::ProcessCertificates()
     {
+        // Defense in depth. Aggregation is otherwise gated only by validator-registry membership,
+        // which an Archive normally never attains precisely because it never votes. That is a
+        // side effect, not a guarantee — a genesis-seeded Archive (SetAdditionalGenesisValidator-
+        // Addresses) is ACTIVE without ever having voted. Refuse by role as well as by registry.
+        if ( !participates_in_consensus_ )
+        {
+            return;
+        }
+
         std::vector<ProposalState> to_process;
         {
             std::lock_guard lock( proposals_mutex_ );

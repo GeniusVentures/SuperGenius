@@ -80,7 +80,8 @@ namespace sgns
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                  std::shared_ptr<GeniusAccount>             account,
                                                  std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                 BlockchainCallback                         callback )
+                                                 BlockchainCallback                         callback,
+                                                 NodeType                                   node_type )
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
@@ -129,7 +130,7 @@ namespace sgns
             {
                 if ( auto strong = weak_instance.lock() )
                 {
-                    (void) strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                    (void) strong->account_->RequestRegularBlock( TIMEOUT_GENESIS_BLOCK, cid, std::move( callback ) );
                 }
             },
             [weak_instance]( bool initialized )
@@ -174,7 +175,9 @@ namespace sgns
                 }
                 return outcome::failure( std::errc::owner_dead );
             },
-            instance->account_->GetAddress() );
+            instance->account_->GetAddress(),
+            /*consensus_topic=*/"",
+            node_type );
         if ( !instance->consensus_manager_ )
         {
             return nullptr;
@@ -188,7 +191,10 @@ namespace sgns
                 {
                     return outcome::failure( std::errc::owner_dead );
                 }
-                if ( !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
+                // Role first: an Archive must not author registry batches even if it somehow
+                // became an active validator (e.g. seeded into the genesis validator list).
+                if ( !strong->consensus_manager_->ParticipatesInConsensus() ||
+                     !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
                 {
                     return outcome::success();
                 }
@@ -475,7 +481,11 @@ namespace sgns
             logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
                            account_->GetAddress().substr( 0, 8 ) );
 
+            // Passive pass: resolves immediately if a registry head already reached us.
             validator_registry_->RetryInitializationIfNeeded();
+            // Active pass: the passive pass reads only our own head list, and nothing
+            // populates it until a full node volunteers a broadcast. Ask for one.
+            RequestValidatorRegistryWhileDeferred();
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
         start_deferred_.store( false );
@@ -574,7 +584,7 @@ namespace sgns
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
             return account_->RequestAccountCreation(
-                TIMEOUT_ACC_CREATION_BLOCK_MS,
+                TIMEOUT_ACC_CREATION_BLOCK,
                 [weakptr( weak_from_this() )]( outcome::result<std::string> creation_cid_res )
                 {
                     if ( auto self = weakptr.lock() )
@@ -599,7 +609,7 @@ namespace sgns
         logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
                        account_->GetAddress().substr( 0, 8 ) );
         auto genesis_request_result = account_->RequestGenesis(
-            TIMEOUT_GENESIS_BLOCK_MS,
+            TIMEOUT_GENESIS_BLOCK,
             [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
             {
                 if ( auto self = weakptr.lock() )
@@ -657,10 +667,42 @@ namespace sgns
 
     void Blockchain::RequestValidatorRegistry()
     {
-        if ( account_->RequestValidatorRegistry( TIMEOUT_GENESIS_BLOCK_MS, {} ).has_error() )
+        if ( account_->RequestValidatorRegistry( TIMEOUT_GENESIS_BLOCK, {} ).has_error() )
         {
             logger_->warn( "[{}] Failed to request validator registry during blockchain init",
                            account_->GetAddress().substr( 0, 8 ) );
+        }
+    }
+
+    void Blockchain::RequestValidatorRegistryWhileDeferred()
+    {
+        const std::unordered_set<std::string> topics{ std::string( ValidatorRegistry::ValidatorTopic() ) };
+
+        auto request_result = account_->RequestHeads( topics );
+        if ( request_result.has_error() )
+        {
+            // Expected until a peer has grafted onto the requests topic.
+            logger_->debug( "[{}] Validator registry head request not sent yet: {}",
+                            account_->GetAddress().substr( 0, 8 ),
+                            request_result.error().message() );
+            return;
+        }
+
+        logger_->info( "[{}] Requested head re-announcement for topic {}",
+                       account_->GetAddress().substr( 0, 8 ),
+                       ValidatorRegistry::ValidatorTopic() );
+
+        // A peer exists (the head request went out), so the direct registry-CID request can
+        // now succeed.
+        const auto now  = std::chrono::steady_clock::now();
+        auto       last = last_registry_block_request_.load( std::memory_order_relaxed );
+        if ( ( last == std::chrono::steady_clock::time_point{} ) ||
+             ( now - last >= REGISTRY_BLOCK_REQUEST_MIN_INTERVAL ) )
+        {
+            if ( last_registry_block_request_.compare_exchange_strong( last, now ) )
+            {
+                RequestValidatorRegistry();
+            }
         }
     }
 
@@ -774,7 +816,7 @@ namespace sgns
         logger_->debug( "[{}] Informing genesis result response with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
                         genesis_result.value() );
-        WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK_MS );
+        WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK );
         return outcome::success();
     }
 
@@ -791,17 +833,17 @@ namespace sgns
         logger_->debug( "[{}] Informing account creation response with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
                         creation_result.value() );
-        WatchCIDDownload( creation_result.value(),
-                          Error::ACCOUNT_CREATION_BLOCK_MISSING,
-                          TIMEOUT_ACC_CREATION_BLOCK_MS );
+        WatchCIDDownload( creation_result.value(), Error::ACCOUNT_CREATION_BLOCK_MISSING, TIMEOUT_ACC_CREATION_BLOCK );
 
         return outcome::success();
     }
 
-    void Blockchain::WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms )
+    void Blockchain::WatchCIDDownload( const std::string        &cid,
+                                       Error                     error_on_failure,
+                                       std::chrono::milliseconds timeout )
     {
         std::thread(
-            [weakptr = weak_from_this(), cid, error_on_failure, timeout_ms]
+            [weakptr = weak_from_this(), cid, error_on_failure, timeout]
             {
                 auto cid_result = CID::fromString( cid );
                 if ( cid_result.has_failure() )
@@ -815,7 +857,7 @@ namespace sgns
                     return;
                 }
 
-                auto deadline       = std::chrono::steady_clock::now() + std::chrono::milliseconds( timeout_ms );
+                auto deadline       = std::chrono::steady_clock::now() + timeout;
                 auto sleep_interval = std::chrono::milliseconds( 200 );
 
                 while ( std::chrono::steady_clock::now() < deadline )
@@ -941,7 +983,7 @@ namespace sgns
         }
 
         auto result = account_->RequestAccountCreation(
-            TIMEOUT_ACC_CREATION_BLOCK_MS,
+            TIMEOUT_ACC_CREATION_BLOCK,
             [weakself = weak_from_this()]( outcome::result<std::string> creation_cid_res )
             {
                 if ( auto s = weakself.lock() )
