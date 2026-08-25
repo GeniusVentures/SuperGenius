@@ -39,7 +39,7 @@
 - [ ] **TEST-03**: A propagation test proves that PubSub recipients do not write the certificate key and do not time out synchronizing a CID they wrote themselves.
 - [ ] **TEST-04**: Restart tests cover recovery before certificate arrival, after durable certificate acceptance, and during mint application without a changed vote or duplicate mint.
 - [ ] **TEST-05**: Publisher-loss tests cover persistence-before-advertisement and deterministic failover without conflicting slot records.
-- [ ] **TEST-06**: The finality tests exercise the production PubSub, CRDT, persistence, and mint ingress paths rather than direct local-author shortcuts.
+- [x] **TEST-06**: The finality tests exercise the production PubSub, CRDT, persistence, and mint ingress paths rather than direct local-author shortcuts.
 
 ## Future Requirements
 
@@ -80,7 +80,7 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | TEST-03 | Phase 12 | Pending |
 | TEST-04 | Phase 12 | Pending |
 | TEST-05 | Phase 12 | Pending |
-| TEST-06 | Phase 12 | Pending |
+| TEST-06 | Phase 12 | Complete |
 
 **Coverage:**
 
