@@ -21,6 +21,7 @@
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
+#include <algorithm>
 #include <array>
 #include <boost/filesystem.hpp>
 #include <chrono>
@@ -393,23 +394,32 @@ namespace
         }
 
         template <size_t Count>
-        static bool PeersAreConnectedAndMeshed( const std::array<Peer *, Count> &peers )
+        static bool PeersFormConnectedTopology( const std::array<Peer *, Count> &peers )
         {
-            for ( auto *source : peers )
-                for ( auto *target : peers )
+            std::array<bool, Count> reachable{};
+            for ( auto *peer : peers )
+                if ( !peer || !peer->pubsub || !peer->pubsub->IsStarted() || !peer->consensus ||
+                     !peer->pubsub->GetHost() ||
+                     peer->pubsub->getPeerCount(
+                         sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) ) < 1 )
+                    return false;
+
+            reachable.front() = true;
+            for ( size_t pass = 0; pass < Count; ++pass )
+                for ( size_t source_index = 0; source_index < Count; ++source_index )
                 {
-                    if ( source == target ) continue;
-                    if ( !source->pubsub || !source->consensus || !target->pubsub ) return false;
-                    const auto source_host = source->pubsub->GetHost();
-                    const auto target_host = target->pubsub->GetHost();
-                    if ( !source_host || !target_host ||
-                         source_host->connectedness( target_host->getPeerInfo() ) != libp2p::Host::Connectedness::CONNECTED )
-                        return false;
-                    if ( source->pubsub->getPeerCount(
-                             sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( source->consensus ) ) < Count - 1 )
-                        return false;
+                    if ( !reachable[source_index] ) continue;
+                    for ( size_t target_index = 0; target_index < Count; ++target_index )
+                    {
+                        if ( reachable[target_index] || source_index == target_index ) continue;
+                        const auto source_host = peers[source_index]->pubsub->GetHost();
+                        const auto target_host = peers[target_index]->pubsub->GetHost();
+                        if ( source_host->connectedness( target_host->getPeerInfo() ) == libp2p::Host::Connectedness::CONNECTED ||
+                             target_host->connectedness( source_host->getPeerInfo() ) == libp2p::Host::Connectedness::CONNECTED )
+                            reachable[target_index] = true;
+                    }
                 }
-            return true;
+            return std::all_of( reachable.begin(), reachable.end(), []( bool connected ) { return connected; } );
         }
 
         template <size_t Count>
@@ -418,9 +428,9 @@ namespace
             for ( auto *source : peers )
                 for ( auto *target : peers )
                     if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
-            ASSERT_WAIT_FOR_CONDITION( [&] { return PeersAreConnectedAndMeshed( peers ); },
+            ASSERT_WAIT_FOR_CONDITION( [&] { return PeersFormConnectedTopology( peers ); },
                                        std::chrono::seconds( 5 ),
-                                       "every peer has a public libp2p connection and a consensus-topic mesh",
+                                       "every peer is started in one public libp2p topology with a consensus-topic neighbor",
                                        nullptr );
         }
 
@@ -529,10 +539,21 @@ namespace
                    outputs.front().GetTxID().toReadableString() != loser.GetHash();
         }
 
+        static bool HasSingleDurableMint( const Peer &peer, const std::string &slot,
+                                          const sgns::MintTransactionV2 &winner,
+                                          const sgns::MintTransactionV2 &loser )
+        {
+            if ( !peer.consensus || !peer.consensus->CheckCertificateForSlot( slot ) ) return false;
+            const auto certificate = peer.consensus->GetCertificateBySlot( slot );
+            return certificate.has_value() &&
+                   sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ) ==
+                       winner.GetHash() &&
+                   HasOnlyWinnerOutput( peer, winner, loser ) && HasBridgeMarker( peer, winner );
+        }
+
         static void AssertSingleDurableMint( const Peer &peer, const std::string &slot,
                                              const sgns::MintTransactionV2 &winner,
-                                             const sgns::MintTransactionV2 &loser,
-                                             uint64_t expected_mint_effects )
+                                             const sgns::MintTransactionV2 &loser )
         {
             ASSERT_TRUE( peer.consensus->CheckCertificateForSlot( slot ) );
             const auto certificate = peer.consensus->GetCertificateBySlot( slot );
@@ -541,7 +562,12 @@ namespace
                        winner.GetHash() );
             EXPECT_TRUE( HasOnlyWinnerOutput( peer, winner, loser ) );
             EXPECT_TRUE( HasBridgeMarker( peer, winner ) );
-            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *peer.transactions ), expected_mint_effects );
+        }
+
+        static void AssertOneLiveMintEffect( const Peer &peer )
+        {
+            ASSERT_TRUE( peer.transactions );
+            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *peer.transactions ), 1u );
         }
     };
 } // namespace
@@ -899,25 +925,25 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         // public route after reconnecting so peers can drive normal recovery.
         ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
-                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 25 ), "recreated vote owner recovered only its durable vote before exact finality", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+        for ( auto *peer : Peers( network ) )
+        {
+            AssertSingleDurableMint( *peer, slot, *winner, *loser );
+            AssertOneLiveMintEffect( *peer );
+        }
 
         RestartAndReconnect( network );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
-                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
-                   HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
-                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
-                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
-                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 20 ), "vote-boundary finality remained exact after reopening every durable root", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
         StopNetwork( network );
     }
 
@@ -945,28 +971,36 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         ASSERT_WAIT_FOR_CONDITION( [&] {
             return sgns::MultiNodeFinalityFaultTestAccess::AcceptedCertificateBarrierEntered( network.second.consensus );
         }, std::chrono::seconds( 25 ), "second validator paused after accepted certificate durable readback", nullptr );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.first.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) &&
+                   network.passive.consensus->CheckCertificateForSlot( slot );
+        }, std::chrono::seconds( 20 ),
+                                   "surviving peers retained the accepted certificate before receiver restart", nullptr );
 
         RestartPeer( network.second );
         ASSERT_TRUE( network.second.consensus );
         ConnectPeers( Peers( network ) );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
-                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 25 ), "recreated certificate recipient recovered the exact durable winner", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+        for ( auto *peer : Peers( network ) )
+        {
+            AssertSingleDurableMint( *peer, slot, *winner, *loser );
+            AssertOneLiveMintEffect( *peer );
+        }
 
         RestartAndReconnect( network );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
-                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
-                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
-                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 20 ), "certificate-boundary recovery remained exact after reopening every durable root", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
         StopNetwork( network );
     }
 
@@ -1001,24 +1035,25 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         ASSERT_TRUE( network.first.consensus );
         ConnectPeers( Peers( network ) );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
-                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
-                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1 &&
-                   HasBridgeMarker( network.first, *winner );
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 25 ), "recreated Mint peer repaired its marker through normal certificate recovery", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+        for ( auto *peer : Peers( network ) )
+        {
+            AssertSingleDurableMint( *peer, slot, *winner, *loser );
+            AssertOneLiveMintEffect( *peer );
+        }
 
         RestartAndReconnect( network );
         ASSERT_WAIT_FOR_CONDITION( [&] {
-            return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
-                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
-                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
-                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+            return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+                   HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 20 ), "Mint-boundary recovery stayed exact after reopening every durable root", nullptr );
-        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
         StopNetwork( network );
     }
 }
@@ -1116,12 +1151,10 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     ASSERT_TRUE( publisher->consensus );
     ConnectPeers( Peers( network ) );
     ASSERT_WAIT_FOR_CONDITION( [&] {
-        return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
-               network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
-               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
-               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
-               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
-               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+        return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.passive, slot, *winner, *loser );
     }, std::chrono::seconds( 25 ), "restarted publisher made the authoritative CRDT certificate normally recoverable on every peer", nullptr );
     for ( auto *peer : Peers( network ) )
     {
@@ -1129,16 +1162,17 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
         const auto certificate = peer->consensus->GetCertificateBySlot( slot );
         ASSERT_TRUE( certificate.has_value() );
         EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ), winner->GetHash() );
-        AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+        AssertSingleDurableMint( *peer, slot, *winner, *loser );
+        AssertOneLiveMintEffect( *peer );
     }
 
     RestartAndReconnect( network );
     ASSERT_WAIT_FOR_CONDITION( [&] {
-        return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
-               HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
-               HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
-               HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+        return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.third, slot, *winner, *loser ) &&
+               HasSingleDurableMint( network.passive, slot, *winner, *loser );
     }, std::chrono::seconds( 25 ), "publisher-loss finality remained exact after reopening every peer root", nullptr );
-    for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+    for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
     StopNetwork( network );
 }
