@@ -40,6 +40,12 @@ namespace sgns
             return blockchain ? blockchain->consensus_manager_ : nullptr;
         }
 
+        static const std::string &ConsensusTopic( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            static const std::string empty;
+            return manager ? manager->consensus_messages_topic_ : empty;
+        }
+
         static uint64_t VotePublications( const std::shared_ptr<ConsensusManager> &manager )
         {
             if ( !manager ) return 0;
@@ -386,11 +392,46 @@ namespace
             StopPeer( network.passive );
         }
 
-        static void ConnectPeers( const std::array<Peer *, 4> &peers )
+        template <size_t Count>
+        static bool PeersAreConnectedAndMeshed( const std::array<Peer *, Count> &peers )
+        {
+            for ( auto *source : peers )
+                for ( auto *target : peers )
+                {
+                    if ( source == target ) continue;
+                    if ( !source->pubsub || !source->consensus || !target->pubsub ) return false;
+                    const auto source_host = source->pubsub->GetHost();
+                    const auto target_host = target->pubsub->GetHost();
+                    if ( !source_host || !target_host ||
+                         source_host->connectedness( target_host->getPeerInfo() ) != libp2p::Host::Connectedness::CONNECTED )
+                        return false;
+                    if ( source->pubsub->getPeerCount(
+                             sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( source->consensus ) ) < Count - 1 )
+                        return false;
+                }
+            return true;
+        }
+
+        template <size_t Count>
+        static void ConnectAndWaitForPeers( const std::array<Peer *, Count> &peers )
         {
             for ( auto *source : peers )
                 for ( auto *target : peers )
                     if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+            ASSERT_WAIT_FOR_CONDITION( [&] { return PeersAreConnectedAndMeshed( peers ); },
+                                       std::chrono::seconds( 5 ),
+                                       "every peer has a public libp2p connection and a consensus-topic mesh",
+                                       nullptr );
+        }
+
+        static void ConnectPeers( const std::array<Peer *, 4> &peers )
+        {
+            ConnectAndWaitForPeers( peers );
+        }
+
+        static void ConnectValidatorPeers( const std::array<Peer *, 3> &peers )
+        {
+            ConnectAndWaitForPeers( peers );
         }
 
         static sgns::ValidatorRegistry::RegistryUpdate RegistryUpdate( const std::array<Peer *, 3> &validators )
@@ -655,9 +696,7 @@ TEST_F( FinalityFaultNetwork, SameBurnContentionUsesOneCanonicalSlotAndExactMint
 
     // Named real-peer barrier: the three validators connect only after both
     // public proposal submissions have completed on their isolated peers.
-    for ( auto *source : { &first, &second, &third } )
-        for ( auto *target : { &first, &second, &third } )
-            if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+    ConnectValidatorPeers( { &first, &second, &third } );
     // GossipPubSub does not replay publications made before a peer link exists.
     // Re-advertise the same public proposals after the real link barrier; this
     // exercises ordinary production ingress without synthesizing delivery.
@@ -759,9 +798,7 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
     // Named topology barrier: only validators join before the winning public
     // submission. The passive recipient remains disconnected until certificate
     // persistence and the post-active-vote late-submission boundary are proven.
-    for ( auto *source : { &first, &second, &third } )
-        for ( auto *target : { &first, &second, &third } )
-            if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+    ConnectValidatorPeers( { &first, &second, &third } );
     ASSERT_TRUE( first.consensus->SubmitProposal( winner_proposal.value() ).has_value() );
     ASSERT_WAIT_FOR_CONDITION( [&] {
         return sgns::MultiNodeFinalityFaultTestAccess::VotePublications( first.consensus ) > 0 &&
