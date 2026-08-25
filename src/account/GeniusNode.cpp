@@ -6,6 +6,7 @@
  */
 
 #include <chrono>
+#include <future>
 #include <stdexcept>
 #include <thread>
 #include <memory>
@@ -15,6 +16,7 @@
 #include <set>
 #include <string_view>
 
+#include <boost/asio/post.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -3685,6 +3687,50 @@ namespace sgns
             interval ) );
     }
 
+    libp2p::Host::Connectedness GeniusNode::HostConnectedness( const libp2p::peer::PeerInfo &peer ) const
+    {
+        if ( !pubsub_ )
+        {
+            return libp2p::Host::Connectedness::NOT_CONNECTED;
+        }
+
+        auto host = pubsub_->GetHost();
+        if ( !host )
+        {
+            return libp2p::Host::Connectedness::NOT_CONNECTED;
+        }
+
+        auto context = pubsub_->GetAsioContext();
+
+        // No context, a stopped context, or a call already made from the pubsub
+        // thread: post-and-wait would never complete, so read inline. Reading
+        // inline from the owning thread is exactly what libp2p expects.
+        if ( !context || context->stopped() || context->get_executor().running_in_this_thread() )
+        {
+            return host->connectedness( peer );
+        }
+
+        auto promise = std::make_shared<std::promise<libp2p::Host::Connectedness>>();
+        auto future  = promise->get_future();
+
+        boost::asio::post( *context,
+                           [host, peer, promise]()
+                           {
+                               promise->set_value( host->connectedness( peer ) );
+                           } );
+
+        // Bounded wait: during shutdown the context can stop between the
+        // stopped() check above and the post, leaving the task unrun. Report
+        // NOT_CONNECTED rather than blocking a scheduler thread forever.
+        if ( future.wait_for( std::chrono::seconds( 5 ) ) != std::future_status::ready )
+        {
+            node_logger_->warn( "HostConnectedness: timed out querying connectedness for {}",
+                                peer.id.toBase58() );
+            return libp2p::Host::Connectedness::NOT_CONNECTED;
+        }
+        return future.get();
+    }
+
     void GeniusNode::PerformHealthCheck()
     {
         if ( shutdown_started_.load() )
@@ -3692,14 +3738,12 @@ namespace sgns
             return;
         }
 
-        auto host = pubsub_->GetHost();
-
         // Check both fullnodes and peers
         for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
         {
             for ( const auto &peer_info : *infos )
             {
-                auto connectedness = host->connectedness( peer_info );
+                auto connectedness = HostConnectedness( peer_info );
                 if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
                      connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
                 {
@@ -3803,7 +3847,7 @@ namespace sgns
             return;
         }
 
-        auto connectedness = pubsub_->GetHost()->connectedness( *peer_info_ptr );
+        auto connectedness = HostConnectedness( *peer_info_ptr );
         if ( connectedness == libp2p::Host::Connectedness::CONNECTED )
         {
             node_logger_->info( "Bootstrap fullnode {} already connected, resetting attempt counter",
