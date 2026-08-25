@@ -1186,6 +1186,10 @@ const auto &proposal_id = proposal.proposal_id();
 
     outcome::result<bool> ConsensusManager::ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key )
     {
+        {
+            std::lock_guard lock( fault_test_mutex_ );
+            ++fault_test_counters_.active_vote_release_attempts;
+        }
         if ( slot_key.empty() )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -1222,6 +1226,10 @@ const auto &proposal_id = proposal.proposal_id();
         }
         std::lock_guard lock( proposals_mutex_ );
         active_votes_.erase( slot_key );
+        {
+            std::lock_guard fault_lock( fault_test_mutex_ );
+            ++fault_test_counters_.active_vote_release_successes;
+        }
         return true;
     }
 
