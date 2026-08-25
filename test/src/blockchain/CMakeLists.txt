@@ -54,7 +54,7 @@ target_link_libraries(multi_node_finality_fault_compatibility_smoke_test
     rapidjson
     base_crdt_test
 )
-set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120)
+set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
 
 addtest(multi_node_finality_fault_test
     multi_node_finality_fault_test.cpp
@@ -65,7 +65,7 @@ target_link_libraries(multi_node_finality_fault_test
     rapidjson
     base_crdt_test
 )
-set_tests_properties(multi_node_finality_fault_test PROPERTIES TIMEOUT 300)
+set_tests_properties(multi_node_finality_fault_test PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE)
 
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
