@@ -2044,6 +2044,20 @@ namespace sgns
         return outcome::success();
     }
 
+    void TransactionManager::EnterFinalityFaultBarrier()
+    {
+        std::unique_lock lock( fault_test_mutex_ );
+        if ( !mint_effects_barrier_.armed )
+        {
+            return;
+        }
+        mint_effects_barrier_.entered = true;
+        fault_test_cv_.notify_all();
+        (void) fault_test_cv_.wait_for(
+            lock, std::chrono::seconds( 30 ), [&] { return mint_effects_barrier_.released || !mint_effects_barrier_.armed; } );
+        mint_effects_barrier_.entered = false;
+    }
+
     outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
@@ -5421,6 +5435,11 @@ namespace sgns
                     }
 
                     BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                    {
+                        std::lock_guard lock( fault_test_mutex_ );
+                        ++mint_effects_for_test_;
+                    }
+                    EnterFinalityFaultBarrier();
                     BOOST_OUTCOME_TRY( PersistBridgeExecutedMarker( *mint_tx ) );
 
                     {
