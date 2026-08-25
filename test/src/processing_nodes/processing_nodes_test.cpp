@@ -336,7 +336,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
     ASSERT_EQ( 18, cost );
 }
 
@@ -346,7 +346,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
                 garbage
                )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
     ASSERT_EQ( 0, cost );
 }
 
@@ -490,7 +490,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
 
     auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),

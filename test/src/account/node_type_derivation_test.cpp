@@ -66,10 +66,10 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );
-    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
-        [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::seconds( 50 ),
-        "node-type test node did not finish initialization" ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
+                                                           { return node->GetState() == GeniusNode::NodeState::READY; },
+                                                           std::chrono::seconds( 50 ),
+                                                           "node-type test node did not finish initialization" ) );
 }
 
 // Scene B (CONTEXT D-04): New(dev_config, AccountSource) preserves nullptr-on-failure.
@@ -88,4 +88,53 @@ TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ "not-a-valid-hex-key" } );
     EXPECT_EQ( node, nullptr );
+}
+
+// Scene C (PROP-02): Archive is a passive replica. It replicates network-wide data like Full
+// (ReplicatesAllAccounts stays true, so the full-node topic subscription and blockchain mode are
+// kept), but it performs no work: is_processor is forced off even though the config asks for it.
+// IsFullNode() is a role check, so it is false here — Archive replicates like Full, it is not Full.
+TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
+{
+    UseMemorySecureStorage();
+    auto       base       = MakeTempDir( "ntd_archive" );
+    const auto dev_config = MakeDevConfig( base );
+    GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                 /*node_type=*/"Archive",
+                                 /*is_processor=*/true, // deliberately on; Archive must override it
+                                 /*rpc_catchup=*/false );
+
+    auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
+    ASSERT_NE( node, nullptr );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+
+    EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Archive );
+    EXPECT_FALSE( node->IsFullNode() ) << "Archive replicates like Full but is not a Full node";
+    EXPECT_TRUE( ReplicatesAllAccounts( node->GetNodeType() ) )
+        << "Archive must replicate network-wide data like Full";
+    EXPECT_FALSE( node->IsProcessor() ) << "Archive must not process, even with is_processor=true";
+
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
+                                                           { return node->GetState() == GeniusNode::NodeState::READY; },
+                                                           std::chrono::seconds( 50 ),
+                                                           "archive node did not finish initialization" ) );
+}
+
+// The role predicates are the whole point of replacing the bool: Full and Archive agree on
+// replication and disagree on participation, which a single bool cannot express.
+TEST( NodeTypeDerivation, RolePredicatesSplitReplicationFromParticipation )
+{
+    EXPECT_TRUE( ReplicatesAllAccounts( NodeType::Full ) );
+    EXPECT_TRUE( ReplicatesAllAccounts( NodeType::Archive ) );
+    EXPECT_FALSE( ReplicatesAllAccounts( NodeType::Light ) );
+
+    EXPECT_TRUE( ParticipatesInConsensus( NodeType::Full ) );
+    EXPECT_FALSE( ParticipatesInConsensus( NodeType::Archive ) );
+    EXPECT_TRUE( ParticipatesInConsensus( NodeType::Light ) );
+
+    EXPECT_EQ( NodeTypeFromString( "ARCHIVE" ), NodeType::Archive );
+    EXPECT_EQ( NodeTypeFromString( "Archive" ), NodeType::Archive );
+    EXPECT_EQ( NodeTypeToString( NodeType::Archive ), "archive" );
+    EXPECT_EQ( NodeTypeFromString( "validator" ), std::nullopt );
 }

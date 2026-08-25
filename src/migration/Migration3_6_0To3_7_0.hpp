@@ -8,6 +8,7 @@
 #define SGNS_MIGRATION_3_6_0_TO_3_7_0_HPP
 
 #include "IMigrationStep.hpp"
+#include "account/NodeType.hpp"
 #include "base/logger.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -43,7 +44,7 @@ namespace sgns
          * @param[in] writeBasePath Base path containing versioned node database directories.
          * @param[in] base58key Base58 node key suffix used to locate the legacy and target databases.
          * @param[in] account Local account used to configure storage and submit the migration claim.
-         * @param[in] is_full_node Whether the node is running as a full node during migration.
+         * @param[in] node_type Deployment role of the node during migration.
          */
         Migration3_6_0To3_7_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
@@ -53,7 +54,7 @@ namespace sgns
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
                                std::shared_ptr<GeniusAccount>                                  account,
-                               bool                                                            is_full_node );
+                               NodeType                                                        node_type );
 
         /**
          * @brief Returns the source schema version handled by this step.
@@ -141,7 +142,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>     db_3_7_0_;            ///< Target 3.7.0 database.
         std::shared_ptr<Blockchain>         blockchain_;          ///< Blockchain instance used during migration.
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction manager used for the migration claim.
-        bool                                is_full_node_ = false; ///< Whether this node is a full node.
+        NodeType                            node_type_ = NodeType::Light;          ///< Deployment role of this node.
         std::atomic<Status>                 blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 }
