@@ -53,8 +53,8 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
         static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
             5 ); ///< Unified timeout for all nonce requests
 
@@ -191,8 +191,6 @@ namespace sgns
          * selects UTXOs, reserves them, and signs the transaction.
          *
          * @param[in] amount  Total amount to lock in escrow.
-         * @param[in] dev_addr  Developer address that receives the remainder after peer payouts.
-         * @param[in] peers_cut  Multiplier (as a TokenAmount) applied to the escrow amount to calculate the per-peer share.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
          *
@@ -342,6 +340,35 @@ namespace sgns
 
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
+
+        /// Destination of the burned fraction of an escrow payout.
+        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+
+        /**
+         * @brief Apportions an escrow amount across contributing peers, their developers and the burn.
+         *
+         * Each subtask result names the peer that did the work plus the developer of the app that
+         * ran it, so a single job whose subtasks were processed by different apps pays each
+         * developer its own cut. The per-result share is split by that result's @c developer_cut
+         * and minted in that result's token; only the burn output uses the escrow token.
+         *
+         * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
+         * @param[in] escrow_amount Total amount locked by the escrow hold.
+         * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
+         * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
+         * @return Outputs ordered peers-by-subtask-id, developers-by-address, burn last; the burn
+         *         output is always present, zero-valued peer and developer credits are omitted.
+         */
+        static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
+            const SGProcessing::TaskResult &task_result,
+            uint64_t                        escrow_amount,
+            const TokenID                  &escrow_token_id,
+            uint64_t                        burn_basis_points );
+
+        friend class PayoutOutputsTestAccess;
 
         struct PendingTransactionWait
         {
