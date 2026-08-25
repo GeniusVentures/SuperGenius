@@ -6,6 +6,7 @@
 
 #include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/TrustStartupController.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
 
@@ -63,12 +64,14 @@ namespace sgns
             const auto canonical = manifest.Canonicalized();
             if ( !canonical )
             {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: Canonicalized failed\n" );
                 return outcome::failure( std::errc::invalid_argument );
             }
             const auto fingerprint = canonical->Fingerprint();
             const auto payload     = canonical->CanonicalBytes();
             if ( !fingerprint || !payload )
             {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: Fingerprint/CanonicalBytes failed\n" );
                 return outcome::failure( std::errc::invalid_argument );
             }
 
@@ -83,6 +86,7 @@ namespace sgns
             const auto bytes = core.CanonicalBytes();
             if ( !bytes )
             {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: core bytes failed\n" );
                 return outcome::failure( std::errc::invalid_argument );
             }
             auto submitted = node->secure_crdt_->SubmitCandidateApproval(
@@ -92,6 +96,9 @@ namespace sgns
                   node->account_->Sign( *bytes ) } );
             if ( submitted.has_error() )
             {
+                fprintf( stderr,
+                         "ApproveConfiguredTrustGenesis: submit failed: %s\n",
+                         submitted.error().message().c_str() );
                 return submitted.error();
             }
             return outcome::success();
@@ -109,6 +116,18 @@ namespace sgns
                 return confirmed.error();
             }
             return outcome::success();
+        }
+
+        /// Drives the node's trust startup controller through one refresh pass. A local
+        /// genesis approval submitted via ApproveConfiguredTrustGenesis does not fire the
+        /// (remote-delta) candidate callback, so tests nudge the controller explicitly.
+        /// No-op while the controller has not been created yet.
+        static void RefreshTrust( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( node && node->trust_startup_controller_ )
+            {
+                (void)node->trust_startup_controller_->Refresh();
+            }
         }
     };
 } // namespace sgns
