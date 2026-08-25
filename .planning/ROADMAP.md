@@ -30,7 +30,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 9: Durable One-Vote Finality** - Lock each validator to one recoverable, non-overlapping vote per canonical slot. (completed 2026-08-20)
 - [x] **Phase 10: Authoritative Slot Certificate Publication** - Persist and publish `/cert/<slot-id>` through deterministic, recoverable protocol authority. (completed 2026-08-21)
 - [x] **Phase 11: Convergent Certificate Consumption & Mint Recovery** - Consume accepted slot certificates once and recover mint application safely. (completed 2026-08-24)
-- [ ] **Phase 12: Multi-Node Finality Fault Proof** - Prove the complete production path under contention, loss, delayed delivery, and restart.
+- [x] **Phase 12: Multi-Node Finality Fault Proof** - Prove the complete production path under contention, loss, delayed delivery, and restart. (completed 2026-08-25)
 
 ## Phase Details
 
@@ -133,7 +133,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 12-03-PLAN.md — Prove restart-boundary recovery and persistence-before-advertisement publisher failover.
+- [x] 12-03-PLAN.md — Prove restart-boundary recovery and persistence-before-advertisement publisher failover.
 
 ## Progress
 
@@ -148,7 +148,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 2/3 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 3/3 | Complete   | 2026-08-25 |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*

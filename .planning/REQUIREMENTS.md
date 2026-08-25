@@ -37,8 +37,8 @@
 - [x] **TEST-01**: A multi-node test proves that differently sourced/proposed mints for one burn contend for one slot and produce one authoritative certificate with one winning proposal.
 - [x] **TEST-02**: A regression test proves that a late contender after an earlier slot vote or certificate cannot obtain a second usable vote or certificate for that slot.
 - [x] **TEST-03**: A propagation test proves that PubSub recipients do not write the certificate key and do not time out synchronizing a CID they wrote themselves.
-- [ ] **TEST-04**: Restart tests cover recovery before certificate arrival, after durable certificate acceptance, and during mint application without a changed vote or duplicate mint.
-- [ ] **TEST-05**: Publisher-loss tests cover persistence-before-advertisement and deterministic failover without conflicting slot records.
+- [x] **TEST-04**: Restart tests cover recovery before certificate arrival, after durable certificate acceptance, and during mint application without a changed vote or duplicate mint.
+- [x] **TEST-05**: Publisher-loss tests cover persistence-before-advertisement and deterministic failover without conflicting slot records.
 - [x] **TEST-06**: The finality tests exercise the production PubSub, CRDT, persistence, and mint ingress paths rather than direct local-author shortcuts.
 
 ## Future Requirements
@@ -78,8 +78,8 @@ None currently. Future finality features must not weaken the v3.0 one-vote-per-s
 | TEST-01 | Phase 12 | Complete |
 | TEST-02 | Phase 12 | Complete |
 | TEST-03 | Phase 12 | Complete |
-| TEST-04 | Phase 12 | Pending |
-| TEST-05 | Phase 12 | Pending |
+| TEST-04 | Phase 12 | Complete |
+| TEST-05 | Phase 12 | Complete |
 | TEST-06 | Phase 12 | Complete |
 
 **Coverage:**
