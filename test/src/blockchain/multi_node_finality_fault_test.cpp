@@ -68,6 +68,13 @@ namespace sgns
             return manager->fault_test_counters_.certificate_write_attempts;
         }
 
+        static uint64_t CertificateWriteSuccesses( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return 0;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->fault_test_counters_.certificate_write_successes;
+        }
+
         static uint64_t AcceptedCertificateReadbacks( const std::shared_ptr<ConsensusManager> &manager )
         {
             if ( !manager ) return 0;
@@ -103,6 +110,60 @@ namespace sgns
             const auto nonce_subject = ConsensusManager::DecodeNonceSubject( proposal.subject() );
             return nonce_subject.has_value() ? std::optional<std::string>( nonce_subject.value().tx_hash() ) : std::nullopt;
         }
+
+        static void ArmActiveVoteBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager->active_vote_persisted_barrier_ = { true, false, false };
+        }
+
+        static void ArmAcceptedCertificateBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager->accepted_certificate_barrier_ = { true, false, false };
+        }
+
+        static bool ActiveVoteBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->active_vote_persisted_barrier_.entered;
+        }
+
+        static bool AcceptedCertificateBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->accepted_certificate_barrier_.entered;
+        }
+
+        static void ReleaseConsensusBarriers( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager->active_vote_persisted_barrier_.released = true;
+            manager->certificate_persisted_barrier_.released = true;
+            manager->accepted_certificate_barrier_.released = true;
+            manager->fault_test_cv_.notify_all();
+        }
+
+        static void ArmMintEffectsBarrier( const std::shared_ptr<TransactionManager> &transactions )
+        {
+            std::lock_guard lock( transactions->fault_test_mutex_ );
+            transactions->mint_effects_barrier_ = { true, false, false };
+        }
+
+        static bool MintEffectsBarrierEntered( const std::shared_ptr<TransactionManager> &transactions )
+        {
+            std::lock_guard lock( transactions->fault_test_mutex_ );
+            return transactions->mint_effects_barrier_.entered;
+        }
+
+        static void ReleaseMintEffectsBarrier( const std::shared_ptr<TransactionManager> &transactions )
+        {
+            if ( !transactions ) return;
+            std::lock_guard lock( transactions->fault_test_mutex_ );
+            transactions->mint_effects_barrier_.released = true;
+            transactions->fault_test_cv_.notify_all();
+        }
     };
 } // namespace sgns
 
@@ -132,6 +193,14 @@ namespace
             Peer &operator=( const Peer & ) = delete;
             Peer( Peer && ) noexcept = default;
             Peer &operator=( Peer && ) noexcept = default;
+        };
+
+        struct Network
+        {
+            Peer first;
+            Peer second;
+            Peer third;
+            Peer passive;
         };
 
         FinalityFaultNetwork() : CRDTFixture( "multi_node_finality_fault" )
@@ -181,6 +250,7 @@ namespace
 
         void StopPeer( Peer &peer )
         {
+            if ( peer.transactions ) peer.transactions->Stop();
             peer.transactions.reset();
             if ( peer.blockchain ) (void) peer.blockchain->Stop();
             peer.consensus.reset();
@@ -200,6 +270,50 @@ namespace
             const auto port = peer.port;
             StopPeer( peer );
             peer = StartPeer( name, port );
+        }
+
+        Network StartNetwork( const std::string &prefix, uint16_t first_port )
+        {
+            return { StartPeer( prefix + "-validator-one", first_port ),
+                     StartPeer( prefix + "-validator-two", static_cast<uint16_t>( first_port + 1 ) ),
+                     StartPeer( prefix + "-validator-three", static_cast<uint16_t>( first_port + 2 ) ),
+                     StartPeer( prefix + "-passive", static_cast<uint16_t>( first_port + 3 ) ) };
+        }
+
+        static std::array<Peer *, 4> Peers( Network &network )
+        {
+            return { &network.first, &network.second, &network.third, &network.passive };
+        }
+
+        void StoreRegistry( Network &network )
+        {
+            const auto update = RegistryUpdate( { &network.first, &network.second, &network.third } );
+            for ( auto *peer : Peers( network ) )
+                ASSERT_TRUE( peer->blockchain->GetValidatorRegistry()->StoreRegistryUpdate( update ).has_value() );
+            ASSERT_WAIT_FOR_CONDITION( [&] {
+                return network.first.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+                       network.second.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+                       network.third.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+                       network.passive.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value();
+            }, std::chrono::seconds( 5 ), "every peer durably stored the validator registry", nullptr );
+        }
+
+        void RestartAndReconnect( Network &network )
+        {
+            RestartPeer( network.first );
+            RestartPeer( network.second );
+            RestartPeer( network.third );
+            RestartPeer( network.passive );
+            ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+            ConnectPeers( Peers( network ) );
+        }
+
+        void StopNetwork( Network &network )
+        {
+            StopPeer( network.first );
+            StopPeer( network.second );
+            StopPeer( network.third );
+            StopPeer( network.passive );
         }
 
         static void ConnectPeers( const std::array<Peer *, 4> &peers )
@@ -302,6 +416,21 @@ namespace
             const auto outputs = peer.account->GetUTXOManager().GetUTXOs( winner.dag_st.source_addr() );
             return outputs.size() == 1 && outputs.front().GetTxID().toReadableString() == winner.GetHash() &&
                    outputs.front().GetTxID().toReadableString() != loser.GetHash();
+        }
+
+        static void AssertSingleDurableMint( const Peer &peer, const std::string &slot,
+                                             const sgns::MintTransactionV2 &winner,
+                                             const sgns::MintTransactionV2 &loser,
+                                             uint64_t expected_mint_effects )
+        {
+            ASSERT_TRUE( peer.consensus->CheckCertificateForSlot( slot ) );
+            const auto certificate = peer.consensus->GetCertificateBySlot( slot );
+            ASSERT_TRUE( certificate.has_value() );
+            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ),
+                       winner.GetHash() );
+            EXPECT_TRUE( HasOnlyWinnerOutput( peer, winner, loser ) );
+            EXPECT_TRUE( HasBridgeMarker( peer, winner ) );
+            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *peer.transactions ), expected_mint_effects );
         }
     };
 } // namespace
@@ -623,5 +752,166 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
 
 TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce )
 {
-    FAIL() << "TEST-04 durable-boundary recovery proof is not implemented yet";
+    sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
+                                                    { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+
+    {
+        auto network = StartNetwork( "restart-vote", 54601 );
+        ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+        StoreRegistry( network );
+        ConnectPeers( Peers( network ) );
+
+        auto winner = MintFor( network.first );
+        auto loser  = MintFor( network.first, 1 );
+        ASSERT_TRUE( winner && loser );
+        auto subject = sgns::ConsensusManager::CreateNonceSubject(
+            network.first.account->GetAddress(), winner->GetNonce(), winner->GetHash(), winner->SerializeToEmbeddedTransaction(),
+            CommitmentFor( *winner ), sgns::UTXOWitness{} );
+        ASSERT_TRUE( subject.has_value() );
+        auto proposal = network.first.consensus->CreateProposal(
+            subject.value(), network.first.account->GetAddress(), network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+            network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal.has_value() );
+        const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+        sgns::MultiNodeFinalityFaultTestAccess::ArmActiveVoteBarrier( network.first.consensus );
+        ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return sgns::MultiNodeFinalityFaultTestAccess::ActiveVoteBarrierEntered( network.first.consensus );
+        }, std::chrono::seconds( 15 ), "first validator paused after durable active-vote persistence", nullptr );
+        ASSERT_EQ( sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.first.consensus, slot ),
+                   proposal.value().proposal_id() );
+
+        RestartPeer( network.first );
+        ASSERT_TRUE( network.first.consensus );
+        ASSERT_EQ( sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.first.consensus, slot ),
+                   proposal.value().proposal_id() );
+        ConnectPeers( Peers( network ) );
+        // The original isolated publisher was stopped before its normal vote
+        // announcement; re-advertise the unchanged signed proposal through the
+        // public route after reconnecting so peers can drive normal recovery.
+        ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+        }, std::chrono::seconds( 25 ), "recreated vote owner recovered only its durable vote before exact finality", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+
+        RestartAndReconnect( network );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
+                   HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
+                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
+                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
+                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+        }, std::chrono::seconds( 20 ), "vote-boundary finality remained exact after reopening every durable root", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        StopNetwork( network );
+    }
+
+    {
+        auto network = StartNetwork( "restart-certificate", 54611 );
+        ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+        StoreRegistry( network );
+        ConnectPeers( Peers( network ) );
+
+        auto winner = MintFor( network.first );
+        auto loser  = MintFor( network.first, 1 );
+        ASSERT_TRUE( winner && loser );
+        auto subject = sgns::ConsensusManager::CreateNonceSubject(
+            network.first.account->GetAddress(), winner->GetNonce(), winner->GetHash(), winner->SerializeToEmbeddedTransaction(),
+            CommitmentFor( *winner ), sgns::UTXOWitness{} );
+        ASSERT_TRUE( subject.has_value() );
+        auto proposal = network.first.consensus->CreateProposal(
+            subject.value(), network.first.account->GetAddress(), network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+            network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal.has_value() );
+        const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+        sgns::MultiNodeFinalityFaultTestAccess::ArmAcceptedCertificateBarrier( network.second.consensus );
+        ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return sgns::MultiNodeFinalityFaultTestAccess::AcceptedCertificateBarrierEntered( network.second.consensus );
+        }, std::chrono::seconds( 25 ), "second validator paused after accepted certificate durable readback", nullptr );
+
+        RestartPeer( network.second );
+        ASSERT_TRUE( network.second.consensus );
+        ConnectPeers( Peers( network ) );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+        }, std::chrono::seconds( 25 ), "recreated certificate recipient recovered the exact durable winner", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+
+        RestartAndReconnect( network );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
+                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
+                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
+                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+        }, std::chrono::seconds( 20 ), "certificate-boundary recovery remained exact after reopening every durable root", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        StopNetwork( network );
+    }
+
+    {
+        auto network = StartNetwork( "restart-mint", 54621 );
+        ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+        StoreRegistry( network );
+        ConnectPeers( Peers( network ) );
+
+        auto winner = MintFor( network.first );
+        auto loser  = MintFor( network.first, 1 );
+        ASSERT_TRUE( winner && loser );
+        auto subject = sgns::ConsensusManager::CreateNonceSubject(
+            network.first.account->GetAddress(), winner->GetNonce(), winner->GetHash(), winner->SerializeToEmbeddedTransaction(),
+            CommitmentFor( *winner ), sgns::UTXOWitness{} );
+        ASSERT_TRUE( subject.has_value() );
+        auto proposal = network.first.consensus->CreateProposal(
+            subject.value(), network.first.account->GetAddress(), network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+            network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal.has_value() );
+        const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+        sgns::MultiNodeFinalityFaultTestAccess::ArmMintEffectsBarrier( network.first.transactions );
+        ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return sgns::MultiNodeFinalityFaultTestAccess::MintEffectsBarrierEntered( network.first.transactions );
+        }, std::chrono::seconds( 25 ), "first validator paused after durable Mint effects and before bridge marker", nullptr );
+        EXPECT_TRUE( HasOnlyWinnerOutput( network.first, *winner, *loser ) );
+        EXPECT_FALSE( HasBridgeMarker( network.first, *winner ) );
+
+        RestartPeer( network.first );
+        ASSERT_TRUE( network.first.consensus );
+        ConnectPeers( Peers( network ) );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
+                   sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1 &&
+                   HasBridgeMarker( network.first, *winner );
+        }, std::chrono::seconds( 25 ), "recreated Mint peer repaired its marker through normal certificate recovery", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+
+        RestartAndReconnect( network );
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
+                   HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
+                   HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
+                   HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+        }, std::chrono::seconds( 20 ), "Mint-boundary recovery stayed exact after reopening every durable root", nullptr );
+        for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+        StopNetwork( network );
+    }
 }
