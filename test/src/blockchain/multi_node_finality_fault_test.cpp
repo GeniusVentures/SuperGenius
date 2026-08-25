@@ -620,3 +620,8 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
     }, std::chrono::seconds( 20 ), "late contender remained absent after reopened-store recovery", nullptr );
     StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
 }
+
+TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce )
+{
+    FAIL() << "TEST-04 durable-boundary recovery proof is not implemented yet";
+}
