@@ -29,6 +29,7 @@
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
+#include <iostream>
 #include <thread>
 
 namespace sgns
@@ -89,6 +90,20 @@ namespace sgns
             return manager->fault_test_counters_.accepted_certificate_readbacks;
         }
 
+        static uint64_t ActiveVoteReleaseAttempts( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return 0;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->fault_test_counters_.active_vote_release_attempts;
+        }
+
+        static uint64_t ActiveVoteReleaseSuccesses( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager ) return 0;
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->fault_test_counters_.active_vote_release_successes;
+        }
+
         static std::optional<std::string> DurableActiveVoteProposalId( const std::shared_ptr<ConsensusManager> &manager,
                                                                        const std::string &slot )
         {
@@ -99,6 +114,23 @@ namespace sgns
             if ( stored.has_error() ) return std::nullopt;
             const auto decoded = manager->DecodeActiveVoteRecord( slot, stored.value().toString() );
             return decoded.has_value() ? std::optional<std::string>( decoded.value().proposal.proposal_id() ) : std::nullopt;
+        }
+
+        static std::string ActiveVoteStorageKey( const std::shared_ptr<ConsensusManager> &manager,
+                                                 const std::string &slot )
+        {
+            return manager ? manager->ActiveVoteStorageKey( slot ) : std::string{};
+        }
+
+        static std::optional<std::string> RecoveredActiveVoteProposalId( const std::shared_ptr<ConsensusManager> &manager,
+                                                                         const std::string &slot )
+        {
+            if ( !manager ) return std::nullopt;
+            std::lock_guard lock( manager->proposals_mutex_ );
+            const auto        found = manager->active_votes_.find( slot );
+            return found == manager->active_votes_.end()
+                       ? std::nullopt
+                       : std::optional<std::string>( found->second.proposal.proposal_id() );
         }
 
         static uint64_t MintEffects( const TransactionManager &transactions )
@@ -211,6 +243,15 @@ namespace
     class FinalityFaultNetwork : public ::test::CRDTFixture
     {
     protected:
+        struct ActiveVoteLifecycleSnapshot
+        {
+            std::string                storage_key;
+            bool                       record_present = false;
+            std::string                record_digest;
+            std::optional<std::string> decoded_proposal_id;
+            bool                       accepted_certificate = false;
+        };
+
         struct Peer
         {
             std::string                                      name;
@@ -224,6 +265,11 @@ namespace
             std::shared_ptr<sgns::TransactionManager>        transactions;
             std::shared_ptr<sgns::ConsensusManager>          consensus;
             std::thread                                      io_thread;
+            std::string                                      active_vote_diagnostic_slot;
+            std::string                                      active_vote_diagnostic_key;
+            ActiveVoteLifecycleSnapshot                       after_consensus_manager_close;
+            ActiveVoteLifecycleSnapshot                       after_manager_ownership_release;
+            ActiveVoteLifecycleSnapshot                       after_same_root_globaldb_reopen_before_manager;
 
             Peer() = default;
             Peer( const Peer & ) = delete;
@@ -239,7 +285,13 @@ namespace
                 blockchain( std::move( other.blockchain ) ),
                 transactions( std::move( other.transactions ) ),
                 consensus( std::move( other.consensus ) ),
-                io_thread( std::move( other.io_thread ) )
+                io_thread( std::move( other.io_thread ) ),
+                active_vote_diagnostic_slot( std::move( other.active_vote_diagnostic_slot ) ),
+                active_vote_diagnostic_key( std::move( other.active_vote_diagnostic_key ) ),
+                after_consensus_manager_close( std::move( other.after_consensus_manager_close ) ),
+                after_manager_ownership_release( std::move( other.after_manager_ownership_release ) ),
+                after_same_root_globaldb_reopen_before_manager(
+                    std::move( other.after_same_root_globaldb_reopen_before_manager ) )
             {
             }
 
@@ -258,7 +310,29 @@ namespace
                 transactions = std::move( other.transactions );
                 consensus    = std::move( other.consensus );
                 io_thread    = std::move( other.io_thread );
+                active_vote_diagnostic_slot = std::move( other.active_vote_diagnostic_slot );
+                active_vote_diagnostic_key  = std::move( other.active_vote_diagnostic_key );
+                after_consensus_manager_close = std::move( other.after_consensus_manager_close );
+                after_manager_ownership_release = std::move( other.after_manager_ownership_release );
+                after_same_root_globaldb_reopen_before_manager =
+                    std::move( other.after_same_root_globaldb_reopen_before_manager );
                 return *this;
+            }
+
+            static ActiveVoteLifecycleSnapshot Snapshot( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
+                                                          const std::string &storage_key )
+            {
+                ActiveVoteLifecycleSnapshot snapshot;
+                snapshot.storage_key = storage_key;
+                if ( !db || storage_key.empty() ) return snapshot;
+                sgns::crdt::GlobalDB::Buffer key;
+                key.put( storage_key );
+                const auto stored = db->GetDataStore()->get( key );
+                if ( stored.has_error() ) return snapshot;
+                const auto bytes = stored.value().toString();
+                snapshot.record_present = true;
+                snapshot.record_digest  = sgns::crypto::sha2_256( bytes.data(), bytes.size() ).toHex();
+                return snapshot;
             }
 
             ~Peer()
@@ -271,8 +345,11 @@ namespace
                 if ( transactions ) transactions->Stop();
                 transactions.reset();
                 if ( blockchain ) (void) blockchain->Stop();
+                if ( consensus ) consensus->Close();
+                after_consensus_manager_close = Snapshot( db, active_vote_diagnostic_key );
                 consensus.reset();
                 blockchain.reset();
+                after_manager_ownership_release = Snapshot( db, active_vote_diagnostic_key );
                 if ( io ) io->stop();
                 if ( io_thread.joinable() ) io_thread.join();
                 if ( pubsub ) pubsub->Stop();
@@ -295,11 +372,12 @@ namespace
         {
         }
 
-        Peer StartPeer( const std::string &name, uint16_t port )
+        Peer StartPeer( const std::string &name, uint16_t port, std::string active_vote_diagnostic_key = {} )
         {
             Peer peer;
             peer.name = name;
             peer.port = port;
+            peer.active_vote_diagnostic_key = std::move( active_vote_diagnostic_key );
             peer.root = ( base_path / name ).string();
             boost::filesystem::create_directories( peer.root );
             peer.io = std::make_shared<boost::asio::io_context>();
@@ -321,6 +399,8 @@ namespace
             if ( db.has_error() ) return peer;
             peer.db = std::move( db.value() );
             peer.db->Start();
+            peer.after_same_root_globaldb_reopen_before_manager =
+                Peer::Snapshot( peer.db, peer.active_vote_diagnostic_key );
             peer.io_thread = std::thread( [io = peer.io] { io->run(); } );
             peer.account = sgns::GeniusAccount::New( kToken, peer.root + "/account" );
             EXPECT_TRUE( peer.account );
@@ -345,8 +425,14 @@ namespace
         {
             const auto name = peer.name;
             const auto port = peer.port;
+            const auto active_vote_diagnostic_key = peer.active_vote_diagnostic_key;
             StopPeer( peer );
-            peer = StartPeer( name, port );
+            auto after_consensus_manager_close = std::move( peer.after_consensus_manager_close );
+            auto after_manager_ownership_release = std::move( peer.after_manager_ownership_release );
+            auto restarted = StartPeer( name, port, active_vote_diagnostic_key );
+            restarted.after_consensus_manager_close   = std::move( after_consensus_manager_close );
+            restarted.after_manager_ownership_release = std::move( after_manager_ownership_release );
+            peer = std::move( restarted );
         }
 
         Network StartNetwork( const std::string &prefix, uint16_t first_port )
@@ -883,6 +969,101 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
     StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
 }
 
+TEST_F( FinalityFaultNetwork, ActiveVoteRestartDiagnosticClassifiesLifecycleBoundary )
+{
+    sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
+                                                    { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+
+    auto network = StartNetwork( "active-vote-diagnostic", 54641 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+    StoreRegistry( network );
+
+    auto winner = MintFor( network.first );
+    ASSERT_TRUE( winner );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject(
+        network.first.account->GetAddress(), winner->GetNonce(), winner->GetHash(), winner->SerializeToEmbeddedTransaction(),
+        CommitmentFor( *winner ), sgns::UTXOWitness{} );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = network.first.consensus->CreateProposal(
+        subject.value(), network.first.account->GetAddress(), network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+    network.first.active_vote_diagnostic_slot = slot;
+    network.first.active_vote_diagnostic_key =
+        sgns::MultiNodeFinalityFaultTestAccess::ActiveVoteStorageKey( network.first.consensus, slot );
+
+    sgns::MultiNodeFinalityFaultTestAccess::ArmActiveVoteBarrier( network.first.consensus );
+    ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return sgns::MultiNodeFinalityFaultTestAccess::ActiveVoteBarrierEntered( network.first.consensus );
+    }, std::chrono::seconds( 15 ), "isolated validator paused after direct active-vote persistence", nullptr );
+
+    auto before_restart = Peer::Snapshot( network.first.db, network.first.active_vote_diagnostic_key );
+    before_restart.decoded_proposal_id =
+        sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.first.consensus, slot );
+    before_restart.accepted_certificate = network.first.consensus->CheckCertificateForSlot( slot );
+    const auto release_attempts_before_restart =
+        sgns::MultiNodeFinalityFaultTestAccess::ActiveVoteReleaseAttempts( network.first.consensus );
+    const auto release_successes_before_restart =
+        sgns::MultiNodeFinalityFaultTestAccess::ActiveVoteReleaseSuccesses( network.first.consensus );
+
+    auto fail = [&]( const char *stage, const char *classification )
+    {
+        std::cout << "ACTIVE_VOTE_RED stage=" << stage << " classification=" << classification << std::endl;
+        ADD_FAILURE() << "active-vote lifecycle diagnostic failed";
+        StopNetwork( network );
+    };
+    auto require_raw = [&]( const ActiveVoteLifecycleSnapshot &snapshot, const char *stage )
+    {
+        if ( snapshot.accepted_certificate )
+        {
+            fail( stage, "release-without-certificate" );
+            return false;
+        }
+        if ( !snapshot.record_present || snapshot.record_digest != before_restart.record_digest )
+        {
+            fail( stage, "record-lost" );
+            return false;
+        }
+        return true;
+    };
+
+    if ( !before_restart.record_present || before_restart.decoded_proposal_id != proposal.value().proposal_id() ||
+         before_restart.accepted_certificate )
+    {
+        fail( "after-pre-broadcast-persistence", "record-lost" );
+        return;
+    }
+
+    RestartPeer( network.first );
+    ASSERT_TRUE( network.first.consensus );
+    if ( !require_raw( network.first.after_consensus_manager_close, "after-consensus-manager-close" ) ||
+         !require_raw( network.first.after_manager_ownership_release, "after-manager-ownership-release" ) ||
+         !require_raw( network.first.after_same_root_globaldb_reopen_before_manager,
+                       "after-same-root-globaldb-reopen-before-manager" ) )
+        return;
+
+    auto recovered_raw = Peer::Snapshot( network.first.db, network.first.active_vote_diagnostic_key );
+    recovered_raw.decoded_proposal_id =
+        sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.first.consensus, slot );
+    recovered_raw.accepted_certificate = network.first.consensus->CheckCertificateForSlot( slot );
+    const auto recovered_in_memory =
+        sgns::MultiNodeFinalityFaultTestAccess::RecoveredActiveVoteProposalId( network.first.consensus, slot );
+    if ( !require_raw( recovered_raw, "after-recover-active-votes" ) ||
+         recovered_raw.decoded_proposal_id != proposal.value().proposal_id() ||
+         recovered_in_memory != proposal.value().proposal_id() )
+    {
+        if ( recovered_raw.record_present && recovered_raw.record_digest == before_restart.record_digest &&
+             !recovered_raw.accepted_certificate )
+            fail( "after-recover-active-votes", "recovery-missed-record" );
+        return;
+    }
+    EXPECT_EQ( release_attempts_before_restart, 0U );
+    EXPECT_EQ( release_successes_before_restart, 0U );
+    StopNetwork( network );
+}
+
 TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce )
 {
     sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
@@ -892,7 +1073,10 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         auto network = StartNetwork( "restart-vote", 54601 );
         ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
         StoreRegistry( network );
-        ConnectPeers( Peers( network ) );
+        // Keep the vote owner isolated until after its same-root recreation.
+        // Otherwise the other validators can finalize this slot and legitimately
+        // release the exact active-vote record before the restart boundary is
+        // observed.
 
         auto winner = MintFor( network.first );
         auto loser  = MintFor( network.first, 1 );

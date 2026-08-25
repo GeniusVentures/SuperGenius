@@ -643,6 +643,8 @@ namespace sgns
             uint64_t certificate_notification_publications = 0;
             uint64_t certificate_notifications_received   = 0;
             uint64_t accepted_certificate_readbacks       = 0;
+            uint64_t active_vote_release_attempts         = 0;
+            uint64_t active_vote_release_successes         = 0;
         };
 
         /** @brief A post-action test pause released only by the friend test accessor. */
