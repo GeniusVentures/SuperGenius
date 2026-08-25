@@ -2,6 +2,7 @@
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -47,18 +48,16 @@ namespace
 // Scene A (CONTEXT D-02/CFG-03): the new canonical factory derives is_full_node_ from the
 // "node_type" sgns_config.json key AFTER LoadSgnsConfig. "full" (lowercase) must parse
 // case-insensitively to NodeType::Full -> is_full_node_=true. is_full_node_ is set in the ctor
-// body before New() returns, so it is observable immediately. The READY wait only lets New()'s
-// asynchronous database initialization finish before the test process releases the node.
+// body before New() returns, so it is observable immediately. The READY wait lets New()'s
+// asynchronous initialization finish (through the local trust setup) before the test releases
+// the node.
 TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 {
     UseMemorySecureStorage();
     auto       base       = MakeTempDir( "ntd_derivation" );
     const auto dev_config = MakeDevConfig( base );
     GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                 /*node_type=*/"full",
-                                 /*is_processor=*/true,
-                                 /*rpc_catchup=*/false );
+    test::WriteLocalTrustSgnsConfig( base, /*node_type=*/"full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -66,10 +65,7 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );
-    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
-                                                           { return node->GetState() == GeniusNode::NodeState::READY; },
-                                                           std::chrono::seconds( 50 ),
-                                                           "node-type test node did not finish initialization" ) );
+    ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
 }
 
 // Scene B (CONTEXT D-04): New(dev_config, AccountSource) preserves nullptr-on-failure.
@@ -100,10 +96,11 @@ TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
     auto       base       = MakeTempDir( "ntd_archive" );
     const auto dev_config = MakeDevConfig( base );
     GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                 /*node_type=*/"Archive",
-                                 /*is_processor=*/true, // deliberately on; Archive must override it
-                                 /*rpc_catchup=*/false );
+    test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                     /*node_type=*/"Archive",
+                                     /*is_processor=*/true, // deliberately on; Archive must override it
+                                     /*rpc_catchup=*/false,
+                                     TEST_PRIVATE_KEY );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -114,10 +111,7 @@ TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
     EXPECT_TRUE( ReplicatesAllAccounts( node->GetNodeType() ) ) << "Archive must replicate network-wide data like Full";
     EXPECT_FALSE( node->IsProcessor() ) << "Archive must not process, even with is_processor=true";
 
-    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
-                                                           { return node->GetState() == GeniusNode::NodeState::READY; },
-                                                           std::chrono::seconds( 50 ),
-                                                           "archive node did not finish initialization" ) );
+    ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
 }
 
 // The role predicates are the whole point of replacing the bool: Full and Archive agree on
