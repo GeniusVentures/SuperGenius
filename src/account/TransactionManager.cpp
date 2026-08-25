@@ -787,9 +787,7 @@ namespace sgns
         return txId;
     }
 
-    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
-                                                                                            const std::string &dev_addr,
-                                                                                            uint64_t peers_cut,
+    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t amount,
                                                                                             const std::string &job_id )
     {
         if ( stopped_.load() || GetState() != State::READY )
@@ -804,7 +802,7 @@ namespace sgns
             account_m->GetUTXOManager().CreateTxParameter( amount, lock_id, TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs]  = params;
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct( lock_id ) ) );
+            EscrowTransaction::New( params, amount, FillDAGStruct( lock_id ) ) );
 
         escrow_transaction->MakeSignature( *account_m );
         account_m->GetUTXOManager().ReserveUTXOs( inputs, escrow_transaction->GetHash() );
