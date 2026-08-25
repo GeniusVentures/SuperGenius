@@ -1,7 +1,7 @@
 # Phase 12: Multi-Node Finality Fault Proof - Research
 
-**Researched:** 2026-08-25  
-**Domain:** C++17 / GoogleTest / CTest production-path finality fault regression  
+**Researched:** 2026-08-25
+**Domain:** C++17 / GoogleTest / CTest production-path finality fault regression
 **Confidence:** HIGH
 
 <user_constraints>
@@ -469,5 +469,5 @@ Security enforcement is enabled in `.planning/config.json`; this phase must pres
 - Architecture: HIGH — locked context directly specifies the topology and fault boundaries, and source inspection identifies the closest fixture and production edges. [VERIFIED: codebase inspection]
 - Pitfalls: HIGH — all listed pitfalls are evidenced by existing focused-test shortcuts, asynchronous connection code, or the actual durable ordering. [VERIFIED: codebase inspection]
 
-**Research date:** 2026-08-25  
+**Research date:** 2026-08-25
 **Valid until:** 2026-09-24 — stable internal C++ codebase, unless Phase 12 predecessor code changes. [ASSUMED]
