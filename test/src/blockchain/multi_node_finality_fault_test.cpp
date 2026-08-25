@@ -221,8 +221,59 @@ namespace
             Peer() = default;
             Peer( const Peer & ) = delete;
             Peer &operator=( const Peer & ) = delete;
-            Peer( Peer && ) noexcept = default;
-            Peer &operator=( Peer && ) noexcept = default;
+            Peer( Peer &&other ) noexcept :
+                name( std::move( other.name ) ),
+                port( other.port ),
+                root( std::move( other.root ) ),
+                io( std::move( other.io ) ),
+                pubsub( std::move( other.pubsub ) ),
+                db( std::move( other.db ) ),
+                account( std::move( other.account ) ),
+                blockchain( std::move( other.blockchain ) ),
+                transactions( std::move( other.transactions ) ),
+                consensus( std::move( other.consensus ) ),
+                io_thread( std::move( other.io_thread ) )
+            {
+            }
+
+            Peer &operator=( Peer &&other ) noexcept
+            {
+                if ( this == &other ) return *this;
+                Stop();
+                name         = std::move( other.name );
+                port         = other.port;
+                root         = std::move( other.root );
+                io           = std::move( other.io );
+                pubsub       = std::move( other.pubsub );
+                db           = std::move( other.db );
+                account      = std::move( other.account );
+                blockchain   = std::move( other.blockchain );
+                transactions = std::move( other.transactions );
+                consensus    = std::move( other.consensus );
+                io_thread    = std::move( other.io_thread );
+                return *this;
+            }
+
+            ~Peer()
+            {
+                Stop();
+            }
+
+            void Stop() noexcept
+            {
+                if ( transactions ) transactions->Stop();
+                transactions.reset();
+                if ( blockchain ) (void) blockchain->Stop();
+                consensus.reset();
+                blockchain.reset();
+                if ( io ) io->stop();
+                if ( io_thread.joinable() ) io_thread.join();
+                if ( pubsub ) pubsub->Stop();
+                db.reset();
+                pubsub.reset();
+                account.reset();
+                io.reset();
+            }
         };
 
         struct Network
@@ -280,18 +331,7 @@ namespace
 
         void StopPeer( Peer &peer )
         {
-            if ( peer.transactions ) peer.transactions->Stop();
-            peer.transactions.reset();
-            if ( peer.blockchain ) (void) peer.blockchain->Stop();
-            peer.consensus.reset();
-            peer.blockchain.reset();
-            if ( peer.io ) peer.io->stop();
-            if ( peer.io_thread.joinable() ) peer.io_thread.join();
-            if ( peer.pubsub ) peer.pubsub->Stop();
-            peer.db.reset();
-            peer.pubsub.reset();
-            peer.account.reset();
-            peer.io.reset();
+            peer.Stop();
         }
 
         void RestartPeer( Peer &peer )

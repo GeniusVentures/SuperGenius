@@ -216,8 +216,52 @@ namespace
         ComponentPeer() = default;
         ComponentPeer( const ComponentPeer & ) = delete;
         ComponentPeer &operator=( const ComponentPeer & ) = delete;
-        ComponentPeer( ComponentPeer && ) noexcept = default;
-        ComponentPeer &operator=( ComponentPeer && ) noexcept = default;
+        ComponentPeer( ComponentPeer &&other ) noexcept :
+            root( std::move( other.root ) ),
+            io( std::move( other.io ) ),
+            pubsub( std::move( other.pubsub ) ),
+            db( std::move( other.db ) ),
+            account( std::move( other.account ) ),
+            blockchain( std::move( other.blockchain ) ),
+            transactions( std::move( other.transactions ) ),
+            io_thread( std::move( other.io_thread ) )
+        {
+        }
+
+        ComponentPeer &operator=( ComponentPeer &&other ) noexcept
+        {
+            if ( this == &other ) return *this;
+            Stop();
+            root         = std::move( other.root );
+            io           = std::move( other.io );
+            pubsub       = std::move( other.pubsub );
+            db           = std::move( other.db );
+            account      = std::move( other.account );
+            blockchain   = std::move( other.blockchain );
+            transactions = std::move( other.transactions );
+            io_thread    = std::move( other.io_thread );
+            return *this;
+        }
+
+        ~ComponentPeer()
+        {
+            Stop();
+        }
+
+        void Stop() noexcept
+        {
+            if ( transactions ) transactions->Stop();
+            transactions.reset();
+            if ( blockchain ) (void) blockchain->Stop();
+            blockchain.reset();
+            if ( io ) io->stop();
+            if ( io_thread.joinable() ) io_thread.join();
+            if ( pubsub ) pubsub->Stop();
+            db.reset();
+            pubsub.reset();
+            account.reset();
+            io.reset();
+        }
     };
 
     class MultiNodeFinalityFaultCompatibilitySmokeTest : public ::test::CRDTFixture
@@ -292,28 +336,7 @@ namespace
 
         void StopPeer( ComponentPeer &peer )
         {
-            peer.transactions.reset();
-            if ( peer.blockchain )
-            {
-                (void) peer.blockchain->Stop();
-            }
-            peer.blockchain.reset();
-            if ( peer.io )
-            {
-                peer.io->stop();
-            }
-            if ( peer.io_thread.joinable() )
-            {
-                peer.io_thread.join();
-            }
-            if ( peer.pubsub )
-            {
-                peer.pubsub->Stop();
-            }
-            peer.db.reset();
-            peer.pubsub.reset();
-            peer.account.reset();
-            peer.io.reset();
+            peer.Stop();
         }
     };
 } // namespace
