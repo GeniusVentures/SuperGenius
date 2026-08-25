@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-08-25T17:12:09.331Z"
+status: verifying
+last_updated: "2026-08-25T18:23:45.529Z"
 last_activity: 2026-08-25
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 17
-  percent: 80
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 12 (Multi-Node Finality Fault Proof) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-25
 
 Progress: [██████████] 100%
@@ -60,6 +60,7 @@ Progress: [██████████] 100%
 | Phase 11 P04 | 17m | 2 tasks | 2 files |
 | Phase 12 P01 | 64m | 2 tasks | 9 files |
 | Phase 12 P02 | 17m | 2 tasks | 1 files |
+| Phase 12 P03 | 68m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Progress: [██████████] 100%
 - [Phase 12]: Use the existing test-chain IInputValidator and a fresh Mint nonce 0 for normal production-route audit ingress.
 - [Phase 12]: Re-advertise unchanged signed proposals through public SubmitProposal after AddPeers because offline GossipPubSub broadcasts are not replayed. — Preserves isolated initial submission and real production ingress.
 - [Phase 12]: Use durable active-vote identity rather than retry publication totals to prove late contender rejection. — Vote counters include normal retry broadcasts and cannot establish unique ownership.
+- [Phase 12]: Use stop-aware post-durability test barriers so shutdown leaves incomplete work to existing recovery.
+- [Phase 12]: CRDT immutable state is authoritative after publisher loss; PubSub is best-effort cleanup with no successor retry.
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-25T17:12:09.327Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-08-25T18:23:45.484Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None
