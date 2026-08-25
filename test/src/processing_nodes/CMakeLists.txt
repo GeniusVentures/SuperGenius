@@ -52,6 +52,8 @@ else()
     )
 endif()
 
+set_tests_properties(child_tokens_test PROPERTIES TIMEOUT 500)
+
 
 addtest(full_node_test
     full_node_test.cpp
