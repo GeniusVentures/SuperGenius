@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-08-25T19:25:33.643Z"
-last_activity: 2026-08-25 -- Phase 12 planning complete
+stopped_at: Completed 12-04-PLAN.md
+last_updated: "2026-08-25T19:47:13Z"
+last_activity: 2026-08-25 -- Completed 12-04-PLAN.md; final verification pending
 progress:
   total_phases: 5
   completed_phases: 4
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 12 — Multi-Node Finality Fault Proof
+**Current focus:** Phase 12 — multi-node-finality-fault-proof
 
 ## Current Position
 
-Phase: 12 (Multi-Node Finality Fault Proof) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-08-25 -- Phase 12 planning complete
+Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
+Plan: 4 of 4
+Status: Plans complete; final verification pending
+Last activity: 2026-08-25 -- Completed 12-04-PLAN.md; final verification pending
 
 Progress: [██████████] 100%
 
