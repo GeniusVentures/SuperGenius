@@ -120,7 +120,7 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
 
 **Wave 1**
@@ -135,6 +135,10 @@ Plans:
 
 - [x] 12-03-PLAN.md — Prove restart-boundary recovery and persistence-before-advertisement publisher failover.
 
+**Wave 4** *(gap closure)*
+
+- [x] 12-04-PLAN.md — Replace full-mesh readiness with public connected-topology checks and prove durable exact-once restart/publisher-loss recovery.
+
 ## Progress
 
 **Execution Order:** Phases execute in numeric order: 8 → 9 → 10 → 11 → 12.
@@ -148,7 +152,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 3/3 | Complete   | 2026-08-25 |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 4/4 | Complete   | 2026-08-25 |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
