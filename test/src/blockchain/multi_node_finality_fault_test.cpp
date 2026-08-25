@@ -111,6 +111,24 @@ namespace sgns
             return nonce_subject.has_value() ? std::optional<std::string>( nonce_subject.value().tx_hash() ) : std::nullopt;
         }
 
+        static std::vector<std::string> OrderedActiveValidators( const std::shared_ptr<ConsensusManager> &manager,
+                                                                 const ValidatorRegistry::Registry &registry )
+        {
+            return manager->GetOrderedActiveValidators( registry );
+        }
+
+        static uint64_t CurrentRound( const std::shared_ptr<ConsensusManager> &manager, uint64_t proposal_timestamp )
+        {
+            return manager->GetCurrentRound( proposal_timestamp );
+        }
+
+        static bool IsCurrentAggregator( const std::shared_ptr<ConsensusManager> &manager,
+                                         const ConsensusManager::Proposal &proposal,
+                                         const ValidatorRegistry::Registry &registry )
+        {
+            return manager->GetAggregatorRole( proposal, registry ) == ConsensusManager::AggregatorRole::CurrentAggregator;
+        }
+
         static void ArmActiveVoteBarrier( const std::shared_ptr<ConsensusManager> &manager )
         {
             std::lock_guard lock( manager->fault_test_mutex_ );
@@ -123,6 +141,12 @@ namespace sgns
             manager->accepted_certificate_barrier_ = { true, false, false };
         }
 
+        static void ArmCertificatePersistedBarrier( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            manager->certificate_persisted_barrier_ = { true, false, false };
+        }
+
         static bool ActiveVoteBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
         {
             std::lock_guard lock( manager->fault_test_mutex_ );
@@ -133,6 +157,12 @@ namespace sgns
         {
             std::lock_guard lock( manager->fault_test_mutex_ );
             return manager->accepted_certificate_barrier_.entered;
+        }
+
+        static bool CertificatePersistedBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->certificate_persisted_barrier_.entered;
         }
 
         static void ReleaseConsensusBarriers( const std::shared_ptr<ConsensusManager> &manager )
@@ -918,5 +948,120 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
 
 TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFailover )
 {
-    FAIL() << "TEST-05 persistence-before-advertisement failover proof is not implemented yet";
+    sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
+                                                    { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "publisher-loss", 54631 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus && network.passive.consensus );
+    StoreRegistry( network );
+
+    auto winner = MintFor( network.first );
+    auto loser  = MintFor( network.first, 1 );
+    ASSERT_TRUE( winner && loser );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject(
+        network.first.account->GetAddress(), winner->GetNonce(), winner->GetHash(), winner->SerializeToEmbeddedTransaction(),
+        CommitmentFor( *winner ), sgns::UTXOWitness{} );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = network.first.consensus->CreateProposal(
+        subject.value(), network.first.account->GetAddress(), network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+    const auto proposal_registry = network.first.blockchain->GetValidatorRegistry()->LoadRegistryByCid( proposal.value().registry_cid() );
+    ASSERT_TRUE( proposal_registry.has_value() );
+    ASSERT_EQ( proposal_registry.value().epoch(), proposal.value().registry_epoch() );
+    const auto active_validators = sgns::MultiNodeFinalityFaultTestAccess::OrderedActiveValidators(
+        network.first.consensus, proposal_registry.value() );
+    ASSERT_EQ( active_validators.size(), 3u );
+    const auto proposal_hash = sgns::crypto::sha2_256( proposal.value().proposal_id().data(), proposal.value().proposal_id().size() );
+    uint64_t base_index = 0;
+    for ( size_t index = 0; index < sizeof( uint64_t ) && index < proposal_hash.size(); ++index )
+        base_index = ( base_index << 8 ) | proposal_hash[index];
+    base_index %= active_validators.size();
+
+    // Round selection happens after the normal candidate and certificate delay.
+    // Arm the same post-write observer on validators solely to discover which
+    // production-selected peer reached that completed action; only that peer
+    // is stopped and the unused observers are released immediately.
+    for ( auto *peer : { &network.first, &network.second, &network.third } )
+        sgns::MultiNodeFinalityFaultTestAccess::ArmCertificatePersistedBarrier( peer->consensus );
+    ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
+    ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( network.first.consensus ) ||
+               sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( network.second.consensus ) ||
+               sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( network.third.consensus );
+    }, std::chrono::seconds( 25 ), "production-selected publisher paused after immutable certificate persistence and before notification", nullptr );
+    if ( ::testing::Test::HasFatalFailure() )
+    {
+        StopNetwork( network );
+        return;
+    }
+    Peer *publisher = nullptr;
+    for ( auto *peer : { &network.first, &network.second, &network.third } )
+        if ( sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( peer->consensus ) ) publisher = peer;
+    ASSERT_NE( publisher, nullptr );
+    const auto persisted_round = sgns::MultiNodeFinalityFaultTestAccess::CurrentRound(
+        publisher->consensus, proposal.value().timestamp() );
+    ASSERT_EQ( publisher->account->GetAddress(), active_validators[( base_index + persisted_round ) % active_validators.size()] );
+    ASSERT_TRUE( sgns::MultiNodeFinalityFaultTestAccess::IsCurrentAggregator(
+        publisher->consensus, proposal.value(), proposal_registry.value() ) );
+    ASSERT_TRUE( publisher->consensus->CheckCertificateForSlot( slot ) );
+    const auto durable_certificate = publisher->consensus->GetCertificateBySlot( slot );
+    ASSERT_TRUE( durable_certificate.has_value() );
+    const auto durable_bytes = durable_certificate.value().SerializeAsString();
+    ASSERT_FALSE( durable_bytes.empty() );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteSuccesses( publisher->consensus ), 1u );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::CertificateNotificationsPublished( publisher->consensus ), 0u );
+    Peer *crdt_blind = nullptr;
+    for ( auto *peer : { &network.first, &network.second, &network.third } )
+        if ( peer != publisher && !peer->consensus->CheckCertificateForSlot( slot ) ) crdt_blind = peer;
+    ASSERT_NE( crdt_blind, nullptr );
+
+    auto stopped_publisher = publisher->consensus;
+    StopPeer( *publisher );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::CertificateNotificationsPublished( stopped_publisher ), 0u );
+    for ( auto *peer : { &network.first, &network.second, &network.third } )
+        if ( peer != publisher ) sgns::MultiNodeFinalityFaultTestAccess::ReleaseConsensusBarriers( peer->consensus );
+
+    // The peer that did not have the record at the durability boundary remains
+    // eligible for ordinary later-round aggregation.  CRDT precedence may make
+    // the record visible first; in that case existing ProcessCertificates
+    // clears/recoveries without a replacement write or vote.
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return sgns::MultiNodeFinalityFaultTestAccess::CurrentRound( crdt_blind->consensus, proposal.value().timestamp() ) >
+                   persisted_round &&
+               sgns::MultiNodeFinalityFaultTestAccess::IsCurrentAggregator(
+                   crdt_blind->consensus, proposal.value(), proposal_registry.value() );
+    }, std::chrono::seconds( 25 ), "later production round kept the CRDT-blind peer eligible for deterministic aggregation", nullptr );
+    stopped_publisher.reset();
+    RestartPeer( *publisher );
+    ASSERT_TRUE( publisher->consensus );
+    ConnectPeers( Peers( network ) );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return network.first.consensus->CheckCertificateForSlot( slot ) && network.second.consensus->CheckCertificateForSlot( slot ) &&
+               network.third.consensus->CheckCertificateForSlot( slot ) && network.passive.consensus->CheckCertificateForSlot( slot ) &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.first.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.second.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.third.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *network.passive.transactions ) == 1;
+    }, std::chrono::seconds( 25 ), "restarted publisher made the authoritative CRDT certificate normally recoverable on every peer", nullptr );
+    for ( auto *peer : Peers( network ) )
+    {
+        EXPECT_LE( sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( peer->consensus ), 1u );
+        const auto certificate = peer->consensus->GetCertificateBySlot( slot );
+        ASSERT_TRUE( certificate.has_value() );
+        EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ), winner->GetHash() );
+        AssertSingleDurableMint( *peer, slot, *winner, *loser, 1 );
+    }
+
+    RestartAndReconnect( network );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return HasOnlyWinnerOutput( network.first, *winner, *loser ) && HasOnlyWinnerOutput( network.second, *winner, *loser ) &&
+               HasOnlyWinnerOutput( network.third, *winner, *loser ) && HasOnlyWinnerOutput( network.passive, *winner, *loser ) &&
+               HasBridgeMarker( network.first, *winner ) && HasBridgeMarker( network.second, *winner ) &&
+               HasBridgeMarker( network.third, *winner ) && HasBridgeMarker( network.passive, *winner );
+    }, std::chrono::seconds( 25 ), "publisher-loss finality remained exact after reopening every peer root", nullptr );
+    for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser, 0 );
+    StopNetwork( network );
 }
