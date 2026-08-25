@@ -34,6 +34,17 @@ namespace sgns
     class MultiNodeFinalityFaultTestAccess
     {
     public:
+        static std::shared_ptr<ConsensusManager> Manager( const std::shared_ptr<Blockchain> &blockchain )
+        {
+            return blockchain ? blockchain->consensus_manager_ : nullptr;
+        }
+
+        static const std::string &ConsensusTopic( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            static const std::string empty;
+            return manager ? manager->consensus_messages_topic_ : empty;
+        }
+
         static void ResetConsensus( const std::shared_ptr<ConsensusManager> &manager )
         {
             if ( !manager ) return;
@@ -211,6 +222,7 @@ namespace
         std::shared_ptr<sgns::GeniusAccount>             account;
         std::shared_ptr<sgns::Blockchain>                blockchain;
         std::shared_ptr<sgns::TransactionManager>        transactions;
+        std::shared_ptr<sgns::ConsensusManager>          consensus;
         std::thread                                      io_thread;
 
         ComponentPeer() = default;
@@ -224,6 +236,7 @@ namespace
             account( std::move( other.account ) ),
             blockchain( std::move( other.blockchain ) ),
             transactions( std::move( other.transactions ) ),
+            consensus( std::move( other.consensus ) ),
             io_thread( std::move( other.io_thread ) )
         {
         }
@@ -239,6 +252,7 @@ namespace
             account      = std::move( other.account );
             blockchain   = std::move( other.blockchain );
             transactions = std::move( other.transactions );
+            consensus    = std::move( other.consensus );
             io_thread    = std::move( other.io_thread );
             return *this;
         }
@@ -253,6 +267,7 @@ namespace
             if ( transactions ) transactions->Stop();
             transactions.reset();
             if ( blockchain ) (void) blockchain->Stop();
+            consensus.reset();
             blockchain.reset();
             if ( io ) io->stop();
             if ( io_thread.joinable() ) io_thread.join();
@@ -322,6 +337,8 @@ namespace
             EXPECT_TRUE( peer.account->GetUTXOManager().LoadUTXOs( peer.db->GetDataStore() ).has_value() );
             peer.blockchain = sgns::Blockchain::New( peer.db, peer.account, peer.pubsub, []( outcome::result<void> ) {} );
             EXPECT_TRUE( peer.blockchain );
+            peer.consensus = sgns::MultiNodeFinalityFaultTestAccess::Manager( peer.blockchain );
+            EXPECT_TRUE( peer.consensus );
             peer.transactions = sgns::TransactionManager::New( peer.db,
                                                                 peer.io,
                                                                 peer.account,
@@ -338,6 +355,29 @@ namespace
         {
             peer.Stop();
         }
+
+        static bool PeersAreConnectedAndMeshed( const ComponentPeer &first, const ComponentPeer &second )
+        {
+            if ( !first.pubsub || !first.consensus || !second.pubsub || !second.consensus ) return false;
+            const auto first_host  = first.pubsub->GetHost();
+            const auto second_host = second.pubsub->GetHost();
+            if ( !first_host || !second_host ||
+                 first_host->connectedness( second_host->getPeerInfo() ) != libp2p::Host::Connectedness::CONNECTED ||
+                 second_host->connectedness( first_host->getPeerInfo() ) != libp2p::Host::Connectedness::CONNECTED )
+                return false;
+            const auto &topic = sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( first.consensus );
+            return !topic.empty() && first.pubsub->getPeerCount( topic ) >= 1 && second.pubsub->getPeerCount( topic ) >= 1;
+        }
+
+        static void ConnectPeers( ComponentPeer &first, ComponentPeer &second )
+        {
+            first.pubsub->AddPeers( { second.pubsub->GetInterfaceAddress() } );
+            second.pubsub->AddPeers( { first.pubsub->GetInterfaceAddress() } );
+            ASSERT_WAIT_FOR_CONDITION( [&] { return PeersAreConnectedAndMeshed( first, second ); },
+                                       std::chrono::seconds( 5 ),
+                                       "component peers have a public libp2p connection and consensus-topic mesh",
+                                       nullptr );
+        }
     };
 } // namespace
 
@@ -348,25 +388,17 @@ TEST_F( MultiNodeFinalityFaultCompatibilitySmokeTest, ProductionCompositionAndLi
 
     auto first = StartPeer( "first", 54201 );
     auto second = StartPeer( "second", 54202 );
-    ASSERT_TRUE( first.pubsub && first.db && first.blockchain && first.transactions );
-    ASSERT_TRUE( second.pubsub && second.db && second.blockchain && second.transactions );
+    ASSERT_TRUE( first.pubsub && first.db && first.blockchain && first.transactions && first.consensus );
+    ASSERT_TRUE( second.pubsub && second.db && second.blockchain && second.transactions && second.consensus );
 
     // Real transport lifecycle: AddPeers, StopPeer, rebuild at the same root, AddPeers.
-    first.pubsub->AddPeers( { second.pubsub->GetInterfaceAddress() } );
-    ASSERT_WAIT_FOR_CONDITION( [&] { return first.db && second.db; },
-                               std::chrono::seconds( 2 ),
-                               "component peers started before lifecycle restart",
-                               nullptr );
+    ConnectPeers( first, second );
     const auto first_root = first.root;
     StopPeer( first );
     first = StartPeer( "first", 54201 );
     ASSERT_EQ( first.root, first_root );
-    ASSERT_TRUE( first.pubsub && first.db && first.blockchain && first.transactions );
-    first.pubsub->AddPeers( { second.pubsub->GetInterfaceAddress() } );
-    ASSERT_WAIT_FOR_CONDITION( [&] { return first.transactions && second.transactions; },
-                               std::chrono::seconds( 2 ),
-                               "recreated component peer and certificate consumer ready",
-                               nullptr );
+    ASSERT_TRUE( first.pubsub && first.db && first.blockchain && first.transactions && first.consensus );
+    ConnectPeers( first, second );
 
     // The new accessor is observation-only; this asserts it can read no fabricated protocol progress.
     EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::VotePublications( nullptr ), 0u );
