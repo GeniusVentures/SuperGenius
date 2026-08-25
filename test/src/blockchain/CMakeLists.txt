@@ -45,6 +45,17 @@ target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
     base_crdt_test
 )
 
+addtest(multi_node_finality_fault_compatibility_smoke_test
+    multi_node_finality_fault_compatibility_smoke_test.cpp
+)
+target_link_libraries(multi_node_finality_fault_compatibility_smoke_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120)
+
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test
