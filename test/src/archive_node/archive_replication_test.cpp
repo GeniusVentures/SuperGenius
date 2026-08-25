@@ -52,14 +52,14 @@ namespace sgns
         /// Destination of the transfer.
         static inline std::shared_ptr<GeniusNode> receiver;
 
-        static inline GeniusNodeConfig FULL_CONFIG    = { "0xcafe", "0.65", "1.0",
-                                                          TokenID::FromBytes( { 0x00 } ), "" };
-        static inline GeniusNodeConfig ARCHIVE_CONFIG = { "0xcafe", "0.65", "1.0",
-                                                          TokenID::FromBytes( { 0x00 } ), "" };
-        static inline GeniusNodeConfig SENDER_CONFIG  = { "0xcafe", "0.65", "1.0",
-                                                          TokenID::FromBytes( { 0x00 } ), "" };
-        static inline GeniusNodeConfig RECEIVER_CONFIG = { "0xcafe", "0.65", "1.0",
-                                                           TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig FULL_CONFIG    = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig ARCHIVE_CONFIG = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig SENDER_CONFIG  = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig RECEIVER_CONFIG = { "0xcafe",
+                                                           "0.35",
+                                                           "1.0",
+                                                           TokenID::FromBytes( { 0x00 } ),
+                                                           "" };
 
         /// Writes the per-node config files. Distinct prefix from mat_/transaction_sync_ so parallel
         /// test binaries never share a data directory.
@@ -75,15 +75,18 @@ namespace sgns
             }
             std::filesystem::create_directories( config.BaseWritePath );
             GeniusNode::WriteNetworkConfig( config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-            GeniusNode::WriteSgnsConfig( config.BaseWritePath, node_type, /*is_processor=*/false,
+            GeniusNode::WriteSgnsConfig( config.BaseWritePath,
+                                         node_type,
+                                         /*is_processor=*/false,
                                          /*rpc_catchup=*/false );
         }
 
         static void SetUpTestSuite()
         {
             // Must precede any node construction so account creation uses the in-memory backend.
-            GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-                                                    { return std::make_shared<MemorySecureStorage>( identifier ); } );
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
             PrepareNode( FULL_CONFIG, "full", "Full" );
             PrepareNode( ARCHIVE_CONFIG, "archive", "Archive" );
@@ -93,16 +96,20 @@ namespace sgns
             // The full node must exist and be registered as genesis authority before the others are
             // constructed, since Blockchain bakes GetAuthorizedFullNodeAddress() in at construction.
             full_node = GeniusNode::New(
-                FULL_CONFIG, FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
+                FULL_CONFIG,
+                FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
             ASSERT_NE( full_node, nullptr );
             Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
 
             archive_node = GeniusNode::New(
-                ARCHIVE_CONFIG, FromPrivateKey{ "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" } );
+                ARCHIVE_CONFIG,
+                FromPrivateKey{ "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" } );
             sender = GeniusNode::New(
-                SENDER_CONFIG, FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
+                SENDER_CONFIG,
+                FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
             receiver = GeniusNode::New(
-                RECEIVER_CONFIG, FromPrivateKey{ "7b1e4a30f2c8d95b6a03e17c4d8f26b09a5c3e71d842f0b6c9e5a1387d406f2c" } );
+                RECEIVER_CONFIG,
+                FromPrivateKey{ "7b1e4a30f2c8d95b6a03e17c4d8f26b09a5c3e71d842f0b6c9e5a1387d406f2c" } );
             ASSERT_NE( archive_node, nullptr );
             ASSERT_NE( sender, nullptr );
             ASSERT_NE( receiver, nullptr );
@@ -141,7 +148,9 @@ namespace sgns
         constexpr uint64_t kMintAmount     = 1000;
         constexpr uint64_t kTransferAmount = 75;
 
-        auto mint = sender->MintTokens( kMintAmount, test::NextMintSourceHash(), "test",
+        auto mint = sender->MintTokens( kMintAmount,
+                                        test::NextMintSourceHash(),
+                                        "test",
                                         TokenID::FromBytes( { 0x00 } ) );
         ASSERT_TRUE( mint.has_value() ) << "mint failed on sender";
 
@@ -150,7 +159,8 @@ namespace sgns
                                       std::chrono::milliseconds( 30000 ),
                                       "mint did not settle into sender's balance" );
 
-        auto transfer = sender->TransferFunds( kTransferAmount, receiver->GetAddress(),
+        auto transfer = sender->TransferFunds( kTransferAmount,
+                                               receiver->GetAddress(),
                                                TokenID::FromBytes( { 0x00 } ),
                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer.has_value() ) << "transfer failed on sender";
@@ -158,18 +168,19 @@ namespace sgns
 
         // Control: the transfer really did propagate. Without this, a failure of the assertion below
         // would be ambiguous between "the archive did not replicate" and "nothing was broadcast".
-        EXPECT_EQ( receiver->WaitForTransactionIncoming( tx_id,
-                                                         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
-                   TransactionManager::TransactionStatus::CONFIRMED )
+        EXPECT_EQ(
+            receiver->WaitForTransactionIncoming( tx_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+            TransactionManager::TransactionStatus::CONFIRMED )
             << "the intended recipient never saw the transfer";
 
         // THE ASSERTION. WaitForTransactionIncoming matches on
         //   tracked.tx->GetHash() == tx_id && tracked.tx->GetSrcAddress() != own address,
         // so a CONFIRMED result proves the archive stored the transaction (it is in tx_processed_m)
         // AND did not author it. It was addressed to `receiver`, so it did not receive it either.
-        EXPECT_EQ( archive_node->WaitForTransactionIncoming(
-                       tx_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
-                   TransactionManager::TransactionStatus::CONFIRMED )
+        EXPECT_EQ(
+            archive_node->WaitForTransactionIncoming( tx_id,
+                                                      std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+            TransactionManager::TransactionStatus::CONFIRMED )
             << "archive node did not store a transaction between two third parties";
 
         // Corroboration: the archive replicated foreign *ledger state*, not just the record.

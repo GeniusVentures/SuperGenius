@@ -127,22 +127,27 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
+
+/// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
+static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+/// Developer cut every node in this fixture is configured with ("0.35" above).
+static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
@@ -533,24 +538,32 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     auto available   = cost - burn_amount;
+    // Both processors report a 0.35 developer cut, so the peers are jointly entitled to 65% of
+    // the available amount. The payout apportions by largest remainder, which hands out the
+    // sub-minion dust -- at most one minion per credit, and there are three credits here (two
+    // peers and the aggregated developer) -- so the observed peer total can exceed the exact
+    // entitlement by up to 2.
+    const uint64_t peers_entitlement  = ( available * ( DEVELOPER_CUT_SCALE - DEVELOPER_CUT ) ) / DEVELOPER_CUT_SCALE;
+    const uint64_t max_dust_to_peers  = 2;
     assertWaitForCondition(
         [&]
         {
-            auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
-            auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
+            auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( balance_node1 + balance_node2 );
+            return ( gain >= peers_entitlement ) && ( gain <= peers_entitlement + max_dust_to_peers );
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );
     std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-    ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = available - 2 * expected_peer_gain;
+    const auto peers_gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) -
+                            ( balance_node1 + balance_node2 );
+    ASSERT_GE( peers_gain, peers_entitlement );
+    ASSERT_LE( peers_gain, peers_entitlement + max_dust_to_peers );
+
+    // Whatever the peers did not take went to the developer: the outputs sum to the escrow exactly.
+    const auto gameDeveloperPayment = available - peers_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
                    burn_amount );

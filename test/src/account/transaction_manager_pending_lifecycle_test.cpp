@@ -159,8 +159,7 @@ namespace
             auto                         transaction = db_->BeginTransaction();
             sgns::crdt::GlobalDB::Buffer value;
             value.put( "committed" );
-            if ( !transaction->Put( sgns::crdt::HierarchicalKey( "/recovery/already-committed" ),
-                                    std::move( value ) ) )
+            if ( !transaction->Put( sgns::crdt::HierarchicalKey( "/recovery/already-committed" ), std::move( value ) ) )
             {
                 ADD_FAILURE() << "Failed to populate the committed CRDT transaction";
                 return nullptr;
@@ -198,6 +197,7 @@ namespace
                                                      { return account_->Sign( payload ); } )
                              .has_value() );
         }
+
         void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
         {
             auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
@@ -307,8 +307,9 @@ TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowin
     // exercises the non-retryable send recovery path without altering production code.
     auto committed_transaction = MakeCommittedTransaction();
     ASSERT_TRUE( committed_transaction );
-    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue(
-        *manager_, failed_transaction, std::move( committed_transaction ) );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 failed_transaction,
+                                                                 std::move( committed_transaction ) );
     sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
 
     ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
@@ -406,10 +407,10 @@ TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitTimesOutWithoutPollingT
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
 
     std::optional<sgns::TransactionManager::TransactionCompletion> completion;
-    manager_->AsyncWaitForTransactionOutgoing(
-        transaction->GetHash(),
-        std::chrono::milliseconds( 10 ),
-        [&]( sgns::TransactionManager::TransactionCompletion result ) { completion = std::move( result ); } );
+    manager_->AsyncWaitForTransactionOutgoing( transaction->GetHash(),
+                                               std::chrono::milliseconds( 10 ),
+                                               [&]( sgns::TransactionManager::TransactionCompletion result )
+                                               { completion = std::move( result ); } );
 
     sgns::test::assertWaitForCondition(
         [&]
@@ -510,11 +511,7 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() );
     escrow_dag.set_uncle_hash( escrow_lock );
     auto escrow = std::make_shared<sgns::EscrowTransaction>(
-        sgns::EscrowTransaction::New( std::move( escrow_params.value() ),
-                                      1,
-                                      account_->GetAddress(),
-                                      0,
-                                      std::move( escrow_dag ) ) );
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ), 1, std::move( escrow_dag ) ) );
     escrow->MakeSignature( *account_ );
     StoreCertificate( escrow );
     StoreTransaction( escrow );

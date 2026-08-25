@@ -64,8 +64,8 @@ protected:
     /** @brief Developer payout address (DevConfig::Addr) shared by all race-test nodes. */
     static constexpr std::string_view kDevPayoutAddr = "0xcafe";
 
-    /** @brief Developer cut fraction (DevConfig::Cut) shared by all race-test nodes. */
-    static constexpr std::string_view kDevCutFraction = "0.65";
+    /** @brief Developer cut fraction (DevConfig::DevCut) shared by all race-test nodes. */
+    static constexpr std::string_view kDevCutFraction = "0.35";
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all race-test nodes. */
     static constexpr std::string_view kDevTokenValue = "1.0";
@@ -140,9 +140,9 @@ protected:
         // Unlike the dedicated catch-up suite, this must not import history.
         const uint64_t creation_block = s_pre_burn_block + 1ull;
 
-        std::string        config_json( kBridgeChainsConfigTemplate );
-        const std::string  placeholder( "__CREATION_BLOCK__" );
-        const auto         pos = config_json.find( placeholder );
+        std::string       config_json( kBridgeChainsConfigTemplate );
+        const std::string placeholder( "__CREATION_BLOCK__" );
+        const auto        pos = config_json.find( placeholder );
         if ( pos != std::string::npos )
         {
             config_json.replace( pos, placeholder.size(), std::to_string( creation_block ) );
@@ -257,9 +257,10 @@ protected:
         // Capture the clean pre-burn baseline. Race-test watchers start here so they
         // see burns mined after setup without importing historical fork events.
         {
-            int               exit_code      = 0;
+            int               exit_code          = 0;
             const std::string pre_burn_block_str = sgns::test::anvil::RunShellCapture(
-                "cast block-number --rpc-url " + s_anvil.RpcUrl(), exit_code );
+                "cast block-number --rpc-url " + s_anvil.RpcUrl(),
+                exit_code );
             ASSERT_EQ( exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
             ASSERT_FALSE( pre_burn_block_str.empty() ) << "cast block-number returned empty output";
             s_pre_burn_block = std::stoull( pre_burn_block_str );
@@ -269,11 +270,11 @@ protected:
 
         const std::string binary_path = boost::dll::program_location().parent_path().string();
 
-        const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
-        auto chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string>
+        const std::string kAnvilRpcUrl      = s_anvil.RpcUrl();
+        auto              chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string>
         {
-            return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) +
-                   kAnvilRpcUrl + R"("],"status":"active"}])";
+            return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) + kAnvilRpcUrl +
+                   R"("],"status":"active"}])";
         };
 
         // Bootstrap order: create the 10 Light nodes FIRST and register their REAL
@@ -311,11 +312,11 @@ protected:
         auto write_node_config = [&]( unsigned int i, const char *node_type )
         {
             const std::string base_write_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
-            s_configs[i].Addr             = kDevPayoutAddr;
-            s_configs[i].Cut              = kDevCutFraction;
-            s_configs[i].TokenValueInGNUS = kDevTokenValue;
-            s_configs[i].TokenID          = sgns::TokenID::FromBytes( { 0x00 } );
-            s_configs[i].BaseWritePath    = base_write_path;
+            s_configs[i].Addr                 = kDevPayoutAddr;
+            s_configs[i].DevCut               = kDevCutFraction;
+            s_configs[i].TokenValueInGNUS     = kDevTokenValue;
+            s_configs[i].TokenID              = sgns::TokenID::FromBytes( { 0x00 } );
+            s_configs[i].BaseWritePath        = base_write_path;
 
             // port_seed=0 asks the OS for a port. Nothing here needs it up front: the star
             // bootstrap reads the Full node's live address after construction. The old
@@ -364,11 +365,10 @@ protected:
         ASSERT_WAIT_FOR_CONDITION(
             [&]()
             {
-                return std::all_of(
-                    s_nodes.begin(),
-                    s_nodes.end(),
-                    []( const std::shared_ptr<GeniusNode> &node )
-                    { return node && node->GetState() == GeniusNode::NodeState::READY; } );
+                return std::all_of( s_nodes.begin(),
+                                    s_nodes.end(),
+                                    []( const std::shared_ptr<GeniusNode> &node )
+                                    { return node && node->GetState() == GeniusNode::NodeState::READY; } );
             },
             kRaceNodeReadyTimeout,
             "all 11 bridge-race nodes READY",

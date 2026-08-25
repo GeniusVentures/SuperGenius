@@ -18,7 +18,7 @@ namespace
 
     GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
-        return { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
+        return { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
 
     boost::filesystem::path MakeTempDir( const std::string &name )
@@ -111,8 +111,7 @@ TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Archive );
     EXPECT_FALSE( node->IsFullNode() ) << "Archive replicates like Full but is not a Full node";
-    EXPECT_TRUE( ReplicatesAllAccounts( node->GetNodeType() ) )
-        << "Archive must replicate network-wide data like Full";
+    EXPECT_TRUE( ReplicatesAllAccounts( node->GetNodeType() ) ) << "Archive must replicate network-wide data like Full";
     EXPECT_FALSE( node->IsProcessor() ) << "Archive must not process, even with is_processor=true";
 
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( [&]()
