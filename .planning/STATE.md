@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-08-25T15:30:40.757Z"
-last_activity: 2026-08-25 -- Phase 12 planning complete
+last_updated: "2026-08-25T16:53:17.598Z"
+last_activity: 2026-08-25
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 15
-  completed_plans: 15
+  completed_plans: 16
   percent: 80
 ---
 
@@ -21,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Phase 11 — convergent-certificate-consumption-mint-recovery
+**Current focus:** Phase 12 — Multi-Node Finality Fault Proof
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
+Phase: 12 (Multi-Node Finality Fault Proof) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-25 -- Phase 12 planning complete
+Last activity: 2026-08-25
 
 Progress: [██████████] 100%
 
@@ -59,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 11 P02 | 10 min | 2 tasks | 3 files |
 | Phase 11 P03 | 8 min | 2 tasks | 5 files |
 | Phase 11 P04 | 17m | 2 tasks | 2 files |
+| Phase 12 P01 | 64m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -80,6 +80,8 @@ Progress: [██████████] 100%
 - [Phase 11]: For Mint V2, keep transaction tracking VERIFYING until idempotent effects and the existing bridge marker both persist. — Terminal confirmation must not outrun durable local effects.
 - [Phase 11]: Expose only friend-scoped test access to the fixture-owned ConsensusManager; production APIs remain unchanged. — The regression needs real ingress access without a production getter.
 - [Phase 11]: Reuse the existing lower serialized SHA-256 certificate ordering in SubmitCertificate and FilterCertificate; different verified Mint hashes only emit a consensus-fault diagnostic.
+- [Phase 12]: Use StopPeer/recreate plus AddPeers as the Phase 12 real-transport recovery path.
+- [Phase 12]: Use the existing test-chain IInputValidator and a fresh Mint nonce 0 for normal production-route audit ingress.
 
 ### Pending Todos
 
@@ -98,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T21:27:49.180Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-CONTEXT.md
+Last session: 2026-08-25T16:53:17.593Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: None

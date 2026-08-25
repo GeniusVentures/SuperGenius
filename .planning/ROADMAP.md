@@ -125,7 +125,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Add safe production-boundary instrumentation and a persistent four-peer real-route audit harness.
+- [x] 12-01-PLAN.md — Add safe production-boundary instrumentation and a persistent four-peer real-route audit harness.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -148,7 +148,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 0/TBD | Not started | - |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 1/3 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
