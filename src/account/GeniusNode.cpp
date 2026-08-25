@@ -921,6 +921,15 @@ namespace sgns
                 }
                 else
                 {
+                    if ( trusted_peers_genesis_.empty() )
+                    {
+                        // Fail closed: a node with no configured or persisted trust
+                        // policy must not boot unrestricted.
+                        node_logger_->critical(
+                            "No trusted peers configured and no persisted trust state; refusing unrestricted boot" );
+                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
                     auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
                                                                                    trusted_peers_genesis_,
                                                                                    bootstrapper_node_address_,
