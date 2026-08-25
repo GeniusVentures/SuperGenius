@@ -19,6 +19,18 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(USE_CCACHE "Use ccache as compiler launcher when it is available" ON)
+if(USE_CCACHE AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        message(STATUS "Using ccache as compiler launcher: ${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    else()
+        message(STATUS "ccache not found, compiling without a compiler launcher")
+    endif()
+endif()
+
 if (DEFINED SANITIZE_CODE)
     message(STATUS "Building with sanitizer: ${SANITIZE_CODE}")
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
