@@ -1,16 +1,11 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-reviewed: 2026-08-25T19:52:57Z
+reviewed: 2026-08-25T21:16:20Z
 depth: deep
-files_reviewed: 8
+files_reviewed: 3
 files_reviewed_list:
   - src/blockchain/Consensus.hpp
   - src/blockchain/Consensus.cpp
-  - src/blockchain/Blockchain.hpp
-  - src/account/TransactionManager.hpp
-  - src/account/TransactionManager.cpp
-  - test/src/blockchain/CMakeLists.txt
-  - test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp
   - test/src/blockchain/multi_node_finality_fault_test.cpp
 findings:
   critical: 0
@@ -22,29 +17,29 @@ status: clean
 
 # Phase 12: Code Review Report
 
-**Reviewed:** 2026-08-25T19:52:57Z
+**Reviewed:** 2026-08-25T21:16:20Z
 **Depth:** deep
-**Files Reviewed:** 8
+**Files Reviewed:** 3
 **Status:** clean
 
 ## Summary
 
-Deep final review covered every Phase 12 source artifact, with focused analysis of the 12-04 test-only recovery-harness change.
+Final deep re-review after 12-05 covers the changed consensus seam and multi-node fault test, with the Phase 12 plans/summaries, current verification, prior review, and Phase 9 durable-one-vote contracts as context.
 
-- The topology predicate uses only public PubSub state: started services, host connected-component reachability, and at least one consensus-topic neighbor. It no longer assumes an impossible all-to-all GossipSub mesh.
-- Certificate persistence remains authoritative: the production path durably writes through `PutConvergentImmutable` before its normal notification, and the publisher-loss scenario stops the selected publisher with zero successful certificate notifications. Recovery reads the persisted certificate through normal CRDT and certificate-consumer paths; it does not add successor notification/re-advertisement.
-- Restart assertions prove the canonical certificate-to-winner binding, winner-only durable UTXO state, loser absence, and bridge marker after same-root recreation. Live Mint counters are used as process-local observations only and are not substituted for durable evidence.
-- Public `CreateProposal`, `SubmitProposal`, `AddPeers`, and same-root stop/recreate are the only scenario-driving APIs. Source scanning found no direct handlers, CRDT writes, forced timers, mock transport, or sleep-based synchronization.
-- Friend seams remain read-only or post-durability barrier/counter controls; tracing the consensus and TransactionManager call chains found no test-authored certificate authority or Mint-completion shortcut.
+The production delta is restricted to two mutex-protected, private friend-readable counters at the existing `ReleaseActiveVoteForAcceptedSlot` boundary. They do not alter validation, persistence, deletion selection, return values, certificate authority, CRDT state, PubSub delivery, or retry behavior. The test accessor exposes observations only.
 
-Verification: the target rebuilt successfully, and the recorded clean serial CTest run passed all five `multi_node_finality_fault_test` scenarios in 118.73 seconds with the registered 300-second timeout.
+The repaired vote-boundary subcase leaves all peers unconnected through durable persistence and same-root `RestartPeer`; it immediately asserts the original direct local record before calling `ConnectPeers`, and only afterwards republishes the unchanged signed proposal through public `SubmitProposal`. The dedicated lifecycle diagnostic independently snapshots the exact record before shutdown, after manager close, after ownership release, after same-root GlobalDB reopening, and after `RecoverActiveVotes`.
+
+Phase 9 invariants remain intact on the traced production paths: the exact active-vote record is direct-local and canonical-slot-bound; release still happens only after committed accepted-certificate readback and validation; CRDT remains certificate authority; and the PubSub callback remains receipt/stalled-work cleanup only, with no certificate authority write, successor re-advertisement, or direct test ingress shortcut.
+
+The required anti-shortcut scan and diff whitespace check are clean. The registered real-socket CTest command was attempted but cannot run in this sandbox because listener creation is denied (`Operation not permitted`); ensuing topology and certificate-barrier timeouts therefore do not constitute a source finding. The recorded 12-05 real-socket run is the applicable execution evidence.
 
 ## Narrative Findings (AI reviewer)
 
-No Critical, Warning, or Info findings.
+No BLOCKER or WARNING findings.
 
 ---
 
-_Reviewed: 2026-08-25T19:52:57Z_
+_Reviewed: 2026-08-25T21:16:20Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
