@@ -482,6 +482,4 @@ TEST_F( FinalityFaultNetwork, SameBurnContentionUsesOneCanonicalSlotAndExactMint
                HasBridgeMarker( third, *winner ) && HasBridgeMarker( passive, *winner );
     }, std::chrono::seconds( 20 ), "durable canonical winner survived every peer recreation", nullptr );
     StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
-
-    FAIL() << "RED: same-burn contention acceptance proof is intentionally failing before the green gate";
 }
