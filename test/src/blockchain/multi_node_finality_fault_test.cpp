@@ -381,3 +381,107 @@ TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceA
     }, std::chrono::seconds( 20 ), "certificate and exact winner Mint survived every peer recreation", nullptr );
     StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
 }
+
+TEST_F( FinalityFaultNetwork, SameBurnContentionUsesOneCanonicalSlotAndExactMint )
+{
+    sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
+                                                    { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto first = StartPeer( "contention-validator-one", 54401 );
+    auto second = StartPeer( "contention-validator-two", 54402 );
+    auto third = StartPeer( "contention-validator-three", 54403 );
+    auto passive = StartPeer( "contention-passive-recipient", 54404 );
+    ASSERT_TRUE( first.consensus && second.consensus && third.consensus && passive.consensus );
+
+    const std::array<Peer *, 4> peers{ &first, &second, &third, &passive };
+    const auto update = RegistryUpdate( { &first, &second, &third } );
+    for ( auto *peer : peers )
+        ASSERT_TRUE( peer->blockchain->GetValidatorRegistry()->StoreRegistryUpdate( update ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return first.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+               second.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+               third.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+               passive.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value();
+    }, std::chrono::seconds( 5 ), "disconnected peers durably stored the validator registry", nullptr );
+
+    auto first_mint = MintFor( first );
+    auto second_mint = MintFor( first, 1 );
+    ASSERT_TRUE( first_mint && second_mint );
+    ASSERT_EQ( first_mint->GetSlotID(), second_mint->GetSlotID() );
+    ASSERT_NE( first_mint->GetHash(), second_mint->GetHash() );
+
+    auto first_subject = sgns::ConsensusManager::CreateNonceSubject(
+        first.account->GetAddress(), first_mint->GetNonce(), first_mint->GetHash(),
+        first_mint->SerializeToEmbeddedTransaction(), CommitmentFor( *first_mint ), sgns::UTXOWitness{} );
+    auto second_subject = sgns::ConsensusManager::CreateNonceSubject(
+        first.account->GetAddress(), second_mint->GetNonce(), second_mint->GetHash(),
+        second_mint->SerializeToEmbeddedTransaction(), CommitmentFor( *second_mint ), sgns::UTXOWitness{} );
+    ASSERT_TRUE( first_subject.has_value() && second_subject.has_value() );
+    auto first_proposal = first.consensus->CreateProposal( first_subject.value(), first.account->GetAddress(),
+                                                            first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+                                                            first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    auto second_proposal = second.consensus->CreateProposal( second_subject.value(), second.account->GetAddress(),
+                                                              second.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+                                                              second.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( first_proposal.has_value() && second_proposal.has_value() );
+    const auto canonical_slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( first_proposal.value() );
+    ASSERT_EQ( canonical_slot, sgns::MultiNodeFinalityFaultTestAccess::SlotKey( second_proposal.value() ) );
+    ASSERT_TRUE( first.consensus->SubmitProposal( first_proposal.value() ).has_value() );
+    ASSERT_TRUE( second.consensus->SubmitProposal( second_proposal.value() ).has_value() );
+
+    // Named real-peer barrier: the three validators connect only after both
+    // public proposal submissions have completed on their isolated peers.
+    for ( auto *source : { &first, &second, &third } )
+        for ( auto *target : { &first, &second, &third } )
+            if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return first.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               second.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               third.consensus->CheckCertificateForSlot( canonical_slot );
+    }, std::chrono::seconds( 20 ), "connected validators converged on one durable canonical certificate", nullptr );
+
+    const auto certificate = first.consensus->GetCertificateBySlot( canonical_slot );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto winner_hash = sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() );
+    ASSERT_TRUE( winner_hash.has_value() );
+    const auto winner = winner_hash.value() == first_mint->GetHash() ? first_mint : second_mint;
+    const auto loser = winner_hash.value() == first_mint->GetHash() ? second_mint : first_mint;
+    ASSERT_NE( winner->GetHash(), loser->GetHash() );
+
+    for ( auto *validator : { &first, &second, &third } )
+    {
+        const auto durable = validator->consensus->GetCertificateBySlot( canonical_slot );
+        ASSERT_TRUE( durable.has_value() );
+        EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( durable.value().proposal() ), winner_hash );
+    }
+
+    ConnectPeers( peers );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return passive.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *first.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *second.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *third.transactions ) == 1 &&
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *passive.transactions ) == 1;
+    }, std::chrono::seconds( 20 ), "passive peer received and recovered the exact canonical winner", nullptr );
+    for ( auto *peer : peers )
+    {
+        EXPECT_TRUE( HasOnlyWinnerOutput( *peer, *winner, *loser ) );
+        EXPECT_TRUE( HasBridgeMarker( *peer, *winner ) );
+    }
+
+    RestartPeer( first ); RestartPeer( second ); RestartPeer( third ); RestartPeer( passive );
+    ASSERT_TRUE( first.consensus && second.consensus && third.consensus && passive.consensus );
+    ConnectPeers( { &first, &second, &third, &passive } );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return first.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               second.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               third.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               passive.consensus->CheckCertificateForSlot( canonical_slot ) &&
+               HasOnlyWinnerOutput( first, *winner, *loser ) && HasOnlyWinnerOutput( second, *winner, *loser ) &&
+               HasOnlyWinnerOutput( third, *winner, *loser ) && HasOnlyWinnerOutput( passive, *winner, *loser ) &&
+               HasBridgeMarker( first, *winner ) && HasBridgeMarker( second, *winner ) &&
+               HasBridgeMarker( third, *winner ) && HasBridgeMarker( passive, *winner );
+    }, std::chrono::seconds( 20 ), "durable canonical winner survived every peer recreation", nullptr );
+    StopPeer( first ); StopPeer( second ); StopPeer( third ); StopPeer( passive );
+
+    FAIL() << "RED: same-burn contention acceptance proof is intentionally failing before the green gate";
+}
