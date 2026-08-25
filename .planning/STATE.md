@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-08-25T20:50:02.610Z"
-last_activity: 2026-08-25 -- Phase 12 planning complete
+stopped_at: Completed 12-05-PLAN.md
+last_updated: "2026-08-25T20:53:14.719Z"
+last_activity: 2026-08-25 -- Completed 12-05 active-vote restart gap closure
 progress:
   total_phases: 5
   completed_phases: 4
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-08-25 -- Phase 12 planning complete
+Plan: 5 of 5
+Status: Awaiting final Phase 12 verification
+Last activity: 2026-08-25 -- TEST-04 active-vote restart proof passed clean serial CTest
 
 Progress: [██████████] 100%
 
@@ -89,6 +89,7 @@ Progress: [██████████] 100%
 - [Phase 12]: Use durable active-vote identity rather than retry publication totals to prove late contender rejection. — Vote counters include normal retry broadcasts and cannot establish unique ownership.
 - [Phase 12]: Use stop-aware post-durability test barriers so shutdown leaves incomplete work to existing recovery.
 - [Phase 12]: CRDT immutable state is authoritative after publisher loss; PubSub is best-effort cleanup with no successor retry.
+- [Phase 12]: Isolate the pre-broadcast vote owner until its same-root active-vote recovery is asserted. — Connected peers may correctly finalize the slot and release that direct local lock before the intended restart boundary.
 
 ### Pending Todos
 
