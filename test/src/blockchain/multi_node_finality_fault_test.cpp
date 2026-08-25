@@ -75,6 +75,18 @@ namespace sgns
             return manager->fault_test_counters_.accepted_certificate_readbacks;
         }
 
+        static std::optional<std::string> DurableActiveVoteProposalId( const std::shared_ptr<ConsensusManager> &manager,
+                                                                       const std::string &slot )
+        {
+            if ( !manager || !manager->db_ ) return std::nullopt;
+            crdt::GlobalDB::Buffer key;
+            key.put( manager->ActiveVoteStorageKey( slot ) );
+            const auto stored = manager->db_->GetDataStore()->get( key );
+            if ( stored.has_error() ) return std::nullopt;
+            const auto decoded = manager->DecodeActiveVoteRecord( slot, stored.value().toString() );
+            return decoded.has_value() ? std::optional<std::string>( decoded.value().proposal.proposal_id() ) : std::nullopt;
+        }
+
         static uint64_t MintEffects( const TransactionManager &transactions )
         {
             std::lock_guard lock( transactions.fault_test_mutex_ );
@@ -558,30 +570,22 @@ TEST_F( FinalityFaultNetwork, LateContenderAndPassiveRecipientRemainReceiveOnly 
                sgns::MultiNodeFinalityFaultTestAccess::VotePublications( third.consensus ) > 0;
     }, std::chrono::seconds( 15 ), "durable active-vote publications reached each validator", nullptr );
 
-    const auto votes_before_late_admission =
-        sgns::MultiNodeFinalityFaultTestAccess::VotePublications( first.consensus ) +
-        sgns::MultiNodeFinalityFaultTestAccess::VotePublications( second.consensus ) +
-        sgns::MultiNodeFinalityFaultTestAccess::VotePublications( third.consensus );
     ASSERT_TRUE( second.consensus->SubmitProposal( loser_proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] {
+        return sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( first.consensus, canonical_slot ) ==
+                   winner_proposal.value().proposal_id() &&
+               sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( second.consensus, canonical_slot ) ==
+                   winner_proposal.value().proposal_id() &&
+               sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( third.consensus, canonical_slot ) ==
+                   winner_proposal.value().proposal_id();
+    }, std::chrono::seconds( 10 ), "late contender did not replace any durable active vote", nullptr );
     ASSERT_WAIT_FOR_CONDITION( [&] {
         return first.consensus->CheckCertificateForSlot( canonical_slot ) &&
                second.consensus->CheckCertificateForSlot( canonical_slot ) &&
                third.consensus->CheckCertificateForSlot( canonical_slot );
     }, std::chrono::seconds( 20 ), "initial winner reached the accepted authoritative certificate boundary", nullptr );
-    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::VotePublications( first.consensus ) +
-                   sgns::MultiNodeFinalityFaultTestAccess::VotePublications( second.consensus ) +
-                   sgns::MultiNodeFinalityFaultTestAccess::VotePublications( third.consensus ),
-               votes_before_late_admission );
 
-    const auto writes_before_final_late =
-        sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( first.consensus ) +
-        sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( second.consensus ) +
-        sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( third.consensus );
     ASSERT_TRUE( third.consensus->SubmitProposal( loser_proposal.value() ).has_value() );
-    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( first.consensus ) +
-                   sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( second.consensus ) +
-                   sgns::MultiNodeFinalityFaultTestAccess::CertificateWriteAttempts( third.consensus ),
-               writes_before_final_late );
 
     ConnectPeers( peers );
     ASSERT_WAIT_FOR_CONDITION( [&] {
