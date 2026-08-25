@@ -915,3 +915,8 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         StopNetwork( network );
     }
 }
+
+TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFailover )
+{
+    FAIL() << "TEST-05 persistence-before-advertisement failover proof is not implemented yet";
+}
