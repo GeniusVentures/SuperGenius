@@ -1107,6 +1107,29 @@ namespace sgns
          */
         void PerformHealthCheck();
 
+        /**
+         * @brief Queries libp2p connectedness for @p peer on the host's own io thread.
+         *
+         * libp2p's ConnectionManagerImpl keeps its connection table
+         * (`connections_`) in a bare unordered_map with no synchronisation: it
+         * assumes every access happens on the single io_context thread that owns
+         * the host. GossipPubSub runs that context on its own thread, while
+         * GeniusNode's scheduler runs on a separate io_context with several
+         * threads. Calling Host::connectedness() directly therefore walks the
+         * connection table while the pubsub thread erases from it during
+         * connect/disconnect churn, which segfaults on a torn shared_ptr.
+         *
+         * This helper posts the query onto the pubsub io_context and waits for
+         * the answer, so the table is only ever read on its owning thread. When
+         * the context is unavailable, already stopped, or when we are already
+         * running on it, the query runs inline (posting would deadlock).
+         *
+         * @param[in] peer Peer to query.
+         * @return Connectedness for @p peer, or NOT_CONNECTED when the query
+         *         could not be completed (shutdown in progress or timed out).
+         */
+        libp2p::Host::Connectedness HostConnectedness( const libp2p::peer::PeerInfo &peer ) const;
+
         struct PriceInfo
         {
             double                                             price;      ///< Cached USD token price.

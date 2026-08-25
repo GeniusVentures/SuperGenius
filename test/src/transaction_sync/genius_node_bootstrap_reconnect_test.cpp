@@ -1,10 +1,12 @@
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
 
+#include <boost/asio/post.hpp>
 #include <boost/dll.hpp>
 #include <gtest/gtest.h>
 #include <libp2p/multi/multiaddress.hpp>
@@ -19,6 +21,49 @@
 
 namespace sgns
 {
+    namespace
+    {
+        /**
+         * @brief Queries connectedness on the pubsub io thread that owns the host.
+         *
+         * libp2p's ConnectionManagerImpl guards its connection table with nothing
+         * at all — it assumes single-threaded access on the host's io_context.
+         * Polling Host::connectedness() from the test thread while the pubsub
+         * thread tears connections down walks a mutating unordered_set and
+         * segfaults on a torn shared_ptr. Post the query onto the owning context
+         * instead of reading the table from here.
+         */
+        libp2p::Host::Connectedness ConnectednessOnHostThread( const std::shared_ptr<GeniusNode>   &node,
+                                                               const libp2p::peer::PeerInfo &peer )
+        {
+            auto pubsub = node->GetPubSub();
+            if ( !pubsub )
+            {
+                return libp2p::Host::Connectedness::NOT_CONNECTED;
+            }
+            auto host = pubsub->GetHost();
+            if ( !host )
+            {
+                return libp2p::Host::Connectedness::NOT_CONNECTED;
+            }
+            auto context = pubsub->GetAsioContext();
+            if ( !context || context->stopped() || context->get_executor().running_in_this_thread() )
+            {
+                return host->connectedness( peer );
+            }
+
+            auto promise = std::make_shared<std::promise<libp2p::Host::Connectedness>>();
+            auto future  = promise->get_future();
+            boost::asio::post( *context,
+                               [host, peer, promise]() { promise->set_value( host->connectedness( peer ) ); } );
+            if ( future.wait_for( std::chrono::seconds( 5 ) ) != std::future_status::ready )
+            {
+                return libp2p::Host::Connectedness::NOT_CONNECTED;
+            }
+            return future.get();
+        }
+    } // namespace
+
     class GeniusNodeBootstrapReconnectTest : public ::testing::Test
     {
     protected:
@@ -122,7 +167,7 @@ namespace sgns
         // to fail. The client must retry without first handing that failure to GossipSub,
         // which bans failed peers for one minute.
         std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
-        EXPECT_NE( client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ),
+        EXPECT_NE( ConnectednessOnHostThread( client_node_, bootstrap_peer ),
                    libp2p::Host::Connectedness::CONNECTED );
 
         full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
@@ -140,7 +185,7 @@ namespace sgns
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {
-                return client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ) ==
+                return ConnectednessOnHostThread( client_node_, bootstrap_peer ) ==
                        libp2p::Host::Connectedness::CONNECTED;
             },
             std::chrono::seconds( 20 ),
@@ -151,7 +196,7 @@ namespace sgns
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {
-                return client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ) !=
+                return ConnectednessOnHostThread( client_node_, bootstrap_peer ) !=
                        libp2p::Host::Connectedness::CONNECTED;
             },
             std::chrono::seconds( 20 ),
@@ -168,7 +213,7 @@ namespace sgns
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
             {
-                return client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ) ==
+                return ConnectednessOnHostThread( client_node_, bootstrap_peer ) ==
                        libp2p::Host::Connectedness::CONNECTED;
             },
             std::chrono::seconds( 20 ),
