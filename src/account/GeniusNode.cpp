@@ -987,18 +987,25 @@ namespace sgns
                 }
 
                 ++transaction_manager_construction_count_;
-                if ( account_service_generation_ == 0 )
+                uint64_t owner_generation;
                 {
-                    account_service_generation_ = 1;
+                    // Publish atomically with SnapshotAccountServices (which takes
+                    // lifecycle_mutex_): a concurrent reader must never observe the
+                    // new generation before the callback-owner generations are armed.
+                    std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+                    if ( account_service_generation_ == 0 )
+                    {
+                        account_service_generation_ = 1;
+                    }
+                    owner_generation = account_service_generation_;
+                    transaction_manager_owner_generation_.store( owner_generation );
+                    account_transaction_callback_owner_generation_.store( owner_generation );
+                    catchup_callback_owner_generation_.store( owner_generation );
+                    // The replacement is now a complete account/manager pair.  This
+                    // is the sole publication point for a switching generation.
+                    account_service_switching_ = false;
                 }
-                const auto owner_generation = account_service_generation_;
-                transaction_manager_owner_generation_.store( owner_generation );
-                account_transaction_callback_owner_generation_.store( owner_generation );
-                catchup_callback_owner_generation_.store( owner_generation );
                 auto manager = transaction_manager_;
-                // The replacement is now a complete account/manager pair.  This
-                // is the sole publication point for a switching generation.
-                account_service_switching_ = false;
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this(),
@@ -3390,7 +3397,10 @@ namespace sgns
         {
             return {};
         }
-        return { account_, transaction_manager_, account_service_generation_ };
+        return { account_,
+                 transaction_manager_,
+                 account_service_generation_,
+                 catchup_callback_owner_generation_.load() };
     }
 
     bool GeniusNode::ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,

@@ -79,7 +79,7 @@ namespace sgns
                      snapshot.manager && snapshot.manager->account_m ? snapshot.manager->account_m->GetAddress()
                                                                      : std::string{},
                      snapshot.generation,
-                     node->catchup_callback_owner_generation_.load() };
+                     snapshot.catchup_generation };
         }
 
         static uint64_t InjectCatchupCallback( const std::shared_ptr<GeniusNode> &node,
@@ -240,7 +240,7 @@ protected:
     {
         const auto path = boost::dll::program_location().parent_path() / "mat_trust_authorities";
         auto account = GeniusAccount::NewFromPrivateKey(
-            TokenID::FromBytes( { 0x00 } ), DeterministicKey( self_address ).c_str(), path, false );
+            TokenID::FromBytes( { 0x00 } ), DeterministicKey( self_address ).c_str(), path );
         ASSERT_TRUE( account );
         trust_peers_.push_back( std::move( account ) );
     }
@@ -290,7 +290,7 @@ protected:
             sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
         }
         auto authority = GeniusAccount::NewFromPrivateKey(
-            devConfig.TokenID, key.c_str(), devConfig.BaseWritePath, isFullNode );
+            devConfig.TokenID, key.c_str(), devConfig.BaseWritePath );
         if ( !authority )
         {
             return nullptr;
