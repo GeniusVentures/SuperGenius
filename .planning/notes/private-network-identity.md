@@ -6,6 +6,10 @@ context: /gsd-explore session; settled jointly with TokenContracts/gnus-ai (comm
 
 # Private network identity for SuperGenius
 
+Implementation tracking: **GeniusVentures/SuperGenius#367** (this repo's private-networks
+phase, assigned henriqueaklein, blocked by **GeniusVentures/libp2p#10** — gater + pnet,
+assigned itsafuu).
+
 Design settled 2026-08-25. Authoritative write-up lives in
 `TokenContracts/gnus-ai/.planning/notes/network-pubkey-identity.md` — this note captures
 the SG-side consequences.

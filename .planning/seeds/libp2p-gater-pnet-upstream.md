@@ -6,6 +6,10 @@ planted_date: 2026-08-25
 
 # Seed: gater + pnet for cpp-libp2p (authored, not ported)
 
+Tracking: GeniusVentures/libp2p#10 (assigned itsafuu, Project 5, HIGH). SuperGenius
+consumption phase: GeniusVentures/SuperGenius#367 (assigned henriqueaklein, blocked by
+libp2p#10).
+
 Spike 002 established that no cpp-libp2p implementation has go-libp2p's connection
 gating (`gater/`) or private networks (`pnet/`) — they would be genuinely new code.
 Owner direction 2026-08-25: the `../thirdparty` repos are open source and others should
