@@ -1,12 +1,14 @@
 # Phase 12: Multi-Node Finality Fault Proof - Context
 
-**Gathered:** 2026-08-24
-**Status:** Ready for planning
+**Gathered:** 2026-08-26
+**Status:** Updated for scoped 12-07 planning; Phase 12 remains blocked
 
 <domain>
 ## Phase Boundary
 
 Build a dedicated production-path multi-node regression suite proving that canonical-slot finality remains safe and live through contention, late delivery, publisher loss, and restart. The suite must use real local PubSub, CRDT, RocksDB, consensus, and transaction/Mint ingress; it validates the existing Phase 8–11 protocol rather than changing it.
+
+**12-07 scope:** Diagnose only the intermittent, fresh-process restart failure at the existing Mint completion boundary. It must identify the first broken existing transition before any recovery-code change is authorized. Late-contender and publisher-loss outcomes stay enabled as separate diagnostics; they do not broaden this plan.
 
 </domain>
 
@@ -32,6 +34,15 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - **D-09:** Register the suite as a normal, non-disabled CTest target. It may take up to five minutes in total, but every wait must be bounded and condition-based.
 - **D-10:** Each successful scenario proves per-node durable outcome: exactly one application of the exact winning Mint, no losing-Mint effect, and no duplicate UTXO or bridge-executed marker after recovery. Network-wide convergence alone is insufficient.
 
+### 12-07 restart diagnosis and repair gate
+
+- **D-11:** Scope 12-07 to the fresh-process restart/Mint-marker recovery failure only. Do not mix in late-contender or publisher-readiness diagnosis.
+- **D-12:** Use friend-scoped, test-only, passive snapshots at existing recovery boundaries: accepted certificate readback, exact transaction lookup/binding, UTXO or outpoint state, local `/bridge/executed/<chain>:<burn>` marker read/write result, certificate-work journal state, and tracked transaction status. Snapshots record canonical identifiers, state, error code, and sequence number only—never serialized certificate/transaction payloads or keys.
+- **D-13:** Tracing must not pause, reorder, retry, or inject failures. The existing real restart scenario remains the sole driver of consensus, CRDT, PubSub, and Mint behavior.
+- **D-14:** A production recovery fix is authorized only after the same broken boundary reproduces in at least two independently started real-socket processes. Add a RED production-path regression for that exact boundary, then make the smallest TDD fix there. If snapshots prove durable state is correct and only the observer is wrong, repair only that test observer/fixture.
+- **D-15:** A repaired restart boundary requires three fresh targeted passes and three normal serial full-suite passes. If the failure cannot reproduce twice, record a structured diagnosis and keep Phase 12 blocked—do not compensate with retries, wider recovery, timing changes, or a test-only workaround.
+- **D-16:** Keep late-contender and publisher-loss scenarios enabled in the serial suite. If they fail during 12-07, retain their traces but do not act on them; even a completed restart fix leaves Phase 12 blocked pending separately scoped plans for those diagnostics.
+
 ### the agent's Discretion
 
 - Choose the smallest existing component-level harness shape, port allocation strategy, test-access seams, and scenario partitioning consistent with the locked real-transport and durable-boundary rules.
@@ -54,6 +65,8 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - `.planning/phases/10-authoritative-slot-certificate-publication/10-CONTEXT.md` — selected publisher, persist-before-PubSub, failover, and receiver-no-write rules.
 - `.planning/phases/11-convergent-certificate-consumption-mint-recovery/11-CONTEXT.md` — exact transaction binding and UTXO-before-marker recovery contract.
 - `.planning/phases/11-convergent-certificate-consumption-mint-recovery/11-VERIFICATION.md` — prior phase's verified local recovery evidence and its multi-node coverage gap.
+- `.planning/phases/12-multi-node-finality-fault-proof/12-06-DIAGNOSIS.md` — retained 18-run fresh-versus-prefix matrix; establishes restart as a valid-topology fresh-process failure, late as inconclusive, and publisher as pre-topology failure.
+- `.planning/phases/12-multi-node-finality-fault-proof/12-07-HANDOFF.md` — mandatory no-repair handoff and invariants preserved by any future restart investigation.
 
 ### Existing production-path test building blocks
 
@@ -70,6 +83,7 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - `src/account/TransactionManager.cpp` — certificate-to-exact-Mint consumption and durable Mint completion path.
 - `src/account/UTXOManager.cpp` — idempotent UTXO durability used by Mint recovery.
 - `src/crdt/globaldb/globaldb.hpp` and `src/crdt/impl/crdt_datastore.cpp` — CRDT replication and convergent immutable certificate record semantics.
+- `test/src/blockchain/multi_node_finality_fault_test.cpp` — existing real-socket restart scenario and its durable assertions; any 12-07 observation seam must remain passive.
 
 </canonical_refs>
 
@@ -91,6 +105,7 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - A new test target belongs under `test/src/blockchain/` or the closest existing integration location, with production components—not direct internal handlers—driving the scenarios.
 - Narrow friend/test-access hooks may expose barriers and read-only counters at vote, certificate persistence/publication, and Mint boundaries; they cannot inject or alter protocol behavior.
 - Per-node filesystem state must survive fixture-level restart recreation while test-generated paths remain isolated.
+- `TransactionManager::PersistBridgeExecutedMarker()` writes the local RocksDB `/bridge/executed/<chain>:<burn>` idempotency marker only after Mint effects; recovery must complete this suffix without duplicating UTXOs.
 
 </code_context>
 
@@ -100,6 +115,7 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - Use the real local network even when delivery is deliberately delayed: disconnect and reconnect actual peers rather than replacing PubSub/CRDT with mocks.
 - PubSub recipient cleanup safety needs an explicit passive-recipient assertion, not an inference from the final certificate record.
 - “Production-path” means that test helpers coordinate faults and observe behavior only; they do not call local-author, local-receive, or direct Mint completion helpers.
+- The 12-07 diagnostic is intentionally a root-cause gate, not permission to increase timeouts, add retries, alter protocol behavior, or hide other suite failures.
 
 </specifics>
 

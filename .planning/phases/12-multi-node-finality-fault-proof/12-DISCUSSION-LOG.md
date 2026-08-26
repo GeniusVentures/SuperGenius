@@ -124,3 +124,47 @@
 ## Deferred Ideas
 
 - `bridge-startup-wiring-mock-rpc.md` remains out of scope: it is startup/RPC work, not finality fault proof.
+
+---
+
+## 12-07 Context Update — 2026-08-26
+
+### Restart failure scope
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Deterministic root cause first | Reproduce and trace the first broken existing recovery boundary before changing behavior. | ✓ |
+| Immediate recovery-path fix | Change Mint-marker recovery from the initial intermittent trace. | |
+| Harness-only explanation | Treat the valid-topology fresh failure as test lifecycle work. | |
+
+**User's choice:** Deterministic root cause first, with a one-boundary RED/GREEN TDD fix only after proof. If all durable state is correct, repair only the faulty test observer/fixture.
+
+### Proof threshold
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Repeatable fresh failure | Require the same boundary failure in two independent real-socket processes. | ✓ |
+| One fully traced fresh failure | Permit a fix after one failure. | |
+| Controlled fault injection | Force the failure with test control. | |
+
+**User's choice:** Require two fresh reproductions before a production fix, then three fresh targeted passes and three normal serial-suite passes. Otherwise, stop without a fix and retain structured diagnosis with stable raw-log paths.
+
+### Observation boundary
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Friend-scoped passive snapshots | Read existing local recovery state without a production API or behavior change. | ✓ |
+| Logs only | Infer the boundary from logging. | |
+| New production diagnostics API | Expose recovery state in product code. | |
+
+**User's choice:** Capture state/error snapshots at every existing certificate-to-Mint boundary. No pauses, retries, reordering, injected failures, serialized payloads, or key material.
+
+### Late and publisher outcomes
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Focus only on restart | Keep late/publisher enabled but defer their distinct diagnostics. | ✓ |
+| Investigate all three together | Broaden 12-07 into a general reliability effort. | |
+| Remove other scenarios temporarily | Reduce suite noise. | |
+
+**User's choice:** Focus 12-07 on restart. Record any late/publisher failures during it but do not act on them. Phase 12 remains blocked even if restart is fixed, until the other diagnostics are separately scoped.
