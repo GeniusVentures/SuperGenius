@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: Blocked — 12-07 handoff required
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-08-26T13:55:48.266Z"
+stopped_at: Phase 12 context updated for 12-07 root-cause planning
+last_updated: "2026-08-26T18:38:24.620Z"
 last_activity: 2026-08-26 -- Phase 12 blocked by 12-06 diagnostic handoff
 progress:
   total_phases: 5
@@ -109,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-25T18:23:45.484Z
-Stopped at: Completed 12-03-PLAN.md
-Resume file: None
+Last session: 2026-08-26T18:38:24.615Z
+Stopped at: Phase 12 context updated for 12-07 root-cause planning
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-CONTEXT.md
