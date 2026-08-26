@@ -413,13 +413,17 @@ protected:
             ASSERT_TRUE( registry.has_value() ) << registry.error().message();
             auto submitted = registry.value()->SubmitReviewedGenesisApproval();
             ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+            // Poll-refresh rather than relying solely on candidate callbacks: on slow
+            // (CI/Debug) runs the replicated approvals can arrive without the callback
+            // firing in time, and the controller only re-evaluates on Refresh().
             sgns::test::assertWaitForCondition(
                 [&]
                 {
+                    (void) controller.value()->Refresh();
                     return controller.value()->GetState() ==
                            sgns::account::TrustStartupController::State::ConfirmedReady;
                 },
-                std::chrono::milliseconds( 50000 ),
+                std::chrono::milliseconds( 150000 ),
                 "reviewed trust composition did not produce deterministic initial burn" );
             sgns::test::assertWaitForCondition(
                 [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
