@@ -14,6 +14,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/crdt_options.hpp"
+#include "crdt/globaldb/crdt_work_journal.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -25,11 +26,13 @@
 #include <array>
 #include <boost/filesystem.hpp>
 #include <chrono>
+#include <cstdlib>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 #include <iostream>
+#include <optional>
 #include <thread>
 
 namespace sgns
@@ -137,6 +140,20 @@ namespace sgns
         {
             std::lock_guard lock( transactions.fault_test_mutex_ );
             return transactions.mint_effects_for_test_;
+        }
+
+        static bool HasUnfinishedCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager && manager->certificate_work_journal_ &&
+                   !manager->certificate_work_journal_->ListUnfinished( manager->CERT_KEY_PATTERN ).empty();
+        }
+
+        static int TrackedTransactionState( const TransactionManager &transactions, const std::string &transaction_id )
+        {
+            std::shared_lock lock( transactions.tx_mutex_m );
+            for ( const auto &[_, tracked] : transactions.tx_processed_m )
+                if ( tracked.tx && tracked.tx->GetHash() == transaction_id ) return static_cast<int>( tracked.status );
+            return -1;
         }
 
         static std::string SlotKey( const ConsensusManager::Proposal &proposal )
@@ -366,6 +383,103 @@ namespace
             Peer second;
             Peer third;
             Peer passive;
+        };
+
+        struct MintRecoverySnapshot
+        {
+            uint64_t    sequence = 0;
+            std::string canonical_slot_id;
+            std::string winning_transaction_id;
+            bool        certificate_present = false;
+            bool        exact_binding       = false;
+            bool        winner_outpoint     = false;
+            bool        bridge_marker       = false;
+            bool        journal_unfinished  = false;
+            int         tracked_state       = -1;
+        };
+
+        class MintRecoveryDiagnostics
+        {
+        public:
+            MintRecoveryDiagnostics( Network &network, const std::string &slot, const sgns::MintTransactionV2 &winner,
+                                     const sgns::MintTransactionV2 &loser ) :
+                network_( network ), slot_( slot ), winner_( winner ), loser_( loser ), run_( std::getenv( "P12_07_RUN" ) )
+            {
+            }
+
+            ~MintRecoveryDiagnostics()
+            {
+                if ( !run_ || !*run_ ) return;
+                const auto snapshot = completed_snapshot_.has_value() ? completed_snapshot_.value() : Capture();
+                const auto outcome  = completed_ ? "pass" : "failure";
+                const auto diagnosis = completed_ ? Diagnosis{ "none", "complete", "none", 6 } : Classify( snapshot );
+                std::cerr << "P12_MINT_MARKER_DIAG run=" << run_ << " outcome=" << outcome
+                          << " boundary=" << diagnosis.boundary << " state=" << diagnosis.state
+                          << " error=" << diagnosis.error << " sequence=" << diagnosis.sequence << '\n';
+            }
+
+            void MarkCompleted()
+            {
+                completed_snapshot_ = Capture();
+                completed_          = true;
+            }
+
+        private:
+            struct Diagnosis
+            {
+                const char *boundary;
+                const char *state;
+                const char *error;
+                uint64_t    sequence;
+            };
+
+            MintRecoverySnapshot Capture() const
+            {
+                MintRecoverySnapshot snapshot;
+                snapshot.canonical_slot_id     = slot_;
+                snapshot.winning_transaction_id = winner_.GetHash();
+                snapshot.sequence               = 1;
+                snapshot.certificate_present = network_.first.consensus && network_.first.consensus->CheckCertificateForSlot( slot_ );
+                snapshot.sequence++;
+                if ( snapshot.certificate_present )
+                {
+                    const auto certificate = network_.first.consensus->GetCertificateBySlot( slot_ );
+                    snapshot.exact_binding = certificate.has_value() &&
+                                             sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ) ==
+                                                 winner_.GetHash();
+                }
+                snapshot.sequence++;
+                snapshot.winner_outpoint = HasOnlyWinnerOutput( network_.first, winner_, loser_ );
+                snapshot.sequence++;
+                snapshot.bridge_marker = HasBridgeMarker( network_.first, winner_ );
+                snapshot.sequence++;
+                snapshot.journal_unfinished = sgns::MultiNodeFinalityFaultTestAccess::HasUnfinishedCertificateWork(
+                    network_.first.consensus );
+                snapshot.tracked_state = network_.first.transactions
+                                             ? sgns::MultiNodeFinalityFaultTestAccess::TrackedTransactionState(
+                                                   *network_.first.transactions, winner_.GetHash() )
+                                             : -1;
+                return snapshot;
+            }
+
+            static Diagnosis Classify( const MintRecoverySnapshot &snapshot )
+            {
+                if ( !snapshot.certificate_present ) return { "certificate-readback", "absent", "not-found", 1 };
+                if ( !snapshot.exact_binding ) return { "exact-transaction-binding", "mismatch", "invalid-binding", 2 };
+                if ( !snapshot.winner_outpoint ) return { "utxo-outpoint", "missing", "not-found", 3 };
+                if ( !snapshot.bridge_marker ) return { "bridge-marker-read", "absent", "not-found", 4 };
+                if ( snapshot.journal_unfinished || snapshot.tracked_state != static_cast<int>( sgns::TransactionManager::TransactionStatus::CONFIRMED ) )
+                    return { "journal-tracked-state", "unfinished", "retryable", 5 };
+                return { "none", "complete", "none", 6 };
+            }
+
+            Network &                         network_;
+            const std::string &               slot_;
+            const sgns::MintTransactionV2 &   winner_;
+            const sgns::MintTransactionV2 &   loser_;
+            const char *                      run_       = nullptr;
+            bool                              completed_ = false;
+            std::optional<MintRecoverySnapshot> completed_snapshot_;
         };
 
         FinalityFaultNetwork() : CRDTFixture( "multi_node_finality_fault" )
@@ -1206,6 +1320,7 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
             network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
         ASSERT_TRUE( proposal.has_value() );
         const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+        MintRecoveryDiagnostics diagnostics( network, slot, *winner, *loser );
 
         sgns::MultiNodeFinalityFaultTestAccess::ArmMintEffectsBarrier( network.first.transactions );
         ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
@@ -1238,6 +1353,7 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
                    HasSingleDurableMint( network.passive, slot, *winner, *loser );
         }, std::chrono::seconds( 20 ), "Mint-boundary recovery stayed exact after reopening every durable root", nullptr );
         for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
+        diagnostics.MarkCompleted();
         StopNetwork( network );
     }
 }
