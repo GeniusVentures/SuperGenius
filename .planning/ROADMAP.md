@@ -451,6 +451,12 @@ Plans:
 - [x] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager` (completed 2026-07-27)
 - [x] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved (completed 2026-07-27)
 
+**Extended scope (added 2026-08-26) — ELM Bridging, a product-v1.0 pre-ship requirement.** Extends v1.1 beyond its original multisig/CRDT goal per owner directive; the milestone now gates product v1.0.
+
+- [ ] **Phase 13: ELM Job Bridging (SuperGenius)** — GCS creates/funds one normal processing job whose `Task.json_data` carries multiple ELM work items; grid distributes subtasks; fixed $0.0003/hour funding; work-item results via existing mechanism. Corrects issue #369 (scheduler/bidding layer removed). Issue: GeniusVentures/SuperGenius#369
+- [ ] **Phase 14: ELM Runtime in SGProcessingManager** — manifest resolution + verification, content-addressed model cache, real LM runtime (tokenizer/prefill/generation/KV-cache/sampling/stop/detokenize/cancel), work-item results. Executes in the GeniusVentures/SGProcessingManager repo. Issue: assigned to itsafuu only
+- [ ] **Phase 15 (deferred): ELM Events & Streaming** — optional `SGElmProcessing.proto` (execution events, token deltas, progress, cancellation); ships only after the first non-streaming proof
+
 ## Phase Details
 
 ### Phase 8: MultiSig Primitive
@@ -534,3 +540,40 @@ Plans:
 | 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
 | 11. BurnConfig Quorum Wiring | 2/2 | Complete   | 2026-07-27 |
 | 12. ValidatorRegistry Migration | 1/1 | Complete   | 2026-07-27 |
+| 13. ELM Job Bridging (SuperGenius) | 0/? | Not started | — |
+| 14. ELM Runtime in SGProcessingManager (cross-repo) | 0/? | Not started | — |
+| 15. ELM Events & Streaming (deferred) | 0/? | Not started | — |
+
+### Phase 13: ELM Job Bridging (SuperGenius)
+
+**Goal**: A GCS instance creates and funds one normal SuperGenius processing job containing one or more ELM work items; the existing grid distributes them as subtasks and results flow back identifying their work item — with no scheduler/bidding/leasing layer added on top.
+**Depends on**: Nothing within v1.1 (can proceed in parallel with Phase 14; end-to-end proof needs Phase 14's runtime)
+**Requirements**: ELM-01, ELM-02, ELM-03, ELM-08
+**Success Criteria** (what must be TRUE):
+  1. A job with multiple ELM work items in `Task.json_data` is published and distributed through the existing processing grid with no new task-ownership protocol messages.
+  2. Funding is deterministic from the job JSON at the fixed $0.0003/hour rate; no quote/bid/negotiation protocol exists anywhere in the feature.
+  3. Every result identifies its ELM work item; GCS aggregates by work-item ID with no SuperGenius-side aggregation.
+**Tracking**: GeniusVentures/SuperGenius#369 (corrected scope — see INGEST-CONFLICTS.md auto-resolutions)
+**Plans**: none yet
+
+### Phase 14: ELM Runtime in SGProcessingManager
+
+**Goal**: SGProcessingManager parses multiple ELM work items, resolves and verifies immutable model manifests, maintains a content-addressed model-bundle cache, and executes a real ELM processor end to end.
+**Depends on**: Phase 13's job/subtask JSON shape (contract only — development can start in parallel from the manifest spec)
+**Requirements**: ELM-04, ELM-05, ELM-06, ELM-07
+**Success Criteria** (what must be TRUE):
+  1. A node never executes a model whose manifest or artifact verification failed; cached files are verified before reuse.
+  2. A node with an empty cache completes an assigned ELM subtask by downloading the model as part of the job; no protocol message carries node model/cache inventory.
+  3. A causal-LM work item produces generated text honoring `max_output_tokens`/`temperature`/`top_p`/`seed` and stop conditions, with accurate token counts; cancellation aborts in-flight generation.
+**Tracking**: Executes in the GeniusVentures/SGProcessingManager repo — separate issue, assigned to itsafuu only
+**Plans**: none yet
+
+### Phase 15 (deferred): ELM Events & Streaming
+
+**Goal**: Optional `SGElmProcessing.proto` (`ElmExecutionEvent`, `ElmTokenDelta`, `ElmProgress`, `ElmExecutionResult`, `ElmCancellationRequest`) for streaming progress/tokens and cancellation control, without altering task ownership.
+**Depends on**: Phases 13+14 shipped (first non-streaming proof works without these messages)
+**Requirements**: ELM-09
+**Success Criteria** (what must be TRUE):
+  1. Events stream per subtask with sequence numbers and the existing result mechanism remains the source of truth for final results.
+  2. The proto file is separate from the main task-ownership proto.
+**Plans**: none yet — deferred, not a v1.0 blocker unless streaming is required for first ship
