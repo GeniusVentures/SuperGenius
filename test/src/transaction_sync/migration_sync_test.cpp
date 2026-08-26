@@ -258,12 +258,8 @@ TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
     ASSERT_NE( client, nullptr );
     client->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "Full node not synced" );
-    test::assertWaitForCondition( [client] { return client->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "client node not ready" );
+    sgns::test::MakeNodeReadyWithLocalTrust( full_node, std::chrono::seconds( 100 ) );
+    sgns::test::MakeNodeReadyWithLocalTrust( client, std::chrono::seconds( 100 ) );
 
     // New() returns before the asynchronous migration finishes, so the mints below overlap it.
     // Reuses the node10 fixture; RemovePrefixedSubdirs drops previously-migrated DBs and preserves
@@ -283,9 +279,7 @@ TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
         (void) client->MintTokens( 100, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     }
 
-    test::assertWaitForCondition( [archive] { return archive->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "archive node did not finish migrating" );
+    sgns::test::MakeNodeReadyWithLocalTrust( archive, std::chrono::seconds( 100 ) );
 
     ASSERT_EQ( archive->GetNodeType(), GeniusNode::NodeType::Archive );
 
