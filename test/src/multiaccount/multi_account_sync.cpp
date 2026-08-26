@@ -411,8 +411,14 @@ protected:
                 authority->GetAddress(),
                 [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
             ASSERT_TRUE( registry.has_value() ) << registry.error().message();
-            auto submitted = registry.value()->SubmitReviewedGenesisApproval();
-            ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+            // SubmitReviewedGenesisApproval is not idempotent (CommitGenesis fails with
+            // ALREADY_INITIALIZED) — skip it when a previous attempt already committed.
+            auto existing_genesis = submission_store.value()->LoadAndVerify();
+            if ( existing_genesis.has_error() )
+            {
+                auto submitted = registry.value()->SubmitReviewedGenesisApproval();
+                ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+            }
             // Poll-refresh rather than relying solely on candidate callbacks: on slow
             // (CI/Debug) runs the replicated approvals can arrive without the callback
             // firing in time, and the controller only re-evaluates on Refresh().
