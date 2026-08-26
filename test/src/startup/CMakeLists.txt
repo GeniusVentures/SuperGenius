@@ -2,10 +2,6 @@ addtest(startup_wiring_test
     startup_wiring_test.cpp
 )
 
-addtest(trust_first_boot_e2e_test
-    trust_first_boot_e2e_test.cpp
-)
-
 addtest(trust_restart_test
     trust_restart_test.cpp
 )
@@ -19,14 +15,6 @@ target_link_libraries(startup_wiring_test
     json_secure_storage
 )
 
-target_link_libraries(trust_first_boot_e2e_test
-    genius_node_test
-    local_trust_admin
-    json_secure_storage
-    rocksdb
-)
-target_include_directories(trust_first_boot_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
 foreach(trust_test trust_restart_test trust_tamper_e2e_test)
     target_link_libraries(${trust_test}
         genius_node_test
@@ -35,6 +23,22 @@ foreach(trust_test trust_restart_test trust_tamper_e2e_test)
     )
     target_include_directories(${trust_test} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 endforeach()
+
+# trust_first_boot_e2e_test is excluded on iOS (same as crdt_datastore_last_owner_test):
+# the multi-process pubsub harness it drives is not supported on that platform.
+if(NOT IOS)
+    addtest(trust_first_boot_e2e_test
+        trust_first_boot_e2e_test.cpp
+    )
+
+    target_link_libraries(trust_first_boot_e2e_test
+        genius_node_test
+        local_trust_admin
+        json_secure_storage
+        rocksdb
+    )
+    target_include_directories(trust_first_boot_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+endif()
 
 # Copy bridge_chains_config.json next to the test binary so direct execution
 # and CTest use the same relative lookup path.
@@ -53,29 +57,34 @@ target_compile_definitions(startup_wiring_test
 # directory because the test opens bridge_chains_config.json by relative path.
 set_tests_properties(
     startup_wiring_test
-    trust_first_boot_e2e_test
     trust_restart_test
     trust_tamper_e2e_test
     PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
 )
 
+if(NOT IOS)
+    set_tests_properties(
+        trust_first_boot_e2e_test
+        PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
+    )
+endif()
+
 if(MSVC)
     target_link_options(startup_wiring_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
-    target_link_options(trust_first_boot_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
     target_link_options(trust_restart_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
     target_link_options(trust_tamper_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+    if(NOT IOS)
+        target_link_options(trust_first_boot_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+    endif()
 elseif(APPLE)
     target_link_options(startup_wiring_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
-    target_link_options(trust_first_boot_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
     target_link_options(trust_restart_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
     target_link_options(trust_tamper_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+    if(NOT IOS)
+        target_link_options(trust_first_boot_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+    endif()
 else()
     target_link_options(startup_wiring_test PUBLIC
-        "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node_test>"
-        "-Wl,--no-whole-archive"
-    )
-    target_link_options(trust_first_boot_e2e_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
@@ -87,4 +96,11 @@ else()
             "-Wl,--no-whole-archive"
         )
     endforeach()
+    if(NOT IOS)
+        target_link_options(trust_first_boot_e2e_test PUBLIC
+            "-Wl,--whole-archive"
+            "$<TARGET_FILE:genius_node_test>"
+            "-Wl,--no-whole-archive"
+        )
+    endif()
 endif()
