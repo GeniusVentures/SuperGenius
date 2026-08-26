@@ -692,9 +692,19 @@ namespace sgns::account
         RefreshStage stage = RefreshStage::DurableState;
         auto         result = controller->RefreshClassified( stage );
         const std::error_code error = result.has_error() ? result.error() : std::error_code{};
+        const auto            state = controller->GetState();
         controller.reset();
 
-        const auto disposition = ClassifyRefreshResult( stage, result );
+        auto disposition = ClassifyRefreshResult( stage, result );
+        // A refresh that succeeds but leaves the controller waiting is not done: the
+        // genesis/burn approvals it needs may simply not have replicated yet (or their
+        // candidate callback was missed). Retry on the same bounded ladder so the node
+        // keeps re-checking instead of stalling forever.
+        if ( disposition == RetryDisposition::Success &&
+             ( state == State::FreshWaitingForGenesis || state == State::WaitingForInitialBurn ) )
+        {
+            disposition = RetryDisposition::Transient;
+        }
         if ( disposition == RetryDisposition::Success )
         {
             FinishDispatch( dispatch );
