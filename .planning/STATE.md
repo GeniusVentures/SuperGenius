@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
+status: Blocked — 12-07 handoff required
 stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-08-26T12:49:47.547Z"
-last_activity: 2026-08-26 -- Phase 12 planning complete
+last_updated: "2026-08-26T13:55:48.266Z"
+last_activity: 2026-08-26 -- Phase 12 blocked by 12-06 diagnostic handoff
 progress:
   total_phases: 5
   completed_phases: 4
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 ## Current Position
 
-Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-08-26 -- Phase 12 planning complete
+Phase: 12 (multi-node-finality-fault-proof) — BLOCKED
+Plan: 6 of 6 (blocked)
+Status: Blocked — 12-07 handoff required
+Last activity: 2026-08-26 -- Phase 12 blocked by 12-06 diagnostic handoff
 
 Progress: [██████████] 100%
 
@@ -99,6 +99,7 @@ None yet.
 
 - Phase 8 planning must lock implementation-level validation and exact winner evidence without changing the required `GetSlotID()` verified-fact semantics.
 - Production-path multi-node failure and restart coverage is mandatory for milestone completion.
+- Phase 12 blocked: Plan 12-06 found a fresh-process Mint-boundary recovery failure after valid topology, plus late/publisher diagnostic outcomes. See 12-07-HANDOFF.md; do not apply fixture or production repair without a separately scoped plan.
 
 ## Deferred Items
 
