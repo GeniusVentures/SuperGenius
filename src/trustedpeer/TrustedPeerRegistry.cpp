@@ -507,6 +507,15 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::INVALID_CANDIDATE );
         }
+        // Already activated by a concurrent refresh before this approval could be
+        // submitted — the authorization context has advanced, so submitting would be
+        // rejected as a context mismatch. The approval is redundant; succeed.
+        auto current = GetConfirmedSnapshot();
+        if ( current.has_value() &&
+             current.value().policy.Hash() == std::optional<std::string>( candidate_id.content_hash ) )
+        {
+            return candidate_id;
+        }
         return SubmitLocalApproval( approvals.value().front().core );
     }
 
