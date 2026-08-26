@@ -311,6 +311,17 @@ namespace sgns::account
         auto approvals = secure_crdt_->ReadCandidateApprovals( candidate_id );
         if ( approvals.has_error() ) return approvals.error();
         if ( approvals.value().empty() ) return outcome::failure( std::errc::invalid_argument );
+        // Already activated by a concurrent refresh before this approval could be
+        // submitted — the authorization context has advanced, so submitting would be
+        // rejected as a context mismatch. The approval is redundant; succeed.
+        auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_value() &&
+             snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum &&
+             snapshot.value().burn.Hash() == std::optional<std::string>( candidate_id.content_hash ) &&
+             snapshot.value().burn.version == approvals.value().front().core.version )
+        {
+            return candidate_id;
+        }
         return SubmitLocalApproval( approvals.value().front().core );
     }
 
