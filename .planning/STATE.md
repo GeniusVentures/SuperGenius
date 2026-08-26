@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: Blocked — 12-07 handoff required
-stopped_at: Phase 12 context updated for 12-07 root-cause planning
-last_updated: "2026-08-26T18:38:24.620Z"
-last_activity: 2026-08-26 -- Phase 12 blocked by 12-06 diagnostic handoff
+status: Blocked — 12-07 reproduction gate closed
+stopped_at: "Phase 12 Plan 12-07: restart reproduction gate closed; phase remains blocked"
+last_updated: "2026-08-26T20:49:33.567Z"
+last_activity: 2026-08-26 -- Phase 12 remains blocked after 12-07 reproduction gate closed
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 18
-  completed_plans: 20
+  total_plans: 19
+  completed_plans: 21
   percent: 80
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — BLOCKED
-Plan: 6 of 6 (blocked)
-Status: Blocked — 12-07 handoff required
-Last activity: 2026-08-26 -- Phase 12 blocked by 12-06 diagnostic handoff
+Plan: 7 of 7 (blocked)
+Status: Blocked — 12-07 reproduction gate closed
+Last activity: 2026-08-26 -- Phase 12 remains blocked after 12-07 reproduction gate closed
 
 Progress: [██████████] 100%
 
@@ -100,6 +100,7 @@ None yet.
 - Phase 8 planning must lock implementation-level validation and exact winner evidence without changing the required `GetSlotID()` verified-fact semantics.
 - Production-path multi-node failure and restart coverage is mandatory for milestone completion.
 - Phase 12 blocked: Plan 12-06 found a fresh-process Mint-boundary recovery failure after valid topology, plus late/publisher diagnostic outcomes. See 12-07-HANDOFF.md; do not apply fixture or production repair without a separately scoped plan.
+- Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=none). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
 
 ## Deferred Items
 
@@ -109,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-26T18:38:24.615Z
-Stopped at: Phase 12 context updated for 12-07 root-cause planning
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-CONTEXT.md
+Last session: 2026-08-26T20:49:33.563Z
+Stopped at: Phase 12 Plan 12-07: restart reproduction gate closed; phase remains blocked
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-07-SUMMARY.md
