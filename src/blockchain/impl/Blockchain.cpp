@@ -477,10 +477,6 @@ namespace sgns
     {
         if ( !validator_registry_initialized_.load() )
         {
-            start_deferred_.store( true );
-            logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
-                           account_->GetAddress().substr( 0, 8 ) );
-
             // Self-help pass: the authorized full node may have been registered only
             // after this blockchain was constructed (EnsureValidatorRegistry() at
             // construction time then skipped the genesis-registry write). Re-run it —
@@ -490,19 +486,21 @@ namespace sgns
                 logger_->error( "[{}] Failed to ensure validator registry while deferred",
                                 account_->GetAddress().substr( 0, 8 ) );
             }
-            if ( validator_registry_initialized_.load() )
+            if ( !validator_registry_initialized_.load() )
             {
-                logger_->info( "[{}] Validator registry ready — retrying deferred blockchain start",
+                start_deferred_.store( true );
+                logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
                                account_->GetAddress().substr( 0, 8 ) );
-                return Start();
-            }
 
-            // Passive pass: resolves immediately if a registry head already reached us.
-            validator_registry_->RetryInitializationIfNeeded();
-            // Active pass: the passive pass reads only our own head list, and nothing
-            // populates it until a full node volunteers a broadcast. Ask for one.
-            RequestValidatorRegistryWhileDeferred();
-            return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+                // Passive pass: resolves immediately if a registry head already reached us.
+                validator_registry_->RetryInitializationIfNeeded();
+                // Active pass: the passive pass reads only our own head list, and nothing
+                // populates it until a full node volunteers a broadcast. Ask for one.
+                RequestValidatorRegistryWhileDeferred();
+                return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+            }
+            logger_->info( "[{}] Validator registry ready after ensure — continuing blockchain start",
+                           account_->GetAddress().substr( 0, 8 ) );
         }
         start_deferred_.store( false );
 
