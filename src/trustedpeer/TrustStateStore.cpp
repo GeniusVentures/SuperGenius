@@ -788,6 +788,19 @@ namespace sgns::trustedpeer
             {
                 return outcome::failure( Error::STALE_HEAD );
             }
+            // Re-committing the exact durable candidate (the refresh-driven vs
+            // admin-driven activation race) is benign — but only with a valid quorum
+            // proof; an unproven duplicate stays a downgrade attempt.
+            auto bytes = candidate.CanonicalBytes();
+            if ( bytes )
+            {
+                const auto &signed_bytes = authorization_bytes.empty() ? *bytes : authorization_bytes;
+                if ( AuthorizationBindsPolicy( signed_bytes, *bytes, candidate ) &&
+                     VerifyProof( current.policy, current.policy.membership_threshold, proof, signed_bytes ) )
+                {
+                    return current;
+                }
+            }
             return outcome::failure( Error::VERSION_DECREASE );
         }
         if ( current.policy.version == std::numeric_limits<uint64_t>::max() ||
