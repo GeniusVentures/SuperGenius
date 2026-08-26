@@ -50,3 +50,12 @@ gnus-ai: `.planning/todos/pending/phase-14-1-network-key-mint-validation.md`.
 - Membership management: extend TrustedPeerRegistry — network key signs peer lists / PSK
   rotation, distributed via SecureCrdt.
 - Solidity never verifies Ed25519 against the ID — verification is off-chain in SG nodes.
+
+## Pubsub privacy (decided 2026-08-26)
+
+Gossipsub has no per-topic ACLs; channel privacy is inherited from connection-level
+gating (owner: "Layer 1 is good enough"). On a private network — once libp2p#10
+(gater/pnet) and #367 land — non-members cannot complete a handshake, so every topic,
+including `ipfspubsub://results/<task>` ELM channels (AsyncIOManager#11), is
+automatically members-only. No per-topic payload encryption is planned; gossipsub's
+publisher signatures cover authenticity.
