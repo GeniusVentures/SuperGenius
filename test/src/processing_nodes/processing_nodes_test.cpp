@@ -17,6 +17,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -68,12 +69,14 @@ protected:
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc1->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_main->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
@@ -81,6 +84,7 @@ protected:
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc2->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc2, 1.0 );
 
         //Connect to each other

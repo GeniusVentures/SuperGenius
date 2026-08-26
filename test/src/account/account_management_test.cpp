@@ -14,6 +14,7 @@
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -49,6 +50,7 @@ public:
         node_ = sgns::GeniusNode::New(
             { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
+        node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
         test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -146,6 +148,8 @@ TEST_F( AccountManagement, SetPayoutAddress )
     auto node_requester = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
+    node_receiver->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
+    node_requester->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
 
     node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
