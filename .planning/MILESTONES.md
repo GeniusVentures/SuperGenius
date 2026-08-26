@@ -1,6 +1,10 @@
 # Milestones
 
-## v1.1 Multi-Signature Secure CRDT Storage (Shipped: 2026-07-29)
+## v1.1 Multi-Signature Secure CRDT Storage (**ACTIVE — re-opened 2026-08-26**)
+
+> **v1.1 extended, not closed.** Phases 10–12 (TrustedPeerRegistry, BurnConfig Quorum Wiring, ValidatorRegistry Migration — the items listed as "deferred" below) completed 2026-07-24/27. On **2026-08-26** the milestone was extended with the ELM Bridging phases as a **product-v1.0 pre-ship requirement** (owner directive; see `.planning/notes/ELM-bridging-gaps.md` and `INGEST-CONFLICTS.md`): Phase 13 — ELM Job Bridging (SuperGenius, issue #369), Phase 14 — ELM Runtime in SGProcessingManager (cross-repo, GeniusVentures/SGProcessingManager#17), Phase 15 — ELM Events & Streaming (deferred). The milestone now gates product v1.0. A final shipped entry replaces this section when Phases 13–14 close.
+
+## v1.1 Multi-Signature Secure CRDT Storage (partial ship: 2026-07-29)
 
 **Phases completed:** 2 phases (08-multisig-primitive, 09-securecrdt-layer), 4 plans
 
