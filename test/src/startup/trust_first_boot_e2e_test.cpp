@@ -1636,13 +1636,24 @@ namespace
         *target = CandidateId::FromCore( core ).value();
 
         const auto burn_calls_before_first = burn_list_calls.load();
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->idle = false;
+        }
         ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
             { CandidateApprovalRecord::ENCODING_VERSION,
               core,
               harness->signers[0].GetAddress(),
               harness->signers[0].Sign( bytes ) } ).has_value() );
+        // Wait for the first refresh dispatch to FINISH (idle), not just for a burn
+        // listing to happen — an in-flight attempt would otherwise bleed across the
+        // observation reset below and shift the expected attempt sequence.
         sgns::test::assertWaitForCondition(
-            [&] { return burn_list_calls.load() > burn_calls_before_first; },
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return burn_list_calls.load() > burn_calls_before_first && observations->idle;
+            },
             std::chrono::seconds( 5 ),
             "first below-quorum policy refresh did not complete" );
         {
@@ -1760,13 +1771,24 @@ namespace
         *target = CandidateId::FromCore( core ).value();
 
         const auto burn_calls_before_first = burn_list_calls.load();
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->idle = false;
+        }
         ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
             { CandidateApprovalRecord::ENCODING_VERSION,
               core,
               harness->signers[0].GetAddress(),
               harness->signers[0].Sign( bytes ) } ).has_value() );
+        // Wait for the first refresh dispatch to FINISH (idle), not just for a burn
+        // listing to happen — an in-flight attempt would otherwise bleed across the
+        // observation reset below and shift the expected attempt sequence.
         sgns::test::assertWaitForCondition(
-            [&] { return burn_list_calls.load() > burn_calls_before_first; },
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return burn_list_calls.load() > burn_calls_before_first && observations->idle;
+            },
             std::chrono::seconds( 5 ),
             "first below-quorum burn refresh did not complete" );
         {
