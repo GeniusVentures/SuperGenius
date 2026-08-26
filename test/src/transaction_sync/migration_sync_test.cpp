@@ -50,7 +50,7 @@ class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 protected:
     static inline GeniusNodeConfig DEV_CONFIG = {
         "0xdeef",                             // Addr
-        "0.35",                               // DevCut
+        0.35,                                 // DevFraction
         "1.0",                                // TokenValueInGNUS
         sgns::TokenID::FromBytes( { 0x00 } ), // TokenID
         ""                                    // BaseWritePath
@@ -143,7 +143,7 @@ protected:
         fs::create_directories( outPath, ec );
 
         GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
-                                   "0.35",
+                                   0.35,
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };

@@ -40,17 +40,17 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
         static inline GeniusNodeConfig DEV_CONFIG  = { "0xcafe",
-                                                       "0.35",
+                                                       0.35,
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        "./transaction_sync_node1" };
         static inline GeniusNodeConfig DEV_CONFIG2 = { "0xcafe",
-                                                       "0.35",
+                                                       0.35,
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        "./transaction_sync_node2" };
         static inline GeniusNodeConfig DEV_CONFIG3 = { "0xcafe",
-                                                       "0.35",
+                                                       0.35,
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        "./transaction_sync_full_node" };

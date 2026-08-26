@@ -18,7 +18,7 @@ namespace
 
     GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
-        return { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
+        return { "0xcafe", 0.35, "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
 
     boost::filesystem::path MakeTempDir( const std::string &name )

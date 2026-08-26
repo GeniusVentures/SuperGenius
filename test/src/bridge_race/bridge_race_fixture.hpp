@@ -64,8 +64,8 @@ protected:
     /** @brief Developer payout address (DevConfig::Addr) shared by all race-test nodes. */
     static constexpr std::string_view kDevPayoutAddr = "0xcafe";
 
-    /** @brief Developer cut fraction (DevConfig::DevCut) shared by all race-test nodes. */
-    static constexpr std::string_view kDevCutFraction = "0.35";
+    /** @brief Developer fraction (DevConfig::DevFraction) shared by all race-test nodes. */
+    static constexpr double kDevFraction = 0.35;
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all race-test nodes. */
     static constexpr std::string_view kDevTokenValue = "1.0";
@@ -313,7 +313,7 @@ protected:
         {
             const std::string base_write_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
             s_configs[i].Addr                 = kDevPayoutAddr;
-            s_configs[i].DevCut               = kDevCutFraction;
+            s_configs[i].DevFraction          = kDevFraction;
             s_configs[i].TokenValueInGNUS     = kDevTokenValue;
             s_configs[i].TokenID              = sgns::TokenID::FromBytes( { 0x00 } );
             s_configs[i].BaseWritePath        = base_write_path;

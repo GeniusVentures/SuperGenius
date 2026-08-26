@@ -128,17 +128,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
@@ -287,7 +287,7 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.DevCut from string to fixed and use below
+    //TODO: use DEV_CONFIG.DevFraction (now a double) in the expectations below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 
@@ -363,7 +363,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.DevCut from string to fixed and use below
+    //TODO: use DEV_CONFIG.DevFraction (now a double) in the expectations below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 

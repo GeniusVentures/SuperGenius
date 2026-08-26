@@ -52,11 +52,11 @@ namespace sgns
         /// Destination of the transfer.
         static inline std::shared_ptr<GeniusNode> receiver;
 
-        static inline GeniusNodeConfig FULL_CONFIG    = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
-        static inline GeniusNodeConfig ARCHIVE_CONFIG = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
-        static inline GeniusNodeConfig SENDER_CONFIG  = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig FULL_CONFIG    = { "0xcafe", 0.35, "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig ARCHIVE_CONFIG = { "0xcafe", 0.35, "1.0", TokenID::FromBytes( { 0x00 } ), "" };
+        static inline GeniusNodeConfig SENDER_CONFIG  = { "0xcafe", 0.35, "1.0", TokenID::FromBytes( { 0x00 } ), "" };
         static inline GeniusNodeConfig RECEIVER_CONFIG = { "0xcafe",
-                                                           "0.35",
+                                                           0.35,
                                                            "1.0",
                                                            TokenID::FromBytes( { 0x00 } ),
                                                            "" };

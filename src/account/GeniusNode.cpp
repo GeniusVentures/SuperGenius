@@ -1582,12 +1582,18 @@ namespace sgns
     {
         bool ret = true;
 
-        // The developer cut is stamped on every result this node produces, so a malformed
+        // The developer fraction is stamped on every result this node produces, so a malformed
         // config must fail here rather than at payout time on some other node.
-        auto developer_cut = TokenAmount::ParseMinions( dev_config_.DevCut );
+        // The bounds are written this way so a NaN is rejected too.
+        if ( !( dev_config_.DevFraction >= 0.0 && dev_config_.DevFraction <= 1.0 ) )
+        {
+            node_logger_->error( "Developer fraction {} is not within [0.0, 1.0]", dev_config_.DevFraction );
+            return false;
+        }
+        auto developer_cut = TokenAmount::New( dev_config_.DevFraction );
         if ( !developer_cut )
         {
-            node_logger_->error( "Invalid developer cut \"{}\" in node configuration", dev_config_.DevCut );
+            node_logger_->error( "Invalid developer fraction {} in node configuration", dev_config_.DevFraction );
             return false;
         }
 
@@ -1596,12 +1602,12 @@ namespace sgns
                                                                 1,
                                                                 dev_config_.TokenID,
                                                                 dev_config_.Addr,
-                                                                developer_cut.value() );
+                                                                developer_cut.value()->Value() );
         if ( !processing_core_ )
         {
-            node_logger_->error( "Invalid processing payout configuration: address \"{}\", cut \"{}\"",
+            node_logger_->error( "Invalid processing payout configuration: address \"{}\", fraction {}",
                                  dev_config_.Addr,
-                                 dev_config_.DevCut );
+                                 dev_config_.DevFraction );
             return false;
         }
 

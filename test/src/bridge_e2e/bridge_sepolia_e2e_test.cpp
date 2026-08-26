@@ -136,9 +136,9 @@ protected:
 
 std::array<std::shared_ptr<GeniusNode>, BridgeSepoliaE2ETest::kNodeCount> BridgeSepoliaE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeSepoliaE2ETest::kNodeCount>                BridgeSepoliaE2ETest::s_configs = { {
-    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node0" },
-    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node1" },
-    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node2" },
+    { "0xcafe", 0.35, "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node0" },
+    { "0xcafe", 0.35, "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node1" },
+    { "0xcafe", 0.35, "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node2" },
 } };
 std::string BridgeSepoliaE2ETest::s_eth_private_key;
 
