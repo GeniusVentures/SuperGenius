@@ -455,7 +455,8 @@ Plans:
 
 - [ ] **Phase 13: ELM Job Bridging (SuperGenius)** — GCS creates/funds one normal processing job whose `Task.json_data` carries multiple ELM work items; grid distributes subtasks; fixed $0.0003/hour funding; work-item results via existing mechanism. Corrects issue #369 (scheduler/bidding layer removed). Issue: GeniusVentures/SuperGenius#369
 - [ ] **Phase 14: ELM Runtime in SGProcessingManager** — manifest resolution + verification, content-addressed model cache, real LM runtime (tokenizer/prefill/generation/KV-cache/sampling/stop/detokenize/cancel), work-item results. Executes in the GeniusVentures/SGProcessingManager repo. Issue: assigned to itsafuu only
-- [ ] **Phase 15 (deferred): ELM Events & Streaming** — optional `SGElmProcessing.proto` (execution events, token deltas, progress, cancellation); ships only after the first non-streaming proof
+
+> Phase 15 (ELM Events & Streaming proto) **dropped** 2026-08-26 per owner: streaming, if ever needed, rides the existing gossip-pubsub results channel (seq-numbered JSON events on `Task.results_channel`) — no new protobuf. `SGElmProcessing.proto` is not planned.
 
 ## Phase Details
 
@@ -542,7 +543,6 @@ Plans:
 | 12. ValidatorRegistry Migration | 1/1 | Complete   | 2026-07-27 |
 | 13. ELM Job Bridging (SuperGenius) | 0/? | Not started | — |
 | 14. ELM Runtime in SGProcessingManager (cross-repo) | 0/? | Not started | — |
-| 15. ELM Events & Streaming (deferred) | 0/? | Not started | — |
 
 ### Phase 13: ELM Job Bridging (SuperGenius)
 
@@ -567,13 +567,3 @@ Plans:
   3. A causal-LM work item produces generated text honoring `max_output_tokens`/`temperature`/`top_p`/`seed` and stop conditions, with accurate token counts; cancellation aborts in-flight generation.
 **Tracking**: Executes in the GeniusVentures/SGProcessingManager repo — separate issue, assigned to itsafuu only
 **Plans**: none yet
-
-### Phase 15 (deferred): ELM Events & Streaming
-
-**Goal**: Optional `SGElmProcessing.proto` (`ElmExecutionEvent`, `ElmTokenDelta`, `ElmProgress`, `ElmExecutionResult`, `ElmCancellationRequest`) for streaming progress/tokens and cancellation control, without altering task ownership.
-**Depends on**: Phases 13+14 shipped (first non-streaming proof works without these messages)
-**Requirements**: ELM-09
-**Success Criteria** (what must be TRUE):
-  1. Events stream per subtask with sequence numbers and the existing result mechanism remains the source of truth for final results.
-  2. The proto file is separate from the main task-ownership proto.
-**Plans**: none yet — deferred, not a v1.0 blocker unless streaming is required for first ship

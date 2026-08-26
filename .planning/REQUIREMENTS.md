@@ -77,9 +77,6 @@ Source: `.planning/notes/ELM-bridging-gaps.md` (ingested DOC); full detail in `.
 **Funding**
 - [ ] **ELM-08:** Fixed built-in rate **$0.0003/processing-hour**, no negotiation; funding deterministic from job JSON (`funding.maximum_processing_hours`, `escrow_path`); model download is part of the job's billable work via existing accounting/escrow
 
-**Optional / follow-up**
-- [ ] **ELM-09 (deferred):** Optional `SGElmProcessing.proto` (`ElmExecutionEvent`, `ElmTokenDelta`, `ElmProgress`, `ElmExecutionResult`, `ElmCancellationRequest`) for streaming/control — first non-streaming proof ships WITHOUT it (JSON result via existing result mechanism)
-
 **Traceability**
 
 | Requirement | Phase | Status |
@@ -92,9 +89,10 @@ Source: `.planning/notes/ELM-bridging-gaps.md` (ingested DOC); full detail in `.
 | ELM-06 | Phase 14 | Pending |
 | ELM-07 | Phase 14 | Pending |
 | ELM-08 | Phase 13 | Pending |
-| ELM-09 | Phase 15 (deferred) | Pending |
 
-Coverage: 9/9 ELM requirements mapped (Phase 14 executes in the SGProcessingManager repo; tracked in SuperGenius via cross-repo issue).
+Coverage: 8/8 ELM requirements mapped (Phase 14 executes in the SGProcessingManager repo; tracked in SuperGenius via cross-repo issue).
+
+> ELM-09 (streaming proto) **dropped** 2026-08-26 per owner: streaming, if ever needed, rides the existing gossip-pubsub results channel (seq-numbered JSON events on `Task.results_channel`) — no `SGElmProcessing.proto`.
 
 ## Slot-Based Network Voting (Phase 6)
 
