@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-stopped_at: Completed 12-05-PLAN.md
-last_updated: "2026-08-25T20:53:14.719Z"
-last_activity: 2026-08-25 -- Completed 12-05 active-vote restart gap closure
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-08-26T12:49:47.547Z"
+last_activity: 2026-08-26 -- Phase 12 planning complete
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 17
-  completed_plans: 19
+  total_plans: 18
+  completed_plans: 20
   percent: 80
 ---
 
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
 Plan: 5 of 5
-Status: Awaiting final Phase 12 verification
-Last activity: 2026-08-25 -- TEST-04 active-vote restart proof passed clean serial CTest
+Status: Ready to execute
+Last activity: 2026-08-26 -- Phase 12 planning complete
 
 Progress: [██████████] 100%
 
