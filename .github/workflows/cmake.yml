@@ -342,6 +342,12 @@ jobs:
 
           Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
 
+          # The Debug and Release jobs share one runner and one cache, and Debug's
+          # /Z7 objects are much larger than Release's. With ccache's 5 GiB default a
+          # Debug build evicts the whole Release cache, which turned a 2-minute warm
+          # Release build back into a 42-minute cold one.
+          Add-Content -Path $env:GITHUB_ENV -Value "CCACHE_MAXSIZE=30G"
+
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS' }}
         run: |

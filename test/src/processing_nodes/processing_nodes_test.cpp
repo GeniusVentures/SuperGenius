@@ -356,10 +356,9 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#if defined( _WIN32 ) || defined( __linux__ )
-    bin_path += "../";
-#endif
+    // Assets live in the source tree. Deriving this from the binary location broke
+    // whenever the build layout changed (multi-config or ABI subdirectory).
+    std::string bin_path = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
     std::string json_data = R"(
 {
   "name": "posenet-inference",
@@ -372,7 +371,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -392,7 +391,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -443,7 +442,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -469,7 +468,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
