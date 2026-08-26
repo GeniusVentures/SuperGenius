@@ -9,6 +9,11 @@ target_link_libraries(processing_nodes_test
     genius_node_test
     json_secure_storage
 )
+
+# See the note in test/src/account/CMakeLists.txt: the asset path must not depend
+# on how deep the binary sits in the build tree.
+target_compile_definitions(processing_nodes_test PRIVATE
+    SGNS_PROCESSING_ASSETS_DIR="${CMAKE_CURRENT_LIST_DIR}")
 if(WIN32)
     target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
