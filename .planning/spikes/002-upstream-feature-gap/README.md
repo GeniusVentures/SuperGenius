@@ -43,9 +43,14 @@ trivially true and already sufficient.**
 
 ## Signal for the Build
 
-Stick with the spike-001 plan. If protocol-fingerprint hiding (go-style PSK) ever becomes
-a hard requirement, that's new code in `GeniusVentures/libp2p` (a PSK-protected
-transport wrapper), not a port — estimate accordingly.
+Revised by owner 2026-08-25: the `thirdparty` libs are open source and others should
+benefit — gater + pnet should be **authored in `GeniusVentures/libp2p` as
+upstream-quality features** (modeled on go-libp2p's `gater/` and `pnet/` semantics),
+with PRs offered to `libp2p/cpp-libp2p` upstream. Since nothing exists to port, this is
+new design work; the spike-001 SecurityAdaptor gate remains the fast path for
+SuperGenius's private-network phase, with migration to gater/pnet once they land.
+
+Seed: `.planning/seeds/libp2p-gater-pnet-upstream.md`.
 
 Note: added `upstream` remote to the local clone for this spike; harmless, but remove
 with `git remote remove upstream` in `thirdparty/libp2p` if you want the clone pristine.
