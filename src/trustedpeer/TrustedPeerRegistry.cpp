@@ -530,8 +530,19 @@ namespace sgns::trustedpeer
         const auto &core          = approvals.value().front().core;
         auto        candidate     = QuorumPolicyState::DecodeCanonical( core.payload );
         auto        expected_core = candidate ? PolicyCandidateCore( *candidate, policy_domain_ ) : std::nullopt;
-        if ( candidate_id.domain != policy_domain_ || !candidate || !expected_core || !( *expected_core == core ) ||
-             !ValidatePolicySuccessor( current.value().policy, *candidate ) )
+        if ( candidate_id.domain != policy_domain_ || !candidate || !expected_core || !( *expected_core == core ) )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        // Already the durable policy (admin/refresh activation race) — idempotent.
+        const auto current_policy_hash = current.value().policy.Hash();
+        const auto candidate_hash      = candidate->Hash();
+        if ( current_policy_hash && candidate_hash && *current_policy_hash == *candidate_hash &&
+             current.value().policy.version == candidate->version )
+        {
+            return false;
+        }
+        if ( !ValidatePolicySuccessor( current.value().policy, *candidate ) )
         {
             return outcome::failure( Error::INVALID_CANDIDATE );
         }

@@ -329,6 +329,15 @@ namespace sgns::account
         if ( candidate_id.domain != candidate_domain_ || !candidate || !expected_core || !( *expected_core == core ) ||
              !policy_hash || candidate->authorizing_policy_hash != *policy_hash )
             return outcome::failure( std::errc::invalid_argument );
+        // Already the durable peer-confirmed burn (admin/refresh activation race) —
+        // idempotent. The initial burn (BootstrapOnly) must NOT take this path: its
+        // record exists but still needs the quorum-proof commit to become active.
+        const auto current_burn_hash = snapshot.value().burn.Hash();
+        const auto candidate_hash    = candidate->Hash();
+        if ( snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum &&
+             current_burn_hash && candidate_hash && *current_burn_hash == *candidate_hash &&
+             snapshot.value().burn.version == candidate->version )
+            return false;
         if ( IsEconomicallyReady() )
         {
             if ( candidate->version != snapshot.value().burn.version + 1 ||
