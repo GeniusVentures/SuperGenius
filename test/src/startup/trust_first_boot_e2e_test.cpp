@@ -1202,6 +1202,18 @@ namespace
         EXPECT_EQ( passive_activation_failures.load(), 0U );
         EXPECT_EQ( passive_state_changes.load(), state_changes_before_pending );
 
+        // The passive-side retention check above does not imply operator_b's store
+        // has the proposal yet — approving against an empty approval list fails with
+        // INVALID_CANDIDATE.
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = operator_b_secure->ReadCandidateApprovals( proposed.value() );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "operator_b did not retain the authenticated pending policy" );
+
         auto approved = operator_b_admin.Approve( proposed.value() );
         ASSERT_TRUE( approved.has_value() ) << approved.error().message();
         const auto policy_v2_hash = policy_v2.Hash().value();
@@ -1487,6 +1499,17 @@ namespace
             },
             std::chrono::seconds( 5 ),
             "passive node did not retain the first policy approval" );
+        // The passive-side wait above does not imply operator_b's store has the
+        // proposal yet — approving against an empty approval list fails with
+        // INVALID_CANDIDATE.
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = operator_b_secure->ReadCandidateApprovals( proposed.value() );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "operator_b did not retain the first policy approval" );
 
         fail_passive_commits.store( true );
         auto approved = operator_b_admin.Approve( proposed.value() );
