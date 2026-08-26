@@ -38,12 +38,12 @@ namespace sgns
 
         // Configuration for node instances
         static inline GeniusNodeConfig CONFIG1 = { "0xcafe",
-                                               "0.35",
+                                               0.35,
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./transaction_crash_node1" };
         static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
-                                               "0.35",
+                                               0.35,
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./transaction_crash_node2" };

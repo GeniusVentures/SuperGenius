@@ -77,7 +77,7 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/" + kNodeDirPrefix + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { dev_addr, "0.35", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, 0.35, tokenValue, tokenId, outPath };
 
         std::hash<std::string>          hasher;
         size_t                          address_hash = hasher( self_address );

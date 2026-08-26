@@ -127,17 +127,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.35",
+                                                  0.35,
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
@@ -146,7 +146,7 @@ std::string ProcessingNodesTest::binary_path = "";
 
 /// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
 static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
-/// Developer cut every node in this fixture is configured with ("0.35" above).
+/// Developer fraction every node in this fixture is configured with (0.35 above).
 static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )

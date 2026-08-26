@@ -74,7 +74,7 @@ namespace
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/child_tokens_node_" + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { self_address, "0.35", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { self_address, 0.35, tokenValue, tokenId, outPath };
 
         removeAllWithRetry( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
@@ -357,7 +357,7 @@ protected:
 
 /// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
 static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
-/// Developer cut every node created by CreateNode is configured with ("0.35").
+/// Developer fraction every node created by CreateNode is configured with (0.35).
 static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )

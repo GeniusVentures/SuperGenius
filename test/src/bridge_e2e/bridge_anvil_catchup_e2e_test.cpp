@@ -163,8 +163,8 @@ protected:
     /** @brief Developer payout address (DevConfig::Addr) shared by all catchup-test nodes. */
     static inline constexpr const char *kDevPayoutAddr = "0xcafe";
 
-    /** @brief Developer cut fraction (DevConfig::DevCut) shared by all catchup-test nodes. */
-    static inline constexpr const char *kDevCutFraction = "0.35";
+    /** @brief Developer fraction (DevConfig::DevFraction) shared by all catchup-test nodes. */
+    static inline constexpr double kDevFraction = 0.35;
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all catchup-test nodes. */
     static inline constexpr const char *kDevTokenValue = "1.0";
@@ -259,17 +259,17 @@ uint64_t                        BridgeAnvilCatchupE2ETest::s_fork_block = 0ull;
 
 std::array<GeniusNodeConfig, BridgeAnvilCatchupE2ETest::kNodeCount> BridgeAnvilCatchupE2ETest::s_configs = { {
     { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
-      BridgeAnvilCatchupE2ETest::kDevCutFraction,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
       BridgeAnvilCatchupE2ETest::kDevTokenValue,
       sgns::TokenID::FromBytes( { 0x00 } ),
       "./catchup_node1" },
     { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
-      BridgeAnvilCatchupE2ETest::kDevCutFraction,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
       BridgeAnvilCatchupE2ETest::kDevTokenValue,
       sgns::TokenID::FromBytes( { 0x00 } ),
       "./catchup_node2" },
     { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
-      BridgeAnvilCatchupE2ETest::kDevCutFraction,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
       BridgeAnvilCatchupE2ETest::kDevTokenValue,
       sgns::TokenID::FromBytes( { 0x00 } ),
       "./catchup_node3" },

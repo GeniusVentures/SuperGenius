@@ -37,7 +37,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
-    GeniusNodeConfig devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
+    GeniusNodeConfig devConfig = { self_address, 0.0, tokenValue, tokenId, outPath };
 
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).

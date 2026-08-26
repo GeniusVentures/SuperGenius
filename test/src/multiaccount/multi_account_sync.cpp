@@ -153,7 +153,7 @@ protected:
             outPathStr.push_back( '/' );
         }
 
-        GeniusNodeConfig devConfig = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
+        GeniusNodeConfig devConfig = { "0xcafe", 0.35, "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
 
         if ( !reuseStorage )
         {
