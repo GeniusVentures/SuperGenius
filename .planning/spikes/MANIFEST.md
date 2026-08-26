@@ -21,8 +21,13 @@ the node's host construction.
 | 001 | libp2p-private-network-feasibility | standard | Given vendored C++ libp2p, when building a host via injector, then non-member peers can be denied at the security-negotiation layer without forking | ✓ VALIDATED | libp2p, security, networking |
 | 002 | upstream-feature-gap | standard | Given upstream cpp-libp2p, when checked for gating/PSK features our fork lacks, then they can be ported | ✗ INVALIDATED | libp2p, upstream, private-network |
 
-## Requirements (from spike 002)
+## Requirements (from spike 002, revised by owner 2026-08-25)
 
-- Do NOT add a gator/PSK to the libp2p fork — nothing exists upstream to port, and the
-  SecurityAdaptor route requires zero libp2p changes. Author fork features only if
-  protocol-fingerprint hiding becomes a hard requirement.
+- The `thirdparty` repos are open source and should serve the broader ecosystem: a
+  go-libp2p-style connection **gater** and **pnet** (PSK private networks) belong in
+  `GeniusVentures/libp2p` as proper upstream-quality features, not SuperGenius-local hacks.
+- SuperGenius should still consume them through the standard injector surface
+  (`useConnectionGater` / `usePsk`-style bindings) once they exist.
+- Sequencing: the SecurityAdaptor gate (spike 001) remains the fast path for the
+  private-network phase; gater/pnet land in the fork as the durable, shareable
+  implementation and SuperGenius migrates onto them.
