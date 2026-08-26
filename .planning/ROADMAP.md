@@ -554,6 +554,7 @@ Plans:
   2. Funding is deterministic from the job JSON at the fixed $0.0003/hour rate; no quote/bid/negotiation protocol exists anywhere in the feature.
   3. Every result identifies its ELM work item; GCS aggregates by work-item ID with no SuperGenius-side aggregation.
 **Tracking**: GeniusVentures/SuperGenius#369 (corrected scope — see INGEST-CONFLICTS.md auto-resolutions)
+**Depends on (cross-repo)**: GeniusVentures/AsyncIOManager#11 — `ipfspubsub://` URL prefix (gossip pubsub channels as FileManager source/destination), assigned itsafuu; results delivery addresses the results channel as `ipfspubsub://results/<task_id>` with the durable artifact via the `ipfs://` saver (CID)
 **Plans**: none yet
 
 ### Phase 14: ELM Runtime in SGProcessingManager
