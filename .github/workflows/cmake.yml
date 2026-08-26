@@ -143,7 +143,6 @@ jobs:
   build:
     needs: resolve-runners
     env:
-      GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
       BUILD_DIRECTORY: build/${{ matrix.target }}/${{ matrix.build-type }}${{ matrix.abi && format('/{0}', matrix.abi) || '' }}
       FILE_NAME: ${{ matrix.id }}-${{ matrix.build-type }}.tar.gz
@@ -313,7 +312,41 @@ jobs:
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows' }}
-        run: choco install ccache -A
+        run: |
+          choco install ccache ninja -A
+
+          # ccache only works with the Ninja generator: CMake honours
+          # CMAKE_<LANG>_COMPILER_LAUNCHER for Ninja and Makefiles, and silently
+          # drops it for Visual Studio. Ninja in turn does not discover the MSVC
+          # environment on its own the way the Visual Studio generator does, so
+          # export what vcvars64 sets up.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
+
+          $oldPath = $env:PATH -split ';'
+          cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -notmatch '^([^=]+)=(.*)$') { return }
+            $name, $value = $matches[1], $matches[2]
+            if ($name -eq 'PATH') {
+              # PATH additions belong in GITHUB_PATH, not GITHUB_ENV.
+              $value -split ';' |
+                Where-Object { $_ -and $oldPath -notcontains $_ } |
+                Add-Content -Path $env:GITHUB_PATH
+            } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
+              "$name=$value" | Add-Content -Path $env:GITHUB_ENV
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+
+          # The Debug and Release jobs share one runner and one cache, and Debug's
+          # /Z7 objects are much larger than Release's. With ccache's 5 GiB default a
+          # Debug build evicts the whole Release cache, which turned a 2-minute warm
+          # Release build back into a 42-minute cold one.
+          Add-Content -Path $env:GITHUB_ENV -Value "CCACHE_MAXSIZE=30G"
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS' }}

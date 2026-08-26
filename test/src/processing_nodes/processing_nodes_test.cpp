@@ -17,6 +17,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -68,12 +69,14 @@ protected:
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc1->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_main->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
@@ -81,6 +84,7 @@ protected:
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc2->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc2, 1.0 );
 
         //Connect to each other
@@ -352,10 +356,9 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#if defined( _WIN32 ) || defined( __linux__ )
-    bin_path += "../";
-#endif
+    // Assets live in the source tree. Deriving this from the binary location broke
+    // whenever the build layout changed (multi-config or ABI subdirectory).
+    std::string bin_path = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
     std::string json_data = R"(
 {
   "name": "posenet-inference",
@@ -368,7 +371,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -388,7 +391,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -439,7 +442,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -465,7 +468,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [

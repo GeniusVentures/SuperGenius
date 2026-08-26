@@ -14,6 +14,7 @@
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -49,6 +50,7 @@ public:
         node_ = sgns::GeniusNode::New(
             { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
+        node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
         test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -146,6 +148,8 @@ TEST_F( AccountManagement, SetPayoutAddress )
     auto node_requester = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
+    node_receiver->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
+    node_requester->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
 
     node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
@@ -179,7 +183,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -199,7 +203,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -250,7 +254,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -276,7 +280,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
       "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -302,10 +306,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_requester->GetProcessCost( *procmgr.value() );
-    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
-#if defined( _WIN32 ) || defined( __linux__ )
-    bin_path += "../";
-#endif
+    // Assets live in the source tree. Deriving this from the binary location broke
+    // whenever the build layout changed (multi-config or ABI subdirectory).
+    std::string bin_path = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
 

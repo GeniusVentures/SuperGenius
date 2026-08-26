@@ -38,6 +38,13 @@ addtest(account_management_test
 
 target_link_libraries(account_management_test genius_node_test json_secure_storage)
 
+# Absolute path to the shared processing test assets. Passed in rather than derived
+# from the binary location at runtime: that walked a fixed number of parent
+# directories and so silently depended on the build layout (the Visual Studio
+# per-config subdirectory, or the ABI subdirectory on Linux) supplying a level.
+target_compile_definitions(account_management_test PRIVATE
+    SGNS_PROCESSING_ASSETS_DIR="${PROJECT_ROOT}/test/src/processing_nodes")
+
 addtest(result_gc_test
     result_gc_test.cpp
 )
