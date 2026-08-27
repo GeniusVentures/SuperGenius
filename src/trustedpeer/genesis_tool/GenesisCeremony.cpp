@@ -1,17 +1,10 @@
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
 
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <cerrno>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
-#include <fcntl.h>
 #include <iostream>
-#include <limits>
 #include <stdexcept>
-#include <termios.h>
 #include <thread>
 #include <utility>
 
@@ -19,48 +12,29 @@
 
 #include "account/GeniusSigner.hpp"
 #include "base/hexutil.hpp"
-
-#ifndef O_NOFOLLOW
-#define O_NOFOLLOW 0
-#endif
+#include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::trustedpeer, GenesisCeremony::Error, e )
 {
     using Error = sgns::trustedpeer::GenesisCeremony::Error;
     switch ( e )
     {
-        case Error::SUCCESS:
-            return "genesis ceremony completed";
-        case Error::INVALID_MANIFEST:
-            return "genesis manifest is not canonical and valid";
-        case Error::INVALID_KEY_SOURCE:
-            return "select exactly one protected key source";
-        case Error::KEY_FILE_IO:
-            return "unable to read the bootstrap key file";
-        case Error::KEY_FILE_NOT_REGULAR:
-            return "bootstrap key path is not a regular file";
-        case Error::KEY_FILE_SYMLINK:
-            return "bootstrap key path must not be a symlink";
-        case Error::KEY_FILE_OWNER:
-            return "bootstrap key file is not owned by this process user";
-        case Error::KEY_FILE_MODE:
-            return "bootstrap key file mode must be 0600";
-        case Error::INVALID_PRIVATE_KEY:
-            return "bootstrap private key is invalid";
-        case Error::BOOTSTRAPPER_MISMATCH:
-            return "derived bootstrapper does not match the manifest";
-        case Error::CONFIRMATION_MISMATCH:
-            return "typed fingerprint does not match the reviewed manifest";
-        case Error::NETWORK_START_FAILED:
-            return "unable to start the production CRDT composition";
-        case Error::SUBMISSION_FAILED:
-            return "unable to submit the reviewed genesis approval";
-        case Error::CONFIRMATION_FAILED:
-            return "durable genesis confirmation failed";
-        case Error::CONFIRMATION_TIMEOUT:
-            return "durable genesis confirmation timed out";
-        case Error::KEY_FILE_UNLINK_FAILED:
-            return "confirmed genesis key file could not be removed";
+        case Error::SUCCESS: return "genesis ceremony completed";
+        case Error::INVALID_MANIFEST: return "genesis manifest is not canonical and valid";
+        case Error::INVALID_KEY_SOURCE: return "select exactly one protected key source";
+        case Error::KEY_FILE_IO: return "unable to read the bootstrap key file";
+        case Error::KEY_FILE_NOT_REGULAR: return "bootstrap key path is not a regular file";
+        case Error::KEY_FILE_SYMLINK: return "bootstrap key path must not be a symlink";
+        case Error::KEY_FILE_OWNER: return "bootstrap key file is not owned by this process user";
+        case Error::KEY_FILE_MODE: return "bootstrap key file mode must be 0600";
+        case Error::INVALID_PRIVATE_KEY: return "bootstrap private key is invalid";
+        case Error::BOOTSTRAPPER_MISMATCH: return "derived bootstrapper does not match the manifest";
+        case Error::CONFIRMATION_MISMATCH: return "typed fingerprint does not match the reviewed manifest";
+        case Error::NETWORK_START_FAILED: return "unable to start the production CRDT composition";
+        case Error::SUBMISSION_FAILED: return "unable to submit the reviewed genesis approval";
+        case Error::CONFIRMATION_FAILED: return "durable genesis confirmation failed";
+        case Error::CONFIRMATION_TIMEOUT: return "durable genesis confirmation timed out";
+        case Error::KEY_FILE_UNLINK_FAILED: return "confirmed genesis key file could not be removed";
     }
     return "unknown GenesisCeremony::Error";
 }
@@ -70,7 +44,6 @@ namespace sgns::trustedpeer
     namespace
     {
         constexpr size_t PRIVATE_KEY_HEX_LENGTH = 64;
-        constexpr size_t MAX_KEY_FILE_BYTES = 256;
 
         bool IsPrivateKeyHex( const std::string &value )
         {
@@ -82,62 +55,6 @@ namespace sgns::trustedpeer
         {
             while ( !value.empty() && ( value.back() == '\n' || value.back() == '\r' ) )
                 value.pop_back();
-        }
-
-        outcome::result<GenesisCeremony::KeyFileStatus> InspectKeyFile( const std::string &path )
-        {
-            struct stat metadata
-            {
-            };
-            if ( ::lstat( path.c_str(), &metadata ) != 0 )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_IO );
-            return GenesisCeremony::KeyFileStatus{ true,
-                                                   S_ISREG( metadata.st_mode ) != 0,
-                                                   S_ISLNK( metadata.st_mode ) != 0,
-                                                   metadata.st_uid == ::geteuid(),
-                                                   static_cast<uint32_t>( metadata.st_mode & 0777 ) };
-        }
-
-        outcome::result<std::string> ReadKeyFile( const std::string &path )
-        {
-            const int descriptor = ::open( path.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW );
-            if ( descriptor < 0 )
-                return outcome::failure( errno == ELOOP ? GenesisCeremony::Error::KEY_FILE_SYMLINK
-                                                        : GenesisCeremony::Error::KEY_FILE_IO );
-
-            struct stat metadata
-            {
-            };
-            if ( ::fstat( descriptor, &metadata ) != 0 )
-            {
-                ::close( descriptor );
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_IO );
-            }
-            if ( !S_ISREG( metadata.st_mode ) )
-            {
-                ::close( descriptor );
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_NOT_REGULAR );
-            }
-            if ( metadata.st_uid != ::geteuid() )
-            {
-                ::close( descriptor );
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_OWNER );
-            }
-            if ( ( metadata.st_mode & 0777 ) != 0600 )
-            {
-                ::close( descriptor );
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_MODE );
-            }
-
-            std::string value;
-            value.resize( MAX_KEY_FILE_BYTES + 1 );
-            const auto bytes_read = ::read( descriptor, value.data(), value.size() );
-            const int close_result = ::close( descriptor );
-            if ( bytes_read < 0 || close_result != 0 || static_cast<size_t>( bytes_read ) > MAX_KEY_FILE_BYTES )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_IO );
-            value.resize( static_cast<size_t>( bytes_read ) );
-            TrimLineEnding( value );
-            return value;
         }
 
         void WriteCriticalRetention( const GenesisCeremony::Request &request, std::ostream &errors )
@@ -153,8 +70,8 @@ namespace sgns::trustedpeer
     GenesisCeremony::Hooks GenesisCeremony::DefaultHooks()
     {
         Hooks hooks;
-        hooks.inspect_key_file = InspectKeyFile;
-        hooks.read_key_file = ReadKeyFile;
+        hooks.inspect_key_file = genesis_ceremony_platform::InspectKeyFile;
+        hooks.read_key_file = genesis_ceremony_platform::ReadKeyFile;
         hooks.create_signer = []( std::string_view private_key ) -> outcome::result<Signer>
         {
             if ( private_key.size() != PRIVATE_KEY_HEX_LENGTH )
@@ -178,7 +95,7 @@ namespace sgns::trustedpeer
             }
         };
         hooks.cleanse = []( void *data, size_t size ) { OPENSSL_cleanse( data, size ); };
-        hooks.unlink_file = []( const std::string &path ) { return ::unlink( path.c_str() ); };
+        hooks.unlink_file = genesis_ceremony_platform::RemoveKeyFile;
         hooks.sleep = []( std::chrono::milliseconds duration ) { std::this_thread::sleep_for( duration ); };
         return hooks;
     }
@@ -215,8 +132,7 @@ namespace sgns::trustedpeer
                << "burn threshold: " << canonical->burn_threshold << '\n'
                << "initial burn basis points: " << canonical->initial_burn_basis_points << '\n'
                << "ordered peers:\n";
-        for ( const auto &peer : canonical->peers )
-            output << "  " << peer << '\n';
+        for ( const auto &peer : canonical->peers ) output << "  " << peer << '\n';
         output << "fingerprint: " << *fingerprint << '\n';
 
         std::string private_key;
@@ -259,28 +175,10 @@ namespace sgns::trustedpeer
         else
         {
             output << "bootstrap key (protected stdin): " << std::flush;
-            const bool terminal_input = &input == &std::cin;
-            struct termios original
-            {
-            };
-            bool echo_disabled = false;
-            if ( terminal_input )
-            {
-                if ( ::isatty( STDIN_FILENO ) == 0 || ::tcgetattr( STDIN_FILENO, &original ) != 0 )
-                    return outcome::failure( Error::INVALID_KEY_SOURCE );
-                auto protected_mode = original;
-                protected_mode.c_lflag &= static_cast<tcflag_t>( ~ECHO );
-                if ( ::tcsetattr( STDIN_FILENO, TCSAFLUSH, &protected_mode ) != 0 )
-                    return outcome::failure( Error::INVALID_KEY_SOURCE );
-                echo_disabled = true;
-            }
-            const bool read = static_cast<bool>( std::getline( input, private_key ) );
-            if ( echo_disabled )
-            {
-                ::tcsetattr( STDIN_FILENO, TCSAFLUSH, &original );
-                output << '\n';
-            }
-            if ( !read )
+            const auto read = genesis_ceremony_platform::ReadProtectedLine( input, output, private_key );
+            if ( read == genesis_ceremony_platform::ProtectedInputResult::NOT_A_TERMINAL )
+                return outcome::failure( Error::INVALID_KEY_SOURCE );
+            if ( read != genesis_ceremony_platform::ProtectedInputResult::SUCCESS )
                 return outcome::failure( Error::KEY_FILE_IO );
             TrimLineEnding( private_key );
         }
@@ -359,8 +257,7 @@ namespace sgns::trustedpeer
                 output << "Genesis durably confirmed.\n";
                 return outcome::success();
             }
-            if ( request.confirmation_timeout.count() > 0 )
-                hooks_.sleep( request.poll_interval );
+            if ( request.confirmation_timeout.count() > 0 ) hooks_.sleep( request.poll_interval );
         } while ( std::chrono::steady_clock::now() < deadline );
 
         WriteCriticalRetention( request, errors );

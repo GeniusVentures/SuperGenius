@@ -4,10 +4,6 @@
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
-#include <sys/stat.h>
-#include <termios.h>
-#include <unistd.h>
-
 #include <charconv>
 #include <algorithm>
 #include <chrono>
@@ -33,6 +29,7 @@
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
+#include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 #include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace
@@ -368,26 +365,11 @@ namespace
         }
         else
         {
-            if ( &input == &std::cin && ::isatty( STDIN_FILENO ) == 0 )
-                return outcome::failure( GenesisCeremony::Error::INVALID_KEY_SOURCE );
             output << "local signing key (protected stdin): " << std::flush;
-            struct termios original
-            {
-            };
-            bool disabled = false;
-            if ( &input == &std::cin && ::tcgetattr( STDIN_FILENO, &original ) == 0 )
-            {
-                auto protected_mode = original;
-                protected_mode.c_lflag &= static_cast<tcflag_t>( ~ECHO );
-                disabled = ::tcsetattr( STDIN_FILENO, TCSAFLUSH, &protected_mode ) == 0;
-            }
-            const bool read = static_cast<bool>( std::getline( input, key ) );
-            if ( disabled )
-            {
-                ::tcsetattr( STDIN_FILENO, TCSAFLUSH, &original );
-                output << '\n';
-            }
-            if ( !read )
+            const auto read = sgns::trustedpeer::genesis_ceremony_platform::ReadProtectedLine( input, output, key );
+            if ( read == sgns::trustedpeer::genesis_ceremony_platform::ProtectedInputResult::NOT_A_TERMINAL )
+                return outcome::failure( GenesisCeremony::Error::INVALID_KEY_SOURCE );
+            if ( read != sgns::trustedpeer::genesis_ceremony_platform::ProtectedInputResult::SUCCESS )
                 return outcome::failure( GenesisCeremony::Error::KEY_FILE_IO );
         }
         outcome::result<GenesisCeremony::Signer> local_signer = hooks.create_signer( key );
