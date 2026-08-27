@@ -508,24 +508,8 @@ namespace
             void MarkReady()
             {
                 const auto peers = Peers( network_ );
-                successful_diagnosis_ = Describe( peers.front(), "none", "ready", "none", IntendedConnectedness( peers ) );
-                successful_diagnosis_.peer_identity.clear();
-                successful_diagnosis_.listener.clear();
-                successful_diagnosis_.root_lifecycle.clear();
-                successful_diagnosis_.consensus_mesh = ConsensusMesh( peers.front() );
-                for ( const auto *peer : peers )
-                {
-                    if ( !successful_diagnosis_.peer_identity.empty() )
-                    {
-                        successful_diagnosis_.peer_identity += ',';
-                        successful_diagnosis_.listener += ',';
-                        successful_diagnosis_.root_lifecycle += ',';
-                    }
-                    successful_diagnosis_.peer_identity += peer->name + "-" + PeerIdentity( peer );
-                    successful_diagnosis_.listener += ListenerState( peer );
-                    successful_diagnosis_.root_lifecycle += RootLifecycle( peer );
-                    successful_diagnosis_.consensus_mesh = std::min( successful_diagnosis_.consensus_mesh, ConsensusMesh( peer ) );
-                }
+                successful_diagnosis_ = WithNetworkSnapshot(
+                    Describe( peers.front(), "none", "ready", "none", IntendedConnectedness( peers ) ), peers );
                 ready_ = true;
             }
 
@@ -601,20 +585,57 @@ namespace
                          ConsensusMesh( peer ) };
             }
 
+            static Diagnosis WithNetworkSnapshot( Diagnosis diagnosis, const std::array<Peer *, 4> &peers )
+            {
+                diagnosis.peer_identity.clear();
+                diagnosis.listener.clear();
+                diagnosis.root_lifecycle.clear();
+                bool first_peer = true;
+                for ( const auto *peer : peers )
+                {
+                    if ( !diagnosis.peer_identity.empty() )
+                    {
+                        diagnosis.peer_identity += ',';
+                        diagnosis.listener += ',';
+                        diagnosis.root_lifecycle += ',';
+                    }
+                    const auto name = peer ? peer->name : "missing";
+                    diagnosis.peer_identity += name + "-" + PeerIdentity( peer );
+                    diagnosis.listener += name + "-" + ListenerState( peer );
+                    diagnosis.root_lifecycle += name + "-" + RootLifecycle( peer );
+                    diagnosis.consensus_mesh = first_peer ? ConsensusMesh( peer )
+                                                          : std::min( diagnosis.consensus_mesh, ConsensusMesh( peer ) );
+                    first_peer = false;
+                }
+                return diagnosis;
+            }
+
             Diagnosis Classify() const
             {
                 const auto peers = Peers( network_ );
                 const auto intended_connectedness = IntendedConnectedness( peers );
                 for ( const auto *peer : peers )
                 {
-                    if ( !peer ) return Describe( peer, "missing-peer", "absent", "not-found", intended_connectedness );
+                    if ( !peer )
+                        return WithNetworkSnapshot( Describe( peer, "missing-peer", "absent", "not-found",
+                                                              intended_connectedness ),
+                                                    peers );
                     if ( !peer->pubsub || !peer->pubsub->IsStarted() )
-                        return Describe( peer, "pubsub-not-started", "stopped", "not-started", intended_connectedness );
-                    if ( !peer->consensus ) return Describe( peer, "missing-consensus", "absent", "not-found", intended_connectedness );
-                    if ( !peer->pubsub->GetHost() ) return Describe( peer, "missing-host", "absent", "not-found", intended_connectedness );
+                        return WithNetworkSnapshot( Describe( peer, "pubsub-not-started", "stopped", "not-started",
+                                                              intended_connectedness ),
+                                                    peers );
+                    if ( !peer->consensus )
+                        return WithNetworkSnapshot( Describe( peer, "missing-consensus", "absent", "not-found",
+                                                              intended_connectedness ),
+                                                    peers );
+                    if ( !peer->pubsub->GetHost() )
+                        return WithNetworkSnapshot( Describe( peer, "missing-host", "absent", "not-found",
+                                                              intended_connectedness ),
+                                                    peers );
                     if ( ConsensusMesh( peer ) < 1 )
-                        return Describe( peer, "zero-consensus-topic-mesh", "zero", "no-consensus-neighbor",
-                                         intended_connectedness );
+                        return WithNetworkSnapshot( Describe( peer, "zero-consensus-topic-mesh", "zero",
+                                                              "no-consensus-neighbor", intended_connectedness ),
+                                                    peers );
                 }
 
                 std::array<bool, 4> reachable{};
@@ -638,12 +659,15 @@ namespace
                     if ( reachable[source_index] )
                         for ( size_t target_index = 0; target_index < peers.size(); ++target_index )
                             if ( !reachable[target_index] && source_index != target_index )
-                                return Describe( peers[source_index], "disconnected-intended-peer", "disconnected",
-                                                 "no-intended-peer-link",
-                                                 intended_connectedness );
+                                return WithNetworkSnapshot(
+                                    Describe( peers[source_index], "disconnected-intended-peer", "disconnected",
+                                              "no-intended-peer-link", intended_connectedness ),
+                                    peers );
 
-                return Describe( peers.front(), "none", "recovered-after-deadline", "unknown-first-readiness-boundary",
-                                 intended_connectedness );
+                return WithNetworkSnapshot(
+                    Describe( peers.front(), "none", "recovered-after-deadline", "unknown-first-readiness-boundary",
+                              intended_connectedness ),
+                    peers );
             }
 
             Network &   network_;
