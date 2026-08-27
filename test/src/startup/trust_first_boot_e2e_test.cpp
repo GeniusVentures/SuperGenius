@@ -657,7 +657,8 @@ namespace
                 (void) non_member_controller->Refresh();
                 auto approvals = peer_a_secure->ReadCandidateApprovals( *burn_candidate );
                 return approvals.has_value() && approvals.value().size() == 2U &&
-                       peer_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
+                       peer_b_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
+                       peer_a_activation_failures.load() == 1U;
             },
             std::chrono::seconds( 5 ),
             "production controllers did not publish exactly two initial-burn approvals" );
