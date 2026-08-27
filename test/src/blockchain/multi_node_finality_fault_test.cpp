@@ -1545,7 +1545,7 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     {
         PublisherReadinessDiagnostics readiness( network );
         ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
-        readiness.MarkReady();
+        if ( !::testing::Test::HasFatalFailure() ) readiness.MarkReady();
     }
     ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
     ASSERT_WAIT_FOR_CONDITION( [&] {
