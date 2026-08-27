@@ -1,3 +1,29 @@
+---
+phase: 12-multi-node-finality-fault-proof
+plan: "08"
+subsystem: testing
+tags: [gtest, ctest, pubsub, crdt, rocksdb, evidence-gate]
+requires:
+  - phase: 12-07
+    provides: restart-gate terminal evidence and preserved test boundaries
+provides:
+  - passive public publisher-readiness diagnostics
+  - three fresh focused publisher-loss classifications
+  - terminal no-repair evidence report
+affects: [phase-12-verification, publisher-loss-regression]
+tech-stack:
+  added: []
+  patterns: [passive public readiness snapshot, two-matching-failure repair gate]
+key-files:
+  created: [.planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md]
+  modified: [test/src/blockchain/multi_node_finality_fault_test.cpp]
+key-decisions:
+  - "Do not repair a fixture unless two fresh failures match and directly prove lifecycle ownership."
+requirements-completed: []
+duration: 11 min
+completed: 2026-08-27T17:36:45Z
+---
+
 pre_task1_commit_sha=5af55025c9cc1a8c4de396ee9f1d5ea6766be6c2
 task1_snapshot_commit_sha=b7772e099c4c31244ff7f05d273001a03fc2eb22
 
