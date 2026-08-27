@@ -120,3 +120,12 @@ The Phase 12 code review found that the passive observer could infer a disconnec
 Three fresh real-socket publisher-loss reruns passed after the initial observer correction, one final rerun passed after the complete four-peer lifecycle snapshot was added, and a final mesh-snapshot rerun passed with four named mesh counts. Their complete outputs are retained as `12-08-traces/publisher-review-run-{1,2,3}.log`, `publisher-review-final.log`, and `publisher-review-mesh-final.log`. The matrices show the existing contract accurately: each peer is in one connected component with a consensus-topic neighbor, while some directed pairwise host links may be absent; no full-mesh requirement, topology mutation, or finality behavior was added.
 
 The review correction remains test-owned and read-only. It does not change `ConnectAndWaitForPeers`, `PeersFormConnectedTopology`, `ConnectPeers`, the publisher-loss scenario, certificate authority, CRDT, PubSub publication, or any production source.
+
+## Post-review Evidence Stop
+
+After the review made the canonical record schema require all four named mesh counts, the three canonical real-socket runs were refreshed with the rebuilt passive observer. Runs 1 and 2 passed and emitted the complete directed-link, lifecycle, and per-peer mesh record. Run 3 ended during teardown without a GTest completion line and emitted the earlier aggregate record format. No matching live test process remained afterward.
+
+This is an evidence-harness inconsistency, not proof of a finality defect or authority to retry, weaken the validator, alter waits, or modify the fixture again. The refreshed raw logs are retained as `publisher-run-{1,2,3}.log`; consequently the updated record-schema validator is intentionally not claimed as passed. The phase remains blocked pending a separately scoped attribution of the mixed observer output.
+
+post_review_evidence_validation=blocked
+next_action=separately-scoped-observer-output-attribution
