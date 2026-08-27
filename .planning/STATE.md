@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: Blocked — Plan 12-08 terminal evidence has no repair authorization
+status: Blocked — Plan 12-08 post-review readiness evidence is mixed
 last_updated: "2026-08-27T17:37:33.289Z"
-last_activity: 2026-08-27
+last_activity: 2026-08-27 -- publisher readiness observer output mismatch retained for separate attribution
 progress:
   total_phases: 5
   completed_phases: 5
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
 Plan: 8 of 8
-Status: Blocked — Plan 12-08 terminal evidence has no repair authorization
-Last activity: 2026-08-27
+Status: Blocked — Plan 12-08 post-review readiness evidence is mixed
+Last activity: 2026-08-27 -- publisher readiness observer output mismatch retained for separate attribution
 
 Progress: [██████████] 100%
 
@@ -91,6 +91,7 @@ Progress: [██████████] 100%
 - [Phase 12]: CRDT immutable state is authoritative after publisher loss; PubSub is best-effort cleanup with no successor retry.
 - [Phase 12]: Isolate the pre-broadcast vote owner until its same-root active-vote recovery is asserted. — Connected peers may correctly finalize the slot and release that direct local lock before the intended restart boundary.
 - [Phase 12]: Publisher readiness repair requires two matching fresh failures with direct fixture lifecycle proof. — Three isolated publisher-loss runs passed readiness, so Plan 12-08 authorizes no repair.
+- [Phase 12]: Complete passive readiness records include all directed host links, all peer lifecycle fields, and named per-peer mesh counts. — A mixed post-review refresh must be attributed before the evidence gate can be considered complete.
 
 ### Pending Todos
 
@@ -103,6 +104,7 @@ None yet.
 - Phase 12 blocked: Plan 12-06 found a fresh-process Mint-boundary recovery failure after valid topology, plus late/publisher diagnostic outcomes. See 12-07-HANDOFF.md; do not apply fixture or production repair without a separately scoped plan.
 - Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
 - Phase 12 remains blocked: Plan 12-08 observed three successful publisher readiness gates, so no fixture lifecycle repair is authorized and separate diagnosis is required for the remaining proof gaps.
+- Phase 12 Plan 08 post-review refresh: two canonical publisher-loss logs contain the complete passive record, while one ends during teardown with the prior aggregate record. Preserve the mismatch and do not retry, relax the schema, or alter topology/finality from it.
 
 ## Deferred Items
 
