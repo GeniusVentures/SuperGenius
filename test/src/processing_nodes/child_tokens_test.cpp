@@ -74,7 +74,7 @@ namespace
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/child_tokens_node_" + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { self_address, 0.35, tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { self_address, "0.35", tokenValue, tokenId, outPath };
 
         removeAllWithRetry( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );

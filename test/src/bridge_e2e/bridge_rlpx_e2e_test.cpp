@@ -225,17 +225,17 @@ std::shared_ptr<GeniusNode> BridgeRlpxE2ETest::node_proc2 = nullptr;
 std::string BridgeRlpxE2ETest::s_eth_private_key;
 
 GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig  = { "0xcafe",
-                                                           0.35,
+                                                           "0.35",
                                                            "1.0",
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            "./bridge_rlpx_node1/" };
 GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig2 = { "0xcafe",
-                                                           0.35,
+                                                           "0.35",
                                                            "1.0",
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            "./bridge_rlpx_node2/" };
 GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig3 = { "0xcafe",
-                                                           0.35,
+                                                           "0.35",
                                                            "1.0",
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            "./bridge_rlpx_node3/" };

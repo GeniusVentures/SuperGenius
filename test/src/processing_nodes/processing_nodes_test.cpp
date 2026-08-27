@@ -127,17 +127,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
-                                                  0.35,
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
-                                                  0.35,
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
-                                                  0.35,
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };

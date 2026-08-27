@@ -200,17 +200,17 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 std::string BridgeE2ETest::s_eth_private_key;
 
 GeniusNodeConfig BridgeE2ETest::DEV_CONFIG  = { "0xcafe",
-                                                0.35,
+                                                "0.35",
                                                 "1.0",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 "./bridge_e2e_node1" };
 GeniusNodeConfig BridgeE2ETest::DEV_CONFIG2 = { "0xcafe",
-                                                0.35,
+                                                "0.35",
                                                 "1.0",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 "./bridge_e2e_node2" };
 GeniusNodeConfig BridgeE2ETest::DEV_CONFIG3 = { "0xcafe",
-                                                0.35,
+                                                "0.35",
                                                 "1.0",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 "./bridge_e2e_node3" };
