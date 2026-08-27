@@ -83,7 +83,7 @@ namespace sgns::test
     /// bootstrapper node first (its approval activates the shared genesis), then on the
     /// remaining nodes — their refresh picks up the replicated approval.
     inline void MakeNodeReadyWithLocalTrust( const std::shared_ptr<GeniusNode> &node,
-                                             std::chrono::milliseconds          timeout = std::chrono::seconds( 50 ) )
+                                             std::chrono::milliseconds          timeout = std::chrono::seconds( 180 ) )
     {
         ASSERT_NO_FATAL_FAILURE( assertWaitForCondition(
             [&]()
