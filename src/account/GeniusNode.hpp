@@ -615,6 +615,16 @@ namespace sgns
         }
 
         /**
+         * @brief Returns the shared GraphSync network used by the node's GlobalDBs.
+         * @return Shared graphsync Network instance; inbound graphsync for this
+         *         host is dispatched through its registered protocol handler.
+         */
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> GetGraphsyncNetwork()
+        {
+            return graphsyncnetwork_;
+        }
+
+        /**
          * @brief Releases processing service, core, queue, and result-storage references.
          */
         void ResetProcessingMembers();
