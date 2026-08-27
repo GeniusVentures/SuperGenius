@@ -508,7 +508,7 @@ namespace
             void MarkReady()
             {
                 const auto peers = Peers( network_ );
-                successful_diagnosis_ = Describe( peers.front(), "none", "ready", "none", "all-intended-peers-connected" );
+                successful_diagnosis_ = Describe( peers.front(), "none", "ready", "none", IntendedConnectedness( peers ) );
                 successful_diagnosis_.peer_identity.clear();
                 successful_diagnosis_.listener.clear();
                 successful_diagnosis_.root_lifecycle.clear();
@@ -571,6 +571,28 @@ namespace
                 return peer->pubsub->getPeerCount( sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) );
             }
 
+            static std::string IntendedConnectedness( const std::array<Peer *, 4> &peers )
+            {
+                std::string connections;
+                for ( size_t source_index = 0; source_index < peers.size(); ++source_index )
+                    for ( size_t target_index = 0; target_index < peers.size(); ++target_index )
+                    {
+                        if ( source_index == target_index ) continue;
+                        if ( !connections.empty() ) connections += ',';
+                        const auto *source = peers[source_index];
+                        const auto *target = peers[target_index];
+                        connections += ( source ? source->name : "missing" ) + std::string( "-to-" ) +
+                                       ( target ? target->name : "missing" ) + '-';
+                        const auto source_host = source && source->pubsub ? source->pubsub->GetHost() : nullptr;
+                        const auto target_host = target && target->pubsub ? target->pubsub->GetHost() : nullptr;
+                        const bool connected = source_host && target_host &&
+                                               source_host->connectedness( target_host->getPeerInfo() ) ==
+                                                   libp2p::Host::Connectedness::CONNECTED;
+                        connections += connected ? "connected" : "not-connected";
+                    }
+                return connections;
+            }
+
             static Diagnosis Describe( const Peer *peer, std::string boundary, std::string state, std::string error,
                                        std::string intended_connectedness = "not-evaluated" )
             {
@@ -582,15 +604,17 @@ namespace
             Diagnosis Classify() const
             {
                 const auto peers = Peers( network_ );
+                const auto intended_connectedness = IntendedConnectedness( peers );
                 for ( const auto *peer : peers )
                 {
-                    if ( !peer ) return Describe( peer, "missing-peer", "absent", "not-found" );
+                    if ( !peer ) return Describe( peer, "missing-peer", "absent", "not-found", intended_connectedness );
                     if ( !peer->pubsub || !peer->pubsub->IsStarted() )
-                        return Describe( peer, "pubsub-not-started", "stopped", "not-started" );
-                    if ( !peer->consensus ) return Describe( peer, "missing-consensus", "absent", "not-found" );
-                    if ( !peer->pubsub->GetHost() ) return Describe( peer, "missing-host", "absent", "not-found" );
+                        return Describe( peer, "pubsub-not-started", "stopped", "not-started", intended_connectedness );
+                    if ( !peer->consensus ) return Describe( peer, "missing-consensus", "absent", "not-found", intended_connectedness );
+                    if ( !peer->pubsub->GetHost() ) return Describe( peer, "missing-host", "absent", "not-found", intended_connectedness );
                     if ( ConsensusMesh( peer ) < 1 )
-                        return Describe( peer, "zero-consensus-topic-mesh", "zero", "no-consensus-neighbor" );
+                        return Describe( peer, "zero-consensus-topic-mesh", "zero", "no-consensus-neighbor",
+                                         intended_connectedness );
                 }
 
                 std::array<bool, 4> reachable{};
@@ -616,9 +640,10 @@ namespace
                             if ( !reachable[target_index] && source_index != target_index )
                                 return Describe( peers[source_index], "disconnected-intended-peer", "disconnected",
                                                  "no-intended-peer-link",
-                                                 peers[source_index]->name + "-to-" + peers[target_index]->name + "-disconnected" );
+                                                 intended_connectedness );
 
-                return Describe( peers.front(), "disconnected-intended-peer", "disconnected", "no-intended-peer-link" );
+                return Describe( peers.front(), "none", "recovered-after-deadline", "unknown-first-readiness-boundary",
+                                 intended_connectedness );
             }
 
             Network &   network_;
