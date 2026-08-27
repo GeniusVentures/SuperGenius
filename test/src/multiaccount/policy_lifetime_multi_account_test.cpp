@@ -525,7 +525,10 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
         },
         std::chrono::seconds( 20 ),
         "operator B did not retain the pinned signer's exact successor approval" ) );
-    ASSERT_TRUE( operator_b_admin.Approve( candidate_id ).has_value() );
+    {
+        auto approved = operator_b_admin.Approve( candidate_id );
+        ASSERT_TRUE( approved.has_value() ) << approved.error().message();
+    }
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&]
         {
