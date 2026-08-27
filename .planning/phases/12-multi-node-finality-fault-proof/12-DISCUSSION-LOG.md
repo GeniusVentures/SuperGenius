@@ -168,3 +168,27 @@
 | Remove other scenarios temporarily | Reduce suite noise. | |
 
 **User's choice:** Focus 12-07 on restart. Record any late/publisher failures during it but do not act on them. Phase 12 remains blocked even if restart is fixed, until the other diagnostics are separately scoped.
+
+---
+
+## 12-08 Context Update — 2026-08-27
+
+### Publisher-loss pre-fault readiness
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Deterministic readiness root cause first | Diagnose why real peers fail public topology readiness before publisher-loss fault execution. | ✓ |
+| Publisher protocol repair | Change certificate persistence or PubSub behavior. | |
+| General suite stabilization | Broaden into unrelated late/restart work. | |
+
+**User's choice:** Add a narrowly scoped plan for the publisher-readiness failure only. The two fresh publisher passes mean certificate publication is not presumed faulty.
+
+### Observation and repair threshold
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Passive readiness snapshots plus repeatability gate | Record existing started/connection/topic-mesh/lifecycle facts; repair only after two identical fresh failures. | ✓ |
+| Retry or timeout tuning | Mask a readiness race without identifying it. | |
+| Protocol changes | Alter CRDT/PubSub semantics before the publisher-loss fault runs. | |
+
+**User's choice:** Keep the diagnosis passive and pre-fault. If evidence is not repeatable, record it and remain blocked. Any proven fixture repair must be test-harness-only and pass three targeted plus three serial runs.
