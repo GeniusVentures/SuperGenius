@@ -482,6 +482,151 @@ namespace
             std::optional<MintRecoverySnapshot> completed_snapshot_;
         };
 
+        class PublisherReadinessDiagnostics
+        {
+        public:
+            explicit PublisherReadinessDiagnostics( Network &network ) : network_( network ), run_( std::getenv( "P12_08_RUN" ) )
+            {
+            }
+
+            ~PublisherReadinessDiagnostics()
+            {
+                if ( !run_ || !*run_ ) return;
+                const auto diagnosis = ready_ ? successful_diagnosis_ : Classify();
+                std::cerr << "P12_PUBLISHER_READINESS_DIAG run=" << run_
+                          << " outcome=" << ( ready_ ? "pass" : "failure" )
+                          << " boundary=" << diagnosis.boundary
+                          << " state=" << diagnosis.state
+                          << " error=" << diagnosis.error
+                          << " peer_identity=" << diagnosis.peer_identity
+                          << " listener=" << diagnosis.listener
+                          << " root_lifecycle=" << diagnosis.root_lifecycle
+                          << " intended_connectedness=" << diagnosis.intended_connectedness
+                          << " consensus_mesh=" << diagnosis.consensus_mesh << '\n';
+            }
+
+            void MarkReady()
+            {
+                const auto peers = Peers( network_ );
+                successful_diagnosis_ = Describe( peers.front(), "none", "ready", "none", "all-intended-peers-connected" );
+                successful_diagnosis_.peer_identity.clear();
+                successful_diagnosis_.listener.clear();
+                successful_diagnosis_.root_lifecycle.clear();
+                successful_diagnosis_.consensus_mesh = ConsensusMesh( peers.front() );
+                for ( const auto *peer : peers )
+                {
+                    if ( !successful_diagnosis_.peer_identity.empty() )
+                    {
+                        successful_diagnosis_.peer_identity += ',';
+                        successful_diagnosis_.listener += ',';
+                        successful_diagnosis_.root_lifecycle += ',';
+                    }
+                    successful_diagnosis_.peer_identity += peer->name + "-" + PeerIdentity( peer );
+                    successful_diagnosis_.listener += ListenerState( peer );
+                    successful_diagnosis_.root_lifecycle += RootLifecycle( peer );
+                    successful_diagnosis_.consensus_mesh = std::min( successful_diagnosis_.consensus_mesh, ConsensusMesh( peer ) );
+                }
+                ready_ = true;
+            }
+
+        private:
+            struct Diagnosis
+            {
+                std::string boundary;
+                std::string state;
+                std::string error;
+                std::string peer_identity;
+                std::string listener;
+                std::string root_lifecycle;
+                std::string intended_connectedness;
+                size_t      consensus_mesh = 0;
+            };
+
+            static std::string PeerIdentity( const Peer *peer )
+            {
+                if ( !peer || !peer->pubsub ) return "unavailable";
+                const auto host = peer->pubsub->GetHost();
+                return host ? host->getId().toBase58() : "unavailable";
+            }
+
+            static std::string ListenerState( const Peer *peer )
+            {
+                if ( !peer ) return "missing";
+                return "port-" + std::to_string( peer->port ) + "-pubsub-" +
+                       ( peer->pubsub && peer->pubsub->IsStarted() ? "started" : "stopped" );
+            }
+
+            static std::string RootLifecycle( const Peer *peer )
+            {
+                if ( !peer ) return "missing";
+                return std::string( boost::filesystem::exists( peer->root ) ? "root-present" : "root-missing" ) +
+                       "-io-thread-" + ( peer->io_thread.joinable() ? "joinable" : "not-joinable" );
+            }
+
+            static size_t ConsensusMesh( const Peer *peer )
+            {
+                if ( !peer || !peer->pubsub || !peer->pubsub->IsStarted() || !peer->consensus ||
+                     !peer->pubsub->GetHost() )
+                    return 0;
+                return peer->pubsub->getPeerCount( sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) );
+            }
+
+            static Diagnosis Describe( const Peer *peer, std::string boundary, std::string state, std::string error,
+                                       std::string intended_connectedness = "not-evaluated" )
+            {
+                return { std::move( boundary ), std::move( state ), std::move( error ), PeerIdentity( peer ),
+                         ListenerState( peer ), RootLifecycle( peer ), std::move( intended_connectedness ),
+                         ConsensusMesh( peer ) };
+            }
+
+            Diagnosis Classify() const
+            {
+                const auto peers = Peers( network_ );
+                for ( const auto *peer : peers )
+                {
+                    if ( !peer ) return Describe( peer, "missing-peer", "absent", "not-found" );
+                    if ( !peer->pubsub || !peer->pubsub->IsStarted() )
+                        return Describe( peer, "pubsub-not-started", "stopped", "not-started" );
+                    if ( !peer->consensus ) return Describe( peer, "missing-consensus", "absent", "not-found" );
+                    if ( !peer->pubsub->GetHost() ) return Describe( peer, "missing-host", "absent", "not-found" );
+                    if ( ConsensusMesh( peer ) < 1 )
+                        return Describe( peer, "zero-consensus-topic-mesh", "zero", "no-consensus-neighbor" );
+                }
+
+                std::array<bool, 4> reachable{};
+                reachable.front() = true;
+                for ( size_t pass = 0; pass < peers.size(); ++pass )
+                    for ( size_t source_index = 0; source_index < peers.size(); ++source_index )
+                    {
+                        if ( !reachable[source_index] ) continue;
+                        for ( size_t target_index = 0; target_index < peers.size(); ++target_index )
+                        {
+                            if ( reachable[target_index] || source_index == target_index ) continue;
+                            const auto source_host = peers[source_index]->pubsub->GetHost();
+                            const auto target_host = peers[target_index]->pubsub->GetHost();
+                            if ( source_host->connectedness( target_host->getPeerInfo() ) == libp2p::Host::Connectedness::CONNECTED ||
+                                 target_host->connectedness( source_host->getPeerInfo() ) == libp2p::Host::Connectedness::CONNECTED )
+                                reachable[target_index] = true;
+                        }
+                    }
+
+                for ( size_t source_index = 0; source_index < peers.size(); ++source_index )
+                    if ( reachable[source_index] )
+                        for ( size_t target_index = 0; target_index < peers.size(); ++target_index )
+                            if ( !reachable[target_index] && source_index != target_index )
+                                return Describe( peers[source_index], "disconnected-intended-peer", "disconnected",
+                                                 "no-intended-peer-link",
+                                                 peers[source_index]->name + "-to-" + peers[target_index]->name + "-disconnected" );
+
+                return Describe( peers.front(), "disconnected-intended-peer", "disconnected", "no-intended-peer-link" );
+            }
+
+            Network &   network_;
+            const char *run_   = nullptr;
+            bool        ready_ = false;
+            Diagnosis   successful_diagnosis_;
+        };
+
         FinalityFaultNetwork() : CRDTFixture( "multi_node_finality_fault" )
         {
         }
@@ -1397,7 +1542,11 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     // is stopped and the unused observers are released immediately.
     for ( auto *peer : { &network.first, &network.second, &network.third } )
         sgns::MultiNodeFinalityFaultTestAccess::ArmCertificatePersistedBarrier( peer->consensus );
-    ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
+    {
+        PublisherReadinessDiagnostics readiness( network );
+        ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
+        readiness.MarkReady();
+    }
     ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
     ASSERT_WAIT_FOR_CONDITION( [&] {
         return sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( network.first.consensus ) ||
