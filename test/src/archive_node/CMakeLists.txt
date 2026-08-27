@@ -20,6 +20,3 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-
-# Four live nodes plus mint/transfer settlement; the default ctest timeout is not enough.
-set_tests_properties(archive_replication_test PROPERTIES TIMEOUT 500)

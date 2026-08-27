@@ -18,6 +18,7 @@ function(addtest test_name)
         NAME ${test_name}
         COMMAND $<TARGET_FILE:${test_name}> ${xml_output}
     )
+    set_tests_properties(${test_name} PROPERTIES TIMEOUT 600)
     set_target_properties(${test_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
         ARCHIVE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/test_lib
