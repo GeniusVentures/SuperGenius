@@ -516,7 +516,20 @@ namespace sgns::trustedpeer
         {
             return candidate_id;
         }
-        return SubmitLocalApproval( approvals.value().front().core );
+        auto submitted = SubmitLocalApproval( approvals.value().front().core );
+        if ( submitted.has_error() &&
+             submitted.error() == sgns::securecrdt::SecureCrdt::Error::CANDIDATE_CONTEXT_MISMATCH )
+        {
+            // The refresh activated the candidate while this approval was in flight;
+            // the authorization context moved past it. Re-check durability.
+            current = GetConfirmedSnapshot();
+            if ( current.has_value() &&
+                 current.value().policy.Hash() == std::optional<std::string>( candidate_id.content_hash ) )
+            {
+                return candidate_id;
+            }
+        }
+        return submitted;
     }
 
     outcome::result<bool> TrustedPeerRegistry::TryActivatePolicyCandidate(
