@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-08-27T17:22:54.063Z"
-last_activity: 2026-08-27 -- Phase 12 execution started
+status: Blocked — Plan 12-08 terminal evidence has no repair authorization
+last_updated: "2026-08-27T17:37:33.289Z"
+last_activity: 2026-08-27
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 20
-  completed_plans: 22
-  percent: 80
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 12
-Last activity: 2026-08-27 -- Phase 12 execution started
+Plan: 8 of 8
+Status: Blocked — Plan 12-08 terminal evidence has no repair authorization
+Last activity: 2026-08-27
 
 Progress: [██████████] 100%
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 12 P01 | 64m | 2 tasks | 9 files |
 | Phase 12 P02 | 17m | 2 tasks | 1 files |
 | Phase 12 P03 | 68m | 2 tasks | 5 files |
+| Phase 12 P08 | 11 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,7 @@ Progress: [██████████] 100%
 - [Phase 12]: Use stop-aware post-durability test barriers so shutdown leaves incomplete work to existing recovery.
 - [Phase 12]: CRDT immutable state is authoritative after publisher loss; PubSub is best-effort cleanup with no successor retry.
 - [Phase 12]: Isolate the pre-broadcast vote owner until its same-root active-vote recovery is asserted. — Connected peers may correctly finalize the slot and release that direct local lock before the intended restart boundary.
+- [Phase 12]: Publisher readiness repair requires two matching fresh failures with direct fixture lifecycle proof. — Three isolated publisher-loss runs passed readiness, so Plan 12-08 authorizes no repair.
 
 ### Pending Todos
 
@@ -99,7 +101,8 @@ None yet.
 - Phase 8 planning must lock implementation-level validation and exact winner evidence without changing the required `GetSlotID()` verified-fact semantics.
 - Production-path multi-node failure and restart coverage is mandatory for milestone completion.
 - Phase 12 blocked: Plan 12-06 found a fresh-process Mint-boundary recovery failure after valid topology, plus late/publisher diagnostic outcomes. See 12-07-HANDOFF.md; do not apply fixture or production repair without a separately scoped plan.
-- Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=none). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
+- Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
+- Phase 12 remains blocked: Plan 12-08 observed three successful publisher readiness gates, so no fixture lifecycle repair is authorized and separate diagnosis is required for the remaining proof gaps.
 
 ## Deferred Items
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-26T20:49:33.563Z
-Stopped at: Phase 12 Plan 12-07: restart reproduction gate closed; phase remains blocked
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-07-SUMMARY.md
+Last session: 2026-08-27T17:36:47.054Z
+Stopped at: Completed 12-08-PLAN.md with terminal blocked evidence report
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md
