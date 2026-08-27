@@ -35,22 +35,17 @@
 #include <boost/asio.hpp>
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/GeniusAccount.hpp"
-#include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
-#include "account/TrustStartupController.hpp"
-#include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
-#include "securecrdt/SecureCrdt.hpp"
-#include "trustedpeer/TrustStateStore.hpp"
-#include "trustedpeer/TrustedPeerRegistry.hpp"
 
 using namespace sgns;
 
@@ -236,15 +231,6 @@ protected:
         return key;
     }
 
-    void AddCanonicalTrustPeer( const std::string &self_address )
-    {
-        const auto path = boost::dll::program_location().parent_path() / "mat_trust_authorities";
-        auto account = GeniusAccount::NewFromPrivateKey(
-            TokenID::FromBytes( { 0x00 } ), DeterministicKey( self_address ).c_str(), path );
-        ASSERT_TRUE( account );
-        trust_peers_.push_back( std::move( account ) );
-    }
-
     /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
     ///        Full/Light implied by @p isFullNode. Trailing and defaulted so the ~15 existing
     ///        call sites are untouched; used to spin up an "Archive" node.
@@ -295,11 +281,6 @@ protected:
         {
             return nullptr;
         }
-        if ( isGenesisAuthorized )
-        {
-            trust_authority_ = authority;
-        }
-        const auto configured_authority = trust_authority_ ? trust_authority_ : authority;
         if ( !reuseStorage )
         {
             std::ofstream config( devConfig.BaseWritePath + "sgns_config.json" );
@@ -307,15 +288,9 @@ protected:
                    << nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" )
                    << "\",\"is_processor\":" << ( isProcessor ? "true" : "false" )
                    << ",\"rpc_catchup\":" << ( rpcCatchup ? "true" : "false" )
-                   << ",\"trusted_peers\":[\"" << configured_authority->GetAddress();
-            for ( const auto &peer : trust_peers_ )
-            {
-                config << "\",\"" << peer->GetAddress();
-            }
-            config << "\"],\"bootstrapper_node\":\"" << configured_authority->GetAddress()
-                   << "\",\"trusted_peer_quorum_threshold\":" << ( ( trust_peers_.size() + 1 ) / 2 + 1 )
-                   << ",\"burn_config_quorum_threshold\":" << ( trust_peers_.size() + 1 - ( trust_peers_.size() + 1 ) / 3 )
-                   << "}";
+                   << ",\"trusted_peers\":[\"" << authority->GetAddress()
+                   << "\"],\"bootstrapper_node\":\"" << authority->GetAddress()
+                   << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
         }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
@@ -324,7 +299,6 @@ protected:
         }
 
         node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
-        node_authorities_.insert_or_assign( node.get(), configured_authority );
         return node;
     }
 
@@ -335,112 +309,7 @@ protected:
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
-        sgns::test::assertWaitForCondition(
-            [&]()
-            {
-                return node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS ||
-                       node->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS ||
-                       node->GetState() == GeniusNode::NodeState::READY;
-            },
-            std::chrono::milliseconds( 50000 ),
-            "node did not reach a trust lifecycle checkpoint: " + node->GetAddress() );
-
-        if ( node->GetState() != GeniusNode::NodeState::READY )
-        {
-            const auto authority = node_authorities_.at( node.get() );
-            const auto base_path = std::filesystem::path( GetBaseWritePath( node ) );
-            const auto network_config = base_path / "reviewed-trust-network.json";
-            const auto database_path  = base_path / "reviewed-trust-globaldb";
-            std::filesystem::create_directories( database_path );
-            {
-                std::ofstream config( network_config );
-                ASSERT_TRUE( config.good() );
-                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-                       << node->GetPubSub()->GetInterfaceAddress() << R"("]})";
-            }
-
-            const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
-            sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
-            composition_config.network_config_path = network_config.string();
-            composition_config.database_path       = database_path.string();
-            composition_config.listen_topic        = topic;
-            composition_config.broadcast_topic     = topic;
-            auto composition_result =
-                sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
-            ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
-            auto composition = composition_result.value();
-            ASSERT_TRUE( composition->Start().has_value() );
-
-            auto secure_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
-            auto store = sgns::trustedpeer::TrustStateStore::Open(
-                ( base_path / "reviewed-trust-state" ).string(), 144 );
-            ASSERT_TRUE( store.has_value() ) << store.error().message();
-
-            sgns::trustedpeer::GenesisManifest manifest;
-            manifest.network_id              = 144;
-            manifest.bootstrapper_public_key = authority->GetAddress();
-            manifest.peers                   = { authority->GetAddress() };
-            for ( const auto &peer : trust_peers_ )
-            {
-                manifest.peers.push_back( peer->GetAddress() );
-            }
-            manifest.membership_threshold = manifest.peers.size() / 2 + 1;
-            manifest.burn_threshold       = manifest.peers.size() - manifest.peers.size() / 3;
-            const auto canonical             = manifest.Canonicalized();
-            ASSERT_TRUE( canonical.has_value() );
-            const auto manifest_bytes = canonical->CanonicalBytes();
-            ASSERT_TRUE( manifest_bytes.has_value() );
-
-            auto controller = sgns::account::TrustStartupController::New(
-                secure_crdt,
-                store.value(),
-                *canonical,
-                authority->GetAddress(),
-                [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
-            ASSERT_TRUE( controller.has_value() ) << controller.error().message();
-
-            auto submission_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
-            auto submission_store = sgns::trustedpeer::TrustStateStore::Open(
-                ( base_path / "reviewed-trust-submitter-state" ).string(), 144 );
-            ASSERT_TRUE( submission_store.has_value() ) << submission_store.error().message();
-            auto registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
-                submission_crdt,
-                submission_store.value(),
-                *canonical,
-                authority->Sign( *manifest_bytes ),
-                authority->GetAddress(),
-                [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
-            ASSERT_TRUE( registry.has_value() ) << registry.error().message();
-            // SubmitReviewedGenesisApproval is not idempotent (CommitGenesis fails with
-            // ALREADY_INITIALIZED) — skip it when a previous attempt already committed.
-            auto existing_genesis = submission_store.value()->LoadAndVerify();
-            if ( existing_genesis.has_error() )
-            {
-                auto submitted = registry.value()->SubmitReviewedGenesisApproval();
-                ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
-            }
-            // Poll-refresh rather than relying solely on candidate callbacks: on slow
-            // (CI/Debug) runs the replicated approvals can arrive without the callback
-            // firing in time, and the controller only re-evaluates on Refresh().
-            sgns::test::assertWaitForCondition(
-                [&]
-                {
-                    (void) controller.value()->Refresh();
-                    return controller.value()->GetState() ==
-                           sgns::account::TrustStartupController::State::ConfirmedReady;
-                },
-                std::chrono::milliseconds( 150000 ),
-                "reviewed trust composition did not produce deterministic initial burn" );
-            sgns::test::assertWaitForCondition(
-                [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                std::chrono::milliseconds( 50000 ),
-                "reviewed trust and deterministic initial burn did not unlock node: " + node->GetAddress() );
-        }
-
-        sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "reviewed trust and deterministic initial burn did not unlock node: " +
-                                                node->GetAddress() );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node ) );
         ASSERT_EQ( node->GetState(), GeniusNode::NodeState::READY )
             << "final node state=" << static_cast<int>( node->GetState() );
     }
@@ -484,9 +353,6 @@ protected:
     }
 
     std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
-    std::unordered_map<const GeniusNode *, std::shared_ptr<GeniusAccount>> node_authorities_;
-    std::shared_ptr<GeniusAccount> trust_authority_;
-    std::vector<std::shared_ptr<GeniusAccount>> trust_peers_;
 };
 
 class ValidatorRegistryTest : public MultiAccountTest
@@ -763,7 +629,6 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
-    AddCanonicalTrustPeer( "node_multi_1" );
     // Create nodes dynamically
     auto node_full     = CreateNode( "node_multi_full", true, true, true );
     auto node_original = CreateNode( "node_multi_1" );
