@@ -326,21 +326,24 @@ jobs:
             -property installationPath
           if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
 
-          $oldPath = $env:PATH -split ';'
           cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
             if ($_ -notmatch '^([^=]+)=(.*)$') { return }
             $name, $value = $matches[1], $matches[2]
             if ($name -eq 'PATH') {
-              # PATH additions belong in GITHUB_PATH, not GITHUB_ENV.
-              $value -split ';' |
-                Where-Object { $_ -and $oldPath -notcontains $_ } |
-                Add-Content -Path $env:GITHUB_PATH
+              # Take vcvars' PATH verbatim and in its own order, so the MSVC bin
+              # directory keeps precedence over the clang directories vcvars also
+              # adds. Skipping entries already on PATH looked tidier but dropped
+              # cl.exe's own directory, which vcvars emits as both HostX64 and
+              # Hostx64; duplicate entries here are harmless.
+              $value -split ';' | Where-Object { $_ } | Add-Content -Path $env:GITHUB_PATH
             } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
               "$name=$value" | Add-Content -Path $env:GITHUB_ENV
             }
           }
 
           Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
 
           # The Debug and Release jobs share one runner and one cache, and Debug's
           # /Z7 objects are much larger than Release's. With ccache's 5 GiB default a
