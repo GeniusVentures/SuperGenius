@@ -507,6 +507,13 @@ namespace sgns::crdt
             activeRootCID_.has_value() );
 
         closeStarted_ = true;
+        // Signal before the waits so a worker parked in DAGSyncer::getNode() can
+        // see it and unwind; the actual syncer teardown has to come after the
+        // waits, or it races the workers still polling graphsync state.
+        if ( dagSyncer_ )
+        {
+            dagSyncer_->Stop();
+        }
         StopWorkerLoops();
 
         if ( IsCurrentThreadInternalWorker() )
@@ -533,11 +540,6 @@ namespace sgns::crdt
 
     void CrdtDatastore::StopWorkerLoops()
     {
-        if ( dagSyncer_ )
-        {
-            dagSyncer_->Stop();
-        }
-
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
