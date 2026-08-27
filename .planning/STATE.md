@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: Blocked — 12-07 reproduction gate closed
-stopped_at: "Phase 12 Plan 12-07: restart reproduction gate closed; phase remains blocked"
-last_updated: "2026-08-26T20:49:33.567Z"
-last_activity: 2026-08-26 -- Phase 12 remains blocked after 12-07 reproduction gate closed
+status: executing
+last_updated: "2026-08-27T17:22:54.063Z"
+last_activity: 2026-08-27 -- Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 19
-  completed_plans: 21
+  total_plans: 20
+  completed_plans: 22
   percent: 80
 ---
 
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 ## Current Position
 
-Phase: 12 (multi-node-finality-fault-proof) — BLOCKED
-Plan: 7 of 7 (blocked)
-Status: Blocked — 12-07 reproduction gate closed
-Last activity: 2026-08-26 -- Phase 12 remains blocked after 12-07 reproduction gate closed
+Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 12
+Last activity: 2026-08-27 -- Phase 12 execution started
 
 Progress: [██████████] 100%
 
