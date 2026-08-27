@@ -1,6 +1,6 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-reviewed: 2026-08-27T20:47:00Z
+reviewed: 2026-08-27T20:55:00Z
 depth: standard
 files_reviewed: 1
 files_reviewed_list:
@@ -15,31 +15,31 @@ status: issues_found
 
 # Phase 12: Code Review Report
 
-**Reviewed:** 2026-08-27T20:47:00Z
+**Reviewed:** 2026-08-27T20:55:00Z
 **Depth:** standard
 **Files Reviewed:** 1
 **Status:** issues_found
 
 ## Summary
 
-Re-review of `c7f921ce` confirms the two prior blockers are resolved. A post-timeout state that has fully recovered now emits `boundary=none state=recovered-after-deadline error=unknown-first-readiness-boundary`, so it cannot authorize a D-19 repair. Both success and failure paths now emit all 12 directed intended-peer connections through public `connectedness()` reads. The patch does not change the topology helper, protocol ingress, barriers, or waits.
+Re-review of `238db508` confirms that the prior recovered-after-timeout classification is non-authorizing, and both success and failure diagnostics now include all 12 directed public link states plus all peers' identities, listener states, and root/I/O-thread states. The target builds successfully. The added observer remains read-only: the topology helper, protocol ingress, barriers, and waits have no diff.
 
-One D-18 evidence gap remains: a failure record preserves lifecycle and mesh facts for only the first failing peer, rather than every peer.
+The all-peer mesh portion of the required failure snapshot remains incomplete because the emitted field retains only a minimum.
 
 ## Narrative Findings (AI reviewer)
 
 ## Warnings
 
-### WR-01: Failure diagnostics omit all-peer lifecycle and mesh snapshots
+### WR-01: Per-peer consensus mesh values are collapsed to a single minimum
 
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:599`
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:606`
 
-**Issue:** `Classify()` captures the full directed connectivity matrix, but each failure return calls `Describe(peer, ...)`, which records `peer_identity`, `listener`, `root_lifecycle`, and `consensus_mesh` for only the first failing peer. D-18 requires passive readiness facts for each peer. Consequently a repeated readiness failure cannot rule in or out listener, root, I/O-thread, or mesh asymmetry on the other three peers, leaving insufficient evidence to prove the fixture-lifecycle condition required by D-20.
+**Issue:** `WithNetworkSnapshot()` reads `ConsensusMesh()` for all four peers but reduces the values with `std::min` and emits only the resulting scalar through `consensus_mesh`. The record therefore cannot show which peers have zero, one, or multiple consensus-topic neighbors. This does not satisfy the requested all-four-peer mesh state and can hide the lifecycle/topology asymmetry D-18/D-20 require the diagnostic to establish.
 
-**Fix:** Build a stable per-peer snapshot alongside `IntendedConnectedness()` that includes peer name/identity, listener state, root lifecycle, and its own consensus-topic mesh count. Attach that complete snapshot to every `Diagnosis` result (including missing/unavailable peers), while retaining the existing first-failure boundary as a separate field.
+**Fix:** Store and emit a named, comma-separated per-peer mesh snapshot (for example, `validator-one-2,validator-two-0,...`) in both success and failure records. Preserve a separate minimum only if downstream parsing needs it; do not replace the per-peer values with that aggregate.
 
 ---
 
-_Reviewed: 2026-08-27T20:47:00Z_
+_Reviewed: 2026-08-27T20:55:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
