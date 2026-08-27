@@ -322,7 +322,21 @@ namespace sgns::account
         {
             return candidate_id;
         }
-        return SubmitLocalApproval( approvals.value().front().core );
+        auto submitted = SubmitLocalApproval( approvals.value().front().core );
+        if ( submitted.has_error() &&
+             submitted.error() == sgns::securecrdt::SecureCrdt::Error::CANDIDATE_CONTEXT_MISMATCH )
+        {
+            // The refresh activated the candidate while this approval was in flight;
+            // the authorization context moved past it. Re-check durability.
+            snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+            if ( snapshot.has_value() &&
+                 snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum &&
+                 snapshot.value().burn.Hash() == std::optional<std::string>( candidate_id.content_hash ) )
+            {
+                return candidate_id;
+            }
+        }
+        return submitted;
     }
 
     outcome::result<bool> BurnConfig::TryActivateBurnCandidate(
