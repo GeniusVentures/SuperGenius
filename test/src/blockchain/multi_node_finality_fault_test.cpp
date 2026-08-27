@@ -523,7 +523,7 @@ namespace
                 std::string listener;
                 std::string root_lifecycle;
                 std::string intended_connectedness;
-                size_t      consensus_mesh = 0;
+                std::string consensus_mesh;
             };
 
             static std::string PeerIdentity( const Peer *peer )
@@ -582,7 +582,7 @@ namespace
             {
                 return { std::move( boundary ), std::move( state ), std::move( error ), PeerIdentity( peer ),
                          ListenerState( peer ), RootLifecycle( peer ), std::move( intended_connectedness ),
-                         ConsensusMesh( peer ) };
+                         std::to_string( ConsensusMesh( peer ) ) };
             }
 
             static Diagnosis WithNetworkSnapshot( Diagnosis diagnosis, const std::array<Peer *, 4> &peers )
@@ -590,7 +590,7 @@ namespace
                 diagnosis.peer_identity.clear();
                 diagnosis.listener.clear();
                 diagnosis.root_lifecycle.clear();
-                bool first_peer = true;
+                diagnosis.consensus_mesh.clear();
                 for ( const auto *peer : peers )
                 {
                     if ( !diagnosis.peer_identity.empty() )
@@ -598,14 +598,13 @@ namespace
                         diagnosis.peer_identity += ',';
                         diagnosis.listener += ',';
                         diagnosis.root_lifecycle += ',';
+                        diagnosis.consensus_mesh += ',';
                     }
                     const auto name = peer ? peer->name : "missing";
                     diagnosis.peer_identity += name + "-" + PeerIdentity( peer );
                     diagnosis.listener += name + "-" + ListenerState( peer );
                     diagnosis.root_lifecycle += name + "-" + RootLifecycle( peer );
-                    diagnosis.consensus_mesh = first_peer ? ConsensusMesh( peer )
-                                                          : std::min( diagnosis.consensus_mesh, ConsensusMesh( peer ) );
-                    first_peer = false;
+                    diagnosis.consensus_mesh += name + "-" + std::to_string( ConsensusMesh( peer ) );
                 }
                 return diagnosis;
             }
