@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -23,6 +20,7 @@
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
+#include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 #include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace
@@ -82,7 +80,7 @@ namespace
             std::ofstream out( key_path_.string(), std::ios::binary | std::ios::trunc );
             out << PRIVATE_KEY << '\n';
             out.close();
-            ASSERT_EQ( ::chmod( key_path_.c_str(), S_IRUSR | S_IWUSR ), 0 );
+            ASSERT_EQ( genesis_ceremony_platform::RestrictKeyFileToCurrentUser( key_path_.string() ), 0 );
         }
 
         GenesisCeremony::Network RealNetwork()

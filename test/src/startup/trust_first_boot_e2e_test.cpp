@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <boost/filesystem/operations.hpp>
 
 #include <fstream>
@@ -23,6 +20,7 @@
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
+#include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 #include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace
@@ -620,7 +618,7 @@ namespace
             ASSERT_TRUE( key_file.good() );
             key_file << BOOTSTRAPPER_PRIVATE_KEY << '\n';
         }
-        ASSERT_EQ( ::chmod( key_path.c_str(), 0600 ), 0 );
+        ASSERT_EQ( sgns::trustedpeer::genesis_ceremony_platform::RestrictKeyFileToCurrentUser( key_path.string() ), 0 );
         const auto fingerprint = manifest.Fingerprint().value();
         std::istringstream ceremony_input( fingerprint + "\n" );
         std::ostringstream ceremony_output;
