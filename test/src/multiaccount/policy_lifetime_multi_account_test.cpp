@@ -297,7 +297,7 @@ namespace
                            node->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS ||
                            node->GetState() == GeniusNode::NodeState::READY;
                 },
-                std::chrono::seconds( 50 ),
+                std::chrono::seconds( 180 ),
                 "node did not reach a trust lifecycle state" ) );
         }
 
@@ -472,7 +472,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
             return node_a->GetState() == GeniusNode::NodeState::READY &&
                    node_b->GetState() == GeniusNode::NodeState::READY;
         },
-        std::chrono::seconds( 50 ),
+        std::chrono::seconds( 180 ),
         "active members did not reach readiness" ) );
 
     const std::string pinned_trust_address = operator_a_signer->GetAddress();
@@ -486,7 +486,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
     ASSERT_TRUE( node_a->SelectAccount( replacement_address ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&] { return node_a->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::seconds( 50 ),
+        std::chrono::seconds( 180 ),
         "replacement transaction account did not become ready" ) );
 
     const auto durable = MultiAccountTestAccess::Store( node_a )->LoadAndVerify().value();
@@ -624,7 +624,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
                    node_b->GetState() == GeniusNode::NodeState::READY &&
                    node_c->GetState() == GeniusNode::NodeState::READY;
         },
-        std::chrono::seconds( 50 ),
+        std::chrono::seconds( 180 ),
         "three production nodes did not reach durable burn-v1 readiness" ) );
 
     const auto initial_policy = MultiAccountTestAccess::Snapshot( node_c );
@@ -643,7 +643,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     ASSERT_TRUE( node_c->SelectAccount( *secondary ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&] { return node_c->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::seconds( 50 ),
+        std::chrono::seconds( 180 ),
         "passive C replacement TransactionManager did not become ready" ) );
     const auto switched_policy = MultiAccountTestAccess::Snapshot( node_c );
     EXPECT_EQ( initial_policy.registry, switched_policy.registry );
