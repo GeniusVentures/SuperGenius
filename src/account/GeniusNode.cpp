@@ -166,7 +166,8 @@ namespace sgns
 
     outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
                                                           uint16_t           port_seed,
-                                                          bool               auto_dht )
+                                                          bool               auto_dht,
+                                                          const std::string &network_key )
     {
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
@@ -182,7 +183,31 @@ namespace sgns
         // deterministic UPnP network I/O during construction (see multi-node-crdt-
         // instability debug session for the crash this caused).
         ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
-            << ", \"upnp_enabled\": false }";
+            << ", \"upnp_enabled\": false";
+        if ( !network_key.empty() )
+        {
+            // Escape backslashes/quotes so any of the accepted PSK encodings survives a
+            // round-trip through the JSON config file.
+            std::string escaped;
+            escaped.reserve( network_key.size() );
+            for ( char c : network_key )
+            {
+                switch ( c )
+                {
+                    case '\\':
+                        escaped += "\\\\";
+                        break;
+                    case '"':
+                        escaped += "\\\"";
+                        break;
+                    default:
+                        escaped += c;
+                        break;
+                }
+            }
+            ofs << ", \"network_key\": \"" << escaped << "\"";
+        }
+        ofs << " }";
         return outcome::success();
     }
 
@@ -1249,6 +1274,7 @@ namespace sgns
         read( "upnp_enabled", settings.upnp_enabled );
         read( "high_water", settings.high_water );
         read( "low_water", settings.low_water );
+        read( "network_key", settings.network_key );
 
         std::string port_str;
         read( "pubsub_port", port_str );
@@ -1380,11 +1406,32 @@ namespace sgns
         config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
         config.rw_timeout_msec         = std::chrono::seconds{ 30 };
 
-        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
-                .GetKeyPair()
-                .value(),
-            config );
+        auto keypair = crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
+                           .GetKeyPair()
+                           .value();
+
+        // A non-empty network key puts PubSub in private-network (pnet) mode: every
+        // connection passes the PSK boundary on both dial and accept paths. The pnet
+        // constructor validates the key eagerly and throws PskValidationError on bad
+        // key material; StartPubSub reports that as a plain init failure.
+        if ( settings.network_key.empty() )
+        {
+            pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( std::move( keypair ), config );
+        }
+        else
+        {
+            try
+            {
+                pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( std::move( keypair ),
+                                                                       config,
+                                                                       settings.network_key );
+            }
+            catch ( const std::exception &e )
+            {
+                node_logger_->error( "Private-network (pnet) initialization failed: {}", e.what() );
+                return false;
+            }
+        }
 
         // A half-started PubSub must not be left reachable, so every failure tears it down.
         auto fail = [this]( const std::string &message )
@@ -1457,6 +1504,13 @@ namespace sgns
         //      OS-selected port because GossipPubSub cannot reliably start on zero.
         pubsubport_ = settings.config_port != 0 ? settings.config_port
                                                 : GenerateRandomPort( settings.port_seed, account_->GetAddress() );
+
+        // Remember the pnet key (if any) so it can be reported and re-applied consistently.
+        network_key_ = settings.network_key;
+        if ( !network_key_.empty() )
+        {
+            node_logger_->info( "network_config.json: private-network (pnet) mode enabled" );
+        }
 
         // Never block node construction on UPnP/IGD discovery.
         // RefreshUPNP() runs on its own thread and will try immediately.
@@ -2017,6 +2071,85 @@ namespace sgns
         {
             AddPeer( peer );
         }
+    }
+
+    namespace
+    {
+        // Parses a base58 peer-id string; nullopt when pubsub_ is down or the id is malformed.
+        std::optional<libp2p::peer::PeerId> ParsePeerId( const std::shared_ptr<ipfs_pubsub::GossipPubSub> &pubsub,
+                                                         const std::string                                         &peer_id,
+                                                         base::Logger                                               logger )
+        {
+            if ( !pubsub )
+            {
+                logger->warn( "Cannot manage peer deny list: PubSub is not running" );
+                return std::nullopt;
+            }
+            auto parsed = libp2p::peer::PeerId::fromBase58( peer_id );
+            if ( !parsed )
+            {
+                logger->warn( "Invalid peer id (expected base58): {}", peer_id );
+                return std::nullopt;
+            }
+            return parsed.value();
+        }
+    } // namespace
+
+    void GeniusNode::BlockPeer( const std::string &peer_id )
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        if ( peer )
+        {
+            pubsub_->BlockPeer( peer.value() );
+        }
+    }
+
+    void GeniusNode::BlockPeers( const std::vector<std::string> &peer_ids )
+    {
+        if ( !pubsub_ )
+        {
+            node_logger_->warn( "Cannot manage peer deny list: PubSub is not running" );
+            return;
+        }
+        std::vector<libp2p::peer::PeerId> peers;
+        peers.reserve( peer_ids.size() );
+        for ( const auto &id : peer_ids )
+        {
+            if ( auto peer = ParsePeerId( pubsub_, id, node_logger_ ) )
+            {
+                peers.push_back( std::move( peer.value() ) );
+            }
+        }
+        pubsub_->BlockPeers( peers );
+    }
+
+    void GeniusNode::UnblockPeer( const std::string &peer_id )
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        if ( peer )
+        {
+            pubsub_->UnblockPeer( peer.value() );
+        }
+    }
+
+    bool GeniusNode::IsPeerBlocked( const std::string &peer_id ) const
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        return peer && pubsub_->IsPeerBlocked( peer.value() );
+    }
+
+    std::vector<std::string> GeniusNode::GetBlockedPeers() const
+    {
+        if ( !pubsub_ )
+        {
+            return {};
+        }
+        std::vector<std::string> result;
+        for ( const auto &peer : pubsub_->GetBlockedPeers() )
+        {
+            result.push_back( peer.toBase58() );
+        }
+        return result;
     }
 
     outcome::result<void> GeniusNode::DHTInit()

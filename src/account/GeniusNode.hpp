@@ -151,12 +151,16 @@ namespace sgns
          * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
          * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
          * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
+         * @param[in] network_key Optional private-network (pnet) PSK written as the
+         *            "network_key" key — swarm-key text, or base16/base64-encoded 32-byte
+         *            PSK. Empty (default) writes no key and the node joins the public network.
          * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
          *         tests and examples do not depend on the host LAN.
          */
         static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
                                                          uint16_t           port_seed,
-                                                         bool               auto_dht );
+                                                         bool               auto_dht,
+                                                         const std::string &network_key = "" );
 
         /**
          * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
@@ -451,6 +455,42 @@ namespace sgns
          * @param[in] peers Peer multiaddresses to connect to.
          */
         void AddPeers( const std::vector<std::string> &peers );
+
+        /**
+         * @brief Blocks a peer at the connection-gater level.
+         *
+         * Blocked peers are rejected at every stage of the connection upgrade
+         * pipeline (dial, secured, upgraded). Existing connections are not
+         * terminated; the block applies to new connection attempts. No-op
+         * (with a warning) when PubSub is not running.
+         * @param[in] peer_id Peer ID (base58) of the peer to block.
+         */
+        void BlockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Blocks several peers at the connection-gater level.
+         * @param[in] peer_ids Peer IDs (base58) of the peers to block.
+         */
+        void BlockPeers( const std::vector<std::string> &peer_ids );
+
+        /**
+         * @brief Removes a peer from the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) of the peer to unblock.
+         */
+        void UnblockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Checks whether a peer is in the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) to check.
+         * @return True when the peer is blocked (false when PubSub is not running).
+         */
+        bool IsPeerBlocked( const std::string &peer_id ) const;
+
+        /**
+         * @brief Returns all peers currently blocked by the connection gater.
+         * @return Base58 peer IDs in the deny list (empty when PubSub is not running).
+         */
+        std::vector<std::string> GetBlockedPeers() const;
 
         /**
          * @brief Starts or restarts the background UPnP port refresh thread.
@@ -911,6 +951,8 @@ namespace sgns
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        /// Private-network (pnet) PSK from network_config.json ("network_key"); empty = public network.
+        std::string network_key_;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1001,6 +1043,7 @@ namespace sgns
             int         low_water    = 0;         ///< Connection-manager low water mark.
             uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
             uint16_t    port_seed    = 0;         ///< "port_seed", or the constructor param when the key is absent.
+            std::string network_key;              ///< "network_key" pnet PSK; empty = public network.
         };
 
         /**
@@ -1033,7 +1076,10 @@ namespace sgns
 
         /**
          * @brief Derives @c base58key_, then creates and starts PubSub on @ref pubsubport_.
-         * @param[in] settings Resolved network settings (bind address, water marks).
+         * When @c settings.network_key is non-empty, PubSub is created via the private-network
+         * (pnet) constructor so every connection passes the PSK boundary; nodes holding a
+         * different key cannot communicate with this node.
+         * @param[in] settings Resolved network settings (bind address, water marks, optional pnet key).
          * @return True on success; on failure PubSub is stopped and reset before returning false.
          */
         bool StartPubSub( const NetworkSettings &settings );
