@@ -42,6 +42,7 @@
 #include "account/GeniusAccount.hpp"
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
+#include "base/ScaledInteger.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -1584,16 +1585,16 @@ namespace sgns
 
         // The developer fraction is stamped on every result this node produces, so a malformed
         // config must fail here rather than at payout time on some other node.
-        // The bounds are written this way so a NaN is rejected too.
-        if ( !( dev_config_.DevFraction >= 0.0 && dev_config_.DevFraction <= 1.0 ) )
-        {
-            node_logger_->error( "Developer fraction {} is not within [0.0, 1.0]", dev_config_.DevFraction );
-            return false;
-        }
         auto developer_cut = TokenAmount::New( dev_config_.DevFraction );
         if ( !developer_cut )
         {
-            node_logger_->error( "Invalid developer fraction {} in node configuration", dev_config_.DevFraction );
+            node_logger_->error( "Invalid developer fraction \"{}\" in node configuration", dev_config_.DevFraction );
+            return false;
+        }
+        // 10^PRECISION minions == 1.0; a negative string already failed to parse above.
+        if ( developer_cut.value()->Value() > ScaledInteger::ScaleFactor( TokenAmount::PRECISION ) )
+        {
+            node_logger_->error( "Developer fraction {} is not within [0.0, 1.0]", dev_config_.DevFraction );
             return false;
         }
 

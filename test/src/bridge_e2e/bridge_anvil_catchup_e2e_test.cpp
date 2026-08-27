@@ -164,7 +164,7 @@ protected:
     static inline constexpr const char *kDevPayoutAddr = "0xcafe";
 
     /** @brief Developer fraction (DevConfig::DevFraction) shared by all catchup-test nodes. */
-    static inline constexpr double kDevFraction = 0.35;
+    static inline constexpr const char *kDevFraction = "0.35";
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all catchup-test nodes. */
     static inline constexpr const char *kDevTokenValue = "1.0";
