@@ -112,3 +112,11 @@ None. The only code surface is a test-owned, read-only observer; it introduces n
 - `test/src/blockchain/multi_node_finality_fault_test.cpp` and all three required `publisher-run-{1,2,3}.log` files exist.
 - Source commits `d6a4b920`, `d96c3fc2`, and `b7772e09` plus Task 1 evidence commit `580ae159` exist in Git history.
 - No Task 2 source edit exists after `task1_snapshot_commit_sha`.
+
+## Post-execution Review Correction
+
+The Phase 12 code review found that the passive observer could infer a disconnected link after a timed readiness wait had already recovered, and that successful records exposed only an aggregate connectivity value. The test-only observer now records the actual directed public `Host::connectedness()` value for every intended peer pair on both successful and failed paths. If a timed wait has recovered before the passive read, it reports `boundary=none state=recovered-after-deadline error=unknown-first-readiness-boundary`, which is not eligible for repair authorization.
+
+Three fresh real-socket publisher-loss reruns passed after this observer correction. Their complete outputs are retained as `12-08-traces/publisher-review-run-{1,2,3}.log`. The matrices show the existing contract accurately: each peer is in one connected component with a consensus-topic neighbor, while some directed pairwise host links may be absent; no full-mesh requirement, topology mutation, or finality behavior was added.
+
+The review correction remains test-owned and read-only. It does not change `ConnectAndWaitForPeers`, `PeersFormConnectedTopology`, `ConnectPeers`, the publisher-loss scenario, certificate authority, CRDT, PubSub publication, or any production source.
