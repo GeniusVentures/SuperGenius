@@ -163,7 +163,7 @@ TEST( SecureCrdtRegistryTest, RegistriesWithSamePatternRemainIsolated )
 TEST( SecureCrdtRegistryTest, ConcurrentAccessUsesStableSnapshots )
 {
     constexpr size_t thread_count = 8;
-    constexpr size_t iterations   = 200;
+    static constexpr size_t iterations = 200;
 
     std::array<int, thread_count> owner_tokens{};
     std::atomic_bool              failed{ false };
