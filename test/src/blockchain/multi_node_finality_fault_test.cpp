@@ -482,14 +482,14 @@ namespace
             std::optional<MintRecoverySnapshot> completed_snapshot_;
         };
 
-        class PublisherReadinessDiagnostics
+        class ReadinessDiagnostics
         {
         public:
-            explicit PublisherReadinessDiagnostics( Network &network ) : network_( network ), run_( std::getenv( "P12_08_RUN" ) )
+            explicit ReadinessDiagnostics( Network &network ) : network_( network ), run_( std::getenv( "P12_08_RUN" ) )
             {
             }
 
-            ~PublisherReadinessDiagnostics()
+            ~ReadinessDiagnostics()
             {
                 if ( !run_ || !*run_ ) return;
                 const auto diagnosis = ready_ ? successful_diagnosis_ : Classify();
@@ -1543,7 +1543,7 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     for ( auto *peer : { &network.first, &network.second, &network.third } )
         sgns::MultiNodeFinalityFaultTestAccess::ArmCertificatePersistedBarrier( peer->consensus );
     {
-        PublisherReadinessDiagnostics readiness( network );
+        ReadinessDiagnostics readiness( network );
         ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
         if ( !::testing::Test::HasFatalFailure() ) readiness.MarkReady();
     }
