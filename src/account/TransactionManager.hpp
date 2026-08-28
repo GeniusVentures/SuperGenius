@@ -348,19 +348,22 @@ namespace sgns
         static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
 
         /**
-         * @brief Apportions an escrow amount across contributing peers, their developers and the burn.
+         * @brief Splits an escrow amount across contributing peers, their developers and the burn.
          *
          * Each subtask result names the peer that did the work plus the developer of the app that
          * ran it, so a single job whose subtasks were processed by different apps pays each
-         * developer its own cut. The per-result share is split by that result's @c developer_cut
-         * and minted in that result's token; only the burn output uses the escrow token.
+         * developer its own cut. The results share an even split of the amount left after the
+         * burn (the split remainder is burned too); each result's share is divided by its
+         * @c developer_cut, floored in the developer's disfavor, and minted in that result's
+         * token. Results with malformed metadata are skipped, they neither block the payout nor
+         * earn from it.
          *
          * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
          * @param[in] escrow_amount Total amount locked by the escrow hold.
          * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
          * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
-         * @return Outputs ordered peers-by-subtask-id, developers-by-address, burn last; the burn
-         *         output is always present, zero-valued peer and developer credits are omitted.
+         * @return Outputs in result order, then developers by (address, token), burn last; the
+         *         burn output is always present, zero-valued peer and developer credits are omitted.
          */
         static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
             const SGProcessing::TaskResult &task_result,

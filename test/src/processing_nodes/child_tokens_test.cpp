@@ -555,15 +555,15 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     // subtasks, and which node ran what is not observable from balances here. So instead of
     // asserting a per-peer split, assert what holds for every split of the work: each peer is
     // paid only for subtasks it ran, in its own child token, and the payout closes the escrow
-    // exactly. The exact per-developer split math is covered by PayoutOutputsTest.
-    const uint64_t peer_entitlement = ( available * ( DEVELOPER_CUT_SCALE - DEVELOPER_CUT ) ) /
-                                      ( 2 * DEVELOPER_CUT_SCALE );
+    // exactly. The exact split math is covered by PayoutOutputsTest.
+    const uint64_t per_result       = available / 2;
+    const uint64_t peer_entitlement = per_result - ( per_result * DEVELOPER_CUT ) / DEVELOPER_CUT_SCALE;
 
     assertWaitForCondition(
         [&]()
         {
             auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( bal_p1_init + bal_p2_init );
-            return ( gain >= 2 * peer_entitlement ) && ( gain <= 2 * peer_entitlement + 2 );
+            return gain == 2 * peer_entitlement;
         },
         std::chrono::milliseconds( 40000 ),
         "Other nodes balance not updated in time" );
@@ -571,11 +571,10 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     const auto p1_gain = node_proc1->GetBalance() - bal_p1_init;
     const auto p2_gain = node_proc2->GetBalance() - bal_p2_init;
 
-    // A peer's gain is 0 (ran nothing) or 1-2 credits of peer_entitlement, each with at most one
-    // dust minion from the largest-remainder apportionment.
-    ASSERT_TRUE( p1_gain == 0 || ( p1_gain >= peer_entitlement && p1_gain <= 2 * peer_entitlement + 2 ) )
+    // A peer is paid per subtask it ran: 0, 1 or 2 whole credits.
+    ASSERT_TRUE( p1_gain == 0 || p1_gain == peer_entitlement || p1_gain == 2 * peer_entitlement )
         << "p1_gain=" << p1_gain << " peer_entitlement=" << peer_entitlement;
-    ASSERT_TRUE( p2_gain == 0 || ( p2_gain >= peer_entitlement && p2_gain <= 2 * peer_entitlement + 2 ) )
+    ASSERT_TRUE( p2_gain == 0 || p2_gain == peer_entitlement || p2_gain == 2 * peer_entitlement )
         << "p2_gain=" << p2_gain << " peer_entitlement=" << peer_entitlement;
 
     // Whatever each peer received was paid in its own child token, and nothing leaks into the

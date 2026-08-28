@@ -60,16 +60,6 @@ namespace
         EXPECT_EQ( output.dest_address, address );
         EXPECT_EQ( output.token_id, token_id );
     }
-
-    void ExpectSameOutputs( const std::vector<sgns::OutputDestInfo> &lhs,
-                            const std::vector<sgns::OutputDestInfo> &rhs )
-    {
-        ASSERT_EQ( lhs.size(), rhs.size() );
-        for ( size_t index = 0; index < lhs.size(); ++index )
-        {
-            ExpectOutput( lhs[index], rhs[index].encrypted_amount, rhs[index].dest_address, rhs[index].token_id );
-        }
-    }
 }
 
 TEST( PayoutOutputsTest, AppliesEachResultsDeveloperCutAndToken )
@@ -88,39 +78,33 @@ TEST( PayoutOutputsTest, AppliesEachResultsDeveloperCutAndToken )
     auto outputs = sgns::PayoutOutputsTestAccess::Build( task_result, 20, ESCROW_TOKEN, 0 );
     ASSERT_TRUE( outputs.has_value() );
     ASSERT_EQ( outputs.value().size(), 5U );
-    ExpectOutput( outputs.value()[0], 3, peer_1, token_1 );
-    ExpectOutput( outputs.value()[1], 8, peer_2, token_2 );
+    ExpectOutput( outputs.value()[0], 8, peer_2, token_2 );
+    ExpectOutput( outputs.value()[1], 3, peer_1, token_1 );
     ExpectOutput( outputs.value()[2], 2, dev_1, token_2 );
     ExpectOutput( outputs.value()[3], 7, dev_2, token_1 );
     ExpectOutput( outputs.value()[4], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 }
 
-TEST( PayoutOutputsTest, DistributesDustAndAggregatesDeveloperCreditsDeterministically )
+TEST( PayoutOutputsTest, BurnsSplitRemainderAndAggregatesDeveloperCredits )
 {
     const auto developer = Address( 'a' );
     const auto token     = Token( 0x33 );
 
-    SGProcessing::TaskResult forward;
-    AddResult( forward, "a", Address( '1' ), developer, 500'000, token );
-    AddResult( forward, "b", Address( '2' ), developer, 500'000, token );
-    AddResult( forward, "c", Address( '3' ), developer, 500'000, token );
+    SGProcessing::TaskResult task_result;
+    AddResult( task_result, "a", Address( '1' ), developer, 500'000, token );
+    AddResult( task_result, "b", Address( '2' ), developer, 500'000, token );
+    AddResult( task_result, "c", Address( '3' ), developer, 500'000, token );
 
-    SGProcessing::TaskResult reverse;
-    AddResult( reverse, "c", Address( '3' ), developer, 500'000, token );
-    AddResult( reverse, "b", Address( '2' ), developer, 500'000, token );
-    AddResult( reverse, "a", Address( '1' ), developer, 500'000, token );
-
-    auto forward_outputs = sgns::PayoutOutputsTestAccess::Build( forward, 11, ESCROW_TOKEN, 0 );
-    auto reverse_outputs = sgns::PayoutOutputsTestAccess::Build( reverse, 11, ESCROW_TOKEN, 0 );
-    ASSERT_TRUE( forward_outputs.has_value() );
-    ASSERT_TRUE( reverse_outputs.has_value() );
-    ExpectSameOutputs( forward_outputs.value(), reverse_outputs.value() );
-
-    ASSERT_EQ( forward_outputs.value().size(), 5U );
-    ExpectOutput( forward_outputs.value()[0], 2, Address( '1' ), token );
-    ExpectOutput( forward_outputs.value()[1], 2, Address( '2' ), token );
-    ExpectOutput( forward_outputs.value()[2], 2, Address( '3' ), token );
-    ExpectOutput( forward_outputs.value()[3], 5, developer, token );
+    // 11 does not split evenly three ways: each result gets 3, the 2 leftover minions are burned.
+    // Every result's cut is 0.5, floored to 1, so each peer takes the 2-minion floor residue.
+    auto outputs = sgns::PayoutOutputsTestAccess::Build( task_result, 11, ESCROW_TOKEN, 0 );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 5U );
+    ExpectOutput( outputs.value()[0], 2, Address( '1' ), token );
+    ExpectOutput( outputs.value()[1], 2, Address( '2' ), token );
+    ExpectOutput( outputs.value()[2], 2, Address( '3' ), token );
+    ExpectOutput( outputs.value()[3], 3, developer, token );
+    ExpectOutput( outputs.value()[4], 2, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 }
 
 TEST( PayoutOutputsTest, OmitsZeroPeerAndDeveloperCreditsAndKeepsBurn )
@@ -137,31 +121,68 @@ TEST( PayoutOutputsTest, OmitsZeroPeerAndDeveloperCreditsAndKeepsBurn )
     ExpectOutput( outputs.value()[2], 10, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 }
 
-TEST( PayoutOutputsTest, RejectsInvalidPayoutMetadata )
+TEST( PayoutOutputsTest, SkipsInvalidPayoutMetadataAndPaysTheRest )
 {
     const auto valid_token = Token( 0x11 );
-    const auto build_invalid = []( const SGProcessing::TaskResult &task_result )
+    const auto valid_peer  = Address( '1' );
+    const auto valid_dev   = Address( '2' );
+
+    // A bad entry must not block the payout for honest peers, and must not be rewarded either.
+    const auto build = []( const SGProcessing::TaskResult &task_result )
     { return sgns::PayoutOutputsTestAccess::Build( task_result, 10, ESCROW_TOKEN, 0 ); };
 
     SGProcessing::TaskResult missing_developer;
-    AddResult( missing_developer, "a", Address( '1' ), {}, 0, valid_token );
-    EXPECT_TRUE( build_invalid( missing_developer ).has_error() );
+    AddResult( missing_developer, "a", valid_peer, {}, 0, valid_token );
+    AddResult( missing_developer, "b", Address( '3' ), valid_dev, 0, valid_token );
+    auto outputs = build( missing_developer );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 2U );
+    ExpectOutput( outputs.value()[0], 10, Address( '3' ), valid_token );
+    ExpectOutput( outputs.value()[1], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 
     SGProcessing::TaskResult invalid_peer;
-    AddResult( invalid_peer, "a", "peer", Address( '2' ), 0, valid_token );
-    EXPECT_TRUE( build_invalid( invalid_peer ).has_error() );
+    AddResult( invalid_peer, "a", "peer", valid_dev, 0, valid_token );
+    AddResult( invalid_peer, "b", Address( '3' ), valid_dev, 0, valid_token );
+    outputs = build( invalid_peer );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 2U );
+    ExpectOutput( outputs.value()[0], 10, Address( '3' ), valid_token );
+    ExpectOutput( outputs.value()[1], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 
     SGProcessing::TaskResult invalid_token;
-    AddResult( invalid_token, "a", Address( '1' ), Address( '2' ), 0, valid_token );
+    AddResult( invalid_token, "a", valid_peer, valid_dev, 0, valid_token );
     invalid_token.mutable_subtask_results( 0 )->set_token_id( std::string( 31, '\0' ) );
-    EXPECT_TRUE( build_invalid( invalid_token ).has_error() );
+    AddResult( invalid_token, "b", Address( '3' ), valid_dev, 0, valid_token );
+    outputs = build( invalid_token );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 2U );
+    ExpectOutput( outputs.value()[0], 10, Address( '3' ), valid_token );
+    ExpectOutput( outputs.value()[1], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 
     SGProcessing::TaskResult invalid_cut;
-    AddResult( invalid_cut, "a", Address( '1' ), Address( '2' ), 1'000'001, valid_token );
-    EXPECT_TRUE( build_invalid( invalid_cut ).has_error() );
+    AddResult( invalid_cut, "a", valid_peer, valid_dev, 1'000'001, valid_token );
+    AddResult( invalid_cut, "b", Address( '3' ), valid_dev, 0, valid_token );
+    outputs = build( invalid_cut );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 2U );
+    ExpectOutput( outputs.value()[0], 10, Address( '3' ), valid_token );
+    ExpectOutput( outputs.value()[1], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
 
+    // A duplicated subtask result pays out once, for the first entry.
     SGProcessing::TaskResult duplicate;
-    AddResult( duplicate, "a", Address( '1' ), Address( '2' ), 0, valid_token );
+    AddResult( duplicate, "a", valid_peer, valid_dev, 0, valid_token );
     AddResult( duplicate, "a", Address( '3' ), Address( '4' ), 0, valid_token );
-    EXPECT_TRUE( build_invalid( duplicate ).has_error() );
+    outputs = build( duplicate );
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs.value().size(), 2U );
+    ExpectOutput( outputs.value()[0], 10, valid_peer, valid_token );
+    ExpectOutput( outputs.value()[1], 0, "0x0000000000000000000000000000000000000000", ESCROW_TOKEN );
+
+    // With nothing valid left there is nothing to pay, so building fails.
+    SGProcessing::TaskResult only_invalid;
+    AddResult( only_invalid, "a", "peer", valid_dev, 0, valid_token );
+    EXPECT_TRUE( build( only_invalid ).has_error() );
+
+    SGProcessing::TaskResult empty;
+    EXPECT_TRUE( build( empty ).has_error() );
 }

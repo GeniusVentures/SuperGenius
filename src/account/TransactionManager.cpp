@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
+#include <unordered_set>
 #include <utility>
 #include <thread>
 #include <system_error>
@@ -831,8 +832,11 @@ namespace sgns
     {
         using boost::multiprecision::uint128_t;
 
-        const auto &subtask_results = task_result.subtask_results();
-        if ( subtask_results.empty() || burn_basis_points > BASIS_POINTS_TOTAL )
+        // Static: this function is static but still logs; createLogger returns the process-wide
+        // "TransactionManager" logger.
+        static const base::Logger logger = base::createLogger( "TransactionManager" );
+
+        if ( burn_basis_points > BASIS_POINTS_TOTAL )
         {
             return std::errc::invalid_argument;
         }
@@ -840,94 +844,73 @@ namespace sgns
         const auto burn      = ( static_cast<uint128_t>( escrow_amount ) * burn_basis_points ) / BASIS_POINTS_TOTAL;
         const auto available = static_cast<uint128_t>( escrow_amount ) - burn;
 
-        // A credit owed to one address in one token, held as a numerator over a common denominator
-        // of result_count * DEVELOPER_CUT_SCALE so nothing is rounded until every share is known.
-        struct Credit
+        // One malformed entry must never block the payout: honest peers get paid, the bad entry
+        // gets nothing.
+        std::unordered_set<std::string>                   seen_subtask_ids;
+        std::vector<const SGProcessing::SubTaskResult *> valid_results;
+        for ( const auto &result : task_result.subtask_results() )
         {
-            uint128_t   numerator;
-            std::string address;
-            TokenID     token_id;
-        };
-
-        // Ordered maps make payout order and remainder tie-breaking deterministic; peer keys also
-        // reject duplicate subtasks, while developer keys aggregate credits before rounding.
-        std::map<std::string, Credit>                            peer_credits;
-        std::map<std::pair<std::string, std::string>, uint128_t> developer_numerators;
-
-        for ( const auto &result : subtask_results )
-        {
-            if ( result.subtaskid().empty() || result.developer_address().empty() ||
-                 !base::IsHexAddress( result.node_address() ) ||
-                 result.token_id().size() != std::tuple_size_v<TokenID::ByteArray> ||
-                 result.developer_cut() > DEVELOPER_CUT_SCALE )
+            const bool valid = !result.subtaskid().empty() && !result.developer_address().empty() &&
+                               base::IsHexAddress( result.node_address() ) &&
+                               result.token_id().size() == std::tuple_size_v<TokenID::ByteArray> &&
+                               result.developer_cut() <= DEVELOPER_CUT_SCALE &&
+                               seen_subtask_ids.insert( result.subtaskid() ).second;
+            if ( valid )
             {
-                return std::errc::invalid_argument;
+                valid_results.push_back( &result );
             }
-
-            const auto developer_cut = static_cast<uint128_t>( result.developer_cut() );
-            const auto token_id      = TokenID::FromBytes( result.token_id().data(), result.token_id().size() );
-            const auto inserted      = peer_credits.emplace(
-                result.subtaskid(),
-                Credit{ available * ( DEVELOPER_CUT_SCALE - developer_cut ), result.node_address(), token_id } );
-            if ( !inserted.second )
+            else
             {
-                return std::errc::invalid_argument;
+                logger->warn( "Ignoring invalid subtask result in escrow payout: subtaskid=\"{}\" peer=\"{}\" "
+                              "developer=\"{}\" cut={}",
+                              result.subtaskid(),
+                              result.node_address(),
+                              result.developer_address(),
+                              result.developer_cut() );
             }
-            developer_numerators[{ result.developer_address(), result.token_id() }] += available * developer_cut;
         }
 
-        // Credits in their final output order: peers by subtask id, then developers by
-        // (address, token). Both maps are already sorted, so this order does not depend on the
-        // order the results were collected in.
-        std::vector<Credit> credits;
-        credits.reserve( peer_credits.size() + developer_numerators.size() );
-        for ( const auto &[subtask_id, credit] : peer_credits )
+        if ( valid_results.empty() )
         {
-            credits.push_back( credit );
-        }
-        for ( const auto &[key, numerator] : developer_numerators )
-        {
-            const auto &[address, token_bytes] = key;
-            credits.push_back( { numerator, address, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
+            logger->error( "No valid subtask results in escrow payout" );
+            return std::errc::invalid_argument;
         }
 
-        // Largest-remainder apportionment: floor every credit, then hand the leftover minions out
-        // one at a time to the largest remainders. The sort is stable over the output order above,
-        // so ties resolve deterministically and the outputs sum to the escrow exactly.
-        const auto            denominator = static_cast<uint128_t>( subtask_results.size() ) * DEVELOPER_CUT_SCALE;
-        std::vector<uint64_t> amounts( credits.size() );
-        uint128_t             apportioned = 0;
-        for ( size_t index = 0; index < credits.size(); ++index )
-        {
-            amounts[index]  = static_cast<uint64_t>( credits[index].numerator / denominator );
-            apportioned    += amounts[index];
-        }
-
-        std::vector<size_t> by_remainder( credits.size() );
-        std::iota( by_remainder.begin(), by_remainder.end(), 0 );
-        std::stable_sort(
-            by_remainder.begin(),
-            by_remainder.end(),
-            [&credits, denominator]( size_t lhs, size_t rhs )
-            { return ( credits[lhs].numerator % denominator ) > ( credits[rhs].numerator % denominator ); } );
-        // Every floor loses less than one minion, so the dust never exceeds the number of credits.
-        const auto dust_minions = static_cast<uint64_t>( available - apportioned );
-        for ( uint64_t dust = 0; dust < dust_minions; ++dust )
-        {
-            ++amounts[by_remainder[dust]];
-        }
+        // Even split of what is left after the burn; the split remainder is burned too, so every
+        // minion is accounted for without an apportionment pass. Each result's developer cut is
+        // floored and the floor residue stays with that result's peer, so a result's peer and
+        // developer outputs always sum to its per-result share.
+        const auto per_result = available / valid_results.size();
+        const auto dust       = available % valid_results.size();
 
         std::vector<OutputDestInfo> outputs;
-        outputs.reserve( credits.size() + 1 );
-        for ( size_t index = 0; index < credits.size(); ++index )
+        outputs.reserve( valid_results.size() * 2 + 1 );
+        // Developer credits from several results collapse into one output per (address, token).
+        std::map<std::pair<std::string, std::string>, uint64_t> developer_amounts;
+        for ( const auto *result : valid_results )
         {
-            if ( amounts[index] != 0 )
+            const auto dev_amount = static_cast<uint64_t>(
+                static_cast<uint128_t>( per_result ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
+            developer_amounts[{ result->developer_address(), result->token_id() }] += dev_amount;
+
+            const auto peer_amount = static_cast<uint64_t>( per_result ) - dev_amount;
+            if ( peer_amount != 0 )
             {
-                outputs.push_back( { amounts[index], credits[index].address, credits[index].token_id } );
+                outputs.push_back( { peer_amount,
+                                     result->node_address(),
+                                     TokenID::FromBytes( result->token_id().data(), result->token_id().size() ) } );
+            }
+        }
+        for ( const auto &[key, amount] : developer_amounts )
+        {
+            if ( amount != 0 )
+            {
+                const auto &[address, token_bytes] = key;
+                outputs.push_back( { amount, address, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
             }
         }
         // Always emitted, even at zero, so the release has a fixed shape for observers.
-        outputs.push_back( { static_cast<uint64_t>( burn ), std::string( BURN_ADDRESS ), escrow_token_id } );
+        outputs.push_back( { static_cast<uint64_t>( burn + dust ), std::string( BURN_ADDRESS ), escrow_token_id } );
 
         const auto total = std::accumulate( outputs.cbegin(),
                                             outputs.cend(),
