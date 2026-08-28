@@ -17,6 +17,7 @@
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/remove_all.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
@@ -72,7 +73,7 @@ namespace
             node_.reset();
             store_.reset();
             GeniusAccount::SetSecureStorageFactory( nullptr );
-            boost::filesystem::remove_all( path_ );
+            test::removeAllWithRetry( path_.string() );
         }
 
         void WriteKeyFile()
