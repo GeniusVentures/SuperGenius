@@ -24,16 +24,21 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <chrono>
+#include <ctime>
 #include <cstdlib>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 #include <iostream>
+#include <mutex>
 #include <optional>
+#include <sstream>
 #include <thread>
+#include <unistd.h>
 
 namespace sgns
 {
@@ -482,27 +487,11 @@ namespace
             std::optional<MintRecoverySnapshot> completed_snapshot_;
         };
 
-        class ReadinessDiagnostics
+        class PublisherReadinessSnapshot
         {
         public:
-            explicit ReadinessDiagnostics( Network &network ) : network_( network ), run_( std::getenv( "P12_08_RUN" ) )
+            explicit PublisherReadinessSnapshot( Network &network ) : network_( network )
             {
-            }
-
-            ~ReadinessDiagnostics()
-            {
-                if ( !run_ || !*run_ ) return;
-                const auto diagnosis = ready_ ? successful_diagnosis_ : Classify();
-                std::cerr << "P12_PUBLISHER_READINESS_DIAG run=" << run_
-                          << " outcome=" << ( ready_ ? "pass" : "failure" )
-                          << " boundary=" << diagnosis.boundary
-                          << " state=" << diagnosis.state
-                          << " error=" << diagnosis.error
-                          << " peer_identity=" << diagnosis.peer_identity
-                          << " listener=" << diagnosis.listener
-                          << " root_lifecycle=" << diagnosis.root_lifecycle
-                          << " intended_connectedness=" << diagnosis.intended_connectedness
-                          << " consensus_mesh=" << diagnosis.consensus_mesh << '\n';
             }
 
             void MarkReady()
@@ -511,6 +500,12 @@ namespace
                 successful_diagnosis_ = WithNetworkSnapshot(
                     Describe( peers.front(), "none", "ready", "none", IntendedConnectedness( peers ) ), peers );
                 ready_ = true;
+            }
+
+            std::array<std::string, 3> FirstFailure() const
+            {
+                const auto diagnosis = Classify();
+                return { diagnosis.boundary, diagnosis.state, diagnosis.error };
             }
 
         private:
@@ -670,9 +665,133 @@ namespace
             }
 
             Network &   network_;
-            const char *run_   = nullptr;
             bool        ready_ = false;
             Diagnosis   successful_diagnosis_;
+        };
+
+        class PublisherReadinessObserver
+        {
+        public:
+            explicit PublisherReadinessObserver( Network &network ) : network_( network )
+            {
+                const char *run_token = std::getenv( "P12_09_RUN_TOKEN" );
+                if ( !run_token || !*run_token ) return;
+                try
+                {
+                    const auto executable = boost::filesystem::canonical( boost::dll::program_location() );
+                    fingerprint_.run_token = run_token;
+                    fingerprint_.path = executable.string();
+                    fingerprint_.size = boost::filesystem::file_size( executable );
+                    fingerprint_.mtime = boost::filesystem::last_write_time( executable );
+                    fingerprint_.pid = static_cast<long>( ::getpid() );
+                    valid_ = !fingerprint_.path.empty();
+                }
+                catch ( const boost::filesystem::filesystem_error & )
+                {
+                    invalid_reason_ = "fingerprint-unavailable";
+                }
+            }
+
+            void EmitStart()
+            {
+                if ( !valid_ || emitted_start_ ) return;
+                Write( "P12_PUBLISHER_OBSERVER_START " + Header() );
+                emitted_start_ = true;
+            }
+
+            void MarkReady()
+            {
+                diagnosis_ = { "none", "ready", "none" };
+                ready_ = true;
+            }
+
+            void MarkFailure()
+            {
+                PublisherReadinessSnapshot snapshot( network_ );
+                const auto diagnosis = snapshot.FirstFailure();
+                diagnosis_ = { diagnosis[0], diagnosis[1], diagnosis[2] };
+                readiness_failure_ = true;
+            }
+
+            void MarkUnclassifiedExit()
+            {
+                if ( readiness_failure_ ) return;
+                ready_ = false;
+                diagnosis_.reset();
+            }
+
+            void EmitTerminal( bool released )
+            {
+                if ( emitted_terminal_ || !emitted_start_ ) return;
+                emitted_terminal_ = true;
+                if ( released && ready_ )
+                {
+                    Write( "P12_PUBLISHER_OBSERVER_TERMINAL " + Header() +
+                           " outcome=pass terminal=complete peer_release=all-four-runtime-handles-released boundary=none state=ready error=none" );
+                    return;
+                }
+                if ( released && diagnosis_.has_value() )
+                {
+                    Write( "P12_PUBLISHER_OBSERVER_TERMINAL " + Header() + " outcome=failure terminal=complete "
+                           "peer_release=all-four-runtime-handles-released boundary=" + diagnosis_->boundary +
+                           " state=" + diagnosis_->state + " error=" + diagnosis_->error );
+                    return;
+                }
+                EmitIncomplete( released ? "unclassified-scenario-exit" : "peer-release-unproven" );
+            }
+
+            void EmitIncomplete( const std::string &reason )
+            {
+                if ( !emitted_start_ || incomplete_emitted_ ) return;
+                incomplete_emitted_ = true;
+                Write( "P12_PUBLISHER_OBSERVER_TERMINAL " + Header() + " outcome=incomplete terminal=incomplete peer_release=" +
+                       std::string( reason == "peer-release-unproven" ? "unproven" : "released" ) +
+                       " boundary=observer-output state=incomplete error=" + reason );
+            }
+
+        private:
+            struct Fingerprint
+            {
+                std::string run_token;
+                std::string path;
+                uintmax_t   size  = 0;
+                std::time_t mtime = 0;
+                long        pid   = 0;
+            };
+
+            struct Diagnosis
+            {
+                std::string boundary;
+                std::string state;
+                std::string error;
+            };
+
+            std::string Header() const
+            {
+                std::ostringstream record;
+                record << "run_token=" << fingerprint_.run_token << " schema=p12-observer-v1 pid=" << fingerprint_.pid
+                       << " exe_path=" << fingerprint_.path << " exe_size=" << fingerprint_.size
+                       << " exe_mtime=" << fingerprint_.mtime;
+                return record.str();
+            }
+
+            static void Write( const std::string &record )
+            {
+                static std::mutex writer_mutex;
+                std::lock_guard lock( writer_mutex );
+                std::cerr << record << '\n' << std::flush;
+            }
+
+            Network &                    network_;
+            Fingerprint                  fingerprint_;
+            std::optional<Diagnosis>     diagnosis_;
+            bool                         valid_              = false;
+            bool                         emitted_start_      = false;
+            bool                         emitted_terminal_   = false;
+            bool                         incomplete_emitted_ = false;
+            bool                         ready_              = false;
+            bool                         readiness_failure_  = false;
+            std::string                  invalid_reason_;
         };
 
         FinalityFaultNetwork() : CRDTFixture( "multi_node_finality_fault" )
@@ -1590,11 +1709,17 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     // is stopped and the unused observers are released immediately.
     for ( auto *peer : { &network.first, &network.second, &network.third } )
         sgns::MultiNodeFinalityFaultTestAccess::ArmCertificatePersistedBarrier( peer->consensus );
+    PublisherReadinessObserver observer( network );
+    observer.EmitStart();
+    auto scenario = [&]
     {
-        ReadinessDiagnostics readiness( network );
         ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
-        if ( !::testing::Test::HasFatalFailure() ) readiness.MarkReady();
-    }
+        if ( ::testing::Test::HasFatalFailure() )
+        {
+            observer.MarkFailure();
+            return;
+        }
+        observer.MarkReady();
     ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
     ASSERT_WAIT_FOR_CONDITION( [&] {
         return sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( network.first.consensus ) ||
@@ -1603,7 +1728,6 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     }, std::chrono::seconds( 25 ), "production-selected publisher paused after immutable certificate persistence and before notification", nullptr );
     if ( ::testing::Test::HasFatalFailure() )
     {
-        StopNetwork( network );
         return;
     }
     Peer *publisher = nullptr;
@@ -1671,5 +1795,17 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
                HasSingleDurableMint( network.passive, slot, *winner, *loser );
     }, std::chrono::seconds( 25 ), "publisher-loss finality remained exact after reopening every peer root", nullptr );
     for ( auto *peer : Peers( network ) ) AssertSingleDurableMint( *peer, slot, *winner, *loser );
+    };
+    scenario();
+    if ( ::testing::Test::HasFatalFailure() ) observer.MarkUnclassifiedExit();
     StopNetwork( network );
+    const auto released = []( const Peer &peer )
+    {
+        return !peer.consensus && !peer.blockchain && !peer.transactions && !peer.db && !peer.pubsub && !peer.io &&
+               !peer.io_thread.joinable();
+    };
+    const bool all_released = released( network.first ) && released( network.second ) && released( network.third ) &&
+                              released( network.passive );
+    EXPECT_TRUE( all_released );
+    observer.EmitTerminal( all_released );
 }
