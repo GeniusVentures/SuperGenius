@@ -867,7 +867,15 @@ namespace sgns
                                        Error                     error_on_failure,
                                        std::chrono::milliseconds timeout )
     {
-        std::thread(
+        // Spawn joinable and register it: Stop() must be able to wait these
+        // threads out, or they poll the GlobalDB and fire result callbacks
+        // after node teardown has begun.
+        std::lock_guard<std::mutex> watchers_lock( cid_watchers_mutex_ );
+        if ( watchers_stop_requested_ )
+        {
+            return;
+        }
+        cid_watchers_.emplace_back( std::thread(
             [weakptr = weak_from_this(), cid, error_on_failure, timeout]
             {
                 auto cid_result = CID::fromString( cid );
@@ -889,6 +897,12 @@ namespace sgns
                 {
                     if ( auto self = weakptr.lock() )
                     {
+                        // Stop() requested: exit without polling the GlobalDB.
+                        if ( self->watchers_stop_requested_ )
+                        {
+                            return;
+                        }
+
                         // Exit if block already processed via normal flow
                         if ( ( error_on_failure == Error::GENESIS_BLOCK_MISSING && self->cids_.hasGenesis() ) ||
                              ( error_on_failure == Error::ACCOUNT_CREATION_BLOCK_MISSING &&
@@ -916,6 +930,11 @@ namespace sgns
 
                 if ( auto self = weakptr.lock() )
                 {
+                    if ( self->watchers_stop_requested_ )
+                    {
+                        return;
+                    }
+
                     auto status = self->db_->GetCIDJobStatus( cid_result.value() );
                     bool done   = status.has_value() && status.value() == crdt::CrdtDatastore::JobStatus::COMPLETED;
                     bool local_state = ( error_on_failure == Error::GENESIS_BLOCK_MISSING &&
@@ -933,8 +952,7 @@ namespace sgns
                                           cid.substr( 0, 8 ) );
                     self->InformBlockchainResult( outcome::failure( error_on_failure ) );
                 }
-            } )
-            .detach();
+            } ) );
     }
 
     outcome::result<void> Blockchain::GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
@@ -992,18 +1010,26 @@ namespace sgns
         {
             logger_->info( "[{}] Genesis creator - creating account creation block directly",
                            account_->GetAddress().substr( 0, 8 ) );
-            std::thread(
+            std::lock_guard<std::mutex> watchers_lock( cid_watchers_mutex_ );
+            if ( watchers_stop_requested_ )
+            {
+                return outcome::success();
+            }
+            cid_watchers_.emplace_back( std::thread(
                 [weakself = weak_from_this()]()
                 {
                     if ( auto s = weakself.lock() )
                     {
+                        if ( s->watchers_stop_requested_ )
+                        {
+                            return;
+                        }
                         // Empty/error result => no peer supplied a CID => fall back
                         // to creating the account-creation block locally.
                         (void) s->InformAccountCreationResponse(
                             outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
                     }
-                } )
-                .detach();
+                } ) );
             return outcome::success();
         }
 
@@ -1643,6 +1669,29 @@ namespace sgns
             db_->UnregisterElementFilter( account_pattern );
         }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
+
+        // Stop and join the CID-watch threads: they poll the GlobalDB and
+        // fire result callbacks, so they must not outlive node teardown.
+        watchers_stop_requested_ = true;
+        std::vector<std::thread> watchers_to_join;
+        {
+            std::lock_guard<std::mutex> watchers_lock( cid_watchers_mutex_ );
+            watchers_to_join.swap( cid_watchers_ );
+        }
+        for ( auto &watcher : watchers_to_join )
+        {
+            if ( !watcher.joinable() )
+            {
+                continue;
+            }
+            if ( watcher.get_id() == std::this_thread::get_id() )
+            {
+                logger_->error( "Stop() called from a CID-watch thread; detaching it" );
+                watcher.detach();
+                continue;
+            }
+            watcher.join();
+        }
         return outcome::success();
     }
 

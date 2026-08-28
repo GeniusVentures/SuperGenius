@@ -81,6 +81,7 @@ namespace sgns::processing
 
     ProcessingNode::~ProcessingNode()
     {
+        StopEngine();
         m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
         if ( m_localContext )
         {
@@ -101,6 +102,14 @@ namespace sgns::processing
             {
                 m_localIoThread.join();
             }
+        }
+    }
+
+    void ProcessingNode::StopEngine()
+    {
+        if ( m_processingEngine )
+        {
+            m_processingEngine->Stop();
         }
     }
 
