@@ -538,18 +538,16 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     auto available   = cost - burn_amount;
-    // Both processors report a 0.35 developer cut, so the peers are jointly entitled to 65% of
-    // the available amount. The payout apportions by largest remainder, which hands out the
-    // sub-minion dust -- at most one minion per credit, and there are three credits here (two
-    // peers and the aggregated developer) -- so the observed peer total can exceed the exact
-    // entitlement by up to 2.
-    const uint64_t peers_entitlement  = ( available * ( DEVELOPER_CUT_SCALE - DEVELOPER_CUT ) ) / DEVELOPER_CUT_SCALE;
-    const uint64_t max_dust_to_peers  = 2;
+    // Both processors report a 0.35 developer cut. The two subtask results share an even split of
+    // the available amount, and each result's cut is floored with the residue staying on its peer,
+    // so the peers' combined gain is an exact number no matter which processor ran which subtask.
+    const uint64_t per_result        = available / 2;
+    const uint64_t peers_entitlement = 2 * ( per_result - ( per_result * DEVELOPER_CUT ) / DEVELOPER_CUT_SCALE );
     assertWaitForCondition(
         [&]
         {
             auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( balance_node1 + balance_node2 );
-            return ( gain >= peers_entitlement ) && ( gain <= peers_entitlement + max_dust_to_peers );
+            return gain == peers_entitlement;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );
@@ -559,8 +557,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     const auto peers_gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) -
                             ( balance_node1 + balance_node2 );
-    ASSERT_GE( peers_gain, peers_entitlement );
-    ASSERT_LE( peers_gain, peers_entitlement + max_dust_to_peers );
+    ASSERT_EQ( peers_gain, peers_entitlement );
 
     // Whatever the peers did not take went to the developer: the outputs sum to the escrow exactly.
     const auto gameDeveloperPayment = available - peers_gain;
