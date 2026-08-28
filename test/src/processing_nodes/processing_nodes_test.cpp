@@ -127,22 +127,27 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
+
+/// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
+static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+/// Developer fraction every node in this fixture is configured with (0.35 above).
+static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
@@ -533,24 +538,29 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     auto available   = cost - burn_amount;
+    // Both processors report a 0.35 developer cut. The two subtask results share an even split of
+    // the available amount, and each result's cut is floored with the residue staying on its peer,
+    // so the peers' combined gain is an exact number no matter which processor ran which subtask.
+    const uint64_t per_result        = available / 2;
+    const uint64_t peers_entitlement = 2 * ( per_result - ( per_result * DEVELOPER_CUT ) / DEVELOPER_CUT_SCALE );
     assertWaitForCondition(
         [&]
         {
-            auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
-            auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
+            auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( balance_node1 + balance_node2 );
+            return gain == peers_entitlement;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );
     std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-    ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = available - 2 * expected_peer_gain;
+    const auto peers_gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) -
+                            ( balance_node1 + balance_node2 );
+    ASSERT_EQ( peers_gain, peers_entitlement );
+
+    // Whatever the peers did not take went to the developer: the outputs sum to the escrow exactly.
+    const auto gameDeveloperPayment = available - peers_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
                    burn_amount );

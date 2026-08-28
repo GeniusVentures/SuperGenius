@@ -2,6 +2,8 @@
 
 #include <rapidjson/document.h>
 
+#include "processing/processing_validation_core.hpp"
+
 #include "FileManager.hpp"
 #include <processingbase/ProcessingManager.hpp>
 #include <Generators.hpp>
@@ -31,23 +33,33 @@ namespace sgns::processing
 {
 
     std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
-                                                                 uint32_t maximalProcessingSubTaskCount,
-                                                                 TokenID  tokenID )
+                                                                 uint32_t           maximalProcessingSubTaskCount,
+                                                                 TokenID            tokenID,
+                                                                 const std::string &developerAddress,
+                                                                 uint64_t           developerCut )
     {
-        if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) )
+        if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) || developerAddress.empty() ||
+             ( developerCut > ProcessingValidationCore::DEVELOPER_CUT_SCALE ) )
         {
             return nullptr;
         }
-        auto instance = std::shared_ptr<ProcessingCoreImpl>(
-            new ProcessingCoreImpl( std::move( task_queue ), maximalProcessingSubTaskCount, std::move( tokenID ) ) );
+        auto instance = std::shared_ptr<ProcessingCoreImpl>( new ProcessingCoreImpl( std::move( task_queue ),
+                                                                                     maximalProcessingSubTaskCount,
+                                                                                     std::move( tokenID ),
+                                                                                     developerAddress,
+                                                                                     developerCut ) );
         return instance;
     }
 
     ProcessingCoreImpl::ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
                                             uint32_t                             maximalProcessingSubTaskCount,
-                                            TokenID                              tokenID ) :
+                                            TokenID                              tokenID,
+                                            std::string                          developerAddress,
+                                            uint64_t                             developerCut ) :
         task_queue_( std::move( task_queue ) ),
         token_ID_( std::move( tokenID ) ),
+        developer_address_( std::move( developerAddress ) ),
+        developer_cut_( developerCut ),
         max_processing_subtask_count_( maximalProcessingSubTaskCount )
     {
     }
@@ -98,11 +110,14 @@ namespace sgns::processing
             auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
             std::vector<std::vector<uint8_t>> chunk_hashes;
-            std::vector<std::string>        output_locations;
-            auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value(), output_locations );
+            std::vector<std::string>          output_locations;
+            auto                              result_retval = processing_manager_->Process( ioc,
+                                                                                            chunk_hashes,
+                                                                                            model_retval.value(),
+                                                                                            output_locations );
 
             DecProcessingSubTaskCount();
-            
+
             if ( !result_retval.has_value() )
             {
                 return result_retval.error();
@@ -118,6 +133,10 @@ namespace sgns::processing
             std::string hash_string( result_retval.value().begin(), result_retval.value().end() );
             result.set_result_hash( hash_string );
             result.set_token_id( token_ID_.bytes().data(), token_ID_.size() );
+            // Payout metadata is reported by the peer that ran the work, not by the job poster:
+            // peers of the same job may be running apps from different developers.
+            result.set_developer_address( developer_address_ );
+            result.set_developer_cut( developer_cut_ );
 
             // Populate output location(s) in the result so the job requester
             // can discover where their output was saved (file path, IPFS CID, etc.)

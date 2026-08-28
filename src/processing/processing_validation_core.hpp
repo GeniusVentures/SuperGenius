@@ -36,9 +36,17 @@ namespace sgns::processing
             MISSING_CHUNK_RESULT,        ///< a chunk from subtask is missing from results map
             INVALID_CHUNK_RESULT_HASH,   ///< conflicting/invalid chunk result hash observed
             SUBTASK_ID_MISMATCH,         ///< subtask id != result id (individual check)
-            INVALID_RESULTS_BATCH        ///< aggregated invalidities across subtasks
+            INVALID_RESULTS_BATCH,       ///< aggregated invalidities across subtasks
+            INVALID_PAYOUT_METADATA      ///< peer/developer payout metadata missing or out of range
         };
-        ProcessingValidationCore();
+
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%. Mirrors SGProcessing.proto.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+
+        /// Exact length of SubTaskResult::token_id in bytes.
+        static constexpr size_t TOKEN_ID_BYTES = 32;
+
+        ProcessingValidationCore() = default;
 
         /** Checks if check result hashes are valid.
         * If invalid chunk hashes found corresponding subtasks are invalidated and returned to processing queue
@@ -48,7 +56,7 @@ namespace sgns::processing
                                                const std::map<std::string, SGProcessing::SubTaskResult> &results,
                                                std::set<std::string> &invalidSubTaskIds );
 
-        /** 
+        /**
          * Validates a single subtask result against its corresponding subtask
          * @param subTask The subtask definition
          * @param result The result to validate

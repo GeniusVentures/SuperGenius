@@ -59,16 +59,6 @@ namespace sgns
 
     ScaledInteger::ScaledInteger( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
 
-    constexpr uint64_t ScaledInteger::ScaleFactor( uint64_t precision )
-    {
-        uint64_t result = 1;
-        for ( uint64_t i = 0; i < precision; ++i )
-        {
-            result *= 10;
-        }
-        return result;
-    }
-
     outcome::result<uint64_t> ScaledInteger::FromString( const std::string &str_value,
                                                          uint64_t           precision,
                                                          ParseMode          mode ) // ← added ParseMode parameter

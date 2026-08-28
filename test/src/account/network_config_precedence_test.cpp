@@ -18,12 +18,11 @@ namespace
     // GenerateRandomPort(seed, address) is deterministic. The only variable between scenes
     // is the config file (the canonical New(dev_config, AccountSource) factory has no
     // autodht/port_seed params — those come only from network_config.json).
-    constexpr const char *TEST_PRIVATE_KEY =
-        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+    constexpr const char *TEST_PRIVATE_KEY = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
     GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
-        return { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
+        return { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
 
     boost::filesystem::path MakeTempDir( const std::string &name )
@@ -44,9 +43,8 @@ namespace
     // GeniusNode construction so account creation uses the test backend.
     void UseMemorySecureStorage()
     {
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
@@ -65,10 +63,13 @@ namespace
 TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 {
     UseMemorySecureStorage();
-    auto base = MakeTempDir( "ncp_autodht" );
+    auto       base       = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                       /*node_type=*/"Full",
+                                       /*is_processor=*/true,
+                                       /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -89,10 +90,13 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
 {
     UseMemorySecureStorage();
-    auto base = MakeTempDir( "ncp_port_seed" );
+    auto       base       = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/20000, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                       /*node_type=*/"Full",
+                                       /*is_processor=*/true,
+                                       /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );

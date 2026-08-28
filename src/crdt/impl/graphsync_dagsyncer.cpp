@@ -1214,8 +1214,7 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
-        graphsync_->stop();
-        logger_->debug( "Dagsyncer Stopped" );
+        g_request_wait_cv.notify_all();
     }
 
 }
