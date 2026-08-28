@@ -101,7 +101,16 @@ namespace sgns::test
         if ( node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS )
         {
             auto approved = GeniusNodeTestAccess::ApproveConfiguredTrustGenesis( node );
-            ASSERT_FALSE( approved.has_error() ) << approved.error().message();
+            // A second node may intentionally use the same account identity (for
+            // duplicate-transaction tests). In that case its identical genesis
+            // approval can already have replicated from the first node. The
+            // approval is therefore satisfied; retain failures for every other
+            // condition so the helper remains fail-closed.
+            if ( approved.has_error() &&
+                 approved.error() != securecrdt::SecureCrdt::Error::DUPLICATE_CANDIDATE_APPROVAL )
+            {
+                ASSERT_FALSE( approved.has_error() ) << approved.error().message();
+            }
         }
         // WAITING_FOR_BURN_GENESIS needs no genesis approval; the controller
         // self-approves the initial burn on refresh.
