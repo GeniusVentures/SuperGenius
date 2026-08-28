@@ -86,6 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+      CCACHE_MAXSIZE: "30G"
     outputs:
       linux_x64: ${{ steps.pick.outputs.linux_x64 }}
       linux_arm: ${{ steps.pick.outputs.linux_arm }}
@@ -344,12 +345,6 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
           Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
           Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
-
-          # The Debug and Release jobs share one runner and one cache, and Debug's
-          # /Z7 objects are much larger than Release's. With ccache's 5 GiB default a
-          # Debug build evicts the whole Release cache, which turned a 2-minute warm
-          # Release build back into a 42-minute cold one.
-          Add-Content -Path $env:GITHUB_ENV -Value "CCACHE_MAXSIZE=30G"
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS' }}
