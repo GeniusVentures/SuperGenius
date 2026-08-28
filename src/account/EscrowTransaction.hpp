@@ -23,16 +23,10 @@ namespace sgns
          * @brief Creates a new escrow-hold transaction from signed UTXO parameters.
          * @param[in] params Signed UTXO inputs and escrow/change outputs for the hold.
          * @param[in] amount Total amount locked in escrow.
-         * @param[in] dev_addr Developer payout address that receives the post-peer remainder.
-         * @param[in] peers_cut Per-peer payout multiplier used when releasing escrow.
          * @param[in] dag DAG metadata shared by all transaction types.
          * @return Escrow transaction with transaction type set and hash populated.
          */
-        static EscrowTransaction New( UTXOTxParameters         params,
-                                      uint64_t                 amount,
-                                      std::string              dev_addr,
-                                      uint64_t                 peers_cut,
-                                      SGTransaction::DAGStruct dag );
+        static EscrowTransaction New( UTXOTxParameters params, uint64_t amount, SGTransaction::DAGStruct dag );
 
         /**
          * @brief Deserializes a serialized escrow transaction.
@@ -84,15 +78,6 @@ namespace sgns
         }
 
         /**
-         * @brief Returns the developer payout address.
-         * @return Address that receives escrow remainder after peer payouts.
-         */
-        std::string GetDevAddress() const
-        {
-            return dev_addr_;
-        }
-
-        /**
          * @brief Returns the total amount locked in escrow.
          * @return Total amount locked by this escrow hold.
          */
@@ -101,34 +86,17 @@ namespace sgns
             return amount_;
         }
 
-        /**
-         * @brief Returns the configured peer-share multiplier.
-         * @return Peer payout multiplier applied during escrow release.
-         */
-        uint64_t GetPeersCut() const
-        {
-            return peers_cut_;
-        }
-
     private:
         /**
          * @brief Constructs an escrow-hold transaction from its payload and DAG metadata.
          * @param[in] params Signed UTXO inputs and escrow/change outputs for the hold.
          * @param[in] amount Total amount locked in escrow.
-         * @param[in] dev_addr Developer payout address that receives the post-peer remainder.
-         * @param[in] peers_cut Per-peer payout multiplier used when releasing escrow.
          * @param[in] dag DAG metadata shared by all transaction types.
          */
-        EscrowTransaction( UTXOTxParameters         params,
-                           uint64_t                 amount,
-                           std::string              dev_addr,
-                           uint64_t                 peers_cut,
-                           SGTransaction::DAGStruct dag );
+        EscrowTransaction( UTXOTxParameters params, uint64_t amount, SGTransaction::DAGStruct dag );
 
         UTXOTxParameters utxo_params_; ///< Signed inputs and outputs for the escrow hold.
         uint64_t         amount_;      ///< Total amount locked in escrow.
-        std::string      dev_addr_;    ///< Developer payout address for escrow remainder.
-        uint64_t         peers_cut_;   ///< Peer payout multiplier used during escrow release.
 
         /**
          * @brief Registers the deserializer for the escrow-hold transaction type.

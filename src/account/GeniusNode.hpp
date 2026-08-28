@@ -76,7 +76,7 @@ namespace sgns::account
 typedef struct DevConfig
 {
     std::string   Addr;             ///< Developer payout address.
-    std::string   Cut;              ///< Developer or peer cut encoded as a string.
+    std::string   DevFraction;      ///< Developer's share of each subtask payout, as a decimal string ("0.35" = 35%).
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.

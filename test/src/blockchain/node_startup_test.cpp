@@ -77,7 +77,7 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/" + kNodeDirPrefix + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, "0.35", tokenValue, tokenId, outPath };
 
         std::hash<std::string>          hasher;
         size_t                          address_hash = hasher( self_address );
@@ -96,7 +96,8 @@ protected:
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                      /*node_type=*/isFullNode ? "Full" : "Light",
-                                     /*is_processor=*/false, /*rpc_catchup=*/false );
+                                     /*is_processor=*/false,
+                                     /*rpc_catchup=*/false );
         return GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } );
     }
 
@@ -223,11 +224,7 @@ TEST_F( NodeStartupTest, GenesisNodeDefaultBurnRateIsOnePercent )
 {
     std::cout << "=== Starting Genesis Node Default Burn Rate Is One Percent Test ===" << std::endl;
 
-    auto node_full = CreateNode( "full_node_burn_rate_default",
-                                 "0xcafe",
-                                 "1.0",
-                                 TokenID::FromBytes( { 0x00 } ),
-                                 true );
+    auto node_full = CreateNode( "full_node_burn_rate_default", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },

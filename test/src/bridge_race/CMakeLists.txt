@@ -23,10 +23,6 @@ else()
     )
 endif()
 
-# D-15/Pitfall 2: 11-node startup cost is higher than the fast bridge_e2e suite's
-# default timeout — own extended TIMEOUT, isolated ctest target.
-set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 500)
-
 addtest(bridge_race_batch_test
     bridge_race_batch_test.cpp
     )
@@ -51,8 +47,6 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-
-set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 180)
 
 addtest(bridge_race_fault_rpc_test
     bridge_race_fault_rpc_test.cpp
@@ -80,8 +74,6 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_rpc_test PROPERTIES TIMEOUT 180)
-
 addtest(bridge_race_fault_kill_test
     bridge_race_fault_kill_test.cpp
     )
@@ -107,8 +99,6 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_kill_test PROPERTIES TIMEOUT 180)
-
 addtest(bridge_race_fault_partition_test
     bridge_race_fault_partition_test.cpp
     )
@@ -133,8 +123,6 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-
-set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 180)
 
 # All five bridge_race targets share bridge_race_fixture.hpp, which owns the
 # bridge_race_node1..11 data directories and remove_all()s them in SetUpTestSuite, and each

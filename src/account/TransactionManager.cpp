@@ -7,11 +7,15 @@
 #include "account/TransactionManager.hpp"
 
 #include <algorithm>
+#include <map>
+#include <numeric>
+#include <unordered_set>
 #include <utility>
 #include <thread>
 #include <system_error>
 
 #include <boost/asio/post.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 #include <openssl/err.h>
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
@@ -28,6 +32,7 @@
 #include "account/AccountMessenger.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "crdt/proto/delta.pb.h"
+#include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
 
@@ -788,8 +793,6 @@ namespace sgns
     }
 
     outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
-                                                                                            const std::string &dev_addr,
-                                                                                            uint64_t peers_cut,
                                                                                             const std::string &job_id )
     {
         if ( stopped_.load() || GetState() != State::READY )
@@ -804,7 +807,7 @@ namespace sgns
             account_m->GetUTXOManager().CreateTxParameter( amount, lock_id, TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs]  = params;
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct( lock_id ) ) );
+            EscrowTransaction::New( params, amount, FillDAGStruct( lock_id ) ) );
 
         escrow_transaction->MakeSignature( *account_m );
         account_m->GetUTXOManager().ReserveUTXOs( inputs, escrow_transaction->GetHash() );
@@ -819,6 +822,106 @@ namespace sgns
 
         // Return both the transaction ID and the original EscrowDataPair
         return std::make_pair( txId, std::make_pair( lock_id, std::move( data_transaction ) ) );
+    }
+
+    outcome::result<std::vector<OutputDestInfo>> TransactionManager::BuildPayoutOutputs(
+        const SGProcessing::TaskResult &task_result,
+        uint64_t                        escrow_amount,
+        const TokenID                  &escrow_token_id,
+        uint64_t                        burn_basis_points )
+    {
+        using boost::multiprecision::uint128_t;
+
+        // Static: this function is static but still logs; createLogger returns the process-wide
+        // "TransactionManager" logger.
+        static const base::Logger logger = base::createLogger( "TransactionManager" );
+
+        if ( burn_basis_points > BASIS_POINTS_TOTAL )
+        {
+            return std::errc::invalid_argument;
+        }
+
+        const auto burn      = ( static_cast<uint128_t>( escrow_amount ) * burn_basis_points ) / BASIS_POINTS_TOTAL;
+        const auto available = static_cast<uint128_t>( escrow_amount ) - burn;
+
+        // One malformed entry must never block the payout: honest peers get paid, the bad entry
+        // gets nothing.
+        std::unordered_set<std::string>                   seen_subtask_ids;
+        std::vector<const SGProcessing::SubTaskResult *> valid_results;
+        for ( const auto &result : task_result.subtask_results() )
+        {
+            const bool valid = !result.subtaskid().empty() && !result.developer_address().empty() &&
+                               base::IsHexAddress( result.node_address() ) &&
+                               result.token_id().size() == std::tuple_size_v<TokenID::ByteArray> &&
+                               result.developer_cut() <= DEVELOPER_CUT_SCALE &&
+                               seen_subtask_ids.insert( result.subtaskid() ).second;
+            if ( valid )
+            {
+                valid_results.push_back( &result );
+            }
+            else
+            {
+                logger->warn( "Ignoring invalid subtask result in escrow payout: subtaskid=\"{}\" peer=\"{}\" "
+                              "developer=\"{}\" cut={}",
+                              result.subtaskid(),
+                              result.node_address(),
+                              result.developer_address(),
+                              result.developer_cut() );
+            }
+        }
+
+        if ( valid_results.empty() )
+        {
+            logger->error( "No valid subtask results in escrow payout" );
+            return std::errc::invalid_argument;
+        }
+
+        // Even split of what is left after the burn; the split remainder is burned too, so every
+        // minion is accounted for without an apportionment pass. Each result's developer cut is
+        // floored and the floor residue stays with that result's peer, so a result's peer and
+        // developer outputs always sum to its per-result share.
+        const auto per_result = available / valid_results.size();
+        const auto dust       = available % valid_results.size();
+
+        std::vector<OutputDestInfo> outputs;
+        outputs.reserve( valid_results.size() * 2 + 1 );
+        // Developer credits from several results collapse into one output per (address, token).
+        std::map<std::pair<std::string, std::string>, uint64_t> developer_amounts;
+        for ( const auto *result : valid_results )
+        {
+            const auto dev_amount = static_cast<uint64_t>(
+                static_cast<uint128_t>( per_result ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
+            developer_amounts[{ result->developer_address(), result->token_id() }] += dev_amount;
+
+            const auto peer_amount = static_cast<uint64_t>( per_result ) - dev_amount;
+            if ( peer_amount != 0 )
+            {
+                outputs.push_back( { peer_amount,
+                                     result->node_address(),
+                                     TokenID::FromBytes( result->token_id().data(), result->token_id().size() ) } );
+            }
+        }
+        for ( const auto &[key, amount] : developer_amounts )
+        {
+            if ( amount != 0 )
+            {
+                const auto &[address, token_bytes] = key;
+                outputs.push_back( { amount, address, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
+            }
+        }
+        // Always emitted, even at zero, so the release has a fixed shape for observers.
+        outputs.push_back( { static_cast<uint64_t>( burn + dust ), std::string( BURN_ADDRESS ), escrow_token_id } );
+
+        const auto total = std::accumulate( outputs.cbegin(),
+                                            outputs.cend(),
+                                            uint128_t{ 0 },
+                                            []( const uint128_t sum, const OutputDestInfo &output )
+                                            { return sum + output.encrypted_amount; } );
+        if ( total != escrow_amount )
+        {
+            return std::errc::result_out_of_range;
+        }
+        return outputs;
     }
 
     outcome::result<std::string> TransactionManager::PayEscrow(
@@ -864,52 +967,11 @@ namespace sgns
             BOOST_OUTCOME_TRY( crdt_transaction->AddTopic( escrow_tx->GetSrcAddress() ) );
         }
 
-        const auto escrow_amount = escrow_tx->GetAmount();
-
-        // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
-        // taken at escrow creation.
-        const auto burn_amount = ( escrow_amount * burn_basis_points_.load( std::memory_order_relaxed ) ) /
-                                 BASIS_POINTS_TOTAL;
-        const auto available   = escrow_amount - burn_amount;
-
-        BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
-
-        BOOST_OUTCOME_TRY( auto peers_cut_ptr, TokenAmount::New( escrow_tx->GetPeersCut() ) );
-
-        BOOST_OUTCOME_TRY( auto peer_total, available_amount_ptr->Multiply( *peers_cut_ptr ) );
-
-        const auto subtask_count   = static_cast<uint64_t>( subtask_results.size() );
-        const auto peers_amount    = peer_total.Value() / subtask_count;
-        const auto peer_total_paid = peers_amount * subtask_count;
-        const auto escrow_token_id = escrow_params.second.front().token_id;
-        if ( peer_total_paid > available )
-        {
-            m_logger->error( "Escrow transaction {} cannot pay {} from available amount {}",
-                             escrow_tx->GetHash(),
-                             peer_total_paid,
-                             available );
-            return std::errc::invalid_argument;
-        }
-        const auto remainder = available - peer_total_paid;
-
-        std::vector<OutputDestInfo> payout_peers;
-        payout_peers.reserve( subtask_results.size() + 2 ); // +1 dev, +1 burn
-
-        for ( const auto &subtask : subtask_results )
-        {
-            m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
-            payout_peers.push_back( { peers_amount,
-                                      subtask.node_address(),
-                                      TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
-        }
-
-        constexpr const char *kZeroAddress = "0x0000000000000000000000000000000000000000";
-        m_logger->debug( "Burning {} to zero address", burn_amount );
-        payout_peers.push_back( { burn_amount, kZeroAddress, escrow_token_id } );
-
-        //TODO: see what do with token_id here
-        m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrow_token_id } );
+        BOOST_OUTCOME_TRY( auto payout_peers,
+                           BuildPayoutOutputs( task_result,
+                                               escrow_tx->GetAmount(),
+                                               escrow_params.second.front().token_id,
+                                               burn_basis_points_.load( std::memory_order_relaxed ) ) );
 
         InputUTXOInfo escrow_utxo_input;
         escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();

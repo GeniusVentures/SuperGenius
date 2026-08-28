@@ -77,7 +77,15 @@ namespace sgns
          * @param[in] precision  Number of decimal places.
          * @return Scale factor (10^precision).
          */
-        static constexpr uint64_t ScaleFactor( uint64_t precision );
+        static constexpr uint64_t ScaleFactor( uint64_t precision )
+        {
+            uint64_t result = 1;
+            for ( uint64_t i = 0; i < precision; ++i )
+            {
+                result *= 10;
+            }
+            return result;
+        }
 
         /**
          * @brief Convert a numeric string to a raw scaled integer.

@@ -199,9 +199,21 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 
 std::string BridgeE2ETest::s_eth_private_key;
 
-GeniusNodeConfig BridgeE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_e2e_node1" };
-GeniusNodeConfig BridgeE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_e2e_node2" };
-GeniusNodeConfig BridgeE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_e2e_node3" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG  = { "0xcafe",
+                                                "0.35",
+                                                "1.0",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                "./bridge_e2e_node1" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG2 = { "0xcafe",
+                                                "0.35",
+                                                "1.0",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                "./bridge_e2e_node2" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG3 = { "0xcafe",
+                                                "0.35",
+                                                "1.0",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                "./bridge_e2e_node3" };
 
 // --- Fixture implementation ---
 
@@ -324,8 +336,7 @@ void BridgeE2ETest::SetUpTestSuite()
     node_proc2 = GeniusNode::New( DEV_CONFIG3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub — match blockchain_genesis_test pattern
-    node_proc1->AddPeers(
-        { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY
