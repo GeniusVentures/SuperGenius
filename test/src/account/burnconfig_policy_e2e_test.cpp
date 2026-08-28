@@ -150,7 +150,7 @@ namespace
             UTXOTxParameters params;
             params.second.push_back( { amount, lock_id, token_id_ } );
             auto escrow = std::make_shared<EscrowTransaction>(
-                EscrowTransaction::New( std::move( params ), amount, account_->GetAddress(), 0, std::move( dag ) ) );
+                EscrowTransaction::New( std::move( params ), amount, std::move( dag ) ) );
             escrow->MakeSignature( *account_ );
             crdt::GlobalDB::Buffer data;
             data.put( escrow->SerializeByteVector() );
