@@ -1,7 +1,7 @@
 # Phase 12: Multi-Node Finality Fault Proof - Context
 
-**Gathered:** 2026-08-26
-**Status:** Updated for scoped 12-08 planning; Phase 12 remains blocked
+**Gathered:** 2026-08-28
+**Status:** Updated for scoped observer-output attribution; Phase 12 remains blocked
 
 <domain>
 ## Phase Boundary
@@ -11,6 +11,8 @@ Build a dedicated production-path multi-node regression suite proving that canon
 **12-07 scope:** Diagnose only the intermittent, fresh-process restart failure at the existing Mint completion boundary. It must identify the first broken existing transition before any recovery-code change is authorized. Late-contender and publisher-loss outcomes stay enabled as separate diagnostics; they do not broaden this plan.
 
 **12-08 scope:** Diagnose only the intermittent publisher-loss scenario failure that occurs at public peer/topic readiness before its persistence-loss fault begins. It must distinguish real transport/topology construction failure from a test-harness lifecycle issue before any repair is authorized. Certificate authority, CRDT precedence, PubSub notification, selected-publisher behavior, restart recovery, and late-contender behavior remain out of scope.
+
+**Next scoped work:** Attribute the mixed publisher-readiness observer output only. It must prove which exact test process and executable emitted a record, distinguish complete teardown from partial output, and decide whether the existing evidence gate may be evaluated. It must not change finality behavior, topology, waits, retries, or fixture ownership outside the test observer's own output path.
 
 </domain>
 
@@ -51,6 +53,18 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - **D-18:** Use passive, test-owned snapshots of each peer's existing public readiness facts: `GossipPubSub::IsStarted()`, host connectedness to intended peers, consensus-topic mesh peer count, peer identity, listener/root lifecycle, and the first failed predicate. Observation must not add peers, retry publishing, pause transport, alter waits, or otherwise steer readiness.
 - **D-19:** Authorize a repair only if at least two independent fresh real-socket runs fail at the same first readiness boundary with the same normalized state/error. If the evidence is not repeatable, record the diagnosis and keep Phase 12 blocked; do not tune timeouts, add retries, or modify product behavior.
 - **D-20:** If a repeated boundary proves a fixture lifecycle defect, change only the smallest test-harness lifecycle/ownership behavior and prove it with three targeted publisher-loss passes plus three normal serial-suite passes. Do not change `SubmitCertificate`, CRDT writes/filtering, deterministic publisher selection, PubSub retries, or receiver behavior.
+
+### Observer-output attribution gate
+
+- **D-21:** A publisher-readiness record is trustworthy only when it carries a process-bound fingerprint: a run token, observer schema version, and executable identity (path, size, and modification time). Emit that identity in both the test-start header and terminal record.
+- **D-22:** A missing or mismatched fingerprint is retained as invalid evidence, but cannot count as a pass/failure or authorize a repair.
+- **D-23:** A run counts only when its run/fingerprint match, GTest completes normally, and the scenario emits its matching terminal observer record. A partial run must emit a distinct `incomplete` terminal record and is retained but excluded from the gate.
+- **D-24:** The terminal observer record is emitted explicitly after the scenario has released all four test-owned peer handles; it is not emitted from an RAII destructor. The record must prove that release without inspecting or changing protocol internals.
+- **D-25:** A test-only observer fix is authorized only when at least two fully attributed, completed real-socket runs show the same first observer-lifecycle boundary, state, and error.
+- **D-26:** If three fully attributed publisher-loss runs pass, close this sub-investigation without repair. Phase 12 remains blocked only on separately proven gaps; a narrow readiness result cannot complete the phase.
+- **D-27:** If a mismatched record is attributed to another executable/process, record a tooling-attribution cause, rebuild cleanly, and restart the three-run observer gate. Do not drop that run or change the finality fixture.
+- **D-28:** If a fix is authorized, it may change only the test observer's ownership/output path. The individual publisher-loss scenario owns the diagnostic lifecycle; the observer holds read-only references and controls no peer, PubSub object, or shutdown work.
+- **D-29:** Diagnostic output uses one synchronized, test-owned writer that emits and flushes a single structured record. Do not suppress normal teardown logs or change production logging.
 
 ### the agent's Discretion
 
@@ -94,7 +108,10 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - `src/account/UTXOManager.cpp` — idempotent UTXO durability used by Mint recovery.
 - `src/crdt/globaldb/globaldb.hpp` and `src/crdt/impl/crdt_datastore.cpp` — CRDT replication and convergent immutable certificate record semantics.
 - `test/src/blockchain/multi_node_finality_fault_test.cpp` — existing real-socket restart scenario and its durable assertions; any 12-07 observation seam must remain passive.
-- `test/src/blockchain/multi_node_finality_fault_test.cpp` — existing `ConnectAndWaitForPeers` readiness predicate and publisher-loss scenario; any 12-08 diagnostic seam must remain passive and pre-fault only.
+- `test/src/blockchain/multi_node_finality_fault_test.cpp` — existing `ConnectAndWaitForPeers` readiness predicate and publisher-loss scenario; observer attribution remains passive, scenario-owned, and pre-fault only.
+- `.planning/phases/12-multi-node-finality-fault-proof/12-08-PLAN.md` — original no-repair publisher-readiness evidence gate and its restricted test-only scope.
+- `.planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md` — retained mixed post-review evidence that requires process/executable attribution before the gate can be evaluated.
+- `.planning/phases/12-multi-node-finality-fault-proof/12-REVIEW.md` — review history for the passive observer schema and evidence-record completeness.
 
 </canonical_refs>
 
@@ -128,6 +145,7 @@ Build a dedicated production-path multi-node regression suite proving that canon
 - “Production-path” means that test helpers coordinate faults and observe behavior only; they do not call local-author, local-receive, or direct Mint completion helpers.
 - The 12-07 diagnostic is intentionally a root-cause gate, not permission to increase timeouts, add retries, alter protocol behavior, or hide other suite failures.
 - The 12-08 diagnostic is likewise a root-cause gate: it may explain the readiness fixture, but cannot convert a pre-fault setup failure into a certificate-publication change.
+- A diagnostic record is evidence only after its process identity and normal terminal completion agree. Incomplete records are preserved for attribution, never used to tune the fixture or finality protocol.
 
 </specifics>
 
@@ -142,4 +160,4 @@ Build a dedicated production-path multi-node regression suite proving that canon
 ---
 
 *Phase: 12-multi-node-finality-fault-proof*
-*Context gathered: 2026-08-24*
+*Context gathered: 2026-08-28*

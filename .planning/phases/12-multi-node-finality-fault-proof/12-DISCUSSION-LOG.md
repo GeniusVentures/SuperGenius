@@ -1,194 +1,66 @@
-# Phase 12: Multi-Node Finality Fault Proof - Discussion Log
+# Phase 12: Multi-node-finality-fault-proof - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
 
-**Date:** 2026-08-24
+**Date:** 2026-08-28
 **Phase:** 12-multi-node-finality-fault-proof
-**Areas discussed:** Test topology, Fault injection, Suite shape
+**Areas discussed:** Record attribution, teardown completion, evidence gate, observer ownership
 
 ---
 
-## Test topology
+## Record attribution
 
 | Option | Description | Selected |
-|--------|-------------|----------|
-| Dedicated in-process three-node harness | Real PubSub, CRDT, RocksDB, consensus, and transaction/Mint ingress assembled in one test process. | ✓ |
-| Three full `GeniusNode` instances | Stronger facade-wiring coverage, but slower and more timing-fragile. | |
-| Hybrid | Core faults in a dedicated harness plus one full-node smoke scenario. | |
+|---|---|---|
+| Process-bound fingerprint | Run token, observer schema version, and executable identity bind diagnostics to one process. | ✓ |
+| Schema version only | Identifies output format but not the binary/process. | |
+| Runtime identity only | Uses peer IDs, ports, and roots already in the record. | |
 
-**User's choice:** Dedicated in-process harness.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Three validators plus one passive recipient | Separates quorum behavior from recipient behavior and proves recipients do not write `/cert/<slot>`. | ✓ |
-| Three validators only | Smaller topology, with receipt behavior asserted only on validators. | |
-| Recipients only in propagation scenarios | Adds a fourth node only where needed. | |
-
-**User's choice:** Three validators plus one passive recipient.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Separate on-disk RocksDB directories reused on restart | Exercises actual durable vote, certificate, UTXO, and marker recovery. | ✓ |
-| Fresh databases after restart | Tests rejoin/sync but not local recovery. | |
-| In-memory storage | Cannot prove restart requirements. | |
-
-**User's choice:** Separate persisted storage per peer, reused on restart.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| All messages use real PubSub/CRDT routes | Test seams observe/control faults but never invoke author or receive shortcuts. | ✓ |
-| Real transport only for certificates and CRDT | Directly inject proposals/votes. | |
-| Current internal consensus helpers | Faster but not TEST-06 proof. | |
-
-**User's choice:** All proposals, votes, certificates, and transactions use real ingress.
+**User's choice:** Require a process-bound fingerprint at test start and normal terminal completion. A missing/mismatched fingerprint is invalid evidence and the run counts only with matching identity, normal GTest completion, and terminal record.
 
 ---
 
-## Fault injection
+## Teardown completion
 
 | Option | Description | Selected |
-|--------|-------------|----------|
-| Control real connectivity and lifecycle | Disconnect/reconnect peers and stop/recreate nodes without mocked delivery. | ✓ |
-| Test-only transport gate | Buffer or drop selected traffic before delivery. | |
-| Mix both | Use partitions primarily and a gate for narrow timing. | |
+|---|---|---|
+| Explicit post-shutdown terminal record | Scenario writes terminal output after all owned peers release. | ✓ |
+| RAII destructor record | Emits automatically while scopes unwind. | |
+| Both records | Emits provisional destructor output plus explicit final output. | |
 
-**User's choice:** Control actual peer connectivity and lifecycle.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Post-persistence/pre-PubSub barrier | Freeze after durable certificate persistence and before normal notification. | ✓ |
-| Poll and race shutdown | Infer the boundary through timing. | |
-| Loss before persistence only | Does not prove persistence-before-advertisement. | |
-
-**User's choice:** A narrow barrier at the actual persistence/advertisement boundary.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Real durable-boundary barriers | Pause after vote, certificate, or Mint durable boundaries before restart. | ✓ |
-| Arbitrary restart timing | Cannot prove which boundary was exercised. | |
-| Unit failure switches only | Precise but not multi-node production-path coverage. | |
-
-**User's choice:** Barrier at each actual durable recovery boundary.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Read-only boundary instrumentation plus durable assertions | Detects forbidden local actions as well as converged end state. | ✓ |
-| Final state only | Cannot prove an invalid intermediate action never happened. | |
-| Logs only | Not strong enough for regression proof. | |
-
-**User's choice:** Read-only instrumentation plus durable-state assertions.
+**User's choice:** Explicit terminal record after clean release of all four peer handles. A prevented normal completion emits an `incomplete` record, retained but excluded from the evidence gate.
 
 ---
 
-## Suite shape
+## Evidence gate
 
 | Option | Description | Selected |
-|--------|-------------|----------|
-| Dedicated five-scenario CTest binary | Named contention, late-delivery, restart, failover, and route-audit scenarios. | ✓ |
-| One long end-to-end test | Single operator story but poor failure isolation. | |
-| Extend existing binaries | Reuses fixtures but obscures the cross-node contract. | |
+|---|---|---|
+| Two matching complete failures | Requires identical fully attributed observer-lifecycle failures. | ✓ |
+| One diagnosed run | Allows a single run to authorize a repair. | |
+| Any mismatched output | Treats the symptom as repair authorization. | |
 
-**User's choice:** A new dedicated `multi_node_finality_fault_test` binary.
+**User's choice:** Only two matching fully attributed complete failures authorize an observer-only repair. Three complete passes close this scope without repair; a different binary/process requires a clean rebuild and a new three-run gate.
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Normal non-disabled CTest target | Routine validation catches finality regressions. | ✓ |
-| Integration label | Faster defaults but easier to omit. | |
-| Nightly/manual only | Too weak for the safety contract. | |
+---
 
-**User's choice:** Normal CTest execution.
+## Observer ownership
 
 | Option | Description | Selected |
-|--------|-------------|----------|
-| About two minutes | Fast routine feedback. | |
-| Up to five minutes | More tolerance for real local replication and restart. | ✓ |
-| No fixed budget | Makes hangs and flakiness harder to identify. | |
+|---|---|---|
+| Scenario-owned, read-only observer | The scenario owns lifecycle; observer only reads and writes diagnostics. | ✓ |
+| Shared fixture observer | Observer spans multiple scenarios. | |
+| External runner | Harness emits diagnostics outside the process. | |
 
-**User's choice:** Up to five minutes for the suite.
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Per-node durable effects | Each peer proves one winning Mint, no loser, and no duplicate effect after recovery. | ✓ |
-| Destination node only | Misses validator/recipient recovery. | |
-| Network-wide aggregate | Can hide a duplicate and a missing effect. | |
-
-**User's choice:** Per-node durable effects.
+**User's choice:** The publisher-loss scenario owns diagnostic lifecycle. The observer controls no peer or shutdown work and uses one synchronized, immediately flushed test-owned writer. Its fingerprint contains a run token, schema version, and executable path/size/mtime.
 
 ---
 
 ## the agent's Discretion
 
-- Pick the narrowest component-level harness, port allocation, test-access shape, and bounded waits compatible with the decisions above.
+- Choose the minimal test-local representation for the fingerprint, release proof, and synchronized writer.
 
 ## Deferred Ideas
 
-- `bridge-startup-wiring-mock-rpc.md` remains out of scope: it is startup/RPC work, not finality fault proof.
-
----
-
-## 12-07 Context Update — 2026-08-26
-
-### Restart failure scope
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Deterministic root cause first | Reproduce and trace the first broken existing recovery boundary before changing behavior. | ✓ |
-| Immediate recovery-path fix | Change Mint-marker recovery from the initial intermittent trace. | |
-| Harness-only explanation | Treat the valid-topology fresh failure as test lifecycle work. | |
-
-**User's choice:** Deterministic root cause first, with a one-boundary RED/GREEN TDD fix only after proof. If all durable state is correct, repair only the faulty test observer/fixture.
-
-### Proof threshold
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Repeatable fresh failure | Require the same boundary failure in two independent real-socket processes. | ✓ |
-| One fully traced fresh failure | Permit a fix after one failure. | |
-| Controlled fault injection | Force the failure with test control. | |
-
-**User's choice:** Require two fresh reproductions before a production fix, then three fresh targeted passes and three normal serial-suite passes. Otherwise, stop without a fix and retain structured diagnosis with stable raw-log paths.
-
-### Observation boundary
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Friend-scoped passive snapshots | Read existing local recovery state without a production API or behavior change. | ✓ |
-| Logs only | Infer the boundary from logging. | |
-| New production diagnostics API | Expose recovery state in product code. | |
-
-**User's choice:** Capture state/error snapshots at every existing certificate-to-Mint boundary. No pauses, retries, reordering, injected failures, serialized payloads, or key material.
-
-### Late and publisher outcomes
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Focus only on restart | Keep late/publisher enabled but defer their distinct diagnostics. | ✓ |
-| Investigate all three together | Broaden 12-07 into a general reliability effort. | |
-| Remove other scenarios temporarily | Reduce suite noise. | |
-
-**User's choice:** Focus 12-07 on restart. Record any late/publisher failures during it but do not act on them. Phase 12 remains blocked even if restart is fixed, until the other diagnostics are separately scoped.
-
----
-
-## 12-08 Context Update — 2026-08-27
-
-### Publisher-loss pre-fault readiness
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Deterministic readiness root cause first | Diagnose why real peers fail public topology readiness before publisher-loss fault execution. | ✓ |
-| Publisher protocol repair | Change certificate persistence or PubSub behavior. | |
-| General suite stabilization | Broaden into unrelated late/restart work. | |
-
-**User's choice:** Add a narrowly scoped plan for the publisher-readiness failure only. The two fresh publisher passes mean certificate publication is not presumed faulty.
-
-### Observation and repair threshold
-
-| Option | Description | Selected |
-|--------|-------------|----------|
-| Passive readiness snapshots plus repeatability gate | Record existing started/connection/topic-mesh/lifecycle facts; repair only after two identical fresh failures. | ✓ |
-| Retry or timeout tuning | Mask a readiness race without identifying it. | |
-| Protocol changes | Alter CRDT/PubSub semantics before the publisher-loss fault runs. | |
-
-**User's choice:** Keep the diagnosis passive and pre-fault. If evidence is not repeatable, record it and remain blocked. Any proven fixture repair must be test-harness-only and pass three targeted plus three serial runs.
+- Bridge Startup Wiring + Mock RPC Endpoints — unrelated to finality evidence; deferred.
