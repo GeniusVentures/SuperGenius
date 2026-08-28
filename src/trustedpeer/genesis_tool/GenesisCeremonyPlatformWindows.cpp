@@ -163,8 +163,9 @@ namespace sgns::trustedpeer::genesis_ceremony_platform
         if ( SetEntriesInAclA( 1, &access, nullptr, &dacl ) != ERROR_SUCCESS ) return -1;
         const auto result = SetNamedSecurityInfoA( const_cast<LPSTR>( path.c_str() ),
                                                    SE_FILE_OBJECT,
-                                                   DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
-                                                   nullptr,
+                                                   OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION |
+                                                       PROTECTED_DACL_SECURITY_INFORMATION,
+                                                   token_user->User.Sid,
                                                    nullptr,
                                                    dacl,
                                                    nullptr );
