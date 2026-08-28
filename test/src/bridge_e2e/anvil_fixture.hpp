@@ -112,8 +112,9 @@ namespace sgns::test::anvil
      */
     inline constexpr const char *kDestChainId = "1";
 
-    /** @brief Default public Sepolia RPC endpoint used as the Anvil --fork-url source — archive-capable, no API key (D-03). */
-    inline constexpr const char *kSepoliaRpcPublicnode = "https://sepolia.drpc.org";
+    /** @brief Default public Sepolia RPC endpoint used as the Anvil --fork-url source — archive-capable, no API key (D-03).
+     *  drpc dropped Sepolia from its free plan (verified 2026-08-27); publicnode is the working public alternative. */
+    inline constexpr const char *kSepoliaRpcPublicnode = "https://ethereum-sepolia-rpc.publicnode.com";
 
     /** @brief Controlled Sepolia GNUS holder used to fund Anvil account #0 via impersonation (D-08/D-09). */
     inline constexpr const char *kGnusHolderSepolia = "0x910bAa33DeB0D614Aa9d80e38b7f0BF87549c2fC";

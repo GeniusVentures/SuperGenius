@@ -104,6 +104,10 @@ namespace sgns
          */
         ~AccountMessenger();
         /**
+         * @brief      Stop the request worker thread after draining pending tasks
+         */
+        void Stop();
+        /**
          * @brief       Get the Latest Nonce from the network
          * @param[in]   timeout How long to wait for the latest nonce
          * @param[in]   silent_time How long to wait for further nonce responses after the first

@@ -77,11 +77,11 @@ protected:
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
         auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
         loggerGraphsync->set_level( spdlog::level::trace );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
 
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::debug );
     }
 
     static void TearDownTestSuite()

@@ -53,8 +53,8 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
         static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
             5 ); ///< Unified timeout for all nonce requests
 
@@ -191,14 +191,14 @@ namespace sgns
          * selects UTXOs, reserves them, and signs the transaction.
          *
          * @param[in] amount  Total amount to lock in escrow.
-         * @param[in] dev_addr  Developer address that receives the remainder after peer payouts.
-         * @param[in] peers_cut  Multiplier (as a TokenAmount) applied to the escrow amount to calculate the per-peer share.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
+         *
+         * @note The escrow hold carries no payout metadata. The developer address and cut are
+         *       reported per subtask by the processing peer that ran the work, since peers of a
+         *       single job may be running apps from different developers.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
-                                                                            const std::string &dev_addr,
-                                                                            uint64_t           peers_cut,
                                                                             const std::string &job_id );
 
         outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
@@ -340,6 +340,38 @@ namespace sgns
 
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
+
+        /// Destination of the burned fraction of an escrow payout.
+        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+
+        /**
+         * @brief Splits an escrow amount across contributing peers, their developers and the burn.
+         *
+         * Each subtask result names the peer that did the work plus the developer of the app that
+         * ran it, so a single job whose subtasks were processed by different apps pays each
+         * developer its own cut. The results share an even split of the amount left after the
+         * burn (the split remainder is burned too); each result's share is divided by its
+         * @c developer_cut, floored in the developer's disfavor, and minted in that result's
+         * token. Results with malformed metadata are skipped, they neither block the payout nor
+         * earn from it.
+         *
+         * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
+         * @param[in] escrow_amount Total amount locked by the escrow hold.
+         * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
+         * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
+         * @return Outputs in result order, then developers by (address, token), burn last; the
+         *         burn output is always present, zero-valued peer and developer credits are omitted.
+         */
+        static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
+            const SGProcessing::TaskResult &task_result,
+            uint64_t                        escrow_amount,
+            const TokenID                  &escrow_token_id,
+            uint64_t                        burn_basis_points );
+
+        friend class PayoutOutputsTestAccess;
 
         struct PendingTransactionWait
         {

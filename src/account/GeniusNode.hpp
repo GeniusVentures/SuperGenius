@@ -76,7 +76,7 @@ namespace sgns::account
 typedef struct DevConfig
 {
     std::string   Addr;             ///< Developer payout address.
-    std::string   Cut;              ///< Developer or peer cut encoded as a string.
+    std::string   DevFraction;      ///< Developer's share of each subtask payout, as a decimal string ("0.35" = 35%).
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
@@ -612,6 +612,16 @@ namespace sgns
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
             return pubsub_;
+        }
+
+        /**
+         * @brief Returns the shared GraphSync network used by the node's GlobalDBs.
+         * @return Shared graphsync Network instance; inbound graphsync for this
+         *         host is dispatched through its registered protocol handler.
+         */
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> GetGraphsyncNetwork()
+        {
+            return graphsyncnetwork_;
         }
 
         /**
@@ -1224,6 +1234,7 @@ namespace sgns
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
+        std::atomic_uint blockchain_retry_count_{ 0 }; ///< Number of blockchain retries scheduled (test observable).
 
         // ── Bootstrap fullnode reconnection ──
         struct BootstrapReconnectConfig

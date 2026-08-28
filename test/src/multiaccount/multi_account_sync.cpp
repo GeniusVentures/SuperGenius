@@ -99,7 +99,7 @@ namespace sgns
             return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
         }
 
-        static bool RemoveRegistryPersistence( const std::string &database_path,
+        static bool RemoveRegistryPersistence( const std::string   &database_path,
                                                std::vector<uint8_t> registry_block_key )
         {
             auto datastore_result = storage::rocksdb::create( database_path );
@@ -153,7 +153,7 @@ protected:
             outPathStr.push_back( '/' );
         }
 
-        GeniusNodeConfig devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
+        GeniusNodeConfig devConfig = { "0xcafe", "0.35", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
 
         if ( !reuseStorage )
         {
@@ -302,7 +302,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     auto cid_bytes = parsed_cid.value().toBytes();
     ASSERT_TRUE( cid_bytes.has_value() );
 
-    const auto client_base_path = GetBaseWritePath( node_client );
+    const auto client_base_path     = GetBaseWritePath( node_client );
     const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
 
     client_registry.reset();
@@ -316,8 +316,8 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
         std::ofstream network_config( client_base_path + "network_config.json" );
         ASSERT_TRUE( network_config.good() );
         network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
-                          "\"bootstrap_addresses\": [\"" << full_address
-                       << "\"] }";
+                          "\"bootstrap_addresses\": [\""
+                       << full_address << "\"] }";
     }
 
     node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
@@ -503,9 +503,9 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     // transaction, rather than sitting in VERIFYING until the proposal TTL expires.
     const auto conflict_start = std::chrono::steady_clock::now();
 
-    uint64_t           correct_tokens_transferred = 0;
-    sgns::GeniusNode  *losing_node                = nullptr;
-    std::string        losing_tx;
+    uint64_t          correct_tokens_transferred = 0;
+    sgns::GeniusNode *losing_node                = nullptr;
+    std::string       losing_tx;
     sgns::test::assertWaitForCondition(
         [&]()
         {
@@ -547,9 +547,11 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         kFailFastBudget,
         "Losing transaction did not fail after the winner's certificate arrived" );
 
-    const auto conflict_elapsed =
-        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - conflict_start );
-    fmt::println( "Losing transaction {} failed {} ms after the conflict started", losing_tx, conflict_elapsed.count() );
+    const auto conflict_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - conflict_start );
+    fmt::println( "Losing transaction {} failed {} ms after the conflict started",
+                  losing_tx,
+                  conflict_elapsed.count() );
     EXPECT_LT( conflict_elapsed, std::chrono::minutes( 3 ) )
         << "loser only resolved around the proposal TTL -- the certificate shortcut did not work";
 
@@ -986,8 +988,7 @@ TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
     EXPECT_TRUE( voters.count( node_client->GetAddress() ) > 0 || voters.count( node_full->GetAddress() ) > 0 )
         << "no non-archive voter present in the certificate; the assertion below would be trivially true";
 
-    EXPECT_EQ( voters.count( archive_address ), 0u )
-        << "archive node voted on proposal " << certificate->proposal_id();
+    EXPECT_EQ( voters.count( archive_address ), 0u ) << "archive node voted on proposal " << certificate->proposal_id();
 
     // PRIMARY ASSERTION: registry membership. Wait for the registry to advance first, so we are
     // inspecting a snapshot that consensus actually produced.

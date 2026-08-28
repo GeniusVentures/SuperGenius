@@ -3,6 +3,7 @@
 #include "account/proto/SGTransaction.pb.h"
 
 #include "base/endian.h"
+#include "base/hexutil.hpp"
 #include <algorithm>
 #include <cctype>
 
@@ -25,16 +26,12 @@ bool sgns::utxo_address::IsEscrowLockAddress( std::string_view address )
         return false;
     }
 
-    return std::all_of(
-        address.begin() + 2, address.end(), []( unsigned char c ) { return std::isxdigit( c ) != 0; } );
+    return std::all_of( address.begin() + 2, address.end(), []( unsigned char c ) { return std::isxdigit( c ) != 0; } );
 }
 
 bool sgns::utxo_address::IsAccountPublicKeyAddress( std::string_view address )
 {
-    if ( address.size() != 128 )
-    {
-        return false;
-    }
-
-    return std::all_of( address.begin(), address.end(), []( unsigned char c ) { return std::isxdigit( c ) != 0; } );
+    // Account addresses are produced by base::hex_lower, so the lowercase-only form is the
+    // canonical one; see sgns::base::IsHexAddress.
+    return sgns::base::IsHexAddress( address );
 }

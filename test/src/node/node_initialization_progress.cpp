@@ -29,15 +29,15 @@ TEST( GeniusNode, InitializationProgress )
                                             { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
     const auto base_write_path = path.generic_string() + '/';
-    sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
+    sgns::GeniusNode::WriteNetworkConfig( base_write_path, 0, false );
+    sgns::GeniusNode::WriteSgnsConfig( base_write_path, "Full", true, false );
     auto node = sgns::GeniusNode::New(
-        { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },
+        { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },
         sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     auto last_percentage = 0.0F;
-    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(50);
+    auto end             = std::chrono::steady_clock::now() + std::chrono::seconds( 50 );
     while ( std::chrono::steady_clock::now() < end && node->GetState() != GeniusNode::NodeState::READY )
     {
         auto percentage = node->GetInitializationStatus().first;

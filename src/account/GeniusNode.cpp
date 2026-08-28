@@ -42,6 +42,7 @@
 #include "account/GeniusAccount.hpp"
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
+#include "base/ScaledInteger.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -580,6 +581,13 @@ namespace sgns
 
     void GeniusNode::StateTransition( NodeState next_state )
     {
+        // Shutdown gate: pending blockchain/migration retry threads must not
+        // restart services once node destruction has begun.
+        if ( shutdown_started_.load() )
+        {
+            node_logger_->debug( "Ignoring transition to {}, shutdown in progress", next_state );
+            return;
+        }
         state_.store( next_state );
         node_logger_->debug( "Transitioning to state {}", next_state );
 
@@ -786,8 +794,7 @@ namespace sgns
 
                 blockchain_->SetSlotHashPopulator(
                     [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
-                     logger                   = node_logger_]( sgns::ConsensusVote          &vote,
-                                                               const sgns::ConsensusSubject &subject )
+                     logger = node_logger_]( sgns::ConsensusVote &vote, const sgns::ConsensusSubject &subject )
                     {
                         auto transaction_manager = weak_transaction_manager.lock();
                         if ( !transaction_manager )
@@ -1576,8 +1583,34 @@ namespace sgns
     {
         bool ret = true;
 
+        // The developer fraction is stamped on every result this node produces, so a malformed
+        // config must fail here rather than at payout time on some other node.
+        auto developer_cut = TokenAmount::New( dev_config_.DevFraction );
+        if ( !developer_cut )
+        {
+            node_logger_->error( "Invalid developer fraction \"{}\" in node configuration", dev_config_.DevFraction );
+            return false;
+        }
+        // 10^PRECISION minions == 1.0; a negative string already failed to parse above.
+        if ( developer_cut.value()->Value() > ScaledInteger::ScaleFactor( TokenAmount::PRECISION ) )
+        {
+            node_logger_->error( "Developer fraction {} is not within [0.0, 1.0]", dev_config_.DevFraction );
+            return false;
+        }
+
         task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
-        processing_core_ = processing::ProcessingCoreImpl::New( task_queue_, 1, dev_config_.TokenID );
+        processing_core_ = processing::ProcessingCoreImpl::New( task_queue_,
+                                                                1,
+                                                                dev_config_.TokenID,
+                                                                dev_config_.Addr,
+                                                                developer_cut.value()->Value() );
+        if ( !processing_core_ )
+        {
+            node_logger_->error( "Invalid processing payout configuration: address \"{}\", fraction {}",
+                                 dev_config_.Addr,
+                                 dev_config_.DevFraction );
+            return false;
+        }
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
@@ -1634,12 +1667,17 @@ namespace sgns
 
     void GeniusNode::ScheduleBlockchainRetry( std::chrono::seconds delay )
     {
+        ++blockchain_retry_count_;
         std::thread(
             [weak_self = weak_from_this(), delay]
             {
                 std::this_thread::sleep_for( delay );
                 if ( auto strong = weak_self.lock() )
                 {
+                    if ( strong->shutdown_started_.load() )
+                    {
+                        return;
+                    }
                     auto current_state = strong->state_.load();
                     if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
                     {
@@ -1763,6 +1801,14 @@ namespace sgns
         if ( bootstrap_disconnect_subscription_ )
         {
             bootstrap_disconnect_subscription_->unsubscribe();
+        }
+
+        // Stop and join the messenger worker before PubSub teardown: queued
+        // blockchain nonce/UTXO tasks call GossipPubSub::getPeerCount, which
+        // faults once PubSub::Stop() releases the gossip object.
+        if ( account_ )
+        {
+            account_->StopMessenger();
         }
 
         // Stop and unregister account-bound work, but retain the owning objects
@@ -2270,15 +2316,8 @@ namespace sgns
         {
             return outcome::failure( Error::INVALID_JSON );
         }
-        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
-        if ( !cut )
-        {
-            return outcome::failure( cut.error() );
-        }
-
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto result_pair,
-                           manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+        BOOST_OUTCOME_TRY( auto result_pair, manager->HoldEscrow( funds, uuidstring ) );
 
         //TODO - Make it async to post the job data in case the transaction gets confirmed.
         auto [tx_id, escrow_data_pair] = result_pair;
@@ -3652,19 +3691,14 @@ namespace sgns
         auto promise = std::make_shared<std::promise<libp2p::Host::Connectedness>>();
         auto future  = promise->get_future();
 
-        boost::asio::post( *context,
-                           [host, peer, promise]()
-                           {
-                               promise->set_value( host->connectedness( peer ) );
-                           } );
+        boost::asio::post( *context, [host, peer, promise]() { promise->set_value( host->connectedness( peer ) ); } );
 
         // Bounded wait: during shutdown the context can stop between the
         // stopped() check above and the post, leaving the task unrun. Report
         // NOT_CONNECTED rather than blocking a scheduler thread forever.
         if ( future.wait_for( std::chrono::seconds( 5 ) ) != std::future_status::ready )
         {
-            node_logger_->warn( "HostConnectedness: timed out querying connectedness for {}",
-                                peer.id.toBase58() );
+            node_logger_->warn( "HostConnectedness: timed out querying connectedness for {}", peer.id.toBase58() );
             return libp2p::Host::Connectedness::NOT_CONNECTED;
         }
         return future.get();

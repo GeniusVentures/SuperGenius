@@ -117,37 +117,37 @@ static std::string BytesToHex( const std::vector<uint8_t> &bytes )
 namespace
 {
 
-/**
+    /**
  * @brief Reads an unsigned integer env var with fallback.
  */
-static uint64_t EnvUint64( const char *name, uint64_t fallback )
-{
-    const char *value = std::getenv( name );
-    if ( !value || value[0] == '\0' )
+    static uint64_t EnvUint64( const char *name, uint64_t fallback )
     {
-        return fallback;
+        const char *value = std::getenv( name );
+        if ( !value || value[0] == '\0' )
+        {
+            return fallback;
+        }
+        try
+        {
+            unsigned long long parsed = std::stoull( value );
+            return parsed == 0ULL ? fallback : static_cast<uint64_t>( parsed );
+        }
+        catch ( ... )
+        {
+            return fallback;
+        }
     }
-    try
-    {
-        unsigned long long parsed = std::stoull( value );
-        return parsed == 0ULL ? fallback : static_cast<uint64_t>( parsed );
-    }
-    catch ( ... )
-    {
-        return fallback;
-    }
-}
 
-/**
+    /**
  * @brief Records one burn iteration: tx hash and the balance baselines at burn time.
  */
-struct BurnRecord
-{
-    std::string tx_hash;
-    uint64_t    baseline_main  = 0;
-    uint64_t    baseline_proc1 = 0;
-    uint64_t    baseline_proc2 = 0;
-};
+    struct BurnRecord
+    {
+        std::string tx_hash;
+        uint64_t    baseline_main  = 0;
+        uint64_t    baseline_proc1 = 0;
+        uint64_t    baseline_proc2 = 0;
+    };
 
 } // namespace
 
@@ -187,9 +187,9 @@ protected:
     static std::unique_ptr<boost::asio::io_context> io_main;
     static std::unique_ptr<boost::asio::io_context> io_proc1;
     static std::unique_ptr<boost::asio::io_context> io_proc2;
-    static std::unique_ptr<std::thread> io_thread_main;
-    static std::unique_ptr<std::thread> io_thread_proc1;
-    static std::unique_ptr<std::thread> io_thread_proc2;
+    static std::unique_ptr<std::thread>             io_thread_main;
+    static std::unique_ptr<std::thread>             io_thread_proc1;
+    static std::unique_ptr<std::thread>             io_thread_proc2;
 
     /** @brief Sepolia GNUS bridge contract address. */
     static constexpr const char *kSepoliaContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
@@ -224,9 +224,21 @@ std::shared_ptr<GeniusNode> BridgeRlpxE2ETest::node_proc2 = nullptr;
 
 std::string BridgeRlpxE2ETest::s_eth_private_key;
 
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node1/" };
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node2/" };
-GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_rlpx_node3/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig  = { "0xcafe",
+                                                           "0.35",
+                                                           "1.0",
+                                                           sgns::TokenID::FromBytes( { 0x00 } ),
+                                                           "./bridge_rlpx_node1/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig2 = { "0xcafe",
+                                                           "0.35",
+                                                           "1.0",
+                                                           sgns::TokenID::FromBytes( { 0x00 } ),
+                                                           "./bridge_rlpx_node2/" };
+GeniusNodeConfig BridgeRlpxE2ETest::gGeniusNodeConfig3 = { "0xcafe",
+                                                           "0.35",
+                                                           "1.0",
+                                                           sgns::TokenID::FromBytes( { 0x00 } ),
+                                                           "./bridge_rlpx_node3/" };
 
 std::shared_ptr<eth::EthWatchService> BridgeRlpxE2ETest::rlpx_service_main  = nullptr;
 std::shared_ptr<eth::EthWatchService> BridgeRlpxE2ETest::rlpx_service_proc1 = nullptr;
@@ -239,9 +251,9 @@ std::shared_ptr<sgns::BridgeRelayer> BridgeRlpxE2ETest::relayer_proc2 = nullptr;
 std::unique_ptr<boost::asio::io_context> BridgeRlpxE2ETest::io_main;
 std::unique_ptr<boost::asio::io_context> BridgeRlpxE2ETest::io_proc1;
 std::unique_ptr<boost::asio::io_context> BridgeRlpxE2ETest::io_proc2;
-std::unique_ptr<std::thread> BridgeRlpxE2ETest::io_thread_main;
-std::unique_ptr<std::thread> BridgeRlpxE2ETest::io_thread_proc1;
-std::unique_ptr<std::thread> BridgeRlpxE2ETest::io_thread_proc2;
+std::unique_ptr<std::thread>             BridgeRlpxE2ETest::io_thread_main;
+std::unique_ptr<std::thread>             BridgeRlpxE2ETest::io_thread_proc1;
+std::unique_ptr<std::thread>             BridgeRlpxE2ETest::io_thread_proc2;
 
 // --- Fixture implementation ---
 
@@ -308,12 +320,13 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     // Guard 3: cast binary must be installed
     if ( !sgns::test::anvil::CastAvailable() )
     {
-        GTEST_SKIP() << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
+        GTEST_SKIP()
+            << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
     }
     spdlog::info( "rlpx_e2e: cast binary found on PATH" );
 
     // Set per-node BaseWritePath
-    std::string binary_path = boost::dll::program_location().parent_path().string();
+    std::string binary_path          = boost::dll::program_location().parent_path().string();
     gGeniusNodeConfig.BaseWritePath  = binary_path + "/bridge_rlpx_node1/";
     gGeniusNodeConfig2.BaseWritePath = binary_path + "/bridge_rlpx_node2/";
     gGeniusNodeConfig3.BaseWritePath = binary_path + "/bridge_rlpx_node3/";
@@ -331,10 +344,9 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     // Wait for node to leave CREATING state (polling, no thread sleep).
     {
         constexpr std::chrono::milliseconds kPostCreateTimeout{ 3000 };
-        sgns::test::assertWaitForCondition(
-            [&]() { return node_main->GetState() != GeniusNode::NodeState::CREATING; },
-            kPostCreateTimeout,
-            "node_main did not leave CREATING state after construction" );
+        sgns::test::assertWaitForCondition( [&]() { return node_main->GetState() != GeniusNode::NodeState::CREATING; },
+                                            kPostCreateTimeout,
+                                            "node_main did not leave CREATING state after construction" );
     }
 
     // Set authorized address to match the full node
@@ -343,10 +355,9 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
 
     // Wait for the full node to reach READY state
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
-        kBlockchainInitTimeout,
-        "node_main not ready" );
+    sgns::test::assertWaitForCondition( [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
+                                        kBlockchainInitTimeout,
+                                        "node_main not ready" );
 
     spdlog::info( "rlpx_e2e: node_main READY, creating processor nodes" );
 
@@ -360,14 +371,13 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     node_proc2 = GeniusNode::New( gGeniusNodeConfig3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub
-    node_proc1->AddPeers(
-        { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY (polling only, no thread sleep)
     {
         auto sync_deadline = std::chrono::steady_clock::now() + kBlockchainInitTimeout;
-        bool synced         = false;
+        bool synced        = false;
         while ( std::chrono::steady_clock::now() < sync_deadline )
         {
             if ( node_proc1->GetState() == GeniusNode::NodeState::READY &&
@@ -415,32 +425,32 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
 
     // --- RLPx service construction per node ---
 
-    const uint64_t settle_secs = EnvUint64( "SGNS_RLPX_SETTLE_SECONDS", kRlpxSettleSeconds );
-    const std::string argv0    = boost::dll::program_location().string();
-    const char       *json_env = std::getenv( "EVMRELAY_LIVE_SEPOLIA_JSON" );
-    const std::string json_path = ( json_env != nullptr ) ? std::string( json_env ) : std::string();
+    const uint64_t    settle_secs = EnvUint64( "SGNS_RLPX_SETTLE_SECONDS", kRlpxSettleSeconds );
+    const std::string argv0       = boost::dll::program_location().string();
+    const char       *json_env    = std::getenv( "EVMRELAY_LIVE_SEPOLIA_JSON" );
+    const std::string json_path   = ( json_env != nullptr ) ? std::string( json_env ) : std::string();
 
     // Load chain peer config once (same for all three services)
-    auto chain_cfg = evmrelay::examples::load_chain_peer_config(
-        "ethereum-sepolia",
-        argv0,
-        json_path,
-        "https://enodes.gnus.ai/chain_enodes.json.gz",
-        true );
+    auto chain_cfg = evmrelay::examples::load_chain_peer_config( "ethereum-sepolia",
+                                                                 argv0,
+                                                                 json_path,
+                                                                 "https://enodes.gnus.ai/chain_enodes.json.gz",
+                                                                 true );
 
     if ( !chain_cfg.has_value() )
     {
-        GTEST_SKIP() << "Could not load ethereum-sepolia chain peer config — check EVMRELAY_LIVE_SEPOLIA_JSON or network";
+        GTEST_SKIP()
+            << "Could not load ethereum-sepolia chain peer config — check EVMRELAY_LIVE_SEPOLIA_JSON or network";
     }
 
     spdlog::info( "rlpx_e2e: loaded sepolia chain config with {} cached nodes", chain_cfg->nodes.size() );
 
     // Lambda to build a per-node RLPx service + BridgeRelayer
-    auto BuildRlpxService = [&]( std::shared_ptr<GeniusNode> &node,
-                                 std::shared_ptr<eth::EthWatchService> &svc,
-                                 std::shared_ptr<sgns::BridgeRelayer> &relayer,
+    auto BuildRlpxService = [&]( std::shared_ptr<GeniusNode>              &node,
+                                 std::shared_ptr<eth::EthWatchService>    &svc,
+                                 std::shared_ptr<sgns::BridgeRelayer>     &relayer,
                                  std::unique_ptr<boost::asio::io_context> &io,
-                                 std::unique_ptr<std::thread> &io_thread )
+                                 std::unique_ptr<std::thread>             &io_thread )
     {
         // Build EthWatchServiceConfig
         eth::EthWatchServiceConfig config{};
@@ -457,24 +467,18 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
         std::shared_ptr<sgns::TransactionManager> tx_mgr = tx_mgr_result.value();
 
-        relayer = sgns::BridgeRelayer::Create(
-            std::weak_ptr<sgns::TransactionManager>( tx_mgr ),
-            svc );
+        relayer = sgns::BridgeRelayer::Create( std::weak_ptr<sgns::TransactionManager>( tx_mgr ), svc );
 
-        relayer->Start( { sgns::ChainContractPair{
-            "ethereum-sepolia",
-            sgns::test::anvil::kSepoliaBridgeContractLower,
-            11155111 } } );
+        relayer->Start( { sgns::ChainContractPair{ "ethereum-sepolia",
+                                                   sgns::test::anvil::kSepoliaBridgeContractLower,
+                                                   11155111 } } );
 
         svc->initialize( std::move( config ), []( const eth::WatchEventNotification & ) {} );
 
-        io        = std::make_unique<boost::asio::io_context>();
+        io = std::make_unique<boost::asio::io_context>();
         svc->run( *io );
 
-        io_thread = std::make_unique<std::thread>( [raw_io = io.get()]()
-        {
-            raw_io->run();
-        } );
+        io_thread = std::make_unique<std::thread>( [raw_io = io.get()]() { raw_io->run(); } );
     };
 
     BuildRlpxService( node_main, rlpx_service_main, relayer_main, io_main, io_thread_main );
@@ -486,7 +490,7 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     // --- RLPx settle wait ---
     {
         constexpr std::chrono::milliseconds kSettleTimeout{ kRlpxSettleSeconds * 1000 };
-        bool settled = waitForCondition(
+        bool                                settled = waitForCondition(
             [&]() { return rlpx_service_main->aggregate_connection_stats().remote_status_accepted >= 1; },
             std::chrono::milliseconds( settle_secs * 1000 ) );
 
@@ -605,14 +609,16 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
     uint64_t initial_balance_proc1 = node_proc1->GetBalance( dest_addr_proc1 );
     uint64_t initial_balance_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
     spdlog::info( "rlpx_e2e: initial balances — main={}, proc1={}, proc2={}",
-                  initial_balance_main, initial_balance_proc1, initial_balance_proc2 );
+                  initial_balance_main,
+                  initial_balance_proc1,
+                  initial_balance_proc2 );
 
     uint64_t baseline_main  = initial_balance_main;
     uint64_t baseline_proc1 = initial_balance_proc1;
     uint64_t baseline_proc2 = initial_balance_proc2;
 
     // --- Step 3: Burn stream ---
-    const uint64_t burn_count = EnvUint64( "SGNS_RLPX_BURN_COUNT", kBurnCount );
+    const uint64_t          burn_count = EnvUint64( "SGNS_RLPX_BURN_COUNT", kBurnCount );
     std::vector<BurnRecord> burn_records;
     burn_records.reserve( burn_count );
 
@@ -623,21 +629,17 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         // Cadence delay: enforce 1-2s floor via deadline polling (no thread sleep).
         // Use a deadline-based lambda polled by assertWaitForCondition.
         {
-            const auto delay = std::chrono::milliseconds( 1000 + static_cast<int>( ( i * 137 ) % 1000 ) );
+            const auto delay    = std::chrono::milliseconds( 1000 + static_cast<int>( ( i * 137 ) % 1000 ) );
             const auto deadline = std::chrono::steady_clock::now() + delay;
-            sgns::test::assertWaitForCondition(
-                [deadline]() { return std::chrono::steady_clock::now() >= deadline; },
-                delay + std::chrono::milliseconds( 500 ),
-                "burn cadence delay" );
+            sgns::test::assertWaitForCondition( [deadline]() { return std::chrono::steady_clock::now() >= deadline; },
+                                                delay + std::chrono::milliseconds( 500 ),
+                                                "burn cadence delay" );
         }
 
         // Build and execute cast send
-        std::string cast_cmd =
-            "cast send " + std::string( kSepoliaContract ) +
-            " \"" + kTransferSig + "\" " + sender_addr +
-            " " + sender_addr + " 0 " + std::to_string( kMintAmount ) +
-            " 0x --private-key " + s_eth_private_key +
-            " --rpc-url " + kSepoliaRpc + " --json 2>&1";
+        std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " +
+                               sender_addr + " " + sender_addr + " 0 " + std::to_string( kMintAmount ) +
+                               " 0x --private-key " + s_eth_private_key + " --rpc-url " + kSepoliaRpc + " --json 2>&1";
 
         FILE *cast_pipe = sgns::test::anvil::OpenCommandPipe( cast_cmd.c_str(), "r" );
         ASSERT_NE( cast_pipe, nullptr ) << "Failed to run cast send";
@@ -653,7 +655,10 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         if ( cast_rc != 0 )
         {
             spdlog::warn( "rlpx_e2e: burn {}/{} failed (cast rc={}), continuing — output: {}",
-                          i + 1, burn_count, cast_rc, cast_output );
+                          i + 1,
+                          burn_count,
+                          cast_rc,
+                          cast_output );
             continue;
         }
 
@@ -665,8 +670,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             continue;
         }
 
-        spdlog::info( "rlpx_e2e: burn {}/{} tx_hash={}",
-                      i + 1, burn_count, tx_hash.substr( 0, 16 ) );
+        spdlog::info( "rlpx_e2e: burn {}/{} tx_hash={}", i + 1, burn_count, tx_hash.substr( 0, 16 ) );
 
         BurnRecord rec;
         rec.tx_hash        = tx_hash;
@@ -682,8 +686,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         baseline_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
     }
 
-    spdlog::info( "rlpx_e2e: burn stream complete — {} / {} burns successful",
-                  successful_burns, burn_count );
+    spdlog::info( "rlpx_e2e: burn stream complete — {} / {} burns successful", successful_burns, burn_count );
 
     if ( successful_burns == 0 )
     {
@@ -698,7 +701,10 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
     for ( const auto &rec : burn_records )
     {
         spdlog::info( "rlpx_e2e: verifying burn tx_hash={} (baselines: main={}, proc1={}, proc2={})",
-                      rec.tx_hash.substr( 0, 16 ), rec.baseline_main, rec.baseline_proc1, rec.baseline_proc2 );
+                      rec.tx_hash.substr( 0, 16 ),
+                      rec.baseline_main,
+                      rec.baseline_proc1,
+                      rec.baseline_proc2 );
 
         // Poll node_main
         {
@@ -713,16 +719,18 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             if ( ok )
             {
                 spdlog::info( "rlpx_e2e: node_main minted for tx_hash={} (balance={})",
-                              rec.tx_hash.substr( 0, 16 ), current );
+                              rec.tx_hash.substr( 0, 16 ),
+                              current );
                 ++minted_main;
             }
             else
             {
-                spdlog::error( "rlpx_e2e: node_main did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
-                               rec.tx_hash.substr( 0, 16 ),
-                               kMintTimeoutMs.count(),
-                               current,
-                               rec.baseline_main + kMintAmount );
+                spdlog::error(
+                    "rlpx_e2e: node_main did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
+                    rec.tx_hash.substr( 0, 16 ),
+                    kMintTimeoutMs.count(),
+                    current,
+                    rec.baseline_main + kMintAmount );
             }
         }
 
@@ -739,16 +747,18 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             if ( ok )
             {
                 spdlog::info( "rlpx_e2e: node_proc1 minted for tx_hash={} (balance={})",
-                              rec.tx_hash.substr( 0, 16 ), current );
+                              rec.tx_hash.substr( 0, 16 ),
+                              current );
                 ++minted_proc1;
             }
             else
             {
-                spdlog::error( "rlpx_e2e: node_proc1 did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
-                               rec.tx_hash.substr( 0, 16 ),
-                               kMintTimeoutMs.count(),
-                               current,
-                               rec.baseline_proc1 + kMintAmount );
+                spdlog::error(
+                    "rlpx_e2e: node_proc1 did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
+                    rec.tx_hash.substr( 0, 16 ),
+                    kMintTimeoutMs.count(),
+                    current,
+                    rec.baseline_proc1 + kMintAmount );
             }
         }
 
@@ -765,16 +775,18 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
             if ( ok )
             {
                 spdlog::info( "rlpx_e2e: node_proc2 minted for tx_hash={} (balance={})",
-                              rec.tx_hash.substr( 0, 16 ), current );
+                              rec.tx_hash.substr( 0, 16 ),
+                              current );
                 ++minted_proc2;
             }
             else
             {
-                spdlog::error( "rlpx_e2e: node_proc2 did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
-                               rec.tx_hash.substr( 0, 16 ),
-                               kMintTimeoutMs.count(),
-                               current,
-                               rec.baseline_proc2 + kMintAmount );
+                spdlog::error(
+                    "rlpx_e2e: node_proc2 did NOT mint for tx_hash={} within {}ms (balance={}, expected >= {})",
+                    rec.tx_hash.substr( 0, 16 ),
+                    kMintTimeoutMs.count(),
+                    current,
+                    rec.baseline_proc2 + kMintAmount );
             }
         }
     }
@@ -784,9 +796,8 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
     uint64_t final_balance_proc1 = node_proc1->GetBalance( dest_addr_proc1 );
     uint64_t final_balance_proc2 = node_proc2->GetBalance( dest_addr_proc2 );
 
-    uint64_t delta_main  = ( final_balance_main > initial_balance_main )
-                               ? ( final_balance_main - initial_balance_main )
-                               : 0;
+    uint64_t delta_main  = ( final_balance_main > initial_balance_main ) ? ( final_balance_main - initial_balance_main )
+                                                                         : 0;
     uint64_t delta_proc1 = ( final_balance_proc1 > initial_balance_proc1 )
                                ? ( final_balance_proc1 - initial_balance_proc1 )
                                : 0;
@@ -795,11 +806,17 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
                                : 0;
 
     spdlog::info( "rlpx_e2e: final deltas — main={}, proc1={}, proc2={} (expected >= {})",
-                  delta_main, delta_proc1, delta_proc2, successful_burns * kMintAmount );
+                  delta_main,
+                  delta_proc1,
+                  delta_proc2,
+                  successful_burns * kMintAmount );
     spdlog::info( "rlpx_e2e: mints per node — main={}/{}, proc1={}/{}, proc2={}/{}",
-                  minted_main, successful_burns,
-                  minted_proc1, successful_burns,
-                  minted_proc2, successful_burns );
+                  minted_main,
+                  successful_burns,
+                  minted_proc1,
+                  successful_burns,
+                  minted_proc2,
+                  successful_burns );
 
     EXPECT_GE( delta_main, successful_burns * kMintAmount )
         << "node_main balance delta too low for " << successful_burns << " burns";

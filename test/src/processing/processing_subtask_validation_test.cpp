@@ -64,7 +64,10 @@ public:
     {
         SGProcessing::SubTaskResult result;
         result.set_subtaskid( subTaskId );
-        result.set_node_address( "test_node" );
+        result.set_node_address( std::string( 128, 'a' ) );
+        result.set_developer_address( "0xcafe" );
+        result.set_developer_cut( 350000 );
+        result.set_token_id( std::string( 32, '\0' ) );
 
         // Create unique hashes for each chunk
         for ( int i = 0; i < numChunks; ++i )
@@ -81,7 +84,10 @@ public:
     {
         SGProcessing::SubTaskResult result;
         result.set_subtaskid( subTaskId );
-        result.set_node_address( "test_node" );
+        result.set_node_address( std::string( 128, 'a' ) );
+        result.set_developer_address( "0xcafe" );
+        result.set_developer_cut( 350000 );
+        result.set_token_id( std::string( 32, '\0' ) );
 
         // Create wrong number of hashes
         for ( int i = 0; i < wrongNumChunks; ++i )
@@ -98,7 +104,10 @@ public:
     {
         SGProcessing::SubTaskResult result;
         result.set_subtaskid( subTaskId );
-        result.set_node_address( "test_node" );
+        result.set_node_address( std::string( 128, 'a' ) );
+        result.set_developer_address( "0xcafe" );
+        result.set_developer_cut( 350000 );
+        result.set_token_id( std::string( 32, '\0' ) );
 
         // Create duplicate hashes (all the same)
         for ( int i = 0; i < numChunks; ++i )
