@@ -1426,7 +1426,7 @@ namespace sgns
             bitswap_->setCacheDir( write_base_path_ + "/" + ipfs_cache_dir_ );
         }
         FileManager::GetInstance().InitializeSingletons();
-        FileManager::GetInstance().setBitswap( bitswap_ );
+        FileManager::GetInstance().setBitswap( bitswap_, pubsub_->GetDHT() );
 
         graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
     }
