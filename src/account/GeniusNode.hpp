@@ -1234,6 +1234,7 @@ namespace sgns
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
+        std::atomic_uint blockchain_retry_count_{ 0 }; ///< Number of blockchain retries scheduled (test observable).
 
         // ── Bootstrap fullnode reconnection ──
         struct BootstrapReconnectConfig

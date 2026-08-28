@@ -580,6 +580,13 @@ namespace sgns
 
     void GeniusNode::StateTransition( NodeState next_state )
     {
+        // Shutdown gate: pending blockchain/migration retry threads must not
+        // restart services once node destruction has begun.
+        if ( shutdown_started_.load() )
+        {
+            node_logger_->debug( "Ignoring transition to {}, shutdown in progress", next_state );
+            return;
+        }
         state_.store( next_state );
         node_logger_->debug( "Transitioning to state {}", next_state );
 
@@ -1634,12 +1641,17 @@ namespace sgns
 
     void GeniusNode::ScheduleBlockchainRetry( std::chrono::seconds delay )
     {
+        ++blockchain_retry_count_;
         std::thread(
             [weak_self = weak_from_this(), delay]
             {
                 std::this_thread::sleep_for( delay );
                 if ( auto strong = weak_self.lock() )
                 {
+                    if ( strong->shutdown_started_.load() )
+                    {
+                        return;
+                    }
                     auto current_state = strong->state_.load();
                     if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
                     {
@@ -1763,6 +1775,14 @@ namespace sgns
         if ( bootstrap_disconnect_subscription_ )
         {
             bootstrap_disconnect_subscription_->unsubscribe();
+        }
+
+        // Stop and join the messenger worker before PubSub teardown: queued
+        // blockchain nonce/UTXO tasks call GossipPubSub::getPeerCount, which
+        // faults once PubSub::Stop() releases the gossip object.
+        if ( account_ )
+        {
+            account_->StopMessenger();
         }
 
         // Stop and unregister account-bound work, but retain the owning objects

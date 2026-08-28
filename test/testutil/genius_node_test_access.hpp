@@ -34,6 +34,15 @@ namespace sgns
         {
             return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
         }
+
+        /// Number of blockchain retries scheduled so far. A fresh offline node
+        /// schedules its first retry when Blockchain::Start() fails with
+        /// BLOCKCHAIN_NOT_INITIALIZED, so count > 0 marks the pending-retry
+        /// window the shutdown-race test tears the node down inside.
+        static unsigned int BlockchainRetryCount( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_retry_count_.load() : 0;
+        }
     };
 } // namespace sgns
 

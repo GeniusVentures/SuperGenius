@@ -106,7 +106,7 @@ namespace sgns
         worker_thread_ = std::thread( &AccountMessenger::WorkerLoop, this );
     }
 
-    AccountMessenger::~AccountMessenger()
+    void AccountMessenger::Stop()
     {
         stop_worker_.store( true );
         queue_cv_.notify_one();
@@ -114,6 +114,11 @@ namespace sgns
         {
             worker_thread_.join();
         }
+    }
+
+    AccountMessenger::~AccountMessenger()
+    {
+        Stop();
     }
 
     void AccountMessenger::RegisterBlockResponseHandler( BlockResponseHandler handler )
@@ -1028,7 +1033,9 @@ namespace sgns
 
     bool AccountMessenger::HasRequestPeers() const
     {
-        return pubsub_->getPeerCount( requests_topic_ ) != 0;
+        // GossipPubSub::getPeerCount takes a mutable reference; copy the const member.
+        std::string topic = requests_topic_;
+        return pubsub_->getPeerCount( topic ) != 0;
     }
 
     outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( std::chrono::milliseconds timeout,
