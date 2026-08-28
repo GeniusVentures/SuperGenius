@@ -68,6 +68,7 @@ namespace
 
         void TearDown() override
         {
+            burn_config_.reset();
             registry_.reset();
             secure_crdt_.reset();
             node_.reset();
