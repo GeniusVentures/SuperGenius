@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: Blocked — Plan 12-08 post-review readiness evidence is mixed
-last_updated: "2026-08-27T17:37:33.289Z"
+last_updated: "2026-08-28T18:04:50.456Z"
 last_activity: 2026-08-27 -- publisher readiness observer output mismatch retained for separate attribution
 progress:
   total_phases: 5
@@ -114,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-27T17:36:47.054Z
-Stopped at: Completed 12-08-PLAN.md with terminal blocked evidence report
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md
+Last session: 2026-08-28T18:04:50.447Z
+Stopped at: Phase 12 observer attribution context gathered
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-CONTEXT.md
