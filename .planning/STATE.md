@@ -59,6 +59,10 @@ Last activity: 2026-07-24 -- Phase 11 execution started
 - Brownfield codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
 - Sequential dependency chain: 8 → 9 → {10 → 11, 12}. Phase 12 depends only on Phase 9 and could in principle run in parallel with 10/11, but is numbered last per the suggested delivery order.
 
+### Roadmap Evolution
+
+- Phase 15 added: Private-network identity and libp2p gater/pnet integration, tracked by GeniusVentures/SuperGenius#367 and blocked on GeniusVentures/libp2p#10.
+
 ## Operator Next Steps
 
 - Review `.planning/ROADMAP.md` (Milestone v1.1 section) and `.planning/REQUIREMENTS.md` traceability

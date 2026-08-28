@@ -568,3 +568,11 @@ Plans:
   3. A causal-LM work item produces generated text honoring `max_output_tokens`/`temperature`/`top_p`/`seed` and stop conditions, with accurate token counts; cancellation aborts in-flight generation.
 **Tracking**: Executes in the GeniusVentures/SGProcessingManager repo — separate issue, assigned to itsafuu only
 **Plans**: none yet
+
+### Phase 15: Private Network Identity and libp2p Gating
+
+**Goal**: SuperGenius consumes the license NFT's `privateNetworkId` as the self-certifying private-network identity and enforces that identity at libp2p connection upgrade, while isolating chain topics and CRDT keys by network.
+**Depends on**: GeniusVentures/libp2p#10 (gater + pnet implementation; do not start until complete)
+**Tracking**: GeniusVentures/SuperGenius#367
+**Requirements**: TBD
+**Plans**: none yet
