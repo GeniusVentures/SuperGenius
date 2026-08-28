@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: Blocked — Plan 12-08 post-review readiness evidence is mixed
-last_updated: "2026-08-28T18:04:50.456Z"
-last_activity: 2026-08-27 -- publisher readiness observer output mismatch retained for separate attribution
+status: executing
+last_updated: "2026-08-28T21:21:32.933Z"
+last_activity: 2026-08-28 -- Phase 12 planning complete
 progress:
   total_phases: 5
-  completed_phases: 5
-  total_plans: 20
+  completed_phases: 4
+  total_plans: 21
   completed_plans: 23
-  percent: 100
+  percent: 80
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
 Plan: 8 of 8
-Status: Blocked — Plan 12-08 post-review readiness evidence is mixed
-Last activity: 2026-08-27 -- publisher readiness observer output mismatch retained for separate attribution
+Status: Ready to execute
+Last activity: 2026-08-28 -- Phase 12 planning complete
 
 Progress: [██████████] 100%
 
