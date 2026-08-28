@@ -524,9 +524,11 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     auto bal_main_init = node_main->GetBalance();
     auto bal_p1_init   = node_proc1->GetBalance();
     auto bal_p2_init   = node_proc2->GetBalance();
-    auto tok_main_init = node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) );
-    auto tok_p1_init   = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
-    auto tok_p2_init   = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_main_init      = node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto tok_p1_init        = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
+    auto tok_p2_init        = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_p1_other_init  = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_p2_other_init  = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
 
     std::cout << "Process cost: " << cost << "\n";
     auto postjob = node_main->ProcessImage( json_data );
@@ -549,9 +551,11 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     // name a single developer on the escrow hold, so one developer collected everything. It now
     // credits each developer out of its own peer's share, in that peer's child token.
     //
-    // Each peer is entitled to (1 - 0.35) of its own half of the available amount. Payouts are
-    // apportioned by largest remainder, so the sub-minion dust adds at most one minion to any one
-    // credit -- there are four credits here, two peers and two developers.
+    // Queue ownership rotates opportunistically, so a single processor can end up running both
+    // subtasks, and which node ran what is not observable from balances here. So instead of
+    // asserting a per-peer split, assert what holds for every split of the work: each peer is
+    // paid only for subtasks it ran, in its own child token, and the payout closes the escrow
+    // exactly. The exact per-developer split math is covered by PayoutOutputsTest.
     const uint64_t peer_entitlement = ( available * ( DEVELOPER_CUT_SCALE - DEVELOPER_CUT ) ) /
                                       ( 2 * DEVELOPER_CUT_SCALE );
 
@@ -566,14 +570,20 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     const auto p1_gain = node_proc1->GetBalance() - bal_p1_init;
     const auto p2_gain = node_proc2->GetBalance() - bal_p2_init;
-    ASSERT_GE( p1_gain, peer_entitlement );
-    ASSERT_LE( p1_gain, peer_entitlement + 1 );
-    ASSERT_GE( p2_gain, peer_entitlement );
-    ASSERT_LE( p2_gain, peer_entitlement + 1 );
 
-    // Each peer is paid in its own child token, and nothing leaks into the other's.
+    // A peer's gain is 0 (ran nothing) or 1-2 credits of peer_entitlement, each with at most one
+    // dust minion from the largest-remainder apportionment.
+    ASSERT_TRUE( p1_gain == 0 || ( p1_gain >= peer_entitlement && p1_gain <= 2 * peer_entitlement + 2 ) )
+        << "p1_gain=" << p1_gain << " peer_entitlement=" << peer_entitlement;
+    ASSERT_TRUE( p2_gain == 0 || ( p2_gain >= peer_entitlement && p2_gain <= 2 * peer_entitlement + 2 ) )
+        << "p2_gain=" << p2_gain << " peer_entitlement=" << peer_entitlement;
+
+    // Whatever each peer received was paid in its own child token, and nothing leaks into the
+    // other's.
     ASSERT_EQ( tok_p1_init + p1_gain, node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) );
     ASSERT_EQ( tok_p2_init + p2_gain, node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+    ASSERT_EQ( tok_p1_other_init, node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+    ASSERT_EQ( tok_p2_other_init, node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) );
 
     // Whatever the peers did not take went to the two developers: the outputs sum to the escrow
     // exactly, so this closes the books on the whole release.
