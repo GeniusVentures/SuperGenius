@@ -555,7 +555,11 @@ jobs:
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
+        # -LE requires_foundry: deterministically exclude Foundry-dependent e2e
+        # suites (bridge_race_*). Without this they only "pass" via the fixture's
+        # runtime GTEST_SKIP PATH probe (~1.4s) and would silently run for real
+        # (failing, taking minutes) if Foundry ever lands on a runner.
+        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
 
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
@@ -570,7 +574,7 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure'
+            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry'
 
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics
