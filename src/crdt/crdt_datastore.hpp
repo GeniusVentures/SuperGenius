@@ -424,6 +424,12 @@ namespace sgns::crdt
         void StopWorkerLoops();
         bool IsCurrentThreadInternalWorker() const;
         void WaitForWorkersToExit();
+
+        /// Drains CRDT workers, then stops the DAG syncer's graphsync server.
+        /// Workers parked in DAGSyncer::getNode() unwind on the stop flag first;
+        /// graphsync_->stop() must run only after they exit or it races their
+        /// polling of graphsync request state.
+        void StopSyncerAfterWorkerDrain();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
         void HandleJobProcessingFailure( const RootCIDJob &job );

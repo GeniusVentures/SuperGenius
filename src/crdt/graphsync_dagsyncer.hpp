@@ -137,7 +137,7 @@ namespace sgns::crdt
         void BlockReceivedCallback( const CID &cid, common::Buffer buffer );
 
         /** Stops instance */
-        void StopSync();
+        void StopSync() override;
 
         // Helper methods for the peer registry
         PeerKey                    RegisterPeer( const PeerId &peer, std::vector<Multiaddress> address );
