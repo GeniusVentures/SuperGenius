@@ -4,6 +4,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -118,20 +119,51 @@ namespace
         return owned.child > 1 && owned.pgid > 1 && owned.child == owned.pgid && ::getpgrp() != owned.pgid && ::getsid( 0 ) != owned.pgid &&
                ::getpgid( owned.child ) == owned.pgid && ::getsid( owned.child ) == owned.pgid;
     }
-    [[nodiscard]] bool TerminateOwned( const OwnedChild &owned, int &status )
+    // This deliberately does not discover a group by PID.  The caller must
+    // already have either checked OwnedNow() or received this exact identity
+    // through the private child handshake.
+    [[nodiscard]] bool HandshakenGroup( const OwnedChild &owned )
     {
-        if ( !OwnedNow( owned ) || ::kill( -owned.pgid, SIGTERM ) != 0 ) return false;
+        return owned.child > 1 && owned.pgid > 1 && owned.child == owned.pgid && ::getpgrp() != owned.pgid && ::getsid( 0 ) != owned.pgid;
+    }
+    [[nodiscard]] bool GroupGone( const OwnedChild &owned )
+    {
+        return ::kill( -owned.pgid, 0 ) == -1 && errno == ESRCH;
+    }
+    [[nodiscard]] bool WaitForGroupGone( const OwnedChild &owned, int &status, bool &reaped )
+    {
         const auto deadline = std::chrono::steady_clock::now() + kCleanupDeadline;
-        bool reaped = false;
         while ( std::chrono::steady_clock::now() < deadline )
         {
-            const auto waited = ::waitpid( owned.child, &status, WNOHANG );
-            if ( waited == owned.child ) { reaped = true; break; }
-            if ( waited < 0 && errno != EINTR ) return false;
+            if ( !reaped )
+            {
+                const auto waited = ::waitpid( owned.child, &status, WNOHANG );
+                if ( waited == owned.child ) reaped = true;
+                else if ( waited < 0 && errno != EINTR ) return false;
+            }
+            if ( GroupGone( owned ) ) return reaped || Reap( owned.child, status );
             if ( ::poll( nullptr, 0, 50 ) < 0 && errno != EINTR ) return false;
         }
-        if ( !reaped && ( !OwnedNow( owned ) || ::kill( -owned.pgid, SIGKILL ) != 0 || !Reap( owned.child, status ) ) ) return false;
-        return ::kill( -owned.pgid, 0 ) == -1 && errno == ESRCH;
+        return false;
+    }
+    [[nodiscard]] bool TerminateHandshakenGroup( const OwnedChild &owned, int &status )
+    {
+        if ( !HandshakenGroup( owned ) ) return false;
+        const auto terminated = ::kill( -owned.pgid, SIGTERM );
+        if ( terminated != 0 && errno != ESRCH ) return false;
+
+        bool reaped = false;
+        if ( WaitForGroupGone( owned, status, reaped ) ) return true;
+
+        // The direct child may have exited after SIGTERM while one of its
+        // descendants still owns the handshaken group.  That group remains
+        // the only target this invocation is permitted to signal.
+        if ( !HandshakenGroup( owned ) || ::kill( -owned.pgid, SIGKILL ) != 0 ) return false;
+        return WaitForGroupGone( owned, status, reaped );
+    }
+    [[nodiscard]] bool TerminateOwned( const OwnedChild &owned, int &status )
+    {
+        return OwnedNow( owned ) && TerminateHandshakenGroup( owned, status );
     }
     [[nodiscard]] bool BlockSignals( sigset_t &signals, sigset_t &original )
     {
@@ -163,7 +195,13 @@ namespace
             std::memcmp( handshake.magic, kMagic, sizeof( handshake.magic ) ) == 0 && handshake.pid == child && handshake.pid > 1 && handshake.sid == child && handshake.pgid == child;
         ::close( pipefd[0] ); owned = { child, child };
         if ( valid && OwnedNow( owned ) ) return true;
-        int ignored = 0; (void)::kill( child, SIGKILL ); (void)Reap( child, ignored ); return false;
+        int ignored = 0;
+        // A valid private handshake is sufficient to retain this exact
+        // session identity even if the direct leader exits before our second
+        // liveness check.  Never fall back to a positive-PID kill here.
+        if ( valid ) (void)TerminateHandshakenGroup( owned, ignored );
+        else { (void)::kill( child, SIGKILL ); (void)Reap( child, ignored ); }
+        return false;
     }
     [[nodiscard]] bool LivenessClosed( int fd, bool &closed )
     {
