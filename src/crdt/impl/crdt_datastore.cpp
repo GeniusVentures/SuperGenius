@@ -550,11 +550,13 @@ namespace sgns::crdt
             logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
                             __func__ );
             auto keep_alive = shared_from_this();
-            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
+            std::thread( [keep_alive = std::move( keep_alive )]()
+                         { keep_alive->StopSyncerAfterWorkerDrain(); } )
+                .detach();
             return;
         }
 
-        WaitForWorkersToExit();
+        StopSyncerAfterWorkerDrain();
 
         started_ = false;
         logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
@@ -614,6 +616,15 @@ namespace sgns::crdt
             }
         }
         return false;
+    }
+
+    void CrdtDatastore::StopSyncerAfterWorkerDrain()
+    {
+        WaitForWorkersToExit();
+        if ( dagSyncer_ )
+        {
+            dagSyncer_->StopSync();
+        }
     }
 
     void CrdtDatastore::WaitForWorkersToExit()
