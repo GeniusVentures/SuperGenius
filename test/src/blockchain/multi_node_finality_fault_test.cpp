@@ -1342,6 +1342,16 @@ TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligible
     EXPECT_FALSE( IsObserverRepairAuthorized( { first, non_observer } ) );
 }
 
+TEST( PublisherObserverProcessEvidenceCollector, CapturesFocusedChildOutputAndRejectsUnattributedEvidence )
+{
+    // D-21 through D-23: the parent must mint evidence from an independently
+    // captured focused child, never from a hand-authored observer record.
+    const auto evidence = PublisherObserverProcessEvidenceCollector::Launch(
+        "PublisherObserverProcessChild.WriterProbe", "write-failed" );
+    EXPECT_EQ( evidence.Classification(), "invalid_or_partial_blocked" );
+    EXPECT_EQ( evidence.CountWeight(), 0u );
+}
+
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
 {
     sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
