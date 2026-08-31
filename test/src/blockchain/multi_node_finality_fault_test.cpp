@@ -1556,8 +1556,10 @@ namespace
                 for ( auto &entry : environment ) envp.push_back( entry.data() );
                 envp.push_back( nullptr );
                 const std::string child_filter = "--gtest_filter=" + filter;
-                std::array<char *, 4> argv{ const_cast<char *>( executable.c_str() ), const_cast<char *>( child_filter.c_str() ),
-                                            const_cast<char *>( "--gtest_brief=1" ), nullptr };
+                // Keep GTest's normal summary: the parent must observe its real
+                // completion footer rather than rely on a terse child mode.
+                std::array<char *, 3> argv{ const_cast<char *>( executable.c_str() ), const_cast<char *>( child_filter.c_str() ),
+                                            nullptr };
                 ::execve( executable.c_str(), argv.data(), envp.data() );
                 _exit( 127 );
             }
@@ -1864,6 +1866,18 @@ TEST( PublisherObserverProcessEvidenceCollector, RealSocketPublisherLossOnlyQual
         "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
     EXPECT_NE( first.RunToken(), second.RunToken() );
     EXPECT_NE( first.ChildPid(), second.ChildPid() );
+    for ( const auto *evidence : { &first, &second } )
+    {
+        EXPECT_EQ( evidence->Origin(), "real-socket-publisher-loss" );
+        EXPECT_EQ( evidence->Classification(), "fully_attributed_complete_failure" );
+        EXPECT_EQ( evidence->CountWeight(), 1u );
+        EXPECT_EQ( evidence->ChildStatus(), "normal-exit-nonzero" );
+        EXPECT_EQ( evidence->FooterStatus(), "one-normal-footer" );
+        EXPECT_EQ( evidence->ControlStatus(), "validated-terminal-recorded" );
+        EXPECT_EQ( evidence->Boundary(), "zero-consensus-topic-mesh" );
+        EXPECT_EQ( evidence->State(), "zero" );
+        EXPECT_EQ( evidence->Error(), "no-consensus-neighbor" );
+    }
     EXPECT_FALSE( IsObserverRepairAuthorized( { first, second } ) );
 }
 
