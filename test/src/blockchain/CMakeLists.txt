@@ -56,7 +56,41 @@ target_link_libraries(multi_node_finality_fault_compatibility_smoke_test
 )
 set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
 
-addtest(multi_node_finality_fault_test
+# Phase 12 owns fixed real-socket ports.  Its launcher is deliberately scoped
+# to this target because addtest() expands the executable path and therefore
+# cannot consume CMake's target TEST_LAUNCHER property.
+if(NOT APPLE OR WIN32)
+    message(FATAL_ERROR "Phase 12 process-ownership runner requires supported POSIX platform: fork/setsid/getpgid/getsid/kill/waitpid/socket/bind/sigwait")
+endif()
+if(CMAKE_VERSION VERSION_LESS 3.29)
+    message(FATAL_ERROR "Phase 12 process-ownership runner requires CMake 3.29+ TEST_LAUNCHER support")
+endif()
+include(CheckSymbolExists)
+check_symbol_exists(fork "unistd.h" P12_HAVE_FORK)
+check_symbol_exists(setsid "unistd.h" P12_HAVE_SETSID)
+check_symbol_exists(getpgid "unistd.h" P12_HAVE_GETPGID)
+check_symbol_exists(getsid "unistd.h" P12_HAVE_GETSID)
+check_symbol_exists(kill "signal.h" P12_HAVE_KILL)
+check_symbol_exists(waitpid "sys/wait.h" P12_HAVE_WAITPID)
+check_symbol_exists(socket "sys/socket.h" P12_HAVE_SOCKET)
+check_symbol_exists(bind "sys/socket.h;netinet/in.h" P12_HAVE_BIND)
+check_symbol_exists(sigwait "signal.h" P12_HAVE_SIGWAIT)
+foreach(p12_primitive IN ITEMS FORK SETSID GETPGID GETSID KILL WAITPID SOCKET BIND SIGWAIT)
+    if(NOT P12_HAVE_${p12_primitive})
+        message(FATAL_ERROR "Phase 12 process-ownership runner unavailable primitive: ${p12_primitive}")
+    endif()
+endforeach()
+
+add_executable(multi_node_finality_fault_runner
+    multi_node_finality_fault_runner.cpp
+)
+set_target_properties(multi_node_finality_fault_runner PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
+)
+disable_clang_tidy(multi_node_finality_fault_runner)
+
+add_executable(multi_node_finality_fault_test)
+addtest_part(multi_node_finality_fault_test
     multi_node_finality_fault_test.cpp
 )
 target_link_libraries(multi_node_finality_fault_test
@@ -64,8 +98,42 @@ target_link_libraries(multi_node_finality_fault_test
     genius_node_test
     rapidjson
     base_crdt_test
+    GTest::gtest_main
+    GTest::gmock_main
 )
-set_tests_properties(multi_node_finality_fault_test PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/xunit)
+set(multi_node_finality_fault_xml_output
+    "--gtest_output=xml:${CMAKE_BINARY_DIR}/xunit/xunit-multi_node_finality_fault_test.xml"
+)
+add_test(
+    NAME multi_node_finality_fault_test
+    COMMAND multi_node_finality_fault_test ${multi_node_finality_fault_xml_output}
+)
+set_target_properties(multi_node_finality_fault_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
+    ARCHIVE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/test_lib
+    LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/test_lib
+    TEST_LAUNCHER "$<TARGET_FILE:multi_node_finality_fault_runner>"
+)
+disable_clang_tidy(multi_node_finality_fault_test)
+add_dependencies(multi_node_finality_fault_test multi_node_finality_fault_runner)
+set_tests_properties(multi_node_finality_fault_test PROPERTIES
+    TIMEOUT 300
+    RUN_SERIAL TRUE
+    RESOURCE_LOCK phase12_real_socket_ports
+)
+
+add_test(
+    NAME multi_node_finality_fault_process_ownership_test
+    COMMAND $<TARGET_FILE:multi_node_finality_fault_runner>
+            --verify-controlled-cancellation
+            $<TARGET_FILE:multi_node_finality_fault_test>
+)
+set_tests_properties(multi_node_finality_fault_process_ownership_test PROPERTIES
+    TIMEOUT 60
+    RUN_SERIAL TRUE
+    RESOURCE_LOCK phase12_real_socket_ports
+)
 
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
