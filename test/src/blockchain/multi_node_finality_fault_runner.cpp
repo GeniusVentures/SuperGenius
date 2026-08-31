@@ -224,8 +224,14 @@ namespace
     }
     [[nodiscard]] int Supervisor( int liveness_fd, const sigset_t &original, char *const child_argv[], bool controlled, int report_fd )
     {
-        if ( ::sigprocmask( SIG_SETMASK, &original, nullptr ) != 0 || !CloseOnExec( liveness_fd ) ||
-             ( report_fd >= 0 && !CloseOnExec( report_fd ) ) ) { Report( report_fd, kFailure ); return Fail( "supervisor-signal-mask-restore-failed" ); }
+        // The supervisor shares the launcher's process group until it has
+        // observed launcher EOF.  Keep the launcher's handled cancellation
+        // signals blocked here so a group-directed cancellation cannot kill
+        // this cleanup owner before it reaps the separate owned test session.
+        // StartOwned restores the original mask only in that new session
+        // leader, immediately before its setsid()/exec path.
+        if ( !CloseOnExec( liveness_fd ) || ( report_fd >= 0 && !CloseOnExec( report_fd ) ) )
+        { Report( report_fd, kFailure ); return Fail( "supervisor-fd-close-on-exec-failed" ); }
         std::vector<int> reservations; std::string reason;
         if ( controlled && !ReservePorts( reservations, reason ) ) { Report( report_fd, kFailure ); return Fail( reason ); }
         for ( const int fd : reservations ) ::close( fd );
@@ -288,7 +294,10 @@ namespace
         const pid_t launcher = ::fork();
         if ( launcher == 0 )
         {
-            ::close( report_pipe[0] ); const std::string fd = std::to_string( report_pipe[1] );
+            ::close( report_pipe[0] );
+            const pid_t session = ::setsid();
+            if ( session != ::getpid() || ::getpgrp() != session || ::getsid( 0 ) != session ) _exit( 126 );
+            const std::string fd = std::to_string( report_pipe[1] );
             std::array<char *, 5> argv{ const_cast<char *>( runner ), const_cast<char *>( "--launcher-controlled" ), const_cast<char *>( test_executable ), const_cast<char *>( fd.c_str() ), nullptr };
             ::execv( runner, argv.data() ); _exit( 127 );
         }
@@ -307,11 +316,14 @@ namespace
             if ( !RebindPorts( reason ) ) return Fail( reason );
             return Fail( "controlled-fixture-listener-not-observed" );
         }
-        if ( ::kill( launcher, SIGKILL ) != 0 ) { ::close( report_pipe[0] ); return Fail( "controlled-launcher-kill-failed" ); }
-        int launcher_status = 0; const bool killed = Reap( launcher, launcher_status ) && WIFSIGNALED( launcher_status ) && WTERMSIG( launcher_status ) == SIGKILL;
-        const bool cleaned = killed && ReadReport( report_pipe[0], report ) && report == kSuccess; ::close( report_pipe[0] );
+        const bool launcher_owned = launcher > 1 && ::getpgid( launcher ) == launcher && ::getsid( launcher ) == launcher;
+        if ( !launcher_owned || ::kill( -launcher, SIGTERM ) != 0 )
+        { ::close( report_pipe[0] ); return Fail( !launcher_owned ? "controlled-launcher-session-unverified" : "controlled-launcher-group-signal-failed" ); }
+        int launcher_status = 0;
+        const bool cancelled = Reap( launcher, launcher_status ) && WIFEXITED( launcher_status ) && WEXITSTATUS( launcher_status ) == 128 + SIGTERM;
+        const bool cleaned = cancelled && ReadReport( report_pipe[0], report ) && report == kSuccess; ::close( report_pipe[0] );
         std::string reason; if ( !cleaned ) return Fail( "controlled-supervisor-cleanup-failed" ); if ( !RebindPorts( reason ) ) return Fail( reason );
-        std::fprintf( stdout, "P12_PROCESS_OWNERSHIP=passed launcher=%d launcher_signal=SIGKILL ports=rebound-all-four\n", static_cast<int>( launcher ) ); return 0;
+        std::fprintf( stdout, "P12_PROCESS_OWNERSHIP=passed launcher=%d launcher_group_signal=SIGTERM ports=rebound-all-four\n", static_cast<int>( launcher ) ); return 0;
     }
 }
 
