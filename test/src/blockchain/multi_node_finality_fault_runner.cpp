@@ -146,19 +146,24 @@ namespace
         }
         return false;
     }
-    [[nodiscard]] bool TerminateHandshakenGroup( const OwnedChild &owned, int &status )
+    [[nodiscard]] bool TerminateHandshakenGroup( const OwnedChild &owned, int &status, bool direct_child_already_reaped = false )
     {
         if ( !HandshakenGroup( owned ) ) return false;
         const auto terminated = ::kill( -owned.pgid, SIGTERM );
         if ( terminated != 0 && errno != ESRCH ) return false;
 
-        bool reaped = false;
+        bool reaped = direct_child_already_reaped;
         if ( WaitForGroupGone( owned, status, reaped ) ) return true;
 
         // The direct child may have exited after SIGTERM while one of its
         // descendants still owns the handshaken group.  That group remains
         // the only target this invocation is permitted to signal.
-        if ( !HandshakenGroup( owned ) || ::kill( -owned.pgid, SIGKILL ) != 0 ) return false;
+        if ( !HandshakenGroup( owned ) ) return false;
+        // A group may disappear after the TERM deadline and immediately
+        // before escalation.  ESRCH is not an ownership failure; prove the
+        // same handshaken group is gone (and that the direct child is reaped)
+        // through the existing bounded check.
+        if ( ::kill( -owned.pgid, SIGKILL ) != 0 && errno != ESRCH ) return false;
         return WaitForGroupGone( owned, status, reaped );
     }
     [[nodiscard]] bool TerminateOwned( const OwnedChild &owned, int &status )
@@ -214,10 +219,15 @@ namespace
     }
     void Report( int fd, char value ) { if ( fd >= 0 ) (void)WriteAll( fd, &value, 1 ); }
     [[nodiscard]] int ControlledCleanupFailure( const OwnedChild &owned, int &status, int report_fd,
-                                                const std::string &failure )
+                                                const std::string &failure, bool direct_child_already_reaped = false )
     {
         std::string reason;
-        const bool terminated = TerminateOwned( owned, status );
+        // A reaped direct session leader can still have collector descendants
+        // in the private group.  The handshake retains the only group this
+        // invocation may target; do not rediscover it through getpgid().
+        const bool terminated = direct_child_already_reaped
+                                    ? TerminateHandshakenGroup( owned, status, true )
+                                    : TerminateOwned( owned, status );
         const bool rebound = terminated && RebindPorts( reason );
         Report( report_fd, kFailure );
         return Fail( !terminated ? "owned-group-termination-or-reap-failed" : !rebound ? reason : failure );
@@ -246,7 +256,12 @@ namespace
         while ( true )
         {
             const auto waited = ::waitpid( owned.child, &status, WNOHANG );
-            if ( waited == owned.child ) { if ( controlled ) { Report( report_fd, kFailure ); return Fail( "controlled-child-exited-before-launcher-cancellation" ); } return NormalizedExit( status ); }
+            if ( waited == owned.child )
+            {
+                if ( controlled )
+                    return ControlledCleanupFailure( owned, status, report_fd, "controlled-child-exited-before-launcher-cancellation", true );
+                return NormalizedExit( status );
+            }
             if ( waited < 0 && errno != EINTR )
                 return controlled ? ControlledCleanupFailure( owned, status, report_fd, "supervisor-child-wait-failed" )
                                   : Fail( TerminateOwned( owned, status ) ? "supervisor-child-wait-failed" : "owned-group-termination-or-reap-failed" );
@@ -302,6 +317,37 @@ namespace
         int ready = 0; do { ready = ::poll( &descriptor, 1, timeout ); } while ( ready < 0 && errno == EINTR );
         return ready > 0 && ReadAll( fd, &report, 1 );
     }
+    [[nodiscard]] bool WaitForControlledCleanup( pid_t launcher, int &launcher_status, int report_fd, char &report )
+    {
+        const auto deadline = std::chrono::steady_clock::now() + kReportDeadline;
+        bool launcher_wait_complete = false, launcher_reaped = false, report_complete = false, report_received = false;
+        while ( std::chrono::steady_clock::now() < deadline )
+        {
+            if ( !launcher_wait_complete )
+            {
+                const auto waited = ::waitpid( launcher, &launcher_status, WNOHANG );
+                if ( waited == launcher ) { launcher_reaped = true; launcher_wait_complete = true; }
+                else if ( waited < 0 && errno != EINTR ) launcher_wait_complete = true;
+            }
+            if ( !report_complete )
+            {
+                pollfd descriptor{ report_fd, POLLIN | POLLHUP, 0 };
+                int ready = 0;
+                do { ready = ::poll( &descriptor, 1, 0 ); } while ( ready < 0 && errno == EINTR );
+                if ( ready < 0 ) report_complete = true;
+                if ( ready > 0 )
+                {
+                    const auto read_size = ::read( report_fd, &report, 1 );
+                    if ( read_size == 1 ) { report_received = true; report_complete = true; }
+                    else if ( read_size < 0 && ( errno == EINTR || errno == EAGAIN ) ) {}
+                    else report_complete = true;
+                }
+            }
+            if ( launcher_wait_complete && report_complete ) return launcher_reaped && report_received && report == kSuccess;
+            if ( ::poll( nullptr, 0, 50 ) < 0 && errno != EINTR ) return false;
+        }
+        return false;
+    }
     [[nodiscard]] int ControlledCancellation( const char *runner, const char *test_executable )
     {
         int report_pipe[2]{ -1, -1 };
@@ -331,13 +377,25 @@ namespace
             if ( !RebindPorts( reason ) ) return Fail( reason );
             return Fail( "controlled-fixture-listener-not-observed" );
         }
-        const bool launcher_owned = launcher > 1 && ::getpgid( launcher ) == launcher && ::getsid( launcher ) == launcher;
-        if ( !launcher_owned || ::kill( -launcher, SIGTERM ) != 0 )
-        { ::close( report_pipe[0] ); return Fail( !launcher_owned ? "controlled-launcher-session-unverified" : "controlled-launcher-group-signal-failed" ); }
         int launcher_status = 0;
-        const bool cancelled = Reap( launcher, launcher_status ) && WIFEXITED( launcher_status ) && WEXITSTATUS( launcher_status ) == 128 + SIGTERM;
-        const bool cleaned = cancelled && ReadReport( report_pipe[0], report ) && report == kSuccess; ::close( report_pipe[0] );
-        std::string reason; if ( !cleaned ) return Fail( "controlled-supervisor-cleanup-failed" ); if ( !RebindPorts( reason ) ) return Fail( reason );
+        const bool launcher_owned = launcher > 1 && ::getpgid( launcher ) == launcher && ::getsid( launcher ) == launcher;
+        const bool group_signalled = launcher_owned && ::kill( -launcher, SIGTERM ) == 0;
+        const std::string launch_failure = !launcher_owned ? "controlled-launcher-session-unverified"
+                                                           : !group_signalled ? "controlled-launcher-group-signal-failed" : "";
+        // After readiness, the supervisor has an independently handshaken
+        // test group.  Even if the launcher ownership check or signal fails,
+        // retain the report channel until that supervisor has completed (or a
+        // bounded deadline expires), then prove neutral port reuse before
+        // returning the launch failure.  No newly discovered process is ever
+        // signalled on these error paths.
+        const bool supervisor_cleaned = WaitForControlledCleanup( launcher, launcher_status, report_pipe[0], report );
+        ::close( report_pipe[0] );
+        std::string reason;
+        if ( !RebindPorts( reason ) ) return Fail( reason );
+        const bool cancelled = WIFEXITED( launcher_status ) && WEXITSTATUS( launcher_status ) == 128 + SIGTERM;
+        if ( !launch_failure.empty() )
+            return Fail( supervisor_cleaned && cancelled ? launch_failure : "controlled-supervisor-cleanup-unproven-after-" + launch_failure );
+        if ( !supervisor_cleaned || !cancelled ) return Fail( "controlled-supervisor-cleanup-failed" );
         std::fprintf( stdout, "P12_PROCESS_OWNERSHIP=passed launcher=%d launcher_group_signal=SIGTERM ports=rebound-all-four\n", static_cast<int>( launcher ) ); return 0;
     }
 }
