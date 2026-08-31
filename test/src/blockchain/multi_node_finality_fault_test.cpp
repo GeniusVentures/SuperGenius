@@ -1090,6 +1090,7 @@ namespace
     {
         int         process_exit = 0;
         bool        gtest_completed = false;
+        bool        gtest_failed = false;
         size_t      starts = 0;
         size_t      terminals = 0;
         bool        fingerprint_matches = false;
@@ -1106,20 +1107,33 @@ namespace
              !record.terminal_complete || !record.peer_released )
             return "invalid_or_partial_blocked";
         if ( record.outcome == "pass" && record.process_exit == 0 ) return "fully_attributed_complete_pass";
-        if ( record.outcome == "failure" && record.process_exit != 0 ) return "fully_attributed_complete_failure";
+        if ( record.outcome == "failure" && record.process_exit != 0 && record.gtest_failed )
+            return "fully_attributed_complete_failure";
         return "invalid_or_partial_blocked";
     }
 }
 
 TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartialAndForeignEvidence )
 {
-    PublisherObserverRecord complete_pass{ 0, true, 1, 1, true, true, true, "pass", false };
+    PublisherObserverRecord complete_pass{ 0, true, false, 1, 1, true, true, true, "pass", false };
     EXPECT_EQ( ClassifyPublisherObserverRecord( complete_pass ), "fully_attributed_complete_pass" );
 
     auto complete_failure = complete_pass;
     complete_failure.process_exit = 1;
     complete_failure.outcome = "failure";
+    complete_failure.gtest_failed = true;
     EXPECT_EQ( ClassifyPublisherObserverRecord( complete_failure ), "fully_attributed_complete_failure" );
+
+    auto nonzero_after_passing_gtest = complete_pass;
+    nonzero_after_passing_gtest.process_exit = 1;
+    nonzero_after_passing_gtest.outcome = "failure";
+    EXPECT_EQ( ClassifyPublisherObserverRecord( nonzero_after_passing_gtest ), "invalid_or_partial_blocked" );
+
+    auto nonzero_after_unknown_gtest = complete_pass;
+    nonzero_after_unknown_gtest.process_exit = 1;
+    nonzero_after_unknown_gtest.gtest_completed = false;
+    nonzero_after_unknown_gtest.outcome = "failure";
+    EXPECT_EQ( ClassifyPublisherObserverRecord( nonzero_after_unknown_gtest ), "invalid_or_partial_blocked" );
 
     auto partial = complete_pass;
     partial.terminals = 0;
