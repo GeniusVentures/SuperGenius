@@ -885,7 +885,7 @@ namespace sgns::trustedpeer
             {
                 return outcome::failure( Error::STALE_HEAD );
             }
-            if ( candidate.version != 1 || !candidate_hash || !current_hash )
+            if ( !candidate_hash || !current_hash )
             {
                 return outcome::failure( Error::VERSION_DECREASE );
             }
@@ -899,6 +899,13 @@ namespace sgns::trustedpeer
                  !VerifyProof( current.policy, current.policy.burn_threshold, proof, signed_bytes ) )
             {
                 return outcome::failure( Error::INVALID_BURN_PROOF );
+            }
+            // Re-committing the exact durable candidate (the refresh-driven vs
+            // admin/peer-driven activation race) is benign — return the durable
+            // state instead of failing as a downgrade attempt.
+            if ( candidate.version != 1 )
+            {
+                return current;
             }
             std::vector<Write> writes{
                 { Buffer( BurnRecordKey( network_id_, candidate.version, *candidate_hash ) ),
