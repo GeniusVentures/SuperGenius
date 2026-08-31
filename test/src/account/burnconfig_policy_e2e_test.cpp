@@ -175,7 +175,10 @@ namespace
         {
             SGProcessing::TaskResult result;
             auto *subtask = result.add_subtask_results();
+            subtask->set_subtaskid( "burn-e2e-subtask" );
             subtask->set_node_address( account_->GetAddress() );
+            subtask->set_developer_address( "0xcafe" );
+            subtask->set_developer_cut( 350000 );
             const auto &bytes = token_id_.bytes();
             subtask->set_token_id( bytes.data(), bytes.size() );
             auto paid = manager_->PayEscrow( escrow_path, result, nullptr );
@@ -213,7 +216,10 @@ namespace
         {
             SGProcessing::TaskResult result;
             auto *subtask = result.add_subtask_results();
+            subtask->set_subtaskid( "burn-e2e-subtask" );
             subtask->set_node_address( account_->GetAddress() );
+            subtask->set_developer_address( "0xcafe" );
+            subtask->set_developer_cut( 350000 );
             const auto &bytes = token_id_.bytes();
             subtask->set_token_id( bytes.data(), bytes.size() );
             return result;

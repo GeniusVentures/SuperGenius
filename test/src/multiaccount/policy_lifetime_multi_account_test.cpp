@@ -163,7 +163,10 @@ namespace sgns
         {
             SGProcessing::TaskResult result;
             auto *subtask = result.add_subtask_results();
+            subtask->set_subtaskid( "policy-lifetime-subtask" );
             subtask->set_node_address( node->account_->GetAddress() );
+            subtask->set_developer_address( "0xcafe" );
+            subtask->set_developer_cut( 350000 );
             const auto token_id = TokenID::FromBytes( { 0x00 } );
             const auto &bytes = token_id.bytes();
             subtask->set_token_id( bytes.data(), bytes.size() );
