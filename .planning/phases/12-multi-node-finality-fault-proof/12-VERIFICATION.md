@@ -1,34 +1,60 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-verified: 2026-08-25T18:55:21Z
+verified: 2026-08-31T17:22:42Z
 status: gaps_found
-score: 3/5 must-haves verified
+score: 1/5 must-haves verified
 overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 2/5
+  gaps_closed: []
+  gaps_remaining:
+    - "Late-contender and passive-recipient real-socket proof cannot get past the public topology readiness predicate."
+    - "The complete three-boundary restart proof remains unestablished by a fresh successful production-path run."
+    - "Publisher-loss still records a real-socket readiness failure and no completed failover proof."
+  regressions:
+    - "The previously verified same-burn contention scenario now fails in a fresh focused real-socket process at public topology readiness, before a certificate is produced."
 gaps:
-  - truth: "Restart scenarios before certificate arrival, after durable certificate acceptance, and during mint application preserve the original vote and produce no duplicate mint."
+  - truth: "A multi-node production-path scenario with competing proposals for one burn produces one canonical slot, one authoritative certificate, and one exact winning proposal."
     status: failed
-    reason: "The clean real-socket target fails TEST-04: RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce times out waiting for the four peers to re-establish the libp2p connection and consensus-topic mesh."
+    reason: "The named fresh contention regression cannot establish its validator topology and then times out waiting for a durable certificate."
     artifacts:
       - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
-        issue: "ConnectAndWaitForPeers at line 424 timed out during the restart scenario in the verifier's clean serial CTest run."
+        issue: "SameBurnContentionUsesOneCanonicalSlotAndExactMint fails at ConnectAndWaitForPeers (line 1119) and later at certificate convergence (line 2053)."
     missing:
-      - "Make the durable-boundary restart scenario reliably reconnect all four recreated peers, then obtain a clean passing CTest result."
+      - "A reliable public real-PubSub topology that lets the contention scenario reach and assert its canonical certificate and exact-Mint outcomes."
+  - truth: "A late contender cannot acquire a second usable vote or certificate for a slot, and PubSub recipients neither write the certificate key nor stall on a CID they wrote themselves."
+    status: failed
+    reason: "The named scenario fails before its no-second-vote and passive-recipient assertions can be completed."
+    artifacts:
+      - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
+        issue: "LateContenderAndPassiveRecipientRemainReceiveOnly times out at the line-1119 topology predicate, then at active-vote publication and no-replacement predicates (lines 2151 and 2161)."
+    missing:
+      - "A passing real-socket late-contender/passive-recipient execution retaining the zero-authoritative-write and durable recovery assertions."
+  - truth: "Restart scenarios before certificate arrival, after durable certificate acceptance, and during mint application preserve the original vote and produce no duplicate mint."
+    status: partial
+    reason: "The isolated raw active-vote diagnostic is implemented, but it is not the three-boundary end-to-end proof and no fresh successful full restart scenario was obtained; its shared reconnect topology is currently failing in the suite."
+    artifacts:
+      - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
+        issue: "RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce remains dependent on ConnectPeers/RestartAndReconnect, whose public topology predicate demonstrably fails in fresh peer scenarios."
+    missing:
+      - "A clean successful real-socket execution of all vote, accepted-certificate, and Mint-before-marker restart boundaries."
   - truth: "Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records."
     status: failed
-    reason: "The clean real-socket target fails TEST-05 after CRDT-first publisher-loss recovery: AssertSingleDurableMint expected a freshly recreated peer's Mint-effect counter to be 0 but observed 1."
+    reason: "Collector-attributed real publisher-loss children are deliberately classified as complete readiness failures with repair_authorization=none; that observes the blocker but does not execute the publisher-loss/failover proof."
     artifacts:
       - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
-        issue: "Line 544 assertion failed in PublisherLossAfterPersistenceUsesDeterministicFailover; the phase cannot presently supply a passing regression proof of exact-once publisher-loss recovery."
+        issue: "RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch asserts boundary=zero-consensus-topic-mesh/state=zero/error=no-consensus-neighbor and expects no authorization, while PublisherLossAfterPersistenceUsesDeterministicFailover reaches ConnectPeers before persistence or publisher stop."
     missing:
-      - "Resolve the restart/counter behavior and demonstrate a clean TEST-05 pass while preserving CRDT-first recovery and no successor certificate re-advertisement."
+      - "A passing real-socket publisher-loss run that reaches persistence-before-advertisement, publisher stop, ordinary recovery, and exact durable state checks."
 ---
 
 # Phase 12: Multi-Node Finality Fault Proof Verification Report
 
 **Phase Goal:** Operators have production-path regression proof that canonical slot finality remains safe and live through contention, propagation disorder, publisher loss, and restart.
-**Verified:** 2026-08-25T18:55:21Z
+**Verified:** 2026-08-31T17:22:42Z
 **Status:** gaps_found
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after prior gap closure work
 
 ## Goal Achievement
 
@@ -36,82 +62,84 @@ gaps:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Competing proposals for one burn produce one canonical slot, authoritative certificate, and exact winner. | ✓ VERIFIED | Clean real-socket CTest passed `SameBurnContentionUsesOneCanonicalSlotAndExactMint` in 16.664s. The scenario compares equal slot IDs, submits through public `CreateProposal`/`SubmitProposal`, checks the slot certificate's embedded winning hash, and reopens every peer root. |
-| 2 | A late contender cannot obtain a second usable vote/certificate; recipients stay receive-only. | ✓ VERIFIED | Clean CTest passed `LateContenderAndPassiveRecipientRemainReceiveOnly` in 17.153s. It checks durable active-vote identity before and after late submissions, passive `CertificateWriteAttempts == 0`, notification/readback, one winner output, and post-restart state. |
-| 3 | Restart at vote, accepted-certificate, and Mint boundaries preserves the vote and causes no duplicate Mint. | ✗ FAILED | Clean CTest failed `RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce` after 53.410s: `ConnectAndWaitForPeers` timed out at line 424 waiting for the public libp2p connection and consensus mesh. |
-| 4 | Publisher loss proves persistence-before-advertisement and safe deterministic recovery without conflicting slot authority. | ✗ FAILED | Static ordering is correct, but clean CTest failed `PublisherLossAfterPersistenceUsesDeterministicFailover` after 18.668s: a recreated peer reported Mint effects `1` where the durable assertion expected `0` (line 544). A regression proof must pass to establish this truth. |
-| 5 | The suite uses production PubSub, CRDT, RocksDB persistence, and Mint ingress—not local-author shortcuts. | ✓ VERIFIED | Clean CTest passed `ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress` in 17.194s; the four-peer fixture constructs real `GossipPubSub`/`GlobalDB`, invokes public proposal APIs, and observes registered Mint effects. Static source gate found no direct handlers, direct CRDT writes, forced timers, mock transport, or sleep synchronization. |
+| 1 | Competing same-burn proposals produce one slot, certificate, and exact winner. | ✗ FAILED | Fresh `SameBurnContentionUsesOneCanonicalSlotAndExactMint` fails line 1119 topology readiness, then line 2053 certificate convergence; no certificate exists at line 2056. |
+| 2 | A late contender cannot gain a second vote/certificate and passive recipients remain receive-only/live. | ✗ FAILED | Fresh named late-contender test hits the same topology failure, then times out at durable active-vote publication and no-replacement predicates. |
+| 3 | Vote, accepted-certificate, and Mint-boundary restarts retain the exact vote and mint once. | ✗ FAILED | The raw active-vote diagnostic is a useful narrow seam, but it does not replace a fresh passing execution of all three restart boundaries; shared reconnect readiness is currently red. |
+| 4 | Publisher loss proves persist-before-advertise and deterministic non-conflicting recovery. | ✗ FAILED | The new parent collector attributes actual publisher-loss children to `zero-consensus-topic-mesh`; its asserted decision is `repair_authorization=none`, not a successful failover. |
+| 5 | The regression suite uses production PubSub, CRDT, RocksDB, consensus, and Mint ingress, without local-author shortcuts. | ✓ VERIFIED | The fixture starts real `GossipPubSub` and `GlobalDB`, submits public proposals through `ConsensusManager::SubmitProposal`, reads certificates by slot, and uses registered `TransactionManager` Mint handling. The Phase-12 test delta has no direct certificate receive/handler, CRDT write, mock, forced timer, or sleep synchronization. |
 
-**Score:** 3/5 truths verified
+**Score:** 1/5 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `test/src/blockchain/multi_node_finality_fault_test.cpp` | Persistent four-peer production-route audit and all TEST-01–05 scenarios | ⚠️ PARTIAL | Exists and is substantive (1,147 lines; five named scenarios); scenario wiring is real, but the TEST-04 and TEST-05 behaviors fail in a clean execution. |
-| `test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp` | Production Blockchain + TransactionManager lifecycle compatibility | ✓ VERIFIED | Exists and substantive; uses real `GossipPubSub`, `GlobalDB`, `Blockchain::New`, `TransactionManager::New`, stop/recreate at the unchanged root, and `AddPeers`. Its CTest passed in 6.12s. |
-| `test/src/blockchain/CMakeLists.txt` | Enabled bounded normal CTest registration | ✓ VERIFIED | Both real-socket targets are registered with `RUN_SERIAL TRUE`; the fault target has `TIMEOUT 300`. |
-| `src/blockchain/Consensus.hpp` / `.cpp` | Friend-only observers and durable-write boundaries | ✓ VERIFIED | Friend access is private; production path increments write counters around `PutConvergentImmutable`, pauses only after success, then calls the unchanged `Publish`. |
-| `src/account/TransactionManager.hpp` / `.cpp` | Friend-only Mint observer after effects and before bridge marker | ✓ VERIFIED | `ParseTransaction` succeeds before the counter/barrier; `PersistBridgeExecutedMarker` remains afterward. |
+| `test/src/blockchain/multi_node_finality_fault_test.cpp` | Real-socket four-peer route plus TEST-01–TEST-05 scenarios | ⚠️ PARTIAL | 2,617 substantive lines; registered and wired, but current focused production scenarios fail before finality. |
+| `test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp` | Production `Blockchain` + `TransactionManager` lifecycle composition | ✓ VERIFIED | Exists, substantive, and remains registered by `test/src/blockchain/CMakeLists.txt`. |
+| `test/src/blockchain/CMakeLists.txt` | Normal bounded serial CTest registration | ✓ VERIFIED | Registers `multi_node_finality_fault_test` with `TIMEOUT 300` and `RUN_SERIAL TRUE`. |
+| `src/blockchain/Consensus.cpp` | Durable active-vote/certificate observation boundaries | ✓ VERIFIED | `PersistOrLoadExactActiveVote`, `RecoverActiveVotes`, and `ReleaseActiveVoteForAcceptedSlot` are connected; immutable certificate persistence occurs before normal `Publish`. |
+| `src/account/TransactionManager.cpp` | Mint-effect observation before durable marker | ✓ VERIFIED | The boundary is ordered after successful `ParseTransaction` and before `PersistBridgeExecutedMarker`. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| Fault test | `ConsensusManager::SubmitProposal` | Public production submission | ✓ WIRED | Every scenario uses `CreateProposal` then `SubmitProposal`; no direct receive/handler path appears in the test source. |
-| `Consensus.cpp` | `GlobalDB::PutConvergentImmutable` → `Publish` | Durable certificate before notification | ✓ WIRED | Lines 2107–2127 perform immutable write, increment success, optionally pause, then construct and publish the certificate message. |
-| Certificate callback | registered TransactionManager Mint consumer | committed readback → `ParseTransaction` → marker | ✓ WIRED | Accepted certificate work calls its handler only after durable readback; `TransactionManager.cpp` lines 5441–5450 parse effects before persisting the bridge marker. |
-| Fault test | peer lifecycle | `StopPeer`/recreate unchanged root/`AddPeers` | ✓ WIRED | `RestartPeer` rebuilds the same root; `ConnectAndWaitForPeers` uses public `AddPeers` and public host/topic readiness. Its execution reliability is the TEST-04 gap above. |
-| Publisher-loss test | CRDT-first recovery | persisted original record, original notification count zero, later-round eligibility, restart/reconnect | ⚠️ PARTIAL | The code intentionally does not add successor certificate re-advertisement, consistent with the Phase 12 decision that CRDT authority precedes PubSub cleanup. The final exact-once assertion fails, so the end-to-end link is not proven. |
+| Fault test | `ConsensusManager::SubmitProposal` | Public proposal ingress | ✓ WIRED | Every substantive scenario calls public proposal creation/submission. |
+| `Consensus.cpp` | `PutConvergentImmutable` then `Publish` | Persistence-before-advertisement | ✓ WIRED | Lines 2115–2135 persist successfully, then cross the test barrier, then publish. |
+| `Consensus.cpp` | active-vote recovery/release | durable record → recovery → accepted-certificate release | ✓ WIRED | Lines 1183, 1282, 1358, and 3770 show the production path. |
+| `TransactionManager.cpp` | `PersistBridgeExecutedMarker` | Mint effects → barrier → marker | ✓ WIRED | Lines 5444–5450 preserve the required order. |
+| Four-peer fixture | Real topology and finality flow | `AddPeers` → connected-host/topic predicate → PubSub/CRDT | ✗ NOT WIRED AT RUNTIME | The source is connected, but fresh runs fail the line-1119 predicate, so the dynamic flow does not reach the assertions. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | --- | --- | --- | --- | --- |
-| Four-peer fault fixture | proposals/certificates/Mint effects | public `SubmitProposal` → real GossipPubSub → consensus → immutable CRDT → committed certificate handler → TransactionManager | Yes; the clean audit and contention/late-recipient scenarios passed over local sockets | ✓ FLOWING |
-| Restart fixture | recreated peers and durable state | same RocksDB roots reopened by `RestartPeer`, then public `AddPeers` | Real durable state, but mesh reconnection timed out in TEST-04 | ✗ DISCONNECTED IN EXECUTION |
-| Publisher-loss fixture | slot certificate and Mint-effect counter | successful immutable write precedes paused notification; recovery reads CRDT finality | Durable record flows, but the final fresh-instance exact-once counter assertion fails | ⚠️ INCOMPLETE PROOF |
+| Contention/late/restart/publisher scenarios | proposal → slot certificate → exact Mint/marker | Public consensus ingress → GossipPubSub/CRDT/RocksDB → registered Mint consumer | No: fresh topology readiness fails before certificate flow. | ✗ DISCONNECTED |
+| Active-vote diagnostic | direct durable vote record and recovered proposal ID | Same-root RocksDB snapshot → `RecoverActiveVotes` | Yes in the isolated diagnostic, but not sufficient for all restart boundaries. | ⚠️ PARTIAL |
+| Publisher observer collector | child output/frame → opaque evidence decision | fork/exec child capture, `waitpid`, validated control frame | Yes; it produces attributable `repair_authorization=none` evidence, not finality recovery. | ✓ FLOWING (diagnostic only) |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | --- | --- | --- | --- |
-| Build current Phase 12 targets | `cmake --build build/OSX/Release --target multi_node_finality_fault_test multi_node_finality_fault_compatibility_smoke_test --parallel 4` | Both targets built successfully. | ✓ PASS |
-| Production composition/lifecycle smoke | `ctest --test-dir build/OSX/Release --output-on-failure -R '^(multi_node_finality_fault_compatibility_smoke_test)$'` | Passed in 6.12s. | ✓ PASS |
-| All five four-peer scenarios, serial local sockets | `ctest --test-dir build/OSX/Release --output-on-failure -R '^multi_node_finality_fault_test$'` | 3/5 passed (audit 17.194s, contention 16.664s, late/passive 17.153s); restart and publisher-loss failed. Total 123.11s. | ✗ FAIL |
+| Focused target build | `cmake --build build/OSX/Release --target multi_node_finality_fault_test --parallel 4` | Completed successfully. | ✓ PASS |
+| Registered serial CTest | `ctest --test-dir build/OSX/Release --output-on-failure --timeout 300 -R '^multi_node_finality_fault_test$'` | Started, but the available runner returned no terminal result; it is not counted as pass evidence. | ? INCONCLUSIVE |
+| Fresh same-burn contention | `multi_node_finality_fault_test --gtest_filter='FinalityFaultNetwork.SameBurnContentionUsesOneCanonicalSlotAndExactMint' --gtest_brief=1` | Failed in 32.288s: line 1119 topology timeout, line 2053 certificate timeout, no certificate at line 2056. | ✗ FAIL |
+| Fresh late/passive scenario | `multi_node_finality_fault_test --gtest_filter='FinalityFaultNetwork.LateContenderAndPassiveRecipientRemainReceiveOnly' --gtest_brief=1` | Line 1119 topology timeout, then lines 2151 and 2161 active-vote/no-replacement timeouts. | ✗ FAIL |
+| Route/shortcut scan | Phase-12 source delta scan | No new direct receive/author handler, CRDT write, mock transport, forced timing, or sleep synchronization found. | ✓ PASS |
 
 ### Probe Execution
 
-Step 7c: SKIPPED — no phase-declared or conventional `scripts/**/tests/probe-*.sh` probes exist.
+Step 7c: SKIPPED — no declared or conventional `scripts/**/tests/probe-*.sh` probes exist.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| TEST-01 | 12-02 | Same-burn contention produces one slot, certificate, and winning proposal. | ✓ SATISFIED | Named contention scenario passed in the clean target. |
-| TEST-02 | 12-02 | Late contender cannot obtain a second usable vote or certificate. | ✓ SATISFIED | Named late-contender scenario passed; durable active-vote identity is asserted. |
-| TEST-03 | 12-02 | PubSub recipient does not write certificate authority or stall on self-written CID. | ✓ SATISFIED | Named passive-recipient scenario passed with zero authority writes, notification/readback, and Mint completion. |
-| TEST-04 | 12-03 | Three restart boundaries preserve vote and avoid duplicate Mint. | ✗ BLOCKED | Named restart scenario fails cleanly at mesh reconnection. |
-| TEST-05 | 12-03 | Publisher loss proves persistence-before-advertisement and deterministic recovery without conflict. | ✗ BLOCKED | Named CRDT-first publisher-loss scenario fails its final exact-once durable assertion. |
-| TEST-06 | 12-01 | Tests use production PubSub, CRDT, persistence, and Mint ingress. | ✓ SATISFIED | Audit scenario and compatibility smoke use real runtime composition and passed; source gate is clean. |
+| TEST-01 | 12-02 | Same-burn contention yields one slot, certificate, and winner. | ✗ BLOCKED | Fresh named test fails before certificate creation. |
+| TEST-02 | 12-02 | Late contender cannot obtain a second usable vote/certificate. | ✗ BLOCKED | Fresh named test fails before its decisive durable-vote assertions. |
+| TEST-03 | 12-02 | Recipient remains receive-only and avoids self-CID stall. | ✗ BLOCKED | It shares the failed named late/passive execution, so zero-write/recovery behavior is not demonstrated. |
+| TEST-04 | 12-03, 12-04, 12-05 | Three restart boundaries retain vote and avoid duplicate Mint. | ✗ BLOCKED | Narrow active-vote instrumentation exists, but no fresh complete three-boundary success and its reconnect path is presently failing. |
+| TEST-05 | 12-03, 12-04, 12-08–12-10 | Publisher loss persists before advertising and recovers without conflict. | ✗ BLOCKED | Collector-attributed evidence confirms a pre-fault readiness failure, not persistence/failover completion. |
+| TEST-06 | 12-01 | Production PubSub/CRDT/RocksDB/Mint route only. | ✓ SATISFIED | Static source and wiring inspection confirm the required production route and no shortcut. |
 
-No requirement is orphaned: Plan 01 claims TEST-06, Plan 02 claims TEST-01 through TEST-03, and Plan 03 claims TEST-04 through TEST-05.
+No requirements are orphaned. Roadmap analysis contains no later milestone phase, so no gap is deferred.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `src/blockchain/Consensus.cpp` | 2822 | Existing `TODO` | ℹ️ Info | Pre-dates Phase 12 (`52fc1c253`, 2026-02-07); unrelated to the finality proof. |
-| `src/account/TransactionManager.cpp` | 869, 931, 2655, 3046, 3194, 4461 | Existing `TODO` comments | ℹ️ Info | All pre-date Phase 12 and are outside its new fault seams; no Phase-12-introduced `TBD`/`FIXME`/`XXX` marker found. |
-| `test/src/blockchain/multi_node_finality_fault_test.cpp` | — | Direct local-author/CRDT-write/forced-timer/sleep shortcut scan | ✓ Clean | No forbidden pattern matched. |
+| `test/src/blockchain/multi_node_finality_fault_test.cpp` | 1111–1119 | Bounded public topology readiness fails in fresh real-socket scenarios. | 🛑 Blocker | Prevents TEST-01–TEST-05 end-to-end proof from reaching finality conditions. |
+| `test/src/blockchain/multi_node_finality_fault_test.cpp` | 1859–1892 | Collector assertions encode `fully_attributed_complete_failure` and `repair_authorization=none` for real publisher-loss children. | ℹ️ Info | Correctly fails closed; does not repair or prove TEST-05. |
+| Phase-12 test delta | — | No new TBD/FIXME/XXX, placeholder, direct-author/receive, CRDT-write, mock, forced-timer, or sleep synchronization marker. | ℹ️ Info | TEST-06 route discipline is preserved. |
 
 ### Gaps Summary
 
-The implementation has real, non-stub production-path coverage and cleanly demonstrates contention, late-contender/passive-recipient safety, and production-route discipline. It does **not** yet deliver the phase goal because the only end-to-end proof for restart boundaries and CRDT-first publisher loss fails in the verifier's clean serial run.
+The new collector-attributed publisher records close an evidence-attribution problem only. They explicitly classify the actual publisher-loss child as a completed readiness failure and preserve a fail-closed `repair_authorization=none`; they do not move persistence, publisher stop, failover, or durable exact-once assertions past the failed topology predicate.
 
-The earlier combined-Ctest failure was order-dependent `SameBurnContentionUsesOneCanonicalSlotAndExactMint` bridge-marker failure. The post-fix topology/RAII/serialization work has enough current evidence to clear that particular scenario: the same-burn case passed in this clean target. It does not clear the phase: the clean target remains red for separate restart mesh and publisher-loss exact-once-counter failures. No later milestone phase exists to defer either gap to.
+The regression is broader than the prior report: a fresh isolated TEST-01 contention run now fails at the same public topology readiness predicate, and the fresh TEST-02/03 run does too. Because the primary production-path proof cannot pass even its contention baseline, the phase goal is not achieved. This is an Escalation Gate: restore reliable real-socket topology/finality execution, then rerun the whole registered serial target before advancing.
 
 ---
 
-_Verified: 2026-08-25T18:55:21Z_
+_Verified: 2026-08-31T17:22:42Z_
 _Verifier: the agent (gsd-verifier)_
