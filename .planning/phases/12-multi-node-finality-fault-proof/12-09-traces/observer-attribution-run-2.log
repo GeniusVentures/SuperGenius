@@ -1,0 +1,431 @@
+Running main() from /Users/henriqueklein/gnus/thirdparty/GTest/googletest/src/gtest_main.cc
+Note: Google Test filter = FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from FinalityFaultNetwork
+[ RUN      ] FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Path to keypairs CRDT.Datastore.TEST/unit_test_1
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Peer ID from public key: 12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF
+Current limits: 1048575 (soft), 9223372036854775807 (hard)
+New limits set successfully: 16384 (soft), 9223372036854775807 (hard)
+Initialized relay addresses
+[2026-08-31 08:19:48][info][GlobalDB] Opening database /Users/henriqueklein/gnus/SuperGenius/CRDT.Datastore.TEST.unit_1
+[2026-08-31 08:19:48][debug][GraphsyncDAGSyncer] GraphSyncer created 5174323544 
+[2026-08-31 08:19:48][info][CrdtDatastore] crdt Datastore created. Number of heads: 0 Current max-height: 0
+[2026-08-31 08:19:48.920642000][th:119569697][info] GossipPubSub /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF: Starting PubSub service
+[2026-08-31 08:19:48.920751000][th:119569724][info] GossipPubSub /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF: PubSub subscribed to topic 'CRDT.Datastore.TEST.Channel.3.7.144'
+[2026-08-31 08:19:48.920775000][th:119569724][info] GossipPubSub Starting address monitoring system for mobile network changes
+[2026-08-31 08:19:48.920779000][th:119569724][info] GossipPubSub === CURRENT NETWORK STATE ===
+[2026-08-31 08:19:48.920788000][th:119569724][info] GossipPubSub Primary listening address: /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF
+[2026-08-31 08:19:48.920791000][th:119569724][info] GossipPubSub Host peer info addresses (0):
+[2026-08-31 08:19:48.920794000][th:119569724][info] GossipPubSub Additional addresses we track (0):
+[2026-08-31 08:19:48.920796000][th:119569724][info] GossipPubSub Listening addresses (1):
+[2026-08-31 08:19:48.920799000][th:119569724][info] GossipPubSub   -> /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF
+[2026-08-31 08:19:48.920802000][th:119569724][info] GossipPubSub Interface addresses (0):
+[2026-08-31 08:19:48.920804000][th:119569724][info] GossipPubSub === RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.920807000][th:119569724][info] GossipPubSub Local address: /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF -> 0 raw observed, 0 activated+confirmed
+[2026-08-31 08:19:48.920809000][th:119569724][info] GossipPubSub TOTAL: 0 raw observed addresses, 0 activated+confirmed addresses
+[2026-08-31 08:19:48.920811000][th:119569724][info] GossipPubSub === END RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.920814000][th:119569724][info] GossipPubSub Observed addresses - all (0):
+[2026-08-31 08:19:48.920816000][th:119569724][info] GossipPubSub Observed addresses - confirmed only (0):
+[2026-08-31 08:19:48.920818000][th:119569724][info] GossipPubSub Relay addresses (0):
+[2026-08-31 08:19:48.920822000][th:119569724][warning] GossipPubSub Failed to get addresses from peer repository: not found
+[2026-08-31 08:19:48.920862000][th:119569724][info] GossipPubSub Found 1 valid network interfaces
+[2026-08-31 08:19:48.920865000][th:119569724][info] GossipPubSub Current network interfaces (1):
+[2026-08-31 08:19:48.920867000][th:119569724][info] GossipPubSub   -> 192.168.1.6
+[2026-08-31 08:19:48.920870000][th:119569724][info] GossipPubSub Active connections: 0
+[2026-08-31 08:19:48.920872000][th:119569724][info] GossipPubSub === PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.920874000][th:119569724][info] GossipPubSub NOTE: Observed addresses need to be seen by 4+ different peer groups to become 'activated'
+[2026-08-31 08:19:48.920877000][th:119569724][info] GossipPubSub NOTE: Current connections: 0, so max possible observers: 0
+[2026-08-31 08:19:48.920883000][th:119569724][info] GossipPubSub === END PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.920885000][th:119569724][info] GossipPubSub Connection manager stats:
+[2026-08-31 08:19:48.920887000][th:119569724][info] GossipPubSub   -> Max connections: 1000
+[2026-08-31 08:19:48.920888000][th:119569724][info] GossipPubSub   -> Current connections: 0
+[2026-08-31 08:19:48.920889000][th:119569724][info] GossipPubSub === END NETWORK STATE ===
+[2026-08-31 08:19:48.920910000][th:119569724][info] GossipPubSub /ip4/0.0.0.0/tcp/40001/p2p/12D3KooWK6znveywJxNod9Hh3vqjtFBJsqXtrbEfJFSygLdM22TF : PubSub service started
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Path to keypairs multi_node_finality_fault/publisher-loss-validator-one/keypair
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Peer ID from public key: 12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr
+Current limits: 16384 (soft), 9223372036854775807 (hard)
+New limits set successfully: 16384 (soft), 9223372036854775807 (hard)
+Initialized relay addresses
+[2026-08-31 08:19:48.922332000][th:119569697][info] GossipPubSub /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr: Starting PubSub service
+[2026-08-31 08:19:48.922367000][th:119569725][info] GossipPubSub Starting address monitoring system for mobile network changes
+[2026-08-31 08:19:48.922370000][th:119569725][info] GossipPubSub === CURRENT NETWORK STATE ===
+[2026-08-31 08:19:48.922376000][th:119569725][info] GossipPubSub Primary listening address: /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr
+[2026-08-31 08:19:48.922378000][th:119569725][info] GossipPubSub Host peer info addresses (0):
+[2026-08-31 08:19:48.922380000][th:119569725][info] GossipPubSub Additional addresses we track (0):
+[2026-08-31 08:19:48.922381000][th:119569725][info] GossipPubSub Listening addresses (1):
+[2026-08-31 08:19:48.922383000][th:119569725][info] GossipPubSub   -> /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr
+[2026-08-31 08:19:48.922385000][th:119569725][info] GossipPubSub Interface addresses (0):
+[2026-08-31 08:19:48.922386000][th:119569725][info] GossipPubSub === RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.922388000][th:119569725][info] GossipPubSub Local address: /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr -> 0 raw observed, 0 activated+confirmed
+[2026-08-31 08:19:48.922390000][th:119569725][info] GossipPubSub TOTAL: 0 raw observed addresses, 0 activated+confirmed addresses
+[2026-08-31 08:19:48.922392000][th:119569725][info] GossipPubSub === END RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.922393000][th:119569725][info] GossipPubSub Observed addresses - all (0):
+[2026-08-31 08:19:48.922395000][th:119569725][info] GossipPubSub Observed addresses - confirmed only (0):
+[2026-08-31 08:19:48.922396000][th:119569725][info] GossipPubSub Relay addresses (0):
+[2026-08-31 08:19:48.922398000][th:119569725][warning] GossipPubSub Failed to get addresses from peer repository: not found
+[2026-08-31 08:19:48.922420000][th:119569725][info] GossipPubSub Found 1 valid network interfaces
+[2026-08-31 08:19:48.922422000][th:119569725][info] GossipPubSub Current network interfaces (1):
+[2026-08-31 08:19:48.922424000][th:119569725][info] GossipPubSub   -> 192.168.1.6
+[2026-08-31 08:19:48.922426000][th:119569725][info] GossipPubSub Active connections: 0
+[2026-08-31 08:19:48.922427000][th:119569725][info] GossipPubSub === PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.922429000][th:119569725][info] GossipPubSub NOTE: Observed addresses need to be seen by 4+ different peer groups to become 'activated'
+[2026-08-31 08:19:48.922430000][th:119569725][info] GossipPubSub NOTE: Current connections: 0, so max possible observers: 0
+[2026-08-31 08:19:48.922432000][th:119569725][info] GossipPubSub === END PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.922433000][th:119569725][info] GossipPubSub Connection manager stats:
+[2026-08-31 08:19:48.922435000][th:119569725][info] GossipPubSub   -> Max connections: 1000
+[2026-08-31 08:19:48.922440000][th:119569725][info] GossipPubSub   -> Current connections: 0
+[2026-08-31 08:19:48.922441000][th:119569725][info] GossipPubSub === END NETWORK STATE ===
+26.08.31 08:19:48[38;2;128;128;128m.922665[0m  [38;2;255;069;000m[1mError   [0m  [1mListener[0m  [1mCannot listen to /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr: Operation not permitted[0m
+[2026-08-31 08:19:48.922741000][th:119569725][info] GossipPubSub /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr : PubSub service started
+[2026-08-31 08:19:48][info][GlobalDB] Opening database /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-one/rocksdb
+[2026-08-31 08:19:48][debug][GraphsyncDAGSyncer] GraphSyncer created 5174762232 
+[2026-08-31 08:19:48][info][CrdtDatastore] crdt Datastore created. Number of heads: 0 Current max-height: 0
+[2026-08-31 08:19:48][info][GeniusAccount] Secure storage ID path: /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-one/account/secure_storage_id
+[2026-08-31 08:19:48][error][GeniusAccount] Could not find existing Genius address, generating one from a random mnemonic
+[2026-08-31 08:19:48][warning][UTXOManager] Found UTXOs in storage, but there were none
+[2026-08-31 08:19:48][info][Blockchain] [6737d59b] Blockchain instance created with authorized full node: 8a33bdf1
+[2026-08-31 08:19:48][error][ValidatorRegistry] InitializeCache: registry content not found during cache init
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:48][info][ValidatorRegistry] RegisterFilter: result=true
+[2026-08-31 08:19:48][info][ValidatorRegistry] New: instance ready
+[2026-08-31 08:19:48.960086000][th:119569725][info] GossipPubSub /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr: PubSub subscribed to topic 'gnus-validator-registry.3.7.144'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?cert/[^/]+'
+[2026-08-31 08:19:48.960121000][th:119569725][info] GossipPubSub /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr: PubSub subscribed to topic 'consensus-channel-.3.7.144'
+[2026-08-31 08:19:48][warning][Blockchain] [6737d59b] Failed to request validator registry during blockchain init
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:48.960146000][th:119569725][info] GossipPubSub /ip4/0.0.0.0/tcp/54631/p2p/12D3KooWHQkZES7aqg2F3B3SMcfMLjSMpgcdGvAsXdrQrH6wtJHr: PubSub subscribed to topic 'consensus-channel-.3.7.144#datastore.3.7.144'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:48][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Path to keypairs multi_node_finality_fault/publisher-loss-validator-two/keypair
+[2026-08-31 08:19:48][info][KeyPairFileStorage] Peer ID from public key: 12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST
+Current limits: 16384 (soft), 9223372036854775807 (hard)
+New limits set successfully: 16384 (soft), 9223372036854775807 (hard)
+Initialized relay addresses
+[2026-08-31 08:19:48.961965000][th:119569697][info] GossipPubSub /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST: Starting PubSub service
+[2026-08-31 08:19:48.962014000][th:119569747][info] GossipPubSub Starting address monitoring system for mobile network changes
+[2026-08-31 08:19:48.962020000][th:119569747][info] GossipPubSub === CURRENT NETWORK STATE ===
+[2026-08-31 08:19:48.962029000][th:119569747][info] GossipPubSub Primary listening address: /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST
+[2026-08-31 08:19:48.962032000][th:119569747][info] GossipPubSub Host peer info addresses (0):
+[2026-08-31 08:19:48.962034000][th:119569747][info] GossipPubSub Additional addresses we track (0):
+[2026-08-31 08:19:48.962036000][th:119569747][info] GossipPubSub Listening addresses (1):
+[2026-08-31 08:19:48.962038000][th:119569747][info] GossipPubSub   -> /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST
+[2026-08-31 08:19:48.962039000][th:119569747][info] GossipPubSub Interface addresses (0):
+[2026-08-31 08:19:48.962041000][th:119569747][info] GossipPubSub === RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.962043000][th:119569747][info] GossipPubSub Local address: /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST -> 0 raw observed, 0 activated+confirmed
+[2026-08-31 08:19:48.962046000][th:119569747][info] GossipPubSub TOTAL: 0 raw observed addresses, 0 activated+confirmed addresses
+[2026-08-31 08:19:48.962047000][th:119569747][info] GossipPubSub === END RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:48.962049000][th:119569747][info] GossipPubSub Observed addresses - all (0):
+[2026-08-31 08:19:48.962050000][th:119569747][info] GossipPubSub Observed addresses - confirmed only (0):
+[2026-08-31 08:19:48.962052000][th:119569747][info] GossipPubSub Relay addresses (0):
+[2026-08-31 08:19:48.962055000][th:119569747][warning] GossipPubSub Failed to get addresses from peer repository: not found
+[2026-08-31 08:19:48.962092000][th:119569747][info] GossipPubSub Found 1 valid network interfaces
+[2026-08-31 08:19:48.962095000][th:119569747][info] GossipPubSub Current network interfaces (1):
+[2026-08-31 08:19:48.962097000][th:119569747][info] GossipPubSub   -> 192.168.1.6
+[2026-08-31 08:19:48.962099000][th:119569747][info] GossipPubSub Active connections: 0
+[2026-08-31 08:19:48.962100000][th:119569747][info] GossipPubSub === PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.962102000][th:119569747][info] GossipPubSub NOTE: Observed addresses need to be seen by 4+ different peer groups to become 'activated'
+[2026-08-31 08:19:48.962103000][th:119569747][info] GossipPubSub NOTE: Current connections: 0, so max possible observers: 0
+[2026-08-31 08:19:48.962105000][th:119569747][info] GossipPubSub === END PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:48.962106000][th:119569747][info] GossipPubSub Connection manager stats:
+[2026-08-31 08:19:48.962108000][th:119569747][info] GossipPubSub   -> Max connections: 1000
+[2026-08-31 08:19:48.962109000][th:119569747][info] GossipPubSub   -> Current connections: 0
+[2026-08-31 08:19:48.962111000][th:119569747][info] GossipPubSub === END NETWORK STATE ===
+26.08.31 08:19:48[38;2;128;128;128m.962168[0m  [38;2;255;069;000m[1mError   [0m  [1mListener[0m  [1mCannot listen to /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST: Operation not permitted[0m
+[2026-08-31 08:19:48.962274000][th:119569747][info] GossipPubSub /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST : PubSub service started
+[2026-08-31 08:19:48][info][GlobalDB] Opening database /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-two/rocksdb
+[2026-08-31 08:19:48][debug][GraphsyncDAGSyncer] GraphSyncer created 5209354600 
+[2026-08-31 08:19:48][info][CrdtDatastore] crdt Datastore created. Number of heads: 0 Current max-height: 0
+[2026-08-31 08:19:48][info][GeniusAccount] Secure storage ID path: /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-two/account/secure_storage_id
+[2026-08-31 08:19:48][error][GeniusAccount] Could not find existing Genius address, generating one from a random mnemonic
+[2026-08-31 08:19:49][warning][UTXOManager] Found UTXOs in storage, but there were none
+[2026-08-31 08:19:49][info][Blockchain] [7c502900] Blockchain instance created with authorized full node: 8a33bdf1
+[2026-08-31 08:19:49][error][ValidatorRegistry] InitializeCache: registry content not found during cache init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegisterFilter: result=true
+[2026-08-31 08:19:49][info][ValidatorRegistry] New: instance ready
+[2026-08-31 08:19:49.002115000][th:119569747][info] GossipPubSub /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST: PubSub subscribed to topic 'gnus-validator-registry.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?cert/[^/]+'
+[2026-08-31 08:19:49.002200000][th:119569747][info] GossipPubSub /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST: PubSub subscribed to topic 'consensus-channel-.3.7.144'
+[2026-08-31 08:19:49][warning][Blockchain] [7c502900] Failed to request validator registry during blockchain init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:49.002219000][th:119569747][info] GossipPubSub /ip4/0.0.0.0/tcp/54632/p2p/12D3KooWDtDVrKqcNUp4h1Ef76kPatN7Rr3BauvAwWCiefTCxUST: PubSub subscribed to topic 'consensus-channel-.3.7.144#datastore.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][KeyPairFileStorage] Path to keypairs multi_node_finality_fault/publisher-loss-validator-three/keypair
+[2026-08-31 08:19:49][info][KeyPairFileStorage] Peer ID from public key: 12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp
+Current limits: 16384 (soft), 9223372036854775807 (hard)
+New limits set successfully: 16384 (soft), 9223372036854775807 (hard)
+Initialized relay addresses
+[2026-08-31 08:19:49.003767000][th:119569697][info] GossipPubSub /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp: Starting PubSub service
+[2026-08-31 08:19:49.003815000][th:119569771][info] GossipPubSub Starting address monitoring system for mobile network changes
+[2026-08-31 08:19:49.003820000][th:119569771][info] GossipPubSub === CURRENT NETWORK STATE ===
+[2026-08-31 08:19:49.003828000][th:119569771][info] GossipPubSub Primary listening address: /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp
+[2026-08-31 08:19:49.003830000][th:119569771][info] GossipPubSub Host peer info addresses (0):
+[2026-08-31 08:19:49.003832000][th:119569771][info] GossipPubSub Additional addresses we track (0):
+[2026-08-31 08:19:49.003834000][th:119569771][info] GossipPubSub Listening addresses (1):
+[2026-08-31 08:19:49.003835000][th:119569771][info] GossipPubSub   -> /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp
+[2026-08-31 08:19:49.003842000][th:119569771][info] GossipPubSub Interface addresses (0):
+[2026-08-31 08:19:49.003843000][th:119569771][info] GossipPubSub === RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:49.003846000][th:119569771][info] GossipPubSub Local address: /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp -> 0 raw observed, 0 activated+confirmed
+[2026-08-31 08:19:49.003848000][th:119569771][info] GossipPubSub TOTAL: 0 raw observed addresses, 0 activated+confirmed addresses
+[2026-08-31 08:19:49.003849000][th:119569771][info] GossipPubSub === END RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:49.003851000][th:119569771][info] GossipPubSub Observed addresses - all (0):
+[2026-08-31 08:19:49.003853000][th:119569771][info] GossipPubSub Observed addresses - confirmed only (0):
+[2026-08-31 08:19:49.003854000][th:119569771][info] GossipPubSub Relay addresses (0):
+[2026-08-31 08:19:49.003856000][th:119569771][warning] GossipPubSub Failed to get addresses from peer repository: not found
+[2026-08-31 08:19:49.003888000][th:119569771][info] GossipPubSub Found 1 valid network interfaces
+[2026-08-31 08:19:49.003891000][th:119569771][info] GossipPubSub Current network interfaces (1):
+[2026-08-31 08:19:49.003892000][th:119569771][info] GossipPubSub   -> 192.168.1.6
+[2026-08-31 08:19:49.003894000][th:119569771][info] GossipPubSub Active connections: 0
+[2026-08-31 08:19:49.003895000][th:119569771][info] GossipPubSub === PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:49.003897000][th:119569771][info] GossipPubSub NOTE: Observed addresses need to be seen by 4+ different peer groups to become 'activated'
+[2026-08-31 08:19:49.003898000][th:119569771][info] GossipPubSub NOTE: Current connections: 0, so max possible observers: 0
+[2026-08-31 08:19:49.003900000][th:119569771][info] GossipPubSub === END PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:49.003901000][th:119569771][info] GossipPubSub Connection manager stats:
+[2026-08-31 08:19:49.003903000][th:119569771][info] GossipPubSub   -> Max connections: 1000
+[2026-08-31 08:19:49.003904000][th:119569771][info] GossipPubSub   -> Current connections: 0
+[2026-08-31 08:19:49.003905000][th:119569771][info] GossipPubSub === END NETWORK STATE ===
+26.08.31 08:19:49[38;2;128;128;128m.003963[0m  [38;2;255;069;000m[1mError   [0m  [1mListener[0m  [1mCannot listen to /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp: Operation not permitted[0m
+[2026-08-31 08:19:49.004054000][th:119569771][info] GossipPubSub /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp : PubSub service started
+[2026-08-31 08:19:49][info][GlobalDB] Opening database /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-three/rocksdb
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] GraphSyncer created 5210403672 
+[2026-08-31 08:19:49][info][CrdtDatastore] crdt Datastore created. Number of heads: 0 Current max-height: 0
+[2026-08-31 08:19:49][info][GeniusAccount] Secure storage ID path: /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-validator-three/account/secure_storage_id
+[2026-08-31 08:19:49][error][GeniusAccount] Could not find existing Genius address, generating one from a random mnemonic
+[2026-08-31 08:19:49][warning][UTXOManager] Found UTXOs in storage, but there were none
+[2026-08-31 08:19:49][info][Blockchain] [b9baaa44] Blockchain instance created with authorized full node: 8a33bdf1
+[2026-08-31 08:19:49][error][ValidatorRegistry] InitializeCache: registry content not found during cache init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegisterFilter: result=true
+[2026-08-31 08:19:49][info][ValidatorRegistry] New: instance ready
+[2026-08-31 08:19:49.039200000][th:119569771][info] GossipPubSub /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp: PubSub subscribed to topic 'gnus-validator-registry.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?cert/[^/]+'
+[2026-08-31 08:19:49.039225000][th:119569771][info] GossipPubSub /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp: PubSub subscribed to topic 'consensus-channel-.3.7.144'
+[2026-08-31 08:19:49][warning][Blockchain] [b9baaa44] Failed to request validator registry during blockchain init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:49.039244000][th:119569771][info] GossipPubSub /ip4/0.0.0.0/tcp/54633/p2p/12D3KooWRn8ubz31BLpHESp6W47RnNpaKgAvy2fFwnnxNortbfJp: PubSub subscribed to topic 'consensus-channel-.3.7.144#datastore.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][KeyPairFileStorage] Path to keypairs multi_node_finality_fault/publisher-loss-passive/keypair
+[2026-08-31 08:19:49][info][KeyPairFileStorage] Peer ID from public key: 12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj
+Current limits: 16384 (soft), 9223372036854775807 (hard)
+New limits set successfully: 16384 (soft), 9223372036854775807 (hard)
+Initialized relay addresses
+[2026-08-31 08:19:49.040592000][th:119569697][info] GossipPubSub /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj: Starting PubSub service
+[2026-08-31 08:19:49.040633000][th:119569792][info] GossipPubSub Starting address monitoring system for mobile network changes
+[2026-08-31 08:19:49.040635000][th:119569792][info] GossipPubSub === CURRENT NETWORK STATE ===
+[2026-08-31 08:19:49.040641000][th:119569792][info] GossipPubSub Primary listening address: /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj
+[2026-08-31 08:19:49.040643000][th:119569792][info] GossipPubSub Host peer info addresses (0):
+[2026-08-31 08:19:49.040644000][th:119569792][info] GossipPubSub Additional addresses we track (0):
+[2026-08-31 08:19:49.040646000][th:119569792][info] GossipPubSub Listening addresses (1):
+[2026-08-31 08:19:49.040647000][th:119569792][info] GossipPubSub   -> /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj
+[2026-08-31 08:19:49.040649000][th:119569792][info] GossipPubSub Interface addresses (0):
+[2026-08-31 08:19:49.040650000][th:119569792][info] GossipPubSub === RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:49.040652000][th:119569792][info] GossipPubSub Local address: /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj -> 0 raw observed, 0 activated+confirmed
+[2026-08-31 08:19:49.040653000][th:119569792][info] GossipPubSub TOTAL: 0 raw observed addresses, 0 activated+confirmed addresses
+[2026-08-31 08:19:49.040655000][th:119569792][info] GossipPubSub === END RAW OBSERVED ADDRESS DEBUG ===
+[2026-08-31 08:19:49.040656000][th:119569792][info] GossipPubSub Observed addresses - all (0):
+[2026-08-31 08:19:49.040658000][th:119569792][info] GossipPubSub Observed addresses - confirmed only (0):
+[2026-08-31 08:19:49.040659000][th:119569792][info] GossipPubSub Relay addresses (0):
+[2026-08-31 08:19:49.040661000][th:119569792][warning] GossipPubSub Failed to get addresses from peer repository: not found
+[2026-08-31 08:19:49.040689000][th:119569792][info] GossipPubSub Found 1 valid network interfaces
+[2026-08-31 08:19:49.040692000][th:119569792][info] GossipPubSub Current network interfaces (1):
+[2026-08-31 08:19:49.040693000][th:119569792][info] GossipPubSub   -> 192.168.1.6
+[2026-08-31 08:19:49.040694000][th:119569792][info] GossipPubSub Active connections: 0
+[2026-08-31 08:19:49.040696000][th:119569792][info] GossipPubSub === PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:49.040697000][th:119569792][info] GossipPubSub NOTE: Observed addresses need to be seen by 4+ different peer groups to become 'activated'
+[2026-08-31 08:19:49.040699000][th:119569792][info] GossipPubSub NOTE: Current connections: 0, so max possible observers: 0
+[2026-08-31 08:19:49.040700000][th:119569792][info] GossipPubSub === END PEER CONNECTION DETAILS ===
+[2026-08-31 08:19:49.040701000][th:119569792][info] GossipPubSub Connection manager stats:
+[2026-08-31 08:19:49.040703000][th:119569792][info] GossipPubSub   -> Max connections: 1000
+[2026-08-31 08:19:49.040704000][th:119569792][info] GossipPubSub   -> Current connections: 0
+[2026-08-31 08:19:49.040705000][th:119569792][info] GossipPubSub === END NETWORK STATE ===
+26.08.31 08:19:49[38;2;128;128;128m.040746[0m  [38;2;255;069;000m[1mError   [0m  [1mListener[0m  [1mCannot listen to /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj: Operation not permitted[0m
+[2026-08-31 08:19:49.040812000][th:119569792][info] GossipPubSub /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj : PubSub service started
+[2026-08-31 08:19:49][info][GlobalDB] Opening database /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-passive/rocksdb
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] GraphSyncer created 5210458552 
+[2026-08-31 08:19:49][info][CrdtDatastore] crdt Datastore created. Number of heads: 0 Current max-height: 0
+[2026-08-31 08:19:49][info][GeniusAccount] Secure storage ID path: /Users/henriqueklein/gnus/SuperGenius/multi_node_finality_fault/publisher-loss-passive/account/secure_storage_id
+[2026-08-31 08:19:49][error][GeniusAccount] Could not find existing Genius address, generating one from a random mnemonic
+[2026-08-31 08:19:49][warning][UTXOManager] Found UTXOs in storage, but there were none
+[2026-08-31 08:19:49][info][Blockchain] [23c9fd08] Blockchain instance created with authorized full node: 8a33bdf1
+[2026-08-31 08:19:49][error][ValidatorRegistry] InitializeCache: registry content not found during cache init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegisterFilter: result=true
+[2026-08-31 08:19:49][info][ValidatorRegistry] New: instance ready
+[2026-08-31 08:19:49.075566000][th:119569792][info] GossipPubSub /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj: PubSub subscribed to topic 'gnus-validator-registry.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?cert/[^/]+'
+[2026-08-31 08:19:49.075587000][th:119569792][info] GossipPubSub /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj: PubSub subscribed to topic 'consensus-channel-.3.7.144'
+[2026-08-31 08:19:49][warning][Blockchain] [23c9fd08] Failed to request validator registry during blockchain init
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:49.075605000][th:119569792][info] GossipPubSub /ip4/0.0.0.0/tcp/54634/p2p/12D3KooWLNqmYEj6LEL9pq1aa4ZLmUGmid8sjqYsh4Uq7zAA9CMj: PubSub subscribed to topic 'consensus-channel-.3.7.144#datastore.3.7.144'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Successfully registered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:49][info][CrdtDatastore] Topics { name="gnus-validator-registry" }
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Executing callback for key '/gnus-validator-registry' matching pattern '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegistryUpdateReceived: cache updated and initialized
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] addNode: Added node QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH on dagService 
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: stored registry update CID QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: success
+[2026-08-31 08:19:49][warning][PubSubBroadcasterExt] No addresses found for broadcasting.
+[2026-08-31 08:19:49][info][CrdtDatastore] Topics { name="gnus-validator-registry" }
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Executing callback for key '/gnus-validator-registry' matching pattern '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegistryUpdateReceived: cache updated and initialized
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] addNode: Added node QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH on dagService 
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: stored registry update CID QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: success
+[2026-08-31 08:19:49][warning][PubSubBroadcasterExt] No addresses found for broadcasting.
+[2026-08-31 08:19:49][info][CrdtDatastore] Topics { name="gnus-validator-registry" }
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Executing callback for key '/gnus-validator-registry' matching pattern '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegistryUpdateReceived: cache updated and initialized
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] addNode: Added node QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH on dagService 
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: stored registry update CID QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: success
+[2026-08-31 08:19:49][warning][PubSubBroadcasterExt] No addresses found for broadcasting.
+[2026-08-31 08:19:49][info][CrdtDatastore] Topics { name="gnus-validator-registry" }
+[2026-08-31 08:19:49][info][CRDTCallbackManager] Executing callback for key '/gnus-validator-registry' matching pattern '/?gnus-validator-registry'
+[2026-08-31 08:19:49][info][ValidatorRegistry] RegistryUpdateReceived: cache updated and initialized
+[2026-08-31 08:19:49][debug][GraphsyncDAGSyncer] addNode: Added node QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH on dagService 
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: stored registry update CID QmQ8HpTu8aopHm6Rfnx1fZxSDjJDhih1RUA6zWt6yNAERH
+[2026-08-31 08:19:49][info][ValidatorRegistry] StoreRegistryUpdate: success
+[2026-08-31 08:19:49][warning][PubSubBroadcasterExt] No addresses found for broadcasting.
+P12_PUBLISHER_OBSERVER_START run_token=p12-09-2-1788175188-18347 schema=p12-observer-v1 pid=18349 exe_path=/Users/henriqueklein/gnus/SuperGenius/build/OSX/Release/test_bin/multi_node_finality_fault_test exe_size=106286952 exe_mtime=1788175110
+/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:946: Failure
+Timed out waiting for condition: every peer is started in one public libp2p topology with a consensus-topic neighbor (timeout: 5000ms)
+
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:54][info][TransactionManager] [6737d59b - full: false] ~TransactionManager: Metrics — cert_fallback(success=0 failure=0) validation(approve=0 reject=0) tracking(insert=0 confirm=0 fail=0)
+[2026-08-31 08:19:54][info][Blockchain] [6737d59b] Stopping blockchain
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:54][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:54.126985000][th:119569725][error] GossipPubSub Address monitoring timer error: Operation canceled
+[2026-08-31 08:19:54][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:54][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:55][debug][GlobalDB] ~GlobalDB CALLED with count 6 on multi_node_finality_fault/publisher-loss-validator-one/rocksdb 
+[2026-08-31 08:19:55][info][GlobalDB] GlobalDB shutdown start
+[2026-08-31 08:19:55][info][CrdtDatastore] CancelAndCloseNow: begin (pending_jobs=0, self_queue=0, root_queue=0, pending_roots=0, active_root=false)
+[2026-08-31 08:19:55][debug][GraphsyncDAGSyncer] Stopping Dagsyncer
+[2026-08-31 08:19:55][debug][GraphsyncDAGSyncer] Dagsyncer Stopped
+[2026-08-31 08:19:55][info][CrdtDatastore] CancelAndCloseNow: CRDT workers stopped
+[2026-08-31 08:19:55][warning][CrdtDatastore] CancelAndCloseNow called but shutdown has already started
+[2026-08-31 08:19:55][debug][GraphsyncDAGSyncer] ~GraphsyncDAGSyncer CALLED
+[2026-08-31 08:19:55][info][GlobalDB] GlobalDB shutdown finished
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:55][info][TransactionManager] [7c502900 - full: false] ~TransactionManager: Metrics — cert_fallback(success=0 failure=0) validation(approve=0 reject=0) tracking(insert=0 confirm=0 fail=0)
+[2026-08-31 08:19:55][info][Blockchain] [7c502900] Stopping blockchain
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:55][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:55.505710000][th:119569747][error] GossipPubSub Address monitoring timer error: Operation canceled
+[2026-08-31 08:19:55][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:55][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:56][debug][GlobalDB] ~GlobalDB CALLED with count 6 on multi_node_finality_fault/publisher-loss-validator-two/rocksdb 
+[2026-08-31 08:19:56][info][GlobalDB] GlobalDB shutdown start
+[2026-08-31 08:19:56][info][CrdtDatastore] CancelAndCloseNow: begin (pending_jobs=0, self_queue=0, root_queue=0, pending_roots=0, active_root=false)
+[2026-08-31 08:19:56][debug][GraphsyncDAGSyncer] Stopping Dagsyncer
+[2026-08-31 08:19:56][debug][GraphsyncDAGSyncer] Dagsyncer Stopped
+[2026-08-31 08:19:56][info][CrdtDatastore] CancelAndCloseNow: CRDT workers stopped
+[2026-08-31 08:19:56][warning][CrdtDatastore] CancelAndCloseNow called but shutdown has already started
+[2026-08-31 08:19:56][debug][GraphsyncDAGSyncer] ~GraphsyncDAGSyncer CALLED
+[2026-08-31 08:19:56][info][GlobalDB] GlobalDB shutdown finished
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:56][info][TransactionManager] [b9baaa44 - full: false] ~TransactionManager: Metrics — cert_fallback(success=0 failure=0) validation(approve=0 reject=0) tracking(insert=0 confirm=0 fail=0)
+[2026-08-31 08:19:56][info][Blockchain] [b9baaa44] Stopping blockchain
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:56][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:56.561106000][th:119569771][error] GossipPubSub Address monitoring timer error: Operation canceled
+[2026-08-31 08:19:56][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:56][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:57][debug][GlobalDB] ~GlobalDB CALLED with count 6 on multi_node_finality_fault/publisher-loss-validator-three/rocksdb 
+[2026-08-31 08:19:57][info][GlobalDB] GlobalDB shutdown start
+[2026-08-31 08:19:57][info][CrdtDatastore] CancelAndCloseNow: begin (pending_jobs=0, self_queue=0, root_queue=0, pending_roots=0, active_root=false)
+[2026-08-31 08:19:57][debug][GraphsyncDAGSyncer] Stopping Dagsyncer
+[2026-08-31 08:19:57][debug][GraphsyncDAGSyncer] Dagsyncer Stopped
+[2026-08-31 08:19:57][info][CrdtDatastore] CancelAndCloseNow: CRDT workers stopped
+[2026-08-31 08:19:57][warning][CrdtDatastore] CancelAndCloseNow called but shutdown has already started
+[2026-08-31 08:19:57][debug][GraphsyncDAGSyncer] ~GraphsyncDAGSyncer CALLED
+[2026-08-31 08:19:57][info][GlobalDB] GlobalDB shutdown finished
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-144/tx/[^/]+'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-963/tx/[^/]+'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered deleted data callback for pattern: '^/?/bc-369/tx/[^/]+'
+[2026-08-31 08:19:57][info][TransactionManager] [23c9fd08 - full: false] ~TransactionManager: Metrics — cert_fallback(success=0 failure=0) validation(approve=0 reject=0) tracking(insert=0 confirm=0 fail=0)
+[2026-08-31 08:19:57][info][Blockchain] [23c9fd08] Stopping blockchain
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-genesis-block'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-account-creation-.*'
+[2026-08-31 08:19:57][info][CRDTCallbackManager] Successfully unregistered new data callback for pattern: '/?gnus-validator-registry'
+[2026-08-31 08:19:57.600328000][th:119569792][error] GossipPubSub Address monitoring timer error: Operation canceled
+[2026-08-31 08:19:57][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:57][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:58][debug][GlobalDB] ~GlobalDB CALLED with count 6 on multi_node_finality_fault/publisher-loss-passive/rocksdb 
+[2026-08-31 08:19:58][info][GlobalDB] GlobalDB shutdown start
+[2026-08-31 08:19:58][info][CrdtDatastore] CancelAndCloseNow: begin (pending_jobs=0, self_queue=0, root_queue=0, pending_roots=0, active_root=false)
+[2026-08-31 08:19:58][debug][GraphsyncDAGSyncer] Stopping Dagsyncer
+[2026-08-31 08:19:58][debug][GraphsyncDAGSyncer] Dagsyncer Stopped
+[2026-08-31 08:19:58][info][CrdtDatastore] CancelAndCloseNow: CRDT workers stopped
+[2026-08-31 08:19:58][warning][CrdtDatastore] CancelAndCloseNow called but shutdown has already started
+[2026-08-31 08:19:58][debug][GraphsyncDAGSyncer] ~GraphsyncDAGSyncer CALLED
+[2026-08-31 08:19:58][info][GlobalDB] GlobalDB shutdown finished
+P12_PUBLISHER_OBSERVER_TERMINAL run_token=p12-09-2-1788175188-18347 schema=p12-observer-v1 pid=18349 exe_path=/Users/henriqueklein/gnus/SuperGenius/build/OSX/Release/test_bin/multi_node_finality_fault_test exe_size=106286952 exe_mtime=1788175110 outcome=failure terminal=complete peer_release=all-four-runtime-handles-released boundary=zero-consensus-topic-mesh state=zero error=no-consensus-neighbor
+[2026-08-31 08:19:58.659100000][th:119569724][error] GossipPubSub Address monitoring timer error: Operation canceled
+[2026-08-31 08:19:58][error][PubSubBroadcasterExt] No message to process
+[2026-08-31 08:19:59][debug][GlobalDB] ~GlobalDB CALLED with count 5 on CRDT.Datastore.TEST.unit_1 
+[2026-08-31 08:19:59][info][GlobalDB] GlobalDB shutdown start
+[2026-08-31 08:19:59][info][CrdtDatastore] CancelAndCloseNow: begin (pending_jobs=0, self_queue=0, root_queue=0, pending_roots=0, active_root=false)
+[2026-08-31 08:19:59][debug][GraphsyncDAGSyncer] Stopping Dagsyncer
+[2026-08-31 08:19:59][debug][GraphsyncDAGSyncer] Dagsyncer Stopped
+[2026-08-31 08:20:00][info][CrdtDatastore] CancelAndCloseNow: CRDT workers stopped
+[2026-08-31 08:20:00][warning][CrdtDatastore] CancelAndCloseNow called but shutdown has already started
+[2026-08-31 08:20:00][debug][GraphsyncDAGSyncer] ~GraphsyncDAGSyncer CALLED
+[2026-08-31 08:20:00][info][GlobalDB] GlobalDB shutdown finished
+[  FAILED  ] FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover (11127 ms)
+[----------] 1 test from FinalityFaultNetwork (11127 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (11127 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover
+
+ 1 FAILED TEST

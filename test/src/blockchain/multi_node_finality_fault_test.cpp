@@ -1084,6 +1084,52 @@ namespace
     };
 } // namespace
 
+namespace
+{
+    struct PublisherObserverRecord
+    {
+        int         process_exit = 0;
+        bool        gtest_completed = false;
+        size_t      starts = 0;
+        size_t      terminals = 0;
+        bool        fingerprint_matches = false;
+        bool        terminal_complete = false;
+        bool        peer_released = false;
+        std::string outcome;
+        bool        foreign_process_or_binary = false;
+    };
+
+    static std::string ClassifyPublisherObserverRecord( const PublisherObserverRecord &record )
+    {
+        if ( record.foreign_process_or_binary ) return "tooling_attribution_rebuild";
+        if ( record.starts != 1 || record.terminals != 1 || !record.fingerprint_matches || !record.gtest_completed ||
+             !record.terminal_complete || !record.peer_released )
+            return "invalid_or_partial_blocked";
+        if ( record.outcome == "pass" && record.process_exit == 0 ) return "fully_attributed_complete_pass";
+        if ( record.outcome == "failure" && record.process_exit != 0 ) return "fully_attributed_complete_failure";
+        return "invalid_or_partial_blocked";
+    }
+}
+
+TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartialAndForeignEvidence )
+{
+    PublisherObserverRecord complete_pass{ 0, true, 1, 1, true, true, true, "pass", false };
+    EXPECT_EQ( ClassifyPublisherObserverRecord( complete_pass ), "fully_attributed_complete_pass" );
+
+    auto complete_failure = complete_pass;
+    complete_failure.process_exit = 1;
+    complete_failure.outcome = "failure";
+    EXPECT_EQ( ClassifyPublisherObserverRecord( complete_failure ), "fully_attributed_complete_failure" );
+
+    auto partial = complete_pass;
+    partial.terminals = 0;
+    EXPECT_EQ( ClassifyPublisherObserverRecord( partial ), "invalid_or_partial_blocked" );
+
+    auto foreign = complete_pass;
+    foreign.foreign_process_or_binary = true;
+    EXPECT_EQ( ClassifyPublisherObserverRecord( foreign ), "tooling_attribution_rebuild" );
+}
+
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
 {
     sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
