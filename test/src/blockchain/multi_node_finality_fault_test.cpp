@@ -34,6 +34,7 @@
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <sstream>
@@ -1086,6 +1087,185 @@ namespace
 
 namespace
 {
+    class PublisherObserverEvidenceEvaluator
+    {
+    public:
+        struct ExpectedProcess
+        {
+            std::string run_token;
+            std::string schema;
+            std::string pid;
+            std::string exe_path;
+            std::string exe_size;
+            std::string exe_mtime;
+        };
+
+        class Record
+        {
+        public:
+            const std::string &Classification() const
+            {
+                return classification_;
+            }
+
+            bool IsEligibleObserverLifecycleFailure() const
+            {
+                return classification_ == "fully_attributed_complete_failure" && observer_lifecycle_eligible_;
+            }
+
+            const std::string &Boundary() const
+            {
+                return boundary_;
+            }
+
+            const std::string &State() const
+            {
+                return state_;
+            }
+
+            const std::string &Error() const
+            {
+                return error_;
+            }
+
+        private:
+            friend class PublisherObserverEvidenceEvaluator;
+
+            std::string classification_ = "invalid_or_partial_blocked";
+            std::string boundary_;
+            std::string state_;
+            std::string error_;
+            bool        observer_lifecycle_eligible_ = false;
+        };
+
+        static Record Evaluate( const std::vector<std::string> &lines, int process_exit,
+                                const ExpectedProcess &expected_process )
+        {
+            std::vector<ParsedRecord> starts;
+            std::vector<ParsedRecord> terminals;
+            bool                      gtest_passed = false;
+            bool                      gtest_failed = false;
+            bool                      malformed_observer_line = false;
+
+            for ( const auto &line : lines )
+            {
+                if ( line.find( "P12_PUBLISHER_OBSERVER_" ) == 0 )
+                {
+                    const auto parsed = ParseObserverLine( line );
+                    if ( !parsed.has_value() )
+                    {
+                        malformed_observer_line = true;
+                        continue;
+                    }
+                    ( parsed->kind == "START" ? starts : terminals ).push_back( parsed.value() );
+                }
+                else if ( line.find( "[  PASSED  ] 1 test" ) == 0 )
+                    gtest_passed = true;
+                else if ( line.find( "[  FAILED  ] 1 test" ) == 0 )
+                    gtest_failed = true;
+            }
+
+            Record record;
+            if ( malformed_observer_line || starts.size() != 1 || terminals.size() != 1 || gtest_passed == gtest_failed )
+                return record;
+
+            const auto &start    = starts.front();
+            const auto &terminal = terminals.front();
+            if ( !SameFingerprint( start, terminal ) ) return record;
+            if ( !MatchesExpectedProcess( start, expected_process ) )
+            {
+                record.classification_ = "tooling_attribution_rebuild";
+                return record;
+            }
+            if ( terminal.fields.at( "terminal" ) != "complete" ||
+                 terminal.fields.at( "peer_release" ) != "all-four-runtime-handles-released" )
+                return record;
+
+            record.boundary_ = terminal.fields.at( "boundary" );
+            record.state_    = terminal.fields.at( "state" );
+            record.error_    = terminal.fields.at( "error" );
+            if ( terminal.fields.at( "outcome" ) == "pass" && process_exit == 0 && gtest_passed )
+                record.classification_ = "fully_attributed_complete_pass";
+            else if ( terminal.fields.at( "outcome" ) == "failure" && process_exit != 0 && gtest_failed )
+            {
+                record.classification_ = "fully_attributed_complete_failure";
+                record.observer_lifecycle_eligible_ = IsAllowedObserverLifecycleTriple(
+                    record.boundary_, record.state_, record.error_ );
+            }
+            return record;
+        }
+
+    private:
+        struct ParsedRecord
+        {
+            std::string kind;
+            std::map<std::string, std::string> fields;
+        };
+
+        static std::optional<ParsedRecord> ParseObserverLine( const std::string &line )
+        {
+            constexpr const char *kPrefix = "P12_PUBLISHER_OBSERVER_";
+            std::istringstream    input( line );
+            std::string           marker;
+            if ( !( input >> marker ) || marker.find( kPrefix ) != 0 ) return std::nullopt;
+
+            ParsedRecord record;
+            record.kind = marker.substr( std::char_traits<char>::length( kPrefix ) );
+            if ( record.kind != "START" && record.kind != "TERMINAL" ) return std::nullopt;
+            std::string field;
+            while ( input >> field )
+            {
+                const auto delimiter = field.find( '=' );
+                if ( delimiter == std::string::npos || delimiter == 0 || delimiter == field.size() - 1 ||
+                     !record.fields.emplace( field.substr( 0, delimiter ), field.substr( delimiter + 1 ) ).second )
+                    return std::nullopt;
+            }
+
+            static const std::array<std::string, 6> kFingerprintFields{
+                "run_token", "schema", "pid", "exe_path", "exe_size", "exe_mtime"
+            };
+            for ( const auto &name : kFingerprintFields )
+                if ( record.fields.find( name ) == record.fields.end() || record.fields.at( name ).empty() )
+                    return std::nullopt;
+            if ( record.kind == "START" )
+                return record.fields.size() == kFingerprintFields.size() ? std::optional<ParsedRecord>( record ) : std::nullopt;
+
+            static const std::array<std::string, 6> kTerminalFields{
+                "outcome", "terminal", "peer_release", "boundary", "state", "error"
+            };
+            for ( const auto &name : kTerminalFields )
+                if ( record.fields.find( name ) == record.fields.end() || record.fields.at( name ).empty() )
+                    return std::nullopt;
+            return record.fields.size() == kFingerprintFields.size() + kTerminalFields.size()
+                       ? std::optional<ParsedRecord>( record )
+                       : std::nullopt;
+        }
+
+        static bool SameFingerprint( const ParsedRecord &left, const ParsedRecord &right )
+        {
+            return left.fields.at( "run_token" ) == right.fields.at( "run_token" ) &&
+                   left.fields.at( "schema" ) == right.fields.at( "schema" ) &&
+                   left.fields.at( "pid" ) == right.fields.at( "pid" ) &&
+                   left.fields.at( "exe_path" ) == right.fields.at( "exe_path" ) &&
+                   left.fields.at( "exe_size" ) == right.fields.at( "exe_size" ) &&
+                   left.fields.at( "exe_mtime" ) == right.fields.at( "exe_mtime" );
+        }
+
+        static bool MatchesExpectedProcess( const ParsedRecord &record, const ExpectedProcess &expected )
+        {
+            return record.fields.at( "run_token" ) == expected.run_token && record.fields.at( "schema" ) == expected.schema &&
+                   record.fields.at( "pid" ) == expected.pid && record.fields.at( "exe_path" ) == expected.exe_path &&
+                   record.fields.at( "exe_size" ) == expected.exe_size && record.fields.at( "exe_mtime" ) == expected.exe_mtime;
+        }
+
+        static bool IsAllowedObserverLifecycleTriple( const std::string &boundary, const std::string &state,
+                                                      const std::string &error )
+        {
+            return boundary == "observer-output" && state == "flush" &&
+                   ( error == "write-failed" || error == "stream-closed" );
+        }
+    };
+
     struct PublisherObserverRecord
     {
         int         process_exit = 0;
@@ -1133,33 +1313,34 @@ namespace
 
 TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartialAndForeignEvidence )
 {
-    PublisherObserverRecord complete_pass{ 0, true, false, 1, 1, true, true, true, "pass", false };
-    EXPECT_EQ( ClassifyPublisherObserverRecord( complete_pass ), "fully_attributed_complete_pass" );
+    using Evaluator = PublisherObserverEvidenceEvaluator;
+    const Evaluator::ExpectedProcess expected{ "run-42", "p12-observer-v1", "4242", "/tmp/p12-test", "123", "456" };
+    const std::string start = "P12_PUBLISHER_OBSERVER_START run_token=run-42 schema=p12-observer-v1 pid=4242 "
+                              "exe_path=/tmp/p12-test exe_size=123 exe_mtime=456";
+    const std::string pass_terminal = start.substr( 0, start.find( "START" ) ) +
+                                      "TERMINAL " + start.substr( start.find( "run_token=" ) ) +
+                                      " outcome=pass terminal=complete peer_release=all-four-runtime-handles-released "
+                                      "boundary=none state=ready error=none";
+    const std::string failure_terminal = start.substr( 0, start.find( "START" ) ) +
+                                         "TERMINAL " + start.substr( start.find( "run_token=" ) ) +
+                                         " outcome=failure terminal=complete peer_release=all-four-runtime-handles-released "
+                                         "boundary=observer-output state=flush error=write-failed";
 
-    auto complete_failure = complete_pass;
-    complete_failure.process_exit = 1;
-    complete_failure.outcome = "failure";
-    complete_failure.gtest_failed = true;
-    EXPECT_EQ( ClassifyPublisherObserverRecord( complete_failure ), "fully_attributed_complete_failure" );
-
-    auto nonzero_after_passing_gtest = complete_pass;
-    nonzero_after_passing_gtest.process_exit = 1;
-    nonzero_after_passing_gtest.outcome = "failure";
-    EXPECT_EQ( ClassifyPublisherObserverRecord( nonzero_after_passing_gtest ), "invalid_or_partial_blocked" );
-
-    auto nonzero_after_unknown_gtest = complete_pass;
-    nonzero_after_unknown_gtest.process_exit = 1;
-    nonzero_after_unknown_gtest.gtest_completed = false;
-    nonzero_after_unknown_gtest.outcome = "failure";
-    EXPECT_EQ( ClassifyPublisherObserverRecord( nonzero_after_unknown_gtest ), "invalid_or_partial_blocked" );
-
-    auto partial = complete_pass;
-    partial.terminals = 0;
-    EXPECT_EQ( ClassifyPublisherObserverRecord( partial ), "invalid_or_partial_blocked" );
-
-    auto foreign = complete_pass;
-    foreign.foreign_process_or_binary = true;
-    EXPECT_EQ( ClassifyPublisherObserverRecord( foreign ), "tooling_attribution_rebuild" );
+    EXPECT_EQ( Evaluator::Evaluate( { start, pass_terminal, "[  PASSED  ] 1 test." }, 0, expected ).Classification(),
+               "fully_attributed_complete_pass" );
+    const auto complete_failure = Evaluator::Evaluate( { start, failure_terminal, "[  FAILED  ] 1 test, listed below:" }, 1,
+                                                       expected );
+    EXPECT_EQ( complete_failure.Classification(), "fully_attributed_complete_failure" );
+    EXPECT_TRUE( complete_failure.IsEligibleObserverLifecycleFailure() );
+    EXPECT_EQ( Evaluator::Evaluate( { start, failure_terminal, "[  PASSED  ] 1 test." }, 1, expected ).Classification(),
+               "invalid_or_partial_blocked" );
+    EXPECT_EQ( Evaluator::Evaluate( { start, failure_terminal }, 1, expected ).Classification(),
+               "invalid_or_partial_blocked" );
+    EXPECT_EQ( Evaluator::Evaluate( { start, "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-42" }, 1, expected ).Classification(),
+               "invalid_or_partial_blocked" );
+    const Evaluator::ExpectedProcess foreign{ "foreign-run", "p12-observer-v1", "4242", "/tmp/p12-test", "123", "456" };
+    EXPECT_EQ( Evaluator::Evaluate( { start, pass_terminal, "[  PASSED  ] 1 test." }, 0, foreign ).Classification(),
+               "tooling_attribution_rebuild" );
 }
 
 TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures )
