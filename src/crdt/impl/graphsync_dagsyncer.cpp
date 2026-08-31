@@ -1067,9 +1067,13 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::IsConnectionFailureStatus( ResponseStatusCode code )
     {
+        // RS_TIMEOUT is deliberately excluded: a timeout means the peer was slow
+        // to answer (e.g. busy serving other requests), not that it is
+        // unconnectable. Blacklisting on timeout excludes the peer for an
+        // escalating backoff (up to 30 min) — fatal when it is the only route
+        // for a CID. Slow peers are handled by the CID-specific failure count.
         return code == ipfs_lite::ipfs::graphsync::RS_NO_PEERS ||
                code == ipfs_lite::ipfs::graphsync::RS_CANNOT_CONNECT ||
-               code == ipfs_lite::ipfs::graphsync::RS_TIMEOUT ||
                code == ipfs_lite::ipfs::graphsync::RS_CONNECTION_ERROR;
     }
 
