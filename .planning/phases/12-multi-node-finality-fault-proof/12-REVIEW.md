@@ -1,47 +1,54 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-reviewed: 2026-08-27T21:18:00Z
+reviewed: 2026-08-31T11:25:58Z
 depth: standard
-files_reviewed: 3
+files_reviewed: 1
 files_reviewed_list:
   - test/src/blockchain/multi_node_finality_fault_test.cpp
-  - .planning/phases/12-multi-node-finality-fault-proof/12-08-PLAN.md
-  - .planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md
 findings:
-  critical: 1
+  critical: 2
   warning: 0
   info: 0
-  total: 1
+  total: 2
 status: issues_found
 ---
 
 # Phase 12: Code Review Report
 
-**Reviewed:** 2026-08-27T21:18:00Z
+**Reviewed:** 2026-08-31T11:25:58Z
 **Depth:** standard
-**Files Reviewed:** 3
+**Files Reviewed:** 1
 **Status:** issues_found
 
 ## Summary
 
-Re-review of `59fc9767` and `a8a9dd8c` confirms the observer is source-clean: it passively records four peer identities, listeners, roots, named mesh counts, and the twelve directed host-link states; a recovered deadline state stays non-authorizing. The topology helper, protocol ingress, barriers, and waits are unchanged, and `multi_node_finality_fault_test` builds successfully.
-
-However, the Plan's updated required record schema rejects all three canonical readiness records still stored in the summary. The evidence gate therefore fails its own validator.
+The Plan 12-09 delta is confined to the test-only observer, its explicit cleanup epilogue, and a local classifier; it does not directly mutate the finality, CRDT, PubSub, Mint, or normal peer protocol paths. However, the classifier does not enforce the evidence conditions needed to keep abnormal process exits and non-observer failure classes out of repair authorization.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Updated validator rejects every canonical readiness record
+### CR-01: BLOCKER — Any nonzero exit can be promoted to a completed GTest failure
 
-**File:** `.planning/phases/12-multi-node-finality-fault-proof/12-08-SUMMARY.md:37`
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1105`
+**Issue:** `gtest_completed` only proves that GTest reached its footer. The classifier calls a record a `fully_attributed_complete_failure` whenever `outcome == "failure"` and `process_exit != 0`, without requiring that the focused GTest itself reported the normal one-test failure result. A teardown/runner/binary failure after a completed GTest footer can therefore enter the failure count as evidence. That violates D-23 and can provide false input to the two-failure repair gate.
+**Fix:** Capture and require an explicit focused-GTest result, not merely completion. For example, add `bool gtest_failed` (derived from the one-test footer) and require it for the failure branch:
 
-**Issue:** The updated Plan validator at `12-08-PLAN.md:105` requires four named `consensus_mesh` values. The three required `run=1..3` records in the summary retain the former single numeric form (for example, `consensus_mesh=2`), so the required `rg -c` expression returns zero rather than three. The final review trace demonstrates the new source format, but it is not one of the three canonical evidence records. Consequently the phase's mandated verification cannot pass with the repository state.
+```cpp
+if (record.outcome == "failure" && record.process_exit != 0 && record.gtest_failed)
+    return "fully_attributed_complete_failure";
+```
 
-**Fix:** Run three fresh canonical focused processes with the final observer, replace or supersede the three required `publisher-run-{1,2,3}` logs and summary records with their named four-peer mesh values, then run the updated Plan validator. Do not weaken the validator to accept stale aggregate-only evidence.
+Add negative tests for a nonzero exit after a passed/unknown GTest result.
+
+### CR-02: BLOCKER — The classifier cannot fence repair authorization to an observer-lifecycle failure triple
+
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1089`
+**Issue:** `PublisherObserverRecord` does not retain `boundary`, `state`, or `error`, nor whether that boundary is an observer-lifecycle defect. Consequently `ClassifyPublisherObserverRecord()` can only label a record as a generic completed failure; it cannot enforce D-25's requirement that two records match exactly on the observer-lifecycle boundary/state/error and that the class justifies an observer-only repair. In particular, the observed `zero-consensus-topic-mesh` pre-fault topology failure is indistinguishable from an observer ownership/output failure to this classifier.
+**Fix:** Include normalized `boundary`, `state`, and `error` plus an explicit observer-lifecycle eligibility classification in the record, and implement a separate aggregate gate that requires two eligible records with an identical triple before returning repair-authorized. Test matching, non-matching, and non-observer triples.
 
 ---
 
-_Reviewed: 2026-08-27T21:18:00Z_
+_Reviewed: 2026-08-31T11:25:58Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
