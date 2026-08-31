@@ -1739,6 +1739,18 @@ namespace
         return first.IsEligibleObserverLifecycleFailure() && second.IsEligibleObserverLifecycleFailure() &&
                first.Boundary() == second.Boundary() && first.State() == second.State() && first.Error() == second.Error();
     }
+
+    class PublisherObserverEvidenceDecision
+    {
+    public:
+        static std::string RepairAuthorization(
+            const std::array<PublisherObserverProcessEvidenceCollector::CollectedEvidence, 2> &evidence )
+        {
+            // D-25/D-28: this reports authorization only.  A future separately
+            // scoped plan owns any observer-only repair branch.
+            return IsObserverRepairAuthorized( evidence ) ? "observer-output-only" : "none";
+        }
+    };
 }
 
 TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartialAndForeignEvidence )
