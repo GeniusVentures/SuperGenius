@@ -1131,6 +1131,8 @@ namespace
         private:
             friend class PublisherObserverEvidenceEvaluator;
 
+            Record() = default;
+
             std::string classification_ = "invalid_or_partial_blocked";
             std::string boundary_;
             std::string state_;
@@ -1266,48 +1268,11 @@ namespace
         }
     };
 
-    struct PublisherObserverRecord
-    {
-        int         process_exit = 0;
-        bool        gtest_completed = false;
-        bool        gtest_failed = false;
-        size_t      starts = 0;
-        size_t      terminals = 0;
-        bool        fingerprint_matches = false;
-        bool        terminal_complete = false;
-        bool        peer_released = false;
-        std::string outcome;
-        bool        foreign_process_or_binary = false;
-        std::string boundary;
-        std::string state;
-        std::string error;
-        bool        observer_lifecycle_eligible = false;
-    };
-
-    static std::string ClassifyPublisherObserverRecord( const PublisherObserverRecord &record )
-    {
-        if ( record.foreign_process_or_binary ) return "tooling_attribution_rebuild";
-        if ( record.starts != 1 || record.terminals != 1 || !record.fingerprint_matches || !record.gtest_completed ||
-             !record.terminal_complete || !record.peer_released )
-            return "invalid_or_partial_blocked";
-        if ( record.outcome == "pass" && record.process_exit == 0 ) return "fully_attributed_complete_pass";
-        if ( record.outcome == "failure" && record.process_exit != 0 && record.gtest_failed )
-            return "fully_attributed_complete_failure";
-        return "invalid_or_partial_blocked";
-    }
-
-    static bool IsEligibleObserverLifecycleFailure( const PublisherObserverRecord &record )
-    {
-        return ClassifyPublisherObserverRecord( record ) == "fully_attributed_complete_failure" &&
-               record.observer_lifecycle_eligible && !record.boundary.empty() && !record.state.empty() &&
-               !record.error.empty();
-    }
-
-    static bool IsObserverRepairAuthorized( const std::array<PublisherObserverRecord, 2> &records )
+    static bool IsObserverRepairAuthorized( const std::array<PublisherObserverEvidenceEvaluator::Record, 2> &records )
     {
         const auto &[first, second] = records;
-        return IsEligibleObserverLifecycleFailure( first ) && IsEligibleObserverLifecycleFailure( second ) &&
-               first.boundary == second.boundary && first.state == second.state && first.error == second.error;
+        return first.IsEligibleObserverLifecycleFailure() && second.IsEligibleObserverLifecycleFailure() &&
+               first.Boundary() == second.Boundary() && first.State() == second.State() && first.Error() == second.Error();
     }
 }
 
@@ -1345,22 +1310,36 @@ TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartial
 
 TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures )
 {
-    PublisherObserverRecord observer_failure{ 1, true, true, 1, 1, true, true, true, "failure", false };
-    observer_failure.boundary = "observer-output";
-    observer_failure.state = "flush";
-    observer_failure.error = "write-failed";
-    observer_failure.observer_lifecycle_eligible = true;
+    using Evaluator = PublisherObserverEvidenceEvaluator;
+    const Evaluator::ExpectedProcess expected{ "run-77", "p12-observer-v1", "777", "/tmp/p12-test", "123", "456" };
+    const std::string start = "P12_PUBLISHER_OBSERVER_START run_token=run-77 schema=p12-observer-v1 pid=777 "
+                              "exe_path=/tmp/p12-test exe_size=123 exe_mtime=456";
+    const auto complete_failure = [&]( const std::string &terminal )
+    {
+        return Evaluator::Evaluate( { start, terminal, "[  FAILED  ] 1 test, listed below:" }, 1, expected );
+    };
+    const std::string matching_terminal = "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-77 schema=p12-observer-v1 pid=777 "
+                                          "exe_path=/tmp/p12-test exe_size=123 exe_mtime=456 outcome=failure terminal=complete "
+                                          "peer_release=all-four-runtime-handles-released boundary=observer-output state=flush "
+                                          "error=write-failed";
+    const auto first  = complete_failure( matching_terminal );
+    const auto second = complete_failure( matching_terminal );
+    EXPECT_TRUE( IsObserverRepairAuthorized( { first, second } ) );
 
-    auto matching_failure = observer_failure;
-    EXPECT_TRUE( IsObserverRepairAuthorized( { observer_failure, matching_failure } ) );
+    const auto triple_mismatch = complete_failure(
+        "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-77 schema=p12-observer-v1 pid=777 exe_path=/tmp/p12-test "
+        "exe_size=123 exe_mtime=456 outcome=failure terminal=complete "
+        "peer_release=all-four-runtime-handles-released boundary=observer-output state=flush error=stream-closed" );
+    EXPECT_TRUE( triple_mismatch.IsEligibleObserverLifecycleFailure() );
+    EXPECT_FALSE( IsObserverRepairAuthorized( { first, triple_mismatch } ) );
 
-    auto non_matching_failure = observer_failure;
-    non_matching_failure.error = "stream-closed";
-    EXPECT_FALSE( IsObserverRepairAuthorized( { observer_failure, non_matching_failure } ) );
-
-    auto non_observer_failure = observer_failure;
-    non_observer_failure.observer_lifecycle_eligible = false;
-    EXPECT_FALSE( IsObserverRepairAuthorized( { observer_failure, non_observer_failure } ) );
+    const auto non_observer = complete_failure(
+        "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-77 schema=p12-observer-v1 pid=777 exe_path=/tmp/p12-test "
+        "exe_size=123 exe_mtime=456 outcome=failure terminal=complete "
+        "peer_release=all-four-runtime-handles-released boundary=zero-consensus-topic-mesh state=zero "
+        "error=no-consensus-neighbor" );
+    EXPECT_FALSE( non_observer.IsEligibleObserverLifecycleFailure() );
+    EXPECT_FALSE( IsObserverRepairAuthorized( { first, non_observer } ) );
 }
 
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
