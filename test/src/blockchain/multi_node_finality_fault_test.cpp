@@ -29,7 +29,11 @@
 #include <chrono>
 #include <ctime>
 #include <cstdlib>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <iomanip>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
@@ -37,9 +41,16 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <poll.h>
+#include <random>
 #include <sstream>
 #include <thread>
+#include <type_traits>
 #include <unistd.h>
+#include <vector>
+#include <sys/wait.h>
+
+extern char **environ;
 
 namespace sgns
 {
@@ -670,12 +681,97 @@ namespace
             Diagnosis   successful_diagnosis_;
         };
 
+        // D-29: this is test-only observer telemetry.  It deliberately carries
+        // no fixture object and never changes peer, PubSub, or consensus state.
+        struct P12ObserverControlFrame
+        {
+            static constexpr size_t kSize = 66;
+            static constexpr const char *P12_OBSERVER_CONTROL_V1 = "P12OCF01";
+
+            enum : uint8_t
+            {
+                kTerminalRecord = 1,
+                kWriteSucceeded = 1,
+                kWriteFailed = 2,
+                kFlushSucceeded = 1,
+                kFlushFailed = 2,
+                kTerminalRecorded = 1,
+                kTerminalUnrecorded = 2,
+            };
+
+            static bool DecodeToken( const std::string &token, std::array<uint8_t, 32> &bytes )
+            {
+                if ( token.size() != 64 ) return false;
+                const auto decode = []( char value ) -> int
+                {
+                    if ( value >= '0' && value <= '9' ) return value - '0';
+                    if ( value >= 'a' && value <= 'f' ) return value - 'a' + 10;
+                    return -1;
+                };
+                for ( size_t index = 0; index < bytes.size(); ++index )
+                {
+                    const int high = decode( token[index * 2] );
+                    const int low = decode( token[index * 2 + 1] );
+                    if ( high < 0 || low < 0 ) return false;
+                    bytes[index] = static_cast<uint8_t>( ( high << 4 ) | low );
+                }
+                return true;
+            }
+
+            static void Put16( std::array<uint8_t, kSize> &frame, size_t offset, uint16_t value )
+            {
+                frame[offset] = static_cast<uint8_t>( value >> 8 );
+                frame[offset + 1] = static_cast<uint8_t>( value );
+            }
+
+            static void Put32( std::array<uint8_t, kSize> &frame, size_t offset, uint32_t value )
+            {
+                for ( size_t index = 0; index < 4; ++index )
+                    frame[offset + index] = static_cast<uint8_t>( value >> ( 24 - index * 8 ) );
+            }
+
+            static void Put64( std::array<uint8_t, kSize> &frame, size_t offset, uint64_t value )
+            {
+                for ( size_t index = 0; index < 8; ++index )
+                    frame[offset + index] = static_cast<uint8_t>( value >> ( 56 - index * 8 ) );
+            }
+
+            static void EmitTerminal( uint8_t write_result, uint8_t flush_result, uint8_t disposition )
+            {
+                const char *fd_text = std::getenv( "P12_OBSERVER_CONTROL_FD" );
+                const char *token_text = std::getenv( "P12_10_RUN_TOKEN" );
+                if ( !fd_text || !token_text ) return;
+                char *end = nullptr;
+                const long descriptor = std::strtol( fd_text, &end, 10 );
+                if ( !end || *end || descriptor < 0 ) return;
+                std::array<uint8_t, 32> token{};
+                if ( !DecodeToken( token_text, token ) ) return;
+
+                std::array<uint8_t, kSize> frame{};
+                std::memcpy( frame.data(), P12_OBSERVER_CONTROL_V1, 8 );
+                Put16( frame, 8, 1 );
+                Put32( frame, 10, 52 );
+                std::copy( token.begin(), token.end(), frame.begin() + 14 );
+                Put64( frame, 46, static_cast<uint64_t>( ::getpid() ) );
+                static uint64_t sequence = 0;
+                Put64( frame, 54, ++sequence );
+                frame[62] = kTerminalRecord;
+                frame[63] = write_result;
+                frame[64] = flush_result;
+                frame[65] = disposition;
+                // The dedicated pipe has a PIPE_BUF-sized frame.  A failed write
+                // remains missing control evidence; it is never retried or forged.
+                (void)::write( static_cast<int>( descriptor ), frame.data(), frame.size() );
+            }
+        };
+
         class PublisherReadinessObserver
         {
         public:
             explicit PublisherReadinessObserver( Network &network ) : network_( network )
             {
-                const char *run_token = std::getenv( "P12_09_RUN_TOKEN" );
+                const char *run_token = std::getenv( "P12_10_RUN_TOKEN" );
+                if ( !run_token || !*run_token ) run_token = std::getenv( "P12_09_RUN_TOKEN" );
                 if ( !run_token || !*run_token ) return;
                 try
                 {
@@ -750,6 +846,21 @@ namespace
                        " boundary=observer-output state=incomplete error=" + reason );
             }
 
+            // Child-only codec probe: it uses the same synchronized Write path
+            // but is permanently non-qualifying at the parent collector boundary.
+            static void EmitProcessWriterProbe()
+            {
+                const auto fingerprint = FingerprintFromEnvironment();
+                if ( !fingerprint.has_value() ) return;
+                const auto header = HeaderFor( fingerprint.value() );
+                Write( "P12_PUBLISHER_OBSERVER_START " + header );
+                const char *mode = std::getenv( "P12_10_WRITER_MODE" );
+                const std::string error = mode && std::string( mode ) == "stream-closed" ? "stream-closed" : "write-failed";
+                Write( "P12_PUBLISHER_OBSERVER_TERMINAL " + header +
+                       " outcome=failure terminal=complete peer_release=all-four-runtime-handles-released "
+                       "boundary=observer-output state=flush error=" + error );
+            }
+
         private:
             struct Fingerprint
             {
@@ -767,20 +878,81 @@ namespace
                 std::string error;
             };
 
-            std::string Header() const
+            static std::optional<Fingerprint> FingerprintFromEnvironment()
+            {
+                const char *run_token = std::getenv( "P12_10_RUN_TOKEN" );
+                if ( !run_token || !*run_token ) run_token = std::getenv( "P12_09_RUN_TOKEN" );
+                if ( !run_token || !*run_token ) return std::nullopt;
+                try
+                {
+                    const auto executable = boost::filesystem::canonical( boost::dll::program_location() );
+                    Fingerprint fingerprint;
+                    fingerprint.run_token = run_token;
+                    fingerprint.path = executable.string();
+                    fingerprint.size = boost::filesystem::file_size( executable );
+                    fingerprint.mtime = boost::filesystem::last_write_time( executable );
+                    fingerprint.pid = static_cast<long>( ::getpid() );
+                    return fingerprint;
+                }
+                catch ( const boost::filesystem::filesystem_error & )
+                {
+                    return std::nullopt;
+                }
+            }
+
+            static std::string HeaderFor( const Fingerprint &fingerprint )
             {
                 std::ostringstream record;
-                record << "run_token=" << fingerprint_.run_token << " schema=p12-observer-v1 pid=" << fingerprint_.pid
-                       << " exe_path=" << fingerprint_.path << " exe_size=" << fingerprint_.size
-                       << " exe_mtime=" << fingerprint_.mtime;
+                record << "run_token=" << fingerprint.run_token << " schema=p12-observer-v1 pid=" << fingerprint.pid
+                       << " exe_path=" << fingerprint.path << " exe_size=" << fingerprint.size
+                       << " exe_mtime=" << fingerprint.mtime;
                 return record.str();
+            }
+
+            std::string Header() const
+            {
+                return HeaderFor( fingerprint_ );
             }
 
             static void Write( const std::string &record )
             {
                 static std::mutex writer_mutex;
                 std::lock_guard lock( writer_mutex );
-                std::cerr << record << '\n' << std::flush;
+                const bool terminal = record.find( "P12_PUBLISHER_OBSERVER_TERMINAL " ) == 0;
+                const char *mode = std::getenv( "P12_10_WRITER_MODE" );
+                const std::string writer_mode = mode ? mode : "";
+                if ( terminal && ( writer_mode == "write-failed" || writer_mode == "stream-closed" ) )
+                {
+                    std::ostringstream failed_stream;
+                    failed_stream.setstate( std::ios::badbit );
+                    failed_stream << record << '\n' << std::flush;
+                }
+
+                bool write_ok = true;
+                bool flush_ok = true;
+                if ( terminal && writer_mode == "terminal-stream-failure" )
+                {
+                    std::ostringstream failed_stream;
+                    failed_stream.setstate( std::ios::badbit );
+                    failed_stream << record << '\n';
+                    write_ok = !failed_stream.fail();
+                    failed_stream << std::flush;
+                    flush_ok = !failed_stream.fail();
+                }
+                else
+                {
+                    std::cerr << record << '\n';
+                    write_ok = !std::cerr.fail();
+                    std::cerr << std::flush;
+                    flush_ok = !std::cerr.fail();
+                }
+
+                if ( terminal )
+                    P12ObserverControlFrame::EmitTerminal(
+                        write_ok ? P12ObserverControlFrame::kWriteSucceeded : P12ObserverControlFrame::kWriteFailed,
+                        flush_ok ? P12ObserverControlFrame::kFlushSucceeded : P12ObserverControlFrame::kFlushFailed,
+                        write_ok && flush_ok ? P12ObserverControlFrame::kTerminalRecorded
+                                             : P12ObserverControlFrame::kTerminalUnrecorded );
             }
 
             Network &                    network_;
@@ -1100,6 +1272,16 @@ namespace
             std::string exe_mtime;
         };
 
+        struct ProcessCompletion
+        {
+            bool data_eof = false;
+            bool control_eof = false;
+            bool normal_exit = false;
+            bool valid_terminal_frame = false;
+            bool terminal_recorded = false;
+            int  exit_code = -1;
+        };
+
         class Record
         {
         public:
@@ -1126,6 +1308,14 @@ namespace
             const std::string &Error() const
             {
                 return error_;
+            }
+
+            uint8_t CountWeight() const
+            {
+                return classification_ == "fully_attributed_complete_pass" ||
+                               classification_ == "fully_attributed_complete_failure"
+                           ? 1
+                           : 0;
             }
 
         private:
@@ -1195,6 +1385,15 @@ namespace
                     record.boundary_, record.state_, record.error_ );
             }
             return record;
+        }
+
+        static Record Evaluate( const std::vector<std::string> &lines, const ProcessCompletion &completion,
+                                const ExpectedProcess &expected_process )
+        {
+            if ( !completion.data_eof || !completion.control_eof || !completion.normal_exit ||
+                 !completion.valid_terminal_frame || !completion.terminal_recorded )
+                return Record{};
+            return Evaluate( lines, completion.exit_code, expected_process );
         }
 
     private:
@@ -1268,9 +1467,275 @@ namespace
         }
     };
 
-    static bool IsObserverRepairAuthorized( const std::array<PublisherObserverEvidenceEvaluator::Record, 2> &records )
+    class PublisherObserverProcessEvidenceCollector
     {
-        const auto &[first, second] = records;
+    public:
+        class CollectedEvidence
+        {
+        public:
+            const std::string &Classification() const { return record_.Classification(); }
+            uint8_t CountWeight() const { return record_.CountWeight(); }
+            const std::string &Boundary() const { return record_.Boundary(); }
+            const std::string &State() const { return record_.State(); }
+            const std::string &Error() const { return record_.Error(); }
+            const std::string &Origin() const { return origin_; }
+            const std::string &Filter() const { return filter_; }
+            const std::string &RunToken() const { return expected_.run_token; }
+            const std::string &ChildPid() const { return expected_.pid; }
+            const std::string &ChildStatus() const { return child_status_; }
+            const std::string &FooterStatus() const { return footer_status_; }
+            const std::string &ControlStatus() const { return control_status_; }
+            bool IsQualifyingPublisherLoss() const { return qualifying_publisher_loss_; }
+            bool IsEligibleObserverLifecycleFailure() const
+            {
+                return qualifying_publisher_loss_ && record_.IsEligibleObserverLifecycleFailure();
+            }
+
+        private:
+            friend class PublisherObserverProcessEvidenceCollector;
+
+            CollectedEvidence( PublisherObserverEvidenceEvaluator::Record record,
+                               PublisherObserverEvidenceEvaluator::ExpectedProcess expected, std::string origin,
+                               std::string filter, std::string child_status, std::string footer_status,
+                               std::string control_status, bool qualifying_publisher_loss ) :
+                record_( std::move( record ) ), expected_( std::move( expected ) ), origin_( std::move( origin ) ),
+                filter_( std::move( filter ) ), child_status_( std::move( child_status ) ),
+                footer_status_( std::move( footer_status ) ), control_status_( std::move( control_status ) ),
+                qualifying_publisher_loss_( qualifying_publisher_loss )
+            {
+            }
+
+            PublisherObserverEvidenceEvaluator::Record          record_;
+            PublisherObserverEvidenceEvaluator::ExpectedProcess expected_;
+            std::string                                         origin_;
+            std::string                                         filter_;
+            std::string                                         child_status_;
+            std::string                                         footer_status_;
+            std::string                                         control_status_;
+            bool                                                qualifying_publisher_loss_ = false;
+        };
+
+        static CollectedEvidence Launch( const std::string &filter, const std::string &writer_mode = {} )
+        {
+            const auto executable = boost::filesystem::canonical( boost::dll::program_location() );
+            const auto run_token = NewRunToken();
+            int data_pipe[2]{};
+            int control_pipe[2]{};
+            if ( ::pipe( data_pipe ) != 0 || ::pipe( control_pipe ) != 0 )
+                return Invalid( filter, run_token, "pipe-unavailable" );
+            SetNonBlocking( data_pipe[0] );
+            SetNonBlocking( data_pipe[1] );
+            SetNonBlocking( control_pipe[0] );
+            SetNonBlocking( control_pipe[1] );
+
+            const auto child = ::fork();
+            if ( child == 0 )
+            {
+                ::close( data_pipe[0] );
+                ::close( control_pipe[0] );
+                ::fcntl( data_pipe[0], F_SETFD, FD_CLOEXEC );
+                ::fcntl( control_pipe[0], F_SETFD, FD_CLOEXEC );
+                ::dup2( data_pipe[1], STDOUT_FILENO );
+                ::dup2( data_pipe[1], STDERR_FILENO );
+                ::close( data_pipe[1] );
+                const int flags = ::fcntl( control_pipe[1], F_GETFD );
+                if ( flags >= 0 ) ::fcntl( control_pipe[1], F_SETFD, flags & ~FD_CLOEXEC );
+                std::vector<std::string> environment;
+                for ( char **entry = ::environ; entry && *entry; ++entry )
+                {
+                    const std::string inherited( *entry );
+                    if ( inherited.rfind( "P12_10_RUN_TOKEN=", 0 ) != 0 &&
+                         inherited.rfind( "P12_OBSERVER_CONTROL_FD=", 0 ) != 0 &&
+                         inherited.rfind( "P12_10_WRITER_MODE=", 0 ) != 0 )
+                        environment.push_back( inherited );
+                }
+                environment.emplace_back( "P12_10_RUN_TOKEN=" + run_token );
+                environment.emplace_back( "P12_OBSERVER_CONTROL_FD=" + std::to_string( control_pipe[1] ) );
+                if ( !writer_mode.empty() ) environment.emplace_back( "P12_10_WRITER_MODE=" + writer_mode );
+                std::vector<char *> envp;
+                for ( auto &entry : environment ) envp.push_back( entry.data() );
+                envp.push_back( nullptr );
+                const std::string child_filter = "--gtest_filter=" + filter;
+                std::array<char *, 4> argv{ const_cast<char *>( executable.c_str() ), const_cast<char *>( child_filter.c_str() ),
+                                            const_cast<char *>( "--gtest_brief=1" ), nullptr };
+                ::execve( executable.c_str(), argv.data(), envp.data() );
+                _exit( 127 );
+            }
+
+            ::close( data_pipe[1] );
+            ::close( control_pipe[1] );
+            if ( child < 0 )
+            {
+                ::close( data_pipe[0] );
+                ::close( control_pipe[0] );
+                return Invalid( filter, run_token, "fork-unavailable" );
+            }
+
+            std::string output;
+            std::string control;
+            bool data_eof = false;
+            bool control_eof = false;
+            while ( !data_eof || !control_eof )
+            {
+                std::array<pollfd, 2> descriptors{{ { data_pipe[0], static_cast<short>( data_eof ? 0 : POLLIN ), 0 },
+                                                     { control_pipe[0], static_cast<short>( control_eof ? 0 : POLLIN ), 0 } }};
+                int ready = 0;
+                do { ready = ::poll( descriptors.data(), descriptors.size(), -1 ); } while ( ready < 0 && errno == EINTR );
+                if ( ready < 0 ) break;
+                Drain( data_pipe[0], output, data_eof );
+                Drain( control_pipe[0], control, control_eof );
+            }
+            ::close( data_pipe[0] );
+            ::close( control_pipe[0] );
+            int status = 0;
+            while ( ::waitpid( child, &status, 0 ) < 0 && errno == EINTR ) {}
+
+            PublisherObserverEvidenceEvaluator::ExpectedProcess expected{
+                run_token, "p12-observer-v1", std::to_string( child ), executable.string(),
+                std::to_string( boost::filesystem::file_size( executable ) ),
+                std::to_string( boost::filesystem::last_write_time( executable ) ) };
+            const auto frame = ValidateControl( control, run_token, child );
+            const bool normal_exit = WIFEXITED( status );
+            const int exit_code = normal_exit ? WEXITSTATUS( status ) : -1;
+            const bool footer = HasOneGTestFooter( SplitLines( output ) );
+            const PublisherObserverEvidenceEvaluator::ProcessCompletion completion{
+                data_eof, control_eof, normal_exit, frame.valid, frame.recorded, exit_code };
+            const auto record = PublisherObserverEvidenceEvaluator::Evaluate( SplitLines( output ), completion, expected );
+            const bool qualifying = filter == "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" &&
+                                    record.CountWeight() == 1;
+            return CollectedEvidence( record, expected,
+                                      qualifying ? "real-socket-publisher-loss" : "child-writer-probe-or-nonqualifying",
+                                      filter, !normal_exit ? "abnormal-signal" : exit_code == 0 ? "normal-exit-0" : "normal-exit-nonzero",
+                                      footer ? "one-normal-footer" : "missing-or-ambiguous-footer",
+                                      frame.valid ? frame.recorded ? "validated-terminal-recorded" : "validated-terminal-unrecorded"
+                                                  : "invalid-or-missing-frame-" + frame.reason,
+                                      qualifying );
+        }
+
+    private:
+        struct FrameValidation { bool valid = false; bool recorded = false; std::string reason = "missing"; };
+
+        static void SetNonBlocking( int descriptor )
+        {
+            const int flags = ::fcntl( descriptor, F_GETFL );
+            if ( flags >= 0 ) (void)::fcntl( descriptor, F_SETFL, flags | O_NONBLOCK );
+        }
+
+        static void Drain( int descriptor, std::string &destination, bool &eof )
+        {
+            std::array<char, 4096> bytes{};
+            while ( !eof )
+            {
+                const auto read_size = ::read( descriptor, bytes.data(), bytes.size() );
+                if ( read_size > 0 ) destination.append( bytes.data(), static_cast<size_t>( read_size ) );
+                else if ( read_size == 0 ) eof = true;
+                else if ( errno == EINTR ) continue;
+                else if ( errno == EAGAIN || errno == EWOULDBLOCK ) break;
+                else { eof = true; break; }
+            }
+        }
+
+        static std::vector<std::string> SplitLines( const std::string &bytes )
+        {
+            std::vector<std::string> lines;
+            std::istringstream input( bytes );
+            for ( std::string line; std::getline( input, line ); ) lines.push_back( line );
+            return lines;
+        }
+
+        static bool HasOneGTestFooter( const std::vector<std::string> &lines )
+        {
+            size_t footers = 0;
+            for ( const auto &line : lines )
+                if ( line.find( "[  PASSED  ] 1 test" ) == 0 || line.find( "[  FAILED  ] 1 test" ) == 0 ) ++footers;
+            return footers == 1;
+        }
+
+        static uint16_t Get16( const std::string &frame, size_t offset )
+        {
+            return ( static_cast<uint16_t>( static_cast<uint8_t>( frame[offset] ) ) << 8 ) |
+                   static_cast<uint8_t>( frame[offset + 1] );
+        }
+
+        static uint32_t Get32( const std::string &frame, size_t offset )
+        {
+            uint32_t result = 0;
+            for ( size_t index = 0; index < 4; ++index ) result = ( result << 8 ) | static_cast<uint8_t>( frame[offset + index] );
+            return result;
+        }
+
+        static uint64_t Get64( const std::string &frame, size_t offset )
+        {
+            uint64_t result = 0;
+            for ( size_t index = 0; index < 8; ++index ) result = ( result << 8 ) | static_cast<uint8_t>( frame[offset + index] );
+            return result;
+        }
+
+        static FrameValidation ValidateControl( const std::string &frame, const std::string &token, pid_t child )
+        {
+            if ( frame.size() != 66 ) return { false, false, "size" };
+            if ( frame.compare( 0, 8, "P12OCF01" ) ) return { false, false, "magic" };
+            if ( Get16( frame, 8 ) != 1 ) return { false, false, "version" };
+            if ( Get32( frame, 10 ) != 52 ) return { false, false, "length" };
+            if ( Get64( frame, 46 ) != static_cast<uint64_t>( child ) ) return { false, false, "pid" };
+            if ( Get64( frame, 54 ) == 0 || static_cast<uint8_t>( frame[62] ) != 1 ) return { false, false, "terminal" };
+            std::array<uint8_t, 32> token_bytes{};
+            if ( !DecodeToken( token, token_bytes ) ) return { false, false, "token-decode" };
+            for ( size_t index = 0; index < token_bytes.size(); ++index )
+                if ( token_bytes[index] != static_cast<uint8_t>( frame[14 + index] ) ) return { false, false, "token" };
+            const auto write_result = static_cast<uint8_t>( frame[63] );
+            const auto flush_result = static_cast<uint8_t>( frame[64] );
+            const auto disposition = static_cast<uint8_t>( frame[65] );
+            const bool successful = write_result == 1 && flush_result == 1;
+            if ( disposition == 1 ) return { successful, successful, successful ? "recorded" : "recorded-failure" };
+            if ( disposition == 2 ) return { !successful, false, !successful ? "unrecorded" : "unrecorded-success" };
+            return { false, false, "disposition" };
+        }
+
+        static bool DecodeToken( const std::string &token, std::array<uint8_t, 32> &bytes )
+        {
+            if ( token.size() != 64 ) return false;
+            const auto decode = []( char value ) -> int
+            {
+                if ( value >= '0' && value <= '9' ) return value - '0';
+                if ( value >= 'a' && value <= 'f' ) return value - 'a' + 10;
+                return -1;
+            };
+            for ( size_t index = 0; index < bytes.size(); ++index )
+            {
+                const int high = decode( token[index * 2] );
+                const int low = decode( token[index * 2 + 1] );
+                if ( high < 0 || low < 0 ) return false;
+                bytes[index] = static_cast<uint8_t>( ( high << 4 ) | low );
+            }
+            return true;
+        }
+
+        static std::string NewRunToken()
+        {
+            std::array<uint8_t, 32> bytes{};
+            std::random_device random;
+            for ( auto &byte : bytes ) byte = static_cast<uint8_t>( random() );
+            std::ostringstream result;
+            result << std::hex << std::setfill( '0' );
+            for ( const auto byte : bytes ) result << std::setw( 2 ) << static_cast<unsigned>( byte );
+            return result.str();
+        }
+
+        static CollectedEvidence Invalid( const std::string &filter, const std::string &token, const std::string &status )
+        {
+            PublisherObserverEvidenceEvaluator::ExpectedProcess expected{ token, "p12-observer-v1", "", "", "", "" };
+            return CollectedEvidence( PublisherObserverEvidenceEvaluator::Evaluate(
+                                         {}, PublisherObserverEvidenceEvaluator::ProcessCompletion{}, expected ),
+                                      expected, "collector-failure", filter, status, "missing-or-ambiguous-footer",
+                                      "invalid-or-missing-frame", false );
+        }
+    };
+
+    static bool IsObserverRepairAuthorized(
+        const std::array<PublisherObserverProcessEvidenceCollector::CollectedEvidence, 2> &evidence )
+    {
+        const auto &[first, second] = evidence;
         return first.IsEligibleObserverLifecycleFailure() && second.IsEligibleObserverLifecycleFailure() &&
                first.Boundary() == second.Boundary() && first.State() == second.State() && first.Error() == second.Error();
     }
@@ -1308,7 +1773,11 @@ TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartial
                "tooling_attribution_rebuild" );
 }
 
-TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures )
+static_assert( !std::is_invocable_v<
+               decltype( &IsObserverRepairAuthorized ),
+               std::array<PublisherObserverEvidenceEvaluator::Record, 2>> );
+
+TEST( PublisherObserverRecordClassifier, ParsesEligibleTriplesButCannotAuthorizeThem )
 {
     using Evaluator = PublisherObserverEvidenceEvaluator;
     const Evaluator::ExpectedProcess expected{ "run-77", "p12-observer-v1", "777", "/tmp/p12-test", "123", "456" };
@@ -1322,16 +1791,14 @@ TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligible
                                           "exe_path=/tmp/p12-test exe_size=123 exe_mtime=456 outcome=failure terminal=complete "
                                           "peer_release=all-four-runtime-handles-released boundary=observer-output state=flush "
                                           "error=write-failed";
-    const auto first  = complete_failure( matching_terminal );
-    const auto second = complete_failure( matching_terminal );
-    EXPECT_TRUE( IsObserverRepairAuthorized( { first, second } ) );
+    const auto first = complete_failure( matching_terminal );
+    EXPECT_TRUE( first.IsEligibleObserverLifecycleFailure() );
 
     const auto triple_mismatch = complete_failure(
         "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-77 schema=p12-observer-v1 pid=777 exe_path=/tmp/p12-test "
         "exe_size=123 exe_mtime=456 outcome=failure terminal=complete "
         "peer_release=all-four-runtime-handles-released boundary=observer-output state=flush error=stream-closed" );
     EXPECT_TRUE( triple_mismatch.IsEligibleObserverLifecycleFailure() );
-    EXPECT_FALSE( IsObserverRepairAuthorized( { first, triple_mismatch } ) );
 
     const auto non_observer = complete_failure(
         "P12_PUBLISHER_OBSERVER_TERMINAL run_token=run-77 schema=p12-observer-v1 pid=777 exe_path=/tmp/p12-test "
@@ -1339,7 +1806,15 @@ TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligible
         "peer_release=all-four-runtime-handles-released boundary=zero-consensus-topic-mesh state=zero "
         "error=no-consensus-neighbor" );
     EXPECT_FALSE( non_observer.IsEligibleObserverLifecycleFailure() );
-    EXPECT_FALSE( IsObserverRepairAuthorized( { first, non_observer } ) );
+}
+
+class PublisherObserverProcessChild : public FinalityFaultNetwork
+{
+};
+
+TEST_F( PublisherObserverProcessChild, WriterProbe )
+{
+    PublisherReadinessObserver::EmitProcessWriterProbe();
 }
 
 TEST( PublisherObserverProcessEvidenceCollector, CapturesFocusedChildOutputAndRejectsUnattributedEvidence )
@@ -1348,8 +1823,36 @@ TEST( PublisherObserverProcessEvidenceCollector, CapturesFocusedChildOutputAndRe
     // captured focused child, never from a hand-authored observer record.
     const auto evidence = PublisherObserverProcessEvidenceCollector::Launch(
         "PublisherObserverProcessChild.WriterProbe", "write-failed" );
-    EXPECT_EQ( evidence.Classification(), "invalid_or_partial_blocked" );
+    EXPECT_EQ( evidence.Origin(), "child-writer-probe-or-nonqualifying" );
     EXPECT_EQ( evidence.CountWeight(), 0u );
+}
+
+TEST( PublisherObserverProcessEvidenceCollector, WriterProbeEvidenceNeverQualifies )
+{
+    const auto write_failed = PublisherObserverProcessEvidenceCollector::Launch(
+        "PublisherObserverProcessChild.WriterProbe", "write-failed" );
+    const auto stream_closed = PublisherObserverProcessEvidenceCollector::Launch(
+        "PublisherObserverProcessChild.WriterProbe", "stream-closed" );
+    const auto terminal_failed = PublisherObserverProcessEvidenceCollector::Launch(
+        "PublisherObserverProcessChild.WriterProbe", "terminal-stream-failure" );
+    EXPECT_EQ( write_failed.ControlStatus(), "validated-terminal-recorded" );
+    EXPECT_EQ( stream_closed.ControlStatus(), "validated-terminal-recorded" );
+    EXPECT_EQ( terminal_failed.ControlStatus(), "validated-terminal-unrecorded" );
+    EXPECT_FALSE( IsObserverRepairAuthorized( { write_failed, stream_closed } ) );
+    EXPECT_FALSE( IsObserverRepairAuthorized( { write_failed, terminal_failed } ) );
+}
+
+TEST( PublisherObserverProcessEvidenceCollector, RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch )
+{
+    // D-25: only independently launched, real-socket scenario children can
+    // enter this decision.  Existing readiness evidence remains no-repair.
+    const auto first = PublisherObserverProcessEvidenceCollector::Launch(
+        "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
+    const auto second = PublisherObserverProcessEvidenceCollector::Launch(
+        "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
+    EXPECT_NE( first.RunToken(), second.RunToken() );
+    EXPECT_NE( first.ChildPid(), second.ChildPid() );
+    EXPECT_FALSE( IsObserverRepairAuthorized( { first, second } ) );
 }
 
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
