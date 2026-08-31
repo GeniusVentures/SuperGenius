@@ -1098,6 +1098,10 @@ namespace
         bool        peer_released = false;
         std::string outcome;
         bool        foreign_process_or_binary = false;
+        std::string boundary;
+        std::string state;
+        std::string error;
+        bool        observer_lifecycle_eligible = false;
     };
 
     static std::string ClassifyPublisherObserverRecord( const PublisherObserverRecord &record )
@@ -1110,6 +1114,20 @@ namespace
         if ( record.outcome == "failure" && record.process_exit != 0 && record.gtest_failed )
             return "fully_attributed_complete_failure";
         return "invalid_or_partial_blocked";
+    }
+
+    static bool IsEligibleObserverLifecycleFailure( const PublisherObserverRecord &record )
+    {
+        return ClassifyPublisherObserverRecord( record ) == "fully_attributed_complete_failure" &&
+               record.observer_lifecycle_eligible && !record.boundary.empty() && !record.state.empty() &&
+               !record.error.empty();
+    }
+
+    static bool IsObserverRepairAuthorized( const std::array<PublisherObserverRecord, 2> &records )
+    {
+        const auto &[first, second] = records;
+        return IsEligibleObserverLifecycleFailure( first ) && IsEligibleObserverLifecycleFailure( second ) &&
+               first.boundary == second.boundary && first.state == second.state && first.error == second.error;
     }
 }
 
@@ -1142,6 +1160,26 @@ TEST( PublisherObserverRecordClassifier, DistinguishesCompletePassFailurePartial
     auto foreign = complete_pass;
     foreign.foreign_process_or_binary = true;
     EXPECT_EQ( ClassifyPublisherObserverRecord( foreign ), "tooling_attribution_rebuild" );
+}
+
+TEST( PublisherObserverRecordClassifier, AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures )
+{
+    PublisherObserverRecord observer_failure{ 1, true, true, 1, 1, true, true, true, "failure", false };
+    observer_failure.boundary = "observer-output";
+    observer_failure.state = "flush";
+    observer_failure.error = "write-failed";
+    observer_failure.observer_lifecycle_eligible = true;
+
+    auto matching_failure = observer_failure;
+    EXPECT_TRUE( IsObserverRepairAuthorized( { observer_failure, matching_failure } ) );
+
+    auto non_matching_failure = observer_failure;
+    non_matching_failure.error = "stream-closed";
+    EXPECT_FALSE( IsObserverRepairAuthorized( { observer_failure, non_matching_failure } ) );
+
+    auto non_observer_failure = observer_failure;
+    non_observer_failure.observer_lifecycle_eligible = false;
+    EXPECT_FALSE( IsObserverRepairAuthorized( { observer_failure, non_observer_failure } ) );
 }
 
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
