@@ -114,6 +114,23 @@ namespace sgns
         {
             worker_thread_.join();
         }
+        // The worker only drains tasks it managed to dequeue before observing
+        // stop_worker_; anything still queued must have its promise/callback
+        // settled, or callers blocked in future.get() hang forever.
+        while ( true )
+        {
+            RequestTask task;
+            {
+                std::lock_guard lock( queue_mutex_ );
+                if ( request_queue_.empty() )
+                {
+                    break;
+                }
+                task = std::move( request_queue_.front() );
+                request_queue_.pop();
+            }
+            AbandonTask( std::move( task ) );
+        }
     }
 
     AccountMessenger::~AccountMessenger()
@@ -1025,10 +1042,50 @@ namespace sgns
     void AccountMessenger::EnqueueTask( RequestTask task )
     {
         {
-            std::lock_guard lock( queue_mutex_ );
+            std::unique_lock lock( queue_mutex_ );
+            // A task accepted after Stop() would never be processed: the worker
+            // has left its loop, so settle the promise/callback immediately or
+            // the caller blocks in future.get() forever.
+            if ( stop_worker_.load() )
+            {
+                const auto canceled = outcome::failure( std::errc::operation_canceled );
+                if ( task.nonce_promise )
+                {
+                    task.nonce_promise->set_value( canceled );
+                }
+                if ( task.utxo_promise )
+                {
+                    task.utxo_promise->set_value( canceled );
+                }
+                auto callback = std::move( task.callback );
+                lock.unlock();
+                if ( callback )
+                {
+                    callback( canceled );
+                }
+                return;
+            }
             request_queue_.push( std::move( task ) );
         }
         queue_cv_.notify_one();
+    }
+
+    void AccountMessenger::AbandonTask( RequestTask task )
+    {
+        // Caller must hold queue_mutex_.
+        const auto canceled = outcome::failure( std::errc::operation_canceled );
+        if ( task.nonce_promise )
+        {
+            task.nonce_promise->set_value( canceled );
+        }
+        if ( task.utxo_promise )
+        {
+            task.utxo_promise->set_value( canceled );
+        }
+        if ( task.callback )
+        {
+            task.callback( canceled );
+        }
     }
 
     bool AccountMessenger::HasRequestPeers() const
