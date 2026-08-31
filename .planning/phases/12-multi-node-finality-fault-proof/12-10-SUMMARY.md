@@ -55,6 +55,7 @@ P12_10_SCOPE_CHANGED_PATH_SHA256 path=test/src/blockchain/multi_node_finality_fa
 2. **Task 2: RED/GREEN opaque no-repair decision**
    - `f84d337a` `test(12-10): add failing opaque evidence decision`
    - `08c6e52a` `feat(12-10): persist opaque no-repair decision`
+   - `4b3322ea` `fix(12-10): retain real child gtest footer`
 
 ## Captured Evidence
 
@@ -68,7 +69,7 @@ The real-socket pair reached the existing readiness/topology boundary, not the a
 ## Verification Results
 
 - `cmake --build build/OSX/Release --target multi_node_finality_fault_test --parallel 4`: passed.
-- `multi_node_finality_fault_test --gtest_filter='PublisherObserverProcessEvidenceCollector.*:PublisherObserverProcessChild.*' --gtest_brief=1`: passed (four focused collector/child tests).
+- `multi_node_finality_fault_test --gtest_filter='PublisherObserverProcessEvidenceCollector.*:PublisherObserverProcessChild.*' --gtest_brief=1`: passed (five focused collector/child tests).
 - `multi_node_finality_fault_test --gtest_filter='PublisherObserverProcessEvidenceCollector.*' --gtest_brief=1`: passed, including the two-run collector-only no-repair decision.
 - Opaque type and control-frame static checks: passed.
 - Scope-manifest replay, post-baseline additions-only scan, and permitted source whitespace check: passed.
@@ -95,7 +96,15 @@ The real-socket pair reached the existing readiness/topology boundary, not the a
    - **Files modified:** `test/src/blockchain/multi_node_finality_fault_test.cpp`
    - **Verification:** All focused collector and child-probe tests passed.
 
-**Total deviations:** 2 auto-fixed (Rule 1: 1, Rule 3: 1). No production, topology, finality, timeout, retry, or user-owned planning change was introduced.
+3. **[Rule 1 - Bug] Preserved the child’s normal GTest completion footer.**
+   - **Found during:** Task 2 real-socket attribution verification
+   - **Issue:** The focused child’s terse GTest mode omitted the failure footer, so valid frame evidence correctly remained zero-weight invalid instead of proving the real readiness result.
+   - **Fix:** Removed only the child’s terse-output flag and added assertions for the parent-observed real-socket PID, footer, frame, classification, and readiness triple.
+   - **Files modified:** `test/src/blockchain/multi_node_finality_fault_test.cpp`
+   - **Verification:** Five focused collector/child tests passed, including two independently launched real-socket publisher-loss children.
+   - **Committed in:** `4b3322ea`
+
+**Total deviations:** 3 auto-fixed (Rule 1: 2, Rule 3: 1). No production, topology, finality, timeout, retry, or user-owned planning change was introduced.
 
 ## Known Stubs
 
@@ -107,6 +116,6 @@ None. The addition is confined to test-process collection and observer output; i
 
 ## Self-Check: PASSED
 
-- Task commits `43e1d95d`, `48af88a3`, `f84d337a`, and `08c6e52a` exist.
+- Task commits `43e1d95d`, `48af88a3`, `f84d337a`, `08c6e52a`, and `4b3322ea` exist.
 - The test source and this summary exist.
 - The private scope manifest, NUL path sets, byte copies, and digest exist at the recorded location.
