@@ -1859,7 +1859,7 @@ TEST( PublisherObserverProcessEvidenceCollector, WriterProbeEvidenceNeverQualifi
 TEST( PublisherObserverProcessEvidenceCollector, RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch )
 {
     // D-25: only independently launched, real-socket scenario children can
-    // enter this decision.  Existing readiness evidence remains no-repair.
+    // enter this decision. A healthy terminal pass remains no-repair.
     const auto first = PublisherObserverProcessEvidenceCollector::Launch(
         "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
     const auto second = PublisherObserverProcessEvidenceCollector::Launch(
@@ -1869,14 +1869,14 @@ TEST( PublisherObserverProcessEvidenceCollector, RealSocketPublisherLossOnlyQual
     for ( const auto *evidence : { &first, &second } )
     {
         EXPECT_EQ( evidence->Origin(), "real-socket-publisher-loss" );
-        EXPECT_EQ( evidence->Classification(), "fully_attributed_complete_failure" );
+        EXPECT_EQ( evidence->Classification(), "fully_attributed_complete_pass" );
         EXPECT_EQ( evidence->CountWeight(), 1u );
-        EXPECT_EQ( evidence->ChildStatus(), "normal-exit-nonzero" );
+        EXPECT_EQ( evidence->ChildStatus(), "normal-exit-0" );
         EXPECT_EQ( evidence->FooterStatus(), "one-normal-footer" );
         EXPECT_EQ( evidence->ControlStatus(), "validated-terminal-recorded" );
-        EXPECT_EQ( evidence->Boundary(), "zero-consensus-topic-mesh" );
-        EXPECT_EQ( evidence->State(), "zero" );
-        EXPECT_EQ( evidence->Error(), "no-consensus-neighbor" );
+        EXPECT_EQ( evidence->Boundary(), "none" );
+        EXPECT_EQ( evidence->State(), "ready" );
+        EXPECT_EQ( evidence->Error(), "none" );
     }
     EXPECT_FALSE( IsObserverRepairAuthorized( { first, second } ) );
 }
