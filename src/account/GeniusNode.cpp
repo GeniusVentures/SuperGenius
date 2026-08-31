@@ -2283,6 +2283,16 @@ namespace sgns
         // tears down borrowers before the things they borrow.
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
+
+        // Static loggers elsewhere pin this node's file sink for process
+        // lifetime; close() is the only way to release sgnslog.log here.
+        if ( logging_system_ )
+        {
+            if ( auto sink = logging_system_->getSink( "file" ) )
+            {
+                sink->close();
+            }
+        }
     }
 
     void GeniusNode::RefreshUPNP( uint16_t pubsubport )
