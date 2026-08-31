@@ -2,6 +2,7 @@
 
 #include <boost/filesystem/operations.hpp>
 
+#include <chrono>
 #include <fstream>
 #include <algorithm>
 #include <deque>
@@ -32,6 +33,10 @@ namespace
     using sgns::trustedpeer::GenesisManifest;
     using sgns::trustedpeer::GenesisCeremony;
     using sgns::trustedpeer::TrustStateStore;
+
+    // CI runners can need several graphsync retry cycles (~2.5s each) before
+    // CRDT entries replicate, so condition waits get a generous budget.
+    constexpr auto E2E_WAIT_TIMEOUT = std::chrono::seconds( 30 );
 
     constexpr char BOOTSTRAPPER_PRIVATE_KEY[] =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
@@ -310,7 +315,7 @@ namespace
                 auto approvals = operator_a_secure->ReadCandidateApprovals( *initial_burn_candidate );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "first production controller did not publish its deterministic initial-burn approval" );
 
         ASSERT_EQ( operator_a_controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
@@ -361,7 +366,7 @@ namespace
                        operator_a_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
                        operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "production callbacks did not complete deterministic initial burn v1" );
         EXPECT_EQ( operator_a_signatures.load(), 1U );
         EXPECT_EQ( operator_b_signatures.load(), 1U );
@@ -379,7 +384,7 @@ namespace
                 auto approvals = operator_b_secure->ReadCandidateApprovals( proposed_policy.value() );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "policy v2 proposal did not replicate before approval" );
         EXPECT_EQ( operator_a_store->LoadAndVerify().value().policy.Hash(),
                    std::optional<std::string>( policy_v1_hash ) );
@@ -398,7 +403,7 @@ namespace
                        operator_a_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
                        operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "policy v2 did not activate after initial-burn readiness and one peer approval" );
 
         const auto policy_approvals = operator_a_secure->ReadCandidateApprovals( proposed_policy.value() ).value();
@@ -640,7 +645,7 @@ namespace
                 return peer_a_store->LoadAndVerify().has_value() && peer_b_store->LoadAndVerify().has_value() &&
                        non_member_store->LoadAndVerify().has_value();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "reviewed genesis did not become durable on every production controller" );
 
         const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( peer_a_store->LoadAndVerify().value().burn );
@@ -658,7 +663,7 @@ namespace
                        peer_b_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
                        peer_a_activation_failures.load() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "production controllers did not publish exactly two initial-burn approvals" );
 
         const auto approvals_before_restart = peer_a_secure->ReadCandidateApprovals( *burn_candidate ).value();
@@ -689,7 +694,7 @@ namespace
                     TrustStateStore::Open( ( path / "peer-a-trust" ).string(), manifest.network_id );
                 return reopened_peer_a_store_result.has_value();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "failed controller retained the trust-store lock after destruction" );
         ASSERT_TRUE( reopened_peer_a_store_result.has_value() );
         auto reopened_peer_a_store = reopened_peer_a_store_result.value();
@@ -976,7 +981,7 @@ namespace
                 return callback_event_count.load( std::memory_order_acquire ) == 1U &&
                        pending_commit_attempts.load() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "quorate callback failure was not emitted" );
         ASSERT_EQ( callback_events.size(), 1U );
         EXPECT_EQ( callback_events.front().code, TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED );
@@ -1167,7 +1172,7 @@ namespace
                        operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
                        passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "production controllers did not reach initial-burn readiness" );
         EXPECT_EQ( operator_a_signatures.load(), 1U );
         EXPECT_EQ( operator_b_signatures.load(), 1U );
@@ -1195,7 +1200,7 @@ namespace
                 auto approvals = passive_secure->ReadCandidateApprovals( proposed.value() );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "passive node did not retain the authenticated pending policy" );
         EXPECT_EQ( passive_store->LoadAndVerify().value().policy.Hash(), std::optional<std::string>( durable_v1_hash ) );
         EXPECT_EQ( passive_activation_failures.load(), 0U );
@@ -1210,7 +1215,7 @@ namespace
                 auto approvals = operator_b_secure->ReadCandidateApprovals( proposed.value() );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "operator_b did not retain the authenticated pending policy" );
 
         auto approved = operator_b_admin.Approve( proposed.value() );
@@ -1228,7 +1233,7 @@ namespace
                        p.value().policy.Hash() == std::optional<std::string>( policy_v2_hash ) &&
                        passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "passive node did not durably activate policy v2" );
         const auto policy_v2_approvals = passive_secure->ReadCandidateApprovals( proposed.value() ).value();
         ASSERT_EQ( policy_v2_approvals.size(), 2U );
@@ -1274,7 +1279,7 @@ namespace
                 return operator_a_failed_commit_attempts.load() == 1U &&
                        passive_activation_failures.load() == 1U && passive_failed_commit_attempts.load() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "passive policy commit failure was not emitted" );
         {
             std::lock_guard<std::mutex> lock( event_mutex );
@@ -1322,7 +1327,7 @@ namespace
                        a.value().policy.Hash() == std::optional<std::string>( winning_policy_v3_hash ) &&
                        b.value().policy.Hash() == std::optional<std::string>( policy_v2_hash );
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "remaining production callback did not process quorum after passive teardown" );
         EXPECT_EQ( passive_store->LoadAndVerify().value().policy.Hash(), std::optional<std::string>( policy_v2_hash ) );
         EXPECT_EQ( passive_failed_commit_attempts.load(), 1U );
@@ -1470,7 +1475,7 @@ namespace
                        operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
                        passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "production controllers did not reach initial-burn readiness" );
         EXPECT_EQ( passive_signatures.load(), 0U );
 
@@ -1496,7 +1501,7 @@ namespace
                 auto approvals = passive_secure->ReadCandidateApprovals( proposed.value() );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "passive node did not retain the first policy approval" );
         // The passive-side wait above does not imply operator_b's store has the
         // proposal yet — approving against an empty approval list fails with
@@ -1507,7 +1512,7 @@ namespace
                 auto approvals = operator_b_secure->ReadCandidateApprovals( proposed.value() );
                 return approvals.has_value() && approvals.value().size() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "operator_b did not retain the first policy approval" );
 
         fail_passive_commits.store( true );
@@ -1518,7 +1523,7 @@ namespace
             {
                 return passive_activation_failures.load() == 1U && passive_failed_commit_attempts.load() == 1U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "passive controller did not report the injected policy commit failure" );
         {
             std::lock_guard<std::mutex> lock( failure_mutex );
@@ -1547,7 +1552,7 @@ namespace
                     TrustStateStore::Open( ( path / "passive-trust" ).string(), manifest.network_id );
                 return reopened_passive_store_result.has_value();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "failed passive controller retained the trust-store lock after destruction" );
         ASSERT_TRUE( reopened_passive_store_result.has_value() );
         auto reopened_passive_store = reopened_passive_store_result.value();
@@ -1573,7 +1578,7 @@ namespace
                        durable.value().policy.Hash() == std::optional<std::string>( policy_v2_hash ) &&
                        passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "reconstructed controller did not activate retained policy quorum" );
         // RECONSTRUCTION_NO_WRITE_WINDOW_END
 
@@ -1676,7 +1681,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return burn_list_calls.load() > burn_calls_before_first && observations->idle;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "first below-quorum policy refresh did not complete" );
         {
             std::lock_guard<std::mutex> lock( observations->mutex );
@@ -1700,7 +1705,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return !observations->timers.empty() || observations->attempts.size() >= 2;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 policy transient retry missing" );
         if ( auto retry = observations->PopTimer() ) retry();
         sgns::test::assertWaitForCondition(
@@ -1710,7 +1715,7 @@ namespace
                 return durable.has_value() &&
                        durable.value().policy.Hash() == std::optional<std::string>( expected_successor_hash );
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 policy transient retry missing" );
         // TRANSIENT_POLICY_NO_WRITE_END
 
@@ -1811,7 +1816,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return burn_list_calls.load() > burn_calls_before_first && observations->idle;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "first below-quorum burn refresh did not complete" );
         {
             std::lock_guard<std::mutex> lock( observations->mutex );
@@ -1835,7 +1840,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return !observations->timers.empty() || observations->attempts.size() >= 2;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 burn transient retry missing" );
         if ( auto retry = observations->PopTimer() ) retry();
         sgns::test::assertWaitForCondition(
@@ -1846,7 +1851,7 @@ namespace
                        durable.value().burn.Hash() == std::optional<std::string>( expected_successor_hash ) &&
                        harness->controller->burn_config()->GetConfirmedValueProvider()->IsReady();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 burn transient retry missing" );
         // TRANSIENT_BURN_NO_WRITE_END
 
@@ -1927,7 +1932,7 @@ namespace
               harness->signers[0].Sign( bytes ) } ).has_value() );
         sgns::test::assertWaitForCondition(
             [&] { return burn_list_calls.load() > burn_calls_before_first; },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "first below-quorum exhaustion refresh did not complete" );
         {
             std::lock_guard<std::mutex> lock( observations->mutex );
@@ -1952,7 +1957,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return !observations->timers.empty();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 retry exhaustion cap missing" );
         std::function<void()> request_refresh;
         {
@@ -1970,7 +1975,7 @@ namespace
                     std::lock_guard<std::mutex> lock( observations->mutex );
                     return !observations->timers.empty();
                 },
-                std::chrono::seconds( 5 ),
+                E2E_WAIT_TIMEOUT,
                 "CR-13 retry exhaustion cap missing" );
             auto timer = observations->PopTimer();
             ASSERT_TRUE( static_cast<bool>( timer ) ) << "CR-13 retry exhaustion cap missing";
@@ -1982,7 +1987,7 @@ namespace
                 std::lock_guard<std::mutex> lock( observations->mutex );
                 return observations->idle && observations->attempts.size() == 7U;
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "CR-13 retry exhaustion cap missing" );
         // TRANSIENT_EXHAUSTION_NO_WRITE_END
 
@@ -2094,7 +2099,7 @@ namespace
                 return callback_released_owner.load() && weak.expired() && observations->idle &&
                        observations->idle_notifications >= 2U && observations->timers.empty();
             },
-            std::chrono::seconds( 5 ),
+            E2E_WAIT_TIMEOUT,
             "callback owner did not expire and drain" );
         const bool dispatch_drained = [&]
         {
