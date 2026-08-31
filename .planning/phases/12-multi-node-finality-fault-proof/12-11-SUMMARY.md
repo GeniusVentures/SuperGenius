@@ -19,22 +19,22 @@ key-files:
 key-decisions:
   - "Only the direct child session handshaken by the runner may receive a negative-PGID signal."
   - "Socket observations establish availability only; they never attribute a listener to a process group."
-requirements-completed: []
-verification_status: blocked
+requirements-completed: [TEST-06]
+verification_status: passed
 completed: 2026-08-31
 ---
 
 # Phase 12 Plan 11: Process-Ownership Runner Summary
 
-**A fail-closed POSIX CTest launcher now creates and reaps only its own real-socket test session, while the final six-run proof remains blocked by a pre-existing stale collector expectation.**
+**A fail-closed POSIX CTest launcher now creates and reaps only its own real-socket test session, with six independently logged cancellation and normal-suite runs passing.**
 
 ## Performance
 
 - **Duration:** approximately 40 minutes
 - **Started:** 2026-08-31T19:20:00Z
-- **Completed:** 2026-08-31T19:59:05Z
-- **Tasks:** 2 implementation tasks committed; final verification gate blocked
-- **Files modified:** 2
+- **Completed:** 2026-08-31T21:52:03Z
+- **Tasks:** 2 planned implementation tasks plus 1 user-authorized assertion correction
+- **Files modified:** 3
 
 ## Accomplishments
 
@@ -46,11 +46,13 @@ completed: 2026-08-31
 
 1. **Task 1: RED/GREEN an invocation-owned POSIX launcher and cancellation reaper** - `ea4cbc32` (`test`)
 2. **Task 2: Register the fail-closed launcher and serial ownership regression through CTest** - `4f144532` (`test`)
+3. **User-authorized scope extension: assert the observed healthy PublisherLoss terminal record** - `bfb2579a` (`test`)
 
 ## Files Created/Modified
 
 - `test/src/blockchain/multi_node_finality_fault_runner.cpp` - Test-only ownership boundary, cancellation/reap verification, and loopback reuse checks.
 - `test/src/blockchain/CMakeLists.txt` - POSIX/CMake preflight, launcher-aware target-name registration, and shared CTest port lock.
+- `test/src/blockchain/multi_node_finality_fault_test.cpp` - Corrected only the stale expected publisher-loss observer tuple to the verified healthy terminal record.
 
 ## Verification
 
@@ -58,8 +60,9 @@ completed: 2026-08-31
 - `ctest -N -V` confirmed the ordinary CTest command is prefixed by `multi_node_finality_fault_runner` and preserves its XML argument.
 - Standalone normal forwarding passed for `PublisherObserverProcessChild.WriterProbe` when executed with local TCP permission.
 - Standalone controlled cancellation passed: `P12_PROCESS_OWNERSHIP=passed`, group exit/reap completed, and ports 54631–54634 rebound.
-- Three fresh controlled-cancellation CTest invocations passed with actual exit status 0. Complete CTest logs are preserved at `/private/tmp/phase12-11-controlled-{1,2,3}.log` for this execution environment.
-- One fresh normal serial `multi_node_finality_fault_test` invocation completed its teardown and released every fixed port, but exited nonzero after 215.53 seconds: 12 of 13 GTests passed.
+- Three fresh controlled-cancellation CTest invocations passed with actual exit status 0. Complete CTest logs are preserved at `/private/tmp/phase12-11-controlled-final-{1,2,3}.log`.
+- Three fresh strictly serial normal `multi_node_finality_fault_test` invocations each passed all 13 GTests with actual exit status 0. Complete CTest logs are preserved at `/private/tmp/phase12-11-normal-final-{1,2,3}.log`.
+- All six final-evidence runs used local TCP permission, completed before the next invocation started, and left ports 54631–54634 clear.
 
 ## Decisions Made
 
@@ -80,11 +83,21 @@ completed: 2026-08-31
 
 **Total deviations:** 1 auto-fixed (Rule 3: 1). No consensus, CRDT, PubSub, Mint/finality, collector, topology, timeout, retry, or user-data change was made.
 
+### User-Authorized Scope Extension
+
+**2. Corrected the stale successful PublisherLoss expectation.**
+- **Authorized by:** User, after the ownership runner proved the real child runs were healthy.
+- **Issue:** `RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch` still asserted the former sandbox-induced failure tuple even though two independent real-socket children consistently produced complete terminal passes.
+- **Fix:** Changed only that test's expected classification, exit status, boundary, state, and error to `fully_attributed_complete_pass`, `normal-exit-0`, `none`, `ready`, and `none`.
+- **Preserved:** Independent launches, distinct run tokens/PIDs, count/footer/control checks, and `EXPECT_FALSE( IsObserverRepairAuthorized( { first, second } ) )`.
+- **Files modified:** `test/src/blockchain/multi_node_finality_fault_test.cpp`.
+- **Committed in:** `bfb2579a`.
+
 ## Issues Encountered
 
-The required six-run gate is not satisfied and is not claimed closed. The first normal serial run failed only in the pre-existing `PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch` assertion. Its real child runs now pass with `complete_pass`, `normal-exit-0`, `boundary=none`, `state=ready`, and `error=none`, while the test still hard-codes the former sandbox-induced failure tuple. The PublisherLoss production scenario itself passed, and no listener remained after teardown.
+The first post-runner normal execution exposed the stale sandbox-era observer expectation. The user authorized the narrowly scoped correction above; the focused two-child real-socket test and every final gate run subsequently passed.
 
-That assertion lives in `multi_node_finality_fault_test.cpp`, which Plan 12-11 explicitly forbids changing. Normal runs 2 and 3 were not launched because a later pass cannot replace the recorded first failure, and the six-pass criterion is already impossible without a separately scoped expectation correction.
+Two incidental overlapping normal invocations occurred while validating CTest completion observation. Neither was interrupted; both exited and all ports cleared. They are explicitly excluded from the final evidence. Final serial runs were restarted only after no prior CTest/runner/test process remained.
 
 ## User Setup Required
 
@@ -92,14 +105,16 @@ None. Real-socket test execution needs the local TCP bind permission already use
 
 ## Next Phase Readiness
 
-- The runner and CTest ownership boundary are ready for the six-run final proof.
-- A separately scoped correction must first update the stale collector expectation to accept the real-socket pass/no-repair result; then rerun all three controlled-cancellation and all three normal serial invocations from a clean port state.
+- The runner and CTest ownership boundary have passed the required six-run proof.
+- The verified healthy PublisherLoss result retains a no-repair decision; no protocol or harness behavior beyond invocation ownership changed.
 
 ## Self-Check: PASSED
 
 - Commits `ea4cbc32` and `4f144532` exist.
-- Both owned source files and this summary exist.
-- No protocol or collector source changed in these task commits.
+- Commit `bfb2579a` exists.
+- All three owned source files and this summary exist.
+- The six final-evidence logs exist at the recorded `/private/tmp/phase12-11-*-final-*.log` paths.
+- No consensus, CRDT, PubSub, Mint/finality, topology, timeout, retry, or user-data source changed.
 
 ---
 *Phase: 12-multi-node-finality-fault-proof*
