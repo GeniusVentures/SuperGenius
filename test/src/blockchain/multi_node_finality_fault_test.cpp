@@ -1855,6 +1855,15 @@ TEST( PublisherObserverProcessEvidenceCollector, RealSocketPublisherLossOnlyQual
     EXPECT_FALSE( IsObserverRepairAuthorized( { first, second } ) );
 }
 
+TEST( PublisherObserverProcessEvidenceCollector, CollectorOnlyDecisionPersistsNoRepairForReadinessFailure )
+{
+    const auto first = PublisherObserverProcessEvidenceCollector::Launch(
+        "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
+    const auto second = PublisherObserverProcessEvidenceCollector::Launch(
+        "FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover" );
+    EXPECT_EQ( PublisherObserverEvidenceDecision::RepairAuthorization( { first, second } ), "none" );
+}
+
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
 {
     sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
