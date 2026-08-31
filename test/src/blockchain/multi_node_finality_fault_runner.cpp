@@ -275,10 +275,25 @@ namespace
         int status = 0, cancellation = 0; bool complete = false;
         while ( true ) { const auto waited = ::waitpid( supervisor, &status, WNOHANG ); if ( waited == supervisor ) { complete = true; break; } if ( waited < 0 && errno != EINTR ) break; cancellation = PendingSignal( signals ); if ( cancellation != 0 || (::poll( nullptr, 0, 50 ) < 0 && errno != EINTR ) ) break; }
         ::close( liveness[1] ); // EOF makes the independently alive supervisor clean the verified test group.
-        const bool reaped = complete || Reap( supervisor, status ); const bool restored = ::sigprocmask( SIG_SETMASK, &original, nullptr ) == 0;
-        if ( !reaped ) return Fail( "supervisor-wait-failed" ); if ( !restored ) return Fail( "signal-mask-restore-failed" );
-        if ( complete ) return NormalizedExit( status );
-        if ( cancellation > 0 ) { int consumed = 0; if ( ::sigwait( &signals, &consumed ) == 0 && consumed == cancellation ) return 128 + cancellation; }
+        const bool reaped = complete || Reap( supervisor, status );
+        if ( !reaped ) return Fail( "supervisor-wait-failed" );
+        if ( complete )
+        {
+            if ( ::sigprocmask( SIG_SETMASK, &original, nullptr ) != 0 ) return Fail( "signal-mask-restore-failed" );
+            return NormalizedExit( status );
+        }
+        if ( cancellation > 0 )
+        {
+            // Consume the blocked group-directed cancellation before restoring
+            // the original mask; otherwise its default action can kill this
+            // launcher after the supervisor has already completed cleanup.
+            int consumed = 0;
+            const bool consumed_expected = ::sigwait( &signals, &consumed ) == 0 && consumed == cancellation;
+            const bool restored = ::sigprocmask( SIG_SETMASK, &original, nullptr ) == 0;
+            if ( !restored ) return Fail( "signal-mask-restore-failed" );
+            if ( consumed_expected ) return 128 + cancellation;
+        }
+        if ( ::sigprocmask( SIG_SETMASK, &original, nullptr ) != 0 ) return Fail( "signal-mask-restore-failed" );
         return Fail( cancellation < 0 ? "signal-wait-failed" : "normal-supervisor-wait-failed" );
     }
     [[nodiscard]] bool ReadReport( int fd, char &report )
