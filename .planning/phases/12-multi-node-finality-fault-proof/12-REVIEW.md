@@ -1,61 +1,54 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-reviewed: 2026-08-31T11:47:31Z
+reviewed: 2026-08-31T14:38:18Z
 depth: standard
-files_reviewed: 7
+files_reviewed: 8
 files_reviewed_list:
   - src/account/TransactionManager.cpp
   - src/account/TransactionManager.hpp
   - src/blockchain/Blockchain.hpp
   - src/blockchain/Consensus.cpp
   - src/blockchain/Consensus.hpp
+  - test/src/blockchain/CMakeLists.txt
   - test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp
   - test/src/blockchain/multi_node_finality_fault_test.cpp
 findings:
   critical: 2
-  warning: 1
+  warning: 0
   info: 0
-  total: 3
+  total: 2
 status: issues_found
 ---
 
 # Phase 12: Code Review Report
 
-**Reviewed:** 2026-08-31T11:47:31Z
+**Reviewed:** 2026-08-31T14:38:18Z
 **Depth:** standard
-**Files Reviewed:** 7
+**Files Reviewed:** 8
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 12 finality hooks, durability barriers, peer lifecycle helpers, and publisher-readiness observer. The production finality paths remain unchanged by the latest observer patch, but both claimed classifier repairs are only synthetic unit-test logic: no implementation parses or derives the required evidence fields from actual observer/GTest output. Consequently, neither the nonzero-exit guard nor the observer-lifecycle repair fence constrains a real evidence decision.
-
-## Narrative Findings (AI reviewer)
+The finality fault barriers are friend-scoped and the reviewed production paths do not introduce an apparent consensus, topology, or protocol behavior change when the test seams are inactive. However, the claimed process-bound observer evidence gate is not connected to any real process output, and its sole eligible lifecycle triples cannot be emitted by the observer. The evidence/repair decision therefore remains unenforced.
 
 ## Critical Issues
 
-### CR-01: Real observer failures cannot be gated on focused-GTest failure evidence
+### CR-01: Real observer output is never evaluated or used to authorize a repair
 
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1089-1116`
-**Issue:** `gtest_completed` and `gtest_failed` exist only in a manually populated `PublisherObserverRecord`. The runtime observer emits only START/TERMINAL strings (lines 695-783), and no code parses a focused GTest footer/process result into this record or calls the classifier for an emitted run. The apparent CR-01 regression merely assigns `gtest_failed = true` by hand (line 1142). Thus a real nonzero exit remains subject to an out-of-band/manual classification with no code-enforced proof that the focused test failed.
-**Fix:** Implement one test-owned record parser/evidence evaluator that consumes the START record, TERMINAL record, focused GTest footer, and process exit. Derive `gtest_completed`/`gtest_failed` solely there, reject any nonzero exit without a matching focused-test failure, and make the regression tests feed parsed fixture output rather than constructing the fields directly.
+**File:** `/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1143`
+**Issue:** `PublisherObserverEvidenceEvaluator::Evaluate` accepts an already-split vector of strings and is called only by the two classifier unit tests (lines 1294-1307 and 1317-1342). `IsObserverRepairAuthorized` (line 1271) likewise has no production/evidence-run caller outside its own unit test. The observer merely writes records to `std::cerr` (lines 696-750), while the CTest target is registered as a normal executable with no wrapper, capture, parsing, evaluator, or authorization step (CMake lines 59-68). Consequently, actual serialized START/TERMINAL/GTest output can never be attributed or passed through the exact two-run repair gate; the test only demonstrates behavior on synthetic strings.
 
-### CR-02: The repair-authorization fence is never applied to emitted evidence
+**Fix:** Add a test-owned process runner/evidence collector that launches the focused GTest, captures combined stdout/stderr, splits the captured bytes into lines, derives a normalized process completion result, constructs `ExpectedProcess` from that launched child, and calls `Evaluate`. Feed only those returned `Record` values into a persisted two-run `IsObserverRepairAuthorized` decision. Treat malformed/missing output, a missing GTest completion footer, and abnormal child termination as fail-closed, zero-weight evidence.
 
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1119-1131`
-**Issue:** `observer_lifecycle_eligible` and the boundary/state/error triple are likewise only synthetic fields. `IsObserverRepairAuthorized` has no caller outside its own unit test, and the emitted terminal format (lines 723-749) does not carry an eligibility decision. The test proves a pure helper can compare two hand-authored records, but it cannot prevent an actual observer-output failure from being used to authorize a repair without the required two fully attributed, eligible matching records.
-**Fix:** Have the same evaluator derive eligibility from the parsed terminal classification (with an explicit, fail-closed observer-lifecycle boundary allowlist) and make repair authorization accept only evaluator-produced records. Add fixtures for actual serialized records covering matching, mismatching, non-observer, malformed, and foreign-process cases.
+### CR-02: The only repair-eligible lifecycle triples are impossible for the observer to produce
 
-## Warnings
+**File:** `/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:779`
+**Issue:** The allowlist accepts only `boundary=observer-output`, `state=flush`, and `error=write-failed|stream-closed` (lines 1263-1268). But `PublisherReadinessObserver::Write` unconditionally writes to `std::cerr` and discards the stream result (lines 779-784); no observer path emits either allowed error or a `flush` state. Its real failure path instead reports a readiness snapshot such as `zero-consensus-topic-mesh` (lines 709-715 and 608-665). Thus eligible failures exist only as hand-authored strings in lines 1289-1292 and 1321-1340, and no actual observer-output/lifecycle failure can satisfy the gate.
 
-### WR-01: The claimed CR-02 regression was not present in the focused executable
-
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1165`
-**Issue:** The source defines `AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures`, but the available focused binary predates the source (binary mtime `1788175110`; source mtime `1788176015`) and `--gtest_list_tests` contains only the earlier classifier test. Running `--gtest_filter=PublisherObserverRecordClassifier.*` therefore exercised one test, not the new repair-gate regression. This leaves the repair claim unverified and makes the test result misleading.
-**Fix:** Rebuild `multi_node_finality_fault_test`, assert that `--gtest_list_tests` includes both classifier tests, then run the focused filter before treating either classifier fix as verified.
+**Fix:** Make the observer output path report a structured write/flush result to the evidence collector, and derive the lifecycle triple from that result rather than from fixture literals. If the terminal record itself cannot be flushed, mark the run incomplete/invalid; only a separately captured, attributable observer-output failure should be eligible for the explicit allowlist. Add integration fixtures using captured serialized output for both allowed triples and for failed/partial writes.
 
 ---
 
-_Reviewed: 2026-08-31T11:47:31Z_
+_Reviewed: 2026-08-31T14:38:18Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
