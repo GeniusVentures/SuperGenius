@@ -574,5 +574,35 @@ Plans:
 **Goal**: SuperGenius consumes the license NFT's `privateNetworkId` as the self-certifying private-network identity and enforces that identity at libp2p connection upgrade, while isolating chain topics and CRDT keys by network.
 **Depends on**: GeniusVentures/libp2p#10 (gater + pnet implementation; do not start until complete)
 **Tracking**: GeniusVentures/SuperGenius#367
-**Requirements**: TBD
-**Plans**: none yet
+**Requirements**: TBD — coverage derived from CONTEXT.md decisions D-01..D-11 (cited per plan in frontmatter `requirements`) plus research-derived PNET-CFG/REG/NETREG/GATE/SCOPE/VAL/PROC
+**Plans**: 8 plans in 5 waves
+
+**Wave 1** (parallel — no file overlap):
+
+Plans:
+- [ ] 15-01-PLAN.md — Build reconfiguration against dev_pnets 3rdparty install + D-10 dependency gate (blocking decision) + `private_network_id`/`network_bootstrap_peers` config identity (D-01, D-02, D-10, PNET-CFG)
+- [ ] 15-02-PLAN.md — PeerRegistry abstraction + SecureCrdtRegistryEntry explicit association + TrustedPeerRegistry adaptation (D-04, D-05, PNET-REG)
+
+**Wave 2** (15-03 needs 15-02; 15-04 and 15-06 need 15-01; mutually disjoint):
+
+Plans:
+- [ ] 15-03-PLAN.md — NetworkRegistry: SecureCRDT child registry, TPR-majority bootstrap, cached self-governance, secret-free payload (D-03, D-05, D-06, PNET-NETREG)
+- [ ] 15-04-PLAN.md — vendored ipfs-pubsub membership allow-list gater + GossipPubSub surface + reinstall (D-07, D-11, PNET-GATE)
+- [ ] 15-06-PLAN.md — job scope plumbing: scoped TaskKeys/chain-ids/topics with byte-stable public paths (D-02, D-08, PNET-SCOPE)
+
+**Wave 3** (15-05 needs 15-03+15-04):
+
+Plans:
+- [ ] 15-05-PLAN.md — GeniusNode NetworkRegistry wiring + gossip-host allow-list binding (fail-closed) + two-node D-07 gating tests (D-06, D-07, PNET-GATE)
+
+**Wave 4** (needs 15-06; serialized after 15-05 — GeniusNode.cpp overlap):
+
+Plans:
+- [ ] 15-07-PLAN.md — ValidatorRegistry instance-scoped identifiers + Blockchain/GossipNode scope threading (D-09, PNET-VAL)
+
+**Wave 5** (needs 15-05 — GeniusNode.cpp overlap):
+
+Plans:
+- [ ] 15-08-PLAN.md — processing-host gating: Noise-only + pnet + membership gater per ProcessSubTask (D-11, PNET-PROC)
+
+> Wave layout note: Waves 3-5 are serialized by exclusive `src/account/GeniusNode.cpp` ownership. Within Wave 2, execute 15-04 first (its vendored reinstall should precede that wave's SGNUS compilations).
