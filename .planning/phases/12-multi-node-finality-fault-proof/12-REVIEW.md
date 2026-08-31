@@ -1,54 +1,61 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-reviewed: 2026-08-31T11:25:58Z
+reviewed: 2026-08-31T11:47:31Z
 depth: standard
-files_reviewed: 1
+files_reviewed: 7
 files_reviewed_list:
+  - src/account/TransactionManager.cpp
+  - src/account/TransactionManager.hpp
+  - src/blockchain/Blockchain.hpp
+  - src/blockchain/Consensus.cpp
+  - src/blockchain/Consensus.hpp
+  - test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp
   - test/src/blockchain/multi_node_finality_fault_test.cpp
 findings:
   critical: 2
-  warning: 0
+  warning: 1
   info: 0
-  total: 2
+  total: 3
 status: issues_found
 ---
 
 # Phase 12: Code Review Report
 
-**Reviewed:** 2026-08-31T11:25:58Z
+**Reviewed:** 2026-08-31T11:47:31Z
 **Depth:** standard
-**Files Reviewed:** 1
+**Files Reviewed:** 7
 **Status:** issues_found
 
 ## Summary
 
-The Plan 12-09 delta is confined to the test-only observer, its explicit cleanup epilogue, and a local classifier; it does not directly mutate the finality, CRDT, PubSub, Mint, or normal peer protocol paths. However, the classifier does not enforce the evidence conditions needed to keep abnormal process exits and non-observer failure classes out of repair authorization.
+Reviewed the Phase 12 finality hooks, durability barriers, peer lifecycle helpers, and publisher-readiness observer. The production finality paths remain unchanged by the latest observer patch, but both claimed classifier repairs are only synthetic unit-test logic: no implementation parses or derives the required evidence fields from actual observer/GTest output. Consequently, neither the nonzero-exit guard nor the observer-lifecycle repair fence constrains a real evidence decision.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: BLOCKER — Any nonzero exit can be promoted to a completed GTest failure
+### CR-01: Real observer failures cannot be gated on focused-GTest failure evidence
 
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1105`
-**Issue:** `gtest_completed` only proves that GTest reached its footer. The classifier calls a record a `fully_attributed_complete_failure` whenever `outcome == "failure"` and `process_exit != 0`, without requiring that the focused GTest itself reported the normal one-test failure result. A teardown/runner/binary failure after a completed GTest footer can therefore enter the failure count as evidence. That violates D-23 and can provide false input to the two-failure repair gate.
-**Fix:** Capture and require an explicit focused-GTest result, not merely completion. For example, add `bool gtest_failed` (derived from the one-test footer) and require it for the failure branch:
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1089-1116`
+**Issue:** `gtest_completed` and `gtest_failed` exist only in a manually populated `PublisherObserverRecord`. The runtime observer emits only START/TERMINAL strings (lines 695-783), and no code parses a focused GTest footer/process result into this record or calls the classifier for an emitted run. The apparent CR-01 regression merely assigns `gtest_failed = true` by hand (line 1142). Thus a real nonzero exit remains subject to an out-of-band/manual classification with no code-enforced proof that the focused test failed.
+**Fix:** Implement one test-owned record parser/evidence evaluator that consumes the START record, TERMINAL record, focused GTest footer, and process exit. Derive `gtest_completed`/`gtest_failed` solely there, reject any nonzero exit without a matching focused-test failure, and make the regression tests feed parsed fixture output rather than constructing the fields directly.
 
-```cpp
-if (record.outcome == "failure" && record.process_exit != 0 && record.gtest_failed)
-    return "fully_attributed_complete_failure";
-```
+### CR-02: The repair-authorization fence is never applied to emitted evidence
 
-Add negative tests for a nonzero exit after a passed/unknown GTest result.
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1119-1131`
+**Issue:** `observer_lifecycle_eligible` and the boundary/state/error triple are likewise only synthetic fields. `IsObserverRepairAuthorized` has no caller outside its own unit test, and the emitted terminal format (lines 723-749) does not carry an eligibility decision. The test proves a pure helper can compare two hand-authored records, but it cannot prevent an actual observer-output failure from being used to authorize a repair without the required two fully attributed, eligible matching records.
+**Fix:** Have the same evaluator derive eligibility from the parsed terminal classification (with an explicit, fail-closed observer-lifecycle boundary allowlist) and make repair authorization accept only evaluator-produced records. Add fixtures for actual serialized records covering matching, mismatching, non-observer, malformed, and foreign-process cases.
 
-### CR-02: BLOCKER — The classifier cannot fence repair authorization to an observer-lifecycle failure triple
+## Warnings
 
-**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1089`
-**Issue:** `PublisherObserverRecord` does not retain `boundary`, `state`, or `error`, nor whether that boundary is an observer-lifecycle defect. Consequently `ClassifyPublisherObserverRecord()` can only label a record as a generic completed failure; it cannot enforce D-25's requirement that two records match exactly on the observer-lifecycle boundary/state/error and that the class justifies an observer-only repair. In particular, the observed `zero-consensus-topic-mesh` pre-fault topology failure is indistinguishable from an observer ownership/output failure to this classifier.
-**Fix:** Include normalized `boundary`, `state`, and `error` plus an explicit observer-lifecycle eligibility classification in the record, and implement a separate aggregate gate that requires two eligible records with an identical triple before returning repair-authorized. Test matching, non-matching, and non-observer triples.
+### WR-01: The claimed CR-02 regression was not present in the focused executable
+
+**File:** `test/src/blockchain/multi_node_finality_fault_test.cpp:1165`
+**Issue:** The source defines `AuthorizesRepairOnlyForMatchingEligibleObserverLifecycleFailures`, but the available focused binary predates the source (binary mtime `1788175110`; source mtime `1788176015`) and `--gtest_list_tests` contains only the earlier classifier test. Running `--gtest_filter=PublisherObserverRecordClassifier.*` therefore exercised one test, not the new repair-gate regression. This leaves the repair claim unverified and makes the test result misleading.
+**Fix:** Rebuild `multi_node_finality_fault_test`, assert that `--gtest_list_tests` includes both classifier tests, then run the focused filter before treating either classifier fix as verified.
 
 ---
 
-_Reviewed: 2026-08-31T11:25:58Z_
+_Reviewed: 2026-08-31T11:47:31Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
