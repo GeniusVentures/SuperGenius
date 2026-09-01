@@ -6,6 +6,7 @@
  */
 #include "account/TransactionManager.hpp"
 
+#include <algorithm>
 #include <utility>
 #include <thread>
 #include <system_error>
@@ -3429,10 +3430,20 @@ namespace sgns
                 conflicting_tx.value()->GetHash() );
             std::unique_lock tx_lock( tx_mutex_m );
             auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+            if ( it == tx_processed_m.end() )
+            {
+                // GetConflictingTransaction resolves entries by value (nonce + source
+                // address), but the tracked key namespace depends on the network the
+                // entry was recorded under; resolve by value scan before dereferencing.
+                it = std::find_if( tx_processed_m.begin(),
+                                   tx_processed_m.end(),
+                                   [&conflicting_tx]( const auto &kv ) {
+                                       return kv.second.tx &&
+                                              kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
+                                   } );
+            }
 
-            // No need to check if not found because we already found it on GetConflictingTransaction
-
-            if ( it->second.status == TransactionStatus::CONFIRMED )
+            if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
             {
                 TransactionManagerLogger()->debug(
                     "[{} - full: {}] Conflicting transaction is already CONFIRMED, not adding incoming transaction{}",
@@ -3961,6 +3972,24 @@ namespace sgns
                                                   conflicting_tx.value()->GetHash() );
                 std::unique_lock tx_lock( tx_mutex_m );
                 auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+                if ( it == tx_processed_m.end() )
+                {
+                    // The conflicting entry may live under a different network's key
+                    // namespace; resolve by value scan before dereferencing.
+                    it = std::find_if( tx_processed_m.begin(),
+                                       tx_processed_m.end(),
+                                       [&conflicting_tx]( const auto &kv ) {
+                                           return kv.second.tx &&
+                                                  kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
+                                       } );
+                }
+                if ( it == tx_processed_m.end() )
+                {
+                    // Nothing locally tracked to arbitrate against; the incoming
+                    // transaction was already confirmed above.
+                    tx_lock.unlock();
+                    return ConsensusManager::Check::Approve;
+                }
 
                 if ( it->second.status == TransactionStatus::CONFIRMED )
                 {
