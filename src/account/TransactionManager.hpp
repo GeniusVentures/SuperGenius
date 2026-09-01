@@ -310,6 +310,10 @@ namespace sgns
             std::shared_ptr<GeniusTransaction> tx;
             TransactionStatus                  status;
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+            // Set once ParseTransaction effects (e.g. mint UTXO application) succeeded
+            // for this entry so a certificate-work retry (e.g. failed
+            // PersistBridgeExecutedMarker) does not re-apply them.
+            bool effects_applied = false;
         };
 
         struct ReplayProtectionResult
