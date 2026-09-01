@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 12-multi-node-finality-fault-proof
 source: 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-08-SUMMARY.md, 12-11-SUMMARY.md
 started: 2026-09-01T14:56:14Z
-updated: 2026-09-01T17:28:00Z
+updated: 2026-09-01T20:15:00Z
 ---
 
 ## Current Test
@@ -47,7 +47,7 @@ blocked: 0
 ## Gaps
 
 - truth: "With two competing Mint proposals for the same burn, the real four-peer production path reaches one canonical slot and one authoritative certificate. Exactly the deterministic winner receives one Mint effect, the loser has none, and the outcome remains exact after every peer restarts."
-  status: failed
+  status: resolved
   reason: "User reported: ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults fails at consensus_pending_lifecycle_test.cpp:1279 — filtered.has_value() Actual: true, Expected: false. FilterCertificate logs 'consensus equivocation' for both same-slot alternates and then 'higher serialized certificate hash rejected'; same-mint alternates should be treated as normal, only different-mint quorum conflicts are faults."
   severity: blocker
   test: 1
