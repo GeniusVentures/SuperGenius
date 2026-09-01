@@ -233,6 +233,11 @@ namespace
         return batch->commit();
     }
 
+    // Windows CI runners can still be bootstrapping node subsystems (bridge,
+    // relayer) well past 30s, so trust-lifecycle replication waits get the same
+    // generous budget WaitForTrustLifecycle uses.
+    constexpr auto POLICY_LIFETIME_WAIT_TIMEOUT = std::chrono::seconds( 180 );
+
     class PolicyLifetimeMultiAccountTest : public ::testing::Test
     {
     protected:
@@ -412,7 +417,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBe
 
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&] { return MultiAccountTestAccess::Store( node_a )->LoadAndVerify().has_value(); },
-        std::chrono::seconds( 30 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "switched active member did not persist reviewed genesis" ) );
     const auto snapshot = MultiAccountTestAccess::Store( node_a )->LoadAndVerify().value();
     const auto canonical_candidate = BurnConfig::BurnCandidateCore( snapshot.burn ).value();
@@ -438,7 +443,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBe
             return durable.has_value() && durable.value().burn.basis_points == 100U &&
                    durable.value().burn_authorization == BurnAuthorizationKind::PeerQuorum;
         },
-        std::chrono::seconds( 30 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "pinned trust signer did not reach durable initial burn value 100" ) );
     EXPECT_EQ( node_a->GetAddress(), replacement_address );
 }
@@ -526,7 +531,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
             auto replicated = MultiAccountTestAccess::SecureCrdt( node_b )->ReadCandidateApprovals( candidate_id );
             return replicated.has_value() && replicated.value().size() == 1U;
         },
-        std::chrono::seconds( 20 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "operator B did not retain the pinned signer's exact successor approval" ) );
     {
         auto approved = operator_b_admin.Approve( candidate_id );
@@ -539,7 +544,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
             return current.has_value() && current.value().burn.version == successor.version &&
                    current.value().burn.basis_points == successor.basis_points;
         },
-        std::chrono::seconds( 30 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "exact successor did not activate under the pinned trust signer" ) );
     EXPECT_EQ( node_a->GetAddress(), replacement_address );
     EXPECT_EQ( MultiAccountTestAccess::ManagerAccountAddress( node_a ), replacement_address );
@@ -680,7 +685,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
             return b_approvals.has_value() && b_approvals.value().size() == 1U &&
                    c_approvals.has_value() && c_approvals.value().size() == 1U;
         },
-        std::chrono::seconds( 20 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "operator B and passive C did not retain operator A's burn-v2 approval" ) );
     auto approved = operator_b_admin.Approve( proposed.value() );
     ASSERT_TRUE( approved.has_value() ) << approved.error().message();
@@ -693,7 +698,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
             return durable.has_value() && durable.value().burn.version == 2U &&
                    durable.value().burn.basis_points == 250U && provider->GetBasisPoints() == 250U;
         },
-        std::chrono::seconds( 20 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "passive C did not durably converge on burn v2" ) );
     const auto passive_c_v2 = MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value();
     EXPECT_EQ( passive_c_v2.burn.version, 2U );
@@ -735,7 +740,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
             auto retained = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( below_id );
             return retained.has_value() && retained.value().size() == 1U;
         },
-        std::chrono::seconds( 5 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "passive C did not retain the authenticated below-quorum successor" ) );
     EXPECT_EQ( MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value().burn.Hash(), passive_c_v2.burn.Hash() );
     EXPECT_EQ( provider->GetBasisPoints(), 250U );
@@ -845,7 +850,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
           operator_b_signer->Sign( failed_bytes ) } ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&] { return failure_events.load() == 1U && failed_commit_attempts.load() == 1U; },
-        std::chrono::seconds( 5 ),
+        POLICY_LIFETIME_WAIT_TIMEOUT,
         "passive C commit failure was not surfaced" ) );
     {
         std::lock_guard<std::mutex> lock( failure_fields_mutex );
