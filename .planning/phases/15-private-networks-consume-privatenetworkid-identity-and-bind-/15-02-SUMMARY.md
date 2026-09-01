@@ -146,6 +146,12 @@ None - no external service configuration required.
 - Trust boundary preserved: only the global TrustedPeerRegistry self-associates today; per-network authorities slot in via `MakeRegistrySignerSetSource` + `entry.peer_registry`
 - All 10 related suites green: peer_registry, trustedpeer (3), securecrdt (5), burnconfig
 
+## Self-Check: PASSED
+
+- All 9 created/modified source + test files exist on disk
+- Commits verified in git log: 924528d3, 2a084d9e, b2182ad6, 04792f96
+- Working tree clean (no unstaged task files, no untracked build output)
+
 ---
 *Phase: 15-private-networks-consume-privatenetworkid-identity-and-bind*
 *Completed: 2026-09-01*
