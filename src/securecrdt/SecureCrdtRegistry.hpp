@@ -24,6 +24,13 @@
 #include "outcome/outcome.hpp"
 #include "securecrdt/ISignedCRDTData.hpp"
 
+namespace sgns::peerregistry
+{
+    class PeerRegistry; // complete type not needed here - association only (D-04);
+                        // the adaptation helper lives in peerregistry/PeerRegistry.hpp
+                        // to avoid an include cycle.
+} // namespace sgns::peerregistry
+
 namespace sgns::securecrdt
 {
     /**
@@ -56,6 +63,17 @@ namespace sgns::securecrdt
         /// @brief Opaque token supplied by the caller at Register() time; must
         ///        be presented verbatim to UnregisterIf() to remove this entry.
         const void                                          *owner_token = nullptr;
+        /// @brief Explicit association to the PeerRegistry instance that owns
+        ///        this key pattern's authorization (D-04) - defaults to null
+        ///        for entries whose signer_set_source was built without a
+        ///        registry. Shared ownership per the BurnConfig shared_ptr
+        ///        registry precedent. Register() stores it verbatim and never
+        ///        replaces an explicitly provided signer_set_source; entries
+        ///        wanting a registry-derived source build it with
+        ///        peerregistry::MakeRegistrySignerSetSource. Declared LAST so
+        ///        existing positional aggregate initializers (which supply
+        ///        owner_token as the final element) stay source-compatible.
+        std::shared_ptr<sgns::peerregistry::PeerRegistry>    peer_registry;
     };
 
     /**
