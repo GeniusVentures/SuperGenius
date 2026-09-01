@@ -3,6 +3,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <deque>
@@ -173,7 +174,7 @@ namespace
             store.reset();
             secure.reset();
             node.reset();
-            sgns::test::removeAllWithRetry( path.string() );
+            try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; }
         }
     };
 
@@ -236,7 +237,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
+        auto cleanup = [&] { try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; } };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();
@@ -438,7 +439,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
+        auto cleanup = [&] { try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; } };
 
         sgns::GeniusSigner bootstrapper{ BootstrapperPrivateKey() };
         auto peer_a       = sgns::GeniusSigner::Generate();
@@ -736,7 +737,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
+        auto cleanup = [&] { try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; } };
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto peer_a = sgns::GeniusSigner::Generate();
         auto peer_b = sgns::GeniusSigner::Generate();
@@ -1022,7 +1023,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
+        auto cleanup = [&] { try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; } };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();
@@ -1351,7 +1352,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
+        auto cleanup = [&] { try { sgns::test::removeAllWithRetry( path.string() ); } catch ( const std::exception &e ) { std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl; } };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();

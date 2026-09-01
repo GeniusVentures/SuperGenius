@@ -6,6 +6,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <atomic>
+#include <iostream>
 #include <chrono>
 #include <fstream>
 #include <mutex>
@@ -241,10 +242,25 @@ namespace
     class PolicyLifetimeMultiAccountTest : public ::testing::Test
     {
     protected:
+        // Leftover files (a handle Windows has not released yet) must not fail
+        // the suite: every test uses its own subdirectory, so stale siblings
+        // cannot affect the next test functionally.
+        static void RemoveDirBestEffort( const boost::filesystem::path &path )
+        {
+            try
+            {
+                test::removeAllWithRetry( path.string() );
+            }
+            catch ( const std::exception &e )
+            {
+                std::cerr << "warning: test directory cleanup left files behind: " << e.what() << std::endl;
+            }
+        }
+
         void SetUp() override
         {
             path_ = boost::dll::program_location().parent_path() / "policy_lifetime_multi_account";
-            test::removeAllWithRetry( path_.string() );
+            RemoveDirBestEffort( path_ );
             boost::filesystem::create_directories( path_ );
             GeniusAccount::SetSecureStorageFactory(
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
@@ -254,7 +270,7 @@ namespace
         void TearDown() override
         {
             GeniusAccount::SetSecureStorageFactory( nullptr );
-            test::removeAllWithRetry( path_.string() );
+            RemoveDirBestEffort( path_ );
         }
 
         static void WriteNetworkConfig( const boost::filesystem::path &base_path,

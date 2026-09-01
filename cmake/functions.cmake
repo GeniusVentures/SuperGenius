@@ -8,6 +8,12 @@ endfunction()
 function(addtest test_name)
     add_executable(${test_name} ${ARGN})
     addtest_part(${test_name} ${ARGN})
+    # spdlog logger names are process-wide ("first sink wins"): a file sink in
+    # the first node's directory is pinned by the registry for the whole
+    # process, making that directory undeletable on Windows for every test
+    # after it. Test builds force console logging so no test directory is ever
+    # held open by a log file.
+    target_compile_definitions(${test_name} PRIVATE SGNS_DEBUGLOGS)
     target_link_libraries(${test_name}
         GTest::gtest_main
         GTest::gmock_main
