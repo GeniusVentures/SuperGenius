@@ -4,6 +4,7 @@ add_library(trustedpeer
 target_link_libraries(trustedpeer
     PUBLIC
     securecrdt
+    peerregistry
     PRIVATE
     hexutil
 )

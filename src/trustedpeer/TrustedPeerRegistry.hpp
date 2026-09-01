@@ -21,6 +21,7 @@
 #include "base/logger.hpp"
 #include "crdt/hierarchical_key.hpp"
 #include "outcome/outcome.hpp"
+#include "peerregistry/PeerRegistry.hpp"
 #include "securecrdt/ISignedCRDTData.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/SecureCrdtRegistry.hpp"
@@ -79,8 +80,13 @@ namespace sgns::trustedpeer
      *        set. Delegates ALL signature/quorum logic to SecureCrdt /
      *        SecureCrdtRegistry -- no bespoke signature/quorum logic exists
      *        here (TPR-03).
+     *
+     *        Implements sgns::peerregistry::PeerRegistry (D-05): the ONE
+     *        global root trust domain -- forwarding-only overrides, no logic
+     *        changes, and no per-network instances are ever created.
      */
-    class TrustedPeerRegistry : public std::enable_shared_from_this<TrustedPeerRegistry>
+    class TrustedPeerRegistry : public sgns::peerregistry::PeerRegistry,
+                                public std::enable_shared_from_this<TrustedPeerRegistry>
     {
     public:
         /**
@@ -169,10 +175,28 @@ namespace sgns::trustedpeer
         outcome::result<bool> TryConfirm();
 
         /**
+         * @brief PeerRegistry override: resolves the current authorized signer
+         *        set via the existing cached-only ResolveSignerSet() (D-05:
+         *        pure forwarding, no logic change).
+         * @return Signer set snapshot for the current state.
+         */
+        outcome::result<sgns::securecrdt::SignerSetSnapshot> CurrentSignerSet() const override;
+
+        /**
          * @brief Returns a copy of the current cached trusted-peer set.
          * @return Current trusted-peer address list.
          */
-        std::vector<std::string> GetCurrentPeers() const;
+        std::vector<std::string> GetCurrentPeers() const override;
+
+        /**
+         * @brief PeerRegistry override: returns this registry's CRDT base key
+         *        (D-05: pure forwarding, no logic change).
+         * @return HierarchicalKey of the "trusted-peer-registry" branch.
+         */
+        sgns::crdt::HierarchicalKey BaseKey() const override
+        {
+            return base_key_;
+        }
 
         /**
          * @brief Reports whether genesis has been confirmed.

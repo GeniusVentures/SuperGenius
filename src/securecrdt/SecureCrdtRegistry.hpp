@@ -97,8 +97,18 @@ namespace sgns::securecrdt
         {
             entry.key_pattern     = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
+            {
+                // Unlink any replaced entry WITHOUT destroying it while the
+                // registry mutex is held: a replaced entry's peer_registry may
+                // own the last reference to a PeerRegistry whose destructor
+                // re-enters Unregister() -> UnregisterIf() (destruction
+                // re-entrancy; std::shared_mutex is not recursive).
+                std::unique_lock<std::shared_mutex> lock( registryMutex() );
+                auto replaced = registry().extract( key_pattern );
+                lock.unlock();
+            } // replaced node (if any) destroyed here, mutex released
             std::unique_lock<std::shared_mutex> lock( registryMutex() );
-            registry()[key_pattern] = std::move( entry );
+            registry().insert_or_assign( key_pattern, std::move( entry ) );
         }
 
         /**
@@ -116,8 +126,13 @@ namespace sgns::securecrdt
             auto it = registry().find( key_pattern );
             if ( it != registry().end() && it->second.owner_token == expected_token )
             {
-                registry().erase( it );
-            }
+                // Unlink without destroying under the lock: the entry's
+                // peer_registry may own the last PeerRegistry reference, whose
+                // destructor re-enters Unregister() -> UnregisterIf()
+                // (destruction re-entrancy; std::shared_mutex is not recursive).
+                auto node = registry().extract( it );
+                lock.unlock();
+            } // node destroyed here, mutex released
         }
 
         /**
