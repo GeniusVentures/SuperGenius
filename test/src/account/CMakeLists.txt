@@ -244,6 +244,26 @@ else()
     )
 endif()
 
+# Phase 15 (D-01/D-02): private_network_id / network_bootstrap_peers config surface —
+# same link set as network_config_precedence_test.
+addtest(network_config_private_network_test
+    network_config_private_network_test.cpp
+)
+
+target_link_libraries(network_config_private_network_test genius_node json_secure_storage)
+
+if(MSVC)
+    target_link_options(network_config_private_network_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(network_config_private_network_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(network_config_private_network_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(node_type_derivation_test
     node_type_derivation_test.cpp
 )

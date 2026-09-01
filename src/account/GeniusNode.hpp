@@ -156,13 +156,22 @@ namespace sgns
          * @param[in] network_key Optional private-network (pnet) PSK written as the
          *            "network_key" key — swarm-key text, or base16/base64-encoded 32-byte
          *            PSK. Empty (default) writes no key and the node joins the public network.
+         * @param[in] private_network_id Optional public private-network identity written as the
+         *            "private_network_id" key — 0x-prefixed hex of exactly 32 bytes (D-01/D-02).
+         *            Empty (default) writes no key. LoadNetworkConfig rejects a config that
+         *            provisions exactly one of private_network_id / network_key.
+         * @param[in] network_bootstrap_peers Optional offline-provisioned initial NetworkRegistry
+         *            membership written as the "network_bootstrap_peers" array (libp2p PeerId
+         *            base58 strings). Empty (default) writes no array.
          * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
          *         tests and examples do not depend on the host LAN.
          */
-        static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
-                                                         uint16_t           port_seed,
-                                                         bool               auto_dht,
-                                                         const std::string &network_key = "" );
+        static outcome::result<void> WriteNetworkConfig( const std::string              &base_path,
+                                                         uint16_t                        port_seed,
+                                                         bool                            auto_dht,
+                                                         const std::string              &network_key             = "",
+                                                         const std::string              &private_network_id      = "",
+                                                         const std::vector<std::string> &network_bootstrap_peers = {} );
 
         /**
          * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
@@ -1009,6 +1018,14 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         /// Private-network (pnet) PSK from network_config.json ("network_key"); empty = public network.
         std::string network_key_;
+        /// Public private-network identity from network_config.json ("private_network_id",
+        /// 0x-prefixed hex of exactly 32 bytes); empty = public network. Intentionally distinct
+        /// from network_key_ (D-02): this value drives identity/CRDT paths, never transport.
+        std::string private_network_id_;
+        /// Offline-provisioned initial NetworkRegistry membership from network_config.json
+        /// ("network_bootstrap_peers", libp2p PeerId base58 strings); consumed when
+        /// private_network_id_ is set.
+        std::vector<std::string> network_bootstrap_peers_;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1100,6 +1117,15 @@ namespace sgns
             uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
             uint16_t    port_seed    = 0;         ///< "port_seed", or the constructor param when the key is absent.
             std::string network_key;              ///< "network_key" pnet PSK; empty = public network.
+            ///< "private_network_id" public Ed25519 identity from the license NFT (D-01/D-02);
+            ///< 0x-prefixed hex of exactly 32 bytes; empty = public network.
+            std::string private_network_id;
+            ///< "network_bootstrap_peers" offline-provisioned initial NetworkRegistry membership
+            ///< (libp2p PeerId base58 strings); consumed when private_network_id is set.
+            std::vector<std::string> network_bootstrap_peers;
+            bool valid = true; ///< False when a fatal config divergence (malformed private_network_id
+                               ///< or a half-provisioned private_network_id/network_key pair) must
+                               ///< abort node start instead of silently running a misidentified node.
         };
 
         /**
