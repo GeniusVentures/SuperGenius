@@ -1811,12 +1811,13 @@ namespace sgns
                     continue;
                 }
                 auto process_result = FetchAndProcessTransaction( transaction_key.value(), value );
-                if ( !transaction_key.has_value() )
+                if ( process_result.has_error() )
                 {
-                    TransactionManagerLogger()->error( "[{} - full: {}] Unable to fetch and process transaction {}",
+                    TransactionManagerLogger()->error( "[{} - full: {}] Unable to fetch and process transaction {}: {}",
                                                        account_m->GetAddress().substr( 0, 8 ),
                                                        full_node_m,
-                                                       transaction_key.value() );
+                                                       transaction_key.value(),
+                                                       process_result.error().message() );
                 }
             }
         }
