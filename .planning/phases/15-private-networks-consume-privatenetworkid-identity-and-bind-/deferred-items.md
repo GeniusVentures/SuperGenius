@@ -3,6 +3,25 @@
 Out-of-scope discoveries logged during plan execution. Not fixed per the executor scope
 boundary (pre-existing issues unrelated to the current task's changes).
 
+## 2. BurnConfig's CRDT change callback shares the synchronous re-entrancy hazard fixed in NetworkRegistry (15-03)
+
+- **Found during:** 15-03 Task 2 (first `network_registry_test` run segfaulted inside a
+  datastore Put callback).
+- **Evidence:** `BurnConfig::RegisterCrdtChangeCallback` (src/account/BurnConfig.cpp:404-416)
+  registers a `RegisterNewElementCallback` that calls `OnCrdtElementChanged` ->
+  `SecureCrdt::ReadIfQuorum` -> `RetainAuthorizedLegacySignatures` -> `GlobalDB::Remove`
+  synchronously from inside the datastore's new-element callback. The identical pattern in
+  NetworkRegistry corrupted the datastore and crashed (EXC_BAD_ACCESS) the moment the
+  signer-set authority transitioned at bootstrap confirmation and stale signature children
+  began being pruned from callback context.
+- **Why latent in BurnConfig:** its signer set never transitions (always the TPR peers), so
+  no signature child is ever unauthorized and the Remove path is not exercised from the
+  callback today.
+- **Fix applied in 15-03 only:** the NetworkRegistry callback flags + notifies a dedicated
+  refresh thread that runs `TryConfirm` outside any datastore callback (commit 5bda5eed).
+- **Suggested later fix:** apply the same off-callback dispatch to BurnConfig (out of scope
+  for 15-03; BurnConfig behavior is unchanged and its suites pass).
+
 ## 1. No-genesis full nodes never reach READY on the phase-15 base (breaks network_config_precedence_test)
 
 - **Found during:** 15-01 Task 3 verification (`ctest -R network_config`).
