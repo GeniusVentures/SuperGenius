@@ -55,10 +55,10 @@ namespace sgns::test
 #ifdef _WIN32
         // RocksDB LOCK files and soralog sinks can be released a beat after the
         // owning objects are destroyed (deferred handle close on Windows), and
-        // CI runners add filter-driver latency on top. 3 x 200ms was repeatedly
-        // insufficient on the runners; exponential backoff over ~13s absorbs it
-        // while staying bounded.
-        constexpr size_t MAX_ATTEMPTS = 7;
+        // CI runners add filter-driver latency on top. Exponential backoff over
+        // ~3s absorbs transient holds; anything longer is a genuine leak and
+        // should fail fast so it is investigated, not waited out.
+        constexpr size_t MAX_ATTEMPTS = 5;
         auto             delay        = std::chrono::milliseconds( 200 );
         for ( size_t attempt = 1; attempt <= MAX_ATTEMPTS; ++attempt )
         {
