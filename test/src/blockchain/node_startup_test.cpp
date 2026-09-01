@@ -64,6 +64,11 @@ protected:
         std::shared_ptr<GeniusNode>    node;
         std::shared_ptr<GeniusAccount> authority;
         std::filesystem::path          path;
+        // Gossip relays the original publisher's peer ID, so nodes joining later
+        // fetch this composition's roots from it. If it dies with the helper's
+        // locals, those fetches burn the full graphsync connect-timeout on the
+        // READY path. Declared last to be destroyed before the node.
+        std::shared_ptr<sgns::crdt::GlobalDbNetworkComposition> composition;
     };
 
     static void SetUpTestSuite()
@@ -124,7 +129,7 @@ protected:
                  outPath };
     }
 
-    void SubmitReviewedTrustAndAwaitReady( const NodeFixture &fixture,
+    void SubmitReviewedTrustAndAwaitReady( NodeFixture              &fixture,
                                            std::chrono::milliseconds *ready_elapsed = nullptr )
     {
         ASSERT_TRUE( fixture.node );
@@ -151,6 +156,7 @@ protected:
         ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
         auto composition = composition_result.value();
         ASSERT_TRUE( composition->Start().has_value() );
+        fixture.composition = composition;
 
         auto secure_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
         auto store = sgns::trustedpeer::TrustStateStore::Open(
