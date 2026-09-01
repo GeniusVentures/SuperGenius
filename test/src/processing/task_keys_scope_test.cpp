@@ -9,11 +9,14 @@
 
 #include <list>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "crdt/hierarchical_key.hpp"
 #include "processing/impl/TaskKeys.hpp"
+#include "processing/impl/TaskQueueImpl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "testutil/storage/base_crdt_test.hpp"
 
@@ -146,4 +149,138 @@ TEST( TaskKeysScope, ScopedTopicAppendsScopeSegmentOnlyWhenScoped )
                "SGNUS.Jobs.Channel/" + kPrivateIdA );
     EXPECT_EQ( TaskKeys::ScopedTopic( "SGNUS.Processing.Channel", kPrivateIdA ).find( "//" ),
                std::string::npos );
+}
+
+// ---------------------------------------------------------------------------
+// Data-path placement: queue and result storage write ONLY under their scope
+// (precedent: task_queue_test.cpp CRDTFixture usage)
+// ---------------------------------------------------------------------------
+
+/// Helper to build a Task proto with minimal fields (task_queue_test.cpp idiom).
+SGProcessing::Task MakeScopedTestTask( const std::string &taskId )
+{
+    SGProcessing::Task task;
+    task.set_ipfs_block_id( taskId );
+    task.set_json_data( R"({"name":"test","gnus_spec_version":1,"inputs":[],"outputs":[],"passes":[],"version":"1.0"})" );
+    task.set_random_seed( 0.0f );
+    task.set_results_channel( "test_channel" );
+    return task;
+}
+
+/// Helper to build a SubTask proto with minimal fields.
+SGProcessing::SubTask MakeScopedTestSubTask( const std::string &taskId, const std::string &subTaskId )
+{
+    SGProcessing::SubTask sub;
+    sub.set_ipfsblock( taskId );
+    sub.set_subtaskid( subTaskId );
+    sub.set_json_data( R"({"source":"input:test_input"})" );
+    return sub;
+}
+
+/// Helper to build a SubTaskResult with minimal fields.
+SGProcessing::SubTaskResult MakeScopedTestResult( const std::string &subTaskId )
+{
+    SGProcessing::SubTaskResult result;
+    result.set_subtaskid( subTaskId );
+    result.set_result_hash( "deadbeef" );
+    result.set_ipfs_results_data_id( "ipfs://QmTestCid" );
+    result.set_node_address( "test_node" );
+    return result;
+}
+
+class TaskKeysScopeDataPathTest : public test::CRDTFixture
+{
+public:
+    TaskKeysScopeDataPathTest() : CRDTFixture( fs::path( "task_keys_scope_test" ) )
+    {
+        topic_ = "test_processing_topic";
+        db_->AddListenTopic( topic_ );
+    }
+
+    std::string topic_;
+};
+
+TEST_F( TaskKeysScopeDataPathTest, ScopedQueueWritesLandOnlyUnderChainBranch )
+{
+    auto queue = TaskQueueImpl::New( db_, topic_, kPrivateIdA );
+    ASSERT_TRUE( queue );
+
+    const std::string task_id = "scoped_task_1";
+    auto              task    = MakeScopedTestTask( task_id );
+    auto              sub     = MakeScopedTestSubTask( task_id, "sub_1" );
+    ASSERT_TRUE( queue->EnqueueTask( task, { sub } ).has_value() );
+
+    // Scoped task key: present.
+    auto scoped_get = db_->Get( crdt::HierarchicalKey( TaskKeys::TaskKey( kPrivateIdA, task_id ) ) );
+    EXPECT_TRUE( scoped_get.has_value() ) << "scoped task key missing after enqueue";
+
+    // Public task key: absent (no public-namespace leak).
+    auto public_get = db_->Get( crdt::HierarchicalKey( TaskKeys::TaskKey( kPublicScope, task_id ) ) );
+    EXPECT_TRUE( public_get.has_failure() ) << "scoped enqueue leaked into the public task key";
+
+    // Scoped claimable list contains the task; public claimable list is empty.
+    auto scoped_claimable = db_->QueryKeyValues( TaskKeys::ClaimableListKey( kPrivateIdA ) );
+    ASSERT_TRUE( scoped_claimable.has_value() );
+    EXPECT_EQ( scoped_claimable.value().size(), 1u );
+
+    auto public_claimable = db_->QueryKeyValues( TaskKeys::ClaimableListKey( kPublicScope ) );
+    if ( public_claimable.has_value() )
+    {
+        EXPECT_TRUE( public_claimable.value().empty() ) << "scoped enqueue leaked into the public claimable list";
+    }
+
+    // Scoped subtask branch holds the subtask; public subtask branch does not.
+    auto scoped_subtasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( kPrivateIdA, task_id ) );
+    ASSERT_TRUE( scoped_subtasks.has_value() );
+    EXPECT_EQ( scoped_subtasks.value().size(), 1u );
+
+    auto public_subtasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( kPublicScope, task_id ) );
+    if ( public_subtasks.has_value() )
+    {
+        EXPECT_TRUE( public_subtasks.value().empty() ) << "scoped enqueue leaked into the public subtask list";
+    }
+
+    // The queue's own readers resolve through the scope (no public-namespace reads).
+    auto listed = queue->ListTaskKeys();
+    ASSERT_EQ( listed.size(), 1u );
+    EXPECT_EQ( listed[0], task_id );
+}
+
+TEST_F( TaskKeysScopeDataPathTest, ScopedResultStorageWritesLandOnlyUnderChainBranch )
+{
+    SubTaskResultStorageImpl storage( db_, topic_, kPrivateIdA );
+
+    storage.AddSubTaskResult( MakeScopedTestResult( "sub_result_1" ) );
+
+    // Reader resolves through the scope.
+    auto results = storage.GetSubTaskResults( { "sub_result_1" } );
+    ASSERT_EQ( results.size(), 1u );
+    EXPECT_EQ( results[0].subtaskid(), "sub_result_1" );
+
+    // Scoped key present in the DB...
+    auto scoped_get = db_->Get( crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kPrivateIdA, "sub_result_1" ) ) );
+    EXPECT_TRUE( scoped_get.has_value() ) << "scoped result key missing after AddSubTaskResult";
+
+    // ...public results/<id> key absent.
+    auto public_get = db_->Get( crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kPublicScope, "sub_result_1" ) ) );
+    EXPECT_TRUE( public_get.has_failure() ) << "scoped result leaked into the public results/ namespace";
+}
+
+TEST_F( TaskKeysScopeDataPathTest, PublicQueueWithDefaultedScopeKeepsExactPublicKeys )
+{
+    // Defaulted trailing argument: existing callers compile unchanged and produce
+    // today's exact public keys.
+    auto queue = TaskQueueImpl::New( db_, topic_ );
+    ASSERT_TRUE( queue );
+
+    const std::string task_id = "public_task_1";
+    auto              task    = MakeScopedTestTask( task_id );
+    auto              sub     = MakeScopedTestSubTask( task_id, "sub_1" );
+    ASSERT_TRUE( queue->EnqueueTask( task, { sub } ).has_value() );
+
+    auto public_get = db_->Get( crdt::HierarchicalKey( TaskKeys::TaskKey( kPublicScope, task_id ) ) );
+    EXPECT_TRUE( public_get.has_value() ) << "public task key missing after defaulted-scope enqueue";
+
+    auto scoped_get = db_->Get( crdt::HierarchicalKey( TaskKeys::TaskKey( kPrivateIdA, task_id ) ) );
+    EXPECT_TRUE( scoped_get.has_failure() ) << "public enqueue unexpectedly landed under a private branch";
 }
