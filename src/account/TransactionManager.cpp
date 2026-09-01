@@ -1183,6 +1183,57 @@ namespace sgns
             topicSet.emplace( account_m->GetAddress() );
         }
 
+        // SIZE-01: Pre-publish validation. Reject oversized transactions (>64KB) and
+        // transactions whose UTXO commitment/witness cannot be built BEFORE any CRDT
+        // Put/Commit or proposal side effect, so a batch is never partially published
+        // (committed to the CRDT, proposal in flight) when one of its transactions
+        // fails validation.
+        for ( const auto &[transaction, maybe_proof] : transaction_batch )
+        {
+            (void) maybe_proof;
+            auto preflight_embedded_tx = transaction->SerializeToEmbeddedTransaction();
+            if ( preflight_embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Transaction exceeds PubSub size limit tx={} size={} max={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    transaction->GetHash(),
+                    preflight_embedded_tx.ByteSizeLong(),
+                    MAX_PUBSUB_TX_BYTES );
+                return outcome::failure( std::errc::message_size );
+            }
+
+            if ( transaction->HasUTXOParameters() )
+            {
+                if ( !BuildUTXOTransitionCommitment( transaction ).has_value() )
+                {
+                    TransactionManagerLogger()->error(
+                        "[{} - full: {}] {}: Missing required UTXO commitment for tx={} type={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        transaction->GetHash(),
+                        transaction->GetType() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+
+                if ( GetInputValidator( GetValidationChainId( transaction ) ).RequiresConsensusUTXOData() &&
+                     !BuildUTXOWitness( transaction ).has_value() )
+                {
+                    TransactionManagerLogger()->error(
+                        "[{} - full: {}] {}: Missing required UTXO witness for tx={} type={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        transaction->GetHash(),
+                        transaction->GetType() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+            }
+        }
+
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
             if ( !expected_next_nonce.has_value() )
@@ -1294,10 +1345,10 @@ namespace sgns
                 }
             }
 
-            // SIZE-01: Pre-publish size enforcement gate
-            // Reject oversized transactions (>64KB) before they enter the consensus
-            // pipeline to prevent silent PubSub message drops. Defense-in-depth with
-            // the handler-level MAX_EMBEDDED_TX_BYTES check (per D-02).
+            // SIZE-01 defense-in-depth: the whole batch was already pre-validated
+            // (size + UTXO commitment/witness) before the CRDT commit above, so this
+            // gate can no longer trigger for a committed batch. Kept to protect the
+            // proposal pipeline against silent PubSub message drops (per D-02).
             // Serialize tx into EmbeddedTransaction proto with typed oneof field
             auto embedded_tx = transaction->SerializeToEmbeddedTransaction();
             if ( embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
