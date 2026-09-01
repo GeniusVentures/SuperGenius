@@ -798,8 +798,8 @@ Plans:
 **Wave 1** (parallel — no file overlap):
 
 Plans:
-- [ ] 15-01-PLAN.md — Build reconfiguration against dev_pnets 3rdparty install + D-10 dependency gate (blocking decision) + `private_network_id`/`network_bootstrap_peers` config identity (D-01, D-02, D-10, PNET-CFG)
-- [ ] 15-02-PLAN.md — PeerRegistry abstraction + SecureCrdtRegistryEntry explicit association + TrustedPeerRegistry adaptation (D-04, D-05, PNET-REG)
+- [x] 15-01-PLAN.md — Build reconfiguration against dev_pnets 3rdparty install + D-10 dependency gate (blocking decision) + `private_network_id`/`network_bootstrap_peers` config identity (D-01, D-02, D-10, PNET-CFG)
+- [x] 15-02-PLAN.md — PeerRegistry abstraction + SecureCrdtRegistryEntry explicit association + TrustedPeerRegistry adaptation (D-04, D-05, PNET-REG)
 
 **Wave 2** (15-03 needs 15-02; 15-04 and 15-06 need 15-01; mutually disjoint):
 
