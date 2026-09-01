@@ -18,6 +18,7 @@
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
@@ -35,8 +36,10 @@ namespace
     using sgns::trustedpeer::TrustStateStore;
 
     // CI runners can need several graphsync retry cycles (~2.5s each) before
-    // CRDT entries replicate, so condition waits get a generous budget.
-    constexpr auto E2E_WAIT_TIMEOUT = std::chrono::seconds( 30 );
+    // CRDT entries replicate, so condition waits get a generous budget. Windows
+    // runners additionally boot node subsystems slowly, so 30s was observed
+    // insufficient there.
+    constexpr auto E2E_WAIT_TIMEOUT = std::chrono::seconds( 120 );
 
     constexpr char BOOTSTRAPPER_PRIVATE_KEY[] =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
@@ -170,7 +173,7 @@ namespace
             store.reset();
             secure.reset();
             node.reset();
-            boost::filesystem::remove_all( path );
+            sgns::test::removeAllWithRetry( path.string() );
         }
     };
 
@@ -233,7 +236,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();
@@ -435,7 +438,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
 
         sgns::GeniusSigner bootstrapper{ BootstrapperPrivateKey() };
         auto peer_a       = sgns::GeniusSigner::Generate();
@@ -733,7 +736,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto peer_a = sgns::GeniusSigner::Generate();
         auto peer_b = sgns::GeniusSigner::Generate();
@@ -1019,7 +1022,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();
@@ -1348,7 +1351,7 @@ namespace
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
-        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto cleanup = [&] { sgns::test::removeAllWithRetry( path.string() ); };
 
         auto bootstrapper = sgns::GeniusSigner::Generate();
         auto operator_a = sgns::GeniusSigner::Generate();
