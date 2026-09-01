@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 Phase: 13 (Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps) — VERIFYING
 Plan: 29 of 29
 Status: Phase complete — ready for verification
-Last activity: 2026-08-17
+Last activity: 2026-09-01 - Completed quick task 260901-erh: Migration3_6_0To3_7_0 first-real-use investigation (ADJUST verdict)
 
 ## Roadmap Snapshot
 
@@ -70,6 +70,7 @@ Last activity: 2026-08-17
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260827-hbf | Add GetGraphsyncNetwork() accessor to GeniusNode (SDK needs it — no public path existed) | 2026-08-27 | 8c9e1b4f | [260827-hbf-check-if-graphsyncnetwork-can-be-obtaine](./quick/260827-hbf-check-if-graphsyncnetwork-can-be-obtaine/) |
+| 260901-erh | Investigate Migration3_6_0To3_7_0 readiness for first real use post-3.5.20 (verdict: ADJUST — claim-timeout retry fix applied; allow-list propagation gap documented for launch) | 2026-09-01 | 4084545d | [260901-erh-investigate-migration-transaction-step](./quick/260901-erh-investigate-migration-transaction-step/) |
 
 ## Session
 
