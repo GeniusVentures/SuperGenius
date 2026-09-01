@@ -468,7 +468,13 @@ public:
 
 **Note:** A1-A6 are assumptions needing owner confirmation before becoming locked; everything else cites verified local sources or the tracked issue.
 
-## Open Questions
+## Open Questions (RESOLVED 2026-09-01)
+
+> **Resolution record (planner, 2026-09-01):** every open question now has a decision owner and vehicle — none remain open for executors.
+
+1. **libp2p#10 completion semantics — RESOLVED via 15-01 Task 2 (blocking D-10 checkpoint).** The gate is the owner's explicit choice among proceed-current-base (recommended: dev_pnets @ b28eed2 installed and tested) / merge-closeout-first / wait. Recorded verbatim in 15-01-SUMMARY before Wave 2 executes.
+2. **`private_network_id` encoding — RESOLVED via 15-01 Task 2 (same checkpoint), recommended 0x-hex-32B.** 15-01 Task 3's validation is written SUBORDINATE to the checkpoint decision: hex regex and golden literals apply for 0x-hex-32B; a decimal-uint256 selection swaps only the regex and all-zero literal in the same commit. Q3/Q4 below were already planner discretion / plan-decided (15-03 literal per-network base key; 15-05 fail-closed), and both plans encode those choices.
+
 
 1. **libp2p#10 completion semantics**
    - What we know: GitHub issue OPEN; dev_pnets fully implemented, tested, examples included, freshly installed locally.

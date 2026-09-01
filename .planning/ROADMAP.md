@@ -588,21 +588,21 @@ Plans:
 Plans:
 - [ ] 15-03-PLAN.md — NetworkRegistry: SecureCRDT child registry, TPR-majority bootstrap, cached self-governance, secret-free payload (D-03, D-05, D-06, PNET-NETREG)
 - [ ] 15-04-PLAN.md — vendored ipfs-pubsub membership allow-list gater + GossipPubSub surface + reinstall (D-07, D-11, PNET-GATE)
-- [ ] 15-06-PLAN.md — job scope plumbing: scoped TaskKeys/chain-ids/topics with byte-stable public paths (D-02, D-08, PNET-SCOPE)
+- [ ] 15-06-PLAN.md — job scope plumbing at the real key sites: scoped TaskKeys consumed by TaskQueueImpl (all 15 sites) + SubTaskResultStorageImpl results/ keys + scoped escrow path/chain-id + channel-topic alignment, byte-stable public paths (D-02, D-08, PNET-SCOPE)
 
 **Wave 3** (15-05 needs 15-03+15-04):
 
 Plans:
 - [ ] 15-05-PLAN.md — GeniusNode NetworkRegistry wiring + gossip-host allow-list binding (fail-closed) + two-node D-07 gating tests (D-06, D-07, PNET-GATE)
 
-**Wave 4** (needs 15-06; serialized after 15-05 — GeniusNode.cpp overlap):
+**Wave 4** (15-07 needs 15-05 + 15-06 — GeniusNode.cpp ownership serialized in `depends_on`):
 
 Plans:
 - [ ] 15-07-PLAN.md — ValidatorRegistry instance-scoped identifiers + Blockchain/GossipNode scope threading (D-09, PNET-VAL)
 
-**Wave 5** (needs 15-05 — GeniusNode.cpp overlap):
+**Wave 5** (15-08 needs 15-05 + 15-07 — GeniusNode.cpp ownership serialized in `depends_on`):
 
 Plans:
 - [ ] 15-08-PLAN.md — processing-host gating: Noise-only + pnet + membership gater per ProcessSubTask (D-11, PNET-PROC)
 
-> Wave layout note: Waves 3-5 are serialized by exclusive `src/account/GeniusNode.cpp` ownership. Within Wave 2, execute 15-04 first (its vendored reinstall should precede that wave's SGNUS compilations).
+> Wave layout note: Waves 3-5 are serialized by exclusive `src/account/GeniusNode.cpp` ownership — encoded in `depends_on` (15-07: +15-05; 15-08: +15-07), so waves re-derive correctly from dependencies. Within Wave 2, execute 15-04 first (its vendored reinstall should precede that wave's SGNUS compilations).
