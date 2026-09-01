@@ -67,6 +67,7 @@ public:
 
     AccountManagement()
     {
+        test::removeAllWithRetry( path.string() );
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
