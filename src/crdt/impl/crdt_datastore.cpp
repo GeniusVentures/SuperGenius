@@ -205,10 +205,33 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingFailure( const RootCIDJob &job )
     {
-        // Signal job failure
+        // An external fetch failure (e.g. peer connection refused) must not
+        // poison the shared per-CID status while a local AddDAGNode put for the
+        // same CID is still queued: the self-created job can complete on the
+        // local node alone, and WaitForJob for the put would otherwise fail
+        // spuriously. Likewise keep the block — it belongs to the pending put.
+        bool self_created_job_pending = false;
         {
-            std::lock_guard lock_jobs( dagWorkerMutex_ );
-            pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
+            std::unique_lock lock_jobs( dagWorkerMutex_ );
+            if ( !job.created_by_self_ )
+            {
+                std::queue<RootCIDJob> tmp;
+                while ( !selfCreatedJobList_.empty() )
+                {
+                    auto queued = selfCreatedJobList_.front();
+                    selfCreatedJobList_.pop();
+                    if ( queued.root_node_->getCID() == job.root_node_->getCID() )
+                    {
+                        self_created_job_pending = true;
+                    }
+                    tmp.push( std::move( queued ) );
+                }
+                std::swap( selfCreatedJobList_, tmp );
+            }
+            if ( !self_created_job_pending )
+            {
+                pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
+            }
         }
 
         const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
@@ -219,10 +242,13 @@ namespace sgns::crdt
         CleanupFailedJob( job );
 
         // Delete blocks
-        (void) dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+        if ( !self_created_job_pending )
         {
-            (void) dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+            (void) dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
+            if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+            {
+                (void) dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+            }
         }
 
         if ( !job.created_by_self_ )
