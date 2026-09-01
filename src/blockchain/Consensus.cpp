@@ -1563,7 +1563,19 @@ namespace sgns
             {
                 continue;
             }
-            active_vote_announcements_for_test_.push_back( bytes );
+            {
+                std::lock_guard lock( fault_test_mutex_ );
+                // Friend-scoped observation buffer: bounded so long-running nodes never
+                // accumulate replayed/retried announcements indefinitely.
+                constexpr std::size_t kMaxActiveVoteAnnouncementsForTest = 1024;
+                if ( active_vote_announcements_for_test_.size() >= kMaxActiveVoteAnnouncementsForTest )
+                {
+                    active_vote_announcements_for_test_.erase(
+                        active_vote_announcements_for_test_.begin(),
+                        active_vote_announcements_for_test_.begin() + kMaxActiveVoteAnnouncementsForTest / 2 );
+                }
+                active_vote_announcements_for_test_.push_back( bytes );
+            }
             auto submit_result = SubmitVote( active_vote.vote );
             if ( submit_result.has_value() )
             {
