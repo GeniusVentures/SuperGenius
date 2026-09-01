@@ -1919,6 +1919,15 @@ namespace sgns
         return "";
     }
 
+    std::string TransactionManager::ScopedChainId( const std::string &private_network_id )
+    {
+        if ( private_network_id.empty() )
+        {
+            return std::string( GENIUS_CHAIN_ID );
+        }
+        return std::string( GENIUS_CHAIN_ID ) + "/" + private_network_id;
+    }
+
     TransactionManager::InputValidatorSelection TransactionManager::SelectInputValidator(
         const GeniusTransaction &tx ) const
     {
