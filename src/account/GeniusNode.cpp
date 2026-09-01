@@ -627,9 +627,14 @@ namespace sgns
                             if ( result.has_error() )
                             {
                                 strong->node_logger_->error( "Database migration error: {}", result.error().message() );
-                                if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                                // Retry blockchain-init failures and migration-claim confirmation
+                                // timeouts: without the timed_out retry a claim that misses the
+                                // 4-minute confirmation window wedges the node in
+                                // MIGRATING_DATABASE with no recovery but a manual restart.
+                                if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED
+                                     || result.error() == std::errc::timed_out )
                                 {
-                                    strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->node_logger_->info( "Scheduling migration retry after failure" );
                                     strong->ScheduleMigrationRetry();
                                 }
                                 return;
