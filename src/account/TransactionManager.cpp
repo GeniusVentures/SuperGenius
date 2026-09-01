@@ -3156,44 +3156,18 @@ namespace sgns
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )
     {
-        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          valid_proof = false;
-        do
-        {
-            valid_proof = true;
-            break;
-            std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
-            auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
-            if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
-            {
-                // TODO: kill reputation point of the node.
-                m_logger->error( "Could not verify proof {}", element.key() );
-                break;
-            }
-            m_logger->trace( "Valid proof of {}", element.key() );
-
-            valid_proof = true;
-        } while ( 0 );
-
-        if ( !valid_proof )
-        {
-            std::vector<crdt::pb::Element> tombstones;
-            tombstones.push_back( element );
-            if ( const auto proof_pos = element.key().find( "/proof/" ); proof_pos != std::string::npos )
-            {
-                std::string tx_key = element.key();
-                tx_key.replace( proof_pos, 7, "/tx/" );
-                if ( tx_key.size() > proof_pos + 4 )
-                {
-                    crdt::pb::Element tx_tombstone;
-                    tx_tombstone.set_key( std::move( tx_key ) );
-                    tombstones.push_back( tx_tombstone );
-                }
-            }
-            maybe_tombstones = tombstones;
-        }
-
-        return maybe_tombstones;
+        // Proof verification is deliberately not enabled yet: enabling
+        // IBasicProof::VerifyFullProof on the CRDT ingress path before the
+        // reputation/penalty infrastructure exists would tombstone proofs we cannot
+        // fully verify and change protocol behavior. Until then every incoming proof
+        // element is accepted; the previously unreachable (short-circuited)
+        // verification and tombstoning blocks are removed instead of shipped as dead
+        // code.
+        //
+        // TODO: once verification is enabled, tombstone invalid proofs (together with
+        // their associated tx key) and kill the reputation point of the offending node.
+        (void) element;
+        return std::nullopt;
     }
 
     uint64_t TransactionManager::GetCurrentTimestamp()
