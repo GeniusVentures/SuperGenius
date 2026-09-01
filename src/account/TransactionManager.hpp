@@ -628,9 +628,8 @@ namespace sgns
         /**
          * @brief CRDT element filter for incoming proofs.
          *
-         * Currently accepts all proofs that are already stored or newly arriving
-         * (full verification path is present but short-circuited).
-         * Invalid proofs are tombstoned together with their associated tx key.
+         * Currently accepts all proofs (full verification is disabled until the
+         * reputation/penalty path exists), so no tombstones are produced here.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */

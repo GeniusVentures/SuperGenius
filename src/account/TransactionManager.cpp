@@ -3234,46 +3234,18 @@ namespace sgns
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )
     {
-        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          valid_proof = false;
-        do
-        {
-            valid_proof = true;
-            break;
-            std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
-            auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
-            if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
-            {
-                // TODO: kill reputation point of the node.
-                TransactionManagerLogger()->error( "[{} - full: {}] Could not verify proof {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   element.key() );
-                break;
-            }
-            TransactionManagerLogger()->trace( "[{} - full: {}] Valid proof of {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               element.key() );
-
-            valid_proof = true;
-        } while ( 0 );
-
-        if ( !valid_proof )
-        {
-            std::vector<crdt::pb::Element> tombstones;
-            tombstones.push_back( element );
-            auto maybe_tx_key = GetExpectedTxKey( element.key() );
-            if ( maybe_tx_key.has_value() )
-            {
-                crdt::pb::Element tx_tombstone;
-                tx_tombstone.set_key( maybe_tx_key.value() );
-                tombstones.push_back( tx_tombstone );
-            }
-            maybe_tombstones = tombstones;
-        }
-
-        return maybe_tombstones;
+        // Proof verification is deliberately not enabled yet: enabling
+        // IBasicProof::VerifyFullProof on the CRDT ingress path before the
+        // reputation/penalty infrastructure exists would tombstone proofs we cannot
+        // fully verify and change protocol behavior. Until then every incoming proof
+        // element is accepted; the previously unreachable (short-circuited)
+        // verification and tombstoning blocks are removed instead of shipped as dead
+        // code.
+        //
+        // TODO: once verification is enabled, tombstone invalid proofs (together with
+        // their associated tx key) and kill the reputation point of the offending node.
+        (void) element;
+        return std::nullopt;
     }
 
     bool TransactionManager::ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
