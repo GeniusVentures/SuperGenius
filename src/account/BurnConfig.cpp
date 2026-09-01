@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <limits>
 #include <system_error>
 
 #include "account/GeniusAccount.hpp"
@@ -17,6 +18,16 @@
 
 namespace sgns::account
 {
+    bool ConfirmedBurnValueProvider::IsReady() const
+    {
+        return ready_.load( std::memory_order_acquire );
+    }
+
+    uint64_t ConfirmedBurnValueProvider::GetBasisPoints() const
+    {
+        return basis_points_.load( std::memory_order_relaxed );
+    }
+
     BurnConfigPayload::BurnConfigPayload( uint64_t basis_points ) : basis_points_( basis_points )
     {
     }
@@ -99,7 +110,7 @@ namespace sgns::account
         std::shared_ptr<sgns::GeniusAccount>           account,
         sgns::crdt::HierarchicalKey                              base_key )
     {
-        auto validation_result = sgns::securecrdt::ValidateQuorumThreshold(
+        auto validation_result = sgns::securecrdt::ValidateBurnQuorumThreshold(
             quorum_threshold, trusted_peer_registry->GetCurrentPeers().size() );
         if ( validation_result.has_error() )
         {
@@ -109,7 +120,10 @@ namespace sgns::account
         auto instance = std::make_shared<BurnConfig>( std::move( secure_crdt ), std::move( db ),
                                                        std::move( trusted_peer_registry ), quorum_threshold,
                                                        std::move( account ), std::move( base_key ) );
-        instance->RegisterSignerSetSource();
+        if ( !instance->RegisterSignerSetSource() )
+        {
+            return outcome::failure( std::errc::file_exists );
+        }
         instance->RegisterCrdtChangeCallback();
         instance->TrySeedGenesisIfEligible();
 
@@ -121,7 +135,250 @@ namespace sgns::account
         return instance;
     }
 
-    void BurnConfig::RegisterSignerSetSource()
+    outcome::result<std::shared_ptr<BurnConfig>> BurnConfig::NewProduction(
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
+        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>     trust_store,
+        std::string                                             local_signer_address,
+        SignCallback                                            sign_callback,
+        std::string                                             candidate_domain )
+    {
+        if ( !secure_crdt || !trusted_peer_registry || !trust_store || candidate_domain.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        auto instance = std::make_shared<BurnConfig>( std::move( secure_crdt ),
+                                                       nullptr,
+                                                       std::move( trusted_peer_registry ),
+                                                       0,
+                                                       nullptr,
+                                                       sgns::crdt::HierarchicalKey( candidate_domain ) );
+        instance->production_mode_      = true;
+        instance->trust_store_          = std::move( trust_store );
+        instance->local_signer_address_ = std::move( local_signer_address );
+        instance->sign_callback_        = std::move( sign_callback );
+        instance->candidate_domain_     = std::move( candidate_domain );
+        if ( !instance->RegisterProductionDomain() )
+        {
+            return outcome::failure( std::errc::file_exists );
+        }
+
+        auto snapshot = instance->trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_value() &&
+             snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum )
+        {
+            instance->PublishConfirmedBurn( snapshot.value() );
+        }
+        return instance;
+    }
+
+    bool BurnConfig::RegisterProductionDomain()
+    {
+        return secure_crdt_->Registry().RegisterCandidateDomain(
+            candidate_domain_,
+            sgns::securecrdt::CandidateDomainEntry{
+                candidate_domain_,
+                sgns::securecrdt::CandidateKind::BurnConfig,
+                [weak_self = weak_from_this()]()
+                    -> outcome::result<sgns::securecrdt::CandidateAuthorizationSnapshot>
+                {
+                    auto self = weak_self.lock();
+                    if ( !self ) return outcome::failure( sgns::trustedpeer::TrustedPeerRegistry::Error::NOT_CONFIRMED );
+                    return self->ResolveBurnAuthorization();
+                },
+                &registry_token_ } );
+    }
+
+    outcome::result<sgns::securecrdt::CandidateAuthorizationSnapshot> BurnConfig::ResolveBurnAuthorization() const
+    {
+        auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_error() ) return snapshot.error();
+        const auto policy_hash = snapshot.value().policy.Hash();
+        if ( !policy_hash ) return outcome::failure( std::errc::invalid_argument );
+
+        uint64_t next_version = 1;
+        std::string predecessor = sgns::trustedpeer::BurnGenesisAnchorHash( snapshot.value().genesis_fingerprint );
+        if ( IsEconomicallyReady() )
+        {
+            if ( snapshot.value().burn.version == std::numeric_limits<uint64_t>::max() )
+                return outcome::failure( std::errc::value_too_large );
+            next_version = snapshot.value().burn.version + 1;
+            predecessor = snapshot.value().burn.Hash().value();
+        }
+        return sgns::securecrdt::CandidateAuthorizationSnapshot{
+            snapshot.value().policy.network_id,
+            sgns::securecrdt::CandidateKind::BurnConfig,
+            next_version,
+            predecessor,
+            *policy_hash,
+            snapshot.value().policy.peers
+        };
+    }
+
+    std::optional<sgns::securecrdt::CandidateCore> BurnConfig::BurnCandidateCore(
+        const sgns::trustedpeer::ConfirmedBurnState &candidate, const std::string &domain )
+    {
+        auto bytes = candidate.CanonicalBytes();
+        if ( !bytes || domain.empty() ) return std::nullopt;
+        return sgns::securecrdt::CandidateCore{
+            sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+            domain,
+            candidate.network_id,
+            sgns::securecrdt::CandidateKind::BurnConfig,
+            candidate.version,
+            candidate.expected_previous_hash,
+            candidate.authorizing_policy_hash,
+            std::move( *bytes )
+        };
+    }
+
+    outcome::result<sgns::securecrdt::CandidateId> BurnConfig::SubmitLocalApproval(
+        const sgns::securecrdt::CandidateCore &core )
+    {
+        if ( !sign_callback_ || local_signer_address_.empty() )
+            return outcome::failure( std::errc::operation_not_permitted );
+        const auto bytes = core.CanonicalBytes();
+        const auto id = sgns::securecrdt::CandidateId::FromCore( core );
+        if ( !bytes || !id ) return outcome::failure( std::errc::invalid_argument );
+        auto existing = secure_crdt_->ReadCandidateApprovals( *id );
+        if ( existing.has_value() &&
+             std::any_of( existing.value().begin(), existing.value().end(), [&]( const auto &approval ) {
+                 return approval.signer == local_signer_address_;
+             } ) ) return *id;
+        return secure_crdt_->SubmitCandidateApproval( {
+            sgns::securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+            core,
+            local_signer_address_,
+            sign_callback_( *bytes )
+        } );
+    }
+
+    outcome::result<sgns::securecrdt::CandidateId> BurnConfig::OnTrustedPeerGenesisConfirmed()
+    {
+        auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_error() ) return snapshot.error();
+        if ( automatic_genesis_candidate_ ) return *automatic_genesis_candidate_;
+        if ( std::find( snapshot.value().policy.peers.begin(),
+                        snapshot.value().policy.peers.end(),
+                        local_signer_address_ ) == snapshot.value().policy.peers.end() )
+            return outcome::failure( std::errc::operation_not_permitted );
+        const auto policy_hash = snapshot.value().policy.Hash();
+        if ( !policy_hash || snapshot.value().policy.version != 1 || snapshot.value().burn.version != 1 ||
+             snapshot.value().burn.basis_points != GENESIS_DEFAULT_BASIS_POINTS ||
+             snapshot.value().burn.expected_previous_hash !=
+                 sgns::trustedpeer::BurnGenesisAnchorHash( snapshot.value().genesis_fingerprint ) ||
+             snapshot.value().burn.authorizing_policy_hash != *policy_hash )
+            return outcome::failure( std::errc::invalid_argument );
+        auto core = BurnCandidateCore( snapshot.value().burn, candidate_domain_ );
+        if ( !core ) return outcome::failure( std::errc::invalid_argument );
+        auto submitted = SubmitLocalApproval( *core );
+        if ( submitted.has_value() ) automatic_genesis_candidate_ = submitted.value();
+        return submitted;
+    }
+
+    outcome::result<std::vector<sgns::securecrdt::CandidateId>> BurnConfig::ListPendingBurnCandidates() const
+    {
+        auto authorization = ResolveBurnAuthorization();
+        if ( authorization.has_error() ) return authorization.error();
+        return secure_crdt_->ListCandidates( candidate_domain_, authorization.value().expected_previous_hash );
+    }
+
+    outcome::result<sgns::securecrdt::CandidateId> BurnConfig::ProposeBurnCandidate( uint64_t basis_points )
+    {
+        if ( !IsEconomicallyReady() )
+            return outcome::failure( sgns::trustedpeer::TrustedPeerRegistry::Error::NOT_CONFIRMED );
+        if ( basis_points > BurnConfigPayload::BASIS_POINTS_TOTAL )
+            return outcome::failure( std::errc::invalid_argument );
+        auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_error() ) return snapshot.error();
+        if ( snapshot.value().burn.version == std::numeric_limits<uint64_t>::max() )
+            return outcome::failure( std::errc::value_too_large );
+        sgns::trustedpeer::ConfirmedBurnState candidate;
+        candidate.network_id = snapshot.value().policy.network_id;
+        candidate.version = snapshot.value().burn.version + 1;
+        candidate.expected_previous_hash = snapshot.value().burn.Hash().value();
+        candidate.authorizing_policy_hash = snapshot.value().policy.Hash().value();
+        candidate.basis_points = basis_points;
+        auto core = BurnCandidateCore( candidate, candidate_domain_ );
+        if ( !core ) return outcome::failure( std::errc::invalid_argument );
+        return SubmitLocalApproval( *core );
+    }
+
+    outcome::result<sgns::securecrdt::CandidateId> BurnConfig::ApproveBurnCandidate(
+        const sgns::securecrdt::CandidateId &candidate_id )
+    {
+        if ( candidate_id.domain != candidate_domain_ ) return outcome::failure( std::errc::invalid_argument );
+        auto approvals = secure_crdt_->ReadCandidateApprovals( candidate_id );
+        if ( approvals.has_error() ) return approvals.error();
+        if ( approvals.value().empty() ) return outcome::failure( std::errc::invalid_argument );
+        return SubmitLocalApproval( approvals.value().front().core );
+    }
+
+    outcome::result<bool> BurnConfig::TryActivateBurnCandidate(
+        const sgns::securecrdt::CandidateId &candidate_id )
+    {
+        auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+        if ( snapshot.has_error() ) return snapshot.error();
+        auto approvals = secure_crdt_->ReadCandidateApprovals( candidate_id );
+        if ( approvals.has_error() ) return approvals.error();
+        if ( approvals.value().empty() ) return outcome::failure( std::errc::invalid_argument );
+        const auto &core = approvals.value().front().core;
+        auto candidate = sgns::trustedpeer::ConfirmedBurnState::DecodeCanonical( core.payload );
+        auto expected_core = candidate ? BurnCandidateCore( *candidate, candidate_domain_ ) : std::nullopt;
+        const auto policy_hash = snapshot.value().policy.Hash();
+        if ( candidate_id.domain != candidate_domain_ || !candidate || !expected_core || !( *expected_core == core ) ||
+             !policy_hash || candidate->authorizing_policy_hash != *policy_hash )
+            return outcome::failure( std::errc::invalid_argument );
+        if ( IsEconomicallyReady() )
+        {
+            if ( candidate->version != snapshot.value().burn.version + 1 ||
+                 candidate->expected_previous_hash != snapshot.value().burn.Hash().value() )
+                return outcome::failure( std::errc::invalid_argument );
+        }
+        else if ( candidate->version != 1 || candidate->basis_points != GENESIS_DEFAULT_BASIS_POINTS ||
+                  candidate->expected_previous_hash !=
+                      sgns::trustedpeer::BurnGenesisAnchorHash( snapshot.value().genesis_fingerprint ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        multisig::CollectedSignatures proof;
+        for ( const auto &approval : approvals.value() ) proof.emplace_back( approval.signer, approval.signature );
+        if ( proof.size() < snapshot.value().policy.burn_threshold ) return false;
+        const auto authorization_bytes = core.CanonicalBytes();
+        if ( !authorization_bytes ) return outcome::failure( std::errc::invalid_argument );
+        auto committed = trust_store_->CommitBurnSuccessor( *candidate, proof, *authorization_bytes );
+        if ( committed.has_error() ) return committed.error();
+        PublishConfirmedBurn( committed.value() );
+        return true;
+    }
+
+    void BurnConfig::PublishConfirmedBurn( const sgns::trustedpeer::ConfirmedTrustSnapshot &snapshot )
+    {
+        const auto previous = cached_basis_points_.load( std::memory_order_relaxed );
+        confirmed_value_provider_->basis_points_.store( snapshot.burn.basis_points, std::memory_order_relaxed );
+        confirmed_value_provider_->ready_.store( true, std::memory_order_release );
+        cached_basis_points_.store( snapshot.burn.basis_points, std::memory_order_relaxed );
+        if ( previous == snapshot.burn.basis_points ) return;
+        std::vector<RefreshCallback> callbacks_copy;
+        {
+            std::lock_guard<std::mutex> lock( refresh_callbacks_mutex_ );
+            callbacks_copy = refresh_callbacks_;
+        }
+        for ( const auto &callback : callbacks_copy ) callback( snapshot.burn.basis_points );
+    }
+
+    bool BurnConfig::IsEconomicallyReady() const
+    {
+        return confirmed_value_provider_->IsReady();
+    }
+
+    std::shared_ptr<const ConfirmedBurnValueProvider> BurnConfig::GetConfirmedValueProvider() const
+    {
+        return confirmed_value_provider_;
+    }
+
+    bool BurnConfig::RegisterSignerSetSource()
     {
         sgns::securecrdt::SecureCrdtRegistryEntry entry;
         entry.signer_set_source =
@@ -141,7 +398,7 @@ namespace sgns::account
         };
         entry.owner_token = &registry_token_;
 
-        sgns::securecrdt::SecureCrdtRegistry::Register( base_key_.GetKey(), entry );
+        return secure_crdt_->Registry().Register( base_key_.GetKey(), std::move( entry ) );
     }
 
     void BurnConfig::RegisterCrdtChangeCallback()
@@ -249,6 +506,13 @@ namespace sgns::account
 
     void BurnConfig::Unregister()
     {
-        sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( base_key_.GetKey(), &registry_token_ );
+        if ( production_mode_ )
+        {
+            secure_crdt_->Registry().UnregisterCandidateDomainIf( candidate_domain_, &registry_token_ );
+        }
+        else
+        {
+            secure_crdt_->Registry().UnregisterIf( base_key_.GetKey(), &registry_token_ );
+        }
     }
 } // namespace sgns::account

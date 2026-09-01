@@ -1,9 +1,9 @@
 /**
  * @file       SecureCrdtRegistry.hpp
- * @brief      Static registry mapping a base_key pattern to {signer-set source,
+ * @brief      Instance registry mapping a base_key pattern to {signer-set source,
  *             required signature count, ISignedCRDTData factory}, resolvable at
- *             startup/runtime by key. Header-only, mirrors IInputValidator's
- *             static Register/UnregisterIf/Get idiom.
+ *             startup/runtime by key. Each SecureCrdt owns an independent
+ *             instance so in-process nodes cannot replace one another's policy.
  * @date       2026-07-23
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -23,6 +23,7 @@
 
 #include "outcome/outcome.hpp"
 #include "securecrdt/ISignedCRDTData.hpp"
+#include "securecrdt/SecureCrdtCandidate.hpp"
 
 namespace sgns::securecrdt
 {
@@ -43,29 +44,49 @@ namespace sgns::securecrdt
      */
     using SignerSetSource = std::function<outcome::result<SignerSetSnapshot>( const std::string &base_key )>;
 
+    struct CandidateAuthorizationSnapshot
+    {
+        uint16_t                 network_id   = 0;
+        CandidateKind            kind         = CandidateKind::TrustPolicy;
+        uint64_t                 next_version = 0;
+        std::string              expected_previous_hash;
+        std::string              authorizing_policy_hash;
+        std::vector<std::string> authorized_signers;
+    };
+
+    using CandidateAuthorizationSource = std::function<outcome::result<CandidateAuthorizationSnapshot>()>;
+
+    struct CandidateDomainEntry
+    {
+        std::string                  domain;
+        CandidateKind                kind = CandidateKind::TrustPolicy;
+        CandidateAuthorizationSource authorization_source;
+        const void                  *owner_token = nullptr;
+    };
+
     /**
      * @brief Policy entry describing how a registered key pattern is verified
      *        and instantiated.
      */
     struct SecureCrdtRegistryEntry
     {
-        std::string                                          key_pattern;
-        SignerSetSource                                      signer_set_source;
-        std::function<std::shared_ptr<ISignedCRDTData>()>    make_instance;
-        std::regex                                           compiled_pattern;
+        std::string                                       key_pattern;
+        SignerSetSource                                   signer_set_source;
+        std::function<std::shared_ptr<ISignedCRDTData>()> make_instance;
+        std::regex                                        compiled_pattern;
         /// @brief Opaque token supplied by the caller at Register() time; must
         ///        be presented verbatim to UnregisterIf() to remove this entry.
-        const void                                          *owner_token = nullptr;
+        const void *owner_token = nullptr;
     };
 
     /**
-     * @brief Static registry resolving a CRDT key to its SecureCrdtRegistryEntry.
+     * @brief Thread-safe registry resolving a CRDT key to its policy entry.
      */
     class SecureCrdtRegistry
     {
     public:
         /**
-         * @brief Registers (or replaces) the policy entry for `key_pattern`.
+         * @brief Registers the policy entry for `key_pattern` if absent.
          *        Compiles `compiled_pattern` as "/?" + key_pattern + "(/sig/[^/]+)?"
          *        so both the base key and a valid `sig/<addr>` child resolve to the
          *        same entry - mirrors CRDTDataFilter::RegisterElementFilter's
@@ -74,13 +95,15 @@ namespace sgns::securecrdt
          *            if it contains regex metacharacters).
          * @param[in] entry Policy entry to register (compiled_pattern is
          *            overwritten by this call).
+         * @return true when inserted; false when this registry already owns
+         *         the same pattern. Existing registrations are never replaced.
          */
-        static void Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
+        bool Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
         {
-            entry.key_pattern     = key_pattern;
+            entry.key_pattern      = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
-            std::unique_lock<std::shared_mutex> lock( registryMutex() );
-            registry()[key_pattern] = std::move( entry );
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            return registry_.emplace( key_pattern, std::move( entry ) ).second;
         }
 
         /**
@@ -92,13 +115,13 @@ namespace sgns::securecrdt
          * @param[in] expected_token Opaque token that must match the registering
          *            token for the removal to take effect.
          */
-        static void UnregisterIf( const std::string &key_pattern, const void *expected_token )
+        void UnregisterIf( const std::string &key_pattern, const void *expected_token )
         {
-            std::unique_lock<std::shared_mutex> lock( registryMutex() );
-            auto it = registry().find( key_pattern );
-            if ( it != registry().end() && it->second.owner_token == expected_token )
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            auto                                it = registry_.find( key_pattern );
+            if ( it != registry_.end() && it->second.owner_token == expected_token )
             {
-                registry().erase( it );
+                registry_.erase( it );
             }
         }
 
@@ -108,10 +131,10 @@ namespace sgns::securecrdt
          * @param[in] key CRDT key to resolve.
          * @return Snapshot of the matching entry, or std::nullopt if unregistered.
          */
-        static std::optional<SecureCrdtRegistryEntry> Resolve( const std::string &key )
+        std::optional<SecureCrdtRegistryEntry> Resolve( const std::string &key ) const
         {
-            std::shared_lock<std::shared_mutex> lock( registryMutex() );
-            for ( const auto &[pattern, entry] : registry() )
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            for ( const auto &[pattern, entry] : registry_ )
             {
                 if ( std::regex_match( key, entry.compiled_pattern ) )
                 {
@@ -127,12 +150,48 @@ namespace sgns::securecrdt
          *        callback for each registered base_key pattern at startup.
          * @return Vector of registered entries (order unspecified).
          */
-        static std::vector<SecureCrdtRegistryEntry> AllEntries()
+        std::vector<SecureCrdtRegistryEntry> AllEntries() const
         {
-            std::shared_lock<std::shared_mutex> lock( registryMutex() );
+            std::shared_lock<std::shared_mutex>  lock( registry_mutex_ );
             std::vector<SecureCrdtRegistryEntry> entries;
-            entries.reserve( registry().size() );
-            for ( const auto &[pattern, entry] : registry() )
+            entries.reserve( registry_.size() );
+            for ( const auto &[pattern, entry] : registry_ )
+            {
+                entries.push_back( entry );
+            }
+            return entries;
+        }
+
+        bool RegisterCandidateDomain( const std::string &domain, CandidateDomainEntry entry )
+        {
+            entry.domain = domain;
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            return candidate_domains_.emplace( domain, std::move( entry ) ).second;
+        }
+
+        void UnregisterCandidateDomainIf( const std::string &domain, const void *expected_token )
+        {
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            auto                                it = candidate_domains_.find( domain );
+            if ( it != candidate_domains_.end() && it->second.owner_token == expected_token )
+            {
+                candidate_domains_.erase( it );
+            }
+        }
+
+        std::optional<CandidateDomainEntry> ResolveCandidateDomain( const std::string &domain ) const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            const auto                          it = candidate_domains_.find( domain );
+            return it == candidate_domains_.end() ? std::nullopt : std::optional<CandidateDomainEntry>( it->second );
+        }
+
+        std::vector<CandidateDomainEntry> AllCandidateDomains() const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            std::vector<CandidateDomainEntry>   entries;
+            entries.reserve( candidate_domains_.size() );
+            for ( const auto &[domain, entry] : candidate_domains_ )
             {
                 entries.push_back( entry );
             }
@@ -140,17 +199,9 @@ namespace sgns::securecrdt
         }
 
     private:
-        static std::unordered_map<std::string, SecureCrdtRegistryEntry> &registry()
-        {
-            static std::unordered_map<std::string, SecureCrdtRegistryEntry> map;
-            return map;
-        }
-
-        static std::shared_mutex &registryMutex()
-        {
-            static std::shared_mutex mutex;
-            return mutex;
-        }
+        std::unordered_map<std::string, SecureCrdtRegistryEntry> registry_;
+        std::unordered_map<std::string, CandidateDomainEntry>    candidate_domains_;
+        mutable std::shared_mutex                                registry_mutex_;
     };
 } // namespace sgns::securecrdt
 

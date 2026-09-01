@@ -44,7 +44,9 @@
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
+#include "account/TrustStartupController.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
@@ -87,6 +89,37 @@ namespace
 
         return base + dist( rng );
     }
+
+    const char *NodeStateToString( sgns::GeniusNode::NodeState state )
+    {
+        using State = sgns::GeniusNode::NodeState;
+        switch ( state )
+        {
+            case State::CREATING:
+                return "CREATING";
+            case State::MIGRATING_DATABASE:
+                return "MIGRATING_DATABASE";
+            case State::INITIALIZING_DATABASE:
+                return "INITIALIZING_DATABASE";
+            case State::INITIALIZING_PROCESSING:
+                return "INITIALIZING_PROCESSING";
+            case State::INITIALIZING_BLOCKCHAIN:
+                return "INITIALIZING_BLOCKCHAIN";
+            case State::INITIALIZING_TRANSACTIONS:
+                return "INITIALIZING_TRANSACTIONS";
+            case State::WAITING_FOR_TRUST_GENESIS:
+                return "WAITING_FOR_TRUST_GENESIS";
+            case State::WAITING_FOR_BURN_GENESIS:
+                return "WAITING_FOR_BURN_GENESIS";
+            case State::FATAL_TRUST_MISMATCH:
+                return "FATAL_TRUST_MISMATCH";
+            case State::READY:
+                return "READY";
+        }
+        return "UNKNOWN";
+    }
+    // NodeTypeFromString lives in account/NodeType.hpp (moved there so lower layers
+    // can parse node roles without including this facade).
 
 }
 
@@ -453,14 +486,16 @@ namespace sgns
         }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)).
-        const auto majority_floor = static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        const auto majority_floor = static_cast<uint64_t>( trusted_peers_genesis_.size() / 2 + 1 );
+        const auto burn_floor     = static_cast<uint64_t>( trusted_peers_genesis_.size() -
+                                                       trusted_peers_genesis_.size() / 3 );
         if ( trusted_peer_quorum_threshold_ == 0 )
         {
             trusted_peer_quorum_threshold_ = majority_floor;
         }
         if ( burn_config_quorum_threshold_ == 0 )
         {
-            burn_config_quorum_threshold_ = majority_floor;
+            burn_config_quorum_threshold_ = burn_floor;
         }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
@@ -605,6 +640,7 @@ namespace sgns
 
     void GeniusNode::StateTransition( NodeState next_state )
     {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
         // Shutdown gate: pending blockchain/migration retry threads must not
         // restart services once node destruction has begun.
         if ( shutdown_started_.load() )
@@ -612,11 +648,25 @@ namespace sgns
             node_logger_->debug( "Ignoring transition to {}, shutdown in progress", next_state );
             return;
         }
+        if ( transition_in_progress_.has_value() && transition_in_progress_.value() == next_state )
+        {
+            node_logger_->debug( "Suppressing re-entrant transition to state {}",
+                                 NodeStateToString( next_state ) );
+            return;
+        }
+
+        const auto previous_transition = transition_in_progress_;
+        transition_in_progress_        = next_state;
+        ++transition_epoch_;
         state_.store( next_state );
         node_logger_->debug( "Transitioning to state {}", next_state );
 
-        switch ( next_state )
+        try
         {
+            [&]
+            {
+                switch ( next_state )
+                {
             case NodeState::MIGRATING_DATABASE:
             {
                 if ( !bootstrap_fullnodes_.empty() )
@@ -747,44 +797,226 @@ namespace sgns
                 const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
                 tx_globaldb_->AddListenTopic( quorum_topic );
 
-                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
-
-                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
-                                                                               trusted_peers_genesis_,
-                                                                               bootstrapper_node_address_,
-                                                                               trusted_peer_quorum_threshold_ );
-                if ( tpr_result.has_error() )
+                if ( !secure_crdt_ )
                 {
-                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
-                                         tpr_result.error().message() );
-                    secure_crdt_.reset();
-                    return;
-                }
-                trusted_peer_registry_ = tpr_result.value();
-
-                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
-                                                                          tx_globaldb_,
-                                                                          trusted_peer_registry_,
-                                                                          burn_config_quorum_threshold_,
-                                                                          account_ );
-                if ( burn_config_result.has_error() )
-                {
-                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
-                                         burn_config_result.error().message() );
-                    ResetQuorumMembers();
-                    return;
-                }
-                burn_config_ = burn_config_result.value();
-
-                // Register only after both policy owners have populated SecureCrdtRegistry;
-                // otherwise a new node can start without filters for either runtime key.
-                if ( !secure_crdt_->RegisterFilters() )
-                {
-                    node_logger_->error( "SecureCrdt filter registration failed" );
-                    ResetQuorumMembers();
-                    return;
+                    secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
                 }
 
+                const std::string trust_path = write_base_path_ + gnus_network_full_path_ + "/trust-state";
+                if ( !trust_state_store_ )
+                {
+                    auto opened = sgns::trustedpeer::TrustStateStore::Open( trust_path, subnet_id_ );
+                    if ( opened.has_value() )
+                    {
+                        trust_state_store_ = opened.value();
+                    }
+                }
+                const bool has_configured_trust = !trusted_peers_genesis_.empty() ||
+                                                  !bootstrapper_node_address_.empty();
+                bool has_persisted_trust = false;
+                if ( trust_state_store_ )
+                {
+                    auto persisted      = trust_state_store_->LoadAndVerify();
+                    has_persisted_trust = persisted.has_value() ||
+                                          persisted.error() != sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND;
+                }
+
+                if ( ( has_configured_trust || has_persisted_trust ) && !trust_startup_controller_ )
+                {
+                    std::optional<sgns::trustedpeer::GenesisManifest> manifest;
+                    if ( has_configured_trust )
+                    {
+                        sgns::trustedpeer::GenesisManifest configured;
+                        configured.network_id              = subnet_id_;
+                        configured.bootstrapper_public_key = bootstrapper_node_address_;
+                        configured.peers                   = trusted_peers_genesis_;
+                        configured.membership_threshold    = trusted_peer_quorum_threshold_;
+                        configured.burn_threshold          = burn_config_quorum_threshold_;
+                        manifest                           = std::move( configured );
+                    }
+                    if ( !trust_signer_ )
+                    {
+                        trust_signer_ = std::make_shared<const NodeTrustSigner>(
+                            NodeTrustSigner{ account_->GetAddress(), account_ } );
+                    }
+                    const auto trust_signer = trust_signer_;
+                    auto created = sgns::account::TrustStartupController::New(
+                        secure_crdt_,
+                        trust_state_store_,
+                        std::move( manifest ),
+                        trust_signer->address,
+                        [trust_signer]( const std::vector<uint8_t> &bytes ) { return trust_signer->Sign( bytes ); },
+                        [logger = node_logger_]( const sgns::account::TrustStartupController::Event &event )
+                        {
+                            const char *code = "TRUST_CONFIG_CONFLICT";
+                            switch ( event.code )
+                            {
+                                case sgns::account::TrustStartupController::EventCode::TRUST_NETWORK_MISMATCH:
+                                    code = "TRUST_NETWORK_MISMATCH";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_LOCAL_STATE_CORRUPT:
+                                    code = "TRUST_LOCAL_STATE_CORRUPT";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_MISSING:
+                                    code = "TRUST_CRDT_MISSING";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_ROLLBACK:
+                                    code = "TRUST_CRDT_ROLLBACK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_FORK:
+                                    code = "TRUST_CRDT_FORK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED:
+                                    code = "TRUST_ACTIVATION_FAILED";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED:
+                                    code = "TRUST_REFRESH_RETRY_SCHEDULED";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_EXHAUSTED:
+                                    code = "TRUST_REFRESH_RETRY_EXHAUSTED";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
+                                    break;
+                            }
+                            logger->critical( "{} fingerprint={} fields={}",
+                                              code,
+                                              event.persisted_fingerprint,
+                                              fmt::join( event.fields, "," ) );
+                        },
+                        [weak_self = weak_from_this()]( sgns::account::TrustStartupController::State state )
+                        {
+                            auto self = weak_self.lock();
+                            if ( !self )
+                            {
+                                return;
+                            }
+
+                            NodeState target_state = NodeState::FATAL_TRUST_MISMATCH;
+                            if ( state == sgns::account::TrustStartupController::State::ConfirmedReady )
+                            {
+                                target_state = NodeState::INITIALIZING_TRANSACTIONS;
+                            }
+                            else if ( state ==
+                                      sgns::account::TrustStartupController::State::WaitingForInitialBurn )
+                            {
+                                target_state = NodeState::WAITING_FOR_BURN_GENESIS;
+                            }
+                            else if ( state ==
+                                      sgns::account::TrustStartupController::State::FreshWaitingForGenesis )
+                            {
+                                target_state = NodeState::WAITING_FOR_TRUST_GENESIS;
+                            }
+
+                            uint64_t  captured_epoch;
+                            NodeState source_state;
+                            {
+                                std::lock_guard<std::recursive_mutex> lifecycle_lock( self->lifecycle_mutex_ );
+                                source_state = self->state_.load();
+                                if ( target_state == NodeState::INITIALIZING_TRANSACTIONS &&
+                                     source_state != NodeState::WAITING_FOR_TRUST_GENESIS &&
+                                     source_state != NodeState::WAITING_FOR_BURN_GENESIS )
+                                {
+                                    self->node_logger_->debug(
+                                        "Ignoring trust-ready transaction initialization from state {}",
+                                        NodeStateToString( source_state ) );
+                                    return;
+                                }
+                                captured_epoch = self->transition_epoch_;
+                            }
+
+                            boost::asio::post(
+                                *self->io_,
+                                [weak_self, captured_epoch, source_state, target_state]
+                                {
+                                    auto node = weak_self.lock();
+                                    if ( !node )
+                                    {
+                                        return;
+                                    }
+
+                                    std::lock_guard<std::recursive_mutex> lifecycle_lock( node->lifecycle_mutex_ );
+                                    if ( node->transition_epoch_ != captured_epoch ||
+                                         node->state_.load() != source_state )
+                                    {
+                                        node->node_logger_->debug(
+                                            "Suppressing stale trust transition from {} to {}",
+                                            NodeStateToString( source_state ),
+                                            NodeStateToString( target_state ) );
+                                        return;
+                                    }
+                                    node->StateTransition( target_state );
+                                } );
+                        } );
+                    if ( created.has_error() )
+                    {
+                        node_logger_->critical( "Trust startup failed closed: {}", created.error().message() );
+                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    trust_startup_controller_ = created.value();
+                    trusted_peer_registry_    = trust_startup_controller_->registry();
+                    burn_config_              = trust_startup_controller_->burn_config();
+                }
+
+                if ( trust_startup_controller_ )
+                {
+                    auto refreshed = trust_startup_controller_->Refresh();
+                    if ( refreshed.has_error() )
+                    {
+                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    if ( !trust_startup_controller_->IsEconomicallyReady() )
+                    {
+                        StateTransition( trust_startup_controller_->GetState() ==
+                                                 sgns::account::TrustStartupController::State::FreshWaitingForGenesis
+                                             ? NodeState::WAITING_FOR_TRUST_GENESIS
+                                             : NodeState::WAITING_FOR_BURN_GENESIS );
+                        return;
+                    }
+                }
+                else
+                {
+                    auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                                   trusted_peers_genesis_,
+                                                                                   bootstrapper_node_address_,
+                                                                                   trusted_peer_quorum_threshold_ );
+                    if ( tpr_result.has_error() )
+                    {
+                        node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                             tpr_result.error().message() );
+                        secure_crdt_.reset();
+                        return;
+                    }
+                    trusted_peer_registry_ = tpr_result.value();
+
+                    auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                              tx_globaldb_,
+                                                                              trusted_peer_registry_,
+                                                                              burn_config_quorum_threshold_,
+                                                                              account_ );
+                    if ( burn_config_result.has_error() )
+                    {
+                        node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                             burn_config_result.error().message() );
+                        ShutdownNodePolicyServices();
+                        return;
+                    }
+                    burn_config_ = burn_config_result.value();
+
+                    // Register only after both policy owners have populated SecureCrdtRegistry;
+                    // otherwise a new node can start without filters for either runtime key.
+                    if ( !secure_crdt_->RegisterFilters() )
+                    {
+                        node_logger_->error( "SecureCrdt filter registration failed" );
+                        ShutdownNodePolicyServices();
+                        return;
+                    }
+                }
+
+                // A replacement must not register the same GlobalDB/account patterns until the
+                // previous owner has stopped and its destructor has removed those callbacks.
+                ReleaseTransactionManagerOwnership();
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
@@ -794,18 +1026,46 @@ namespace sgns
                                                                 std::chrono::milliseconds( 300000 ),
                                                                 std::chrono::milliseconds( 0 ),
                                                                 burn_config_->GetCachedBasisPoints(),
-                                                                burn_config_ );
+                                                                burn_config_->GetConfirmedValueProvider() );
+                if ( !transaction_manager_ )
+                {
+                    node_logger_->error( "TransactionManager construction failed" );
+                    return;
+                }
+
+                ++transaction_manager_construction_count_;
+                if ( account_service_generation_ == 0 )
+                {
+                    account_service_generation_ = 1;
+                }
+                const auto owner_generation = account_service_generation_;
+                transaction_manager_owner_generation_.store( owner_generation );
+                account_transaction_callback_owner_generation_.store( owner_generation );
+                catchup_callback_owner_generation_.store( owner_generation );
+                auto manager = transaction_manager_;
+                // The replacement is now a complete account/manager pair.  This
+                // is the sole publication point for a switching generation.
+                account_service_switching_ = false;
 
                 transaction_manager_->RegisterStateChangeCallback(
-                    [weak_self = weak_from_this()]( TransactionManager::State old_state,
-                                                    TransactionManager::State new_state )
+                    [weak_self = weak_from_this(),
+                     weak_manager = std::weak_ptr<TransactionManager>( manager ),
+                     owner_generation]( TransactionManager::State old_state, TransactionManager::State new_state )
                     {
                         if ( auto strong = weak_self.lock() )
                         {
+                            auto callback_manager = weak_manager.lock();
+                            const auto snapshot = strong->SnapshotAccountServices();
+                            if ( !callback_manager || snapshot.generation != owner_generation ||
+                                 snapshot.manager.get() != callback_manager.get() )
+                            {
+                                return;
+                            }
                             strong->TransactionStateChanged( old_state, new_state );
                         }
                     } );
                 transaction_manager_->Start();
+                ++transaction_manager_start_count_;
                 // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
                 // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
@@ -818,11 +1078,16 @@ namespace sgns
 
                 blockchain_->SetSlotHashPopulator(
                     [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                     weak_self                = weak_from_this(),
+                     owner_generation,
                      logger                   = node_logger_]( sgns::ConsensusVote          &vote,
                                                                const sgns::ConsensusSubject &subject )
                     {
+                        auto self = weak_self.lock();
                         auto transaction_manager = weak_transaction_manager.lock();
-                        if ( !transaction_manager )
+                        const auto snapshot = self ? self->SnapshotAccountServices() : AccountServiceSnapshot{};
+                        if ( !self || !transaction_manager || snapshot.generation != owner_generation ||
+                             snapshot.manager.get() != transaction_manager.get() )
                         {
                             return;
                         }
@@ -870,6 +1135,7 @@ namespace sgns
                                        !slot1.empty(),
                                        !slot2.empty() );
                     } );
+                blockchain_slot_hash_owner_generation_.store( owner_generation );
 
                 // Initialize shared EthWatchService for EVM event detection
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
@@ -1036,10 +1302,40 @@ namespace sgns
                 node_logger_->info( "GeniusNode READY" );
                 break;
             }
-            case NodeState::CREATING:
-            default:
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+            case NodeState::FATAL_TRUST_MISMATCH:
                 break;
+                    case NodeState::CREATING:
+                    default:
+                        break;
+                }
+            }();
         }
+        catch ( ... )
+        {
+            transition_in_progress_ = previous_transition;
+            throw;
+        }
+        transition_in_progress_ = previous_transition;
+    }
+
+    bool GeniusNode::IsTrustEconomicallyReady() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->IsEconomicallyReady()
+                                         : burn_config_ && burn_config_->IsEconomicallyReady();
+    }
+
+    bool GeniusNode::CanApproveTrustSuccessors() const
+    {
+        return trust_startup_controller_ && trust_startup_controller_->CanApproveSuccessors();
+    }
+
+    std::vector<std::string> GeniusNode::GetCurrentTrustedPeers() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->GetCurrentPeers()
+                                         : ( trusted_peer_registry_ ? trusted_peer_registry_->GetCurrentPeers()
+                                                                    : std::vector<std::string>{} );
     }
 
     void GeniusNode::InitOpenSSL()
@@ -1753,19 +2049,15 @@ namespace sgns
             BOOST_OUTCOME_TRY( blockchain_->Stop() );
         }
 
-        if ( transaction_manager_ )
-        {
-            transaction_manager_->Stop();
-        }
-
         if ( release_members )
         {
             ResetProcessingMembers();
-            transaction_manager_.reset();
-            ResetQuorumMembers();
-            bridge_relayer_.reset();
-            eth_watch_service_.reset();
+            ReleaseTransactionManagerOwnership();
             blockchain_.reset();
+        }
+        else if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
         }
 
         if ( deconfigure_account && account_ )
@@ -1776,8 +2068,43 @@ namespace sgns
         return outcome::success();
     }
 
-    void GeniusNode::ResetQuorumMembers()
+    void GeniusNode::ReleaseTransactionManagerOwnership()
     {
+        // Invalidate posted bridge initialization before releasing its observer and
+        // weak TransactionManager target.
+        ++bridge_init_generation_;
+        rpc_endpoint_provider_.reset();
+        bridge_relayer_.reset();
+        eth_watch_service_.reset();
+
+        auto previous_manager = std::move( transaction_manager_ );
+        if ( !previous_manager )
+        {
+            account_transaction_callback_owner_generation_.store( 0 );
+            blockchain_slot_hash_owner_generation_.store( 0 );
+            return;
+        }
+
+        // These callbacks can re-enter GeniusNode or borrow the manager. Remove them
+        // before Stop and before the manager destructor unregisters its GlobalDB and
+        // account transaction-CID callbacks.
+        previous_manager->UnregisterStateChangeCallback();
+        if ( blockchain_ )
+        {
+            blockchain_->SetSlotHashPopulator( {} );
+        }
+        account_transaction_callback_owner_generation_.store( 0 );
+        blockchain_slot_hash_owner_generation_.store( 0 );
+        previous_manager->Stop();
+        previous_manager.reset();
+    }
+
+    void GeniusNode::ShutdownNodePolicyServices()
+    {
+        // The controller owns candidate callbacks into SecureCrdt and retains both
+        // policy services. Release it before unregistering those owners.
+        trust_startup_controller_.reset();
+
         // Unregister while the policy owners and their owner tokens are still alive.
         // Their destructors repeat this defensively, so partial initialization is safe.
         if ( burn_config_ )
@@ -1794,7 +2121,13 @@ namespace sgns
         burn_config_.reset();
         trusted_peer_registry_.reset();
         secure_crdt_.reset();
+        trust_state_store_.reset();
     }
+
+    // ReleaseRuntimeMembersAfterIoStopped() (phase-13) was superseded by the
+    // ownership-order teardown: members are declared provider-first and destroyed
+    // implicitly in reverse declaration order by ~GeniusNode; the phase-13
+    // ShutdownNodePolicyServices() hook runs from ShutdownForDestruction instead.
 
     void GeniusNode::ShutdownForDestruction()
     {
@@ -1847,6 +2180,7 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
+        ShutdownNodePolicyServices();
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();
@@ -2254,17 +2588,35 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        BOOST_OUTCOME_TRY( ShutdownAccountBoundServices( true ) );
+        std::shared_ptr<evmwatcher::BridgeCatchupWatcher> previous_watcher;
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( account_service_switching_ )
+            {
+                return std::errc::operation_in_progress;
+            }
+            account_service_switching_ = true;
+            ++account_service_generation_; // invalidate every captured account-service snapshot
+            ++bridge_init_generation_;
+            catchup_callback_owner_generation_.store( 0 );
+            previous_watcher = std::move( catchup_watcher_ );
+        }
 
-        if ( account_ )
+        // Watcher draining and manager/blockchain Stop may block or join threads;
+        // they deliberately run without lifecycle_mutex_.  Public and async
+        // consumers see the switching epoch as unavailable throughout the drain.
+        if ( previous_watcher )
         {
-            account_.swap( account );
+            previous_watcher->stopWatching();
+            previous_watcher.reset();
         }
-        else
+        auto shutdown_result = ShutdownAccountBoundServices( true );
+        if ( shutdown_result.has_error() )
         {
-            account_ = account;
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            account_service_switching_ = false;
+            return outcome::failure( shutdown_result.error() );
         }
-        account.reset();
 
         if ( this->tx_globaldb_ )
         {
@@ -2273,10 +2625,21 @@ namespace sgns
             // account-dependent layers. We must replicate what MIGRATING_DATABASE
             // and INITIALIZING_DATABASE do for a new account, without recreating
             // the database itself.
-            this->account_->InitMessenger( this->pubsub_ );
-            this->account_->ConfigureDatabaseDependencies( this->tx_globaldb_ );
+            account->InitMessenger( this->pubsub_ );
+            account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
             this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-            StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+            {
+                std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+                account_ = std::move( account );
+                StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+                account_service_switching_ = false;
+            }
+        }
+        else
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            account_ = std::move( account );
+            account_service_switching_ = false;
         }
 
         return outcome::success();
@@ -2312,8 +2675,10 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         const auto token_id = GetTokenID();
-        auto       balance  = account_->GetUTXOManager().GetBalance( token_id );
+        auto       balance  = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( balance > 0 )
         {
             BOOST_OUTCOME_TRY( auto transfer_result,
@@ -2354,7 +2719,9 @@ namespace sgns
             return outcome::failure( std::errc::bad_address );
         }
 
-        BOOST_OUTCOME_TRY( account_->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        BOOST_OUTCOME_TRY( snapshot.account->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );
 
@@ -2375,7 +2742,9 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        if ( account_->GetUTXOManager().GetBalance() < funds )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        if ( snapshot.account->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
@@ -2551,18 +2920,20 @@ namespace sgns
                                                          TokenID            tokenid,
                                                          std::string        destination )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ||
+             snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         if ( destination.empty() )
         {
-            destination = account_->GetAddress();
+            destination = snapshot.account->GetAddress();
         }
 
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                           snapshot.manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
         return tx_id;
@@ -2594,7 +2965,9 @@ namespace sgns
 
     std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
     {
-        auto res = this->account_->LoadFromSecureStorage( "mnemonic" );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account ) return std::nullopt;
+        auto res = snapshot.account->LoadFromSecureStorage( "mnemonic" );
         if ( res.has_error() )
         {
             return std::nullopt;
@@ -2653,6 +3026,15 @@ namespace sgns
                 return { 0.60f, "Initializing transactions" };
             }
 
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+                return { 0.60f, "Waiting for confirmed trust genesis" };
+
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+                return { 0.65f, "Waiting for confirmed burn genesis" };
+
+            case NodeState::FATAL_TRUST_MISMATCH:
+                return { 0.60f, "Trust startup failed closed" };
+
             case NodeState::INITIALIZING_PROCESSING:
                 return { 0.945f, "Initializing processing modules" };
 
@@ -2688,13 +3070,15 @@ namespace sgns
                                                             const std::string &destination,
                                                             TokenID            token_id )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ||
+             snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
+        auto available_balance = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( available_balance < amount )
         {
             node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
@@ -2704,8 +3088,7 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto tx_id, snapshot.manager->TransferFunds( amount, destination, token_id ) );
 
         node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
@@ -2782,28 +3165,34 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        return account_->GetUTXOManager().GetBalance();
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance() : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        return account_->GetUTXOManager().GetBalance( token_id );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id ) : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        return account_->GetUTXOManager().GetBalance( address );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( address ) : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        return account_->GetUTXOManager().GetBalance( token_id, address );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id, address ) : 0;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC        = __func__;
-        const auto                        account_tag = account_->GetAddress().substr( 0, 8 );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return;
+        const auto account_tag = snapshot.account->GetAddress().substr( 0, 8 );
         node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
         if ( task_queue_->IsTaskCompleted( task_id ) )
@@ -2890,8 +3279,10 @@ namespace sgns
                            {
                                if ( auto strong = weak_self.lock() )
                                {
+                                   const auto snapshot = strong->SnapshotAccountServices();
+                                   if ( !snapshot.account ) return;
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
-                                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                                snapshot.account->GetAddress().substr( 0, 8 ),
                                                                 task_id );
                                }
                            } );
@@ -3068,13 +3459,36 @@ namespace sgns
         return manager_result.value()->CountTransactions( tx_status );
     }
 
+    GeniusNode::AccountServiceSnapshot GeniusNode::SnapshotAccountServices() const
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( account_service_switching_ )
+        {
+            return {};
+        }
+        return { account_, transaction_manager_, account_service_generation_ };
+    }
+
+    bool GeniusNode::ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
+                                                    const std::function<void()>  &side_effect )
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( account_service_switching_ || snapshot.generation != account_service_generation_ ||
+             snapshot.account.get() != account_.get() || snapshot.manager.get() != transaction_manager_.get() )
+        {
+            return false;
+        }
+        side_effect();
+        return true;
+    }
+
     std::string GeniusNode::GetAddress() const
     {
         std::string address = "UNVAILABLE";
-        auto        account = account_;
-        if ( account )
+        auto        snapshot = SnapshotAccountServices();
+        if ( snapshot.account )
         {
-            address = account->GetAddress();
+            address = snapshot.account->GetAddress();
         }
         return address;
     }
@@ -3116,11 +3530,12 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TransactionManager>> GeniusNode::GetTransactionManager() const
     {
-        if ( !transaction_manager_ )
+        auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.manager )
         {
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
-        return transaction_manager_;
+        return snapshot.manager;
     }
 
     outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateEscrowInfoCRDTTransaction(
@@ -3215,7 +3630,7 @@ namespace sgns
 
     bool GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto transaction_manager = transaction_manager_;
+        auto transaction_manager = SnapshotAccountServices().manager;
         if ( !transaction_manager || transaction_manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
@@ -3277,6 +3692,12 @@ namespace sgns
     void GeniusNode::InitializeAndStartBridge()
     {
         node_logger_->info( "InitializeAndStartBridge: thin orchestrator (D-01, D-03)" );
+        const auto account_services = SnapshotAccountServices();
+        if ( !account_services.account || !account_services.manager )
+        {
+            node_logger_->warn( "InitializeAndStartBridge: account services are not published" );
+            return;
+        }
 
         // 1. Resolve config path (stays in GeniusNode per D-01)
         auto config_path = ResolveBridgeChainsConfigPath();
@@ -3325,21 +3746,29 @@ namespace sgns
                 return strong->catchup_chains_;
             };
 
-            auto rpc_resolver =
-                [weak_self = weak_from_this()]( const std::string &chain_id_str ) -> std::optional<std::string>
+            auto rpc_resolver = [weak_self = weak_from_this(), account_services](
+                                    const std::string &chain_id_str ) -> std::optional<std::string>
             {
                 auto strong = weak_self.lock();
-                if ( !strong || !strong->transaction_manager_ )
+                if ( !strong )
                 {
                     return std::nullopt;
                 }
-                auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
-                return validator.GetFirstRpcUrl( chain_id_str );
+                std::optional<std::string> url;
+                strong->ApplyIfCurrentAccountServices(
+                    account_services,
+                    [&]
+                    {
+                        auto &validator = account_services.manager->GetPublicChainInputValidator();
+                        url             = validator.GetFirstRpcUrl( chain_id_str );
+                    } );
+                return url;
             };
 
-            auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
-                                                                  const std::string                     &tx_hash_hex,
-                                                                  const std::string &chain_id_str ) -> bool
+            auto burn_processor = [weak_self = weak_from_this(), account_services](
+                                      const std::vector<eth::abi::AbiValue> &decoded_values,
+                                      const std::string                     &tx_hash_hex,
+                                      const std::string                     &chain_id_str ) -> bool
             {
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
@@ -3360,40 +3789,38 @@ namespace sgns
                 }
 
                 auto strong = weak_self.lock();
-                if ( !strong || !strong->account_ )
+                if ( !strong )
                 {
                     return false;
                 }
-                auto &utxo_mgr = strong->account_->GetUTXOManager();
-                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
-                                                 tx_hash_hex );
-                    return false;
-                }
-                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
-                                                 tx_hash_hex );
-                    return false;
-                }
-
-                try
-                {
-                    auto result = strong->MintTokens( burn.value().amount,
-                                                      tx_hash_hex,
-                                                      chain_id_str,
-                                                      burn.value().token_id,
-                                                      burn.value().destination );
-                    return result.has_value();
-                }
-                catch ( const std::exception &e )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
-                                                 tx_hash_hex,
-                                                 e.what() );
-                    return false;
-                }
+                bool processed = false;
+                strong->ApplyIfCurrentAccountServices(
+                    account_services,
+                    [&]
+                    {
+                        auto &utxo_mgr = account_services.account->GetUTXOManager();
+                        if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) ||
+                             utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                        {
+                            return;
+                        }
+                        try
+                        {
+                            auto result = strong->MintTokens( burn.value().amount,
+                                                              tx_hash_hex,
+                                                              chain_id_str,
+                                                              burn.value().token_id,
+                                                              burn.value().destination );
+                            processed = result.has_value();
+                        }
+                        catch ( const std::exception &e )
+                        {
+                            strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
+                                                         tx_hash_hex,
+                                                         e.what() );
+                        }
+                    } );
+                return processed;
             };
 
             catchup_watcher_ = std::make_unique<evmwatcher::BridgeCatchupWatcher>(
@@ -3404,6 +3831,7 @@ namespace sgns
                 std::move( burn_processor ) );
 
             catchup_watcher_->startWatching();
+            catchup_callback_owner_generation_.store( account_services.generation );
             node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
                                 catchup_config.poll_interval.count() );
         }
@@ -3421,8 +3849,8 @@ namespace sgns
         //    the provider's chainlist_fetcher_/observers_, and the raw
         //    bridge_relayer_ observer stays valid). The generation check still
         //    discards work posted before a completed switch.
-        const auto generation = bridge_init_generation_.load();
-        auto       tx_mgr     = transaction_manager_;   // shared_ptr copy: stable lifetime
+        const auto generation = account_services.generation;
+        auto       tx_mgr     = account_services.manager;
         auto       provider   = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
         auto       relayer    = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
         boost::asio::post( *io_,
@@ -3434,7 +3862,7 @@ namespace sgns
                             relayer  = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
-                               if ( !strong || strong->bridge_init_generation_.load() != generation )
+                               if ( !strong || strong->SnapshotAccountServices().generation != generation )
                                {
                                    return; // account switched — stale init, abort
                                }
@@ -3449,7 +3877,7 @@ namespace sgns
                                auto is_cancelled = [weak_self, generation]() -> bool
                                {
                                    auto s = weak_self.lock();
-                                   return !s || s->bridge_init_generation_.load() != generation;
+                                   return !s || s->SnapshotAccountServices().generation != generation;
                                };
                                auto &validator = tx_mgr->GetPublicChainInputValidator();
                                provider->Initialize( config_path, validator, is_cancelled );
@@ -3624,7 +4052,7 @@ namespace sgns
             const auto &mtime   = it->mtime;
             bool        expired = mtime < cutoff;
             bool        overCap = ( result_retention_max_mb_ > 0 ) &&
-                                  ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+                           ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
             if ( !expired && !overCap )
             {
                 break;

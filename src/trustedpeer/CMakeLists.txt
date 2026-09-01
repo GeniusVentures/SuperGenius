@@ -1,10 +1,20 @@
 add_library(trustedpeer
+    CanonicalTrustCodec.cpp
+    genesis_tool/GenesisCeremony.cpp
+    GenesisManifest.cpp
+    QuorumPolicy.cpp
+    TrustStateStore.cpp
     TrustedPeerRegistry.cpp
 )
 target_link_libraries(trustedpeer
     PUBLIC
     securecrdt
+    sgns_genius_account
     PRIVATE
     hexutil
+    sha
+    rocksdb
+    OpenSSL::Crypto
 )
 supergenius_install(trustedpeer)
+add_subdirectory(genesis_tool)
