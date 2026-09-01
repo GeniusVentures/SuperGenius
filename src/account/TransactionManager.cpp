@@ -2004,12 +2004,12 @@ namespace sgns
             for ( std::uint32_t i = 0; i < outputs.size(); ++i )
             {
                 GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
             }
 
             if ( !inputs.empty() )
             {
-                account_m->GetUTXOManager().ConsumeUTXOs( inputs, migration_tx->GetSrcAddress() );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs, migration_tx->GetSrcAddress() ) );
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (migration), amount {} balance {}",
