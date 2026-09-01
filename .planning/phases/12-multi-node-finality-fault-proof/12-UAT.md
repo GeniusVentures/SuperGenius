@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 12-multi-node-finality-fault-proof
 source: 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-08-SUMMARY.md, 12-11-SUMMARY.md
 started: 2026-09-01T14:56:14Z
@@ -51,5 +51,18 @@ blocked: 0
   reason: "User reported: ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults fails at consensus_pending_lifecycle_test.cpp:1279 — filtered.has_value() Actual: true, Expected: false. FilterCertificate logs 'consensus equivocation' for both same-slot alternates and then 'higher serialized certificate hash rejected'; same-mint alternates should be treated as normal, only different-mint quorum conflicts are faults."
   severity: blocker
   test: 1
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  root_cause: "FilterCertificate behaves per its contract — the failure is a fixture/CRDT interaction. The test writes the convergent-immutable slot key (/cert/mint-v2:...) three times with different values via plain db_->Put (WriteCertificateAtKey, test lines 154-161), bypassing production's PutConvergentImmutable (src/blockchain/Consensus.cpp:2115 — reserved UINT64_MAX priority with ConvergentImmutableValueHash lowest-hash convergence). All three no-topic self-created deltas carry the SAME priority (UpdateCRDTHeads 'untracked head' early-return leaves heads static; call 1 and call 3 DAG nodes share an identical CID in logs), and CrdtSet::SetValue (src/crdt/impl/crdt_set.cpp:623-649) falls through to an unconditional last-merge-wins overwrite at equal priority with a different value. The visible slot value after three conflicting same-priority writes depends on merge/scheduling order, not write order; under the loaded full-ctest UAT run, call 3's read observed call 2's certificate (second_serialized), so FilterCertificate correctly flagged the different-mint existing against the same-mint candidate and rejected by higher hash — failing EXPECT_FALSE(filtered.has_value()) at line 1279. Intermittent: 34 reproduction attempts on the identical binary (isolated, nominal-loop, load, full-binary) all passed; production and test SerializedCertificateHash predicates are byte-identical, eliminating hash divergence."
+  artifacts:
+    - path: "test/src/blockchain/consensus_pending_lifecycle_test.cpp"
+      issue: "verify_order (1265-1281) + WriteCertificateAtKey (154-161): repeated plain Put writes of different values to the convergent-immutable certificate slot key"
+    - path: "src/crdt/impl/crdt_set.cpp"
+      issue: "SetValue (594-667): equal-priority different-value fall-through overwrite — last-merge-wins with no convergence guard outside the reserved UINT64_MAX priority"
+    - path: "src/crdt/impl/crdt_datastore.cpp"
+      issue: "CreateDAGNode (1443-1477) assigns priority = heads_max+1; UpdateCRDTHeads (1832+) 'untracked head' early-return leaves heads static for no-topic self-created writes, so conflicting writes tie on priority"
+    - path: "src/blockchain/Consensus.cpp"
+      issue: "FilterCertificate (2603-2674) behaves per contract; SubmitCertificate (2062-2115) shows the production convergent-immutable write path the fixture bypasses"
+  missing:
+    - "Fixture: write the slot key the way production does — extend ConsensusPendingLifecycleTestAccess with a PutConvergentImmutable-based write helper (mirroring WriteLiveCertificate) or give each verify_order direction a distinct key, removing dependence on same-priority overwrite ordering"
+    - "CRDT hardening: require strictly-greater priority (or apply the convergent-hash tiebreak generally) before an equal-priority overwrite in CrdtSet::SetValue"
+    - "CRDT hardening: advance DAG heads for self-created writes so priorities are monotonic and replays are harmless"
+  debug_session: ".planning/debug/same-burn-canonical-finality.md"
