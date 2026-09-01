@@ -151,6 +151,18 @@ namespace sgns
             ASSERT_TRUE( manager->db_->PutConvergentImmutable( { key }, value, {} ).has_value() );
         }
 
+        // Production-path slot write (mirrors WriteLiveCertificate / Consensus.cpp SubmitCertificate):
+        // the convergent-immutable certificate slot key must be written through PutConvergentImmutable
+        // so the stored value converges instead of relying on same-priority CRDT overwrite ordering.
+        static void WriteConvergentCertificateAtKey( const std::shared_ptr<ConsensusManager> &manager,
+                                                     const std::string                       &key,
+                                                     const std::string                       &serialized )
+        {
+            crdt::GlobalDB::Buffer value;
+            value.put( serialized );
+            ASSERT_TRUE( manager->db_->PutConvergentImmutable( { key }, value, {} ).has_value() );
+        }
+
         static void WriteCertificateAtKey( const std::shared_ptr<ConsensusManager> &manager,
                                            const std::string                       &key,
                                            const std::string                       &serialized )
@@ -1262,13 +1274,27 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     ASSERT_TRUE( second_certificate.value().SerializeToString( &second_serialized ) );
     const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( first_certificate.value() );
     ASSERT_EQ( key, sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second_certificate.value() ) );
-    const auto verify_order = [&]( const std::string &existing, const std::string &candidate )
+    // Each direction targets one dedicated node db: the canonical slot key is written
+    // exactly once per direction through the production convergent-immutable path, so
+    // no direction's outcome can depend on same-priority CRDT overwrite ordering.
+    const auto verify_order = [&]( const size_t node_index, const std::string &existing, const std::string &candidate )
     {
-        sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( nodes.front().manager, key, existing );
+        const auto &manager = nodes[node_index].manager;
+        sgns::ConsensusManager::Certificate parsed_existing;
+        ASSERT_TRUE( parsed_existing.ParseFromString( existing ) );
+        ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, parsed_existing ),
+                   sgns::ConsensusManager::Check::Approve );
+        sgns::ConsensusPendingLifecycleTestAccess::WriteConvergentCertificateAtKey( manager, key, existing );
+        const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( parsed_existing.proposal() );
+        ASSERT_FALSE( slot.empty() );
+        ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( parsed_existing ), key );
+        auto stored = manager->GetCertificateBySlot( slot );
+        ASSERT_TRUE( stored.has_value() );
+        EXPECT_EQ( stored.value().SerializeAsString(), existing );
         sgns::crdt::pb::Element element;
         element.set_key( key );
         element.set_value( candidate );
-        const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( nodes.front().manager, element );
+        const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
         if ( SerializedCertificateHash( existing ) < SerializedCertificateHash( candidate ) )
         {
             ASSERT_TRUE( filtered.has_value() );
@@ -1281,8 +1307,8 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     };
     // Both directions execute the critical Mint-equivocation diagnostic while
     // retaining the normal lower-hash CRDT decision.
-    verify_order( first_serialized, second_serialized );
-    verify_order( second_serialized, first_serialized );
+    verify_order( 0, first_serialized, second_serialized );
+    verify_order( 1, second_serialized, first_serialized );
 
     const auto same_mint_alternate = nodes.front().manager->CreateCertificate(
         first_proposal.value(), { first_vote_1.value(), first_vote_0.value() } );
@@ -1293,7 +1319,7 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     std::string same_mint_serialized;
     ASSERT_TRUE( same_mint_alternate.value().SerializeToString( &same_mint_serialized ) );
     ASSERT_NE( same_mint_serialized, first_serialized );
-    verify_order( first_serialized, same_mint_serialized );
+    verify_order( 2, first_serialized, same_mint_serialized );
 
     for ( auto &node : nodes )
     {
