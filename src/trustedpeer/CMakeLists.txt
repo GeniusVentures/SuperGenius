@@ -10,6 +10,7 @@ target_link_libraries(trustedpeer
     PUBLIC
     securecrdt
     sgns_genius_account
+    peerregistry
     PRIVATE
     hexutil
     sha

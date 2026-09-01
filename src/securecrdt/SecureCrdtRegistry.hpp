@@ -25,6 +25,13 @@
 #include "securecrdt/ISignedCRDTData.hpp"
 #include "securecrdt/SecureCrdtCandidate.hpp"
 
+namespace sgns::peerregistry
+{
+    class PeerRegistry; // complete type not needed here - association only (D-04);
+                        // the adaptation helper lives in peerregistry/PeerRegistry.hpp
+                        // to avoid an include cycle.
+} // namespace sgns::peerregistry
+
 namespace sgns::securecrdt
 {
     /**
@@ -76,7 +83,18 @@ namespace sgns::securecrdt
         std::regex                                        compiled_pattern;
         /// @brief Opaque token supplied by the caller at Register() time; must
         ///        be presented verbatim to UnregisterIf() to remove this entry.
-        const void *owner_token = nullptr;
+        const void                                          *owner_token = nullptr;
+        /// @brief Explicit association to the PeerRegistry instance that owns
+        ///        this key pattern's authorization (D-04) - defaults to null
+        ///        for entries whose signer_set_source was built without a
+        ///        registry. Shared ownership per the BurnConfig shared_ptr
+        ///        registry precedent. Register() stores it verbatim and never
+        ///        replaces an explicitly provided signer_set_source; entries
+        ///        wanting a registry-derived source build it with
+        ///        peerregistry::MakeRegistrySignerSetSource. Declared LAST so
+        ///        existing positional aggregate initializers (which supply
+        ///        owner_token as the final element) stay source-compatible.
+        std::shared_ptr<sgns::peerregistry::PeerRegistry>    peer_registry;
     };
 
     /**
@@ -86,7 +104,7 @@ namespace sgns::securecrdt
     {
     public:
         /**
-         * @brief Registers the policy entry for `key_pattern` if absent.
+         * @brief Registers (or replaces) the policy entry for `key_pattern`.
          *        Compiles `compiled_pattern` as "/?" + key_pattern + "(/sig/[^/]+)?"
          *        so both the base key and a valid `sig/<addr>` child resolve to the
          *        same entry - mirrors CRDTDataFilter::RegisterElementFilter's
@@ -95,15 +113,27 @@ namespace sgns::securecrdt
          *            if it contains regex metacharacters).
          * @param[in] entry Policy entry to register (compiled_pattern is
          *            overwritten by this call).
-         * @return true when inserted; false when this registry already owns
-         *         the same pattern. Existing registrations are never replaced.
+         * @return true when a new entry was inserted; false when an existing
+         *         entry for the same pattern was replaced. A replaced entry is
+         *         unlinked and destroyed only after the registry mutex has
+         *         been released.
          */
         bool Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
         {
             entry.key_pattern      = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
+            {
+                // Unlink any replaced entry WITHOUT destroying it while the
+                // registry mutex is held: a replaced entry's peer_registry may
+                // own the last reference to a PeerRegistry whose destructor
+                // re-enters Unregister() -> UnregisterIf() (destruction
+                // re-entrancy; std::shared_mutex is not recursive).
+                std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+                auto                                replaced = registry_.extract( key_pattern );
+                lock.unlock();
+            } // replaced node (if any) destroyed here, mutex released
             std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
-            return registry_.emplace( key_pattern, std::move( entry ) ).second;
+            return registry_.insert_or_assign( key_pattern, std::move( entry ) ).second;
         }
 
         /**
@@ -121,8 +151,13 @@ namespace sgns::securecrdt
             auto                                it = registry_.find( key_pattern );
             if ( it != registry_.end() && it->second.owner_token == expected_token )
             {
-                registry_.erase( it );
-            }
+                // Unlink without destroying under the lock: the entry's
+                // peer_registry may own the last PeerRegistry reference, whose
+                // destructor re-enters Unregister() -> UnregisterIf()
+                // (destruction re-entrancy; std::shared_mutex is not recursive).
+                auto node = registry_.extract( it );
+                lock.unlock();
+            } // node destroyed here, mutex released
         }
 
         /**

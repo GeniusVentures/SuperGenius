@@ -596,8 +596,16 @@ namespace sgns::trustedpeer
         entry.make_instance = []() -> std::shared_ptr<sgns::securecrdt::ISignedCRDTData>
         { return std::make_shared<TrustedPeerListPayload>(); };
         entry.owner_token = &registry_token_;
+        // D-04: the global registry's own policy entry records its authority,
+        // so Resolve() callers can see which PeerRegistry owns the key.
+        entry.peer_registry = shared_from_this();
 
         return secure_crdt_->Registry().Register( base_key_.GetKey(), std::move( entry ) );
+    }
+
+    outcome::result<sgns::securecrdt::SignerSetSnapshot> TrustedPeerRegistry::CurrentSignerSet() const
+    {
+        return ResolveSignerSet();
     }
 
     outcome::result<sgns::securecrdt::SignerSetSnapshot> TrustedPeerRegistry::ResolveSignerSet() const

@@ -16,6 +16,7 @@ add_subdirectory(coinprices)
 add_subdirectory(proof)
 add_subdirectory(multisig)
 add_subdirectory(securecrdt)
+add_subdirectory(peerregistry)
 add_subdirectory(trustedpeer)
 
 install(
