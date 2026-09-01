@@ -47,6 +47,16 @@ target_compile_definitions(processing_validation_core_test PRIVATE
     VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
+addtest(task_keys_scope_test
+    task_keys_scope_test.cpp
+)
+
+target_link_libraries(task_keys_scope_test
+    processing_service
+    SGProcessingProto
+    base_crdt_test
+)
+
 addtest(processing_result_durability_test
     processing_result_durability_test.cpp
     processing_service_test_base.cpp
