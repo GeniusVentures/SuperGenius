@@ -2174,13 +2174,20 @@ namespace sgns
 
             if ( !params.first.empty() )
             {
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, migration_tx->GetSrcAddress() ) );
+                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
             }
 
-            m_logger->info( "Created tokens (migration), amount {} balance {}",
-                            migration_tx->GetAmount(),
-                            account_m->GetUTXOManager().GetBalance() );
+            if ( !inputs.empty() )
+            {
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs, migration_tx->GetSrcAddress() ) );
+            }
+
+            TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (migration), amount {} balance {}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              std::to_string( migration_tx->GetAmount() ),
+                                              std::to_string( account_m->GetUTXOManager().GetBalance() ) );
             return outcome::success();
         }
 
