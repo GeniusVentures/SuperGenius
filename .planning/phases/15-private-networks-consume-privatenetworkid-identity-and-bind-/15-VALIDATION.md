@@ -2,7 +2,7 @@
 phase: 15
 slug: private-networks-consume-privatenetworkid-identity-and-bind
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-31
 ---
@@ -38,7 +38,7 @@ created: 2026-08-31
 
 ## Per-Task Verification Map
 
-> Reconciled by planner 2026-08-31 against final PLAN.md task numbering (8 plans, 4 waves). Requirement IDs are derived (D-01..D-11 / PNET-*) because ROADMAP lists `Requirements: TBD`.
+> Reconciled by planner 2026-08-31, revised 2026-09-01 after checker feedback (8 plans, 5 waves — Waves 3-5 serialized by exclusive `src/account/GeniusNode.cpp` ownership, now encoded in `depends_on`). Requirement IDs are derived (D-01..D-11 / PNET-*) because ROADMAP lists `Requirements: TBD`.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
@@ -54,9 +54,9 @@ created: 2026-08-31
 | 15-04-02 | 04 | 2 | D-07 / PNET-GATE | T-15-11 | GossipPubSub surface installed; SGNUS still builds against refreshed install | integration | `grep SetMembershipAllowList <install>/include/... && ninja -C build/OSX/Release pubsub_counts_test` | ❌ W0 | ⬜ pending |
 | 15-05-01 | 05 | 3 | D-06, D-07 / PNET-GATE | T-15-15..18 | private node binds registry membership to gossip host; fail-closed on empty registry | integration | `ctest -R "trustedpeer|securecrdt"` + grep gates | ✅ (wiring) | ⬜ pending |
 | 15-05-02 | 05 | 3 | D-07 / PNET-GATE | T-15-15, T-15-16 | same-PSK-not-in-registry rejected; empty-membership fail-closed; runtime admission works | integration | `ctest -R pubsub_counts` (new `PrivateNetworkMembershipGating`) | ✅ (extend) | ⬜ pending |
-| 15-06-01 | 06 | 2 | D-08 / PNET-SCOPE | T-15-19..21 | scope helpers; public output byte-identical; no SetNetworkId | unit | `ninja -C build/OSX/Release processing transaction_manager` + grep | ✅ (source) | ⬜ pending |
-| 15-06-02 | 06 | 2 | D-02, D-08 / PNET-SCOPE | T-15-19 | node threads private scope into keys/topics/chain-ids; public node unchanged | integration | `ctest -R "startup|node"` | ✅ | ⬜ pending |
-| 15-06-03 | 06 | 2 | D-08 / PNET-SCOPE | T-15-19, T-15-20 | public golden strings pinned; distinct networks disjoint | unit | `ctest -R task_keys_scope` | ❌ W0 | ⬜ pending |
+| 15-06-01 | 06 | 2 | D-08 / PNET-SCOPE | T-15-19..21 | scope helpers (keys/result-keys/paths/topics/chain-ids); public output byte-identical; no SetNetworkId | unit | `ninja -C build/OSX/Release processing transaction_manager && ! grep -q SetNetworkId <sources>` | ✅ (source) | ⬜ pending |
+| 15-06-02 | 06 | 2 | D-08 / PNET-SCOPE | T-15-19, T-15-19b | all 15 TaskKeys sites in TaskQueueImpl + results/ keys + AddListenTopic aligned to the scoped channel; enqueue/result writes land ONLY under /chain/<id>/ (data-path placement asserted) | unit+integration | `ctest -R "task_keys_scope|task_queue"` + grep gates | ❌ W0 | ⬜ pending |
+| 15-06-03 | 06 | 2 | D-02, D-08 / PNET-SCOPE | T-15-19c, T-15-20 | escrow CRDT path scoped + symmetric PayEscrow read; escrow chain-id override routed to genius validator; public byte-identical | unit+integration | `ctest -R "task_keys_scope|transaction_manager|startup|node"` | ✅ (extend lifecycle test) | ⬜ pending |
 | 15-07-01 | 07 | 4 | D-09 / PNET-VAL | T-15-22, T-15-23 | instance-scoped identifiers; public strings byte-stable | unit | `ctest -R "blockchain|validator|genesis|multi_account"` | ✅ | ⬜ pending |
 | 15-07-02 | 07 | 4 | D-09 / PNET-VAL | T-15-22 | Blockchain/GossipNode scope threading; all call sites compile | integration | `ctest -R "startup|node|blockchain"` | ✅ | ⬜ pending |
 | 15-07-03 | 07 | 4 | D-09 / PNET-VAL | T-15-22, T-15-23 | three-way disjoint scope identifiers | unit | `ctest -R validator_registry_scope` | ❌ W0 | ⬜ pending |
@@ -77,7 +77,7 @@ created: 2026-08-31
 - [ ] New test suite `network_registry_test` (bootstrap/self-governance/secret exclusion) — **15-03 Task 2**
 - [ ] Vendored allow-list gater tests + reinstall — **15-04 Tasks 1-2**
 - [ ] Extend `test/src/pubsub_counts/pubsub_counts.cpp` with the D-07 membership layer — **15-05 Task 2**
-- [ ] New test suite `task_keys_scope_test` — **15-06 Task 3**
+- [ ] New test suite `task_keys_scope_test` (helper goldens + data-path placement cases) — **15-06 Task 2**; escrow cases appended — **15-06 Task 3**
 - [ ] New test suite `validator_registry_scope_test` — **15-07 Task 3**
 - [ ] New test suite `processing_core_gating_test` — **15-08 Task 2**
 
@@ -95,13 +95,21 @@ created: 2026-08-31
 
 ---
 
+## Coverage Criterion (PNET-TEST) — Descope Record (pending owner confirmation)
+
+The SuperGenius#367 acceptance criterion ">=80% coverage on new code" (cited in the RESEARCH requirements table) has **no measurement vehicle as configured**: the build tree carries no coverage instrumentation (no `-fprofile-instr-generate`/`-fcoverage-mapping` flags anywhere in the CMake config, no llvm-cov targets), and reconfiguring the Release build mid-phase for instrumentation would invalidate the 15-01 Task 1 build binding and exceed the 300s feedback budget.
+
+- **Descoped:** the numeric >=80% target is NOT measured in this phase. This is a recorded descope, not a silent drop.
+- **Compensating control:** every new behavior lands in a dedicated suite with a per-task automated gate (map above); suite pass/fail plus the pre-existing regression suites (`task_queue`, `transaction_manager`, `trustedpeer`, `securecrdt`, `pubsub_counts`, `blockchain`, `processing`) are the coverage proxy.
+- **Owner confirmation required at `/gsd:verify-work`:** accept this descope, or request a follow-up task that configures llvm-cov instrumentation in a separate Debug build tree.
+
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 300s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (all 8 plans; 15-01-02 is a decision checkpoint, not a verification gap)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (each scaffold created inside its owning task)
+- [x] No watch-mode flags
+- [x] Feedback latency < 300s (per-command estimate; heaviest suites are `transaction_manager` and `pubsub_counts`)
+- [x] `nyquist_compliant: true` set in frontmatter (set by planner 2026-09-01)
 
-**Approval:** pending
+**Approval:** planner sign-off complete 2026-09-01; owner confirms coverage descope (see above) at `/gsd:verify-work`
