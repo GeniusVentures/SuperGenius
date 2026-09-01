@@ -36,38 +36,44 @@ namespace
 
 TEST( TaskKeysScope, PublicBuildersAreByteStableAcrossForms )
 {
+    // std::string arguments (a bare literal would be ambiguous between the
+    // std::string_view public overload and the const std::string& scoped overload).
+    const std::string t1 = "t1";
+    const std::string s1 = "s1";
+
     EXPECT_EQ( TaskKeys::TaskListKey(), TaskKeys::TaskListKey( kPublicScope ) );
-    EXPECT_EQ( TaskKeys::SubTaskListKey(), TaskKeys::SubTaskListKey( kPublicScope ) );
-    EXPECT_EQ( TaskKeys::SubTaskListKey( "t1" ), TaskKeys::SubTaskListKey( kPublicScope, "t1" ) );
-    EXPECT_EQ( TaskKeys::TaskKey( "t1" ), TaskKeys::TaskKey( kPublicScope, "t1" ) );
-    EXPECT_EQ( TaskKeys::SubTaskKey( "t1", "s1" ), TaskKeys::SubTaskKey( kPublicScope, "t1", "s1" ) );
+    EXPECT_EQ( TaskKeys::SubTaskListKey(),
+               TaskKeys::ScopePrefix( kPublicScope ) + TaskKeys::SubTaskListKey() );
+    EXPECT_EQ( TaskKeys::SubTaskListKey( t1 ), TaskKeys::SubTaskListKey( kPublicScope, t1 ) );
+    EXPECT_EQ( TaskKeys::TaskKey( t1 ), TaskKeys::TaskKey( kPublicScope, t1 ) );
+    EXPECT_EQ( TaskKeys::SubTaskKey( t1, s1 ), TaskKeys::SubTaskKey( kPublicScope, t1, s1 ) );
     EXPECT_EQ( TaskKeys::ClaimableListKey(), TaskKeys::ClaimableListKey( kPublicScope ) );
-    EXPECT_EQ( TaskKeys::ClaimableTaskKey( "t1" ), TaskKeys::ClaimableTaskKey( kPublicScope, "t1" ) );
-    EXPECT_EQ( TaskKeys::ResultTaskKey( "t1" ), TaskKeys::ResultTaskKey( kPublicScope, "t1" ) );
+    EXPECT_EQ( TaskKeys::ClaimableTaskKey( t1 ), TaskKeys::ClaimableTaskKey( kPublicScope, t1 ) );
+    EXPECT_EQ( TaskKeys::ResultTaskKey( t1 ), TaskKeys::ResultTaskKey( kPublicScope, t1 ) );
 
     // Golden public composition (existing CRDT data must stay reachable).
     const std::string prefix = TaskKeys::ProcessingPrefix();
     EXPECT_EQ( TaskKeys::TaskListKey(), prefix + "/tasks" );
-    EXPECT_EQ( TaskKeys::TaskKey( "t1" ), prefix + "/tasks/t1" );
-    EXPECT_EQ( TaskKeys::SubTaskListKey( "t1" ), prefix + "/subtasks/t1" );
-    EXPECT_EQ( TaskKeys::SubTaskKey( "t1", "s1" ), prefix + "/subtasks/t1/s1" );
+    EXPECT_EQ( TaskKeys::TaskKey( t1 ), prefix + "/tasks/t1" );
+    EXPECT_EQ( TaskKeys::SubTaskListKey( t1 ), prefix + "/subtasks/t1" );
+    EXPECT_EQ( TaskKeys::SubTaskKey( t1, s1 ), prefix + "/subtasks/t1/s1" );
     EXPECT_EQ( TaskKeys::ClaimableListKey(), prefix + "/claimable" );
-    EXPECT_EQ( TaskKeys::ClaimableTaskKey( "t1" ), prefix + "/claimable/t1" );
+    EXPECT_EQ( TaskKeys::ClaimableTaskKey( t1 ), prefix + "/claimable/t1" );
 
     // No public key may leak into the private branch namespace.
     for ( const auto &key : { TaskKeys::TaskListKey( kPublicScope ),
-                              TaskKeys::TaskKey( kPublicScope, "t1" ),
-                              TaskKeys::SubTaskListKey( kPublicScope, "t1" ),
-                              TaskKeys::SubTaskKey( kPublicScope, "t1", "s1" ),
+                              TaskKeys::TaskKey( kPublicScope, t1 ),
+                              TaskKeys::SubTaskListKey( kPublicScope, t1 ),
+                              TaskKeys::SubTaskKey( kPublicScope, t1, s1 ),
                               TaskKeys::ClaimableListKey( kPublicScope ),
-                              TaskKeys::ClaimableTaskKey( kPublicScope, "t1" ),
-                              TaskKeys::ResultTaskKey( kPublicScope, "t1" ) } )
+                              TaskKeys::ClaimableTaskKey( kPublicScope, t1 ),
+                              TaskKeys::ResultTaskKey( kPublicScope, t1 ) } )
     {
         EXPECT_EQ( key.find( "/chain/" ), std::string::npos ) << "public key branched: " << key;
     }
 
     // Plan-pinned shape checks.
-    EXPECT_NE( TaskKeys::TaskKey( "t1" ).find( "/tasks/t1" ), std::string::npos );
+    EXPECT_NE( TaskKeys::TaskKey( t1 ).find( "/tasks/t1" ), std::string::npos );
 }
 
 TEST( TaskKeysScope, ScopePrefixIsChainBranch )
@@ -82,7 +88,9 @@ TEST( TaskKeysScope, PrivateScopeBranchesEveryBuilder )
 
     EXPECT_EQ( TaskKeys::TaskListKey( kPrivateIdA ), "/chain/" + kPrivateIdA + prefix + "/tasks" );
     EXPECT_EQ( TaskKeys::TaskKey( kPrivateIdA, "t1" ), "/chain/" + kPrivateIdA + prefix + "/tasks/t1" );
-    EXPECT_EQ( TaskKeys::SubTaskListKey( kPrivateIdA ), "/chain/" + kPrivateIdA + prefix + "/subtasks" );
+    // Bare scoped subtask list is composed (no colliding 1-arg overload exists).
+    EXPECT_EQ( TaskKeys::ScopePrefix( kPrivateIdA ) + TaskKeys::SubTaskListKey(),
+               "/chain/" + kPrivateIdA + prefix + "/subtasks" );
     EXPECT_EQ( TaskKeys::SubTaskListKey( kPrivateIdA, "t1" ),
                "/chain/" + kPrivateIdA + prefix + "/subtasks/t1" );
     EXPECT_EQ( TaskKeys::SubTaskKey( kPrivateIdA, "t1", "s1" ),

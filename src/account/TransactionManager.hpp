@@ -790,6 +790,14 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
+        /**
+         * @brief Derives the escrow chain id for a private-network job scope.
+         * @param[in] private_network_id Private-network identity; empty = public scope.
+         * @return "supergenius" when public (byte-identical to GENIUS_CHAIN_ID),
+         *         "supergenius/<private_network_id>" when scoped.
+         */
+        static std::string ScopedChainId( const std::string &private_network_id );
+
         struct InputValidatorSelection
         {
             std::string            chain_id;
