@@ -3284,7 +3284,27 @@ namespace sgns
 
         if ( !conflicting_txs.empty() )
         {
-            bool has_confirmed_conflict = false;
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] Found conflicting transaction that passed the FILTER with hash: {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                conflicting_tx.value()->GetHash() );
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+            if ( it == tx_processed_m.end() )
+            {
+                // GetConflictingTransaction resolves entries by value (nonce + source
+                // address), but the tracked key namespace depends on the network the
+                // entry was recorded under; resolve by value scan before dereferencing.
+                it = std::find_if( tx_processed_m.begin(),
+                                   tx_processed_m.end(),
+                                   [&conflicting_tx]( const auto &kv ) {
+                                       return kv.second.tx &&
+                                              kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
+                                   } );
+            }
+
+            if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
             {
                 std::shared_lock tx_lock( tx_mutex_m );
                 has_confirmed_conflict = std::any_of(
@@ -3789,6 +3809,24 @@ namespace sgns
                                                   conflicting_tx.value()->GetHash() );
                 std::unique_lock tx_lock( tx_mutex_m );
                 auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+                if ( it == tx_processed_m.end() )
+                {
+                    // The conflicting entry may live under a different network's key
+                    // namespace; resolve by value scan before dereferencing.
+                    it = std::find_if( tx_processed_m.begin(),
+                                       tx_processed_m.end(),
+                                       [&conflicting_tx]( const auto &kv ) {
+                                           return kv.second.tx &&
+                                                  kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
+                                       } );
+                }
+                if ( it == tx_processed_m.end() )
+                {
+                    // Nothing locally tracked to arbitrate against; the incoming
+                    // transaction was already confirmed above.
+                    tx_lock.unlock();
+                    return ConsensusManager::Check::Approve;
+                }
 
                 if ( it->second.status == TransactionStatus::CONFIRMED )
                 {
