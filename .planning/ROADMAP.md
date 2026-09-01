@@ -145,7 +145,7 @@ Plans:
 
 **Wave 12** *(gap closure — UAT Test 1)*
 
-- [ ] 12-12-PLAN.md — Repair the same-burn FilterCertificate fixture to write the convergent-immutable slot key exactly once per direction through the production PutConvergentImmutable path, prove no regression across the lifecycle and multi-node suites, and record the CRDT hardening follow-ups as deferred items.
+- [x] 12-12-PLAN.md — Repair the same-burn FilterCertificate fixture to write the convergent-immutable slot key exactly once per direction through the production PutConvergentImmutable path, prove no regression across the lifecycle and multi-node suites, and record the CRDT hardening follow-ups as deferred items.
 
 ## Progress
 
@@ -160,7 +160,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 10/10 | Complete   | 2026-08-31 |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 12/12 | Complete   | 2026-09-01 |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
