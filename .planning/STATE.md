@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-31T15:42:31.375Z"
+last_updated: "2026-08-31T19:42:16.041Z"
 last_activity: 2026-08-31 -- Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 22
-  completed_plans: 24
+  total_plans: 23
+  completed_plans: 25
   percent: 80
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 1 of 10
+Plan: 1 of 11
 Status: Executing Phase 12
 Last activity: 2026-08-31 -- Phase 12 execution started
 
@@ -105,12 +105,15 @@ None yet.
 - Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
 - Phase 12 remains blocked: Plan 12-08 observed three successful publisher readiness gates, so no fixture lifecycle repair is authorized and separate diagnosis is required for the remaining proof gaps.
 - Phase 12 Plan 08 post-review refresh: two canonical publisher-loss logs contain the complete passive record, while one ends during teardown with the prior aggregate record. Preserve the mismatch and do not retry, relax the schema, or alter topology/finality from it.
+- Phase 12 Plan 12-12: multi_node_finality_fault_test three-consecutive-serial evidence is blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores). The unchanged binary passed three serial full runs on 2026-08-31 (logs at /private/tmp/phase12-11-normal-final-{1,2,3}.log) and one complete 13/13 pass under the load on 2026-09-01; every other attempt failed only on timing readiness gates (5s topology, 20s passive recovery, child readiness). Clear the orphaned load loops and re-run the three serial passes; no fixture or production repair is authorized by these failures.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | v1.0 | NodeType downstream propagation and Archive/Full behavior split | Deferred | v1.0 close |
+| crdt-hardening | Require strictly-greater priority (or apply the convergent-hash tiebreak generally) before an equal-priority different-value overwrite in CrdtSet::SetValue (src/crdt/impl/crdt_set.cpp:630-649; the ConvergentImmutableValueHash guard currently applies only at the reserved UINT64_MAX priority) | Deferred | Phase 12 UAT gap closure 12-12 |
+| crdt-hardening | Advance DAG heads for no-topic self-created writes so CreateDAGNode priorities are monotonic and replays are harmless (src/crdt/impl/crdt_datastore.cpp UpdateCRDTHeads 'untracked head' early-return keeps heads static; src/blockchain/Consensus.cpp:2115 is unaffected) | Deferred | Phase 12 UAT gap closure 12-12 |
 
 ## Session Continuity
 
