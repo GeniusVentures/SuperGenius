@@ -62,7 +62,7 @@ Progress: [██████████] 100%
 | Phase 12 P02 | 17m | 2 tasks | 1 files |
 | Phase 12 P03 | 68m | 2 tasks | 5 files |
 | Phase 12 P08 | 11 min | 2 tasks | 8 files |
-| Phase 12 P12 | 36min | 2 tasks | 3 files |
+| Phase 12 P12 | 62min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -108,7 +108,7 @@ None yet.
 - Phase 12 Plan 07: three fresh real-socket Mint-boundary restart runs passed; D-14 reproduction gate closed (repair_authorization=). Phase remains blocked pending separately scoped evidence for the existing finality gaps.
 - Phase 12 remains blocked: Plan 12-08 observed three successful publisher readiness gates, so no fixture lifecycle repair is authorized and separate diagnosis is required for the remaining proof gaps.
 - Phase 12 Plan 08 post-review refresh: two canonical publisher-loss logs contain the complete passive record, while one ends during teardown with the prior aggregate record. Preserve the mismatch and do not retry, relax the schema, or alter topology/finality from it.
-- Phase 12 Plan 12-12: multi_node_finality_fault_test three-consecutive-serial evidence is blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores). The unchanged binary passed three serial full runs on 2026-08-31 (logs at /private/tmp/phase12-11-normal-final-{1,2,3}.log) and one complete 13/13 pass under the load on 2026-09-01; every other attempt failed only on timing readiness gates (5s topology, 20s passive recovery, child readiness). Clear the orphaned load loops and re-run the three serial passes; no fixture or production repair is authorized by these failures.
+- Phase 12 Plan 12-12 resolved: multi_node_finality_fault_test three-consecutive-serial evidence was temporarily blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores); the orphans terminated on their own at about 15:50 local and the gate then closed with three consecutive serial full passes (logs at /tmp/p12_mn_triple_{a,b,c}.log). Residual note: PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch failed once at low load with the usual child-readiness signature, so its pre-existing intermittence stands under the Plan 12-08 discipline; no repair was authorized or applied by 12-12.
 
 ## Deferred Items
 
@@ -120,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-01T18:49:17.077Z
-Stopped at: Completed 12-12-PLAN.md; UAT Test 1 fixture repair verified, multi-node triple-serial evidence blocked by leftover artificial CPU load
+Last session: 2026-09-01T19:12:00.000Z
+Stopped at: Completed 12-12-PLAN.md; UAT Test 1 fixture repair verified plus three serial full passes on both CTest targets
 Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-UAT.md

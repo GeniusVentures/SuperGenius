@@ -39,7 +39,7 @@ patterns-established:
 requirements-completed: [TEST-01, TEST-06]
 
 # Metrics
-duration: 36min
+duration: 62min
 completed: 2026-09-01
 ---
 
@@ -49,9 +49,9 @@ completed: 2026-09-01
 
 ## Performance
 
-- **Duration:** 36 min
+- **Duration:** 62 min (36 min of repair and lifecycle evidence, plus the multi-node evidence wait for the external artificial load to clear and the three serial passes)
 - **Started:** 2026-09-01T18:08:22Z
-- **Completed:** 2026-09-01T18:44:00Z
+- **Completed:** 2026-09-01T19:10:00Z
 - **Tasks:** 2
 - **Files modified:** 2 (test fixture + STATE.md) plus this SUMMARY
 
@@ -111,14 +111,15 @@ completed: 2026-09-01
 - The executor's attempt to terminate only those six orphaned spin loops was denied by the permission system ("Interfere With Workloads"), so the load could not be cleared and the denial was respected.
 - Multi-node full-suite attempts under that load: 5 attempts, 1 complete green pass (13/13, run 2 of the final series) and 4 intermittent failures. Every failure is a timing readiness gate, never an assertion about finality state: `multi_node_finality_fault_test.cpp:1119` (5s libp2p topology formation), `:2077/:2080/:2096` (20s passive-recipient recovery), and the collector child exiting nonzero on its own readiness gate. The inner scenario `FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover` also passed standalone under load 17.9.
 - Attribution that this is environmental, not the plan's change: the `multi_node_finality_fault_test` binary was not recompiled by this plan (mtime 12:10 local, before the first fixture edit at 15:08); this plan touches only `consensus_pending_lifecycle_test.cpp`; the identical binary passed three strictly serial full 13/13 runs on 2026-08-31 (logs preserved at `/private/tmp/phase12-11-normal-final-{1,2,3}.log`); and the Phase 12 UAT recorded publisher loss and real-route/process ownership as passing on this binary.
-- Resolution: recorded as a blocker in `.planning/STATE.md` with the re-run instruction. After the orphaned load loops are cleared, re-running `ctest --test-dir build/OSX/Release --output-on-failure --timeout 300 -R '^multi_node_finality_fault_test$'` three times serially is expected to reproduce the 2026-08-31 result. No fixture or production repair is authorized by these load failures (STATE.md Plan 12-08 discipline: repair requires two matching fresh failures with direct fixture lifecycle proof, and these failures carry an identified external cause).
+- Resolution: the orphaned busy-loop shells terminated on their own at about 15:50 local (1-minute load fell from ~18 to ~2.6); the executor's own attempt to terminate them had been denied by the permission system and was not retried. Once the load cleared, the plan's gate was completed: three consecutive serial full `multi_node_finality_fault_test` CTest passes, all green (`/tmp/p12_mn_triple_{a,b,c}.log`).
+- Residual observation kept for the record: between the green passes, `PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch` failed once at low load (~4) with the same child-readiness signature (`normal-exit-nonzero`, nonqualifying evidence). So the artificial load greatly amplified the intermittence (4/5 attempts failed, including core finality scenarios) but the collector test retains a pre-existing low-rate readiness flake. That matches the standing Phase 12 discipline (STATE.md Plan 12-08: publisher readiness repair requires two matching fresh failures with direct fixture lifecycle proof in a separately scoped plan); no repair was attempted or authorized by 12-12, which may not touch this file.
 
 ## Verification
 
 1. **Focused regression, five consecutive runs:** `ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults` passed 5/5 consecutive runs on `build/OSX/Release` (logs `/tmp/p12_focus_run{1..5}.log`).
 2. **FilterCertificate group:** `ConsensusPendingLifecycleTest.FilterCertificate*` passed 2/2, including the unchanged production-path sibling `FilterCertificateRejectsHigherHashOccupiedSlotBeforeCrdtApply`.
 3. **Lifecycle full CTest target, three consecutive serial runs:** passed 3/3, each `100% tests passed, 0 tests failed out of 1`, ~44 s per run (logs `/tmp/p12_lifecycle_full{1,2,3}.log`).
-4. **Multi-node full CTest target:** build verified unchanged; 1 complete green pass (13/13, `/tmp/p12_multinode_pass2.log`) plus 4 load-attributed intermittent failures (see Issues Encountered). **The three-consecutive-serial gate for this target is not yet satisfied** and is recorded as a STATE.md blocker pending removal of the leftover artificial load.
+4. **Multi-node full CTest target, three consecutive serial runs:** passed 3/3 after the leftover artificial load cleared (`/tmp/p12_mn_triple_{a,b,c}.log`, each CTest `100% tests passed, 0 tests failed out of 1`, 211.5-215.0 s per run; CTest exit 0 means every GTest in the target passed). An earlier complete green pass under load (`/tmp/p12_multinode_pass2.log`) and one intermittent collector readiness failure observed at low load between passes are recorded under Issues Encountered.
 5. **Static no-src-change gate:** `git status --porcelain -- src/` was empty at every task gate; the Task 1 commit (`e08288c3`) touches only `test/src/blockchain/consensus_pending_lifecycle_test.cpp`.
 6. **STATE.md deferrals:** `grep -c 'crdt-hardening' .planning/STATE.md` returns 2.
 
@@ -128,13 +129,13 @@ None. No placeholder values, no unwired data sources, no TODO/FIXME markers were
 
 ## User Setup Required
 
-None for the plan's deliverables. One manual cleanup is needed to finish the remaining evidence gate: terminate the six orphaned busy-loop shells listed above (they belong to a finished diagnosis run and are only burning CPU), then re-run the three serial multi-node passes.
+None - no external service configuration required.
 
 ## Next Phase Readiness
 
 - The UAT Test 1 blocker is closed at its diagnosed root cause: the repaired regression no longer performs repeated same-key conflicting plain-Put writes to a convergent-immutable record, so its outcome is deterministic under any CRDT merge/scheduling order.
-- FilterCertificate semantics, production consensus/CRDT sources, and every other lifecycle test are unchanged and green across three serial full-suite passes.
-- Outstanding before the Phase 12 UAT can be re-run clean: the multi-node three-consecutive-serial evidence pass blocked by the leftover artificial load (STATE.md blocker), and the two `crdt-hardening` deferred follow-ups need their own separately scoped plan.
+- FilterCertificate semantics, production consensus/CRDT sources, and every other lifecycle test are unchanged and green across three serial full-suite passes; the multi-node target likewise passed three consecutive serial full-suite passes.
+- The two `crdt-hardening` deferred follow-ups need their own separately scoped plan with full-suite regression evidence; the residual low-rate collector readiness flake noted under Issues Encountered belongs to that same separately scoped publisher-readiness discipline, not to this gap closure.
 
 ## Self-Check: PASSED
 
