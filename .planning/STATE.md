@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-08-31T19:42:16.041Z"
-last_activity: 2026-08-31 -- Phase 12 execution started
+last_updated: "2026-09-01T18:49:17.084Z"
+last_activity: 2026-09-01
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 23
-  completed_plans: 25
-  percent: 80
+  completed_phases: 5
+  total_plans: 24
+  completed_plans: 27
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 1 of 11
-Status: Executing Phase 12
-Last activity: 2026-08-31 -- Phase 12 execution started
+Plan: 2 of 11
+Status: Ready to execute
+Last activity: 2026-09-01
 
 Progress: [██████████] 100%
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 12 P02 | 17m | 2 tasks | 1 files |
 | Phase 12 P03 | 68m | 2 tasks | 5 files |
 | Phase 12 P08 | 11 min | 2 tasks | 8 files |
+| Phase 12 P12 | 36min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Progress: [██████████] 100%
 - [Phase 12]: Isolate the pre-broadcast vote owner until its same-root active-vote recovery is asserted. — Connected peers may correctly finalize the slot and release that direct local lock before the intended restart boundary.
 - [Phase 12]: Publisher readiness repair requires two matching fresh failures with direct fixture lifecycle proof. — Three isolated publisher-loss runs passed readiness, so Plan 12-08 authorizes no repair.
 - [Phase 12]: Complete passive readiness records include all directed host links, all peer lifecycle fields, and named per-peer mesh counts. — A mixed post-review refresh must be attributed before the evidence gate can be considered complete.
+- [Phase 12]: Convergent-immutable certificate slot keys are written in fixtures only through PutConvergentImmutable, exactly once per db — a per-direction fresh node db removes any dependence on same-priority CRDT overwrite ordering.
+- [Phase 12]: CRDT equal-priority overwrite guard and self-created-write head advancement are deferred follow-ups, not 12-12 changes — production authority is already protected by PutConvergentImmutable's reserved priority and lowest-hash convergence, and CRDT merge changes ripple across every CRDT-dependent suite.
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-31T11:27:20.962Z
-Stopped at: Plan 12-09 evidence complete; code review found observer classifier blockers
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-REVIEW.md
+Last session: 2026-09-01T18:49:17.077Z
+Stopped at: Completed 12-12-PLAN.md; UAT Test 1 fixture repair verified, multi-node triple-serial evidence blocked by leftover artificial CPU load
+Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-UAT.md
