@@ -120,7 +120,7 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: 5 plans
+**Plans**: 12 plans
 Plans:
 
 **Wave 1**
@@ -142,6 +142,10 @@ Plans:
 **Wave 5** *(gap closure)*
 
 - [x] 12-05-PLAN.md — Diagnose the same-root active-vote boundary and isolate the pre-finality restart proof from valid certificate cleanup.
+
+**Wave 12** *(gap closure — UAT Test 1)*
+
+- [ ] 12-12-PLAN.md — Repair the same-burn FilterCertificate fixture to write the convergent-immutable slot key exactly once per direction through the production PutConvergentImmutable path, prove no regression across the lifecycle and multi-node suites, and record the CRDT hardening follow-ups as deferred items.
 
 ## Progress
 
