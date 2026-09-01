@@ -1987,7 +1987,11 @@ namespace sgns
                 auto process_result = FetchAndProcessTransaction( transaction_key.value(), value );
                 if ( process_result.has_error() )
                 {
-                    m_logger->error( "Unable to fetch and process transaction {}", transaction_key.value() );
+                    TransactionManagerLogger()->error( "[{} - full: {}] Unable to fetch and process transaction {}: {}",
+                                                       account_m->GetAddress().substr( 0, 8 ),
+                                                       full_node_m,
+                                                       transaction_key.value(),
+                                                       process_result.error().message() );
                 }
             }
         }
