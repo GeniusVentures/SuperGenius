@@ -42,12 +42,13 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 - ✓ Canonical bridge-burn identity is shared by competing Mint proposals and derived from verified burn facts, never proposer address or nonce — **Validated in Phase 8**
 - ✓ Certificate publication has deterministic verifiable authority, persistence-before-advertisement, and safe failover — **Validated in Phase 10**
 - ✓ Local completion, PubSub receipt, CRDT synchronization, and restart recovery converge through one durable canonical-certificate path; honest validators produce one same-slot winner — **Validated in Phases 9–11**
+- ✓ A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart — production-path regression proof via real PubSub/CRDT/RocksDB/consensus/Mint-ingress (TEST-01..TEST-06) — **Validated in Phase 12**
 
 ### Active
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart.
+- (none — milestone v3.0 scope fully validated)
 
 ### Out of Scope
 
@@ -65,7 +66,7 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 ## Context
 
-**Current State:** v3.0 rebuilt canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery from the `develop` baseline. Phase 12 remains to prove those guarantees across production-path multi-node faults; the old exploratory worktree remains forensic reference only.
+**Current State:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof; the old exploratory worktree remains forensic reference only.
 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
@@ -124,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-24 after completing Phase 11 of milestone v3.0*
+*Last updated: 2026-09-01 after completing Phase 12 of milestone v3.0 (final phase)*
