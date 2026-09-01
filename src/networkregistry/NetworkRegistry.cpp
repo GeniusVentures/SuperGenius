@@ -397,25 +397,66 @@ namespace sgns::networkregistry
 
     void NetworkRegistry::RegisterCrdtChangeCallback()
     {
-        // BurnConfig pattern: re-run TryConfirm whenever a base_key or
-        // sig/<addr> child element arrives, so later quorum-signed membership
-        // changes refresh the cache without an explicit TryConfirm call.
+        // BurnConfig pattern (re-derived for a trust-transitioning registry):
+        // refresh the cache when a base_key or sig/<addr> child element
+        // arrives, so later quorum-signed membership changes land without an
+        // explicit TryConfirm call. Unlike BurnConfig, this registry's
+        // signer-set authority TRANSITIONS at confirmation, so the quorum
+        // read prunes stale signature children (GlobalDB::Remove) -- running
+        // that re-entrantly from inside a datastore Put callback corrupts
+        // the datastore. The callback therefore only flags + notifies; the
+        // refresh thread performs the actual TryConfirm.
         change_callback_pattern_ = "/?" + EscapeRegex( base_key_.GetKey() ) + "(/sig/.*)?";
         auto weak_self           = weak_from_this();
-        global_db_->RegisterNewElementCallback(
+        const bool registered    = global_db_->RegisterNewElementCallback(
             change_callback_pattern_,
             [weak_self]( sgns::crdt::CRDTCallbackManager::NewDataPair, const std::string & )
             {
                 if ( auto self = weak_self.lock() )
                 {
-                    auto confirmed = self->TryConfirm();
-                    if ( confirmed.has_error() )
-                    {
-                        self->logger_->warn( "OnCrdtElementChanged: TryConfirm failed: {}",
-                                             confirmed.error().message() );
-                    }
+                    self->refresh_pending_.store( true, std::memory_order_release );
+                    std::lock_guard<std::mutex> lock( self->refresh_mutex_ );
+                    self->refresh_cv_.notify_one();
                 }
             } );
+        if ( !registered )
+        {
+            change_callback_pattern_.clear();
+            logger_->warn( "{}: change-callback pattern already registered", __func__ );
+            return;
+        }
+        refresh_stopping_.store( false, std::memory_order_release );
+        refresh_thread_ = std::thread( [weak_self] {
+            if ( auto self = weak_self.lock() )
+            {
+                self->RefreshLoop();
+            }
+        } );
+    }
+
+    void NetworkRegistry::RefreshLoop()
+    {
+        while ( !refresh_stopping_.load( std::memory_order_acquire ) )
+        {
+            std::unique_lock<std::mutex> lock( refresh_mutex_ );
+            refresh_cv_.wait( lock,
+                              [&]
+                              {
+                                  return refresh_pending_.load( std::memory_order_acquire )
+                                      || refresh_stopping_.load( std::memory_order_acquire );
+                              } );
+            if ( refresh_stopping_.load( std::memory_order_acquire ) )
+            {
+                return;
+            }
+            lock.unlock();
+
+            auto confirmed = TryConfirm();
+            if ( confirmed.has_error() )
+            {
+                logger_->warn( "{}: TryConfirm failed: {}", __func__, confirmed.error().message() );
+            }
+        }
     }
 
     outcome::result<sgns::securecrdt::SignerSetSnapshot> NetworkRegistry::CurrentSignerSet() const
@@ -540,6 +581,17 @@ namespace sgns::networkregistry
         if ( secure_crdt_ )
         {
             secure_crdt_->Registry().UnregisterIf( EscapeRegex( base_key_.GetKey() ), &registry_token_ );
+        }
+        // Stop + join the refresh thread BEFORE tearing down the callback or
+        // the db references it uses.
+        refresh_stopping_.store( true, std::memory_order_release );
+        {
+            std::lock_guard<std::mutex> lock( refresh_mutex_ );
+            refresh_cv_.notify_all();
+        }
+        if ( refresh_thread_.joinable() )
+        {
+            refresh_thread_.join();
         }
         if ( global_db_ && !change_callback_pattern_.empty() )
         {
