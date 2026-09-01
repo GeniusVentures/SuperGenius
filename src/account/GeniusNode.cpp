@@ -6,6 +6,7 @@
  */
 
 #include <chrono>
+#include <algorithm>
 #include <future>
 #include <stdexcept>
 #include <thread>
@@ -197,10 +198,12 @@ namespace sgns
         }
     }
 
-    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
-                                                          uint16_t           port_seed,
-                                                          bool               auto_dht,
-                                                          const std::string &network_key )
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string              &base_path,
+                                                          uint16_t                        port_seed,
+                                                          bool                            auto_dht,
+                                                          const std::string              &network_key,
+                                                          const std::string              &private_network_id,
+                                                          const std::vector<std::string> &network_bootstrap_peers )
     {
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
@@ -239,6 +242,26 @@ namespace sgns
                 }
             }
             ofs << ", \"network_key\": \"" << escaped << "\"";
+        }
+        if ( !private_network_id.empty() )
+        {
+            // Plain string: the id is 0x-prefixed hex (no characters JSON would escape).
+            ofs << ", \"private_network_id\": \"" << private_network_id << "\"";
+        }
+        if ( !network_bootstrap_peers.empty() )
+        {
+            ofs << ", \"network_bootstrap_peers\": [";
+            bool first = true;
+            for ( const auto &peer : network_bootstrap_peers )
+            {
+                if ( !first )
+                {
+                    ofs << ", ";
+                }
+                first = false;
+                ofs << "\"" << peer << "\"";
+            }
+            ofs << "]";
         }
         ofs << " }";
         return outcome::success();
@@ -1571,6 +1594,67 @@ namespace sgns
         read( "high_water", settings.high_water );
         read( "low_water", settings.low_water );
         read( "network_key", settings.network_key );
+        read( "private_network_id", settings.private_network_id );
+
+        // Offline-provisioned initial NetworkRegistry membership (D-01): same FindMember /
+        // type-check array pattern as "bootstrap_addresses" below, but the entries land in the
+        // returned settings because they are consumed only when private_network_id is set.
+        if ( config_json.HasMember( "network_bootstrap_peers" ) && config_json["network_bootstrap_peers"].IsArray() )
+        {
+            for ( auto &v : config_json["network_bootstrap_peers"].GetArray() )
+            {
+                if ( v.IsString() )
+                {
+                    settings.network_bootstrap_peers.emplace_back( v.GetString() );
+                }
+            }
+        }
+
+        // D-01/D-02 identity validation (Task 2 encoding decision: 0x-hex-32B). The
+        // private_network_id is the PUBLIC identity - 0x-prefixed hex of exactly 32 bytes
+        // (66 characters) - and is intentionally distinct from the network_key secret.
+        // Malformed ids are fatal (fail closed): this mirrors the warn-on-ill-typed divergence
+        // precedent above but escalates to failure, because a misidentified "private" node
+        // must not start. Only key names appear in errors; the network_key value is never
+        // logged (D-03).
+        if ( !settings.private_network_id.empty() )
+        {
+            const auto &id          = settings.private_network_id;
+            const bool  well_formed = id.size() == 66 && id[0] == '0' && id[1] == 'x' &&
+                                     std::all_of( id.begin() + 2,
+                                                  id.end(),
+                                                  []( char c )
+                                                  { return std::isxdigit( static_cast<unsigned char>( c ) ) != 0; } );
+            const bool all_zero = id.size() == 66 &&
+                                  std::all_of( id.begin() + 2, id.end(), []( char c ) { return c == '0'; } );
+            if ( !well_formed )
+            {
+                node_logger_->error( "network_config.json: private_network_id must be 0x-prefixed hex of exactly "
+                                     "32 bytes (66 characters, 0x + 64 hex digits) - refusing to start" );
+                settings.valid = false;
+            }
+            else if ( all_zero )
+            {
+                node_logger_->error( "network_config.json: private_network_id is all-zero, which is reserved for "
+                                     "the public network - refusing to start" );
+                settings.valid = false;
+            }
+        }
+        // D-01 provisioning pair: the public identity and the pnet secret are provisioned
+        // together or not at all. "network_key" without "private_network_id" would run a
+        // PSK-isolated node writing private-intent data into PUBLIC CRDT paths (D-08 misroute);
+        // "private_network_id" without "network_key" claims a private namespace with no
+        // transport protection. Both-set and both-absent configs load exactly as before.
+        const bool has_id  = !settings.private_network_id.empty();
+        const bool has_key = !settings.network_key.empty();
+        if ( settings.valid && has_id != has_key )
+        {
+            settings.valid = false;
+            node_logger_->error( "network_config.json: half-provisioned private-network identity - \"{}\" is set "
+                                 "but \"{}\" is missing; provision both keys or neither - refusing to start",
+                                 has_key ? "network_key" : "private_network_id",
+                                 has_key ? "private_network_id" : "network_key" );
+        }
 
         std::string port_str;
         read( "pubsub_port", port_str );
@@ -1785,6 +1869,14 @@ namespace sgns
     {
         const NetworkSettings settings = LoadNetworkConfig( port_seed, node_type );
 
+        // Fail closed on fatal identity config divergences (malformed private_network_id or a
+        // half-provisioned private_network_id/network_key pair); the reason was already logged
+        // at the detection site, and no network side effects may run before this check.
+        if ( !settings.valid )
+        {
+            return false;
+        }
+
         auto fullnodes            = ParseBootstrapPeers( bootstrap_fullnodes_, "fullnode" );
         bootstrap_fullnode_infos_ = std::move( fullnodes.infos );
         bootstrap_fullnode_ids_   = std::move( fullnodes.ids );
@@ -1806,6 +1898,15 @@ namespace sgns
         if ( !network_key_.empty() )
         {
             node_logger_->info( "network_config.json: private-network (pnet) mode enabled" );
+        }
+
+        // Retain the distinct public identity (D-02) and the offline-provisioned bootstrap
+        // membership. Log the public id only - never the network_key value (D-03).
+        private_network_id_      = settings.private_network_id;
+        network_bootstrap_peers_ = settings.network_bootstrap_peers;
+        if ( !private_network_id_.empty() )
+        {
+            node_logger_->info( "network_config.json: private-network identity: {}", private_network_id_ );
         }
 
         // Never block node construction on UPnP/IGD discovery.

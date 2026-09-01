@@ -30,6 +30,20 @@ namespace sgns
             return node ? node->reconnect_config_.background_multiplier : 0.0;
         }
 
+        /// "private_network_id" retained by InitNetwork (empty = public node). No public getter
+        /// exists yet because the value's consumers (NetworkRegistry, scoped CRDT paths) land in
+        /// later Phase-15 plans; a test accessor is the only way to observe retention.
+        static std::string PrivateNetworkId( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->private_network_id_ : std::string();
+        }
+
+        /// "network_bootstrap_peers" retained by InitNetwork (empty unless provisioned).
+        static std::vector<std::string> NetworkBootstrapPeers( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->network_bootstrap_peers_ : std::vector<std::string>{};
+        }
+
         /// The node's validator registry, for tests asserting consensus participation.
         /// GeniusNode::blockchain_ is private (hence this friend class) but
         /// Blockchain::GetValidatorRegistry() is public.

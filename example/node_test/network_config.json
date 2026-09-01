@@ -1,4 +1,6 @@
 {
     "port_seed": 40101,
-    "auto_dht": true
+    "auto_dht": true,
+    "private_network_id": "",
+    "network_bootstrap_peers": []
 }
