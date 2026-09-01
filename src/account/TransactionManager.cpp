@@ -2033,9 +2033,19 @@ namespace sgns
             if ( !inputs.empty() )
             {
                 BOOST_OUTCOME_TRY(
+                    auto consumed,
                     account_m->GetUTXOManager().ConsumeUTXOs( inputs,
                                                               mint_tx_v2->GetSrcAddress(),
                                                               sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                if ( !consumed )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] Mint-v2 {} did not consume every burn input (already consumed or "
+                        "missing); burn outpoint metadata may have been rebuilt with zero amount",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        mint_tx_v2->GetHash() );
+                }
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
@@ -5478,6 +5488,7 @@ namespace sgns
             {
                 if ( auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
                 {
+                    bool effects_applied = false;
                     {
                         std::unique_lock tx_lock( tx_mutex_m );
                         auto             it = tx_processed_m.find( key );
@@ -5486,15 +5497,33 @@ namespace sgns
                             // Marker and effects were already durable on a prior delivery.
                             return outcome::success();
                         }
+                        if ( it != tx_processed_m.end() )
+                        {
+                            // A prior attempt already applied the parse effects and is
+                            // retrying only the marker write; re-parsing would re-apply
+                            // the mint effects (double-count and UTXO metadata clobber).
+                            effects_applied = it->second.effects_applied;
+                        }
                         // Keep failed certificate work explicitly retryable until every local
                         // persistence boundary has succeeded.
-                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
+                        tx_processed_m[key] =
+                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), effects_applied };
                     }
 
-                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                    if ( !effects_applied )
                     {
-                        std::lock_guard lock( fault_test_mutex_ );
-                        ++mint_effects_for_test_;
+                        BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                        {
+                            std::lock_guard lock( fault_test_mutex_ );
+                            ++mint_effects_for_test_;
+                        }
+                        // Record the applied-effects boundary separately from the tracking
+                        // status so a marker-write retry skips re-parsing.
+                        {
+                            std::unique_lock tx_lock( tx_mutex_m );
+                            tx_processed_m[key] =
+                                TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                        }
                     }
                     if ( !EnterFinalityFaultBarrier() )
                     {
@@ -5504,7 +5533,7 @@ namespace sgns
 
                     {
                         std::unique_lock tx_lock( tx_mutex_m );
-                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce(), true };
                     }
 
                     metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
