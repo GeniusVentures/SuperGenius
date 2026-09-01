@@ -3019,16 +3019,21 @@ namespace sgns
         ProposalState new_state;
         new_state.proposal = certificate.proposal();
         new_state.slot_key = GetSlotKey( new_state.proposal );
-        proposals_.emplace( new_state.proposal.proposal_id(), new_state );
-
-        auto &slot_state = slot_states_[new_state.slot_key];
-        if ( slot_state.best_proposal_id.empty() )
+        // Runs on the pubsub receive thread; `proposals_`/`slot_states_` are also mutated
+        // by the round-timer thread and other pubsub callbacks under `proposals_mutex_`.
         {
-            slot_state.best_proposal_id = new_state.proposal.proposal_id();
-            auto nonce_payload          = DecodeNonceSubject( new_state.proposal.subject() );
-            if ( nonce_payload.has_value() )
+            std::lock_guard lock( proposals_mutex_ );
+            proposals_.emplace( new_state.proposal.proposal_id(), new_state );
+
+            auto &slot_state = slot_states_[new_state.slot_key];
+            if ( slot_state.best_proposal_id.empty() )
             {
-                slot_state.best_tx_hash = nonce_payload.value().tx_hash();
+                slot_state.best_proposal_id = new_state.proposal.proposal_id();
+                auto nonce_payload          = DecodeNonceSubject( new_state.proposal.subject() );
+                if ( nonce_payload.has_value() )
+                {
+                    slot_state.best_tx_hash = nonce_payload.value().tx_hash();
+                }
             }
         }
 
