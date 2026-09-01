@@ -2900,7 +2900,7 @@ namespace sgns
 
             for ( auto &nonce : nonces_to_check )
             {
-                for ( auto [key, tracked] : tx_processed_m )
+                for ( auto &[key, tracked] : tx_processed_m )
                 {
                     if ( !tracked.tx || tracked.tx->GetSrcAddress() != account_m->GetAddress() )
                     {
