@@ -18,12 +18,16 @@
 #ifndef SGNS_NETWORKREGISTRY_NETWORKREGISTRY_HPP
 #define SGNS_NETWORKREGISTRY_NETWORKREGISTRY_HPP
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "base/logger.hpp"
@@ -324,11 +328,24 @@ namespace sgns::networkregistry
         bool RegisterSignerSetSource();
 
         /**
-         * @brief Registers the GlobalDB new-element callback that re-runs
-         *        TryConfirm on every base_key / sig-child element (BurnConfig
-         *        RegisterNewElementCallback pattern).
+         * @brief Registers the GlobalDB new-element callback that refreshes
+         *        the cache when new base_key / sig-child elements arrive
+         *        (BurnConfig RegisterNewElementCallback pattern), and starts
+         *        the refresh thread that drains those notifications.
+         *
+         *        The datastore callback itself NEVER runs the quorum-read
+         *        path: ReadIfQuorum prunes stale signature children via
+         *        GlobalDB::Remove, and executing that re-entrantly from
+         *        inside a datastore Put callback corrupts the datastore.
+         *        The callback therefore only sets a pending flag and nudges
+         *        the condition variable; the dedicated refresh thread calls
+         *        TryConfirm() outside any datastore callback context.
          */
         void RegisterCrdtChangeCallback();
+
+        /// @brief Refresh-thread loop: waits for pending notifications and
+        ///        runs TryConfirm() outside datastore-callback context.
+        void RefreshLoop();
 
         /**
          * @brief Resolves the current authorized signer set: cached-only
@@ -360,6 +377,16 @@ namespace sgns::networkregistry
         std::string                         private_network_id_;
         std::shared_ptr<sgns::crdt::GlobalDB> global_db_;
         std::string                         change_callback_pattern_;
+
+        // Change-callback refresh machinery: the datastore callback only
+        // flags + notifies; the refresh thread runs TryConfirm outside any
+        // datastore callback (re-entrancy guard -- see
+        // RegisterCrdtChangeCallback).
+        std::thread             refresh_thread_;
+        std::mutex              refresh_mutex_;
+        std::condition_variable refresh_cv_;
+        std::atomic<bool>       refresh_pending_{ false };
+        std::atomic<bool>       refresh_stopping_{ false };
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "networkregistry" );
     };
