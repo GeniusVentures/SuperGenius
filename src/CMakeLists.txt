@@ -18,6 +18,7 @@ add_subdirectory(multisig)
 add_subdirectory(securecrdt)
 add_subdirectory(peerregistry)
 add_subdirectory(trustedpeer)
+add_subdirectory(networkregistry)
 
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/"
