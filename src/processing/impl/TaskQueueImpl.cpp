@@ -17,15 +17,20 @@ namespace sgns::processing
     }
 
     std::shared_ptr<TaskQueueImpl> TaskQueueImpl::New( std::shared_ptr<sgns::crdt::GlobalDB> db,
-                                                       std::string                           processing_topic )
+                                                       std::string                           processing_topic,
+                                                       std::string                           private_network_id )
     {
         auto instance = std::shared_ptr<TaskQueueImpl>(
-            new TaskQueueImpl( std::move( db ), std::move( processing_topic ) ) );
+            new TaskQueueImpl( std::move( db ), std::move( processing_topic ), std::move( private_network_id ) ) );
         return instance;
     }
 
-    TaskQueueImpl::TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
-        db_( std::move( db ) ), processing_topic_( std::move( processing_topic ) )
+    TaskQueueImpl::TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                  std::string                           processing_topic,
+                                  std::string                           private_network_id ) :
+        db_( std::move( db ) ),
+        processing_topic_( std::move( processing_topic ) ),
+        network_scope_( std::move( private_network_id ) )
     {
     }
 
@@ -48,22 +53,24 @@ namespace sgns::processing
             value.put( subTask.SerializeAsString() );
             TaskQueueImplLogger()->debug( "Enqueuing subtask: {}", subTask.subtaskid() );
 
-            BOOST_OUTCOME_TRY( crdt_transaction->Put(
-                sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( task.ipfs_block_id(), subTask.subtaskid() ) ),
-                std::move( value ) ) );
+            BOOST_OUTCOME_TRY(
+                crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( network_scope_,
+                                                                                          task.ipfs_block_id(),
+                                                                                          subTask.subtaskid() ) ),
+                                       std::move( value ) ) );
         }
 
         sgns::base::Buffer taskValue;
         taskValue.put( task.SerializeAsString() );
-        BOOST_OUTCOME_TRY(
-            crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task.ipfs_block_id() ) ),
-                                   std::move( taskValue ) ) );
+        BOOST_OUTCOME_TRY( crdt_transaction->Put(
+            sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( network_scope_, task.ipfs_block_id() ) ),
+            std::move( taskValue ) ) );
 
         sgns::base::Buffer claimableValue;
         claimableValue.put( task.ipfs_block_id() );
-        BOOST_OUTCOME_TRY(
-            crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( task.ipfs_block_id() ) ),
-                                   std::move( claimableValue ) ) );
+        BOOST_OUTCOME_TRY( crdt_transaction->Put(
+            sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( network_scope_, task.ipfs_block_id() ) ),
+            std::move( claimableValue ) ) );
 
         TaskQueueImplLogger()->debug( "Task with ID: {} enqueued to CRDT transaction", task.ipfs_block_id() );
         BOOST_OUTCOME_TRY( crdt_transaction->Commit( { processing_topic_ } ) );
@@ -74,7 +81,8 @@ namespace sgns::processing
     outcome::result<SGProcessing::Task> TaskQueueImpl::GetTask( const std::string &taskId )
     {
         TaskQueueImplLogger()->debug( "Fetching task with ID: {}", taskId );
-        BOOST_OUTCOME_TRY( auto task_buffer, db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( taskId ) ) ) );
+        BOOST_OUTCOME_TRY( auto task_buffer,
+                           db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( network_scope_, taskId ) ) ) );
 
         SGProcessing::Task task;
 
@@ -91,7 +99,7 @@ namespace sgns::processing
     bool TaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
         TaskQueueImplLogger()->debug( "Fetching subtasks for task with ID: {}", taskId );
-        auto querySubTasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( taskId ) );
+        auto querySubTasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( network_scope_, taskId ) );
         if ( querySubTasks.has_failure() || !querySubTasks.has_value() )
         {
             TaskQueueImplLogger()->error( "No subtasks found for task with ID: {}", taskId );
@@ -123,7 +131,8 @@ namespace sgns::processing
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> TaskQueueImpl::GrabTask()
     {
-        BOOST_OUTCOME_TRY( auto queryClaimable, db_->QueryKeyValues( TaskKeys::ClaimableListKey() ) );
+        BOOST_OUTCOME_TRY( auto queryClaimable,
+                           db_->QueryKeyValues( TaskKeys::ClaimableListKey( network_scope_ ) ) );
 
         TaskQueueImplLogger()->debug( "GrabTask scanning claimable list with {} candidates", queryClaimable.size() );
         std::set<std::string> lockedTasks;
@@ -143,7 +152,7 @@ namespace sgns::processing
                 TaskQueueImplLogger()->debug( "Skipping incompatible task with ID: {}", taskId );
                 continue;
             }
-            const auto taskKey = TaskKeys::TaskKey( taskId );
+            const auto taskKey = TaskKeys::TaskKey( network_scope_, taskId );
             if ( IsTaskLocked( taskKey ) )
             {
                 lockedTasks.insert( taskKey );
@@ -189,11 +198,11 @@ namespace sgns::processing
         TaskQueueImplLogger()->debug( "Completing task with ID: {}, result: {}", taskKey, taskResult.DebugString() );
         sgns::base::Buffer resultData;
         resultData.put( taskResult.SerializeAsString() );
-        BOOST_OUTCOME_TRY(
-            completionTransaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( taskKey ) ),
-                                        std::move( resultData ) ) );
-        BOOST_OUTCOME_TRY(
-            completionTransaction->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskKey ) ) ) );
+        BOOST_OUTCOME_TRY( completionTransaction->Put(
+            sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( network_scope_, taskKey ) ),
+            std::move( resultData ) ) );
+        BOOST_OUTCOME_TRY( completionTransaction->Remove(
+            sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( network_scope_, taskKey ) ) ) );
         BOOST_OUTCOME_TRY( completionTransaction->AddTopic( processing_topic_ ) );
 
         return completionTransaction;
@@ -201,7 +210,7 @@ namespace sgns::processing
 
     bool TaskQueueImpl::IsTaskCompleted( const std::string &taskId )
     {
-        const sgns::crdt::HierarchicalKey resultKey( TaskKeys::ResultTaskKey( taskId ) );
+        const sgns::crdt::HierarchicalKey resultKey( TaskKeys::ResultTaskKey( network_scope_, taskId ) );
         auto                              resultData = db_->Get( resultKey );
         if ( resultData.has_failure() )
         {
@@ -310,7 +319,7 @@ namespace sgns::processing
     std::vector<std::string> TaskQueueImpl::ListTaskKeys()
     {
         TaskQueueImplLogger()->debug( "Listing all task keys" );
-        auto queryResult = db_->QueryKeyValues( TaskKeys::TaskListKey() );
+        auto queryResult = db_->QueryKeyValues( TaskKeys::TaskListKey( network_scope_ ) );
         if ( queryResult.has_failure() || !queryResult.has_value() )
         {
             TaskQueueImplLogger()->debug( "No tasks found in queue" );
@@ -339,7 +348,7 @@ namespace sgns::processing
     {
         TaskQueueImplLogger()->debug( "Fetching result for task: {}", taskId );
         BOOST_OUTCOME_TRY( auto resultBuffer,
-                           db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( taskId ) ) ) );
+                           db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( network_scope_, taskId ) ) ) );
 
         SGProcessing::TaskResult result;
         if ( !result.ParseFromArray( resultBuffer.data(), resultBuffer.size() ) )

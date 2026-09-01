@@ -726,7 +726,7 @@ namespace sgns
                     return;
                 }
                 account_->ConfigureDatabaseDependencies( tx_globaldb_ );
-                tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+                tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
@@ -2034,11 +2034,12 @@ namespace sgns
     {
         bool ret = true;
 
-        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
+        task_queue_ = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
         processing_core_ = processing::ProcessingCoreImpl::New( task_queue_, 1, dev_config_.TokenID );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
-                                                                                       processing_channel_topic_ );
+                                                                                       ScopedProcessingChannel(),
+                                                                                       private_network_id_ );
 
         // Restore previously-submitted task IDs from local file
         LoadMyTaskIds();
@@ -2587,10 +2588,22 @@ namespace sgns
         return result;
     }
 
+    std::string GeniusNode::ScopedProcessingChannel() const
+    {
+        return processing::TaskKeys::ScopedTopic( processing_channel_topic_, private_network_id_ );
+    }
+
+    std::string GeniusNode::ScopedProcessingGridChannel() const
+    {
+        return processing::TaskKeys::ScopedTopic( processing_grid_chanel_topic_, private_network_id_ );
+    }
+
     outcome::result<void> GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes, then compute its SHA-256
-        const std::string   topic = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
+        // Scope FIRST, net-and-version appendix LAST: an empty scope hashes today's exact
+        // byte string, so public job discovery keeps its CID.
+        const std::string topic = ScopedProcessingGridChannel() + sgns::version::GetNetAndVersionAppendix();
         const base::Hash256 hash  = crypto::sha2_256( topic.data(), topic.size() );
 
         // Provide CID
@@ -2728,7 +2741,7 @@ namespace sgns
             // the database itself.
             account->InitMessenger( this->pubsub_ );
             account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
-            this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+            this->tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
             {
                 std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
                 account_ = std::move( account );
@@ -3417,7 +3430,7 @@ namespace sgns
     {
         if ( processing_service_ )
         {
-            processing_service_->StartProcessing( processing_grid_chanel_topic_ );
+            processing_service_->StartProcessing( ScopedProcessingGridChannel() );
         }
         else
         {
