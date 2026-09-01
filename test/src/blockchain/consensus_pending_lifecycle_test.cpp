@@ -389,13 +389,15 @@ namespace sgns
             manager->fail_active_vote_removal_for_test_ = fail;
         }
 
-        static const std::vector<std::string> &ActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
+        static std::vector<std::string> ActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
         {
+            std::lock_guard lock( manager->fault_test_mutex_ );
             return manager->active_vote_announcements_for_test_;
         }
 
         static void ClearActiveVoteAnnouncements( const std::shared_ptr<ConsensusManager> &manager )
         {
+            std::lock_guard lock( manager->fault_test_mutex_ );
             manager->active_vote_announcements_for_test_.clear();
         }
 
