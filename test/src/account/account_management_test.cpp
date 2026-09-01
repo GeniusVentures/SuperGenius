@@ -1,6 +1,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <fstream>
 
@@ -53,18 +54,19 @@ namespace
 class AccountManagement : public ::testing::Test
 {
 public:
-    static inline boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    // Each test gets its own directory. The previous test's node can finish
+    // its async destruction (RocksDB close on a detached io thread) after this
+    // constructor runs; reusing one path made the new node's DB open race the
+    // old instance's lock and a directory wiped under still-open files, which
+    // surfaced as spurious "lock hold by current process" then MANIFEST/.sst
+    // corruption. No state is shared between tests — the old fixture wiped the
+    // directory here anyway.
+    static inline std::atomic<uint64_t> next_test_index{ 0 };
+    boost::filesystem::path             path = boost::dll::program_location().parent_path() /
+                   ( "am_full_node_" + std::to_string( next_test_index.fetch_add( 1 ) ) );
 
     AccountManagement()
     {
-        try
-        {
-            test::removeAllWithRetry( path.string() );
-        }
-        catch ( ... ) //NOLINT(bugprone-empty-catch)
-        {
-        }
-
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
