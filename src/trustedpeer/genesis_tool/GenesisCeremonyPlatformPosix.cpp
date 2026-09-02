@@ -12,12 +12,6 @@ namespace sgns::trustedpeer::genesis_ceremony_platform
     {
         constexpr size_t MAX_KEY_FILE_BYTES = 256;
 
-        void TrimLineEnding( std::string &value )
-        {
-            while ( !value.empty() && ( value.back() == '\n' || value.back() == '\r' ) )
-                value.pop_back();
-        }
-
     } // namespace
 
     outcome::result<GenesisCeremony::KeyFileStatus> InspectKeyFile( const std::string &path )

@@ -13,12 +13,6 @@ namespace sgns::trustedpeer::genesis_ceremony_platform
     {
         constexpr size_t MAX_KEY_FILE_BYTES = 256;
 
-        void TrimLineEnding( std::string &value )
-        {
-            while ( !value.empty() && ( value.back() == '\n' || value.back() == '\r' ) )
-                value.pop_back();
-        }
-
         bool IsOwnerOnlyDacl( PACL dacl, PSID owner )
         {
             ACL_SIZE_INFORMATION information{};
@@ -43,11 +37,8 @@ namespace sgns::trustedpeer::genesis_ceremony_platform
 
         GenesisCeremony::Error StatusError( const GenesisCeremony::KeyFileStatus &status )
         {
-            if ( status.symlink ) return GenesisCeremony::Error::KEY_FILE_SYMLINK;
-            if ( !status.regular ) return GenesisCeremony::Error::KEY_FILE_NOT_REGULAR;
-            if ( !status.owner ) return GenesisCeremony::Error::KEY_FILE_OWNER;
-            if ( status.mode != 0600 ) return GenesisCeremony::Error::KEY_FILE_MODE;
-            return GenesisCeremony::Error::SUCCESS;
+            const auto problem = GenesisCeremony::KeyFileStatusProblem( status );
+            return problem ? *problem : GenesisCeremony::Error::SUCCESS;
         }
 
         outcome::result<std::vector<BYTE>> CurrentUserToken()

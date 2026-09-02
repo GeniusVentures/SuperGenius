@@ -103,6 +103,10 @@ namespace sgns::trustedpeer
 
         static Hooks DefaultHooks();
 
+        /// First key-file policy violation in `status`, or nullopt when the file is acceptable.
+        [[nodiscard]] static std::optional<Error> KeyFileStatusProblem(
+            const outcome::result<KeyFileStatus> &status );
+
         outcome::result<void> Run( const Request &request,
                                    Network &network,
                                    std::istream &input,
