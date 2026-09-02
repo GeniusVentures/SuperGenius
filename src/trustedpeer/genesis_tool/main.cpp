@@ -1,9 +1,3 @@
-#include <boost/range/concepts.hpp>
-
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-
 #include <charconv>
 #include <algorithm>
 #include <chrono>
@@ -21,8 +15,10 @@
 #include <vector>
 
 #include "account/BurnConfig.hpp"
+#include "base/hexutil.hpp"
 #include "base/logger.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
+#include "securecrdt/QuorumThresholdValidation.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
 #include "trustedpeer/QuorumPolicy.hpp"
@@ -36,9 +32,6 @@ namespace
 {
     using namespace sgns;
     using namespace sgns::trustedpeer;
-
-    constexpr std::string_view POLICY_DOMAIN = "trusted-peer";
-    constexpr std::string_view BURN_DOMAIN = "burn-config";
 
     void PrintHelp( std::ostream &out )
     {
@@ -253,9 +246,9 @@ namespace
             return EXIT_FAILURE;
         }
 
-        const auto peer_count = static_cast<uint64_t>( manifest.peers.size() );
-        manifest.membership_threshold = peer_count / 2 + 1;
-        manifest.burn_threshold       = peer_count - peer_count / 3;
+        const auto peer_count = manifest.peers.size();
+        manifest.membership_threshold = sgns::securecrdt::MembershipQuorumFloor( peer_count );
+        manifest.burn_threshold       = sgns::securecrdt::BurnQuorumFloor( peer_count );
         if ( const auto value = arguments.values.find( "--membership-threshold" );
              value != arguments.values.end() )
         {
@@ -351,14 +344,8 @@ namespace
         if ( file != arguments.values.end() )
         {
             BOOST_OUTCOME_TRY( auto status, hooks.inspect_key_file( file->second ) );
-            if ( status.symlink )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_SYMLINK );
-            if ( !status.regular )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_NOT_REGULAR );
-            if ( !status.owner )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_OWNER );
-            if ( status.mode != 0600 )
-                return outcome::failure( GenesisCeremony::Error::KEY_FILE_MODE );
+            if ( auto problem = GenesisCeremony::KeyFileStatusProblem( status ) )
+                return outcome::failure( *problem );
             BOOST_OUTCOME_TRY( key, hooks.read_key_file( file->second ) );
         }
         else
