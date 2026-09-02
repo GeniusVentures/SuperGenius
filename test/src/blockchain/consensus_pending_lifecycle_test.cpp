@@ -1326,6 +1326,12 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     for ( auto &node : nodes )
     {
         sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        // Peer::Stop teardown invariant (multi_node_finality_fault_test.cpp:389-405):
+        // release the GlobalDB host co-owners (db, account) before pubsub->Stop()
+        // so StopImpl is the final libp2p host release, not the earlier one.
+        node.manager.reset();
+        node.db.reset();
+        node.account.reset();
         node.pubsub->Stop();
     }
     sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
@@ -2021,6 +2027,12 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     for ( auto &node : nodes )
     {
         sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        // Peer::Stop teardown invariant (multi_node_finality_fault_test.cpp:389-405):
+        // release the GlobalDB host co-owners (db, account) before pubsub->Stop()
+        // so StopImpl is the final libp2p host release, not the earlier one.
+        node.manager.reset();
+        node.db.reset();
+        node.account.reset();
         node.pubsub->Stop();
     }
     sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
