@@ -804,9 +804,9 @@ Plans:
 **Wave 2** (15-03 needs 15-02; 15-04 and 15-06 need 15-01; mutually disjoint):
 
 Plans:
-- [ ] 15-03-PLAN.md — NetworkRegistry: SecureCRDT child registry, TPR-majority bootstrap, cached self-governance, secret-free payload (D-03, D-05, D-06, PNET-NETREG)
+- [x] 15-03-PLAN.md — NetworkRegistry: SecureCRDT child registry, TPR-majority bootstrap, cached self-governance, secret-free payload (D-03, D-05, D-06, PNET-NETREG)
 - [ ] 15-04-PLAN.md — vendored ipfs-pubsub membership allow-list gater + GossipPubSub surface + reinstall (D-07, D-11, PNET-GATE)
-- [ ] 15-06-PLAN.md — job scope plumbing at the real key sites: scoped TaskKeys consumed by TaskQueueImpl (all 15 sites) + SubTaskResultStorageImpl results/ keys + scoped escrow path/chain-id + channel-topic alignment, byte-stable public paths (D-02, D-08, PNET-SCOPE)
+- [x] 15-06-PLAN.md — job scope plumbing at the real key sites: scoped TaskKeys consumed by TaskQueueImpl (all 15 sites) + SubTaskResultStorageImpl results/ keys + scoped escrow path/chain-id + channel-topic alignment, byte-stable public paths (D-02, D-08, PNET-SCOPE)
 
 **Wave 3** (15-05 needs 15-03+15-04):
 
