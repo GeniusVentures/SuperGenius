@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: milestone_complete
-last_updated: 2026-09-01T20:06:32.162Z
-last_activity: 2026-09-01
+status: executing
+last_updated: "2026-09-02T15:13:33.042Z"
+last_activity: 2026-09-02
 progress:
   total_phases: 5
-  completed_phases: 5
-  total_plans: 24
-  completed_plans: 61
-  percent: 100
-stopped_at: Milestone complete (Phase 12 was final phase)
+  completed_phases: 4
+  total_plans: 26
+  completed_plans: 28
+  percent: 80
 ---
 
 # Project State
@@ -21,14 +20,14 @@ stopped_at: Milestone complete (Phase 12 was final phase)
 See: .planning/PROJECT.md (updated 2026-08-20)
 
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.
-**Current focus:** Milestone complete
+**Current focus:** Phase 12 — multi-node-finality-fault-proof
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-09-01
+Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
+Plan: 2 of 14
+Status: Ready to execute
+Last activity: 2026-09-02
 
 Progress: [██████████] 100%
 
@@ -65,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 12 P03 | 68m | 2 tasks | 5 files |
 | Phase 12 P08 | 11 min | 2 tasks | 8 files |
 | Phase 12 P12 | 62min | 2 tasks | 3 files |
+| Phase 12 P13 | 9m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -97,6 +97,8 @@ Progress: [██████████] 100%
 - [Phase 12]: Complete passive readiness records include all directed host links, all peer lifecycle fields, and named per-peer mesh counts. — A mixed post-review refresh must be attributed before the evidence gate can be considered complete.
 - [Phase 12]: Convergent-immutable certificate slot keys are written in fixtures only through PutConvergentImmutable, exactly once per db — a per-direction fresh node db removes any dependence on same-priority CRDT overwrite ordering.
 - [Phase 12]: CRDT equal-priority overwrite guard and self-created-write head advancement are deferred follow-ups, not 12-12 changes — production authority is already protected by PutConvergentImmutable's reserved priority and lowest-hash convergence, and CRDT merge changes ripple across every CRDT-dependent suite.
+- [Phase 12]: [Phase 12]: CRDTFixture db/keypair paths are run-unique (pid + fixture counter) and reaped at construction before KeyPairFileStorage/GlobalDB::New — leftover databases from killed or crashed runs can no longer poison later runs.
+- [Phase 12]: [Phase 12]: ConsensusManager::ValidateCertificate's no-quorum/tally-error reject now emits one warn line (slot key, registry cid, vote count, tally error) — the previously sole silent validation stage; per-vote non-member drop stays debug.
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-01T19:12:00.000Z
-Stopped at: Completed 12-12-PLAN.md; UAT Test 1 fixture repair verified plus three serial full passes on both CTest targets
+Last session: 2026-09-02T15:13:33.011Z
+Stopped at: Completed 12-13-PLAN.md; stale-db immunity + no-quorum warn log verified across all CRDTFixture suites
 Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-UAT.md
