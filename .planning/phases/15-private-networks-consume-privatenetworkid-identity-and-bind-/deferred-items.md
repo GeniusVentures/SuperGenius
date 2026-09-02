@@ -50,3 +50,16 @@ boundary (pre-existing issues unrelated to the current task's changes).
   only for startup to begin (`WaitForStartupSettled`), since every identity assertion is
   about the synchronous `LoadNetworkConfig`/`InitNetwork` path and does not depend on
   READY. Teardown verified clean (suite passes in ~10s, no crashes/hangs).
+- **15-06 observation (2026-09-02, same base family at 52501d57):** the `ctest -R
+  "startup|node"` gate fails on the SAME mechanism with the identical suite set before and
+  after this plan's changes: `node_type_derivation_test`, `node_initialization_progress`
+  (stuck at 0.6/1.0), `processing_nodes_test`, `full_node_test`,
+  `genius_node_bootstrap_reconnect_test` — all no-genesis READY waits. Suites that exercise
+  the startup wiring without requiring READY (`startup_wiring_test`,
+  `node_shutdown_race_test`) pass with 15-06's scoped-channel changes, as do all
+  task-queue/keys/transaction-manager suites. No regression introduced; base repair still
+  deferred per the options above.
+- **Environment note (user instruction, 2026-09-02):** the vendored 3rdparty install
+  moved from `/Users/henriqueklein/gnus/3rdparty` to `/Users/henriqueklein/gnus/thirdparty`
+  (libp2p b28eed2 verified at the new path). 15-06's build tree is configured against the
+  NEW path; later plans/worktrees must use the new THIRDPARTY_DIR.
