@@ -4,6 +4,7 @@
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
+#include <unistd.h>
 
 #include <boost/asio/io_context.hpp>
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -54,9 +55,29 @@ namespace test
     CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
     {
         const auto fixture_id = fixture_counter_.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        const auto suffix     = std::to_string( fixture_id );
+        const auto suffix     = std::to_string( ::getpid() ) + "_" + std::to_string( fixture_id );
         keypair_path_         = basePath + "/unit_test_" + suffix;
         db_path_              = basePath + ".unit_" + suffix;
+
+        // Reap exactly the derived paths before any consumer opens them: a leftover
+        // database from a killed/crashed run (or pid reuse) would otherwise be
+        // silently reopened by GlobalDB::New and poison the run with stale state.
+        // Never sweep more broadly - basePath also holds other live fixtures.
+        for ( const auto *stale_path : { &keypair_path_, &db_path_ } )
+        {
+            try
+            {
+                if ( fs::exists( *stale_path ) )
+                {
+                    fs::remove_all( *stale_path );
+                    std::cerr << "[CRDTFixture] removed pre-existing " << *stale_path << std::endl;
+                }
+            }
+            catch ( const fs::filesystem_error &err )
+            {
+                std::cerr << err.what() << std::endl;
+            }
+        }
 
         io_ = std::make_shared<io_context>();
 
