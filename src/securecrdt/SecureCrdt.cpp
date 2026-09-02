@@ -79,12 +79,17 @@ namespace sgns::securecrdt
             size_t                  bytes = 0;
         };
 
+        std::string CandidateDomainPrefix( const std::string &domain )
+        {
+            return sgns::crdt::HierarchicalKey( domain ).ChildString( "candidate" ).GetKey();
+        }
+
         outcome::result<std::vector<StoredCandidateRecord>> QueryCandidateRecords(
             const std::shared_ptr<sgns::crdt::GlobalDB> &db,
+            const std::string                           &prefix,
             const std::string                           &domain )
         {
-            auto query = db->QueryKeyValues(
-                sgns::crdt::HierarchicalKey( domain ).ChildString( "candidate" ).GetKey() );
+            auto query = db->QueryKeyValues( prefix );
             if ( query.has_error() )
             {
                 return query.error();
@@ -125,11 +130,6 @@ namespace sgns::securecrdt
     }
 
     SecureCrdtRegistry &SecureCrdt::Registry()
-    {
-        return *registry_;
-    }
-
-    const SecureCrdtRegistry &SecureCrdt::Registry() const
     {
         return *registry_;
     }
@@ -404,7 +404,15 @@ namespace sgns::securecrdt
         {
             return outcome::failure( Error::UNREGISTERED_CANDIDATE_DOMAIN );
         }
-        auto stored = QueryCandidateRecords( db_, id.domain );
+        // Scope the prefix scan to this one candidate instead of decoding the
+        // whole domain subtree; this runs per approval element on the sync path.
+        auto stored = QueryCandidateRecords(
+            db_,
+            sgns::crdt::HierarchicalKey( CandidateDomainPrefix( id.domain ) )
+                .ChildString( "v" + std::to_string( id.version ) )
+                .ChildString( id.content_hash )
+                .GetKey(),
+            id.domain );
         if ( stored.has_error() )
         {
             return stored.error();
@@ -445,7 +453,7 @@ namespace sgns::securecrdt
             }
         }
 
-        auto stored = QueryCandidateRecords( db_, domain );
+        auto stored = QueryCandidateRecords( db_, CandidateDomainPrefix( domain ), domain );
         if ( stored.has_error() )
         {
             return stored.error();
@@ -570,7 +578,7 @@ namespace sgns::securecrdt
             return *record;
         }
 
-        auto stored = QueryCandidateRecords( db_, key->id.domain );
+        auto stored = QueryCandidateRecords( db_, CandidateDomainPrefix( key->id.domain ), key->id.domain );
         if ( stored.has_error() )
         {
             return stored.error();
