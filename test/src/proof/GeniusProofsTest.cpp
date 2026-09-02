@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 #include "testutil/outcome.hpp"
 #include <boost/json.hpp>
-#include "proof/GeniusProver.hpp"
 #include "proof/TransferProof.hpp"
 #include "proof/ProcessingProof.hpp"
 #include "proof/circuits/TransactionVerifierCircuit.hpp"
@@ -96,8 +95,6 @@ TEST( GeniusProofsTest, InvalidTransferProof )
 
     auto wrong_parameters = AnotherTxProof.GenerateJsonParameters();
     auto right_parameters = TxProof2.GenerateJsonParameters();
-
-    std::vector<sgns::GeniusProver::ParameterType> parameters;
 
     verification_result =
         TxProof2.VerifyFullProof( wrong_parameters, base_proof.value().proof_data(), TransactionBytecode );
