@@ -25,7 +25,7 @@ namespace sgns::account
 {
     class BurnConfig;
 
-    class TrustStartupController : public std::enable_shared_from_this<TrustStartupController>
+    class TrustStartupController
     {
     public:
         enum class State : uint8_t
@@ -128,6 +128,8 @@ namespace sgns::account
         void SetState( State state );
         void Emit( EventCode code, std::vector<std::string> fields = {} ) const;
         void RequestRefresh();
+        void QueuePendingCandidate( const sgns::securecrdt::CandidateId &candidate );
+        void MarkCandidateFailed( const sgns::securecrdt::CandidateId &candidate );
         outcome::result<void> RefreshClassified( RefreshStage &stage );
         static RetryDisposition ClassifyRefreshResult( RefreshStage                 stage,
                                                        const outcome::result<void> &result );
