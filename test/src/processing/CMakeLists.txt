@@ -104,3 +104,16 @@ target_link_libraries(processing_payout_metadata_test
     p2p::p2p_logger
     ipfs-pubsub
 )
+
+addtest(processing_core_gating_test
+    processing_core_gating_test.cpp
+)
+
+target_link_libraries(processing_core_gating_test
+    processing_service
+    SGProcessingProto
+    logger
+    Boost::headers
+    p2p::p2p_logger
+    ipfs-pubsub
+)
