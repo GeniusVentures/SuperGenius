@@ -595,6 +595,33 @@ namespace sgns
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
 
+            // Genesis creator with a locally-present genesis block: it creates its
+            // own account-creation block, so issuing RequestAccountCreation would
+            // stall startup for the full PubSub timeout waiting for a response
+            // that never arrives (no peers). Trigger the same fallback the
+            // timeout would, immediately — same detached-thread pattern as the
+            // genesis-creation path: InformAccountCreationResponse's fallback
+            // writes to the DB, which self-deadlocks the single CRDT DAG worker
+            // if run synchronously here.
+            if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
+            {
+                logger_->info( "[{}] Genesis creator (local genesis) - creating account creation block directly",
+                               account_->GetAddress().substr( 0, 8 ) );
+                std::thread(
+                    [weakself = weak_from_this()]()
+                    {
+                        if ( auto s = weakself.lock() )
+                        {
+                            // Empty/error result => no peer supplied a CID => fall back
+                            // to creating the account-creation block locally.
+                            (void) s->InformAccountCreationResponse(
+                                outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
+                        }
+                    } )
+                    .detach();
+                return outcome::success();
+            }
+
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
             return account_->RequestAccountCreation(
