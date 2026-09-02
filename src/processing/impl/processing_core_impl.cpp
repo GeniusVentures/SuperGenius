@@ -2,6 +2,10 @@
 
 #include <rapidjson/document.h>
 
+#include <boost/di/extension/scopes/shared.hpp>
+#include <libp2p/security/noise.hpp>
+
+#include "base/logger.hpp"
 #include "FileManager.hpp"
 #include <processingbase/ProcessingManager.hpp>
 #include <Generators.hpp>
@@ -23,6 +27,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
             return "Job incompatibility error";
         case E::INVALID_MODEL_ERROR:
             return "Invalid model error";
+        case E::PNET_INITIALIZATION_ERROR:
+            return "Private-network initialization error";
     }
     return "Unknown error";
 }
@@ -30,25 +36,93 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
 namespace sgns::processing
 {
 
+    namespace
+    {
+        base::Logger ProcessingCoreLogger()
+        {
+            return base::createLogger( "ProcessingCoreImpl" );
+        }
+
+        /**
+         * @brief   Materializes the eagerly-needed io_context and exposes the gated
+         *          Host lazily from one injector composition (both branch compositions
+         *          have distinct injector types, so the sink is a template - the same
+         *          structure the vendored GossipPubSub::InitHostFromInjector uses).
+         *          The move-only injector is held via shared_ptr so the copyable
+         *          std::function closure can keep it (and its shared singletons) alive;
+         *          the Host later created from it shares this io_context.
+         */
+        template <typename InjectorT>
+        ProcessingCoreImpl::GatedHostContext MakeContextFromInjector( InjectorT &&injector )
+        {
+            auto held = std::make_shared<std::decay_t<InjectorT>>( std::move( injector ) );
+            ProcessingCoreImpl::GatedHostContext context;
+            context.io_context = held->template create<std::shared_ptr<boost::asio::io_context>>();
+            context.make_host  = [held]() -> std::shared_ptr<libp2p::Host> {
+                return held->template create<std::shared_ptr<libp2p::Host>>();
+            };
+            return context;
+        }
+    } // namespace
+
+    ProcessingCoreImpl::GatedHostContext ProcessingCoreImpl::MakeGatedHostInjector(
+        const std::string                                               &network_key,
+        const std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater> &gater,
+        libp2p::protocol::kademlia::Config                                kademlia_config )
+    {
+        namespace di = boost::di;
+        using namespace libp2p;
+
+        // Identical binding set the gossip host applies (MakeCustomHostInjector):
+        // Noise-only security - the unauthenticated transport adaptor is never
+        // offered in any mode (D-11) - plus the connection gater.
+        // usePrivateNetwork validates the key EAGERLY and throws PskValidationError
+        // (a std::exception) on invalid key material before anything assembles.
+        if ( network_key.empty() )
+        {
+            auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+                libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
+                    libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
+                libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
+                di::bind<libp2p::network::ConnectionGater>().TEMPLATE_TO( gater )[di::override] );
+            return MakeContextFromInjector( std::move( injector ) );
+        }
+
+        auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+            libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
+                libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
+            libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
+            di::bind<libp2p::network::ConnectionGater>().TEMPLATE_TO( gater )[di::override],
+            libp2p::injector::usePrivateNetwork( network_key ) );
+        return MakeContextFromInjector( std::move( injector ) );
+    }
+
     std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
                                                                  uint32_t maximalProcessingSubTaskCount,
-                                                                 TokenID  tokenID )
+                                                                 TokenID  tokenID,
+                                                                 std::string network_key )
     {
         if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) )
         {
             return nullptr;
         }
         auto instance = std::shared_ptr<ProcessingCoreImpl>(
-            new ProcessingCoreImpl( std::move( task_queue ), maximalProcessingSubTaskCount, std::move( tokenID ) ) );
+            new ProcessingCoreImpl( std::move( task_queue ),
+                                    maximalProcessingSubTaskCount,
+                                    std::move( tokenID ),
+                                    std::move( network_key ) ) );
         return instance;
     }
 
     ProcessingCoreImpl::ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
                                             uint32_t                             maximalProcessingSubTaskCount,
-                                            TokenID                              tokenID ) :
+                                            TokenID                              tokenID,
+                                            std::string                          network_key ) :
         task_queue_( std::move( task_queue ) ),
         token_ID_( std::move( tokenID ) ),
-        max_processing_subtask_count_( maximalProcessingSubTaskCount )
+        max_processing_subtask_count_( maximalProcessingSubTaskCount ),
+        network_key_( std::move( network_key ) ),
+        connection_gater_( std::make_shared<sgns::ipfs_pubsub::DenyListConnectionGater>() )
     {
     }
 
@@ -93,9 +167,25 @@ namespace sgns::processing
             kademlia_config.randomWalk.enabled  = true;
             kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
             kademlia_config.requestConcurency   = 20;
-            auto injector                       = libp2p::injector::makeHostInjector(
-                libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
-            auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+            // Per-subtask host composition with the same private-network enforcement
+            // as the gossip host (D-11): Noise-only security + connection gater, plus
+            // the pnet PSK boundary when a network key is configured. Invalid key
+            // material throws eagerly - caught here and mapped to an Error instead of
+            // leaking an exception or proceeding with a half-configured host.
+            std::shared_ptr<boost::asio::io_context> ioc;
+            try
+            {
+                auto host_context = MakeGatedHostInjector( network_key_, connection_gater_, kademlia_config );
+                ioc               = std::move( host_context.io_context );
+            }
+            catch ( const std::exception &e )
+            {
+                // Never log the key material itself - only the error message.
+                ProcessingCoreLogger()->error( "Private-network (pnet) host initialization failed: {}", e.what() );
+                error = Error::PNET_INITIALIZATION_ERROR;
+                break;
+            }
 
             std::vector<std::vector<uint8_t>> chunk_hashes;
             std::vector<std::string>        output_locations;
