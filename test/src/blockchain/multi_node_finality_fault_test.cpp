@@ -386,10 +386,27 @@ namespace
                 after_manager_ownership_release = Snapshot( db, active_vote_diagnostic_key );
                 if ( io ) io->stop();
                 if ( io_thread.joinable() ) io_thread.join();
-                if ( pubsub ) pubsub->Stop();
+                /*
+                 * Teardown invariant (asio): the io_context owned by GossipPubSub must
+                 * outlive every I/O object that touches it. GlobalDB's graphsync chain
+                 * (GlobalDB -> CrdtDatastore -> GraphsyncDAGSyncer -> GraphsyncImpl ->
+                 * graphsync::Network::host_) co-owns the libp2p host wired from
+                 * pubsub->GetHost() at StartPeer, and the account holds db-backed
+                 * handles, so BOTH must be reset BEFORE pubsub->Stop(). Otherwise
+                 * GossipPubSub::StopImpl destroys m_host/m_context while external
+                 * co-owners keep the host alive, and the later ~BasicHost (reverse
+                 * member order: transport_manager_ before network_) deregisters
+                 * leftover TcpConnections from the freed kqueue reactor — the
+                 * teardown SIGSEGV seen in crash reports 2026-08-26..2026-09-02
+                 * (e.g. multi_node_finality_fault_test-2026-09-02-075842.ips).
+                 * With db and account released first, pubsub->Stop() is the FINAL
+                 * host release: StopImpl cleanly closes connections and only then
+                 * resets m_host/m_context with no external owners left.
+                 */
                 db.reset();
-                pubsub.reset();
                 account.reset();
+                if ( pubsub ) pubsub->Stop();
+                pubsub.reset();
                 io.reset();
             }
         };
