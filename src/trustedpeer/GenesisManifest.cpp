@@ -4,6 +4,8 @@
 
 #include <gsl/span>
 
+#include "base/hexutil.hpp"
+#include "securecrdt/QuorumThresholdValidation.hpp"
 #include "trustedpeer/CanonicalTrustCodec.hpp"
 
 namespace sgns::trustedpeer
@@ -24,8 +26,8 @@ namespace sgns::trustedpeer
         }
 
         const uint64_t peer_count       = normalized_peers->size();
-        const uint64_t membership_floor = peer_count / 2 + 1;
-        const uint64_t burn_floor       = peer_count - peer_count / 3;
+        const uint64_t membership_floor = sgns::securecrdt::MembershipQuorumFloor( peer_count );
+        const uint64_t burn_floor       = sgns::securecrdt::BurnQuorumFloor( peer_count );
         if ( membership_threshold < membership_floor || membership_threshold > peer_count ||
              burn_threshold < burn_floor || burn_threshold > peer_count )
         {
@@ -172,6 +174,21 @@ namespace sgns::trustedpeer
             return std::nullopt;
         }
         return manifest;
+    }
+
+    sgns::securecrdt::CandidateCore GenesisCandidateCore( const GenesisManifest      &manifest,
+                                                          const std::vector<uint8_t> &canonical_bytes,
+                                                          const std::string          &fingerprint,
+                                                          const std::string          &domain )
+    {
+        return { sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+                 domain,
+                 manifest.network_id,
+                 sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
+                 manifest.policy_version,
+                 fingerprint,
+                 fingerprint,
+                 canonical_bytes };
     }
 
     bool GenesisManifest::operator==( const GenesisManifest &other ) const

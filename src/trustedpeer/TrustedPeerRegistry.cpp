@@ -370,15 +370,8 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::INVALID_CANDIDATE );
         }
-        sgns::securecrdt::CandidateCore core{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-                                              genesis_domain_,
-                                              reviewed_manifest_.network_id,
-                                              sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
-                                              reviewed_manifest_.policy_version,
-                                              *fingerprint,
-                                              *fingerprint,
-                                              *payload };
-        auto                            submitted = SubmitLocalApproval( core );
+        auto core = GenesisCandidateCore( reviewed_manifest_, *payload, *fingerprint, genesis_domain_ );
+        auto submitted = SubmitLocalApproval( core );
         if ( submitted.has_error() )
         {
             return submitted.error();
@@ -405,15 +398,8 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::INVALID_CANDIDATE );
         }
-        const sgns::securecrdt::CandidateCore expected{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-                                                        genesis_domain_,
-                                                        reviewed_manifest_.network_id,
-                                                        sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
-                                                        reviewed_manifest_.policy_version,
-                                                        *fingerprint,
-                                                        *fingerprint,
-                                                        *payload };
-        const auto                            expected_id = sgns::securecrdt::CandidateId::FromCore( expected );
+        const auto expected = GenesisCandidateCore( reviewed_manifest_, *payload, *fingerprint, genesis_domain_ );
+        const auto expected_id = sgns::securecrdt::CandidateId::FromCore( expected );
         if ( !expected_id || !( *expected_id == candidate_id ) )
         {
             return outcome::failure( Error::INVALID_CANDIDATE );

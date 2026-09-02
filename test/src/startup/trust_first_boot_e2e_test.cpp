@@ -47,14 +47,9 @@ namespace
 
     sgns::GeniusSigner::PrivateKey BootstrapperPrivateKey()
     {
-        auto key_bytes = sgns::base::unhex( BOOTSTRAPPER_PRIVATE_KEY );
-        EXPECT_FALSE( key_bytes.has_error() );
-        sgns::GeniusSigner::PrivateKey secret_key{};
-        if ( !key_bytes.has_error() && key_bytes.value().size() == secret_key.size() )
-        {
-            std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
-        }
-        return secret_key;
+        auto secret_key = sgns::GeniusSigner::PrivateKeyFromHex( BOOTSTRAPPER_PRIVATE_KEY );
+        EXPECT_TRUE( secret_key.has_value() );
+        return secret_key.value_or( sgns::GeniusSigner::PrivateKey{} );
     }
 
     void WriteNetworkConfig( const boost::filesystem::path &path,
