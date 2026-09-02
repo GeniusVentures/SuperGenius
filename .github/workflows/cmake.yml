@@ -495,6 +495,19 @@ jobs:
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
             ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure'
 
+      # The consensus/registry loggers (soralog) write to per-node sgnslog.log files, not the
+      # console, so a flaky consensus failure leaves no trace in the job log. Capture them to
+      # diagnose which pipeline step stalled (certificate validation, batch subject voting,
+      # registry write).
+      - name: Upload node logs
+        if: ${{ failure() && env.RUN_TESTS == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-logs-${{ matrix.id }}-${{ matrix.build-type }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}/test_bin/**/sgnslog*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics
         if: ${{ failure() && matrix.target == 'OSX' }}
