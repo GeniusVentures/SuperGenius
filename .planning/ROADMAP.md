@@ -793,7 +793,7 @@ Plans:
 **Depends on**: GeniusVentures/libp2p#10 (gater + pnet implementation; do not start until complete)
 **Tracking**: GeniusVentures/SuperGenius#367
 **Requirements**: TBD — coverage derived from CONTEXT.md decisions D-01..D-11 (cited per plan in frontmatter `requirements`) plus research-derived PNET-CFG/REG/NETREG/GATE/SCOPE/VAL/PROC
-**Plans**: 8 plans in 5 waves
+**Plans**: 13 plans — 8 in 5 waves + 5 gap-closure in 3 waves (post-verification)
 
 **Wave 1** (parallel — no file overlap):
 
@@ -824,3 +824,14 @@ Plans:
 - [x] 15-08-PLAN.md — processing-host gating: Noise-only + pnet + membership gater per ProcessSubTask (D-11, PNET-PROC)
 
 > Wave layout note: Waves 3-5 are serialized by exclusive `src/account/GeniusNode.cpp` ownership — encoded in `depends_on` (15-07: +15-05; 15-08: +15-07), so waves re-derive correctly from dependencies. Within Wave 2, execute 15-04 first (its vendored reinstall should precede that wave's SGNUS compilations).
+
+**Gap-closure waves** (from 15-VERIFICATION.md — 29/37 must-haves; 15-04 remains permanently skipped per owner):
+
+Plans:
+- [ ] 15-09-PLAN.md — gap closure: NetworkRegistry lifecycle hardening — refresh busy-spin (WR-02), duplicate-New clobber (WR-03), unfiltered network-registry ingest (WR-04) (D-06, PNET-NETREG)
+- [ ] 15-10-PLAN.md — gap closure: fail-closed provisioning chain — WriteNetworkConfig control-char escaping (CR-01) + corrupt-config fail-closed load (WR-01) (D-01, PNET-CFG)
+- [ ] 15-11-PLAN.md — gap closure: SuperGenius-side membership filter component + broadcaster ingest enforcement with three-node same-PSK flow proofs (D-07 replacement per deferred-items §3)
+- [ ] 15-12-PLAN.md — gap closure: GeniusNode installs the registry-backed gossip membership filter + live cache refresh (needs 15-09/10/11) (D-06, D-07)
+- [ ] 15-13-PLAN.md — gap closure: processing-path membership gates — grid/results/queue channel handlers (needs 15-11/12) (D-11, PNET-PROC)
+
+> Gap wave layout: wave 1 = {15-09, 15-10, 15-11} (disjoint files); wave 2 = {15-12} (exclusive GeniusNode.cpp after 15-10); wave 3 = {15-13} (GeniusNode.cpp again after 15-12). 15-12 depends on 15-09 because wiring the live membership refresh (tx_globaldb_ as global_db) must come after the WR-02 busy-spin fix.
