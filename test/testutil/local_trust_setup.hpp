@@ -5,6 +5,7 @@
 #include <chrono>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/genius_node_test_access.hpp"
+#include "testutil/globaldb_network_config.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace sgns::test
@@ -42,12 +44,20 @@ namespace sgns::test
                                         const std::vector<std::string>   &peers,
                                         const std::string                &bootstrapper,
                                         uint64_t                          membership_threshold,
-                                        uint64_t                          burn_threshold )
+                                        uint64_t                          burn_threshold,
+                                        std::optional<uint16_t>           network_id = std::nullopt )
     {
         boost::filesystem::create_directories( base_path );
         std::ofstream config( ( base_path / "sgns_config.json" ).string() );
         ASSERT_TRUE( config.good() );
-        config << R"({"node_type":")" << node_type << R"(","is_processor":)"
+        config << R"({)";
+        if ( network_id )
+        {
+            // Emitted only when set: a present-but-zero net_id still overrides the
+            // process-global network id, unlike an absent key.
+            config << R"("net_id":)" << *network_id << R"(,"subnet_id":)" << *network_id << ',';
+        }
+        config << R"("node_type":")" << node_type << R"(","is_processor":)"
                << ( is_processor ? "true" : "false" ) << R"(,"rpc_catchup":)" << ( rpc_catchup ? "true" : "false" )
                << R"(,"trusted_peers":[)";
         for ( size_t i = 0; i < peers.size(); ++i )

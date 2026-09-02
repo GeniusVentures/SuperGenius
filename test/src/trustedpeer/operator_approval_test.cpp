@@ -84,6 +84,8 @@ namespace
         {
             auto snapshot         = store_->LoadAndVerify().value();
             const auto burn_bytes = snapshot.burn.CanonicalBytes().value();
+            // Hand-rolled twin of BurnConfig::BurnCandidateCore: trustedpeer
+            // tests must not link the account library that owns it.
             const securecrdt::CandidateCore core{
                 securecrdt::CandidateCore::ENCODING_VERSION,
                 "burn-config",

@@ -18,6 +18,7 @@
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/trust_batch_committer.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
@@ -85,25 +86,11 @@ namespace
             node_ = test::securecrdt::MakeSecureCrdtTestNode( "trust_genesis_tool" );
             EXPECT_NE( node_, nullptr );
             secure_crdt_ = std::make_shared<securecrdt::SecureCrdt>( node_->db, "trust-genesis-tool-topic" );
-            store_ = TrustStateStore::Open(
-                ( path_ / "trust" ).string(),
-                manifest_.network_id,
-                [this]( sgns::storage::rocksdb &database,
-                        const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
-                {
-                    if ( fail_commits_.load() )
-                        return outcome::failure( std::errc::io_error );
-                    auto batch = database.batch();
-                    if ( !batch )
-                        return outcome::failure( std::errc::io_error );
-                    for ( const auto &[key, value] : writes )
-                    {
-                        auto put = batch->put( key, value );
-                        if ( put.has_error() )
-                            return put.error();
-                    }
-                    return batch->commit();
-                } ).value();
+            store_ = TrustStateStore::Open( ( path_ / "trust" ).string(),
+                                            manifest_.network_id,
+                                            test::MakeBatchCommitter(
+                                                [this] { return fail_commits_.load(); } ) )
+                         .value();
 
             GenesisCeremony::Network network;
             network.start = [] { return outcome::success(); };
