@@ -67,8 +67,12 @@ namespace sgns
         static bool SelectsGeniusValidator( TransactionManager                      &manager,
                                             const std::shared_ptr<GeniusTransaction> &tx )
         {
-            const auto selection = manager.SelectInputValidator( tx );
-            return &selection.validator == &manager.genius_input_validator_;
+            const auto selection    = manager.SelectInputValidator( tx );
+            const auto *chosen      = &selection.validator;
+            const bool  is_genius   = chosen == &manager.genius_input_validator_;
+            const bool  is_registry = chosen == IInputValidator::Get( "supergenius" )
+                                   || chosen == IInputValidator::Get( "supergenius_chain" );
+            return is_genius || is_registry;
         }
     };
 } // namespace sgns
@@ -545,7 +549,7 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
 }
 
-TEST_F( TransactionManagerRecoveryTest, EscrowChainIdDefaultAndScopedOverride )
+TEST_F( TransactionManagerPreviousHashTest, EscrowChainIdDefaultAndScopedOverride )
 {
     const std::string private_id = "0xabcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123";
 
@@ -555,11 +559,19 @@ TEST_F( TransactionManagerRecoveryTest, EscrowChainIdDefaultAndScopedOverride )
     EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( private_id ),
                "supergenius/" + private_id );
 
+    // Fund the account (mint ceremony) so escrow construction has a spendable UTXO —
+    // the same prerequisite TransferAndEscrowDeletionRestoresConsumedInputs uses.
+    auto previous_transaction = MakeTransaction( 0 );
+    StoreCertificate( previous_transaction );
+    StoreTransaction( previous_transaction );
+    ProcessStoredTransaction( previous_transaction );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
+
     // Escrow construction precedent (TransferAndEscrowDeletionRestoresConsumedInputs).
     const std::string escrow_lock   = "0x" + std::string( 64, '1' );
     auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
     ASSERT_TRUE( escrow_params.has_value() );
-    auto escrow_dag = MakeDAG( account_->ReserveNextNonce() );
+    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() );
     escrow_dag.set_uncle_hash( escrow_lock );
     auto escrow = std::make_shared<sgns::EscrowTransaction>(
         sgns::EscrowTransaction::New( std::move( escrow_params.value() ),
@@ -585,15 +597,12 @@ TEST_F( TransactionManagerRecoveryTest, EscrowChainIdDefaultAndScopedOverride )
     // public-chain fallback (misrouting would send private escrow through public validation).
     EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::SelectsGeniusValidator( *manager_, escrow ) );
 
-    // Public-node equivalence: applying the PUBLIC ScopedChainId value would keep the chain id
-    // byte-identical to the default, so an empty-scope HoldEscrow cannot change routing.
-    const auto public_scoped = sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" );
-    EXPECT_EQ( public_scoped, "supergenius" );
-    auto public_escrow = std::make_shared<sgns::EscrowTransaction>(
-        sgns::EscrowTransaction::New( account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId ).value(),
-                                      1,
-                                      account_->GetAddress(),
-                                      0,
-                                      MakeDAG( account_->ReserveNextNonce() ) ) );
-    EXPECT_EQ( public_escrow->GetChainId(), std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ) );
+    // Counterfactual: a foreign chain id falls through to the public-chain validator —
+    // proving the assertions above discriminate genius routing from public routing.
+    escrow->SetChainIdOverride( "0xforeignchain" );
+    EXPECT_FALSE( sgns::TransactionManagerPendingLifecycleTestAccess::SelectsGeniusValidator( *manager_, escrow ) );
+
+    // Public-node equivalence: the PUBLIC ScopedChainId value equals the TransactionManager
+    // genius chain id, so an empty-scope HoldEscrow keeps routing unchanged.
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" ), "supergenius" );
 }

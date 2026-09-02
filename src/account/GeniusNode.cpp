@@ -2913,18 +2913,25 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto result_pair,
-                           manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+        BOOST_OUTCOME_TRY(
+            auto result_pair,
+            manager->HoldEscrow(
+                funds, std::string( dev_config_.Addr ), cut.value(), uuidstring, private_network_id_ ) );
 
         //TODO - Make it async to post the job data in case the transaction gets confirmed.
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
-        task.set_escrow_path( escrow_path );
+        // Scope the escrow CRDT path through the task-carried escrow_path so the write here and
+        // the PayEscrow -> FetchTransaction read stay symmetric; a public node's path equals the
+        // raw lock_id byte-for-byte.
+        const std::string scoped_escrow_path =
+            processing::TaskKeys::ScopedKeyPath( private_network_id_, escrow_path );
+        task.set_escrow_path( scoped_escrow_path );
 
         BOOST_OUTCOME_TRY( auto crdt_transaction,
-                           CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
+                           CreateEscrowInfoCRDTTransaction( scoped_escrow_path, std::move( escrow_data ) ) );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks, crdt_transaction );
         if ( enqueue_task_return.has_failure() )

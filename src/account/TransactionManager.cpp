@@ -787,10 +787,12 @@ namespace sgns
         return txId;
     }
 
-    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
-                                                                                            const std::string &dev_addr,
-                                                                                            uint64_t peers_cut,
-                                                                                            const std::string &job_id )
+    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow(
+        uint64_t           amount,
+        const std::string &dev_addr,
+        uint64_t           peers_cut,
+        const std::string &job_id,
+        std::string        network_scope )
     {
         if ( stopped_.load() || GetState() != State::READY )
         {
@@ -805,6 +807,13 @@ namespace sgns
         auto [inputs, outputs]  = params;
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct( lock_id ) ) );
+
+        // Scoped escrows carry their network's chain id for input-validation routing; public
+        // escrows keep the genius default (byte-identical to the pre-scope behavior).
+        if ( !network_scope.empty() )
+        {
+            escrow_transaction->SetChainIdOverride( ScopedChainId( network_scope ) );
+        }
 
         escrow_transaction->MakeSignature( *account_m );
         account_m->GetUTXOManager().ReserveUTXOs( inputs, escrow_transaction->GetHash() );
@@ -1371,7 +1380,12 @@ namespace sgns
             return { std::move( chain_id ), *registered_validator };
         }
 
-        if ( chain_id == GENIUS_CHAIN_ID || chain_id == GeniusTransaction::GENIUS_CHAIN_ID )
+        // A scoped genius chain id ("supergenius/<private_network_id>") extends the genius
+        // branch: without this it would fall through to the public-chain validator and
+        // misroute private escrow validation. Public equality behavior is unchanged.
+        const bool is_scoped_genius_chain = chain_id.rfind( std::string( GENIUS_CHAIN_ID ) + "/", 0 ) == 0;
+
+        if ( chain_id == GENIUS_CHAIN_ID || chain_id == GeniusTransaction::GENIUS_CHAIN_ID || is_scoped_genius_chain )
         {
             return { std::move( chain_id ), genius_input_validator_ };
         }

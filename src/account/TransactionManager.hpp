@@ -200,12 +200,15 @@ namespace sgns
          * @param[in] dev_addr  Developer address that receives the remainder after peer payouts.
          * @param[in] peers_cut  Multiplier (as a TokenAmount) applied to the escrow amount to calculate the per-peer share.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
+         * @param[in] network_scope  Private-network identity scoping the escrow chain id
+         *             (empty = public scope; the chain id stays at the genius default).
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
-                                                                            const std::string &job_id );
+                                                                            const std::string &job_id,
+                                                                            std::string        network_scope = "" );
 
         outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
                                                 const SGProcessing::TaskResult          &task_result,
