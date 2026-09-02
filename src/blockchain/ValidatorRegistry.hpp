@@ -140,6 +140,9 @@ namespace sgns
          * @param[in] genesis_authority Validator id treated as genesis authority.
          * @param[in] block_request_method Callback used to fetch blocks by CID.
          * @param[in] init_callback Optional callback notified after initialization.
+         * @param[in] network_scope Private-network identity (0x-hex-32B) scoping the
+         *            registry's CRDT key, gossip topic, and CID key; empty = public
+         *            scope (byte-identical to the historical static identifiers).
          * @return Shared pointer to the created registry.
          */
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
@@ -148,7 +151,8 @@ namespace sgns
                                                        WeightConfig                    weight_config,
                                                        std::string                     genesis_authority,
                                                        BlockRequestMethod              block_request_method,
-                                                       InitCallback                    init_callback = nullptr );
+                                                       InitCallback                    init_callback = nullptr,
+                                                       std::string                     network_scope = "" );
         /**
          * @brief Destroys the registry instance.
          */
@@ -407,6 +411,34 @@ namespace sgns
         }
 
         /**
+         * @brief Instance-scoped registry object key used in the datastore.
+         *
+         * Empty network scope yields exactly @ref RegistryKey(); a non-empty scope
+         * yields RegistryKey() + "/" + scope. Two registries with different scopes
+         * therefore read/write disjoint CRDT keys (D-09).
+         * @return This instance's registry key.
+         */
+        std::string RegistryKeyValue() const;
+
+        /**
+         * @brief Instance-scoped topic used to publish/subscribe registry updates.
+         *
+         * Empty network scope yields exactly @ref ValidatorTopic(); a non-empty
+         * scope yields ValidatorTopic() + "/" + scope.
+         * @return This instance's validator topic.
+         */
+        std::string ValidatorTopicValue() const;
+
+        /**
+         * @brief Instance-scoped key used to persist the current registry CID.
+         *
+         * Empty network scope yields exactly @ref RegistryCidKey(); a non-empty
+         * scope yields RegistryCidKey() + "/" + scope.
+         * @return This instance's registry CID key.
+         */
+        std::string RegistryCidKeyValue() const;
+
+        /**
          * @brief Finds validator entry by id in a registry snapshot.
          * @param[in] registry Registry snapshot.
          * @param[in] validator_id Validator identifier.
@@ -438,10 +470,13 @@ namespace sgns
          * @brief Migrates registry-related CIDs from old to new datastore.
          * @param[in] old_db Source GlobalDB.
          * @param[in] new_db Target GlobalDB.
+         * @param[in] network_scope Private-network identity scoping the migrated
+         *            CID key; empty = public scope (the only pre-existing data).
          * @return outcome::success on success, otherwise an error.
          */
         static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+                                                  const std::shared_ptr<crdt::GlobalDB> &new_db,
+                                                  std::string                           network_scope = "" );
 
     private:
         /**
@@ -462,6 +497,8 @@ namespace sgns
          * @param[in] genesis_authority Validator id treated as genesis authority.
          * @param[in] block_request_method Callback used to fetch blocks by CID.
          * @param[in] init_callback Optional callback notified after initialization.
+         * @param[in] network_scope Private-network identity scoping the instance
+         *            identifiers; empty = public scope.
          */
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                            uint64_t                        quorum_numerator,
@@ -469,7 +506,8 @@ namespace sgns
                            WeightConfig                    weight_config,
                            std::string                     genesis_authority,
                            BlockRequestMethod              block_request_method,
-                           InitCallback                    init_callback );
+                           InitCallback                    init_callback,
+                           std::string                     network_scope = "" );
 
         /**
          * @brief Filters CRDT elements to registry-update entries.
@@ -675,11 +713,22 @@ namespace sgns
         void PersistenceWorkerLoop();
         bool EnqueueRegistryWrite( std::string subject_hash, RegistryUpdate update );
 
+        /**
+         * @brief Derives an instance identifier from its public base and network scope.
+         * @param[in] base Public identifier constant (RegistryKey()/ValidatorTopic()/RegistryCidKey()).
+         * @param[in] network_scope Private-network identity; empty = public scope.
+         * @return base unchanged when the scope is empty, otherwise base + "/" + scope.
+         */
+        static std::string ScopedIdentifier( std::string_view base, const std::string &network_scope );
+
         std::shared_ptr<crdt::GlobalDB> db_;                 ///< Backing GlobalDB instance.
         uint64_t                        quorum_numerator_;   ///< Quorum numerator.
         uint64_t                        quorum_denominator_; ///< Quorum denominator.
         WeightConfig                    weight_config_;      ///< Weight and penalty configuration.
         std::string                     genesis_authority_;  ///< Genesis authority validator id.
+        std::string                     registry_key_;       ///< Instance-scoped registry CRDT key (public base when scope is empty).
+        std::string                     validator_topic_;    ///< Instance-scoped registry gossip topic (public base when scope is empty).
+        std::string                     registry_cid_key_;   ///< Instance-scoped registry-CID persistence key (public base when scope is empty).
         base::Logger                    logger_ = base::createLogger( "ValidatorRegistry" ); ///< Component logger.
         mutable std::shared_mutex       cache_mutex_;               ///< Guards cached registry/update state.
         std::optional<Registry>         cached_registry_;           ///< Cached active registry snapshot.

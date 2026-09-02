@@ -47,7 +47,6 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            const std::string registry_key = std::string( ValidatorRegistry::RegistryKey() );
             for ( const auto &element : delta.elements() )
             {
                 validator::RegistryUpdate update;
@@ -105,12 +104,16 @@ namespace sgns
                                           WeightConfig                    weight_config,
                                           std::string                     genesis_authority,
                                           BlockRequestMethod              block_request_method,
-                                          InitCallback                    init_callback ) :
+                                          InitCallback                    init_callback,
+                                          std::string                     network_scope ) :
         db_( std::move( db ) ),
         quorum_numerator_( quorum_numerator ),
         quorum_denominator_( quorum_denominator ),
         weight_config_( std::move( weight_config ) ),
         genesis_authority_( std::move( genesis_authority ) ),
+        registry_key_( ScopedIdentifier( RegistryKey(), network_scope ) ),
+        validator_topic_( ScopedIdentifier( ValidatorTopic(), network_scope ) ),
+        registry_cid_key_( ScopedIdentifier( RegistryCidKey(), network_scope ) ),
         init_callback_( std::move( init_callback ) ),
         request_block_by_cid_( std::move( block_request_method ) )
     {
@@ -133,7 +136,7 @@ namespace sgns
         }
         close_started_ = true;
 
-        const std::string pattern = "/?" + std::string( RegistryKey() );
+        const std::string pattern = "/?" + registry_key_;
         if ( db_ )
         {
             db_->UnregisterNewElementCallback( pattern );
@@ -235,7 +238,8 @@ namespace sgns
                                                                WeightConfig                    weight_config,
                                                                std::string                     genesis_authority,
                                                                BlockRequestMethod              block_request_method,
-                                                               InitCallback                    init_callback )
+                                                               InitCallback                    init_callback,
+                                                               std::string                     network_scope )
     {
         if ( !db )
         {
@@ -259,7 +263,8 @@ namespace sgns
                                                                                    std::move( weight_config ),
                                                                                    std::move( genesis_authority ),
                                                                                    std::move( block_request_method ),
-                                                                                   std::move( init_callback ) ) );
+                                                                                   std::move( init_callback ),
+                                                                                   std::move( network_scope ) ) );
 
         instance->logger_->trace( "{}: instance created", __func__ );
         instance->InitializeCache();
@@ -274,8 +279,33 @@ namespace sgns
         return instance;
     }
 
+    std::string ValidatorRegistry::ScopedIdentifier( std::string_view base, const std::string &network_scope )
+    {
+        if ( network_scope.empty() )
+        {
+            return std::string( base );
+        }
+        return fmt::format( "{}/{}", base, network_scope );
+    }
+
+    std::string ValidatorRegistry::RegistryKeyValue() const
+    {
+        return registry_key_;
+    }
+
+    std::string ValidatorRegistry::ValidatorTopicValue() const
+    {
+        return validator_topic_;
+    }
+
+    std::string ValidatorRegistry::RegistryCidKeyValue() const
+    {
+        return registry_cid_key_;
+    }
+
     outcome::result<void> ValidatorRegistry::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                          const std::shared_ptr<crdt::GlobalDB> &new_db )
+                                                          const std::shared_ptr<crdt::GlobalDB> &new_db,
+                                                          std::string                           network_scope )
     {
         if ( !old_db || !new_db )
         {
@@ -302,7 +332,7 @@ namespace sgns
         ValidatorRegistryLogger()->debug( "{}: Getting the registry CID from the datastore", __func__ );
 
         crdt::GlobalDB::Buffer registry_cid_key;
-        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        registry_cid_key.put( ScopedIdentifier( RegistryCidKey(), network_scope ) );
         auto registry_cid = old_store->get( registry_cid_key );
         if ( registry_cid.has_value() )
         {
@@ -666,9 +696,9 @@ namespace sgns
         base::Buffer update_buffer(
             gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
 
-        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        crdt::HierarchicalKey registry_key{ registry_key_ };
 
-        auto registry_put = db_->Put( registry_key, update_buffer, { std::string( ValidatorTopic() ) } );
+        auto registry_put = db_->Put( registry_key, update_buffer, { validator_topic_ } );
         if ( registry_put.has_error() )
         {
             logger_->error( "{}: failed to store registry in CRDT", __func__ );
@@ -719,7 +749,7 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto delta_key_values, db_->GetLocalDeltaKeyValues( cid ) );
         ValidatorRegistryLogger()->trace( "{}: Got local delta with {} entries ", __func__, delta_key_values.size() );
 
-        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        crdt::HierarchicalKey registry_key{ registry_key_ };
         for ( const auto &[key, registry_update_buffer] : delta_key_values )
         {
             ValidatorRegistryLogger()->trace( "{}: Processing delta element key={}", __func__, key );
@@ -812,8 +842,8 @@ namespace sgns
         base::Buffer update_buffer(
             gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
 
-        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
-        auto registry_put = db_->Put( registry_key, update_buffer, { std::string( ValidatorTopic() ) } );
+        crdt::HierarchicalKey registry_key{ registry_key_ };
+        auto registry_put = db_->Put( registry_key, update_buffer, { validator_topic_ } );
         if ( registry_put.has_error() )
         {
             logger_->error( "{}: failed to store registry update in CRDT", __func__ );
@@ -1159,7 +1189,7 @@ namespace sgns
     bool ValidatorRegistry::RegisterFilter()
     {
         logger_->trace( "{}: entry", __func__ );
-        const std::string pattern           = "/?" + std::string( RegistryKey() );
+        const std::string pattern           = "/?" + registry_key_;
         auto              weak_self         = weak_from_this();
         const bool        filter_registered = db_->RegisterElementFilter(
             pattern,
@@ -1181,7 +1211,7 @@ namespace sgns
                 }
             } );
 
-        db_->AddListenTopic( std::string( ValidatorTopic() ) );
+        db_->AddListenTopic( validator_topic_ );
 
         const bool result = filter_registered && callback_registered;
         logger_->info( "{}: result={}", __func__, result );
@@ -1961,7 +1991,7 @@ namespace sgns
     {
         logger_->trace( "{}: entry", __func__ );
 
-        auto registry_get = db_->Get( crdt::HierarchicalKey{ std::string( RegistryKey() ) } );
+        auto registry_get = db_->Get( crdt::HierarchicalKey{ registry_key_ } );
         if ( !registry_get.has_value() )
         {
             logger_->error( "{}: registry content not found during cache init", __func__ );
@@ -1980,7 +2010,7 @@ namespace sgns
         logger_->debug( "{}: cache populated validators={}", __func__, cached_registry_->validators().size() );
 
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
-        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        registry_cid_key.put( registry_cid_key_ );
         auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
         if ( !registry_cid.has_value() )
         {
@@ -2015,7 +2045,7 @@ namespace sgns
         }
 
         const auto &heads_map = heads_result.value().first;
-        auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
+        auto        it        = heads_map.find( validator_topic_ );
         if ( it == heads_map.end() || it->second.empty() )
         {
             logger_->debug( "{}: retry found no heads yet available", __func__ );
@@ -2030,7 +2060,7 @@ namespace sgns
     {
         logger_->trace( "{}: entry cid={}", __func__, cid );
         crdt::GlobalDB::Buffer registry_cid_key;
-        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        registry_cid_key.put( registry_cid_key_ );
         crdt::GlobalDB::Buffer registry_cid;
         registry_cid.put( cid );
         (void) db_->GetDataStore()->put( registry_cid_key, registry_cid );

@@ -58,6 +58,17 @@ target_link_libraries(validator_registry_promotion_test
     blockchain_genesis
 )
 
+# Phase 15 (D-09): instance-scope validator registry identifier tests. Pure
+# identifier-level checks (public byte-stability, scoped suffixing, three-way
+# disjointness) against CRDT-backed registries -- no consensus round needed.
+addtest(validator_registry_scope_test
+    validator_registry_scope_test.cpp
+)
+target_link_libraries(validator_registry_scope_test
+    blockchain_genesis
+    base_crdt_test
+)
+
 # ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
 # GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
 # Test deferred to E2E integration (Phase 4).

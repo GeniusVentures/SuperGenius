@@ -791,7 +791,10 @@ namespace sgns
                                     } );
                             }
                         },
-                        node_type_ );
+                        node_type_,
+                        // Scope this blockchain's validator consensus to the private
+                        // network (empty on public nodes keeps public identifiers).
+                        private_network_id_ );
                 }
                 if ( blockchain_ )
                 {
