@@ -1,9 +1,10 @@
 ---
-status: resolved
+status: complete
 phase: 12-multi-node-finality-fault-proof
-source: 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-08-SUMMARY.md, 12-11-SUMMARY.md
-started: 2026-09-01T14:56:14Z
-updated: 2026-09-01T20:15:00Z
+source: 12-REVIEW-FIX.md, 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-08-SUMMARY.md, 12-11-SUMMARY.md, 12-12-SUMMARY.md
+round: 2 (post-review-fix verification: commits 2b1a8e47..caf34458)
+started: 2026-09-02T10:49:43Z
+updated: 2026-09-02T11:55:00Z
 ---
 
 ## Current Test
@@ -13,56 +14,69 @@ updated: 2026-09-01T20:15:00Z
 
 ## Tests
 
-### 1. Same-Burn Canonical Finality
-expected: With two competing Mint proposals for the same burn, the real four-peer production path reaches one canonical slot and one authoritative certificate. Exactly the deterministic winner receives one Mint effect, the loser has none, and the outcome remains exact after every peer restarts.
+### 1. Post-Fix Full Regression
+expected: Both full CTest targets (consensus_pending_lifecycle_test, multi_node_finality_fault_test) pass on the post-review-fix build — the original 5 UAT outcomes hold. Note: intermittent failures under back-to-back load were A/B-verified as pre-existing baseline sensitivity, not regressions.
 result: issue
-reported: "This test failed: ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults — consensus_pending_lifecycle_test.cpp:1279: Value of: filtered.has_value() Actual: true, Expected: false. Logs show FilterCertificate flagging 'consensus equivocation' for BOTH same-slot alternates (existing_tx_hash=7e061d0b... vs candidate_tx_hash=2356e4ba..., then the reverse pairing), followed by 'higher serialized certificate hash rejected' for the same canonical_slot key. Also repeated 'UpdateCRDTHeads: Error, untracked head' during cert callbacks."
+reported: "This happened on the multi node finality. The consensus pending worked. — macOS crash report multi_node_finality_fault_test-2026-09-02-075842.ips: EXC_BAD_ACCESS / SIGSEGV KERN_INVALID_ADDRESS at 0x30 in boost::asio::detail::kqueue_reactor::deregister_descriptor during libp2p::transport::TcpConnection::~TcpConnection -> basic_stream_socket dtor -> MultiselectInstance release (shared_ptr teardown chain). Teardown-time near-null deref while deregistering a socket from the asio kqueue reactor."
 severity: blocker
 
-### 2. Late Contender and Passive Recipient
-expected: A proposal admitted after the original slot vote cannot acquire a replacement vote or a second certificate. A passive PubSub recipient remains receive-only, never writes the certificate key, and recovers from the authoritative CRDT certificate without a self-CID stall.
+### 2. CR-02 Conflicting-Transaction Lookup Safety
+expected: With a conflicting transaction whose tx_processed_m key misses (network-prefixed path variance on DEV_NET), certificate handling takes the hash value-scan fallback instead of dereferencing end() — no crash/wild dereference; when nothing local exists to arbitrate, the site approves. Observable via transaction_manager_certificate_fallback_test and consensus_pending_lifecycle_test staying green.
+result: issue
+reported: "CertificateFallbackTest.SharedMintSlotConfirmsOnlyTheCertifiedTransaction FAILED at transaction_manager_certificate_fallback_test.cpp:740 — loaded.has_value() Actual: false, Expected: true. Preceding logs: '[warning][TransactionManager] Mint-v2 301eb8... did not consume every burn input (already consumed or missing); burn outpoint metadata may have been rebuilt with zero amount' (the WR-07 fix's new warning), cert callback for slot key destination dfc785af... with 'UpdateCRDTHeads: Error, untracked head QmRPFEs...', and two 'ProcessCommittedCertificate: No subject handler' warnings for a different slot (destination aab2ab...). Metrics at teardown: cert_fallback(success=1 failure=0) tracking(confirm=1)."
+severity: blocker
+
+### 3. WR-03 Pre-Commit Batch Validation
+expected: An oversized/invalid batch is rejected before any CRDT Put/Commit — a rejected oversized transaction leaves no committed CRDT data behind (size gate + UTXO commitment/witness buildability checked pre-commit; post-commit gate retained as defense-in-depth). Mapped to ConsensusSubjectTest.SizeGate_* (consensus_subject_test.cpp:655-723) via ctest -R '^consensus_subject_test$'.
 result: pass
 
-### 3. Restart-Boundary Exact-Once Recovery
-expected: Restarting at the active-vote, accepted-certificate, and Mint-application boundaries preserves the original vote and certificate and results in exactly one durable Mint effect with no duplicate marker or loser state.
+### 4. WR-07 Marker-Write Retry Idempotency
+expected: A CONFIRMED-marker write retry after a successful parse skips re-parse via the effects_applied flag — exactly one live Mint effect, burn outpoint not clobbered with an amount-0 entry; transient failures before parse success remain retryable. Observable via RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce staying green.
 result: pass
 
-### 4. Publisher-Loss Durable Recovery
-expected: After certificate persistence and before PubSub notification, losing the selected publisher does not create a conflicting certificate. Peers recover through the authoritative CRDT state and retain the one exact Mint result.
-result: pass
-
-### 5. Real-Route and Process Ownership
-expected: The fault proof uses real PubSub, CRDT, RocksDB, consensus, and Mint ingress without direct authoring shortcuts. The serial real-socket CTest runner owns and reaps its children and leaves its fixed test ports reusable.
-result: pass
+### 5. CR-01/WR-05 Receive-Path Hardening
+expected: Concurrent certificate receipt over PubSub no longer races proposals_/slot_states_ (proposals_mutex_ held in CreateProposalState, deadlock-checked single caller), and the announcement capture is bounded (1024, halving) and locked — no unbounded growth or race with the test accessor. Observable via a clean full multi_node_finality_fault_test run under normal load.
+result: issue
+reported: "The multi node finality crashed before RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce ended, but previous tests succeeded. — i.e. FinalityFaultNetwork.RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce (multi_node_finality_fault_test.cpp:2299) crashed mid-run in the full-suite execution. Same case as Test 4's focused run, which passed. Presumed same teardown SIGSEGV signature as Test 1 (kqueue_reactor::deregister_descriptor via TcpConnection::~TcpConnection) — confirm against the new crash report."
+severity: blocker
 
 ## Summary
 
 total: 5
-passed: 4
-issues: 1
+passed: 2
+issues: 3
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "With two competing Mint proposals for the same burn, the real four-peer production path reaches one canonical slot and one authoritative certificate. Exactly the deterministic winner receives one Mint effect, the loser has none, and the outcome remains exact after every peer restarts."
-  status: resolved
-  reason: "User reported: ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults fails at consensus_pending_lifecycle_test.cpp:1279 — filtered.has_value() Actual: true, Expected: false. FilterCertificate logs 'consensus equivocation' for both same-slot alternates and then 'higher serialized certificate hash rejected'; same-mint alternates should be treated as normal, only different-mint quorum conflicts are faults."
+- truth: "Both full CTest targets pass on the post-review-fix build — the original 5 UAT outcomes (same-burn canonical finality, late contender, restart exact-once, publisher loss, real-route ownership) hold."
+  status: failed
+  reason: "User reported: multi_node_finality_fault_test crashed (macOS .ips 2026-09-02-075842): SIGSEGV KERN_INVALID_ADDRESS at 0x30 in kqueue_reactor::deregister_descriptor via TcpConnection::~TcpConnection shared_ptr teardown. consensus_pending_lifecycle_test passed. Unknown whether fix-induced or the documented pre-existing teardown/load intermittence (fixer A/B found baseline intermittence; crash-vs-fail not distinguished)."
   severity: blocker
   test: 1
-  root_cause: "FilterCertificate behaves per its contract — the failure is a fixture/CRDT interaction. The test writes the convergent-immutable slot key (/cert/mint-v2:...) three times with different values via plain db_->Put (WriteCertificateAtKey, test lines 154-161), bypassing production's PutConvergentImmutable (src/blockchain/Consensus.cpp:2115 — reserved UINT64_MAX priority with ConvergentImmutableValueHash lowest-hash convergence). All three no-topic self-created deltas carry the SAME priority (UpdateCRDTHeads 'untracked head' early-return leaves heads static; call 1 and call 3 DAG nodes share an identical CID in logs), and CrdtSet::SetValue (src/crdt/impl/crdt_set.cpp:623-649) falls through to an unconditional last-merge-wins overwrite at equal priority with a different value. The visible slot value after three conflicting same-priority writes depends on merge/scheduling order, not write order; under the loaded full-ctest UAT run, call 3's read observed call 2's certificate (second_serialized), so FilterCertificate correctly flagged the different-mint existing against the same-mint candidate and rejected by higher hash — failing EXPECT_FALSE(filtered.has_value()) at line 1279. Intermittent: 34 reproduction attempts on the identical binary (isolated, nominal-loop, load, full-binary) all passed; production and test SerializedCertificateHash predicates are byte-identical, eliminating hash divergence."
   artifacts:
-    - path: "test/src/blockchain/consensus_pending_lifecycle_test.cpp"
-      issue: "verify_order (1265-1281) + WriteCertificateAtKey (154-161): repeated plain Put writes of different values to the convergent-immutable certificate slot key"
-    - path: "src/crdt/impl/crdt_set.cpp"
-      issue: "SetValue (594-667): equal-priority different-value fall-through overwrite — last-merge-wins with no convergence guard outside the reserved UINT64_MAX priority"
-    - path: "src/crdt/impl/crdt_datastore.cpp"
-      issue: "CreateDAGNode (1443-1477) assigns priority = heads_max+1; UpdateCRDTHeads (1832+) 'untracked head' early-return leaves heads static for no-topic self-created writes, so conflicting writes tie on priority"
-    - path: "src/blockchain/Consensus.cpp"
-      issue: "FilterCertificate (2603-2674) behaves per contract; SubmitCertificate (2062-2115) shows the production convergent-immutable write path the fixture bypasses"
-  missing:
-    - "Fixture: write the slot key the way production does — extend ConsensusPendingLifecycleTestAccess with a PutConvergentImmutable-based write helper (mirroring WriteLiveCertificate) or give each verify_order direction a distinct key, removing dependence on same-priority overwrite ordering"
-    - "CRDT hardening: require strictly-greater priority (or apply the convergent-hash tiebreak generally) before an equal-priority overwrite in CrdtSet::SetValue"
-    - "CRDT hardening: advance DAG heads for self-created writes so priorities are monotonic and replays are harmless"
-  debug_session: ".planning/debug/same-burn-canonical-finality.md"
+    - path: "/Users/henriqueklein/Library/Logs/DiagnosticReports/multi_node_finality_fault_test-2026-09-02-075842.ips"
+      issue: "crash report: asio kqueue reactor deregistration during libp2p TcpConnection destruction"
+  missing: []  # Filled by diagnosis
+
+- truth: "With a conflicting transaction whose tx_processed_m key misses, certificate handling takes the hash value-scan fallback with no crash; transaction_manager_certificate_fallback_test stays green."
+  status: failed
+  reason: "User reported: CertificateFallbackTest.SharedMintSlotConfirmsOnlyTheCertifiedTransaction fails at transaction_manager_certificate_fallback_test.cpp:740 (loaded.has_value() false). Logs show the WR-07 fix's burn-consumption warning firing ('did not consume every burn input... rebuilt with zero amount') and an untracked-head CRDT error during the certified slot's callback. Note: the fixer's verification had this target passing 4/4 twice post-fix, so this may be intermittent or order/state-dependent."
+  severity: blocker
+  test: 2
+  artifacts:
+    - path: "test/src/account/transaction_manager_certificate_fallback_test.cpp"
+      issue: "assertion at line 740 — expected durable loaded state absent after certified mint confirmation"
+  missing: []  # Filled by diagnosis
+
+- truth: "Concurrent certificate receipt over PubSub no longer races proposals_/slot_states_ and announcement capture is bounded and locked — a clean full multi_node_finality_fault_test run under normal load."
+  status: failed
+  reason: "User reported: the multi-node binary crashed before RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce (multi_node_finality_fault_test.cpp:2299) ended; preceding cases succeeded. Same case passed focused in Test 4. Presumed same teardown SIGSEGV as Test 1 (TcpConnection::~TcpConnection -> kqueue_reactor::deregister_descriptor); likely shares Test 1's root cause."
+  severity: blocker
+  test: 5
+  artifacts:
+    - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
+      issue: "crash mid-run of FinalityFaultNetwork.RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce (line 2299)"
+  missing: []  # Filled by diagnosis
