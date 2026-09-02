@@ -18,6 +18,7 @@
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/trust_batch_committer.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
@@ -45,18 +46,7 @@ namespace
             store_ = TrustStateStore::Open(
                          ( path_ / "trust" ).string(),
                          42,
-                         [this]( storage::rocksdb &database, const std::vector<TrustStateStore::Write> &writes )
-                             -> outcome::result<void>
-                         {
-                             if ( fail_commits_ ) return outcome::failure( std::errc::io_error );
-                             auto batch = database.batch();
-                             for ( const auto &[key, value] : writes )
-                             {
-                                 auto put = batch->put( key, value );
-                                 if ( put.has_error() ) return put.error();
-                             }
-                             return batch->commit();
-                         } )
+                         test::MakeBatchCommitter( [this] { return fail_commits_; } ) )
                          .value();
             const auto manifest = Manifest();
             tpr_ = TrustedPeerRegistry::NewProduction(

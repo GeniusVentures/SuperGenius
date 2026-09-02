@@ -36,12 +36,7 @@ namespace
             return nullptr;
         }
         const auto address = account->GetAddress();
-        std::ofstream config( ( path / "sgns_config.json" ).string() );
-        config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\"" << node_type
-               << "\",\"is_processor\":" << ( is_processor ? "true" : "false" )
-               << ",\"rpc_catchup\":false,\"trusted_peers\":[\"" << address
-               << "\"],\"bootstrapper_node\":\"" << address
-               << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
+        WriteTrustedSgnsConfig( path, node_type, is_processor, false, { address }, address, 1, 1, 144 );
         return account;
     }
 

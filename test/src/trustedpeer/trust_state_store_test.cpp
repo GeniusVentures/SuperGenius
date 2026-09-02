@@ -325,11 +325,7 @@ TEST_F( TrustStateStoreTest, LoadAndVerifySerializesPolicyAndBurnTransitionWitho
     bool                    release_reader = false;
     bool                    writer_started = false;
     size_t                  observed_loads = 0;
-    auto observer = [&]( TrustStateStore::LoadStage stage ) {
-        if ( stage != TrustStateStore::LoadStage::PolicyHistoryVerifiedBeforeBurnHead )
-        {
-            return;
-        }
+    auto observer = [&] {
         std::unique_lock<std::mutex> lock( barrier_mutex );
         ++observed_loads;
         if ( observed_loads != 1 )
