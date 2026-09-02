@@ -67,6 +67,23 @@ namespace sgns::account
         }
     } // namespace
 
+    const char *TrustStartupController::EventCodeName( EventCode code ) noexcept
+    {
+        switch ( code )
+        {
+            case EventCode::TRUST_CONFIG_CONFLICT: return "TRUST_CONFIG_CONFLICT";
+            case EventCode::TRUST_NETWORK_MISMATCH: return "TRUST_NETWORK_MISMATCH";
+            case EventCode::TRUST_LOCAL_STATE_CORRUPT: return "TRUST_LOCAL_STATE_CORRUPT";
+            case EventCode::TRUST_CRDT_MISSING: return "TRUST_CRDT_MISSING";
+            case EventCode::TRUST_CRDT_ROLLBACK: return "TRUST_CRDT_ROLLBACK";
+            case EventCode::TRUST_CRDT_FORK: return "TRUST_CRDT_FORK";
+            case EventCode::TRUST_ACTIVATION_FAILED: return "TRUST_ACTIVATION_FAILED";
+            case EventCode::TRUST_REFRESH_RETRY_SCHEDULED: return "TRUST_REFRESH_RETRY_SCHEDULED";
+            case EventCode::TRUST_REFRESH_RETRY_EXHAUSTED: return "TRUST_REFRESH_RETRY_EXHAUSTED";
+        }
+        return "unknown";
+    }
+
     struct TrustStartupController::RefreshDispatchState
     {
         std::mutex                                             mutex;

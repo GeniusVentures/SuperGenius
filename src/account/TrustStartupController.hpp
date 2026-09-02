@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "outcome/outcome.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
@@ -65,6 +67,8 @@ namespace sgns::account
             Actionable,
             Fatal,
         };
+
+        [[nodiscard]] static const char *EventCodeName( EventCode code ) noexcept;
 
         struct Event
         {
@@ -152,6 +156,17 @@ namespace sgns::account
         std::vector<sgns::securecrdt::CandidateId>              failed_burn_candidates_;
         std::optional<sgns::securecrdt::CandidateId>            failed_genesis_candidate_;
     };
-} // namespace sgns::account
+}
 
-#endif // SGNS_ACCOUNT_TRUST_STARTUP_CONTROLLER_HPP
+/// Lets an EventCode be passed straight to any spdlog/fmt call: `logger->info( "{}", event.code )`.
+template <>
+struct fmt::formatter<sgns::account::TrustStartupController::EventCode> : formatter<std::string_view>
+{
+    format_context::iterator format( const sgns::account::TrustStartupController::EventCode &code,
+                                     format_context                                          &ctx ) const
+    {
+        return formatter<string_view>::format( sgns::account::TrustStartupController::EventCodeName( code ), ctx );
+    }
+};
+
+#endif
