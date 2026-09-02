@@ -1,5 +1,6 @@
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 
+#include <charconv>
 #include <chrono>
 #include <fstream>
 #include <limits>
@@ -65,19 +66,15 @@ namespace sgns::crdt
         NetworkConfig result;
         if ( document.HasMember( "pubsub_port" ) && document["pubsub_port"].IsString() )
         {
-            try
-            {
-                const auto parsed = std::stoul( document["pubsub_port"].GetString() );
-                if ( parsed > std::numeric_limits<uint16_t>::max() )
-                {
-                    return outcome::failure( Error::NETWORK_CONFIG_PARSE );
-                }
-                result.pubsub_port = static_cast<uint16_t>( parsed );
-            }
-            catch ( const std::exception & )
+            const std::string port_text = document["pubsub_port"].GetString();
+            uint64_t          parsed    = 0;
+            const auto [end, ec] = std::from_chars( port_text.data(), port_text.data() + port_text.size(), parsed );
+            if ( ec != std::errc{} || end != port_text.data() + port_text.size() ||
+                 parsed > std::numeric_limits<uint16_t>::max() )
             {
                 return outcome::failure( Error::NETWORK_CONFIG_PARSE );
             }
+            result.pubsub_port = static_cast<uint16_t>( parsed );
         }
 
         if ( document.HasMember( "pubsub_bind_address" ) )
