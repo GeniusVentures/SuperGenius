@@ -811,7 +811,7 @@ Plans:
 **Wave 3** (15-05 needs 15-03+15-04):
 
 Plans:
-- [ ] 15-05-PLAN.md — GeniusNode NetworkRegistry wiring + gossip-host allow-list binding (fail-closed) + two-node D-07 gating tests (D-06, D-07, PNET-GATE)
+- [x] 15-05-PLAN.md — GeniusNode NetworkRegistry wiring + gossip-host allow-list binding (fail-closed) + two-node D-07 gating tests (D-06, D-07, PNET-GATE)
 
 **Wave 4** (15-07 needs 15-05 + 15-06 — GeniusNode.cpp ownership serialized in `depends_on`):
 
