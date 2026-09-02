@@ -24,7 +24,7 @@ key-decisions:
   - "Gate-entry check FIRED: the RestartAtVote signature that struck in 12-16's preserved full run is recorded live and unrepaired in 12-15's verdict table (repair withheld, both authorization clauses failed), so the plan's own Task-1 STOP branch applies — the three-run series was NOT started and the round's single no-reroll evidence budget is preserved."
   - "The two authorized repairs do not address the striking mechanism: 12-15's SameBurn fix is a different test's wait predicate and 12-16's CR-01/CR-02/WR-01 are teardown-order changes outside the failing mid-test recovery path (12-16's own attribution: '12-16's changes are not in the failing path')."
 metrics:
-  duration: 20m
+  duration: 8m
   completed: 2026-09-02
 ---
 
