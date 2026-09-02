@@ -51,12 +51,6 @@ namespace sgns::trustedpeer
                    std::all_of( value.begin(), value.end(), []( unsigned char c ) { return std::isxdigit( c ) != 0; } );
         }
 
-        void TrimLineEnding( std::string &value )
-        {
-            while ( !value.empty() && ( value.back() == '\n' || value.back() == '\r' ) )
-                value.pop_back();
-        }
-
         void WriteCriticalRetention( const GenesisCeremony::Request &request, std::ostream &errors )
         {
             if ( request.key_file )
@@ -95,6 +89,22 @@ namespace sgns::trustedpeer
     {
     }
 
+    std::optional<GenesisCeremony::Error> GenesisCeremony::KeyFileStatusProblem(
+        const outcome::result<KeyFileStatus> &status )
+    {
+        if ( status.has_error() || !status.value().exists )
+            return Error::KEY_FILE_IO;
+        if ( status.value().symlink )
+            return Error::KEY_FILE_SYMLINK;
+        if ( !status.value().regular )
+            return Error::KEY_FILE_NOT_REGULAR;
+        if ( !status.value().owner )
+            return Error::KEY_FILE_OWNER;
+        if ( status.value().mode != 0600 )
+            return Error::KEY_FILE_MODE;
+        return std::nullopt;
+    }
+
     outcome::result<void> GenesisCeremony::Run( const Request &request,
                                                 Network &network,
                                                 std::istream &input,
@@ -111,6 +121,12 @@ namespace sgns::trustedpeer
         if ( !network.start || !network.submit || !network.confirmed )
             return outcome::failure( Error::NETWORK_START_FAILED );
 
+        const auto fail = [&request, &errors]( Error error )
+        {
+            WriteCriticalRetention( request, errors );
+            return outcome::result<void>( outcome::failure( error ) );
+        };
+
         output << "Trusted-peer genesis review\n"
                << "network: " << canonical->network_id << '\n'
                << "bootstrapper: " << canonical->bootstrapper_public_key << '\n'
@@ -126,30 +142,9 @@ namespace sgns::trustedpeer
         if ( request.key_file )
         {
             auto status = hooks_.inspect_key_file( *request.key_file );
-            if ( status.has_error() || !status.value().exists )
+            if ( auto problem = KeyFileStatusProblem( status ) )
             {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::KEY_FILE_IO );
-            }
-            if ( status.value().symlink )
-            {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::KEY_FILE_SYMLINK );
-            }
-            if ( !status.value().regular )
-            {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::KEY_FILE_NOT_REGULAR );
-            }
-            if ( !status.value().owner )
-            {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::KEY_FILE_OWNER );
-            }
-            if ( status.value().mode != 0600 )
-            {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::KEY_FILE_MODE );
+                return fail( *problem );
             }
             auto read = hooks_.read_key_file( *request.key_file );
             if ( read.has_error() )
@@ -167,7 +162,7 @@ namespace sgns::trustedpeer
                 return outcome::failure( Error::INVALID_KEY_SOURCE );
             if ( read != genesis_ceremony_platform::ProtectedInputResult::SUCCESS )
                 return outcome::failure( Error::KEY_FILE_IO );
-            TrimLineEnding( private_key );
+            genesis_ceremony_platform::TrimLineEnding( private_key );
         }
 
         bool cleansed = false;
@@ -182,8 +177,7 @@ namespace sgns::trustedpeer
         if ( !IsPrivateKeyHex( private_key ) )
         {
             cleanse();
-            WriteCriticalRetention( request, errors );
-            return outcome::failure( Error::INVALID_PRIVATE_KEY );
+            return fail( Error::INVALID_PRIVATE_KEY );
         }
         outcome::result<Signer> local_signer = hooks_.create_signer( private_key );
         cleanse();
@@ -194,23 +188,20 @@ namespace sgns::trustedpeer
         }
         if ( local_signer.value().address != canonical->bootstrapper_public_key )
         {
-            WriteCriticalRetention( request, errors );
-            return outcome::failure( Error::BOOTSTRAPPER_MISMATCH );
+            return fail( Error::BOOTSTRAPPER_MISMATCH );
         }
 
         output << "Type the exact fingerprint to submit: " << std::flush;
         std::string typed_fingerprint;
         if ( !std::getline( input, typed_fingerprint ) || typed_fingerprint != *fingerprint )
         {
-            WriteCriticalRetention( request, errors );
-            return outcome::failure( Error::CONFIRMATION_MISMATCH );
+            return fail( Error::CONFIRMATION_MISMATCH );
         }
 
         auto started = network.start();
         if ( started.has_error() )
         {
-            WriteCriticalRetention( request, errors );
-            return outcome::failure( Error::NETWORK_START_FAILED );
+            return fail( Error::NETWORK_START_FAILED );
         }
         const std::vector<uint8_t> manifest_signature = local_signer.value().sign( *manifest_bytes );
         auto submitted = network.submit( *canonical,
@@ -219,8 +210,7 @@ namespace sgns::trustedpeer
                                          local_signer.value().sign );
         if ( submitted.has_error() )
         {
-            WriteCriticalRetention( request, errors );
-            return outcome::failure( Error::SUBMISSION_FAILED );
+            return fail( Error::SUBMISSION_FAILED );
         }
 
         const auto deadline = std::chrono::steady_clock::now() + request.confirmation_timeout;
@@ -229,8 +219,7 @@ namespace sgns::trustedpeer
             auto confirmed = network.confirmed();
             if ( confirmed.has_error() )
             {
-                WriteCriticalRetention( request, errors );
-                return outcome::failure( Error::CONFIRMATION_FAILED );
+                return fail( Error::CONFIRMATION_FAILED );
             }
             if ( confirmed.value() && confirmed.value()->genesis_fingerprint == *fingerprint &&
                  confirmed.value()->genesis == *canonical )
@@ -247,7 +236,6 @@ namespace sgns::trustedpeer
             if ( request.confirmation_timeout.count() > 0 ) hooks_.sleep( request.poll_interval );
         } while ( std::chrono::steady_clock::now() < deadline );
 
-        WriteCriticalRetention( request, errors );
-        return outcome::failure( Error::CONFIRMATION_TIMEOUT );
+        return fail( Error::CONFIRMATION_TIMEOUT );
     }
 } // namespace sgns::trustedpeer
