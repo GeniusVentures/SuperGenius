@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-02T21:28:32.918Z"
-last_activity: 2026-09-02 -- Phase 12 planning complete
+last_updated: "2026-09-02T22:29:30.079Z"
+last_activity: 2026-09-02
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 29
-  completed_plans: 29
+  completed_plans: 30
   percent: 80
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 3 of 14
+Plan: 2 of 17
 Status: Ready to execute
-Last activity: 2026-09-02 -- Phase 12 planning complete
+Last activity: 2026-09-02
 
 Progress: [██████████] 100%
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 12 P12 | 62min | 2 tasks | 3 files |
 | Phase 12 P13 | 9m | 3 tasks | 2 files |
 | Phase 12 P14 | 90m | 2 tasks | 3 files |
+| Phase 12 P15 | 25m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Progress: [██████████] 100%
 - [Phase 12]: [Phase 12]: ConsensusManager::ValidateCertificate's no-quorum/tally-error reject now emits one warn line (slot key, registry cid, vote count, tally error) — the previously sole silent validation stage; per-vote non-member drop stays debug.
 - [Phase ?]: Peer::Stop releases every co-owner of the pubsub libp2p host (db, account) after the io_thread join and BEFORE pubsub->Stop() - the fixture-level asio io_context-outlives-I/O-objects fix for the kqueue teardown SIGSEGV (12-14; 8 crash-free reordered full runs vs 2 crashes in 3 pre-fix control runs).
 - [Phase ?]: A Peer::Stop variant force-closing host connections before db release was rejected - it removed one recovery failure signature but introduced a new 5s topology-readiness flake with no net gain; the shipped diff stays exactly the plan-prescribed reorder (12-14).
+- [Phase ?]: SameBurnContention HasBridgeMarker flake is a test check-then-act race (MintEffects at TransactionManager.cpp:5518 precedes the marker write at :5532); the first wait now covers the exact durable marker boundary on all four peers, mirroring the post-restart wait (12-15).
+- [Phase ?]: RestartAtVote block-3 reconvergence flake is a certificate-CID graphsync route loss: after RestartPeer, fetchers hit CANNOT_CONNECT on the dead publisher host, blacklist the reused host identity, and no surviving replica or re-publication exists — WR-02 parked-hold excluded 4/4 (teardown ~1s), so the Stop()/Close() notify-under-paired-mutex repair was withheld and stays open for a scoped decision (12-15).
+- [Phase ?]: PublisherLoss child-readiness intermittence stands un-repaired per the 12-08/D-25 discipline: both preserved strikes share the first-failing boundary (child produced no qualifying terminal evidence record) with heterogeneous child-death modes (12-15).
 
 ### Pending Todos
 
@@ -117,6 +121,7 @@ None yet.
 - Phase 12 Plan 08 post-review refresh: two canonical publisher-loss logs contain the complete passive record, while one ends during teardown with the prior aggregate record. Preserve the mismatch and do not retry, relax the schema, or alter topology/finality from it.
 - Phase 12 Plan 12-12 resolved: multi_node_finality_fault_test three-consecutive-serial evidence was temporarily blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores); the orphans terminated on their own at about 15:50 local and the gate then closed with three consecutive serial full passes (logs at /tmp/p12_mn_triple_{a,b,c}.log). Residual note: PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch failed once at low load with the usual child-readiness signature, so its pre-existing intermittence stands under the Plan 12-08 discipline; no repair was authorized or applied by 12-12.
 - Phase 12 Plan 12-14 evidence gap: multi_node_finality_fault_test currently flakes ~40-60% per full serial run from order-independent signatures (SameBurnContention bridge-marker timing, RestartAtVote block-3 certificate reconvergence, PublisherLoss child-readiness), blocking the three-consecutive-pass 12-12 evidence standard. Crash fix itself confirmed (8 crash-free reordered runs vs 2 pre-fix control crashes). Diagnosis scope recorded in phases/12-multi-node-finality-fault-proof/deferred-items.md; prime suspect WR-07 mint-v2 retry (caf34458).
+- 12-15 update: SameBurnContention flake closed (test check-then-act race fixed, 3/3 focused + full serial pass). RestartAtVote block-3 residual risk stands for 12-17's three-pass gate: certificate-CID graphsync route loss + host blacklist after RestartPeer (WR-02 parked-hold excluded 4/4, repair withheld per gate); PublisherLoss child-readiness ~18%/run un-repaired per 12-08 discipline.
 
 ## Deferred Items
 
@@ -130,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-02T16:48:51.741Z
-Stopped at: Completed 12-14-PLAN.md; teardown SIGSEGV fixed, evidence gate open on ambient flakiness
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-UAT.md
+Last session: 2026-09-02T22:29:19.469Z
+Stopped at: Completed 12-15-PLAN.md; suite flakiness attributed, SameBurn closed, WR-02 withheld, 6/6 focused + 1 full serial pass
+Resume file: None

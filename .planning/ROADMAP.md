@@ -157,7 +157,7 @@ Plans:
 
 **Wave 15** *(gap closure round 3 — VERIFICATION gaps 1+2: post-review-fix full-suite flakiness; developer option (a) on the escalation gate)*
 
-- [ ] 12-15-PLAN.md — Attribute every intermittent full-suite signature from the preserved evidence logs, close the SameBurn marker wait-predicate check-then-act gap, and fix the WR-02 notify-without-paired-mutex contract violation in TransactionManager::Stop and ConsensusManager::Close.
+- [x] 12-15-PLAN.md — Attribute every intermittent full-suite signature from the preserved evidence logs, close the SameBurn marker wait-predicate check-then-act gap, and fix the WR-02 notify-without-paired-mutex contract violation in TransactionManager::Stop and ConsensusManager::Close.
 
 **Wave 16** *(gap closure round 3 — VERIFICATION gap 3: teardown-invariant propagation; serialized after 12-15 for build-tree and port contention)*
 
@@ -180,7 +180,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 14/14 | Complete   | 2026-09-02 |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 15/17 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*

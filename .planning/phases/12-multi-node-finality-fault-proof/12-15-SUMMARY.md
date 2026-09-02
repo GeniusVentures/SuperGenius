@@ -9,8 +9,8 @@ requires:
   - SameBurn first-wait predicate and HasBridgeMarker helper (multi_node_finality_fault_test.cpp)
 provides:
   - Per-signature attribution verdicts for the three intermittent full-suite failure signatures, each backed by preserved-log citations (log filename + timestamp + log-line)
-  - SameBurn first-wait predicate closure over the durable bridge-marker boundary (four HasBridgeMarker terms added, mirroring the in-file post-restart wait)
-  - RestartAtVote residual-mechanism record: certificate-CID graphsync route loss + blacklist of the reused host identity after restart, with no surviving re-publication (WR-02 parked-hold excluded 4/4)
+  - SameBurn first-wait predicate closure over the durable bridge-marker boundary (four HasBridgeMarker terms added, mirroring the in-file post-restart wait); 3/3 focused SameBurn passes on the stabilized build
+  - RestartAtVote residual-mechanism record: certificate-CID graphsync route loss + blacklist of the reused host identity after restart, with no surviving re-publication (WR-02 parked-hold excluded 4/4); 3/3 focused passes and one green full-serial confirmation run
   - PublisherLoss child-readiness characterization (same first-failing readiness boundary across strikes; heterogeneous child-death causes) for 12-17 gate risk assessment
 affects:
   - 12-17 formal three-consecutive-serial-pass gate (per-run risk quantification inputs)
@@ -25,26 +25,25 @@ key-files:
   modified:
     - test/src/blockchain/multi_node_finality_fault_test.cpp
 key-decisions:
-  - "SameBurn verdict: confirmed check-then-act race in 3 independent failing runs (marker always lands within the same second AFTER the assertion) — wait-predicate repair authorized and applied."
-  - "RestartAtVote verdict: WR-02 parked-hold EXCLUDED (old peer-one teardown ~1s before same-root reopen in 4/4 failing runs); residual mechanism is certificate-CID graphsync route loss with blacklisting of the reused host identity and no surviving re-publication — WR-02 production shutdown-path repair WITHHELD (authorization gate failed on both clauses)."
+  - "SameBurn verdict: confirmed check-then-act race in 3 independent failing runs (marker always lands within the same second AFTER the assertion) — wait-predicate repair authorized and applied; 3/3 focused passes."
+  - "RestartAtVote verdict: WR-02 parked-hold EXCLUDED (old peer-one teardown ~1s before same-root reopen in 4/4 failing runs); residual mechanism is certificate-CID graphsync route loss with blacklisting of the reused host identity and no surviving re-publication — WR-02 production shutdown-path repair WITHHELD (authorization gate failed on both clauses); the review's contract violation stays open for a separately scoped decision."
   - "PublisherLoss child-readiness: characterization only, no repair (12-08/D-18/D-19/D-25 discipline); both preserved strikes share the same first-failing readiness boundary."
+  - "One full serial confirmation run executed and preserved exactly as it came out (Passed, 211.67s, pre-run 1-min load 1.40) — no rerolls."
 requirements-completed: [TEST-01, TEST-04]
 metrics:
-  duration: pending
+  duration: 25m
   completed: 2026-09-02
 ---
 
 # Phase 12 Plan 15: Multi-Node Finality Fault Suite Flakiness Attribution and Stabilization Summary
 
-Per-signature attribution verdicts built from the 11 preserved 12-14 evidence logs: the SameBurn signature is a confirmed test check-then-act race (fixed by closing the wait predicate over the durable marker boundary), the RestartAtVote signature is a certificate-CID graphsync route loss after restart (WR-02 parked-hold excluded 4/4, so the production shutdown-path repair is withheld and the residual mechanism recorded for a scoped decision), and the PublisherLoss child-readiness signature is characterized but not repaired per the standing twice-reproduced discipline.
-
-*Task 1 (attribution) committed below; Task 2 (authorized repair) and Task 3 (focused + one honest full-serial confirmation run) outcomes are appended in the final revision of this file.*
+Per-signature attribution verdicts built from the 11 preserved 12-14 evidence logs: the SameBurn signature is a confirmed test check-then-act race (fixed by closing the wait predicate over the durable marker boundary), the RestartAtVote signature is a certificate-CID graphsync route loss after restart (WR-02 parked-hold excluded 4/4, so the production shutdown-path repair is withheld and the residual mechanism recorded for a scoped decision), and the PublisherLoss child-readiness signature is characterized but not repaired per the standing twice-reproduced discipline; verification: 6/6 focused runs green (3 SameBurn + 3 RestartAtVote) plus one honest full-serial pass (211.67s) at load 1.40.
 
 ## Signature attribution (Task 1)
 
 ### Verdict 1 — SameBurnContention HasBridgeMarker (:2098; :2081 in pre-12-14 line numbering): CONFIRMED test check-then-act race — repair AUTHORIZED and applied
 
-Mechanism: the first convergence wait (multi_node_finality_fault_test.cpp:2088-2094) requires only `CheckCertificateForSlot(passive)` and `MintEffects==1` on all four peers. `mint_effects_for_test_` increments at TransactionManager.cpp:5518 — BEFORE the tracking-table effects-applied update and `PersistBridgeExecutedMarker`'s datastore put at :5532. The wait can therefore pass while the winner's marker write is still in flight; the immediately-following loop (:2095-2099) asserts `HasOnlyWinnerOutput`/`HasBridgeMarker` and fails. In every failing instance the marker then lands within the same second — a race in the test wait, not a durability defect.
+Mechanism: the first convergence wait (multi_node_finality_fault_test.cpp:2088-2094, pre-edit) required only `CheckCertificateForSlot(passive)` and `MintEffects==1` on all four peers. `mint_effects_for_test_` increments at TransactionManager.cpp:5518 — BEFORE the tracking-table effects-applied update and `PersistBridgeExecutedMarker`'s datastore put at :5532. The wait could therefore pass while the winner's marker write was still in flight; the immediately-following loop asserted `HasOnlyWinnerOutput`/`HasBridgeMarker` and failed. In every failing instance the marker then landed within the same second — a race in the test wait, not a durability defect.
 
 Failing-run evidence (3 independent instances, both build orders, identical sub-second ordering):
 
@@ -52,7 +51,7 @@ Failing-run evidence (3 independent instances, both build orders, identical sub-
 2. `/tmp/p12_14_full_b_load_failed.log` — failure dump at log-line 1340, 12:27:49. Failing peer `55cc1c8a`, winner `07b5babf`. "Tracking entry confirmed" + "Standalone validator confirmed" land after the failure dump, same second 12:27:49.
 3. `/tmp/p12_14_ab_oldorder_2.log` (pre-12-14 control build) — failure dump at log-line 1355, 12:49:57, reported at source line :2081. Failing peer `33cb1c23`, winner `32c17aa0`. Same ordering: confirmation lines after the failure dump, same second. The :2081/:2098 pair is ONE assertion at two line-number generations (commit b9ad7d2b added 17 lines above it), not two different checks.
 
-Authorization: check-then-act ordering confirmed in 3 failing runs (gate required >= 2). REPAIR 1 applied (Task 2): the first wait now also requires `HasBridgeMarker( first/second/third/passive, *winner )`, mirroring the in-file post-restart wait at :2111-2112; timeout unchanged at 20s; second wait byte-identical.
+Authorization: check-then-act ordering confirmed in 3 failing runs (gate required >= 2). REPAIR 1 applied (Task 2).
 
 ### Verdict 2 — RestartAtVote block-3 certificate reconvergence (:2471-2476): WR-02 parked-hold EXCLUDED (4/4); residual mechanism = certificate-CID graphsync route loss + blacklist of the reused host identity, no surviving re-publication — repair WITHHELD
 
@@ -85,6 +84,78 @@ Strikes carrying full preserved dumps (both on the pre-fix control build order):
 
 In the 11 preserved round-2 full runs this test failed in exactly these 2 (both pre-fix control order; ~18% per-run contribution to suite risk). The deferred-items ledger's count of 3 includes a strike whose detailed log was not preserved in this round's set (STATE.md separately records one 12-12-era low-load strike). Per the standing discipline (three isolated publisher-loss runs previously passed readiness; D-25 requires two matching fresh fully-attributed failures with direct fixture lifecycle proof before repair authorization), no repair is attempted here; this characterization feeds 12-17's gate risk assessment.
 
-## Task 2 and Task 3 outcomes
+## What Was Done (Tasks 2 and 3)
 
-*(appended in the final revision after the repair and verification runs complete)*
+### Task 2: Apply the authorized stabilizations — commit `60e449bb`
+
+- REPAIR 1 applied: the SameBurnContention first wait (multi_node_finality_fault_test.cpp:2088-2095) now also requires `HasBridgeMarker( first, *winner ) && HasBridgeMarker( second, *winner ) && HasBridgeMarker( third, *winner ) && HasBridgeMarker( passive, *winner )`, mirroring the in-file post-restart wait exactly. Existing MintEffects and passive-certificate terms and the 20s bound unchanged; the second wait byte-identical to before. Diff: +3/-1 lines, one file.
+- REPAIR 2 WITHHELD with the Task-1 evidence recorded above; `TransactionManager::Stop()` and `ConsensusManager::Close()` are untouched (verified post-edit: both still show the bare notifies). Consequences honored: no shutdown-path change, so the plan's "broader-consumer rebuild note" and the lifecycle/cert-fallback regression runs (Task 3 step 3) are moot — see Deviations.
+- Rebuild: `multi_node_finality_fault_test`, `consensus_pending_lifecycle_test`, `transaction_manager_certificate_fallback_test` all compile clean (binary confirmed relinked at build/OSX/Release/test_bin/).
+
+### Task 3: Focused verification plus one honest full-serial confirmation run (no code changes)
+
+Port preflight before direct invocation: `lsof -nP -iTCP:54631..54634 -sTCP:LISTEN` returned no listeners (exit 1, no output).
+
+| Run | Test | Result | Elapsed | 1-min load before | Log |
+|-----|------|--------|---------|-------------------|-----|
+| 1 | SameBurnContention focused | PASSED | 17.19s | 1.61 | /tmp/p12_15_sameburn_1.log |
+| 2 | SameBurnContention focused | PASSED | 17.68s | 1.86 | /tmp/p12_15_sameburn_2.log |
+| 3 | SameBurnContention focused | PASSED | 17.17s | 1.68 | /tmp/p12_15_sameburn_3.log |
+| 4 | RestartAtVote focused | PASSED | 53.95s | 1.78 | /tmp/p12_15_restart_1.log |
+| 5 | RestartAtVote focused | PASSED | 55.48s | 1.51 | /tmp/p12_15_restart_2.log |
+| 6 | RestartAtVote focused | PASSED | 54.95s | 1.10 | /tmp/p12_15_restart_3.log |
+| 7 | Full serial suite (`ctest -R '^multi_node_finality_fault_test$'`) | **Passed, 211.67s** | 211.67s | 1.40 | /tmp/p12_15_confirm_1.log |
+
+- Mechanical gate: all six focused logs assert zero `[  FAILED` lines — FOCUSED_RUNS_ZERO_FAILED echoed.
+- Full-serial confirmation: exactly one run executed, outcome preserved verbatim (Passed; 100% tests passed, 0 failed). No rerun was performed for any recorded outcome. Post-run 1-min load read 2.15 (driven by the suite's own CPU during the run; 5-min average 1.82, no external spike — the 12-14 deviation-3 load discipline was applied: pre-run 1-min load 1.40 < 2).
+- Which signature struck in the full run: NONE — all three targets green in the same run, for the first time in a preserved detailed-attribution session since the review-fix generation. SameBurn's pass is consistent with the predicate closure; RestartAtVote's pass is a race win (the unfixed cert-propagation race remains a per-run risk in full-suite order — see Findings).
+
+## Deviations from Plan
+
+### Withheld repair (plan-authorized STOP branch, not an auto-fix)
+
+**1. [Task 1D STOP branch] REPAIR 2 (WR-02 notify-under-paired-mutex) withheld — authorization gate failed on both clauses**
+- **Found during:** Task 1 signature-B attribution
+- **Issue:** The plan pre-authorized the WR-02 repair iff the parked-hold signature appeared in >= 2 failing runs OR all competing mechanisms were excluded with the source violation confirmed. Evidence: 0/4 failing runs show a parked hold (old peer-one teardown always ~1s before same-root reopen), and a competing mechanism is positively confirmed (cert-CID graphsync CANNOT_CONNECT → blacklist of the reused host identity → "No usable route candidates left", zero cert callbacks in the 25s window, identical 4/4).
+- **Action:** Repair not applied; Stop()/Close() verified untouched; the contradiction recorded per the plan's Task 1D instruction ("STOP — do not apply the contradicted repair; record the contradiction"). The WR-02 contract violation remains open under 12-REVIEW WR-02 for a separately scoped decision.
+- **Files modified:** none (withheld)
+- **Commit:** none (withheld)
+
+**2. [Rule 3 - Procedure] Task 3 step 3 (lifecycle/cert-fallback regression runs) skipped as moot**
+- **Found during:** Task 3
+- **Issue:** The step exists to cover the production shutdown-path change from REPAIR 2; with REPAIR 2 withheld there is no production change for those binaries to regress against.
+- **Action:** Both targets were still REBUILT as part of Task 2's compile verification (clean); the runtime re-runs were skipped. Recorded rather than silently dropped.
+- **Files modified:** none
+- **Commit:** none (procedure)
+
+Otherwise the plan was executed exactly as written; every executed test outcome above is preserved with no rerolls.
+
+## Must-Have Truth Status
+
+| Truth | Status |
+|-------|--------|
+| Every intermittent failure signature has a written attribution verdict backed by preserved-log citations | MET — three verdicts above, each citing log filename + timestamp + log-line |
+| SameBurn wait predicate covers the exact durable boundary it asserts (bridge marker on all four peers) | MET — four HasBridgeMarker terms added mirroring :2111-2112; 3/3 focused passes |
+| TransactionManager::Stop() and ConsensusManager::Close() notify each CV while holding its paired mutex (WR-02 closed) | **NOT MET — intentionally withheld**: the plan's authorization gate failed (parked-hold excluded 0/4; competing mechanism confirmed); recorded per Task 1D instead of applied |
+| Focused SameBurnContention and RestartAtVote runs pass three consecutive times each; one full serial run executed with outcome preserved honestly | MET — 3/3 + 3/3 focused (zero FAILED asserted mechanically); one full-serial Passed (211.67s) preserved at /tmp/p12_15_confirm_1.log, no rerolls |
+
+## Findings
+
+- The SameBurn signature is fully closed: a pure test-side check-then-act race between the MintEffects counter (TransactionManager.cpp:5518) and the marker write (:5532), with no durability defect (the marker always landed the same second in all 3 failing instances).
+- The RestartAtVote signature is a per-run propagation race that is NOT fixed by this plan: the certificate must reach second/third/passive before RestartPeer kills the only CID provider. In failing runs the fetchers' graphsync requests land after the host dies, the (reused) host identity is blacklisted, and no surviving replica or re-publication path exists — the 25s wait then cannot converge. Focused runs (3/3 here) and full runs can both win the race; 12-17's formal gate carries this residual per-run risk, quantified by the 12-14 ledger at roughly 4/8 full-run failures on the pre-12-15 build (the mechanism is untouched by this plan's test-only change).
+- The missed-wakeup window WR-02 describes is real in source but was never observed: every barrier wakeup in the preserved runs was prompt. A future scoped decision should weigh the notify-under-paired-mutex contract closure (with the plan's verified deadlock-safety analysis) against the evidence that the observed failures need cert re-publication/blacklist-expiry handling instead.
+- The PublisherLoss child-readiness intermittence stands (2/11 preserved full runs, ~18%): same first-failing readiness boundary across strikes, heterogeneous child-death modes — exactly the profile the 12-08 discipline holds un-repaired without two matching fully-attributed fresh failures.
+
+## Known Stubs
+
+None — the shipped change is real test behavior (wait predicate over a durable boundary); no placeholders, no unwired data.
+
+## Threat Flags
+
+None — no new security surface. T-12-15-01 (deadlock from notify-under-lock) is moot: the repair it assessed was withheld. T-12-15-02 (evidence integrity) honored: single recorded full run, mechanical zero-FAILED assertion, no rerolls. T-12-15-03: the predicate extension waits on the exact durable boundary already asserted at :2100 with no timeout increase. T-12-15-04: manual lsof port preflight performed before direct invocation (no listeners).
+
+## Self-Check: PASSED
+
+- Files: test/src/blockchain/multi_node_finality_fault_test.cpp (modified, commit 60e449bb) and .planning/phases/12-multi-node-finality-fault-proof/12-15-SUMMARY.md (created, commit 65cceb89) both present.
+- Commits 65cceb89 (Task 1 attribution) and 60e449bb (Task 2 repair) verified in git log; Task 3 intentionally modifies no source file (verification runs, logs preserved under /tmp/p12_15_*).
+- Evidence logs present: /tmp/p12_15_sameburn_{1,2,3}.log, /tmp/p12_15_restart_{1,2,3}.log, /tmp/p12_15_confirm_1.log.
