@@ -2902,32 +2902,46 @@ namespace sgns
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
 
-        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        // Idempotent replay (startup verification of already-applied transactions) finds every
+        // output present already; any other transfer spending an already-consumed input is a
+        // double spend and must fail before the destinations get credited a second time.
+        auto &utxo_mgr = account_m->GetUTXOManager();
+        auto  inputs   = transfer_tx->GetInputInfos();
+        if ( std::any_of( inputs.begin(),
+                          inputs.end(),
+                          [&utxo_mgr]( const InputUTXOInfo &input )
+                          {
+                              return utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ );
+                          } ) )
         {
-            auto       hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, dest_infos[i].dest_address ) );
-
-            TransactionManagerLogger()->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               dest_infos[i].dest_address,
-                                               dest_infos[i].encrypted_amount );
+            std::vector<GeniusUTXO> outputs;
+            const bool              replayed = ExtractProducedUTXOs( *transfer_tx, outputs ) && !outputs.empty() &&
+                           std::all_of( outputs.begin(),
+                                        outputs.end(),
+                                        [&utxo_mgr]( const GeniusUTXO &output )
+                                        {
+                                            return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
+                                                .has_value();
+                                        } );
+            if ( !replayed )
+            {
+                m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
+                return std::errc::invalid_argument;
+            }
         }
 
-        for ( auto &input : transfer_tx->GetInputInfos() )
+        for ( auto &input : inputs )
         {
-            TransactionManagerLogger()->trace( "[{} - full: {}] UTXO to be updated {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.txid_hash_.toReadableString() );
-            TransactionManagerLogger()->trace( "[{} - full: {}] UTXO output {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.output_idx_ );
+            m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
+            m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(),
-                                                                     TransferInputOwner( *transfer_tx ) ) );
+        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_tx ) ) );
+        BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
+        for ( const auto &dest_info : dest_infos )
+        {
+            m_logger->debug( "Notify {} of transfer of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
+        }
+
         return outcome::success();
     }
 
