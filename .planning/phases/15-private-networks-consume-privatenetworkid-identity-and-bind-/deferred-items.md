@@ -63,3 +63,20 @@ boundary (pre-existing issues unrelated to the current task's changes).
   moved from `/Users/henriqueklein/gnus/3rdparty` to `/Users/henriqueklein/gnus/thirdparty`
   (libp2p b28eed2 verified at the new path). 15-06's build tree is configured against the
   NEW path; later plans/worktrees must use the new THIRDPARTY_DIR.
+
+## 3. Membership enforcement direction: SuperGenius-side filtering, NOT a libp2p allow-list
+
+- **Owner direction (2026-09-02, mid-phase-15 execution):** the NetworkRegistry membership
+  will NOT be passed down to libp2p (no gater allow-list injection into the vendored
+  ipfs-pubsub/libp2p fork — plan 15-04's approach is permanently off the table). Instead,
+  peer/membership filtering happens at the SuperGenius application layer.
+- **Consequence for the descope gaps (15-05, 15-08 SUMMARYs):** the recorded gap is not
+  "restore 15-04" but "implement membership filtering in SGNUS code" — e.g. at
+  message-handling/peer-evaluation points in GeniusNode/processing paths that consult the
+  NetworkRegistry's cached membership (its `GetCurrentPeers()` PeerId set), rather than at
+  connection upgrade inside libp2p.
+- **Planning note for gap closure:** any gap plan must design the SuperGenius-side filter
+  surface and its tests against the two-node fixtures already built
+  (test/src/account/private_network_registry_binding_test.cpp,
+  test/src/pubsub_counts/pubsub_counts.cpp) and must respect the fail-closed posture
+  established in 15-05 (empty membership never fails open).
