@@ -161,7 +161,7 @@ Plans:
 
 **Wave 16** *(gap closure round 3 — VERIFICATION gap 3: teardown-invariant propagation; serialized after 12-15 for build-tree and port contention)*
 
-- [ ] 12-16-PLAN.md — Mirror the 12-14 Peer::Stop teardown order into ComponentPeer::Stop (CR-01), ~CRDTFixture (CR-02), and both lifecycle multi-validator teardown loops (WR-01 same class), and prove every affected suite green with zero new crash reports.
+- [x] 12-16-PLAN.md — Mirror the 12-14 Peer::Stop teardown order into ComponentPeer::Stop (CR-01), ~CRDTFixture (CR-02), and both lifecycle multi-validator teardown loops (WR-01 same class), and prove every affected suite green with zero new crash reports.
 
 **Wave 17** *(gap closure round 3 — evidence gate; depends on 12-15 and 12-16)*
 
@@ -180,7 +180,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 15/17 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 16/17 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
