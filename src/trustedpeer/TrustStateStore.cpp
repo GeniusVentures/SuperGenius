@@ -8,8 +8,8 @@
 
 #include <gsl/span>
 
+#include "base/hexutil.hpp"
 #include "multisig/MultiSig.hpp"
-#include "securecrdt/SecureCrdtCandidate.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
 #include "trustedpeer/CanonicalTrustCodec.hpp"
@@ -319,11 +319,8 @@ namespace sgns::trustedpeer
                                                      const std::vector<uint8_t> &burn_bytes,
                                                      const ConfirmedBurnState   &burn )
         {
-            auto core = securecrdt::CandidateCore::DecodeCanonical( authorization_bytes );
-            return core && core->kind == securecrdt::CandidateKind::BurnConfig &&
-                   core->network_id == burn.network_id && core->version == burn.version &&
-                   core->expected_previous_hash == burn.expected_previous_hash &&
-                   core->authorizing_policy_hash == burn.authorizing_policy_hash && core->payload == burn_bytes;
+            // The canonical authorization is the candidate core, never the raw state bytes.
+            return authorization_bytes != burn_bytes && AuthorizationBindsBurn( authorization_bytes, burn_bytes, burn );
         }
     } // namespace
 
@@ -468,15 +465,8 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::NETWORK_MISMATCH );
         }
-        const sgns::securecrdt::CandidateCore genesis_core{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-                                                            "trusted-peer-genesis",
-                                                            genesis->network_id,
-                                                            sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
-                                                            genesis->policy_version,
-                                                            genesis_record->fingerprint,
-                                                            genesis_record->fingerprint,
-                                                            genesis_record->bytes };
-        const auto                            genesis_authorization = genesis_core.CanonicalBytes();
+        const auto genesis_core = GenesisCandidateCore( *genesis, genesis_record->bytes, genesis_record->fingerprint );
+        const auto genesis_authorization = genesis_core.CanonicalBytes();
         if ( !multisig::VerifyPayloadSignature( genesis->bootstrapper_public_key,
                                                 genesis_record->signature,
                                                 genesis_record->bytes ) &&
@@ -566,7 +556,7 @@ namespace sgns::trustedpeer
 
         if ( load_observer_ )
         {
-            load_observer_( LoadStage::PolicyHistoryVerifiedBeforeBurnHead );
+            load_observer_();
         }
 
         auto burn_head_value = database_->get( Buffer( BurnHeadKey( network_id_ ) ) );
@@ -691,15 +681,8 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::NETWORK_MISMATCH );
         }
-        const sgns::securecrdt::CandidateCore genesis_core{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-                                                            "trusted-peer-genesis",
-                                                            canonical->network_id,
-                                                            sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
-                                                            canonical->policy_version,
-                                                            *fingerprint,
-                                                            *fingerprint,
-                                                            *bytes };
-        const auto                            expected_candidate_authorization = genesis_core.CanonicalBytes();
+        const auto genesis_core = GenesisCandidateCore( *canonical, *bytes, *fingerprint );
+        const auto expected_candidate_authorization = genesis_core.CanonicalBytes();
         const auto                           &proof_bytes = authorization_bytes.empty() ? *bytes : authorization_bytes;
         if ( !multisig::VerifyPayloadSignature( canonical->bootstrapper_public_key,
                                                 bootstrap_signature,
@@ -827,17 +810,10 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::INVALID_POLICY_PROOF );
         }
-        std::vector<Write> writes{
+        return CommitRecordAndHead(
             { Buffer( PolicyRecordKey( network_id_, canonical->version, *hash ) ),
               Buffer( EncodeSignedRecord( POLICY_RECORD, *bytes, signed_bytes, proof ) ) },
-            { Buffer( PolicyHeadKey( network_id_ ) ), Buffer( EncodeHead( canonical->version, *hash ) ) },
-        };
-        auto committed = CommitWrites( writes );
-        if ( committed.has_error() )
-        {
-            return outcome::failure( Error::COMMIT_FAILED );
-        }
-        return LoadAndVerifyUnlocked();
+            { Buffer( PolicyHeadKey( network_id_ ) ), Buffer( EncodeHead( canonical->version, *hash ) ) } );
     }
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitBurnSuccessor(
@@ -904,17 +880,10 @@ namespace sgns::trustedpeer
             {
                 return current;
             }
-            std::vector<Write> writes{
+            return CommitRecordAndHead(
                 { Buffer( BurnRecordKey( network_id_, candidate.version, *candidate_hash ) ),
                   Buffer( EncodeSignedRecord( BURN_RECORD, *bytes, signed_bytes, proof ) ) },
-                { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( candidate.version, *candidate_hash ) ) },
-            };
-            auto committed = CommitWrites( writes );
-            if ( committed.has_error() )
-            {
-                return outcome::failure( Error::COMMIT_FAILED );
-            }
-            return LoadAndVerifyUnlocked();
+                { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( candidate.version, *candidate_hash ) ) } );
         }
         if ( current.burn.version == std::numeric_limits<uint64_t>::max() ||
              candidate.version != current.burn.version + 1 )
@@ -941,17 +910,10 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::INVALID_BURN_PROOF );
         }
-        std::vector<Write> writes{
+        return CommitRecordAndHead(
             { Buffer( BurnRecordKey( network_id_, candidate.version, *hash ) ),
               Buffer( EncodeSignedRecord( BURN_RECORD, *bytes, signed_bytes, proof ) ) },
-            { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( candidate.version, *hash ) ) },
-        };
-        auto committed = CommitWrites( writes );
-        if ( committed.has_error() )
-        {
-            return outcome::failure( Error::COMMIT_FAILED );
-        }
-        return LoadAndVerifyUnlocked();
+            { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( candidate.version, *hash ) ) } );
     }
 
     outcome::result<void> TrustStateStore::CommitWrites( const std::vector<Write> &writes )
@@ -979,5 +941,15 @@ namespace sgns::trustedpeer
             return outcome::failure( Error::COMMIT_FAILED );
         }
         return outcome::success();
+    }
+
+    outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitRecordAndHead( Write record_write, Write head_write )
+    {
+        auto committed = CommitWrites( { std::move( record_write ), std::move( head_write ) } );
+        if ( committed.has_error() )
+        {
+            return outcome::failure( Error::COMMIT_FAILED );
+        }
+        return LoadAndVerifyUnlocked();
     }
 } // namespace sgns::trustedpeer
