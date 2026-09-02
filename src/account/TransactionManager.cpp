@@ -2014,19 +2014,46 @@ namespace sgns
 
         auto dest_infos = transfer_tx->GetDstInfos();
 
+        // Idempotent replay (startup verification of already-applied transactions) finds every
+        // output present already; any other transfer spending an already-consumed input is a
+        // double spend and must fail before the destinations get credited a second time.
+        auto &utxo_mgr = account_m->GetUTXOManager();
+        auto  inputs   = transfer_tx->GetInputInfos();
+        if ( std::any_of( inputs.begin(),
+                          inputs.end(),
+                          [&utxo_mgr]( const InputUTXOInfo &input )
+                          {
+                              return utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ );
+                          } ) )
+        {
+            std::vector<GeniusUTXO> outputs;
+            const bool              replayed = ExtractProducedUTXOs( *transfer_tx, outputs ) && !outputs.empty() &&
+                           std::all_of( outputs.begin(),
+                                        outputs.end(),
+                                        [&utxo_mgr]( const GeniusUTXO &output )
+                                        {
+                                            return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
+                                                .has_value();
+                                        } );
+            if ( !replayed )
+            {
+                m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
+                return std::errc::invalid_argument;
+            }
+        }
+
+        for ( auto &input : inputs )
+        {
+            m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
+            m_logger->trace( "UTXO output {}", input.output_idx_ );
+        }
+        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_tx ) ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
             m_logger->debug( "Notify {} of transfer of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
-        for ( auto &input : transfer_tx->GetInputInfos() )
-        {
-            m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
-            m_logger->trace( "UTXO output {}", input.output_idx_ );
-        }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(),
-                                                                     TransferInputOwner( *transfer_tx ) ) );
         return outcome::success();
     }
 
