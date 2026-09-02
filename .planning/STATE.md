@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-02T15:13:33.042Z"
+last_updated: "2026-09-02T16:48:59.726Z"
 last_activity: 2026-09-02
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 26
-  completed_plans: 28
-  percent: 80
+  completed_plans: 29
+  percent: 100
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 2 of 14
+Plan: 3 of 14
 Status: Ready to execute
 Last activity: 2026-09-02
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 12 P08 | 11 min | 2 tasks | 8 files |
 | Phase 12 P12 | 62min | 2 tasks | 3 files |
 | Phase 12 P13 | 9m | 3 tasks | 2 files |
+| Phase 12 P14 | 90m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Progress: [██████████] 100%
 - [Phase 12]: CRDT equal-priority overwrite guard and self-created-write head advancement are deferred follow-ups, not 12-12 changes — production authority is already protected by PutConvergentImmutable's reserved priority and lowest-hash convergence, and CRDT merge changes ripple across every CRDT-dependent suite.
 - [Phase 12]: [Phase 12]: CRDTFixture db/keypair paths are run-unique (pid + fixture counter) and reaped at construction before KeyPairFileStorage/GlobalDB::New — leftover databases from killed or crashed runs can no longer poison later runs.
 - [Phase 12]: [Phase 12]: ConsensusManager::ValidateCertificate's no-quorum/tally-error reject now emits one warn line (slot key, registry cid, vote count, tally error) — the previously sole silent validation stage; per-vote non-member drop stays debug.
+- [Phase ?]: Peer::Stop releases every co-owner of the pubsub libp2p host (db, account) after the io_thread join and BEFORE pubsub->Stop() - the fixture-level asio io_context-outlives-I/O-objects fix for the kqueue teardown SIGSEGV (12-14; 8 crash-free reordered full runs vs 2 crashes in 3 pre-fix control runs).
+- [Phase ?]: A Peer::Stop variant force-closing host connections before db release was rejected - it removed one recovery failure signature but introduced a new 5s topology-readiness flake with no net gain; the shipped diff stays exactly the plan-prescribed reorder (12-14).
 
 ### Pending Todos
 
@@ -113,6 +116,7 @@ None yet.
 - Phase 12 remains blocked: Plan 12-08 observed three successful publisher readiness gates, so no fixture lifecycle repair is authorized and separate diagnosis is required for the remaining proof gaps.
 - Phase 12 Plan 08 post-review refresh: two canonical publisher-loss logs contain the complete passive record, while one ends during teardown with the prior aggregate record. Preserve the mismatch and do not retry, relax the schema, or alter topology/finality from it.
 - Phase 12 Plan 12-12 resolved: multi_node_finality_fault_test three-consecutive-serial evidence was temporarily blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores); the orphans terminated on their own at about 15:50 local and the gate then closed with three consecutive serial full passes (logs at /tmp/p12_mn_triple_{a,b,c}.log). Residual note: PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch failed once at low load with the usual child-readiness signature, so its pre-existing intermittence stands under the Plan 12-08 discipline; no repair was authorized or applied by 12-12.
+- Phase 12 Plan 12-14 evidence gap: multi_node_finality_fault_test currently flakes ~40-60% per full serial run from order-independent signatures (SameBurnContention bridge-marker timing, RestartAtVote block-3 certificate reconvergence, PublisherLoss child-readiness), blocking the three-consecutive-pass 12-12 evidence standard. Crash fix itself confirmed (8 crash-free reordered runs vs 2 pre-fix control crashes). Diagnosis scope recorded in phases/12-multi-node-finality-fault-proof/deferred-items.md; prime suspect WR-07 mint-v2 retry (caf34458).
 
 ## Deferred Items
 
@@ -126,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-02T15:13:33.011Z
-Stopped at: Completed 12-13-PLAN.md; stale-db immunity + no-quorum warn log verified across all CRDTFixture suites
+Last session: 2026-09-02T16:48:51.741Z
+Stopped at: Completed 12-14-PLAN.md; teardown SIGSEGV fixed, evidence gate open on ambient flakiness
 Resume file: .planning/phases/12-multi-node-finality-fault-proof/12-UAT.md
