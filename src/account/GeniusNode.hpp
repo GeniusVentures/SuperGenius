@@ -834,7 +834,8 @@ namespace sgns
             uint64_t                            catchup_generation = 0;
         };
 
-        /** Immutable address/key binding used by node-scoped trust policy. */
+        /** Immutable address/key binding used by node-scoped trust policy. Pins the
+         *  genesis account so trust signatures survive SelectAccount (CR-12). */
         struct NodeTrustSigner
         {
             std::string                    address;
@@ -937,11 +938,6 @@ namespace sgns
         mutable std::mutex catchup_mutex_;
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
-        /// Generation token for async bridge init. Incremented on account
-        /// switch; the posted Initialize() job captures the value at post time
-        /// and aborts if it is stale — so a reset transaction_manager_ /
-        /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t> bridge_init_generation_{ 0 };
         std::string           gnus_network_full_path_;       ///< Versioned network DB path.
         std::string           processing_channel_topic_;     ///< Processing task channel topic.
         std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
