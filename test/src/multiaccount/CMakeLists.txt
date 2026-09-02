@@ -8,6 +8,10 @@ target_link_libraries(multi_account_test
     json_secure_storage
 )
 
+# 8 multi-node integration tests in one binary: ~300 s unloaded, ~700 s when
+# ctest -j 4 piles it together with the other heavy suites on the same runner.
+set_tests_properties(multi_account_test PROPERTIES TIMEOUT 1200)
+
 if(WIN32)
     target_link_options(multi_account_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
