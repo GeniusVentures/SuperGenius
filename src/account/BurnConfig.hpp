@@ -216,6 +216,7 @@ namespace sgns::account
         outcome::result<sgns::securecrdt::CandidateId> SubmitLocalApproval(
             const sgns::securecrdt::CandidateCore &core );
         void PublishConfirmedBurn( const sgns::trustedpeer::ConfirmedTrustSnapshot &snapshot );
+        void NotifyBasisPointsChanged( uint64_t new_value );
 
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
         std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
