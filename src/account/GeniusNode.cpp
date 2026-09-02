@@ -797,38 +797,8 @@ namespace sgns
                         [trust_signer]( const std::vector<uint8_t> &bytes ) { return trust_signer->Sign( bytes ); },
                         [logger = node_logger_]( const sgns::account::TrustStartupController::Event &event )
                         {
-                            const char *code = "TRUST_CONFIG_CONFLICT";
-                            switch ( event.code )
-                            {
-                                case sgns::account::TrustStartupController::EventCode::TRUST_NETWORK_MISMATCH:
-                                    code = "TRUST_NETWORK_MISMATCH";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_LOCAL_STATE_CORRUPT:
-                                    code = "TRUST_LOCAL_STATE_CORRUPT";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_MISSING:
-                                    code = "TRUST_CRDT_MISSING";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_ROLLBACK:
-                                    code = "TRUST_CRDT_ROLLBACK";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_FORK:
-                                    code = "TRUST_CRDT_FORK";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED:
-                                    code = "TRUST_ACTIVATION_FAILED";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED:
-                                    code = "TRUST_REFRESH_RETRY_SCHEDULED";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_EXHAUSTED:
-                                    code = "TRUST_REFRESH_RETRY_EXHAUSTED";
-                                    break;
-                                case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
-                                    break;
-                            }
                             logger->critical( "{} fingerprint={} fields={}",
-                                              code,
+                                              event.code,
                                               event.persisted_fingerprint,
                                               fmt::join( event.fields, "," ) );
                         },
