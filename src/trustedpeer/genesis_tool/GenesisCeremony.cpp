@@ -74,25 +74,12 @@ namespace sgns::trustedpeer
         hooks.read_key_file = genesis_ceremony_platform::ReadKeyFile;
         hooks.create_signer = []( std::string_view private_key ) -> outcome::result<Signer>
         {
-            if ( private_key.size() != PRIVATE_KEY_HEX_LENGTH )
+            auto local_key = GeniusSigner::FromPrivateKeyHex( private_key );
+            if ( !local_key )
                 return outcome::failure( Error::INVALID_PRIVATE_KEY );
-            auto key_bytes = sgns::base::unhex( private_key );
-            if ( key_bytes.has_error() || key_bytes.value().size() != GeniusSigner::PRIVATE_KEY_SIZE )
-                return outcome::failure( Error::INVALID_PRIVATE_KEY );
-            try
-            {
-                GeniusSigner::PrivateKey secret_key{};
-                std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
-                std::shared_ptr<GeniusSigner> local_key = std::make_shared<GeniusSigner>( secret_key );
-                if ( local_key->GetAddress().empty() )
-                    return outcome::failure( Error::INVALID_PRIVATE_KEY );
-                return Signer{ local_key->GetAddress(),
-                               [local_key]( const std::vector<uint8_t> &bytes ) { return local_key->Sign( bytes ); } };
-            }
-            catch ( const std::exception & )
-            {
-                return outcome::failure( Error::INVALID_PRIVATE_KEY );
-            }
+            std::shared_ptr<GeniusSigner> signer = std::make_shared<GeniusSigner>( std::move( *local_key ) );
+            return Signer{ signer->GetAddress(),
+                           [signer]( const std::vector<uint8_t> &bytes ) { return signer->Sign( bytes ); } };
         };
         hooks.cleanse = []( void *data, size_t size ) { OPENSSL_cleanse( data, size ); };
         hooks.unlink_file = genesis_ceremony_platform::RemoveKeyFile;
