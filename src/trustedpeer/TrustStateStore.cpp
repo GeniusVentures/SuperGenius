@@ -75,10 +75,7 @@ namespace sgns::trustedpeer
 
         bool IsHash( std::string_view value )
         {
-            return value.size() == HASH_HEX_LENGTH &&
-                   std::all_of( value.begin(),
-                                value.end(),
-                                []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ); } );
+            return value.size() == HASH_HEX_LENGTH && sgns::base::IsLowerHex( value );
         }
 
         base::Buffer Buffer( std::string_view value )

@@ -8,6 +8,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,6 +37,18 @@ namespace sgns
          * @brief Generate a fresh, in-memory-only keypair.
          */
         static GeniusSigner Generate();
+
+        /**
+         * @brief Parse a 64-character hex secret key.
+         * @return std::nullopt when the hex is malformed or has the wrong size.
+         */
+        static std::optional<PrivateKey> PrivateKeyFromHex( std::string_view private_key_hex );
+
+        /**
+         * @brief Build a signer from a 64-character hex secret key.
+         * @return std::nullopt when the key is not a valid secp256k1 scalar.
+         */
+        static std::optional<GeniusSigner> FromPrivateKeyHex( std::string_view private_key_hex );
 
         /**
          * @brief Take ownership of an existing secret key.
