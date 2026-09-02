@@ -80,13 +80,18 @@ namespace sgns
          * @param[in] callback Called when initialization completes.
          * @param[in] node_type Deployment role, forwarded to the consensus manager. Archive nodes
          *            abstain from self-voting; defaults to Full so existing call sites are unaffected.
+         * @param[in] network_scope Private-network identity (0x-hex-32B) scoping the validator
+         *            registry's CRDT key/topic/CID key; empty = public scope (identifiers stay
+         *            byte-identical to the public constants). Defaults to empty so existing
+         *            call sites are unaffected.
          * @return Shared pointer to blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                 BlockchainCallback                         callback,
-                                                NodeType                                   node_type = NodeType::Full );
+                                                NodeType                                   node_type = NodeType::Full,
+                                                std::string                                network_scope = "" );
 
         /**
          * @brief Destroys the blockchain instance.
@@ -587,6 +592,8 @@ namespace sgns
         static std::vector<std::string> &AdditionalGenesisValidatorAddressesStorage();
 
         std::shared_ptr<ValidatorRegistry> validator_registry_; ///< Validator registry component.
+
+        std::string network_scope_; ///< Private-network identity forwarded to the validator registry ("" = public scope).
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 

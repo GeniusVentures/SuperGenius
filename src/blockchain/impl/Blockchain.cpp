@@ -81,10 +81,12 @@ namespace sgns
                                                  std::shared_ptr<GeniusAccount>             account,
                                                  std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                  BlockchainCallback                         callback,
-                                                 NodeType                                   node_type )
+                                                 NodeType                                   node_type,
+                                                 std::string                                network_scope )
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
+        instance->network_scope_ = network_scope;
         const auto weak_instance            = instance->weak_from_this();
         const auto genesis_pattern          = fmt::format( "/?{}", GENESIS_KEY );
         const auto account_creation_pattern = fmt::format( "/?{}.*", ACCOUNT_CREATION_KEY_PREFIX );
@@ -154,7 +156,11 @@ namespace sgns
                         (void) strong->Start();
                     }
                 }
-            } );
+            },
+            // Network scope: private-network nodes get a ValidatorRegistry whose CRDT
+            // key, gossip topic, and CID key are suffixed with the network identity;
+            // public nodes (empty scope) keep the byte-stable public constants.
+            std::move( network_scope ) );
 
         if ( !instance->validator_registry_ )
         {
@@ -319,7 +325,7 @@ namespace sgns
                     case 2:
                     {
                         sgns::crdt::GlobalDB::Buffer registry_cid_key;
-                        registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
+                        registry_cid_key.put( strong->validator_registry_->RegistryCidKeyValue() );
                         auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
                         if ( registry_cid.has_value() )
                         {
@@ -676,7 +682,7 @@ namespace sgns
 
     void Blockchain::RequestValidatorRegistryWhileDeferred()
     {
-        const std::unordered_set<std::string> topics{ std::string( ValidatorRegistry::ValidatorTopic() ) };
+        const std::unordered_set<std::string> topics{ validator_registry_->ValidatorTopicValue() };
 
         auto request_result = account_->RequestHeads( topics );
         if ( request_result.has_error() )
@@ -690,7 +696,7 @@ namespace sgns
 
         logger_->info( "[{}] Requested head re-announcement for topic {}",
                        account_->GetAddress().substr( 0, 8 ),
-                       ValidatorRegistry::ValidatorTopic() );
+                       validator_registry_->ValidatorTopicValue() );
 
         // A peer exists (the head request went out), so the direct registry-CID request can
         // now succeed.
