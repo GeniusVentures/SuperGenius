@@ -158,14 +158,8 @@ namespace sgns::trustedpeer
     std::optional<GenesisManifest> GenesisManifest::DecodeAndVerify( const std::vector<uint8_t> &bytes,
                                                                      const std::string          &expected_fingerprint )
     {
-        const bool canonical_fingerprint = expected_fingerprint.size() == 64 &&
-                                           std::all_of( expected_fingerprint.begin(),
-                                                        expected_fingerprint.end(),
-                                                        []( char value )
-                                                        {
-                                                            return ( value >= '0' && value <= '9' ) ||
-                                                                   ( value >= 'a' && value <= 'f' );
-                                                        } );
+        const bool canonical_fingerprint =
+            expected_fingerprint.size() == 64 && sgns::base::IsLowerHex( expected_fingerprint );
         if ( !canonical_fingerprint )
         {
             return std::nullopt;

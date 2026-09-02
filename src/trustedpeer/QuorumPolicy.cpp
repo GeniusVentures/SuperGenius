@@ -17,11 +17,7 @@ namespace sgns::trustedpeer
 
         bool IsCanonicalHash( const std::string &hash )
         {
-            return hash.size() == POLICY_HASH_BYTES * 2 &&
-                   std::all_of( hash.begin(),
-                                hash.end(),
-                                []( char value )
-                                { return ( value >= '0' && value <= '9' ) || ( value >= 'a' && value <= 'f' ); } );
+            return hash.size() == POLICY_HASH_BYTES * 2 && sgns::base::IsLowerHex( hash );
         }
 
         std::optional<std::vector<uint8_t>> DecodeHash( const std::string &hash )

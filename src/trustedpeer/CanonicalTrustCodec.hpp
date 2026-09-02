@@ -34,8 +34,7 @@ namespace sgns::trustedpeer
             void               WriteBytes( std::string_view bytes );
             [[nodiscard]] bool WriteLengthPrefixedBytes( gsl::span<const uint8_t> bytes );
 
-            [[nodiscard]] const std::vector<uint8_t> &Bytes() const;
-            [[nodiscard]] std::vector<uint8_t>        Take();
+            [[nodiscard]] std::vector<uint8_t> Take();
 
         private:
             std::vector<uint8_t> bytes_;
