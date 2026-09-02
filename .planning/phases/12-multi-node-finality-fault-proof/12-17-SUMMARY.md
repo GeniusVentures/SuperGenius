@@ -117,4 +117,9 @@ None — no code was written; this is an evidence/decision artifact.
 
 None. T-12-17-01 (evidence integrity) is honored in its strongest form: the no-reroll budget was not spent on a predicted failure, exactly zero gate runs exist, and every claim above cites a preserved log or verdict-table line verified this session. T-12-17-02: STATE.md records the stop accurately and touches no historical note or Deferred Items row. T-12-17-03: no runs were executed, so no load contamination applies.
 
-## Self-Check: PENDING
+## Self-Check: PASSED
+
+- Files: .planning/phases/12-multi-node-finality-fault-proof/12-17-SUMMARY.md (created, commit 74a8653b) and .planning/STATE.md (12-17 gate-entry STOP blocker entry, decision entry, position line, and session record) both present on disk.
+- Commit 74a8653b verified in git log.
+- Budget-preservation proof: `ls /tmp/p12_17_*` returns no matches — no gate log, no crash baseline marker exists; zero test runs were executed by this plan.
+- STATE.md integrity: grep -c "Deferred" unchanged at 7 (no Deferred Items row or milestone field altered); historical blocker notes intact (the 12-17 note is appended after the 12-16 update, nothing rewritten).

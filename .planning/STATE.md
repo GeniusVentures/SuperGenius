@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-02T22:45:56.047Z"
+last_updated: "2026-09-02T22:51:32.133Z"
 last_activity: 2026-09-02
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 29
-  completed_plans: 31
-  percent: 80
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 3 of 17
-Status: Ready to execute
+Plan: 17 of 17 (STOPPED at 12-17 gate-entry; series withheld)
+Status: Awaiting developer go/no-go routed by 12-17-SUMMARY.md (repair-first recommended vs. run-anyway); the 12-14 evidence-gap blocker remains open
 Last activity: 2026-09-02
 
 Progress: [██████████] 100%
@@ -109,6 +109,7 @@ Progress: [██████████] 100%
 - [Phase ?]: PublisherLoss child-readiness intermittence stands un-repaired per the 12-08/D-25 discipline: both preserved strikes share the first-failing boundary (child produced no qualifying terminal evidence record) with heterogeneous child-death modes (12-15).
 - [Phase ?]: The 12-14 Peer::Stop teardown invariant is propagated to every phase proof artifact teardown site: ComponentPeer::Stop (smoke), ~CRDTFixture (shared base, 7 binaries), and both lifecycle multi-validator loops - CR-01/CR-02 closed, WR-01 same-class sites closed in the same mechanical pass (12-16).
 - [Phase ?]: 12-16's one full serial fault-suite run is preserved verbatim as FAILED (CTest Timeout): the RestartAtVote wait-timeout cascade is 12-15's already-attributed certificate-CID graphsync route-loss race (WR-02 withheld), not a teardown-order regression; no reroll, the three-pass gate belongs to 12-17.
+- [Phase ?]: 12-17's gate-entry check FIRED before run A — RestartAtVote's recorded-live-unrepaired residual (12-15 Verdict 2, repair withheld on both failed authorization clauses) struck again in 12-16's preserved full run, so the round-3 three-run series was never started and the no-reroll evidence budget is preserved; a developer go/no-go (repair-first recommended vs. run-anyway at ~7-12% odds) is routed per the plan's own STOP branch (12-17).
 
 ### Pending Todos
 
@@ -126,6 +127,7 @@ None yet.
 - Phase 12 Plan 12-14 evidence gap: multi_node_finality_fault_test currently flakes ~40-60% per full serial run from order-independent signatures (SameBurnContention bridge-marker timing, RestartAtVote block-3 certificate reconvergence, PublisherLoss child-readiness), blocking the three-consecutive-pass 12-12 evidence standard. Crash fix itself confirmed (8 crash-free reordered runs vs 2 pre-fix control crashes). Diagnosis scope recorded in phases/12-multi-node-finality-fault-proof/deferred-items.md; prime suspect WR-07 mint-v2 retry (caf34458).
 - 12-15 update: SameBurnContention flake closed (test check-then-act race fixed, 3/3 focused + full serial pass). RestartAtVote block-3 residual risk stands for 12-17's three-pass gate: certificate-CID graphsync route loss + host blacklist after RestartPeer (WR-02 parked-hold excluded 4/4, repair withheld per gate); PublisherLoss child-readiness ~18%/run un-repaired per 12-08 discipline.
 - 12-16 update: gap 3 closed - teardown invariant now holds across all phase proof artifacts (4 affected suites green, 0 new crash reports). One full serial run FAILED (CTest Timeout 300s) in RestartAtVote via the pre-attributed cert-propagation race (wait cascade 20+25+20+25s in /tmp/p12_16_full_1.log); preserved honestly for 12-17's three-pass gate risk context.
+- 12-17 gate-entry STOP (round 3, 2026-09-02): the Task-1 gate-entry check FIRED before run A — the RestartAtVote residual recorded live and unrepaired (12-15 Verdict 2: certificate-CID graphsync route loss + blacklist of the reused host identity, repair withheld on both failed authorization clauses) struck again in 12-16's preserved full run on the final build (/tmp/p12_16_full_1.log: CANNOT_CONNECT/blacklist/no-route lines 4342-4360 and 5537-5569, timeout cascade 4406/4672/5063/5731, load 1.58 — no contamination). The three-run series was NOT started: no /tmp/p12_17_triple_* logs or crash baseline marker exist, and the round's no-reroll evidence budget is unspent. The 12-14 evidence-gap blocker stays OPEN pending the developer go/no-go routed by 12-17-SUMMARY.md: repair-first (recommended: scoped post-restart certificate re-publication / blacklist-expiry plan, then re-gate under a new attributed fix) vs. run-anyway (~7-12% series pass odds).
 
 ## Deferred Items
 
@@ -139,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-02T22:45:56.043Z
-Stopped at: Completed 12-16-PLAN.md; gap 3 closed (CR-01/CR-02/WR-01 propagated), 4 suites green, 0 new crash reports, 1 honest full run FAILED (pre-attributed RestartAtVote race)
+Last session: 2026-09-02T22:51:32.129Z
+Stopped at: 12-17 gate-entry STOP branch — three-run series withheld per the plan's Task-1 rule (RestartAtVote residual live and unrepaired per 12-15 Verdict 2, struck again in /tmp/p12_16_full_1.log); developer go/no-go pending (repair-first recommended vs. run-anyway); Task 2 sibling matrix not executed; no /tmp/p12_17_* artifacts exist
 Resume file: None
