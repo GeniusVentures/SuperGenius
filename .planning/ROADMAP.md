@@ -821,6 +821,6 @@ Plans:
 **Wave 5** (15-08 needs 15-05 + 15-07 — GeniusNode.cpp ownership serialized in `depends_on`):
 
 Plans:
-- [ ] 15-08-PLAN.md — processing-host gating: Noise-only + pnet + membership gater per ProcessSubTask (D-11, PNET-PROC)
+- [x] 15-08-PLAN.md — processing-host gating: Noise-only + pnet + membership gater per ProcessSubTask (D-11, PNET-PROC)
 
 > Wave layout note: Waves 3-5 are serialized by exclusive `src/account/GeniusNode.cpp` ownership — encoded in `depends_on` (15-07: +15-05; 15-08: +15-07), so waves re-derive correctly from dependencies. Within Wave 2, execute 15-04 first (its vendored reinstall should precede that wave's SGNUS compilations).
