@@ -215,18 +215,14 @@ namespace sgns::crdt
             std::unique_lock lock_jobs( dagWorkerMutex_ );
             if ( !job.created_by_self_ )
             {
-                std::queue<RootCIDJob> tmp;
-                while ( !selfCreatedJobList_.empty() )
+                for ( std::queue<RootCIDJob> scan = selfCreatedJobList_; !scan.empty(); scan.pop() )
                 {
-                    auto queued = selfCreatedJobList_.front();
-                    selfCreatedJobList_.pop();
-                    if ( queued.root_node_->getCID() == job.root_node_->getCID() )
+                    if ( scan.front().root_node_->getCID() == job.root_node_->getCID() )
                     {
                         self_created_job_pending = true;
+                        break;
                     }
-                    tmp.push( std::move( queued ) );
                 }
-                std::swap( selfCreatedJobList_, tmp );
             }
             if ( !self_created_job_pending )
             {
