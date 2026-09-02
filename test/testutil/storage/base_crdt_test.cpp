@@ -106,11 +106,24 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        /*
+         * Teardown invariant (asio), mirroring Peer::Stop in
+         * multi_node_finality_fault_test.cpp:389-405: the io_context owned by
+         * GossipPubSub must outlive every I/O object that touches it. This
+         * fixture wires graphsync::Network from pubs_->GetHost() into
+         * GlobalDB::New, and Start(40001, {GetLocalAddress()}) creates a
+         * self-connection, so db_ (whose ~GlobalDB -> ~BasicHost deregisters
+         * leftover TcpConnections) must be reset BEFORE pubs_->Stop().
+         * Otherwise StopImpl frees m_context first and the later ~BasicHost
+         * deregisters from the freed kqueue reactor — the teardown SIGSEGV
+         * closed by 12-14. With db_ released first, pubs_->Stop() is the
+         * FINAL host release.
+         */
+        db_.reset();
         if ( pubs_ )
         {
             pubs_->Stop();
         }
-        db_.reset();
         pubs_.reset();
         io_.reset();
 
