@@ -394,12 +394,20 @@ namespace sgns::account
         confirmed_value_provider_->ready_.store( true, std::memory_order_release );
         cached_basis_points_.store( snapshot.burn.basis_points, std::memory_order_relaxed );
         if ( previous == snapshot.burn.basis_points ) return;
+        NotifyBasisPointsChanged( snapshot.burn.basis_points );
+    }
+
+    void BurnConfig::NotifyBasisPointsChanged( uint64_t new_value )
+    {
         std::vector<RefreshCallback> callbacks_copy;
         {
             std::lock_guard<std::mutex> lock( refresh_callbacks_mutex_ );
             callbacks_copy = refresh_callbacks_;
         }
-        for ( const auto &callback : callbacks_copy ) callback( snapshot.burn.basis_points );
+        for ( const auto &callback : callbacks_copy )
+        {
+            callback( new_value );
+        }
     }
 
     bool BurnConfig::IsEconomicallyReady() const
@@ -472,16 +480,7 @@ namespace sgns::account
         }
 
         cached_basis_points_.store( new_value, std::memory_order_relaxed );
-
-        std::vector<RefreshCallback> callbacks_copy;
-        {
-            std::lock_guard<std::mutex> lock( refresh_callbacks_mutex_ );
-            callbacks_copy = refresh_callbacks_;
-        }
-        for ( const auto &cb : callbacks_copy )
-        {
-            cb( new_value );
-        }
+        NotifyBasisPointsChanged( new_value );
 
         logger_->info( "{}: cached basis points refreshed to {}", __func__, new_value );
     }
