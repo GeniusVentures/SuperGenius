@@ -9,6 +9,11 @@
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
 
+namespace sgns::networkregistry
+{
+    class NetworkRegistry; // test-accessor return type only; callers include the full header
+}
+
 namespace sgns
 {
     class GeniusNodeTestAccess
@@ -42,6 +47,17 @@ namespace sgns
         static std::vector<std::string> NetworkBootstrapPeers( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->network_bootstrap_peers_ : std::vector<std::string>{};
+        }
+
+        /// NetworkRegistry constructed by the INITIALIZING_TRANSACTIONS path when a
+        /// private_network_id is provisioned (15-05); null on a public node. No public
+        /// getter exists because the registry's runtime consumers land in later Phase-15
+        /// plans (the vendored gater allow-list binding was descoped), so a test accessor
+        /// is the only way to observe the wiring.
+        static std::shared_ptr<sgns::networkregistry::NetworkRegistry> NetworkRegistry(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->network_registry_ : nullptr;
         }
 
         /// The node's validator registry, for tests asserting consensus participation.
