@@ -2090,7 +2090,9 @@ TEST_F( FinalityFaultNetwork, SameBurnContentionUsesOneCanonicalSlotAndExactMint
                sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *first.transactions ) == 1 &&
                sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *second.transactions ) == 1 &&
                sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *third.transactions ) == 1 &&
-               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *passive.transactions ) == 1;
+               sgns::MultiNodeFinalityFaultTestAccess::MintEffects( *passive.transactions ) == 1 &&
+               HasBridgeMarker( first, *winner ) && HasBridgeMarker( second, *winner ) &&
+               HasBridgeMarker( third, *winner ) && HasBridgeMarker( passive, *winner );
     }, std::chrono::seconds( 20 ), "passive peer received and recovered the exact canonical winner", nullptr );
     for ( auto *peer : peers )
     {
