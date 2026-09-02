@@ -86,19 +86,8 @@ set(GENIUS_NODE_SOURCES
 
 set(GENIUS_NODE_LIBS
     PRIVATE
-    AsyncIOManager
     component_factory
     crdt_graphsync_dagsyncer
-    p2p::p2p_basic_host
-    p2p::p2p_default_network
-    p2p::p2p_peer_repository
-    p2p::p2p_inmem_address_repository
-    p2p::p2p_inmem_key_repository
-    p2p::p2p_inmem_protocol_repository
-    p2p::p2p_literals
-    p2p::p2p_kademlia
-    p2p::p2p_identify
-    p2p::p2p_ping
     ipfs-bitswap-proto
     ipfs-unixfs-proto
     ipfs-bitswap-cpp

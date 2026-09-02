@@ -887,12 +887,12 @@ namespace sgns
                     // pre-existing controller needs another pass.
                     if ( !trust_controller_created_here )
                     {
-                    auto refreshed = trust_startup_controller_->Refresh();
-                    if ( refreshed.has_error() )
-                    {
-                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
-                        return;
-                    }
+                        auto refreshed = trust_startup_controller_->Refresh();
+                        if ( refreshed.has_error() )
+                        {
+                            StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                            return;
+                        }
                     }
                     if ( !trust_startup_controller_->IsEconomicallyReady() )
                     {
@@ -905,13 +905,13 @@ namespace sgns
                 }
                 else
                 {
-                        // Fail closed: a node with no configured or persisted trust
-                        // policy must not boot unrestricted.
-                        node_logger_->critical(
-                            "No trusted peers configured and no persisted trust state; refusing unrestricted boot" );
-                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
-                        return;
-                    }
+                    // Fail closed: a node with no configured or persisted trust
+                    // policy must not boot unrestricted.
+                    node_logger_->critical(
+                        "No trusted peers configured and no persisted trust state; refusing unrestricted boot" );
+                    StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                    return;
+                }
 
                 // A replacement must not register the same GlobalDB/account patterns until the
                 // previous owner has stopped and its destructor has removed those callbacks.
