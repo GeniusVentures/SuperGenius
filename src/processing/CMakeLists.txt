@@ -57,9 +57,9 @@ target_link_libraries(processing_service
     Vulkan::Vulkan
     ProcessingBase
     SGProcessingProto
+    ipfs-pubsub
     PRIVATE
     crdt_globaldb
-    ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
     ipfs-bitswap-cpp

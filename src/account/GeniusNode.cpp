@@ -2080,7 +2080,10 @@ namespace sgns
         bool ret = true;
 
         task_queue_ = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
-        processing_core_ = processing::ProcessingCoreImpl::New( task_queue_, 1, dev_config_.TokenID );
+        // Thread the private-network key into the per-subtask processing host so it gets
+        // the same Noise-only + pnet enforcement as the gossip host (D-11). Public nodes
+        // keep the defaulted argument and today's construction semantics.
+        processing_core_ = processing::ProcessingCoreImpl::New( task_queue_, 1, dev_config_.TokenID, network_key_ );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        ScopedProcessingChannel(),
