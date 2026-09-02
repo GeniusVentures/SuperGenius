@@ -31,6 +31,7 @@
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
@@ -117,13 +118,15 @@ protected:
         {
             return {};
         }
-        std::ofstream config( outPath + "sgns_config.json" );
-        config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\""
-               << ( isFullNode ? "Full" : "Light" )
-               << "\",\"is_processor\":false,\"rpc_catchup\":false,\"trusted_peers\":[\""
-               << authority->GetAddress() << "\"],\"bootstrapper_node\":\"" << authority->GetAddress()
-               << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
-        config.close();
+        sgns::test::WriteTrustedSgnsConfig( outPath,
+                                isFullNode ? "Full" : "Light",
+                                /*is_processor=*/false,
+                                /*rpc_catchup=*/false,
+                                { authority->GetAddress() },
+                                authority->GetAddress(),
+                                1,
+                                1,
+                                144 );
         return { GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } ),
                  std::move( authority ),
                  outPath };
@@ -139,12 +142,8 @@ protected:
         const auto network_config = fixture.path / "reviewed-trust-network.json";
         const auto database_path  = fixture.path / "reviewed-trust-globaldb";
         std::filesystem::create_directories( database_path );
-        {
-            std::ofstream config( network_config );
-            ASSERT_TRUE( config.good() );
-            config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-                   << fixture.node->GetPubSub()->GetInterfaceAddress() << R"("]})";
-        }
+        sgns::test::WriteGlobalDbNetworkConfig( network_config.string(),
+                                                fixture.node->GetPubSub()->GetInterfaceAddress() );
 
         const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
         sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
