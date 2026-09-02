@@ -66,6 +66,11 @@ namespace sgns::trustedpeer
     class TrustedPeerRegistry;
 }
 
+namespace sgns::networkregistry
+{
+    class NetworkRegistry;
+}
+
 namespace sgns::account
 {
     class BurnConfig;
@@ -947,6 +952,11 @@ namespace sgns
         /// deliberately does not.
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        /// D-06/D-07 (15-05): per-privateNetworkId membership authority, constructed only
+        /// when private_network_id_ is provisioned. Declared after trusted_peer_registry_
+        /// for the same destructor-ordering reason as the rest of the quorum trio: its
+        /// destructor calls Unregister(), which needs SecureCrdt alive (destroyed last).
+        std::shared_ptr<sgns::networkregistry::NetworkRegistry> network_registry_;
         std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
         std::shared_ptr<sgns::trustedpeer::TrustStateStore>
             trust_state_store_; ///< Durable network-scoped trust authority.
