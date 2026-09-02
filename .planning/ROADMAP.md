@@ -149,7 +149,7 @@ Plans:
 
 **Wave 13** *(gap closure — UAT round 2: stale-fixture db reuse, tests 1-2 precondition)*
 
-- [ ] 12-13-PLAN.md — Make CRDTFixture db paths run-unique (pid + counter) with construction-time reap, log the silent no-quorum certificate rejection, and prove stale-db immunity across all CRDTFixture suites.
+- [x] 12-13-PLAN.md — Make CRDTFixture db paths run-unique (pid + counter) with construction-time reap, log the silent no-quorum certificate rejection, and prove stale-db immunity across all CRDTFixture suites.
 
 **Wave 14** *(gap closure — UAT round 2: teardown SIGSEGV, tests 1+5 single event; blocked on 12-13 for serial build/port contention and clean evidence)*
 
@@ -168,7 +168,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 12/14 | Gap closure | 2026-09-01 |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 13/14 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
