@@ -2791,6 +2791,13 @@ namespace sgns
         auto tally = TallyVotes( proposal, votes, registry, certificate.registry_cid() );
         if ( tally.has_error() || !tally.value().has_quorum )
         {
+            ConsensusManagerLogger()->warn(
+                "{}: rejected: certificate tally failed slot_key={} registry_cid={} votes={} tally_error={}",
+                __func__,
+                GetSlotKey( certificate.proposal() ),
+                certificate.registry_cid(),
+                certificate.votes_size(),
+                tally.has_error() ? tally.error().message() : std::string( "quorum not reached" ) );
             return Check::Reject;
         }
 
