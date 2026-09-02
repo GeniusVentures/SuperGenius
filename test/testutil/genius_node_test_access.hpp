@@ -75,14 +75,8 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            securecrdt::CandidateCore core{ securecrdt::CandidateCore::ENCODING_VERSION,
-                                            "trusted-peer-genesis",
-                                            canonical->network_id,
-                                            securecrdt::CandidateKind::TrustedPeerGenesis,
-                                            canonical->policy_version,
-                                            *fingerprint,
-                                            *fingerprint,
-                                            *payload };
+            securecrdt::CandidateCore core = trustedpeer::GenesisCandidateCore(
+                *canonical, *payload, *fingerprint );
             const auto bytes = core.CanonicalBytes();
             if ( !bytes )
             {

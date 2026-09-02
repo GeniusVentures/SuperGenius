@@ -33,14 +33,9 @@ namespace
 
     GeniusSigner::PrivateKey PrivateKeyFromHex()
     {
-        auto key_bytes = sgns::base::unhex( PRIVATE_KEY );
-        EXPECT_FALSE( key_bytes.has_error() );
-        GeniusSigner::PrivateKey secret_key{};
-        if ( !key_bytes.has_error() && key_bytes.value().size() == secret_key.size() )
-        {
-            std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
-        }
-        return secret_key;
+        auto secret_key = GeniusSigner::PrivateKeyFromHex( PRIVATE_KEY );
+        EXPECT_TRUE( secret_key.has_value() );
+        return secret_key.value_or( GeniusSigner::PrivateKey{} );
     }
 
     class TrustGenesisToolTest : public ::testing::Test

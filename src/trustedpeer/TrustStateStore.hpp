@@ -77,14 +77,9 @@ namespace sgns::trustedpeer
      * guarantee. Detecting that requires a TPM, OS-keystore monotonic counter,
      * or off-host checkpoint.
      */
-    class TrustStateStore : public std::enable_shared_from_this<TrustStateStore>
+    class TrustStateStore
     {
     public:
-        enum class LoadStage : uint8_t
-        {
-            PolicyHistoryVerifiedBeforeBurnHead = 0,
-        };
-
         enum class Error : uint8_t
         {
             NOT_FOUND = 0,
@@ -110,7 +105,9 @@ namespace sgns::trustedpeer
 
         using Write          = std::pair<base::Buffer, base::Buffer>;
         using BatchCommitter = std::function<outcome::result<void>( storage::rocksdb &, const std::vector<Write> & )>;
-        using LoadObserver   = std::function<void( LoadStage )>;
+        // Invoked after the policy history is verified but before the burn head
+        // is read (crash-injection seam for tests).
+        using LoadObserver = std::function<void()>;
 
         static outcome::result<std::shared_ptr<TrustStateStore>> Open( const std::string &path,
                                                                        uint16_t           network_id,
@@ -138,6 +135,7 @@ namespace sgns::trustedpeer
 
         outcome::result<ConfirmedTrustSnapshot> LoadAndVerifyUnlocked() const;
         outcome::result<void> CommitWrites( const std::vector<Write> &writes );
+        outcome::result<ConfirmedTrustSnapshot> CommitRecordAndHead( Write record_write, Write head_write );
 
         std::shared_ptr<storage::rocksdb> database_;
         uint16_t                          network_id_ = 0;

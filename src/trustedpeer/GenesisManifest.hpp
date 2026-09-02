@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "securecrdt/SecureCrdtCandidate.hpp"
+
 namespace sgns::trustedpeer
 {
     struct GenesisManifest
@@ -36,6 +38,14 @@ namespace sgns::trustedpeer
 
         bool operator==( const GenesisManifest &other ) const;
     };
+
+    /** Single construction site of the genesis CandidateCore; the core bytes are
+     *  the signed genesis proof everywhere, so duplicate constructions drift apart. */
+    [[nodiscard]] sgns::securecrdt::CandidateCore GenesisCandidateCore(
+        const GenesisManifest      &manifest,
+        const std::vector<uint8_t> &canonical_bytes,
+        const std::string          &fingerprint,
+        const std::string          &domain = "trusted-peer-genesis" );
 } // namespace sgns::trustedpeer
 
 #endif // SUPERGENIUS_GENESIS_MANIFEST_HPP

@@ -5,6 +5,23 @@
 
 namespace sgns::trustedpeer
 {
+    namespace
+    {
+        template <typename TryActivate>
+        outcome::result<sgns::securecrdt::CandidateId> ActivateIfSubmitted(
+            outcome::result<sgns::securecrdt::CandidateId> submitted,
+            TryActivate                                 &&try_activate )
+        {
+            if ( submitted.has_value() )
+            {
+                auto activated = std::forward<TryActivate>( try_activate )( submitted.value() );
+                if ( activated.has_error() )
+                    return activated.error();
+            }
+            return submitted;
+        }
+    } // namespace
+
     LocalTrustAdmin::LocalTrustAdmin( std::shared_ptr<TrustedPeerRegistry> registry,
                                       std::shared_ptr<sgns::account::BurnConfig> burn_config,
                                       std::string policy_domain,
@@ -39,28 +56,18 @@ namespace sgns::trustedpeer
             return outcome::failure( std::errc::not_connected );
         if ( !burn_config_->IsEconomicallyReady() )
             return outcome::failure( std::errc::operation_not_permitted );
-        auto proposed = registry_->ProposePolicyCandidate( candidate );
-        if ( proposed.has_value() )
-        {
-            auto activated = registry_->TryActivatePolicyCandidate( proposed.value() );
-            if ( activated.has_error() )
-                return activated.error();
-        }
-        return proposed;
+        return ActivateIfSubmitted( registry_->ProposePolicyCandidate( candidate ),
+                                    [this]( const sgns::securecrdt::CandidateId &id )
+                                    { return registry_->TryActivatePolicyCandidate( id ); } );
     }
 
     outcome::result<sgns::securecrdt::CandidateId> LocalTrustAdmin::ProposeBurn( uint64_t basis_points )
     {
         if ( !burn_config_ )
             return outcome::failure( std::errc::not_connected );
-        auto proposed = burn_config_->ProposeBurnCandidate( basis_points );
-        if ( proposed.has_value() )
-        {
-            auto activated = burn_config_->TryActivateBurnCandidate( proposed.value() );
-            if ( activated.has_error() )
-                return activated.error();
-        }
-        return proposed;
+        return ActivateIfSubmitted( burn_config_->ProposeBurnCandidate( basis_points ),
+                                    [this]( const sgns::securecrdt::CandidateId &id )
+                                    { return burn_config_->TryActivateBurnCandidate( id ); } );
     }
 
     outcome::result<sgns::securecrdt::CandidateId> LocalTrustAdmin::Approve(
@@ -72,25 +79,15 @@ namespace sgns::trustedpeer
                 return outcome::failure( std::errc::not_connected );
             if ( !burn_config_->IsEconomicallyReady() )
                 return outcome::failure( std::errc::operation_not_permitted );
-            auto approved = registry_->ApprovePolicyCandidate( candidate_id );
-            if ( approved.has_value() )
-            {
-                auto activated = registry_->TryActivatePolicyCandidate( approved.value() );
-                if ( activated.has_error() )
-                    return activated.error();
-            }
-            return approved;
+            return ActivateIfSubmitted( registry_->ApprovePolicyCandidate( candidate_id ),
+                                        [this]( const sgns::securecrdt::CandidateId &id )
+                                        { return registry_->TryActivatePolicyCandidate( id ); } );
         }
         if ( candidate_id.domain == burn_domain_ && burn_config_ )
         {
-            auto approved = burn_config_->ApproveBurnCandidate( candidate_id );
-            if ( approved.has_value() )
-            {
-                auto activated = burn_config_->TryActivateBurnCandidate( approved.value() );
-                if ( activated.has_error() )
-                    return activated.error();
-            }
-            return approved;
+            return ActivateIfSubmitted( burn_config_->ApproveBurnCandidate( candidate_id ),
+                                        [this]( const sgns::securecrdt::CandidateId &id )
+                                        { return burn_config_->TryActivateBurnCandidate( id ); } );
         }
         return outcome::failure( std::errc::invalid_argument );
     }
