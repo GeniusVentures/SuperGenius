@@ -331,9 +331,7 @@ namespace
             return std::nullopt;
         const auto version = ParseUint64( value.substr( first + 1, second - first - 1 ) );
         const auto hash = value.substr( second + 1 );
-        if ( !version || hash.size() != 64 ||
-             !std::all_of( hash.begin(), hash.end(), []( char c ) { return ( c >= '0' && c <= '9' ) ||
-                                                                         ( c >= 'a' && c <= 'f' ); } ) )
+        if ( !version || hash.size() != 64 || !sgns::base::IsLowerHex( hash ) )
             return std::nullopt;
         return sgns::securecrdt::CandidateId{ value.substr( 0, first ), *version, hash };
     }

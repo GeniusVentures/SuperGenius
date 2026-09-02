@@ -10,26 +10,6 @@
 
 namespace sgns::trustedpeer
 {
-    namespace
-    {
-        std::optional<uint8_t> HexNibble( char value )
-        {
-            if ( value >= '0' && value <= '9' )
-            {
-                return static_cast<uint8_t>( value - '0' );
-            }
-            if ( value >= 'a' && value <= 'f' )
-            {
-                return static_cast<uint8_t>( value - 'a' + 10 );
-            }
-            if ( value >= 'A' && value <= 'F' )
-            {
-                return static_cast<uint8_t>( value - 'A' + 10 );
-            }
-            return std::nullopt;
-        }
-    } // namespace
-
     void CanonicalTrustCodec::Writer::WriteU8( uint8_t value )
     {
         bytes_.push_back( value );
@@ -77,11 +57,6 @@ namespace sgns::trustedpeer
         WriteU32( static_cast<uint32_t>( bytes.size() ) );
         WriteBytes( bytes );
         return true;
-    }
-
-    const std::vector<uint8_t> &CanonicalTrustCodec::Writer::Bytes() const
-    {
-        return bytes_;
     }
 
     std::vector<uint8_t> CanonicalTrustCodec::Writer::Take()
@@ -174,20 +149,13 @@ namespace sgns::trustedpeer
         {
             return std::nullopt;
         }
-
-        std::vector<uint8_t> decoded;
-        decoded.reserve( PUBLIC_KEY_BYTES );
-        for ( size_t index = 0; index < public_key.size(); index += 2 )
+        // unhex also strips a leading 0x, so re-check the decoded length.
+        const auto decoded = sgns::base::unhex( public_key );
+        if ( decoded.has_error() || decoded.value().size() != PUBLIC_KEY_BYTES )
         {
-            const auto high = HexNibble( public_key[index] );
-            const auto low  = HexNibble( public_key[index + 1] );
-            if ( !high || !low )
-            {
-                return std::nullopt;
-            }
-            decoded.push_back( static_cast<uint8_t>( ( *high << 4U ) | *low ) );
+            return std::nullopt;
         }
-        return decoded;
+        return std::move( decoded.value() );
     }
 
     std::string CanonicalTrustCodec::EncodePublicKey( gsl::span<const uint8_t> public_key )

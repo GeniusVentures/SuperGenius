@@ -64,6 +64,33 @@ namespace sgns
         return GeniusSigner( private_key );
     }
 
+    std::optional<GeniusSigner::PrivateKey> GeniusSigner::PrivateKeyFromHex( std::string_view private_key_hex )
+    {
+        const auto key_bytes = base::unhex( private_key_hex );
+        if ( key_bytes.has_error() || key_bytes.value().size() != PRIVATE_KEY_SIZE )
+        {
+            return std::nullopt;
+        }
+        PrivateKey secret_key{};
+        std::copy( key_bytes.value().begin(), key_bytes.value().end(), secret_key.begin() );
+        return secret_key;
+    }
+
+    std::optional<GeniusSigner> GeniusSigner::FromPrivateKeyHex( std::string_view private_key_hex )
+    {
+        auto secret_key = PrivateKeyFromHex( private_key_hex );
+        if ( !secret_key )
+        {
+            return std::nullopt;
+        }
+        GeniusSigner signer( *secret_key );
+        if ( signer.GetAddress().empty() )
+        {
+            return std::nullopt;
+        }
+        return signer;
+    }
+
     GeniusSigner::GeniusSigner( const PrivateKey &private_key ) : private_key_( private_key )
     {
         const auto *context = GetSecp256k1Context();
