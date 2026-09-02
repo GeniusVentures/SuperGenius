@@ -131,6 +131,7 @@ set(GENIUS_NODE_LIBS
     sgns_genius_account
     trustedpeer
     burnconfig
+    networkregistry
 )
 
 

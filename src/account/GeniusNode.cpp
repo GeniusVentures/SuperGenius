@@ -47,8 +47,10 @@
 #include "account/BurnConfig.hpp"
 #include "account/TrustStartupController.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "securecrdt/QuorumThresholdValidation.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "networkregistry/NetworkRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
@@ -1035,6 +1037,46 @@ namespace sgns
                         ShutdownNodePolicyServices();
                         return;
                     }
+                }
+
+                // D-06/D-07 (15-05): a node provisioned with a private_network_id constructs
+                // its per-network membership registry once the quorum trio is live. The
+                // registry (registered with SecureCrdtRegistry under "network-registry/<id>"
+                // inside New) is this network's PeerRegistry; its cached membership is the
+                // authorization state for the private network. Public nodes (empty
+                // private_network_id_) construct nothing here. Construction is FAIL-CLOSED: a
+                // private-network node whose membership authority cannot be established (for
+                // example, empty network_bootstrap_peers below the strict-majority quorum
+                // floor) must not start as if network enforcement were active. Only the
+                // PUBLIC private_network_id_ and the membership SIZE are ever logged (D-03).
+                if ( !private_network_id_.empty() && !network_registry_ )
+                {
+                    const auto network_quorum_floor =
+                        sgns::securecrdt::StrictMajorityQuorumFloor( network_bootstrap_peers_.size() );
+                    auto network_registry_result = sgns::networkregistry::NetworkRegistry::New(
+                        secure_crdt_,
+                        trusted_peer_registry_,
+                        private_network_id_,
+                        network_bootstrap_peers_,
+                        network_quorum_floor );
+                    if ( network_registry_result.has_error() )
+                    {
+                        node_logger_->error(
+                            "NetworkRegistry construction failed for private network {} with {} bootstrap "
+                            "peers (quorum floor {}): {} - private-network membership is not provisioned; "
+                            "failing closed",
+                            private_network_id_,
+                            network_bootstrap_peers_.size(),
+                            network_quorum_floor,
+                            network_registry_result.error().message() );
+                        ShutdownNodePolicyServices();
+                        return;
+                    }
+                    network_registry_ = network_registry_result.value();
+                    node_logger_->info( "NetworkRegistry active for private network {} (bootstrap membership: "
+                                        "{} peers)",
+                                        private_network_id_,
+                                        network_registry_->GetCurrentPeers().size() );
                 }
 
                 // A replacement must not register the same GlobalDB/account patterns until the
@@ -2209,6 +2251,12 @@ namespace sgns
 
         // Unregister while the policy owners and their owner tokens are still alive.
         // Their destructors repeat this defensively, so partial initialization is safe.
+        // NetworkRegistry first: it retains SecureCrdt and TrustedPeerRegistry, so it
+        // must drop those references before the owners below are released (15-05).
+        if ( network_registry_ )
+        {
+            network_registry_->Unregister();
+        }
         if ( burn_config_ )
         {
             burn_config_->Unregister();
@@ -2220,6 +2268,7 @@ namespace sgns
 
         // BurnConfig retains GlobalDB, TrustedPeerRegistry, SecureCrdt, and the
         // account. Release it first so those dependencies can actually drain.
+        network_registry_.reset();
         burn_config_.reset();
         trusted_peer_registry_.reset();
         secure_crdt_.reset();
