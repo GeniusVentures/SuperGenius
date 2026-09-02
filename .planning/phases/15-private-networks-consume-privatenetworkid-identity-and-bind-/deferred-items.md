@@ -59,6 +59,17 @@ boundary (pre-existing issues unrelated to the current task's changes).
   `node_shutdown_race_test`) pass with 15-06's scoped-channel changes, as do all
   task-queue/keys/transaction-manager suites. No regression introduced; base repair still
   deferred per the options above.
+- **15-07 observation (2026-09-02, base 8a7a3a84):** `blockchain_genesis_test` (matched by
+  this plan's "blockchain" gate but not by 15-06's "startup|node" regex) fails its two
+  `WithAuthorization*` scenes on the same no-genesis READY mechanism. A/B-verified against
+  the base family: a prebuilt binary from the main checkout (without 15-07's changes) fails
+  the identical two scenes with the identical 50s READY timeouts; the
+  `AuthorizedAddressIsSafeDuringConcurrentStartupAccess` scene passes on both. Same A/B
+  method applied to `migration_sync_test` (outside the plan's gates; run because 15-07
+  touches `ValidatorRegistry::MigrateCids`): base binary fails the identical 3 scenes
+  (ArchiveSurvivesMigrationWithoutJoiningRegistry + both BalanceAfterMigration params) with
+  the same wait_condition timeouts and near-identical durations — pre-existing, no
+  regression from 15-07.
 - **Environment note (user instruction, 2026-09-02):** the vendored 3rdparty install
   moved from `/Users/henriqueklein/gnus/3rdparty` to `/Users/henriqueklein/gnus/thirdparty`
   (libp2p b28eed2 verified at the new path). 15-06's build tree is configured against the
