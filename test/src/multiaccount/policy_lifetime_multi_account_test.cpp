@@ -26,6 +26,8 @@
 #include "securecrdt/SecureCrdt.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/globaldb_network_config.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
@@ -288,16 +290,15 @@ namespace
                                      const std::vector<std::string> &peers,
                                      const std::string &bootstrapper )
         {
-            std::ofstream config( ( base_path / "sgns_config.json" ).string() );
-            ASSERT_TRUE( config.good() );
-            config << R"({"net_id":144,"subnet_id":144,"node_type":"Full","is_processor":false,"rpc_catchup":false,"trusted_peers":[)";
-            for ( size_t i = 0; i < peers.size(); ++i )
-            {
-                if ( i != 0 ) config << ',';
-                config << '"' << peers[i] << '"';
-            }
-            config << R"(],"bootstrapper_node":")" << bootstrapper
-                   << R"(","trusted_peer_quorum_threshold":2,"burn_config_quorum_threshold":2})";
+            test::WriteTrustedSgnsConfig( base_path,
+                                    /*node_type=*/"Full",
+                                    /*is_processor=*/false,
+                                    /*rpc_catchup=*/false,
+                                    peers,
+                                    bootstrapper,
+                                    /*membership_threshold=*/2,
+                                    /*burn_threshold=*/2,
+                                    /*network_id=*/144 );
         }
 
         static std::shared_ptr<GeniusNode> NewNode( const boost::filesystem::path &base_path,
@@ -353,12 +354,7 @@ namespace
             const auto config_path   = path_ / ( name + "-network.json" );
             const auto database_path = path_ / ( name + "-globaldb" );
             boost::filesystem::create_directories( database_path );
-            {
-                std::ofstream config( config_path.string() );
-                EXPECT_TRUE( config.good() );
-                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-                       << bootstrap_address << R"("]})";
-            }
+            test::WriteGlobalDbNetworkConfig( config_path, bootstrap_address );
             crdt::GlobalDbNetworkComposition::Config tool_config;
             tool_config.network_config_path = config_path.string();
             tool_config.database_path       = database_path.string();
@@ -607,12 +603,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     const auto tool_config_path = path_ / "genesis-tool-network.json";
     const auto tool_database_path = path_ / "genesis-tool-globaldb";
     boost::filesystem::create_directories( tool_database_path );
-    {
-        std::ofstream config( tool_config_path.string() );
-        ASSERT_TRUE( config.good() );
-        config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-               << bootstrap_address << R"("]})";
-    }
+    test::WriteGlobalDbNetworkConfig( tool_config_path, bootstrap_address );
     crdt::GlobalDbNetworkComposition::Config tool_config;
     tool_config.network_config_path = tool_config_path.string();
     tool_config.database_path       = tool_database_path.string();
@@ -780,12 +771,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     const auto failure_config_path = path_ / "passive-c-failure-network.json";
     const auto failure_database_path = path_ / "passive-c-failure-globaldb";
     boost::filesystem::create_directories( failure_database_path );
-    {
-        std::ofstream config( failure_config_path.string() );
-        ASSERT_TRUE( config.good() );
-        config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-               << bootstrap_address << R"("]})";
-    }
+    test::WriteGlobalDbNetworkConfig( failure_config_path, bootstrap_address );
     crdt::GlobalDbNetworkComposition::Config failure_config;
     failure_config.network_config_path = failure_config_path.string();
     failure_config.database_path       = failure_database_path.string();

@@ -19,7 +19,9 @@
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/globaldb_network_config.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/trust_batch_committer.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
@@ -55,33 +57,13 @@ namespace
     void WriteNetworkConfig( const boost::filesystem::path &path,
                              const std::optional<std::string> &bootstrap = std::nullopt )
     {
-        std::ofstream output( path.string() );
-        ASSERT_TRUE( output.good() );
-        output << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[)";
-        if ( bootstrap )
-        {
-            output << '"' << *bootstrap << '"';
-        }
-        output << "]}";
+        sgns::test::WriteGlobalDbNetworkConfig( path, bootstrap.value_or( "" ) );
     }
 
     outcome::result<void> CommitBatch( sgns::storage::rocksdb                         &database,
                                        const std::vector<TrustStateStore::Write> &writes )
     {
-        auto batch = database.batch();
-        if ( !batch )
-        {
-            return outcome::failure( std::errc::io_error );
-        }
-        for ( const auto &[key, value] : writes )
-        {
-            auto put = batch->put( key, value );
-            if ( put.has_error() )
-            {
-                return put.error();
-            }
-        }
-        return batch->commit();
+        return sgns::test::CommitWritesToBatch( database, writes );
     }
 
     struct RefreshObservations

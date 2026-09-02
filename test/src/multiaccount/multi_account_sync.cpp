@@ -283,14 +283,15 @@ protected:
         }
         if ( !reuseStorage )
         {
-            std::ofstream config( devConfig.BaseWritePath + "sgns_config.json" );
-            config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\""
-                   << nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" )
-                   << "\",\"is_processor\":" << ( isProcessor ? "true" : "false" )
-                   << ",\"rpc_catchup\":" << ( rpcCatchup ? "true" : "false" )
-                   << ",\"trusted_peers\":[\"" << authority->GetAddress()
-                   << "\"],\"bootstrapper_node\":\"" << authority->GetAddress()
-                   << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
+            test::WriteTrustedSgnsConfig( devConfig.BaseWritePath,
+                                    nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" ),
+                                    isProcessor,
+                                    rpcCatchup,
+                                    { authority->GetAddress() },
+                                    authority->GetAddress(),
+                                    1,
+                                    1,
+                                    144 );
         }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
