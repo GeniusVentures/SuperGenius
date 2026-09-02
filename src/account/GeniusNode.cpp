@@ -46,6 +46,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/TrustStartupController.hpp"
+#include "securecrdt/QuorumThresholdValidation.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
@@ -429,10 +430,11 @@ namespace sgns
             node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
         }
         // Unset config never trips D-07's floor rejection: default to the exact majority
-        // floor for the parsed genesis peer count (ceil(0.51*N)).
-        const auto majority_floor = static_cast<uint64_t>( trusted_peers_genesis_.size() / 2 + 1 );
-        const auto burn_floor     = static_cast<uint64_t>( trusted_peers_genesis_.size() -
-                                                       trusted_peers_genesis_.size() / 3 );
+        // floor for the parsed genesis peer count (ceil(0.51*N)). MembershipQuorumFloor
+        // maps an empty peer set to 0; keep the historical default of 1 for that case.
+        const auto peer_count     = trusted_peers_genesis_.size();
+        const auto majority_floor = peer_count == 0 ? 1 : sgns::securecrdt::MembershipQuorumFloor( peer_count );
+        const auto burn_floor     = sgns::securecrdt::BurnQuorumFloor( peer_count );
         if ( trusted_peer_quorum_threshold_ == 0 )
         {
             trusted_peer_quorum_threshold_ = majority_floor;
@@ -770,7 +772,9 @@ namespace sgns
                                           persisted.error() != sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND;
                 }
 
-                if ( ( has_configured_trust || has_persisted_trust ) && !trust_startup_controller_ )
+                const bool trust_controller_created_here =
+                    ( has_configured_trust || has_persisted_trust ) && !trust_startup_controller_;
+                if ( trust_controller_created_here )
                 {
                     std::optional<sgns::trustedpeer::GenesisManifest> manifest;
                     if ( has_configured_trust )
@@ -879,11 +883,16 @@ namespace sgns
 
                 if ( trust_startup_controller_ )
                 {
+                    // New() already ran a full refresh; only re-entry with a
+                    // pre-existing controller needs another pass.
+                    if ( !trust_controller_created_here )
+                    {
                     auto refreshed = trust_startup_controller_->Refresh();
                     if ( refreshed.has_error() )
                     {
                         StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                         return;
+                    }
                     }
                     if ( !trust_startup_controller_->IsEconomicallyReady() )
                     {
@@ -896,8 +905,6 @@ namespace sgns
                 }
                 else
                 {
-                    if ( trusted_peers_genesis_.empty() )
-                    {
                         // Fail closed: a node with no configured or persisted trust
                         // policy must not boot unrestricted.
                         node_logger_->critical(
@@ -905,42 +912,6 @@ namespace sgns
                         StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                         return;
                     }
-                    auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
-                                                                                   trusted_peers_genesis_,
-                                                                                   bootstrapper_node_address_,
-                                                                                   trusted_peer_quorum_threshold_ );
-                    if ( tpr_result.has_error() )
-                    {
-                        node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
-                                             tpr_result.error().message() );
-                        secure_crdt_.reset();
-                        return;
-                    }
-                    trusted_peer_registry_ = tpr_result.value();
-
-                    auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
-                                                                              tx_globaldb_,
-                                                                              trusted_peer_registry_,
-                                                                              burn_config_quorum_threshold_,
-                                                                              account_ );
-                    if ( burn_config_result.has_error() )
-                    {
-                        node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
-                                             burn_config_result.error().message() );
-                        ShutdownNodePolicyServices();
-                        return;
-                    }
-                    burn_config_ = burn_config_result.value();
-
-                    // Register only after both policy owners have populated SecureCrdtRegistry;
-                    // otherwise a new node can start without filters for either runtime key.
-                    if ( !secure_crdt_->RegisterFilters() )
-                    {
-                        node_logger_->error( "SecureCrdt filter registration failed" );
-                        ShutdownNodePolicyServices();
-                        return;
-                    }
-                }
 
                 // A replacement must not register the same GlobalDB/account patterns until the
                 // previous owner has stopped and its destructor has removed those callbacks.
@@ -1966,12 +1937,10 @@ namespace sgns
             processing_service_->StopProcessing();
         }
 
-        // Invalidate any in-flight async bridge init and drop its observer
-        // registrations BEFORE bridge_relayer_ is destroyed. The posted init
-        // job captures this generation token and aborts if stale; resetting the
-        // provider here also releases its raw bridge_relayer_ observer so a
-        // late Initialize() cannot notify a freed relayer.
-        ++bridge_init_generation_;
+        // Drop the rpc endpoint provider and its observer registrations BEFORE
+        // bridge_relayer_ is destroyed. Resetting the provider also releases its
+        // raw bridge_relayer_ observer so a late Initialize() cannot notify a
+        // freed relayer.
         rpc_endpoint_provider_.reset();
 
         // Stop consensus and drain registry persistence while TransactionManager
@@ -2002,9 +1971,7 @@ namespace sgns
 
     void GeniusNode::ReleaseTransactionManagerOwnership()
     {
-        // Invalidate posted bridge initialization before releasing its observer and
-        // weak TransactionManager target.
-        ++bridge_init_generation_;
+        // Release the bridge observer and weak TransactionManager target.
         rpc_endpoint_provider_.reset();
         bridge_relayer_.reset();
         eth_watch_service_.reset();
@@ -2520,7 +2487,6 @@ namespace sgns
             }
             account_service_switching_ = true;
             ++account_service_generation_; // invalidate every captured account-service snapshot
-            ++bridge_init_generation_;
             catchup_callback_owner_generation_.store( 0 );
             previous_watcher = std::move( catchup_watcher_ );
         }
