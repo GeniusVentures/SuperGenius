@@ -2062,11 +2062,15 @@ namespace sgns
         }
 
         task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
+        // Thread the private-network key into the per-subtask processing host so it gets
+        // the same Noise-only + pnet enforcement as the gossip host (D-11). Public nodes
+        // keep the defaulted argument and today's construction semantics.
         processing_core_ = processing::ProcessingCoreImpl::New( task_queue_,
                                                                 1,
                                                                 dev_config_.TokenID,
                                                                 dev_config_.Addr,
-                                                                developer_cut.value()->Value() );
+                                                                developer_cut.value()->Value(),
+                                                                network_key_ );
         if ( !processing_core_ )
         {
             node_logger_->error( "Invalid processing payout configuration: address \"{}\", fraction {}",
