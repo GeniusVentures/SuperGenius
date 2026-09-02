@@ -46,7 +46,9 @@ target_include_directories(
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
-if(MSVC)
+# clang-cl also sets MSVC=1 but ignores /constexpr:steps, silently dropping
+# the raised budget, so restrict it to cl.exe.
+if(MSVC AND NOT CLANG)
     target_compile_options(sgns_genius_account PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
@@ -137,8 +139,7 @@ target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 
 add_dependencies(genius_node rlp)
 
-#set_target_properties(genius_node PROPERTIES PU@)
-if(MSVC)
+if(MSVC AND NOT CLANG)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)

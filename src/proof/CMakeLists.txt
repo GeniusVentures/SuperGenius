@@ -42,7 +42,7 @@ target_link_libraries(processing_proof
 # add_library(recursive_transfer_proof
 #     RecursiveTransferProof.cpp
 # )
-if(MSVC)
+if(MSVC AND NOT CLANG)
     target_compile_options(genius_prover PUBLIC /constexpr:steps1500000 /bigobj)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(genius_prover PUBLIC -fconstexpr-steps=10000000)
