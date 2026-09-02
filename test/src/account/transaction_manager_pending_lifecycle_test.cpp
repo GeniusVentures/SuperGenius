@@ -58,6 +58,22 @@ namespace sgns
         {
             return manager.ChangeTransactionState( transaction, status );
         }
+
+        static std::string ScopedChainId( const std::string &private_network_id )
+        {
+            return TransactionManager::ScopedChainId( private_network_id );
+        }
+
+        static bool SelectsGeniusValidator( TransactionManager                      &manager,
+                                            const std::shared_ptr<GeniusTransaction> &tx )
+        {
+            const auto selection    = manager.SelectInputValidator( tx );
+            const auto *chosen      = &selection.validator;
+            const bool  is_genius   = chosen == &manager.genius_input_validator_;
+            const bool  is_registry = chosen == IInputValidator::Get( "supergenius" )
+                                   || chosen == IInputValidator::Get( "supergenius_chain" );
+            return is_genius || is_registry;
+        }
     };
 } // namespace sgns
 
@@ -531,4 +547,62 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     DeleteStoredTransaction( previous_transaction );
 
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
+}
+
+TEST_F( TransactionManagerPreviousHashTest, EscrowChainIdDefaultAndScopedOverride )
+{
+    const std::string private_id = "0xabcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123";
+
+    // ScopedChainId goldens: public is byte-identical to TransactionManager::GENIUS_CHAIN_ID,
+    // scoped appends the identity under the genius branch.
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" ), "supergenius" );
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( private_id ),
+               "supergenius/" + private_id );
+
+    // Fund the account (mint ceremony) so escrow construction has a spendable UTXO —
+    // the same prerequisite TransferAndEscrowDeletionRestoresConsumedInputs uses.
+    auto previous_transaction = MakeTransaction( 0 );
+    StoreCertificate( previous_transaction );
+    StoreTransaction( previous_transaction );
+    ProcessStoredTransaction( previous_transaction );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
+
+    // Escrow construction precedent (TransferAndEscrowDeletionRestoresConsumedInputs).
+    const std::string escrow_lock   = "0x" + std::string( 64, '1' );
+    auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
+    ASSERT_TRUE( escrow_params.has_value() );
+    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() );
+    escrow_dag.set_uncle_hash( escrow_lock );
+    auto escrow = std::make_shared<sgns::EscrowTransaction>(
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ),
+                                      1,
+                                      account_->GetAddress(),
+                                      0,
+                                      std::move( escrow_dag ) ) );
+    escrow->MakeSignature( *account_ );
+
+    // Default: byte-identical to the GeniusTransaction chain id.
+    EXPECT_EQ( escrow->GetChainId(), std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ) );
+    EXPECT_EQ( escrow->GetChainId(), "supergenius_chain" );
+
+    // Validator routing before any override: the genius validator serves the default chain id.
+    EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::SelectsGeniusValidator( *manager_, escrow ) );
+
+    // Scoped override (what a scoped HoldEscrow applies): chain id carries the network scope.
+    escrow->SetChainIdOverride(
+        sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( private_id ) );
+    EXPECT_EQ( escrow->GetChainId(), "supergenius/" + private_id );
+
+    // A scoped genius chain id must still route to the genius input validator, not the
+    // public-chain fallback (misrouting would send private escrow through public validation).
+    EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::SelectsGeniusValidator( *manager_, escrow ) );
+
+    // Counterfactual: a foreign chain id falls through to the public-chain validator —
+    // proving the assertions above discriminate genius routing from public routing.
+    escrow->SetChainIdOverride( "0xforeignchain" );
+    EXPECT_FALSE( sgns::TransactionManagerPendingLifecycleTestAccess::SelectsGeniusValidator( *manager_, escrow ) );
+
+    // Public-node equivalence: the PUBLIC ScopedChainId value equals the TransactionManager
+    // genius chain id, so an empty-scope HoldEscrow keeps routing unchanged.
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" ), "supergenius" );
 }

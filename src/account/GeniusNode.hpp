@@ -1203,6 +1203,23 @@ namespace sgns
         bool InitProcessingModules();
 
         /**
+         * @brief Returns the processing channel topic scoped to this node's network identity.
+         * @return PROCESSING_CHANNEL unchanged when public; PROCESSING_CHANNEL + "/" +
+         *         private_network_id when the node belongs to a private network. Used at every
+         *         listen/commit/construction site so replication follows the scoped channel.
+         */
+        std::string ScopedProcessingChannel() const;
+
+        /**
+         * @brief Returns the processing grid topic scoped to this node's network identity.
+         * @return PROCESSING_GRID_CHANNEL unchanged when public; PROCESSING_GRID_CHANNEL + "/" +
+         *         private_network_id when scoped. Feeds the job-discovery DHT CID derivation
+         *         (DHTInit) and the grid subscription (StartProcessing) so a private network's
+         *         job discovery stops colliding with the public DHT advertisement.
+         */
+        std::string ScopedProcessingGridChannel() const;
+
+        /**
          * @brief Begins the asynchronous database migration and initialization state flow.
          */
         void BeginDBInitialization();
