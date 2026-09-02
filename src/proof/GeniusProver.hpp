@@ -15,9 +15,12 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/log/trivial.hpp>
 
-#include <boost/test/unit_test.hpp> // TODO: remove this. Required only because of an incorrect assert check in zk
-
 #include "GeniusAssigner.hpp"
+
+// zkLLVM's lookup_argument.hpp calls BOOST_CHECK in library code; no-op it instead of pulling Boost.Test in
+#ifndef BOOST_CHECK
+#define BOOST_CHECK( cond ) ( (void)0 )
+#endif
 
 #include <nil/marshalling/status_type.hpp>
 #include <nil/marshalling/field_type.hpp>
