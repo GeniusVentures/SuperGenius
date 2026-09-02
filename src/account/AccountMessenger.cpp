@@ -120,16 +120,14 @@ namespace sgns
         while ( true )
         {
             RequestTask task;
+            std::unique_lock lock( queue_mutex_ );
+            if ( request_queue_.empty() )
             {
-                std::lock_guard lock( queue_mutex_ );
-                if ( request_queue_.empty() )
-                {
-                    break;
-                }
-                task = std::move( request_queue_.front() );
-                request_queue_.pop();
+                break;
             }
-            AbandonTask( std::move( task ) );
+            task = std::move( request_queue_.front() );
+            request_queue_.pop();
+            AbandonTask( lock, std::move( task ) );
         }
     }
 
@@ -1048,21 +1046,7 @@ namespace sgns
             // the caller blocks in future.get() forever.
             if ( stop_worker_.load() )
             {
-                const auto canceled = outcome::failure( std::errc::operation_canceled );
-                if ( task.nonce_promise )
-                {
-                    task.nonce_promise->set_value( canceled );
-                }
-                if ( task.utxo_promise )
-                {
-                    task.utxo_promise->set_value( canceled );
-                }
-                auto callback = std::move( task.callback );
-                lock.unlock();
-                if ( callback )
-                {
-                    callback( canceled );
-                }
+                AbandonTask( lock, std::move( task ) );
                 return;
             }
             request_queue_.push( std::move( task ) );
@@ -1070,9 +1054,9 @@ namespace sgns
         queue_cv_.notify_one();
     }
 
-    void AccountMessenger::AbandonTask( RequestTask task )
+    void AccountMessenger::AbandonTask( std::unique_lock<std::mutex> &lock, RequestTask task )
     {
-        // Caller must hold queue_mutex_.
+        // Caller holds queue_mutex_; the callback fires only after it is released.
         const auto canceled = outcome::failure( std::errc::operation_canceled );
         if ( task.nonce_promise )
         {
@@ -1082,9 +1066,11 @@ namespace sgns
         {
             task.utxo_promise->set_value( canceled );
         }
-        if ( task.callback )
+        auto callback = std::move( task.callback );
+        lock.unlock();
+        if ( callback )
         {
-            task.callback( canceled );
+            callback( canceled );
         }
     }
 
