@@ -816,7 +816,7 @@ Plans:
 **Wave 4** (15-07 needs 15-05 + 15-06 — GeniusNode.cpp ownership serialized in `depends_on`):
 
 Plans:
-- [ ] 15-07-PLAN.md — ValidatorRegistry instance-scoped identifiers + Blockchain/GossipNode scope threading (D-09, PNET-VAL)
+- [x] 15-07-PLAN.md — ValidatorRegistry instance-scoped identifiers + Blockchain/GossipNode scope threading (D-09, PNET-VAL)
 
 **Wave 5** (15-08 needs 15-05 + 15-07 — GeniusNode.cpp ownership serialized in `depends_on`):
 
