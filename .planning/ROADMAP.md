@@ -120,7 +120,7 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: 14 plans
+**Plans**: 17 plans
 Plans:
 
 **Wave 1**
@@ -154,6 +154,18 @@ Plans:
 **Wave 14** *(gap closure — UAT round 2: teardown SIGSEGV, tests 1+5 single event; blocked on 12-13 for serial build/port contention and clean evidence)*
 
 - [x] 12-14-PLAN.md — Release the GlobalDB host co-owner before GossipPubSub::Stop in Peer::Stop, prove three consecutive serial full multi-node passes with zero new crash reports, and record the thirdparty StopImpl hardening and MintRecoveryDiagnostics UAF as deferred items.
+
+**Wave 15** *(gap closure round 3 — VERIFICATION gaps 1+2: post-review-fix full-suite flakiness; developer option (a) on the escalation gate)*
+
+- [ ] 12-15-PLAN.md — Attribute every intermittent full-suite signature from the preserved evidence logs, close the SameBurn marker wait-predicate check-then-act gap, and fix the WR-02 notify-without-paired-mutex contract violation in TransactionManager::Stop and ConsensusManager::Close.
+
+**Wave 16** *(gap closure round 3 — VERIFICATION gap 3: teardown-invariant propagation; serialized after 12-15 for build-tree and port contention)*
+
+- [ ] 12-16-PLAN.md — Mirror the 12-14 Peer::Stop teardown order into ComponentPeer::Stop (CR-01), ~CRDTFixture (CR-02), and both lifecycle multi-validator teardown loops (WR-01 same class), and prove every affected suite green with zero new crash reports.
+
+**Wave 17** *(gap closure round 3 — evidence gate; depends on 12-15 and 12-16)*
+
+- [ ] 12-17-PLAN.md — Re-run the three-consecutive-serial-pass evidence gate on the final build with crash-report absence proof, the sibling suite matrix, and an honest STATE.md resolution of the 12-14 evidence-gap blocker.
 
 ## Progress
 
