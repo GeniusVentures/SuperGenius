@@ -263,6 +263,8 @@ namespace sgns
          *
          * @param[in] amount  Total amount to lock in escrow.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
+         * @param[in] network_scope  Private-network identity scoping the escrow chain id
+         *             (empty = public scope; the chain id stays at the genius default).
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
          *
          * @note The escrow hold carries no payout metadata. The developer address and cut are
@@ -270,7 +272,8 @@ namespace sgns
          *       single job may be running apps from different developers.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
-                                                                            const std::string &job_id );
+                                                                            const std::string &job_id,
+                                                                            std::string        network_scope = "" );
 
         outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
                                                 const SGProcessing::TaskResult          &task_result,
