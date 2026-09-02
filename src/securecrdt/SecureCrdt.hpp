@@ -81,9 +81,6 @@ namespace sgns::securecrdt
         /// @brief Returns this node's isolated policy registry.
         SecureCrdtRegistry &Registry();
 
-        /// @brief Returns this node's isolated policy registry.
-        const SecureCrdtRegistry &Registry() const;
-
         /**
          * @brief Proposes a value for a registered base_key. Runs the SAME
          *        codec/semantic check the remote filter callback runs on a
