@@ -271,10 +271,23 @@ namespace
             blockchain.reset();
             if ( io ) io->stop();
             if ( io_thread.joinable() ) io_thread.join();
-            if ( pubsub ) pubsub->Stop();
+            /*
+             * Teardown invariant (asio), mirroring Peer::Stop in
+             * multi_node_finality_fault_test.cpp:389-405: the io_context owned
+             * by GossipPubSub must outlive every I/O object that touches it.
+             * GlobalDB's graphsync chain co-owns the libp2p host wired from
+             * pubsub->GetHost() at StartPeer, and the account holds db-backed
+             * handles, so BOTH must be reset BEFORE pubsub->Stop(). Otherwise
+             * StopImpl destroys m_host/m_context while external co-owners keep
+             * the host alive, and the later ~BasicHost deregisters leftover
+             * TcpConnections from the freed kqueue reactor — the teardown
+             * SIGSEGV closed by 12-14. With db and account released first,
+             * pubsub->Stop() is the FINAL host release.
+             */
             db.reset();
-            pubsub.reset();
             account.reset();
+            if ( pubsub ) pubsub->Stop();
+            pubsub.reset();
             io.reset();
         }
     };
