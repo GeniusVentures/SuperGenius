@@ -7,6 +7,7 @@
 #include "account/GeniusSigner.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
+#include "testutil/trust_candidate_core.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 
@@ -82,20 +83,8 @@ namespace
 
         void ConfirmInitialBurn()
         {
-            auto snapshot         = store_->LoadAndVerify().value();
-            const auto burn_bytes = snapshot.burn.CanonicalBytes().value();
-            // Hand-rolled twin of BurnConfig::BurnCandidateCore: trustedpeer
-            // tests must not link the account library that owns it.
-            const securecrdt::CandidateCore core{
-                securecrdt::CandidateCore::ENCODING_VERSION,
-                "burn-config",
-                snapshot.burn.network_id,
-                securecrdt::CandidateKind::BurnConfig,
-                snapshot.burn.version,
-                snapshot.burn.expected_previous_hash,
-                snapshot.burn.authorizing_policy_hash,
-                burn_bytes,
-            };
+            auto       snapshot      = store_->LoadAndVerify().value();
+            const auto core          = sgns::testutil::BurnCandidateCore( snapshot.burn ).value();
             const auto authorization = core.CanonicalBytes().value();
             multisig::CollectedSignatures proof{
                 { signers_[0].GetAddress(), signers_[0].Sign( authorization ) },
@@ -132,10 +121,7 @@ TEST_F( OperatorApprovalTest, FreshRegistryIsEmptyAndPolicyOperationsRequireConf
     EXPECT_TRUE( registry_->GetCurrentPeers().empty() );
     EXPECT_FALSE( registry_->IsGenesisConfirmed() );
     EXPECT_TRUE( registry_->ListPendingPolicyCandidates().has_error() );
-    EXPECT_TRUE( registry_
-                     ->ProposePolicyCandidate( Manifest().Canonicalized().has_value() ? QuorumPolicyState{}
-                                                                                      : QuorumPolicyState{} )
-                     .has_error() );
+    EXPECT_TRUE( registry_->ProposePolicyCandidate( QuorumPolicyState{} ).has_error() );
 }
 
 TEST_F( OperatorApprovalTest, ReviewedGenesisCommitsBeforePeersBecomeVisible )

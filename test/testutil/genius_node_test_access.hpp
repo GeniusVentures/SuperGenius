@@ -98,20 +98,6 @@ namespace sgns
             return outcome::success();
         }
 
-        static outcome::result<void> ConfirmInitialBurn( const std::shared_ptr<GeniusNode> &node )
-        {
-            if ( !node || !node->burn_config_ )
-            {
-                return outcome::failure( std::errc::invalid_argument );
-            }
-            auto confirmed = node->burn_config_->OnTrustedPeerGenesisConfirmed();
-            if ( confirmed.has_error() )
-            {
-                return confirmed.error();
-            }
-            return outcome::success();
-        }
-
         /// Drives the node's trust startup controller through one refresh pass. A local
         /// genesis approval submitted via ApproveConfiguredTrustGenesis does not fire the
         /// (remote-delta) candidate callback, so tests nudge the controller explicitly.
