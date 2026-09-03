@@ -1269,7 +1269,12 @@ namespace sgns
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
 
         std::string logdir = "";
-#ifndef SGNS_DEBUGLOGS
+        // The sink (console vs per-node file) is decided independently of the
+        // log levels below: SGNS_CONSOLE_LOG_TESTS forces console sinks so test
+        // binaries never open sgnslog2.log inside node directories (which pins
+        // them for the process on Windows) and CI console logs carry the full
+        // CRDT/graphsync trace. Levels keep each build type's intent.
+#if !defined( SGNS_DEBUGLOGS ) && !defined( SGNS_CONSOLE_LOG_TESTS )
         logdir = base_path + "/sgnslog2.log";
 #endif
 #ifdef SGNS_DEBUGLOGS

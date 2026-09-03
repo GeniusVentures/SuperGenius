@@ -136,13 +136,13 @@ target_include_directories(
 # Test library — uses in-memory secure storage via DI factory (no keychain prompts)
 add_library(genius_node_test ${GENIUS_NODE_SOURCES})
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
-# SGNS_DEBUGLOGS is consumed by GeniusNode.cpp (InitLoggers), which compiles into
-# THIS library — defining it on the test executable alone never reached it, so
-# Release test builds still opened per-node sgnslog2.log file sinks (pinning
-# directories on Windows) and logged CRDT/graphsync detail only to files,
-# leaving CI console logs unusable for diagnosis. Test binaries get console
-# logging in every build type; the production genius_node library is unchanged.
-target_compile_definitions(genius_node_test PRIVATE SGNS_DEBUGLOGS)
+# SGNS_CONSOLE_LOG_TESTS is consumed by GeniusNode.cpp (InitLoggers), which
+# compiles into THIS library — a definition on the test executable alone never
+# reached it. It forces console sinks (no per-node sgnslog2.log, which pins
+# node directories for the process on Windows and hides the CRDT/graphsync
+# trace from CI console logs) while keeping each build type's log levels.
+# Production genius_node is unchanged.
+target_compile_definitions(genius_node_test PRIVATE SGNS_CONSOLE_LOG_TESTS)
 
 add_dependencies(genius_node rlp)
 
