@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: paused
-last_updated: "2026-09-03T14:27:02.205Z"
-last_activity: 2026-09-03
+status: executing
+last_updated: "2026-09-03T15:25:41.669Z"
+last_activity: 2026-09-03 -- Phase 12 planning complete
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 32
-  completed_plans: 34
+  total_plans: 34
+  completed_plans: 35
   percent: 80
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
 Plan: 20 of 20 (12-20 executed to its plan-prescribed gate-entry STOP; series withheld)
-Status: Stopped at gate-entry — round-5 scope funded (Option A repair, then gate re-attempt)
-Last activity: 2026-09-03
+Status: Ready to execute
+Last activity: 2026-09-03 -- Phase 12 planning complete
 
 Progress: [██████████] 100%
 
