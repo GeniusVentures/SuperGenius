@@ -839,8 +839,15 @@ namespace sgns::crdt
             uint64_t base_ms = 5000;
             uint64_t max_ms  = 30000;
 
-            // Calculate exponential backoff
-            uint64_t timeout = base_ms * ( 1ULL << failures );
+            // Calculate exponential backoff. WR-06 (12-REVIEW.md round 5):
+            // failures increments without bound (AddToBlackList), entries
+            // are never erased, and resets happen only on successful
+            // connection, so shifting 1ULL by the raw failure count is UB
+            // at failures >= 64; the
+            // caps are reached by 2^6 and 2^8, so clamping the exponent at
+            // 16 preserves every reachable behavior.
+            const uint64_t exponent = failures < 16 ? failures : 16;
+            uint64_t        timeout  = base_ms * ( 1ULL << exponent );
             return std::min( timeout, max_ms );
         }
         // For never-connected peers:
@@ -849,8 +856,9 @@ namespace sgns::crdt
         uint64_t base_ms = 10000;
         uint64_t max_ms  = 1800000;
 
-        // Calculate exponential backoff
-        uint64_t timeout = base_ms * ( 1ULL << failures );
+        // Calculate exponential backoff (exponent clamped per WR-06 above)
+        const uint64_t exponent = failures < 16 ? failures : 16;
+        uint64_t        timeout  = base_ms * ( 1ULL << exponent );
         return std::min( timeout, max_ms );
     }
 
