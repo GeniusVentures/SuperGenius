@@ -740,6 +740,32 @@ namespace sgns::trustedpeer
         return LoadAndVerifyUnlocked();
     }
 
+    outcome::result<void> TrustStateStore::CheckVersionSkip( uint64_t current_version,
+                                                              uint64_t candidate_version ) const
+    {
+        if ( current_version == std::numeric_limits<uint64_t>::max() || candidate_version != current_version + 1 )
+        {
+            return outcome::failure( Error::VERSION_SKIP );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> TrustStateStore::CheckPredecessorAndAuthorizer( const std::string &expected_previous_hash,
+                                                                          const std::string &authorizing_policy_hash,
+                                                                          const std::string &current_domain_hash,
+                                                                          const std::string &current_policy_hash ) const
+    {
+        if ( expected_previous_hash != current_domain_hash )
+        {
+            return outcome::failure( Error::WRONG_PREDECESSOR );
+        }
+        if ( authorizing_policy_hash != current_policy_hash )
+        {
+            return outcome::failure( Error::WRONG_AUTHORIZER );
+        }
+        return outcome::success();
+    }
+
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitPolicySuccessor(
         const QuorumPolicyState             &candidate,
         const multisig::CollectedSignatures &proof,
@@ -783,20 +809,12 @@ namespace sgns::trustedpeer
             }
             return outcome::failure( Error::VERSION_DECREASE );
         }
-        if ( current.policy.version == std::numeric_limits<uint64_t>::max() ||
-             candidate.version != current.policy.version + 1 )
-        {
-            return outcome::failure( Error::VERSION_SKIP );
-        }
+        BOOST_OUTCOME_TRY( CheckVersionSkip( current.policy.version, candidate.version ) );
         const auto current_hash = current.policy.Hash().value();
-        if ( candidate.expected_previous_hash != current_hash )
-        {
-            return outcome::failure( Error::WRONG_PREDECESSOR );
-        }
-        if ( candidate.authorizing_policy_hash != current_hash )
-        {
-            return outcome::failure( Error::WRONG_AUTHORIZER );
-        }
+        BOOST_OUTCOME_TRY( CheckPredecessorAndAuthorizer( candidate.expected_previous_hash,
+                                                          candidate.authorizing_policy_hash,
+                                                          current_hash,
+                                                          current_hash ) );
         auto canonical = candidate.Canonicalized();
         auto bytes     = candidate.CanonicalBytes();
         auto hash      = candidate.Hash();
@@ -885,19 +903,11 @@ namespace sgns::trustedpeer
                   Buffer( EncodeSignedRecord( BURN_RECORD, *bytes, signed_bytes, proof ) ) },
                 { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( candidate.version, *candidate_hash ) ) } );
         }
-        if ( current.burn.version == std::numeric_limits<uint64_t>::max() ||
-             candidate.version != current.burn.version + 1 )
-        {
-            return outcome::failure( Error::VERSION_SKIP );
-        }
-        if ( candidate.expected_previous_hash != current.burn.Hash().value() )
-        {
-            return outcome::failure( Error::WRONG_PREDECESSOR );
-        }
-        if ( candidate.authorizing_policy_hash != current.policy.Hash().value() )
-        {
-            return outcome::failure( Error::WRONG_AUTHORIZER );
-        }
+        BOOST_OUTCOME_TRY( CheckVersionSkip( current.burn.version, candidate.version ) );
+        BOOST_OUTCOME_TRY( CheckPredecessorAndAuthorizer( candidate.expected_previous_hash,
+                                                          candidate.authorizing_policy_hash,
+                                                          current.burn.Hash().value(),
+                                                          current.policy.Hash().value() ) );
         auto bytes = candidate.CanonicalBytes();
         auto hash  = candidate.Hash();
         if ( !bytes || !hash || candidate.network_id != network_id_ )
