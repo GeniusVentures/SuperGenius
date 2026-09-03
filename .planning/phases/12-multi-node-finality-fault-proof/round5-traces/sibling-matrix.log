@@ -1,0 +1,18 @@
+# 12-22 sibling matrix (round-5, same build generation as the gate series - no rebuild)
+# date/time: 2026-09-03 14:40:50 -0300
+# 1-min load: 1.58
+# serial ctest alternation: smoke, lifecycle, cert-fallback (FIRST run on the round-4+ generation), ownership
+Internal ctest changing into directory: /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+Test project /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+    Start  8: transaction_manager_certificate_fallback_test
+1/4 Test  #8: transaction_manager_certificate_fallback_test ........   Passed   32.10 sec
+    Start 23: consensus_pending_lifecycle_test
+2/4 Test #23: consensus_pending_lifecycle_test .....................   Passed   41.93 sec
+    Start 24: multi_node_finality_fault_compatibility_smoke_test
+3/4 Test #24: multi_node_finality_fault_compatibility_smoke_test ...   Passed    6.48 sec
+    Start 26: multi_node_finality_fault_process_ownership_test
+4/4 Test #26: multi_node_finality_fault_process_ownership_test .....   Passed    0.32 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =  80.84 sec
