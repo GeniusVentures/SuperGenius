@@ -1,0 +1,23 @@
+=== P12 round6 sibling matrix (serial, one run each) ===
+date-utc: 2026-09-03T18:37:14Z
+git-head: 6fa285fe
+1min-load: 6.22
+targets: multi_node_finality_fault_compatibility_smoke_test, consensus_pending_lifecycle_test, transaction_manager_certificate_fallback_test
+extra:   multi_node_finality_fault_process_ownership_test (runner filter changed this round — verify CTest still green)
+
+--- multi_node_finality_fault_compatibility_smoke_test ---
+1/1 Test #24: multi_node_finality_fault_compatibility_smoke_test ...   Passed    5.66 sec
+100% tests passed, 0 tests failed out of 1
+
+--- consensus_pending_lifecycle_test ---
+1/1 Test #23: consensus_pending_lifecycle_test ...   Passed   41.55 sec
+100% tests passed, 0 tests failed out of 1
+
+--- transaction_manager_certificate_fallback_test ---
+1/1 Test #8: transaction_manager_certificate_fallback_test ...   Passed   30.93 sec
+100% tests passed, 0 tests failed out of 1
+
+--- multi_node_finality_fault_process_ownership_test ---
+1/1 Test #26: multi_node_finality_fault_process_ownership_test ...   Passed    0.21 sec
+100% tests passed, 0 tests failed out of 1
+

@@ -1,0 +1,17 @@
+=== P12 round6 evidence gate — run A ===
+date-utc:      2026-09-03T18:29:46Z
+git-head:      6fa285fe
+suite:         multi_node_finality_fault_test (reduced: 6 FinalityFaultNetwork scenarios, 13 before removal)
+pre-run-1min-load: 2.45
+note: contamination regime for earlier rounds was 15-20; today's load is far below it
+command: ctest --test-dir build/OSX/Release -R '^multi_node_finality_fault_test$' --output-on-failure
+
+Internal ctest changing into directory: /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+Test project /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+    Start 25: multi_node_finality_fault_test
+1/1 Test #25: multi_node_finality_fault_test ...   Passed  132.65 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) = 132.67 sec
+ctest-rc=0

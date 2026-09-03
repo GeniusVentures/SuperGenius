@@ -1,0 +1,5 @@
+=== P12 round6 crash check ===
+date-utc: 2026-09-03T18:38:59Z
+window: gate start (marker /var/folders/q4/j8ttdlss0xdf0hnkmskvc37r0000gn/T/tmp.JZGj9KUvxt) through sibling matrix completion
+new .ips in ~/Library/Logs/DiagnosticReports: 0
+result: PASS — zero new crash reports during 3 gate runs + sibling matrix (incl. process_ownership)
