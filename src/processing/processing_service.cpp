@@ -123,6 +123,24 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingServiceImpl::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        {
+            std::scoped_lock lockFilter( m_membershipFilterMutex );
+            m_membershipFilter = filter;
+        }
+        // Apply to all existing nodes (mirrors setBitswap); nodes created later pick the
+        // filter up at the node-creation sites, so there is no enrollment window.
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && filter )
+            {
+                node->SetMembershipFilter( filter );
+            }
+        }
+    }
+
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
@@ -169,6 +187,22 @@ namespace sgns::processing
         {
             m_logger->trace( "[{}] Invalid message.", node_address_ );
             return;
+        }
+
+        // Membership gate (15-13): drop messages whose transport sender is not an
+        // authorized member before ANY grid handling. Empty filter = public pass-through;
+        // empty/malformed `from` is denied under a set filter (fail-closed, T-15-13-04).
+        {
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+            }
+            if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+            {
+                m_logger->debug( "[{}] Grid channel message from unauthorized sender ignored", node_address_ );
+                return;
+            }
         }
 
         m_logger->trace( "[{}] Valid message.", node_address_ );
@@ -391,6 +425,16 @@ namespace sgns::processing
                 if ( m_bitswap )
                 {
                     node->setBitswap( m_bitswap );
+                }
+                // Apply membership filter to newly created node (no enrollment window)
+                sgns::networkregistry::MembershipFilter membershipFilter;
+                {
+                    std::scoped_lock lockFilter( m_membershipFilterMutex );
+                    membershipFilter = m_membershipFilter;
+                }
+                if ( membershipFilter )
+                {
+                    node->SetMembershipFilter( membershipFilter );
                 }
             }
         }
@@ -763,6 +807,16 @@ namespace sgns::processing
         if ( node != nullptr )
         {
             m_processingNodes[subTaskQueueId] = node;
+            // Apply membership filter to newly created node (no enrollment window)
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+            }
+            if ( membershipFilter )
+            {
+                node->SetMembershipFilter( membershipFilter );
+            }
         }
 
         lock.unlock(); // Release the mutex before potentially long operations

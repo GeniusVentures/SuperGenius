@@ -11,6 +11,7 @@
 #include <optional>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_engine.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
@@ -67,6 +68,10 @@ namespace sgns::processing
 
         /** Set bitswap instance for data availability checks */
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+        /** Set membership filter forwarded to this node's results channel (queue accessor)
+         *  and processing queue channel — gates non-member senders at both handlers. */
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)

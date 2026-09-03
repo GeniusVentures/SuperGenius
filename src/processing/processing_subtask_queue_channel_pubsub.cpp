@@ -89,9 +89,33 @@ namespace sgns::processing
         m_queueUpdateSink = std::move( queueUpdateSink );
     }
 
+    void ProcessingSubTaskQueueChannelPubSub::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+        m_membershipFilter = std::move( filter );
+    }
+
     void ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage(
         boost::optional<const GossipPubSub::Message &> message )
     {
+        // Membership gate (15-13): drop messages whose transport sender is not an
+        // authorized member BEFORE any queue ownership/sync handling. Empty filter =
+        // public pass-through; empty/malformed `from` is denied under a set filter
+        // (fail-closed).
+        if ( message )
+        {
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+                membershipFilter = m_membershipFilter;
+            }
+            if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+            {
+                m_logger->debug( "Processing queue channel message from unauthorized sender ignored" );
+                return;
+            }
+        }
+
         if ( message )
         {
             SGProcessing::ProcessingChannelMessage channelMesssage;

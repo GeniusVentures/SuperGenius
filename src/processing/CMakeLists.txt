@@ -58,6 +58,7 @@ target_link_libraries(processing_service
     ProcessingBase
     SGProcessingProto
     ipfs-pubsub
+    networkregistry
     PRIVATE
     crdt_globaldb
     ${WIN_CRYPT_LIBRARY}

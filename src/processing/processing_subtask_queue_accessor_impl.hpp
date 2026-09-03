@@ -6,6 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
@@ -13,6 +14,7 @@
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <list>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <boost/asio.hpp>
@@ -59,6 +61,10 @@ namespace sgns::processing
 
         /// @brief Set bitswap instance for data availability checks on IPFS results.
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+        /// @brief Set membership filter gating the results channel (empty = public
+        ///        pass-through; non-member senders are dropped before any result handling).
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
@@ -107,6 +113,9 @@ namespace sgns::processing
 
         std::function<void( const std::string & )> m_mirrorResultCallback; ///< Invoked when a mirrored result arrives.
         mutable std::mutex                         m_mutexMirrorCallback;
+
+        sgns::networkregistry::MembershipFilter m_membershipFilter;    ///< Membership gate for results-channel messages (empty = public).
+        mutable std::mutex                      m_mutexMembershipFilter; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap; ///< For data availability checks on IPFS results.
 

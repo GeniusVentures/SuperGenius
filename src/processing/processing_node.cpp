@@ -129,6 +129,28 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingNode::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        // Results channel (SubTaskQueueAccessorImpl::OnResultChannelMessage gate)
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->SetMembershipFilter( filter );
+            }
+        }
+        // Processing queue channel (ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage gate)
+        if ( m_queueChannel )
+        {
+            auto channel = std::dynamic_pointer_cast<ProcessingSubTaskQueueChannelPubSub>( m_queueChannel );
+            if ( channel )
+            {
+                channel->SetMembershipFilter( std::move( filter ) );
+            }
+        }
+    }
+
     void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
                                      std::chrono::milliseconds msSubscriptionWaitingDuration )
     {

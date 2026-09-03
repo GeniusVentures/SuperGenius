@@ -75,6 +75,12 @@ namespace sgns::processing
         m_bitswap = std::move( bitswap );
     }
 
+    void SubTaskQueueAccessorImpl::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+        m_membershipFilter = std::move( filter );
+    }
+
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
     {
         bool ret           = false;
@@ -390,6 +396,23 @@ namespace sgns::processing
         if ( !_this )
         {
             return;
+        }
+
+        // Membership gate (15-13): drop messages whose transport sender is not an
+        // authorized member BEFORE any result/mirror handling. Empty filter = public
+        // pass-through; empty/malformed `from` is denied under a set filter (fail-closed).
+        if ( message )
+        {
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::lock_guard<std::mutex> guard( _this->m_mutexMembershipFilter );
+                membershipFilter = _this->m_membershipFilter;
+            }
+            if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+            {
+                _this->m_logger->debug( "Results channel message from unauthorized sender ignored" );
+                return;
+            }
         }
 
         bool rebroadcast_results = false;

@@ -7,8 +7,10 @@
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP
 
 #include <future>
+#include <mutex>
 #include "outcome/outcome.hpp"
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_subtask_queue_channel.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
@@ -50,6 +52,11 @@ namespace sgns::processing
         */
         void SetQueueUpdateSink( QueueUpdateSink queueUpdateSink );
 
+        /** Sets a membership filter gating this processing queue channel (empty = public
+         *  pass-through; non-member senders are dropped before any queue handling).
+         */
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
+
         /** Starts a listening to pubsub channel
          * @param msSubscriptionWaitingDuration - Duration to wait for subscription, 0 means no waiting
          * @return If msSubscriptionWaitingDuration > 0: outcome with success/failure and actual wait time
@@ -83,6 +90,9 @@ namespace sgns::processing
 
         std::function<bool( const SGProcessing::SubTaskQueueRequest & )> m_queueRequestSink;
         std::function<bool( SGProcessing::SubTaskQueue * )>              m_queueUpdateSink;
+
+        sgns::networkregistry::MembershipFilter m_membershipFilter;       ///< Membership gate for queue-channel messages (empty = public).
+        mutable std::mutex                     m_mutexMembershipFilter; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
 
