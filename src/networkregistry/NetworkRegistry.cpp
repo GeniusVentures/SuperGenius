@@ -96,6 +96,16 @@ namespace sgns::networkregistry
             count = static_cast<size_t>( std::stoull( number ) );
             return true;
         }
+
+        /// @brief Logger for factory-path failures that occur BEFORE an
+        ///        instance (and its member logger_) exists. Function-local
+        ///        static defers logger creation to first use, after the
+        ///        logging system is configured at runtime.
+        sgns::base::Logger &FactoryLogger()
+        {
+            static sgns::base::Logger logger = sgns::base::createLogger( "networkregistry" );
+            return logger;
+        }
     } // namespace
 
     //
@@ -352,6 +362,29 @@ namespace sgns::networkregistry
             }
         }
 
+        // WR-03: non-destructive duplicate check. Resolving an existing
+        // policy entry for this network id means a live registry already
+        // owns the branch. Fail here -- BEFORE any make_shared/Register call
+        // -- so nothing is registered, no instance is created, and the live
+        // entry (and the registry still using it) remains fully functional.
+        // Without this, SecureCrdtRegistry::Register would REPLACE the live
+        // entry, the destroyed duplicate's ~NetworkRegistry -> Unregister()
+        // would then remove the newly inserted entry, and the first registry
+        // would be left with no policy entry (every subsequent write failing
+        // UNREGISTERED_KEY).
+        const auto base_key = DefaultBaseKey( private_network_id );
+        if ( secure_crdt->Registry().Resolve( base_key.GetKey() ).has_value() )
+        {
+            // Names the public network id / derived base key only -- never
+            // any key material (D-03 logging posture).
+            FactoryLogger()->error( "{}: a registry for private network {} is already registered (base key {}); "
+                                    "duplicate construction refused, live registry untouched",
+                                    __func__,
+                                    private_network_id,
+                                    base_key.GetKey() );
+            return outcome::failure( std::errc::address_in_use );
+        }
+
         auto instance = std::make_shared<NetworkRegistry>( std::move( secure_crdt ),
                                                            std::move( global_trusted_peers ),
                                                            private_network_id,
@@ -359,16 +392,37 @@ namespace sgns::networkregistry
                                                            network_quorum_threshold,
                                                            std::move( initial_network_signers ),
                                                            std::move( pnet_key_fingerprint ),
-                                                           DefaultBaseKey( private_network_id ),
+                                                           base_key,
                                                            std::move( global_db ) );
         if ( !instance->RegisterSignerSetSource() )
         {
-            return outcome::failure( std::errc::file_exists );
+            return outcome::failure( std::errc::address_in_use );
         }
         if ( instance->global_db_ )
         {
             instance->RegisterCrdtChangeCallback();
         }
+        // WR-04: both production wiring paths run SecureCrdt::RegisterFilters()
+        // BEFORE this factory (GeniusNode.cpp:1037 vs :1059; the
+        // TrustStartupController path has the same ordering), so the
+        // network-registry/<id> pattern would otherwise receive NO ingest
+        // element filter and remote-originated unsigned/under-signed
+        // membership payloads and sig children would be accepted into the
+        // datastore without canonical-signer verification. RegisterFilters()
+        // is safely re-runnable: it re-snapshots AllEntries() (now including
+        // this registry's pattern) and re-installs one element filter per
+        // pattern (re-registration replaces-and-succeeds).
+        if ( !instance->secure_crdt_->RegisterFilters() )
+        {
+            instance->logger_->error( "{}: re-registering SecureCrdt ingest filters failed for base key {}",
+                                      __func__,
+                                      instance->base_key_.GetKey() );
+            return outcome::failure( std::errc::io_error );
+        }
+        instance->logger_->info( "{}: SecureCrdt ingest filters re-registered -- network-registry branch {} "
+                                 "is now ingest-filtered",
+                                 __func__,
+                                 instance->base_key_.GetKey() );
         return instance;
     }
 
@@ -449,14 +503,33 @@ namespace sgns::networkregistry
             {
                 return;
             }
+            // WR-02: drain-once semantics -- the notification that woke this
+            // iteration is consumed here, WHILE still holding refresh_mutex_
+            // (before the unlock below, which stays before TryConfirm). The
+            // mutex-guarded clear is ordered against the datastore callback's
+            // mutex-guarded notify, so a notification arriving DURING
+            // TryConfirm re-sets the flag and the next loop iteration wakes
+            // and processes it -- no lost refresh. After the last
+            // notification the wait predicate is false again and the thread
+            // returns to waiting (no permanent busy-spin of TryConfirm +
+            // GlobalDB scans). Deliberately NO retry semantics: re-setting
+            // the flag after a success(false) TryConfirm would resurrect the
+            // spin.
+            refresh_pending_.store( false, std::memory_order_release );
             lock.unlock();
 
+            refresh_attempts_.fetch_add( 1, std::memory_order_relaxed );
             auto confirmed = TryConfirm();
             if ( confirmed.has_error() )
             {
                 logger_->warn( "{}: TryConfirm failed: {}", __func__, confirmed.error().message() );
             }
         }
+    }
+
+    uint64_t NetworkRegistry::RefreshAttemptsForTesting() const
+    {
+        return refresh_attempts_.load( std::memory_order_relaxed );
     }
 
     outcome::result<sgns::securecrdt::SignerSetSnapshot> NetworkRegistry::CurrentSignerSet() const

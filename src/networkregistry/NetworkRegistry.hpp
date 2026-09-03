@@ -215,7 +215,11 @@ namespace sgns::networkregistry
          * @return outcome::success(instance), or
          *         outcome::failure(SecureCrdt::Error::QUORUM_THRESHOLD_BELOW_FLOOR)
          *         if either floor check fails -- construction fails, no
-         *         instance is produced.
+         *         instance is produced -- or
+         *         outcome::failure(std::errc::address_in_use) if a registry
+         *         for this private network id is already registered (the
+         *         duplicate attempt registers NOTHING and the live entry --
+         *         and the registry using it -- is left fully functional).
          */
         static outcome::result<std::shared_ptr<NetworkRegistry>> New(
             std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
@@ -315,6 +319,16 @@ namespace sgns::networkregistry
         bool IsBootstrapConfirmed() const;
 
         /**
+         * @brief TEST SEAM: number of TryConfirm attempts the refresh thread
+         *        has performed (one increment per attempt). Lets regression
+         *        tests observe drain-once refresh semantics -- after a
+         *        notification is consumed the thread must return to waiting
+         *        instead of spinning (WR-02).
+         * @return Total refresh-loop TryConfirm attempt count.
+         */
+        uint64_t RefreshAttemptsForTesting() const;
+
+        /**
          * @brief Unregisters this instance's signer-set source and change
          *        callback (test-fixture teardown helper).
          */
@@ -387,6 +401,8 @@ namespace sgns::networkregistry
         std::condition_variable refresh_cv_;
         std::atomic<bool>       refresh_pending_{ false };
         std::atomic<bool>       refresh_stopping_{ false };
+        /// @brief Total refresh-thread TryConfirm attempts (test seam, WR-02).
+        std::atomic<uint64_t>   refresh_attempts_{ 0 };
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "networkregistry" );
     };
