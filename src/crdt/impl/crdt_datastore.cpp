@@ -1547,6 +1547,17 @@ namespace sgns::crdt
         auto cid_string_result = cid.toString();
         logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid_string_result.value() );
 
+        // Root jobs are processed one at a time, so a worker waiting on a job it
+        // (or a sibling) must process would wait forever. Fail instead of hanging.
+        if ( IsCurrentThreadInternalWorker() )
+        {
+            logger_->error( "WaitForJob: called from CRDT worker thread for CID {}; refusing to self-deadlock",
+                            cid_string_result.value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_.erase( cid );
+            return outcome::failure( Error::NODE_CREATION );
+        }
+
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();
         auto deadline         = start_time + timeout_duration;
