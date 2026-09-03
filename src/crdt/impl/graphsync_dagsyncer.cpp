@@ -916,11 +916,10 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const PeerId &peer ) const
     {
+        // Routes are kept: getNode already skips blacklisted peers, and erasing the
+        // only route to a CID turned a temporary backoff into an unfetchable CID
+        // until the sender's next rebroadcast re-added it.
         AddToBlackList( peer );
-        if ( IsOnBlackList( peer ) )
-        {
-            EraseRoutesFromPeerID( peer );
-        }
         return outcome::success();
     }
 
@@ -977,40 +976,6 @@ namespace sgns::crdt
 
         routes.erase( pos );
         routes.insert( routes.begin(), peerKey );
-    }
-
-    void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
-    {
-        // First find the peer key in the peer index
-        PeerKey peerKeyToRemove;
-
-        {
-            std::lock_guard registry_lock( registry_mutex_ );
-            auto            it = peer_index_.find( peer );
-            if ( it == peer_index_.end() )
-            {
-                // Peer not found in registry, nothing to erase
-                return;
-            }
-            peerKeyToRemove = it->second;
-        }
-
-        // Remove all routes that point to this peer
-        std::lock_guard routing_lock( routing_mutex_ );
-        for ( auto it = routing_.begin(); it != routing_.end(); )
-        {
-            auto &route_keys = it->second;
-            route_keys.erase( std::remove( route_keys.begin(), route_keys.end(), peerKeyToRemove ), route_keys.end() );
-            if ( route_keys.empty() )
-            {
-                logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
-                it = routing_.erase( it );
-            }
-            else
-            {
-                ++it;
-            }
-        }
     }
 
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid )

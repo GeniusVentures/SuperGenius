@@ -151,7 +151,6 @@ namespace sgns::crdt
         outcome::result<std::vector<PeerKey>> GetRouteKeys( const CID &cid ) const;
         outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
         void                       MoveRoutePeerToFront( const CID &cid, PeerKey peerKey ) const;
-        void                       EraseRoutesFromPeerID( const PeerId &peer ) const;
         void                       EraseRoute( const CID &cid );
 
         static bool IsConnectionFailureStatus( ResponseStatusCode code );
