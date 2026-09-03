@@ -2491,6 +2491,28 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         RestartPeer( network.first );
         ASSERT_TRUE( network.first.consensus );
         ConnectPeers( Peers( network ) );
+        // 2026-09-03 developer directive fallback (round-4 gap closure):
+        // "post-restart certificate re-publication / surviving-replica serving".
+        // The blacklist-duration hypothesis was DISPROVEN (round4-traces/
+        // hypothesis-verdict.md): after RestartPeer the certificate-CID
+        // graphsync route to the recreated publisher is erased on the first
+        // blacklist, the boot-window re-dial fails transport-level, and no
+        // surviving replica or re-publication exists for the completed
+        // certificate. The recreated publisher durably holds the accepted
+        // certificate (the Mint-effects barrier is downstream of certificate
+        // acceptance and persistence-before-advertisement), so re-advertise the
+        // UNCHANGED durable certificate through the public ingress route after
+        // reconnecting, mirroring the recorded SubmitProposal re-advertisement
+        // precedent (STATE.md: offline GossipPubSub broadcasts are not
+        // replayed). The byte-identical replay is idempotent (CERT-05) and
+        // recipients process it receive-only through validation (CERT-02) —
+        // only the deterministic publisher authority inside SubmitCertificate
+        // writes the certificate key.
+        {
+            const auto durable_certificate = network.first.consensus->GetCertificateBySlot( slot );
+            ASSERT_TRUE( durable_certificate.has_value() );
+            ASSERT_TRUE( network.first.consensus->SubmitCertificate( durable_certificate.value() ).has_value() );
+        }
         ASSERT_WAIT_FOR_CONDITION( [&] {
             return HasSingleDurableMint( network.first, slot, *winner, *loser ) &&
                    HasSingleDurableMint( network.second, slot, *winner, *loser ) &&
