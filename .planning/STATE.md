@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 15
-status: verifying
-last_updated: "2026-09-03T18:06:33.264Z"
+status: executing
+last_updated: "2026-09-03T18:40:02.514Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 19
   completed_phases: 6
   total_plans: 68
-  completed_plans: 50
+  completed_plans: 51
   percent: 32
 ---
 
@@ -30,15 +30,15 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 15 (private-networks-consume-privatenetworkid-identity-and-bind-) — EXECUTING
-Plan: 14 of 16 (cycle-2 gap closure: 15-14 done; 15-15, 15-16 remain; 15-04 permanently skipped by owner order)
-Status: Executing — gap-closure cycle 2 (CR-G01 closed by 15-14; CR-G02 → 15-15)
+Plan: 15 of 16 (cycle-2 gap closure: 15-14 done; 15-15, 15-16 remain; 15-04 permanently skipped by owner order)
+Status: Ready to execute
 Last activity: 2026-09-03
-**Progress:** [███████░░░] 74%
+**Progress:** [████████░░] 75%
 
 Last session:
-2026-09-03T18:05:59.677Z
+2026-09-03T18:40:02.510Z
 Stopped At:
-Completed 15-14-PLAN.md
+Completed 15-16-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -94,6 +94,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 15 P12 | 11min | 2 tasks | 3 files |
 | Phase 15 P13 | 20min | 2 tasks | 13 files |
 | Phase 15 P14 | 41min | 3 tasks | 23 files |
+| Phase 15 P16 | 30min | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -111,3 +112,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 15]: 15-14: CR-G01 closed — all four membership gates authenticate before authorizing via an application-layer envelope (embedded pubkey must derive the from-field PeerId + signature over magic+from+payload); unsigned/unverifiable denied under a set filter; public nodes byte-identical raw
 - [Phase 15]: 15-14: publishers seal with the SAME keypair that constructs the gossip host (SealGossipPayload); filter set + no key = publish fails closed; sign_messages=true at both production sites (wire sigs exist but are not consumed by SGNUS gates — gossip.hpp:129-135)
 - [Phase 15]: 15-14: forged-from proven mutation-verified — impostor envelope (member sealing with another member's key) dropped at gated ingest although membership admits; signature rebuilt over the wire from-field gives double protection (binding OR verify disabled still denies)
+- [Phase Phase 15]: 15-16: G-WR-01/02/04 closed — teardown removes the GlobalDB ingest element filter via SecureCrdt::UnregisterFiltersFor (token-guarded on UnregisterIf's removal result so a duplicate-New loser never strips a live registry's filter); RegisterCrdtChangeCallback failure fails New with address_in_use; SecureCrdtRegistry::RegisterIfAbsent makes policy registration atomic-detecting (no replace path, no destruction under the mutex) — Pattern-keyed teardown without ownership scoping would let the failed duplicate's destructor remove the LIVE filter (re-opening the unsigned-base-element griefing vector); New's failure paths explicitly Unregister() because the policy entry's peer_registry strong capture pins the instance — destructor-driven cleanup is unreachable while pinned
