@@ -137,6 +137,16 @@ namespace sgns::trustedpeer
         outcome::result<void> CommitWrites( const std::vector<Write> &writes );
         outcome::result<ConfirmedTrustSnapshot> CommitRecordAndHead( Write record_write, Write head_write );
 
+        // Shared successor-chain invariants: identical for the policy and burn
+        // chains, since both hang off the same monotonic-version/predecessor/
+        // authorizer rules. Kept separate from the equal-version-replay and
+        // domain-specific validation branches, which genuinely differ.
+        outcome::result<void> CheckVersionSkip( uint64_t current_version, uint64_t candidate_version ) const;
+        outcome::result<void> CheckPredecessorAndAuthorizer( const std::string &expected_previous_hash,
+                                                             const std::string &authorizing_policy_hash,
+                                                             const std::string &current_domain_hash,
+                                                             const std::string &current_policy_hash ) const;
+
         std::shared_ptr<storage::rocksdb> database_;
         uint16_t                          network_id_ = 0;
         BatchCommitter                    committer_;
