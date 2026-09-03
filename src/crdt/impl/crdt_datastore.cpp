@@ -115,6 +115,7 @@ namespace sgns::crdt
                             {
                                 continue;
                             }
+                            self->RetryDueFailedRoots();
                             if ( self->SeedNextExternalRoot() )
                             {
                                 continue;
@@ -226,7 +227,7 @@ namespace sgns::crdt
             }
             if ( !self_created_job_pending )
             {
-                pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
+                MarkJobFailedLocked( job.root_node_->getCID(), !job.created_by_self_ );
             }
         }
 
@@ -262,6 +263,7 @@ namespace sgns::crdt
             // Mark self-created job as completed
             std::lock_guard lock_jobs( dagWorkerMutex_ );
             pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
+            ClearFailedRootRetryLocked( job.root_node_->getCID() );
         }
         dagWorkerCv_.notify_all();
         if ( job.created_by_self_ )
@@ -543,8 +545,7 @@ namespace sgns::crdt
             logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
                             __func__ );
             auto keep_alive = shared_from_this();
-            std::thread( [keep_alive = std::move( keep_alive )]()
-                         { keep_alive->StopSyncerAfterWorkerDrain(); } )
+            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->StopSyncerAfterWorkerDrain(); } )
                 .detach();
             return;
         }
@@ -657,6 +658,8 @@ namespace sgns::crdt
             std::swap( rootCIDJobList_, empty1 );
             std::swap( selfCreatedJobList_, empty2 );
             pending_jobs_.clear();
+            failedRootRetries_.clear();
+            failedRootRetryCount_.store( 0, std::memory_order_relaxed );
         }
 
         {
@@ -722,6 +725,8 @@ namespace sgns::crdt
                         if ( it != pending_jobs_.end() && it->second == JobStatus::FAILED )
                         {
                             pending_jobs_.erase( it );
+                            // A fresh broadcast restarts the local retry budget.
+                            ClearFailedRootRetryLocked( bCastHeadCID );
                             retry_failed = true;
                         }
                     }
@@ -1631,9 +1636,82 @@ namespace sgns::crdt
     {
         {
             std::lock_guard lock( dagWorkerMutex_ );
-            pending_jobs_[cid] = JobStatus::FAILED;
+            // Only external root jobs reach MarkJobFailed (HandleRootCIDBlock).
+            MarkJobFailedLocked( cid, /*schedule_retry=*/true );
         }
         dagWorkerCv_.notify_all();
+    }
+
+    void CrdtDatastore::MarkJobFailedLocked( const CID &cid, bool schedule_retry )
+    {
+        pending_jobs_[cid] = JobStatus::FAILED;
+        if ( schedule_retry )
+        {
+            ScheduleFailedRootRetryLocked( cid );
+        }
+    }
+
+    void CrdtDatastore::ScheduleFailedRootRetryLocked( const CID &cid )
+    {
+        auto &entry = failedRootRetries_[cid];
+        ++entry.attempts;
+        if ( entry.attempts > MAX_FAILED_ROOT_RETRIES )
+        {
+            // Give up locally; the sender's periodic rebroadcast remains as backstop.
+            failedRootRetries_.erase( cid );
+            logger_->warn( "ScheduleFailedRootRetry: giving up local retries for CID {}", cid.toString().value() );
+        }
+        else
+        {
+            // attempts <= 8, so the shift cannot overflow.
+            entry.next_attempt = std::chrono::steady_clock::now() +
+                                 std::min( FAILED_ROOT_RETRY_BASE_DELAY * ( 1U << ( entry.attempts - 1 ) ),
+                                           FAILED_ROOT_RETRY_MAX_DELAY );
+        }
+        failedRootRetryCount_.store( failedRootRetries_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ClearFailedRootRetryLocked( const CID &cid )
+    {
+        failedRootRetries_.erase( cid );
+        failedRootRetryCount_.store( failedRootRetries_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::RetryDueFailedRoots()
+    {
+        if ( failedRootRetryCount_.load( std::memory_order_relaxed ) == 0 )
+        {
+            return;
+        }
+
+        std::vector<CID> due;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            const auto      now = std::chrono::steady_clock::now();
+            due.reserve( failedRootRetries_.size() );
+            for ( auto &[cid, entry] : failedRootRetries_ )
+            {
+                if ( entry.next_attempt <= now )
+                {
+                    due.push_back( cid );
+                    // Re-armed rather than parked: the retried job's failure reschedules
+                    // and its success erases the entry, so this only fires again if the
+                    // enqueue below was lost to a race.
+                    entry.next_attempt = now + FAILED_ROOT_RETRY_MAX_DELAY;
+                }
+            }
+        }
+
+        for ( const auto &cid : due )
+        {
+            // EnqueueRootCID flips a FAILED pending_jobs_ entry back to PENDING itself.
+            (void) dagSyncer_->DeleteCIDBlock( cid );
+            if ( EnqueueRootCID( cid ) )
+            {
+                logger_->info( "RetryDueFailedRoots: retrying root CID {}", cid.toString().value() );
+                dagWorkerCv_.notify_one();
+            }
+        }
     }
 
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
