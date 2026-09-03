@@ -16,6 +16,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
@@ -2319,6 +2320,26 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
 {
     sgns::GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier )
                                                     { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+
+    // 2026-09-03 developer directive (round-4 gap closure): activate the
+    // test-only GraphsyncDAGSyncer blacklist-backoff seam to exercise the
+    // boot-window masking hypothesis — after RestartPeer recreates a peer from
+    // the same root (same PeerId/port), fetchers that hit CANNOT_CONNECT
+    // against the still-booting host blacklist the reused identity for the
+    // production 5-30s backoff and stay skipped even once the host is
+    // reachable inside this suite's 25s recovery window. A flat 100 ms
+    // backoff lets fetchers retry the restarting peer within the window;
+    // production defaults are unchanged. The RAII guard restores the override
+    // to 0 on every exit path (including ASSERT fatalities) so later tests in
+    // this binary (PublisherLoss and the audit) inherit no sub-second backoff.
+    sgns::crdt::GraphsyncDAGSyncer::SetBlacklistBackoffTimeoutForTest( 100 );
+    struct BlacklistBackoffOverrideGuard
+    {
+        ~BlacklistBackoffOverrideGuard()
+        {
+            sgns::crdt::GraphsyncDAGSyncer::SetBlacklistBackoffTimeoutForTest( 0 );
+        }
+    } blacklist_backoff_override_guard;
 
     {
         auto network = StartNetwork( "restart-vote", 54601 );
