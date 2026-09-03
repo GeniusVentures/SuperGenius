@@ -1,10 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 phase: 12-multi-node-finality-fault-proof
 source: 12-REVIEW-FIX.md, 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-08-SUMMARY.md, 12-11-SUMMARY.md, 12-12-SUMMARY.md
 round: 2 (post-review-fix verification: commits 2b1a8e47..caf34458)
 started: 2026-09-02T10:49:43Z
-updated: 2026-09-02T11:55:00Z
+updated: 2026-09-03T18:50:00Z
 ---
 
 ## Current Test
@@ -52,10 +52,11 @@ blocked: 0
 ## Gaps
 
 - truth: "Both full CTest targets pass on the post-review-fix build — the original 5 UAT outcomes (same-burn canonical finality, late contender, restart exact-once, publisher loss, real-route ownership) hold."
-  status: failed
+  status: resolved
   reason: "User reported: multi_node_finality_fault_test crashed (macOS .ips 2026-09-02-075842): SIGSEGV KERN_INVALID_ADDRESS at 0x30 in kqueue_reactor::deregister_descriptor via TcpConnection::~TcpConnection shared_ptr teardown. consensus_pending_lifecycle_test passed. Unknown whether fix-induced or the documented pre-existing teardown/load intermittence (fixer A/B found baseline intermittence; crash-vs-fail not distinguished)."
   severity: blocker
   test: 1
+  resolution: "Fixed by 12-14 (Peer::Stop reorder), propagated to all phase artifacts by 12-16 (CR-01/CR-02/WR-01) and 12-18 (CR-03 registry co-owner); verified in source by rounds 3-6 verification and code review (0 criticals). Zero new crash reports since. Thirdparty StopImpl hardening and MintRecoveryDiagnostics UAF remain recorded as deferred items in STATE.md under separate change control."
   root_cause: "PRE-EXISTING teardown-order defect (crash reports back to 2026-08-26, six days before the review fixes — NOT fix-induced). FinalityFaultNetwork::Peer::Stop calls pubsub->Stop() (line 389) before db.reset() (line 390). GossipPubSub::StopImpl resets m_host and m_context — destroying the asio io_context/kqueue_reactor — while GlobalDB->CrdtDatastore->GraphsyncDAGSyncer->graphsync Network::host_ still co-owns the libp2p host (wired from peer.pubsub->GetHost() at test line 993; globaldb.cpp:300-307). When db.reset() later releases the host, ~BasicHost's reverse member order destroys transport_manager_ (TcpTransport holds the last shared_ptr<io_context>) BEFORE network_ (ListenerManagerImpl->Multiselect->TcpConnection). Any TcpConnection not cleanly closed during StopImpl (its enumeration skips connections with unresolved remotePeer(); its 1000ms close deadline under load aborts in-flight closes) then deregisters from the freed reactor: kqueue_reactor::deregister_descriptor SIGSEGV at 0x30. Full runs do ~4-5x more Peer::Stop calls under load, so the window opens probabilistically; focused runs usually close everything. Gaps 1 and 5 are ONE crash event (single Sep-2 .ips, owned by RestartAtVote TestBody)."
   artifacts:
     - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
@@ -71,10 +72,11 @@ blocked: 0
   debug_session: ".planning/debug/multi-node-teardown-sigsegv.md"
 
 - truth: "With a conflicting transaction whose tx_processed_m key misses, certificate handling takes the hash value-scan fallback with no crash; transaction_manager_certificate_fallback_test stays green."
-  status: failed
+  status: resolved
   reason: "User reported: CertificateFallbackTest.SharedMintSlotConfirmsOnlyTheCertifiedTransaction fails at transaction_manager_certificate_fallback_test.cpp:740 (loaded.has_value() false). Logs show the WR-07 fix's burn-consumption warning firing ('did not consume every burn input... rebuilt with zero amount') and an untracked-head CRDT error during the certified slot's callback. Note: the fixer's verification had this target passing 4/4 twice post-fix, so this may be intermittent or order/state-dependent."
   severity: blocker
   test: 2
+  resolution: "Fixed by 12-13: CRDTFixture db paths are run-unique (pid + counter) and reaped at construction before any consumer opens them; the silent no-quorum rejection now logs a warning. Verified with a seeded-precondition proof (stale unit_12 present → 20/20 green, 0 registry-skip lines)."
   root_cause: "STALE TEST-FIXTURE DB REUSE — not a regression from CR-02 or WR-07. CRDTFixture (test/testutil/storage/base_crdt_test.cpp:54-105) names its GlobalDB dir CRDT.Datastore.TEST.unit_<N> from a per-process counter (SharedMintSlot... is the 12th TEST_F -> unit_12) and removes it only in the destructor. A previously killed/crashed run leaves unit_12 behind; the next run's 12th fixture silently reopens it. The stale db pre-seeds ValidatorRegistry's cache, so StoreGenesisRegistry takes its cache_initialized_ skip branch (ValidatorRegistry.cpp:413-418) and never registers this run's random account; BuildSignedCertificate embeds the stale registry_cid while its sole vote is signed by the new non-member account; GetCertificateBySlot -> ValidateCertificate -> TallyVotes drops the non-member vote (Consensus.cpp:1894-1903) -> approved_weight=0 -> silent no-quorum reject (2792-2795) -> invalid_argument (3843-3846) -> loaded.has_value()==false at :740. Line 740 reads back line 736's Put BEFORE FetchAndProcess/OnConsensusCertificate — both CR-02-changed sites are downstream and untouched by this chain. Decisive experiment: SIGKILL a focused run, rename leftover dir to unit_12, run full binary -> 19 pass / exactly SharedMintSlot FAILED at :740 reproducing every UAT log line in order; 8 consecutive clean runs 20/20 green. The WR-07 burn warning was a stale-state symptom (constant burn outpoint 64xa/idx 0 already consumed by the stale run's mint), and UpdateCRDTHeads untracked-head appears in healthy runs — neither causal."
   artifacts:
     - path: "test/testutil/storage/base_crdt_test.cpp"
@@ -91,10 +93,11 @@ blocked: 0
   debug_session: ".planning/debug/cert-fallback-loaded-missing.md"
 
 - truth: "Concurrent certificate receipt over PubSub no longer races proposals_/slot_states_ and announcement capture is bounded and locked — a clean full multi_node_finality_fault_test run under normal load."
-  status: failed
+  status: resolved
   reason: "User reported: the multi-node binary crashed before RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce (multi_node_finality_fault_test.cpp:2299) ended; preceding cases succeeded. Same case passed focused in Test 4. Presumed same teardown SIGSEGV as Test 1 (TcpConnection::~TcpConnection -> kqueue_reactor::deregister_descriptor); likely shares Test 1's root cause."
   severity: blocker
   test: 5
+  resolution: "Same crash event as test 1 — closed by the same 12-14/12-16/12-18 teardown-invariant propagation. RestartAtVote green in 8 consecutive full-suite runs on the final build (rounds 5-6)."
   root_cause: "PRE-EXISTING teardown-order defect (crash reports back to 2026-08-26, six days before the review fixes — NOT fix-induced). FinalityFaultNetwork::Peer::Stop calls pubsub->Stop() (line 389) before db.reset() (line 390). GossipPubSub::StopImpl resets m_host and m_context — destroying the asio io_context/kqueue_reactor — while GlobalDB->CrdtDatastore->GraphsyncDAGSyncer->graphsync Network::host_ still co-owns the libp2p host (wired from peer.pubsub->GetHost() at test line 993; globaldb.cpp:300-307). When db.reset() later releases the host, ~BasicHost's reverse member order destroys transport_manager_ (TcpTransport holds the last shared_ptr<io_context>) BEFORE network_ (ListenerManagerImpl->Multiselect->TcpConnection). Any TcpConnection not cleanly closed during StopImpl (its enumeration skips connections with unresolved remotePeer(); its 1000ms close deadline under load aborts in-flight closes) then deregisters from the freed reactor: kqueue_reactor::deregister_descriptor SIGSEGV at 0x30. Full runs do ~4-5x more Peer::Stop calls under load, so the window opens probabilistically; focused runs usually close everything. Gaps 1 and 5 are ONE crash event (single Sep-2 .ips, owned by RestartAtVote TestBody)."
   artifacts:
     - path: "test/src/blockchain/multi_node_finality_fault_test.cpp"
