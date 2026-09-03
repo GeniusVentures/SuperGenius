@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: milestone_complete
-last_updated: 2026-09-03T18:49:00.437Z
-last_activity: 2026-09-03
+status: Awaiting next milestone
+last_updated: "2026-09-03T20:21:45.593Z"
+last_activity: 2026-09-03 — Milestone v3.0 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 34
-  completed_plans: 71
+  completed_plans: 37
   percent: 100
-stopped_at: Milestone complete (Phase 12 was final phase)
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-09-03
-
-Progress: [██████████] 100%
+Phase: Milestone v3.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-03 — Milestone v3.0 completed and archived
 
 ## Performance Metrics
 
@@ -173,3 +170,20 @@ None yet.
 Last session: 2026-09-03T18:26:41Z
 Stopped at: Completed 12-23 developer-directed apparatus removal (13->6 suite; 3 consecutive serial passes on reduced suite; zero crashes; sibling matrix green) — awaiting orchestrator verification
 Resume file: None
+| debug_sessions | phase11-fallback-suite-abort | acknowledged at v3.0 close (2026-09-03; was: awaiting_human_verify) |
+| debug_sessions | phase12-mesh-readiness | acknowledged at v3.0 close (2026-09-03; was: investigating) |
+| debug_sessions | phase12-orphan-test-peer | acknowledged at v3.0 close (2026-09-03; was: investigating) |
+| quick_tasks | 260602-k34-separate-inputvalidator-derived-classes- | acknowledged at v3.0 close (2026-09-03; was: missing) |
+| quick_tasks | 260603-dcg-add-tokenid-fromuint256-with-endian-dete | acknowledged at v3.0 close (2026-09-03; was: missing) |
+| quick_tasks | 260603-dla-fix-tokenid-fromuint256-to-use-host-inde | acknowledged at v3.0 close (2026-09-03; was: missing) |
+| quick_tasks | 260603-dmz-add-configurable-tokenid-fromuint256-end | acknowledged at v3.0 close (2026-09-03; was: missing) |
+| quick_tasks | 260603-dor-implement-full-tokenid-fromuint256-tests | acknowledged at v3.0 close (2026-09-03; was: missing) |
+| todos | todos | acknowledged at v3.0 close (2026-09-03; was: open) |
+| uat_gaps | 02 | acknowledged at v3.0 close (2026-09-03; was: testing) |
+| uat_gaps | 04 | acknowledged at v3.0 close (2026-09-03; was: partial) |
+| uat_gaps | 12 | acknowledged at v3.0 close (2026-09-03; was: resolved) |
+| verification_gaps | 02 | acknowledged at v3.0 close (2026-09-03; was: human_needed) |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
