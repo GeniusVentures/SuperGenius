@@ -92,3 +92,11 @@ add_custom_command(TARGET child_tokens_test POST_BUILD
     "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/"
     COMMENT "Copying files"
 )
+
+# Several suites in this directory boot multiple full nodes; running them
+# concurrently starves CPU on smaller CI runners (observed: a genesis creator
+# starved for 30s while eight test binaries ran), stalling startup past any
+# sane timeout. Sharing this lock serializes them against the other
+# node-booting suites while light suites keep running in parallel.
+set_tests_properties(child_tokens_test full_node_test processing_nodes_test
+    PROPERTIES RESOURCE_LOCK genius_node_pool)
