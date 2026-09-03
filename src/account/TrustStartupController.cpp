@@ -197,7 +197,7 @@ namespace sgns::account
                          self->RequestRefresh();
                      }
                  },
-                 &instance->callback_owner_token_ ) ||
+                 instance.get() ) ||
              !instance->secure_crdt_->RegisterCandidateCallback(
                  "trusted-peer",
                  [weak, enqueue_candidate]( const auto &id, const auto &approval )
@@ -207,7 +207,7 @@ namespace sgns::account
                          enqueue_candidate( id );
                      }
                  },
-                 &instance->callback_owner_token_ ) ||
+                 instance.get() ) ||
              !instance->secure_crdt_->RegisterCandidateCallback(
                  "burn-config",
                  [weak, enqueue_candidate]( const auto &id, const auto &approval )
@@ -217,7 +217,7 @@ namespace sgns::account
                          enqueue_candidate( id );
                      }
                  },
-                 &instance->callback_owner_token_ ) )
+                 instance.get() ) )
         {
             return outcome::failure( std::errc::operation_not_permitted );
         }
@@ -264,9 +264,9 @@ namespace sgns::account
         if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
         if ( secure_crdt_ )
         {
-            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", &callback_owner_token_ );
-            secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", &callback_owner_token_ );
-            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", &callback_owner_token_ );
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", this );
+            secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", this );
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", this );
         }
     }
 
@@ -305,11 +305,10 @@ namespace sgns::account
                     if ( activated.has_error() )
                     {
                         failed_genesis_candidate_ = *candidate;
-                        Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                              { candidate->domain,
-                                std::to_string( candidate->version ),
-                                candidate->content_hash,
-                                activated.error().message() } );
+                        EmitActivationFailed( candidate->domain,
+                                              std::to_string( candidate->version ),
+                                              candidate->content_hash,
+                                              activated.error() );
                         return activated.error();
                     }
                 }
@@ -361,11 +360,10 @@ namespace sgns::account
             if ( activated.has_error() )
             {
                 MarkCandidateFailed( candidate );
-                Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                      { candidate.domain,
-                        std::to_string( candidate.version ),
-                        candidate.content_hash,
-                        activated.error().message() } );
+                EmitActivationFailed( candidate.domain,
+                                      std::to_string( candidate.version ),
+                                      candidate.content_hash,
+                                      activated.error() );
                 return activated.error();
             }
             if ( activated.value() )
@@ -377,11 +375,10 @@ namespace sgns::account
                 snapshot = trust_store_->LoadAndVerify();
                 if ( snapshot.has_error() )
                 {
-                    Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                          { candidate.domain,
-                            std::to_string( candidate.version ),
-                            candidate.content_hash,
-                            snapshot.error().message() } );
+                    EmitActivationFailed( candidate.domain,
+                                          std::to_string( candidate.version ),
+                                          candidate.content_hash,
+                                          snapshot.error() );
                     return snapshot.error();
                 }
                 // All candidates in this pass were authorized by the predecessor
@@ -403,11 +400,11 @@ namespace sgns::account
             {
                 auto core = BurnConfig::BurnCandidateCore( snapshot.value().burn );
                 auto id = core ? sgns::securecrdt::CandidateId::FromCore( *core ) : std::nullopt;
-                Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                      { id ? id->domain : "burn-config",
-                        id ? std::to_string( id->version ) : std::to_string( snapshot.value().burn.version ),
-                        id ? id->content_hash : "",
-                        initiated.error().message() } );
+                EmitActivationFailed( id ? id->domain : "burn-config",
+                                      id ? std::to_string( id->version )
+                                         : std::to_string( snapshot.value().burn.version ),
+                                      id ? id->content_hash : "",
+                                      initiated.error() );
                 return initiated.error();
             }
             QueuePendingCandidate( initiated.value() );
@@ -444,11 +441,10 @@ namespace sgns::account
             if ( activated.has_error() )
             {
                 MarkCandidateFailed( candidate );
-                Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                      { candidate.domain,
-                        std::to_string( candidate.version ),
-                        candidate.content_hash,
-                        activated.error().message() } );
+                EmitActivationFailed( candidate.domain,
+                                      std::to_string( candidate.version ),
+                                      candidate.content_hash,
+                                      activated.error() );
                 return activated.error();
             }
             if ( activated.value() )
@@ -462,11 +458,10 @@ namespace sgns::account
                 snapshot = trust_store_->LoadAndVerify();
                 if ( snapshot.has_error() )
                 {
-                    Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                          { candidate.domain,
-                            std::to_string( candidate.version ),
-                            candidate.content_hash,
-                            snapshot.error().message() } );
+                    EmitActivationFailed( candidate.domain,
+                                          std::to_string( candidate.version ),
+                                          candidate.content_hash,
+                                          snapshot.error() );
                     return snapshot.error();
                 }
                 // The durable predecessor changed. Any remaining IDs were eligible for
@@ -553,6 +548,14 @@ namespace sgns::account
         }
         const auto fingerprint = manifest_.Fingerprint();
         event_callback_( Event{ code, std::move( fields ), fingerprint.value_or( "" ) } );
+    }
+
+    void TrustStartupController::EmitActivationFailed( const std::string     &domain,
+                                                        const std::string     &version,
+                                                        const std::string     &content_hash,
+                                                        const std::error_code &error ) const
+    {
+        Emit( EventCode::TRUST_ACTIVATION_FAILED, { domain, version, content_hash, error.message() } );
     }
 
     TrustStartupController::RetryDisposition TrustStartupController::ClassifyRefreshResult(
