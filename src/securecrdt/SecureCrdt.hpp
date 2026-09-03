@@ -143,6 +143,9 @@ namespace sgns::securecrdt
         outcome::result<std::vector<CandidateId>>             ListCandidates( const std::string &domain,
                                                                               const std::string &predecessor_hash,
                                                                               bool               current_only = true );
+        // owner_token is an opaque identity key: stored and compared by address only,
+        // never dereferenced. Callers may pass any pointer whose lifetime covers the
+        // registration (e.g. `this`) — SecureCrdt does not take ownership of it.
         bool                                                  RegisterCandidateCallback( const std::string &domain,
                                                                                          CandidateCallback  callback,
                                                                                          const void        *owner_token );
