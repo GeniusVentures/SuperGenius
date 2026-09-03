@@ -117,7 +117,17 @@ Each task was committed atomically:
 
 ---
 
-**Total deviations:** 2 (both blocking test-path realities; both keep the plan's required observables intact)
+**3. [Rule 3 - Blocking] Flow case 5's single-gated scene is unsound: an ungated member relays the intruder's delta past the receiver's filter (intermittent negative-window failures)**
+- **Found during:** post-merge UAT (case 5 failed intermittently in combined ctest orders; standalone loop reproduced 4 failures in 6 runs, disproving cross-suite contamination)
+- **Issue:** The plan wires the membership filter on pnetA only ("GlobalDB on pnetB and intruder (no filter)") while asserting the intruder's data never reaches the gated node. But an ungated pnetB merges the intruder's delta, and `CrdtDatastore::RebroadcastHeads` (100ms loop) republishes the per-topic head list — now containing the intruder's head CID — under pnetB's OWN identity (`PubSubBroadcasterExt::Broadcast` stamps the broadcaster's peer id and transport `from`). CIDs carry no origin, so pnetA authorizes the announcement and graphsync-fetches the intruder's blocks from its trusted member. Whether this relay completes inside the 3s negative window is gossip-timing luck (log evidence: pnetA drops the intruder's direct messages, then requests the very same head CID from pnetB one second later). The per-node gate itself never missed in any observed run.
+- **Fix:** Flow case 5 now installs the shared-set membership filter on BOTH gated members (the production shape: every private-network node gates gossip ingest — an ungated node is specified public pass-through), clears pnetB's filter at teardown, and adds a second negative window asserting pnetB's db never gains the intruder key. No assertion weakened, no sleeps added; the negative window stays 3s with the same 100ms poll.
+- **Files modified:** test/src/networkregistry/network_membership_filter_test.cpp
+- **Verification:** standalone `ctest -R network_membership_filter` 10/10 (pre-fix 4/6 failures); combined `ctest -R "network_config_private_network|network_registry_test|network_membership_filter"` twice consecutively green; `ctest -R network_registry_test` alone green; 4-suite combo with pubsub_counts green
+- **Committed in:** eaa99d54
+
+---
+
+**Total deviations:** 3 (all blocking test-path realities; all keep the plan's required observables intact)
 **Impact on plan:** All must_have truths and artifacts hold. No scope creep; no new dependencies; nothing under 3rdparty/ or thirdparty/ touched; no SetMembershipAllowList surface anywhere.
 
 ## Verification Evidence
