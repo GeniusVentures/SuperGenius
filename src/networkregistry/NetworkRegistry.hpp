@@ -219,7 +219,12 @@ namespace sgns::networkregistry
          *         outcome::failure(std::errc::address_in_use) if a registry
          *         for this private network id is already registered (the
          *         duplicate attempt registers NOTHING and the live entry --
-         *         and the registry using it -- is left fully functional).
+         *         and the registry using it -- is left fully functional), or
+         *         if the CRDT change callback could not be registered on the
+         *         provided global_db (G-WR-02: fail-closed construction --
+         *         live membership refresh never silently degrades; the failed
+         *         construction explicitly unregisters its just-registered
+         *         policy entry before returning, leaving nothing behind).
          */
         static outcome::result<std::shared_ptr<NetworkRegistry>> New(
             std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
@@ -354,8 +359,15 @@ namespace sgns::networkregistry
          *        The callback therefore only sets a pending flag and nudges
          *        the condition variable; the dedicated refresh thread calls
          *        TryConfirm() outside any datastore callback context.
+         * @return true when the callback was registered AND the refresh
+         *         thread started; false when the callback pattern could not
+         *         be registered (e.g. an identical pattern is already live
+         *         on the GlobalDB) -- in that case NO refresh thread is
+         *         started and the caller (New) must fail closed (G-WR-02:
+         *         live membership refresh never silently degrades on a
+         *         "successful" node).
          */
-        void RegisterCrdtChangeCallback();
+        bool RegisterCrdtChangeCallback();
 
         /// @brief Refresh-thread loop: waits for pending notifications and
         ///        runs TryConfirm() outside datastore-callback context.

@@ -400,7 +400,29 @@ namespace sgns::networkregistry
         }
         if ( instance->global_db_ )
         {
-            instance->RegisterCrdtChangeCallback();
+            // G-WR-02: fail-closed construction. A failed change-callback
+            // registration would otherwise leave New succeeding with NO live
+            // refresh on this node -- the 15-12 live-widening core feature
+            // silently dead. Fail construction instead.
+            if ( !instance->RegisterCrdtChangeCallback() )
+            {
+                instance->logger_->error( "{}: registering the CRDT change callback for pattern "
+                                          "\"{}\" failed (pattern already live on the GlobalDB?); "
+                                          "failing construction -- live membership refresh must not "
+                                          "silently degrade",
+                                          __func__,
+                                          "/?" + EscapeRegex( instance->base_key_.GetKey() ) + "(/sig/.*)?" );
+                // Explicit teardown (NOT destructor-driven): the just-registered
+                // policy entry's peer_registry strong capture pins the instance
+                // in the SecureCrdtRegistry, so ~NetworkRegistry would never
+                // run while the caller still holds the failure result.
+                // Unregister() removes the entry (owner_token matches THIS
+                // instance), breaking the pin; no refresh thread and no
+                // callback pattern exist at this point (cleared on the
+                // failure path), so the rest of the teardown is a no-op.
+                instance->Unregister();
+                return outcome::failure( std::errc::address_in_use );
+            }
         }
         // WR-04: both production wiring paths run SecureCrdt::RegisterFilters()
         // BEFORE this factory (GeniusNode.cpp:1037 vs :1059; the
@@ -417,6 +439,13 @@ namespace sgns::networkregistry
             instance->logger_->error( "{}: re-registering SecureCrdt ingest filters failed for base key {}",
                                       __func__,
                                       instance->base_key_.GetKey() );
+            // Same pinning hazard as the callback-failure branch above: the
+            // registered policy entry strongly captures the instance, so the
+            // explicit Unregister() here is what actually removes it (and any
+            // partially installed per-pattern filter) -- without it a "failed"
+            // New would leave a live zombie policy entry that blocks every
+            // retry with address_in_use.
+            instance->Unregister();
             return outcome::failure( std::errc::io_error );
         }
         instance->logger_->info( "{}: SecureCrdt ingest filters re-registered -- network-registry branch {} "
@@ -446,10 +475,16 @@ namespace sgns::networkregistry
         // can see which PeerRegistry owns this network's branch.
         entry.peer_registry = shared_from_this();
 
-        return secure_crdt_->Registry().Register( EscapeRegex( base_key_.GetKey() ), std::move( entry ) );
+        // G-WR-04: atomic-detecting insert. The Resolve() pre-check in New()
+        // is only the descriptive fast path; THIS call is the safety
+        // mechanism -- RegisterIfAbsent can never replace a live entry, so
+        // two racing New() constructions can no longer clobber each other's
+        // policy entry (the loser fails with address_in_use and its teardown
+        // removes nothing it does not own).
+        return secure_crdt_->Registry().RegisterIfAbsent( EscapeRegex( base_key_.GetKey() ), std::move( entry ) );
     }
 
-    void NetworkRegistry::RegisterCrdtChangeCallback()
+    bool NetworkRegistry::RegisterCrdtChangeCallback()
     {
         // BurnConfig pattern (re-derived for a trust-transitioning registry):
         // refresh the cache when a base_key or sig/<addr> child element
@@ -475,9 +510,16 @@ namespace sgns::networkregistry
             } );
         if ( !registered )
         {
+            // G-WR-02: clear the pattern so the teardown path (and the
+            // caller's failure handling) knows no callback of ours is live --
+            // the pre-existing registration under this pattern belongs to
+            // someone else and must not be removed by our Unregister().
             change_callback_pattern_.clear();
-            logger_->warn( "{}: change-callback pattern already registered", __func__ );
-            return;
+            logger_->error( "{}: change-callback pattern \"{}\" could not be registered "
+                            "(already live on the GlobalDB)",
+                            __func__,
+                            "/?" + EscapeRegex( base_key_.GetKey() ) + "(/sig/.*)?" );
+            return false;
         }
         refresh_stopping_.store( false, std::memory_order_release );
         refresh_thread_ = std::thread( [weak_self] {
@@ -486,6 +528,7 @@ namespace sgns::networkregistry
                 self->RefreshLoop();
             }
         } );
+        return true;
     }
 
     void NetworkRegistry::RefreshLoop()

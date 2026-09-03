@@ -137,6 +137,46 @@ namespace sgns::securecrdt
         }
 
         /**
+         * @brief Registers the policy entry for `key_pattern` ONLY when no
+         *        entry for the pattern exists yet -- an atomic-detecting
+         *        insert that can never replace a live entry (G-WR-04: closes
+         *        the check-then-act window between a caller's Resolve()
+         *        pre-check and its Register(), which concurrent constructions
+         *        could otherwise use to clobber a live policy entry and brick
+         *        the registry still using it).
+         *        Compiles `compiled_pattern` exactly like Register():
+         *        "/?" + key_pattern + "(/sig/[^/]+)?".
+         * @param[in] key_pattern Base key pattern (regex-escaped by the caller
+         *            if it contains regex metacharacters).
+         * @param[in] entry Policy entry to register (compiled_pattern is
+         *            overwritten by this call).
+         * @return true when the entry was inserted; false when an entry for
+         *         the pattern already exists (the live entry is untouched and
+         *         the caller's `entry` copy is destroyed only after the
+         *         registry mutex has been released).
+         */
+        bool RegisterIfAbsent( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
+        {
+            entry.key_pattern      = key_pattern;
+            entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
+            bool inserted = false;
+            {
+                std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+                // find-then-emplace under ONE continuous lock hold: emplace
+                // cannot lose the race, so the moved entry is never destroyed
+                // under the mutex (mirror of Register/UnregisterIf's
+                // extract-then-destroy destruction-reentrancy safety -- a
+                // failed insert's caller-owned entry copy is destroyed after
+                // the lock released).
+                if ( registry_.find( key_pattern ) == registry_.end() )
+                {
+                    inserted = registry_.emplace( key_pattern, std::move( entry ) ).second;
+                }
+            } // lock released; a rejected entry copy is destroyed after this point
+            return inserted;
+        }
+
+        /**
          * @brief Removes the registration for `key_pattern` only if the caller's
          *        token matches the token supplied at Register() time
          *        (compare-and-remove, prevents a second unrelated registration
@@ -144,8 +184,12 @@ namespace sgns::securecrdt
          * @param[in] key_pattern Base key pattern to unregister.
          * @param[in] expected_token Opaque token that must match the registering
          *            token for the removal to take effect.
+         * @return true when this call removed the entry; false when no entry
+         *         existed or the live entry belongs to a different owner
+         *         (lets the caller scope pattern-keyed cleanup -- e.g. filter
+         *         teardown -- to the case where IT owned the entry).
          */
-        void UnregisterIf( const std::string &key_pattern, const void *expected_token )
+        bool UnregisterIf( const std::string &key_pattern, const void *expected_token )
         {
             std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
             auto                                it = registry_.find( key_pattern );
@@ -157,7 +201,9 @@ namespace sgns::securecrdt
                 // (destruction re-entrancy; std::shared_mutex is not recursive).
                 auto node = registry_.extract( it );
                 lock.unlock();
+                return true;
             } // node destroyed here, mutex released
+            return false;
         }
 
         /**
