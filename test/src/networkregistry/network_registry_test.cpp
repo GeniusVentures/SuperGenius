@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <boost/filesystem/operations.hpp>
+#include <system_error>
 
 #include "account/GeniusAccount.hpp"
 #include "base/util.hpp"
@@ -460,5 +461,166 @@ namespace
                                    "change callback must refresh the cache once the TPR majority is met",
                                    &refresh_wait_ );
         EXPECT_EQ( registry_->GetCurrentPeers(), kInitialPeers );
+    }
+
+    //
+    // (7) Duplicate construction is non-destructive (WR-03): a second New
+    //     for an already-registered network id fails with address_in_use
+    //     WITHOUT registering anything, and the first registry stays fully
+    //     functional. Pre-fix, the duplicate's Register replaced the live
+    //     policy entry and its teardown removed it, leaving the live
+    //     registry bricked (every write failing UNREGISTERED_KEY).
+    //
+
+    TEST_F( NetworkRegistryTest, DuplicateNewDoesNotClobberLiveRegistry )
+    {
+        MakeRegistry();
+
+        auto duplicate = NetworkRegistry::New( secure_crdt_,
+                                               tpr_,
+                                               kPrivateNetworkId,
+                                               kInitialPeers,
+                                               /*network_quorum_threshold=*/2,
+                                               member_signers_,
+                                               kPnetKeyFingerprint );
+        ASSERT_TRUE( duplicate.has_error() );
+        EXPECT_TRUE( duplicate.error() == std::errc::address_in_use )
+            << "expected address_in_use, got: " << duplicate.error().message();
+
+        // The live registry's policy entry was never touched...
+        EXPECT_TRUE( secure_crdt_->Registry()
+                         .Resolve( NetworkRegistry::DefaultBaseKey( kPrivateNetworkId ).GetKey() )
+                         .has_value() )
+            << "the duplicate attempt must not remove the live policy entry";
+
+        // ...and the live registry still works: pre-fix this SeedBootstrap
+        // failed with UNREGISTERED_KEY because the duplicate's teardown had
+        // destroyed the policy entry.
+        auto seed_result = registry_->SeedBootstrap( kInitialPeers );
+        EXPECT_FALSE( seed_result.has_error() ) << seed_result.error().message();
+        EXPECT_EQ( registry_->GetCurrentPeers(), kInitialPeers );
+    }
+
+    //
+    // (8) Drain-once refresh semantics (WR-02): once a change notification
+    //     is consumed the refresh thread returns to waiting instead of
+    //     busy-spinning TryConfirm + GlobalDB scans, and notifications
+    //     arriving later still wake it (no lost refresh).
+    //
+
+    TEST_F( NetworkRegistryTest, RefreshLoopDrainsOnceWithoutSpinning )
+    {
+        MakeRegistry( /*with_change_callback=*/true );
+        EXPECT_FALSE( registry_->IsBootstrapConfirmed() );
+
+        // Change->confirm sequence: 2-of-3 TPR signatures let the refresh
+        // thread confirm on its own (no explicit TryConfirm).
+        SeedAndSignBootstrap( /*signature_count=*/2 );
+        ASSERT_WAIT_FOR_CONDITION( [this]() { return registry_->IsBootstrapConfirmed(); },
+                                   std::chrono::milliseconds( 2000 ),
+                                   "change callback must refresh the cache once the TPR majority is met",
+                                   &refresh_wait_ );
+
+        // Let trailing notifications settle (bounded negative-window pattern,
+        // no bare sleeps), then sample the attempt counter.
+        EXPECT_FALSE( waitForCondition( []() { return false; }, std::chrono::milliseconds( 200 ) ) );
+        const auto attempts_before = registry_->RefreshAttemptsForTesting();
+
+        // Grace window: a draining loop performs at most ONE more attempt.
+        // Pre-fix the flag was never cleared, so the loop spun continuously
+        // (hundreds of TryConfirm + datastore scans per 500ms).
+        EXPECT_FALSE( waitForCondition( []() { return false; }, std::chrono::milliseconds( 500 ) ) );
+        const auto attempts_after = registry_->RefreshAttemptsForTesting();
+        EXPECT_LE( attempts_after - attempts_before, 1u )
+            << "refresh loop must drain once per notification and return to waiting, not spin";
+
+        // No lost wakeup: a later element arrival under the branch re-wakes
+        // the thread (attempts increase again within a bounded window).
+        const std::vector<std::string> new_peers = { kInitialPeers[0], kInitialPeers[1], kNewPeerId };
+        auto propose_result = registry_->ProposeMembershipChange( new_peers );
+        ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
+        EXPECT_TRUE( waitForCondition(
+            [this, attempts_after]() { return registry_->RefreshAttemptsForTesting() > attempts_after; },
+            std::chrono::milliseconds( 2000 ) ) )
+            << "clearing the pending flag must not lose subsequent notifications";
+    }
+
+    //
+    // (9) Ingest filter covers the late-registered network-registry pattern
+    //     (WR-04): with the production wiring order (RegisterFilters in
+    //     SetUp BEFORE NetworkRegistry::New), a remote-originated unsigned
+    //     element under network-registry/<id> is rejected at datastore
+    //     ingest and never lands, while an unfiltered control element in
+    //     the same delta replicates (the sync path itself works).
+    //
+
+    TEST_F( NetworkRegistryTest, IngestFilterCoversLateRegisteredNetworkRegistryPattern )
+    {
+        MakeRegistry();
+        ASSERT_TRUE( secure_crdt_->Registry().Resolve( registry_->BaseKey().GetKey() ).has_value() );
+
+        // Attacker node: a second GlobalDB gossipping on the same SecureCrdt
+        // topic ("networkregistry-test", subscribed by the fixture node's
+        // RegisterFilters). Local puts on the fixture node itself are
+        // created_by_self and never traverse element filters, so the
+        // unsigned write must arrive as a REMOTE delta (two-datastore sync
+        // pattern, crdt_datastore_test FilterCallbackOneInvalid).
+        auto attacker = sgns::test::securecrdt::MakeSecureCrdtTestNode( "networkregistry-attacker" );
+        ASSERT_NE( attacker, nullptr );
+        ASSERT_FALSE( attacker->db->AddBroadcastTopic( "networkregistry-test" ).has_error() );
+        attacker->db->AddListenTopic( "networkregistry-test" );
+
+        node_->pubsub->AddPeers( { attacker->pubsub->GetInterfaceAddress() } );
+        EXPECT_TRUE( waitForCondition(
+            [&]()
+            {
+                const auto &a_host = node_->pubsub->GetHost();
+                const auto &b_host = attacker->pubsub->GetHost();
+                return a_host->getNetwork().getConnectionManager().getConnections().size() >= 1
+                    && b_host->getNetwork().getConnectionManager().getConnections().size() >= 1;
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "attacker node did not connect to the registry node";
+
+        // One delta carrying BOTH an unsigned garbage element under the
+        // registry branch and a benign control element outside every
+        // registered filter pattern.
+        const auto                     branch_key = registry_->BaseKey();
+        const crdt::HierarchicalKey    probe_key( "wr04-unfiltered-probe" );
+        base::Buffer                   garbage;
+        garbage.put( "definitely-not-a-membership-record" );
+        base::Buffer probe_value;
+        probe_value.put( "wr04-control" );
+
+        const auto tx = attacker->db->BeginTransaction();
+        ASSERT_NE( tx, nullptr );
+        ASSERT_FALSE( tx->Put( branch_key, garbage ).has_error() );
+        ASSERT_FALSE( tx->Put( probe_key, probe_value ).has_error() );
+        ASSERT_FALSE( tx->Commit( { "networkregistry-test" } ).has_error() );
+
+        // Control element replicates: the attacker's delta reached and was
+        // processed by the registry node.
+        ASSERT_TRUE( waitForCondition(
+            [&]()
+            {
+                auto res = node_->db->Get( probe_key );
+                return res.has_value() && res.value().toString() == "wr04-control";
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "control element must replicate (sync path works)";
+
+        // The unsigned branch element never lands: the SecureCrdt ingest
+        // filter (installed by New's RegisterFilters re-run) rejected it.
+        EXPECT_FALSE( waitForCondition(
+            [&]() { return node_->db->Get( branch_key ).has_value(); },
+            std::chrono::milliseconds( 500 ) ) )
+            << "unsigned remote element under network-registry/<id> must never land";
+        auto stored = node_->db->Get( branch_key );
+        EXPECT_TRUE( stored.has_error() ) << "ingest filter must keep the branch free of unsigned writes";
+
+        // Proven GlobalDB teardown order (TestNodeCollection): shutdown
+        // before stopping the attacker's io thread.
+        attacker->db->ShutdownNow();
+        attacker.reset();
     }
 } // namespace
