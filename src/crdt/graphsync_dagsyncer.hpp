@@ -140,10 +140,8 @@ namespace sgns::crdt
 
     private:
         // Per-(peer, CID) re-request suppression. Must stay below CrdtDatastore's
-        // failed-root retry cadence (5s base doubling to a 60s cap), or local
-        // retries against a sole route no-op: at 30s the first two retries (t+5s,
-        // t+15s) deterministically skip the only route and burn their budget.
-        static constexpr std::chrono::seconds CID_FAILURE_SUPPRESSION{ 4 };
+        // failed-root retry cadence, or local retries against a sole route no-op.
+        static constexpr std::chrono::seconds CID_FAILURE_SUPPRESSION{ 30 };
 
         outcome::result<ipfs_lite::ipfs::graphsync::Subscription> RequestNode(
             const PeerId                              &peer,
