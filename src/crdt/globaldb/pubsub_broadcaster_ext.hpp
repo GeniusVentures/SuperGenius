@@ -14,6 +14,7 @@
 #include <string>
 #include <optional>
 #include <mutex>
+#include <condition_variable>
 
 namespace sgns::crdt
 {
@@ -45,13 +46,26 @@ namespace sgns::crdt
          * @param peerInfo   Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
+        outcome::result<void> Broadcast( const base::Buffer                     &buff,
+                                         std::string                             topic,
+                                         boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.
          * @return buffer value or outcome::failure on error
          */
         outcome::result<base::Buffer> Next() override;
+
+        /**
+         * @brief Blocks until a message is queued or \p timeout elapses.
+         * @param timeout Longest time to block.
+         */
+        void WaitForNext( std::chrono::milliseconds timeout ) override;
+
+        /**
+         * @brief Releases any waiter and makes later waits return at once.
+         */
+        void CancelWait() override;
 
         /**
          * @brief Subscribes to all configured topics and starts message processing.
@@ -84,7 +98,10 @@ namespace sgns::crdt
          * @brief Get the underlying GraphsyncDAGSyncer instance.
          * @return Shared pointer to the GraphsyncDAGSyncer (as void pointer).
          */
-        std::shared_ptr<void> GetDagSyncer() const override { return dagSyncer_; }
+        std::shared_ptr<void> GetDagSyncer() const override
+        {
+            return dagSyncer_;
+        }
 
         void Stop();
 
@@ -109,11 +126,13 @@ namespace sgns::crdt
 
         std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
 
-        std::mutex       queueMutex_;           ///< protects messageQueue_
-        std::mutex       listenTopicsMutex_;    ///< protects topicsToListen_
-        std::mutex       broadcastTopicsMutex_; ///< protects topicsToListen_
-        std::mutex       subscriptionMutex_;    ///< protects subscriptionFutures_
-        std::atomic_bool started_;
+        std::mutex              queueMutex_;             ///< protects messageQueue_ and wait_cancelled_
+        std::condition_variable queueCv_;                ///< signals messageQueue_ arrivals and CancelWait
+        bool                    wait_cancelled_ = false; ///< sticky once shut down; guarded by queueMutex_
+        std::mutex              listenTopicsMutex_;      ///< protects topicsToListen_
+        std::mutex              broadcastTopicsMutex_;   ///< protects topicsToListen_
+        std::mutex              subscriptionMutex_;      ///< protects subscriptionFutures_
+        std::atomic_bool        started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>> subscriptionFutures_;

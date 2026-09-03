@@ -1,4 +1,5 @@
 add_subdirectory(account)
+add_subdirectory(archive_node)
 add_subdirectory(account_creation)
 add_subdirectory(base)
 add_subdirectory(bitswap)

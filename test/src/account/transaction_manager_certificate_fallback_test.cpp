@@ -251,9 +251,9 @@ namespace
         SGTransaction::DAGStruct dag;
         dag.set_nonce( nonce );
         dag.set_source_addr( account.GetAddress() );
-        dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
-                               std::chrono::system_clock::now().time_since_epoch() )
-                               .count() );
+        dag.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
         return dag;
     }
 }
@@ -313,9 +313,9 @@ public:
         // MemorySecureStorage keys its (process-wide static) store by identifier, so a
         // unique path per test is what forces a fresh keypair and a fresh address.
         static std::atomic<uint64_t> account_counter{ 0 };
-        const auto                   account_path =
-            fs::path( crdt_->getPathString() ) /
-            ( "account-" + std::to_string( account_counter.fetch_add( 1, std::memory_order_relaxed ) ) );
+        const auto account_path = fs::path( crdt_->getPathString() ) /
+                                  ( "account-" +
+                                    std::to_string( account_counter.fetch_add( 1, std::memory_order_relaxed ) ) );
 
         account_ = GeniusAccount::New( kTestTokenId, account_path );
         ASSERT_NE( account_, nullptr );
@@ -336,8 +336,8 @@ public:
                                        crdt_->io_,
                                        account_,
                                        blockchain_,
-                                       false, // full_node
-                                       0,     // subnet_id
+                                       sgns::NodeType::Light, // node_type
+                                       0,                     // subnet_id
                                        kTimestampTolerance,
                                        kMutabilityWindow );
         ASSERT_NE( tm_, nullptr );
@@ -354,7 +354,7 @@ public:
         }
         if ( blockchain_ )
         {
-            ( void ) blockchain_->Stop();
+            (void) blockchain_->Stop();
             blockchain_.reset();
         }
         account_.reset();
@@ -419,7 +419,7 @@ TEST_F( CertificateFallbackTest, EdgeCase_UndecodableSubjectsAreApprovedWithoutP
                                                                    std::nullopt,
                                                                    std::nullopt )
                                  .value();
-        const auto result = CertificateFallbackTestAccess::OnConsensusCertificate(
+        const auto result  = CertificateFallbackTestAccess::OnConsensusCertificate(
             *tm_,
             "fake-hash-empty",
             BuildCertificate( subject, "proposal-empty-01" ) );
@@ -456,8 +456,8 @@ TEST_F( CertificateFallbackTest, EdgeCase_HashBindingFailureApprovesWithoutProce
     // 1. Subject and parameter agree on a hash that is not the embedded tx's hash.
     {
         const std::string mismatched_hash = "definitely-not-the-real-hash-value";
-        const auto        subject = MakeNonceSubject( account_->GetAddress(), 11, mismatched_hash, embedded );
-        const auto        result  = CertificateFallbackTestAccess::OnConsensusCertificate(
+        const auto        subject         = MakeNonceSubject( account_->GetAddress(), 11, mismatched_hash, embedded );
+        const auto        result          = CertificateFallbackTestAccess::OnConsensusCertificate(
             *tm_,
             mismatched_hash,
             BuildCertificate( subject, "proposal-mismatch-01" ) );
@@ -521,21 +521,21 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
 
 TEST_F( CertificateFallbackTest, CertifiedWinnerImmediatelyFailsVerifyingTransactionsWithSameAddressAndNonce )
 {
-    const auto &source = account_->GetAddress();
-    constexpr uint64_t nonce = 40;
+    const auto        &source = account_->GetAddress();
+    constexpr uint64_t nonce  = 40;
 
-    const auto loser_a_embedded       = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
-    const auto loser_b_embedded       = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-    const auto winner_embedded        = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 3 );
-    const auto other_embedded         = MakeMinimalEmbeddedTransfer( *tm_, source, nonce + 1, 4 );
-    const auto other_address_embedded = MakeMinimalEmbeddedTransfer( *tm_, "other-account", nonce, 5 );
+    const auto loser_a_embedded        = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
+    const auto loser_b_embedded        = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
+    const auto winner_embedded         = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 3 );
+    const auto other_embedded          = MakeMinimalEmbeddedTransfer( *tm_, source, nonce + 1, 4 );
+    const auto other_address_embedded  = MakeMinimalEmbeddedTransfer( *tm_, "other-account", nonce, 5 );
     const auto already_failed_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 6 );
 
     const auto loser_a = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_a_embedded )
                              .value();
     const auto loser_b = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_b_embedded )
                              .value();
-    const auto other = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, other_embedded ).value();
+    const auto other   = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, other_embedded ).value();
     const auto other_address =
         CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, other_address_embedded ).value();
     const auto already_failed =
@@ -599,13 +599,12 @@ TEST_F( CertificateFallbackTest, ConflictIsSupersededAcrossLoserStatesAndTrackin
 
         const auto loser_embedded  = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
         const auto winner_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-        const auto loser = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_embedded )
-                               .value();
+        const auto loser  = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_embedded )
+                                .value();
         const auto winner = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, winner_embedded )
                                 .value();
 
-        const auto track_loser = [&]
-        { CertificateFallbackTestAccess::Track( *tm_, loser, loser_status ); };
+        const auto track_loser  = [&] { CertificateFallbackTestAccess::Track( *tm_, loser, loser_status ); };
         const auto track_winner = [&]
         { CertificateFallbackTestAccess::Track( *tm_, winner, TransactionManager::TransactionStatus::VERIFYING ); };
 
@@ -694,10 +693,9 @@ TEST_F( CertificateFallbackTest, FailingLocalLoserReleasesReservedInputs )
                               kTestTokenId,
                               MakeLocalDag( *account_, 0 ) ) );
     mint->MakeSignature( *account_ );
-    ASSERT_TRUE( CertificateFallbackTestAccess::ChangeState( *tm_,
-                                                             mint,
-                                                             TransactionManager::TransactionStatus::CONFIRMED )
-                     .has_value() );
+    ASSERT_TRUE(
+        CertificateFallbackTestAccess::ChangeState( *tm_, mint, TransactionManager::TransactionStatus::CONFIRMED )
+            .has_value() );
     ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
 
     const auto mint_outpoint = base::Hash256::fromReadableString( mint->GetHash() );
@@ -707,7 +705,7 @@ TEST_F( CertificateFallbackTest, FailingLocalLoserReleasesReservedInputs )
     constexpr uint64_t nonce  = 90;
     auto               params = account_->GetUTXOManager().CreateTxParameter( 1, "0x00", kTestTokenId );
     ASSERT_TRUE( params.has_value() );
-    const auto inputs = params.value().first;
+    const auto inputs            = params.value().first;
     auto [tx_inputs, tx_outputs] = std::move( params.value() );
     auto loser                   = std::make_shared<TransferTransaction>(
         TransferTransaction::New( std::move( tx_inputs ), std::move( tx_outputs ), MakeLocalDag( *account_, nonce ) ) );
@@ -720,8 +718,8 @@ TEST_F( CertificateFallbackTest, FailingLocalLoserReleasesReservedInputs )
     // A different transaction wins the same address+nonce slot.
     const auto winner_embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), nonce, 7 );
     const auto winner_hash     = ComputeEmbeddedTxHash( *tm_, winner_embedded );
-    const auto subject = MakeNonceSubject( account_->GetAddress(), nonce, winner_hash, winner_embedded );
-    const auto result  = CertificateFallbackTestAccess::OnConsensusCertificate(
+    const auto subject         = MakeNonceSubject( account_->GetAddress(), nonce, winner_hash, winner_embedded );
+    const auto result          = CertificateFallbackTestAccess::OnConsensusCertificate(
         *tm_,
         winner_hash,
         BuildCertificate( subject, "proposal-local-loser-utxo" ) );

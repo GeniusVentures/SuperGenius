@@ -12,6 +12,7 @@
 #include "processing/processing_subtask_queue.hpp"
 #include "processing/processing_subtask_queue_channel.hpp"
 #include "util/diff_utils.hpp"
+#include "base/hexutil.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingValidationCore::Error, e )
 {
@@ -36,15 +37,14 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingValidationCore::Error
             return "The results batch is invalid";
         case ValidationError::CHUNK_HASH_MISMATCH_UNTOLERATED:
             return "Chunk hash mismatch could not be resolved as a tolerant match";
+        case ValidationError::INVALID_PAYOUT_METADATA:
+            return "The result payout metadata is missing or out of range";
     }
     return "Unknown error";
 }
 
 namespace sgns::processing
 {
-
-    ProcessingValidationCore::ProcessingValidationCore() {}
-
     outcome::result<void> ProcessingValidationCore::ValidateResults(
         const SGProcessing::SubTaskCollection                                            &subTasks,
         const std::map<std::string, SGProcessing::SubTaskResult>                         &results,
@@ -52,7 +52,6 @@ namespace sgns::processing
         const std::vector<sgns::Parameter>                                               *jobParameters,
         std::function<outcome::result<std::vector<uint8_t>>( const std::string &outputUri )> fetchOutputData )
     {
-
         std::optional<std::error_code> error;
 
         // Compare result hashes for each chunk
@@ -77,7 +76,7 @@ namespace sgns::processing
                     invalidSubTaskIds.insert( subTask.subtaskid() );
                     if ( !error )
                     {
-                        error = make_error_code(Error::WRONG_RESULT_HASHES_LENGTH);
+                        error = make_error_code( Error::WRONG_RESULT_HASHES_LENGTH );
                     }
                 }
                 else
@@ -98,7 +97,7 @@ namespace sgns::processing
                 invalidSubTaskIds.insert( subTask.subtaskid() );
                 if ( !error )
                 {
-                    error = make_error_code(Error::NO_RESULTS_FOR_SUBTASK);
+                    error = make_error_code( Error::NO_RESULTS_FOR_SUBTASK );
                 }
             }
         }
@@ -213,6 +212,38 @@ namespace sgns::processing
                 m_logger->error( "EMPTY_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid() );
                 return outcome::failure( Error::EMPTY_CHUNK_RESULT_HASH );
             }
+        }
+
+        // Check 5: Verify the payout metadata this peer reported for itself and for the developer
+        // of the app that ran the work. A payout cannot be built without it, so reject the result
+        // here rather than let it block the escrow release later.
+        if ( !base::IsHexAddress( result.node_address() ) )
+        {
+            m_logger->error( "INVALID_PAYOUT_METADATA {}: peer address is not an account address",
+                             subTask.subtaskid() );
+            return outcome::failure( Error::INVALID_PAYOUT_METADATA );
+        }
+        if ( result.developer_address().empty() )
+        {
+            m_logger->error( "INVALID_PAYOUT_METADATA {}: no developer address", subTask.subtaskid() );
+            return outcome::failure( Error::INVALID_PAYOUT_METADATA );
+        }
+        // Checked on the raw bytes, not via TokenID, which left-pads anything shorter than 32.
+        if ( result.token_id().size() != TOKEN_ID_BYTES )
+        {
+            m_logger->error( "INVALID_PAYOUT_METADATA {}: token id is {} bytes, expected {}",
+                             subTask.subtaskid(),
+                             result.token_id().size(),
+                             TOKEN_ID_BYTES );
+            return outcome::failure( Error::INVALID_PAYOUT_METADATA );
+        }
+        if ( result.developer_cut() > DEVELOPER_CUT_SCALE )
+        {
+            m_logger->error( "INVALID_PAYOUT_METADATA {}: developer cut {} exceeds {}",
+                             subTask.subtaskid(),
+                             result.developer_cut(),
+                             DEVELOPER_CUT_SCALE );
+            return outcome::failure( Error::INVALID_PAYOUT_METADATA );
         }
 
         return outcome::success();
@@ -355,4 +386,3 @@ namespace sgns::processing
     }
 
 }
-

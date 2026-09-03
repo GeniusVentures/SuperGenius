@@ -31,17 +31,25 @@ namespace sgns::processing
          */
         enum class Error
         {
-            NO_RESULTS_FOR_SUBTASK = 0,   ///< a subtask had no result entry
-            WRONG_RESULT_HASHES_LENGTH,   ///< number of hashes != number of chunks
-            DUPLICATE_CHUNK_RESULT_HASH,  ///< duplicate hash inside a result
-            EMPTY_CHUNK_RESULT_HASH,      ///< empty hash seen
-            MISSING_CHUNK_RESULT,         ///< a chunk from subtask is missing from results map
-            INVALID_CHUNK_RESULT_HASH,    ///< conflicting/invalid chunk result hash observed
-            SUBTASK_ID_MISMATCH,          ///< subtask id != result id (individual check)
-            INVALID_RESULTS_BATCH,        ///< aggregated invalidities across subtasks
-            CHUNK_HASH_MISMATCH_UNTOLERATED ///< a genuine cross-subtask chunk hash mismatch that the tolerance fallback could not resolve
+            NO_RESULTS_FOR_SUBTASK = 0,     ///< a subtask had no result entry
+            WRONG_RESULT_HASHES_LENGTH,     ///< number of hashes != number of chunks
+            DUPLICATE_CHUNK_RESULT_HASH,    ///< duplicate hash inside a result
+            EMPTY_CHUNK_RESULT_HASH,        ///< empty hash seen
+            MISSING_CHUNK_RESULT,           ///< a chunk from subtask is missing from results map
+            INVALID_CHUNK_RESULT_HASH,      ///< conflicting/invalid chunk result hash observed
+            SUBTASK_ID_MISMATCH,            ///< subtask id != result id (individual check)
+            INVALID_RESULTS_BATCH,          ///< aggregated invalidities across subtasks
+            CHUNK_HASH_MISMATCH_UNTOLERATED, ///< a genuine cross-subtask chunk hash mismatch that the tolerance fallback could not resolve
+            INVALID_PAYOUT_METADATA          ///< peer/developer payout metadata missing or out of range
         };
-        ProcessingValidationCore();
+
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%. Mirrors SGProcessing.proto.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+
+        /// Exact length of SubTaskResult::token_id in bytes.
+        static constexpr size_t TOKEN_ID_BYTES = 32;
+
+        ProcessingValidationCore() = default;
 
         /** Checks if check result hashes are valid.
         * If invalid chunk hashes found corresponding subtasks are invalidated and returned to processing queue

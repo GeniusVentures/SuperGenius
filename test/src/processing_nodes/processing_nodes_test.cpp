@@ -17,6 +17,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -68,12 +69,14 @@ protected:
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc1->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_main->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
@@ -81,6 +84,7 @@ protected:
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        node_proc2->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc2, 1.0 );
 
         //Connect to each other
@@ -123,22 +127,27 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
+
+/// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
+static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+/// Developer fraction every node in this fixture is configured with (0.35 above).
+static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
@@ -336,7 +345,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
     ASSERT_EQ( 18, cost );
 }
 
@@ -346,16 +355,15 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
                 garbage
                )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
     ASSERT_EQ( 0, cost );
 }
 
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-#if defined( _WIN32 ) || defined( __linux__ )
-    bin_path += "../";
-#endif
+    // Assets live in the source tree. Deriving this from the binary location broke
+    // whenever the build layout changed (multi-config or ABI subdirectory).
+    std::string bin_path = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
     std::string json_data = R"(
 {
   "name": "posenet-inference",
@@ -368,7 +376,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -388,7 +396,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -439,7 +447,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -465,7 +473,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -490,7 +498,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_main->GetProcessCost( procmgr.value() );
+    auto        cost      = node_main->GetProcessCost( *procmgr.value() );
 
     auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),
@@ -530,24 +538,29 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     auto available   = cost - burn_amount;
+    // Both processors report a 0.35 developer cut. The two subtask results share an even split of
+    // the available amount, and each result's cut is floored with the residue staying on its peer,
+    // so the peers' combined gain is an exact number no matter which processor ran which subtask.
+    const uint64_t per_result        = available / 2;
+    const uint64_t peers_entitlement = 2 * ( per_result - ( per_result * DEVELOPER_CUT ) / DEVELOPER_CUT_SCALE );
     assertWaitForCondition(
         [&]
         {
-            auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
-            auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
+            auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( balance_node1 + balance_node2 );
+            return gain == peers_entitlement;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );
     std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
-    ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = available - 2 * expected_peer_gain;
+    const auto peers_gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) -
+                            ( balance_node1 + balance_node2 );
+    ASSERT_EQ( peers_gain, peers_entitlement );
+
+    // Whatever the peers did not take went to the developer: the outputs sum to the escrow exactly.
+    const auto gameDeveloperPayment = available - peers_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
                    burn_amount );

@@ -47,7 +47,8 @@ namespace sgns
         using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, GeniusSigner::PrivateKey>;
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
-        static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static constexpr std::chrono::milliseconds NONCE_CACHE_DURATION = std::chrono::seconds(
+            5 ); ///< How long a fetched nonce stays usable from cache
 
         /**
          * @brief   Factory function type for creating secure storage instances.
@@ -77,11 +78,8 @@ namespace sgns
          * and if failure, create one with @ref NewFromRandomMnemonic
          * @param[in]   token_id Token ID of the account
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> New( TokenID token_id, const boost::filesystem::path &base_path );
 
         /**
          * @brief Create a fresh account whose key exists only in memory.
@@ -89,53 +87,45 @@ namespace sgns
          * This path keeps storage in memory and does not persist key material
          * or update the account index.
          */
-        static std::shared_ptr<GeniusAccount> NewEphemeral( TokenID token_id, bool full_node = false );
+        static std::shared_ptr<GeniusAccount> NewEphemeral( TokenID token_id );
 
         /**
          * @brief       Creates an account from an Ethereum private key
          * @param[in]   token_id Token ID of the account.
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
         static std::shared_ptr<GeniusAccount> NewFromPrivateKey( TokenID                        token_id,
                                                                  const char                    *eth_private_key,
-                                                                 const boost::filesystem::path &base_path,
-                                                                 bool                           full_node = false );
+                                                                 const boost::filesystem::path &base_path );
 
         /**
          * @brief Creates an account by loading directly from storage.
          * If the account wasn't previously stored, returns `nullptr`.
          */
-        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
-                                                                std::string_view public_key,
-                                                                bool             full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID token_id, std::string_view public_key );
 
         /**
          * @brief       Creates an account from a BIP39 mnemonic phrase.
          * @param[in]   token_id Token ID of the account.
          * @param[in]   mnemonic BIP39 mnemonic phrase.
          * @param[in]   base_path Base path to store/retrieve keys.
-         * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
         static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
                                                                const std::string             &mnemonic,
-                                                               const boost::filesystem::path &base_path,
-                                                               bool                           full_node = false );
+                                                               const boost::filesystem::path &base_path );
 
         /**
          * @brief Creates an account with a newly generated random BIP39 mnemonic.
          * @param[in] token_id Token ID of the account.
          * @param[in] base_path Base path to store/retrieve keys.
-         * @param[in] full_node Whether to initialize as a full node.
          * @return Pair of shared account instance (nullptr on failure) and the generated mnemonic phrase.
          */
         static std::pair<std::shared_ptr<GeniusAccount>, std::string> NewFromRandomMnemonic(
             TokenID                        token_id,
-            const boost::filesystem::path &base_path,
-            bool                           full_node = false );
+            const boost::filesystem::path &base_path );
 
         static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
 
@@ -164,6 +154,11 @@ namespace sgns
          * @return      true if succeeds, false otherwise
          */
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
+
+        /**
+         * @brief       Stop the account messenger worker thread
+         */
+        void StopMessenger();
 
         /**
          * @brief       Configures database dependencies: nonce store, block response handler,
@@ -278,17 +273,17 @@ namespace sgns
 
         /**
          * @brief       Get confirmed nonce from the network
-         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @param[in]   timeout How long to wait for the confirmed nonce
          * @return      The confirmed nonce if success, error otherwise
          */
-        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
+        outcome::result<uint64_t> GetConfirmedNonce( std::chrono::milliseconds timeout ) const;
 
         /**
          * @brief       Fetch the latest nonce from the network without relying on cached values
-         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @param[in]   timeout How long to wait for the nonce
          * @return      Error if no response received, optional nonce if success
          */
-        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( uint64_t timeout_ms ) const;
+        outcome::result<std::optional<uint64_t>> FetchNetworkNonce( std::chrono::milliseconds timeout ) const;
 
         /**
          * @brief       Get the next available nonce without reserving it
@@ -309,32 +304,33 @@ namespace sgns
         void ReleaseNonce( uint64_t nonce );
 
         outcome::result<void> RequestGenesis(
-            uint64_t                                            timeout_ms = 8000,
-            std::function<void( outcome::result<std::string> )> callback   = nullptr ) const;
+            std::chrono::milliseconds                           timeout  = std::chrono::seconds( 8 ),
+            std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         outcome::result<void> RequestAccountCreation(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::function<void( outcome::result<std::string> )> callback ) const;
         outcome::result<void> RequestValidatorRegistry(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             std::function<void( outcome::result<std::string> )> callback ) const;
         outcome::result<void> RequestRegularBlock(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             const std::string                                  &cid,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         outcome::result<void> RequestTransaction(
-            uint64_t                                            timeout_ms,
+            std::chrono::milliseconds                           timeout,
             const std::string                                  &tx_hash,
             std::function<void( outcome::result<std::string> )> callback = nullptr ) const;
         /**
          * @brief       Request UTXOs for a specific address and return the selected response
-         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   timeout Total time to wait for responses
          * @param[in]   address Address to request UTXOs for
-         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @param[in]   silent_time Time to wait for subsequent responses after the first one
          * @return      Set of UTXO strings based on selection criteria, or error otherwise
          */
-        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
-                                                                       const std::string &address,
-                                                                       uint64_t           silent_time_ms = 150 ) const;
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs(
+            std::chrono::milliseconds timeout,
+            const std::string        &address,
+            std::chrono::milliseconds silent_time = std::chrono::milliseconds( 150 ) ) const;
         /**
          * @brief       Request heads broadcast for specific topics
          * @param[in]   topics Set of topic names to request heads for
@@ -398,12 +394,10 @@ namespace sgns
         static outcome::result<StorageWithAddress> LoadGeniusAccount( std::string_view public_key );
 
         static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
-                                                                          StorageWithAddress response_value,
-                                                                          bool               full_node );
+                                                                          StorageWithAddress response_value );
 
-        TokenID                         token;         ///< Token ID of the account
-        std::shared_ptr<ISecureStorage> storage_;      ///< Secure storage instance
-        bool                            is_full_node_; ///< Whether this account is a full node
+        TokenID                         token;    ///< Token ID of the account
+        std::shared_ptr<ISecureStorage> storage_; ///< Secure storage instance
 
         GeniusSigner                              signer_;                ///< In-memory signing identity
         std::unordered_map<std::string, uint64_t> confirmed_nonces_;      ///< Map of the confirmed nonces from peers
@@ -452,9 +446,8 @@ namespace sgns
          * @param[in]   signer In-memory signing identity.
          * @param[in]   token_id Token ID for the account.
          * @param[in]   storage Secure storage instance.
-         * @param[in]   full_node Whether this account is a full node.
          */
-        GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
+        GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage );
     };
 }
 

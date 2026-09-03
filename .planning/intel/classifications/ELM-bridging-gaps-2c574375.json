@@ -1,0 +1,27 @@
+{
+  "source_path": "/Users/Shared/SSDevelopment/Development/GeniusVentures/GeniusNetwork/SuperGenius/.planning/notes/ELM-bridging-gaps.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": true,
+  "title": "Analyze ELM bridging gaps",
+  "summary": "ChatGPT analysis correcting the ELM processing design in issue #369: GCS only creates and funds SuperGenius jobs; SGProcessingManager handles manifests, caching, and execution without bidding or advertising.",
+  "scope": [
+    "ELM processing",
+    "GCS",
+    "SuperGenius processing grid",
+    "SGProcessingManager",
+    "model manifests",
+    "model bundle caching",
+    "protobuf task protocol",
+    "GNUS funding and escrow",
+    "OpenAI-compatible /v1 API",
+    "issue #369"
+  ],
+  "cross_refs": [
+    "issue #369",
+    "SGElmProcessing.proto"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Manifest declares DOC; content is an exported ChatGPT conversation (prose analysis, no frontmatter, no Decision/Consequences or user-story sections), so DOC fits. Ambiguity resolved by manifest override: the doc also carries directive scope corrections for issue #369 (removes NodeElmCapabilities, ELM/capability advertising, ElmProcessingIntent, bidding, quotes, GCS-side claims/leases, requester-side worker selection; redirects execution work to SGProcessingManager with local content-addressed model caching at the fixed $0.0003/hour rate) and illustrative protobuf/JSON sketches marked optional. Owner states this is a v1.0 pre-ship requirement for SuperGenius; synthesizer should preserve these scope-removal and redirection directives as authoritative context despite DOC-level precedence. Filename hash suffix is a deterministic path digest (no shell available for SHA-256); source_path field preserves traceability."
+}

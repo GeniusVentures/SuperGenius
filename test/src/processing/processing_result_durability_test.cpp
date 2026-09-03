@@ -72,11 +72,12 @@ public:
         // Initialize the logging system before creating libp2p hosts.
         // Mirrors ProcessingServiceTest::SetUp(name, loggerConfig).
         auto logSystem = std::make_shared<soralog::LoggingSystem>(
-            std::make_shared<soralog::ConfiguratorFromYAML>(
-                std::make_shared<libp2p::log::Configurator>(),
-                durability_logger_config ) );
+            std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
+                                                             durability_logger_config ) );
         if ( auto result = logSystem->configure(); result.has_error )
+        {
             throw std::domain_error( "Unable to configure soralog" );
+        }
         libp2p::log::setLoggingSystem( logSystem );
         libp2p::log::setLevelOfGroup( "result_durability_test", soralog::Level::OFF );
         s_logger_initialized = true;
@@ -93,7 +94,9 @@ public:
             auto node = std::make_shared<GossipPubSub>( config );
 
             for ( auto &bn : bootstrap_nodes )
+            {
                 Color::PrintInfo( "  with bootstrap node: ", bn );
+            }
 
             s_pubsub_futures.push_back( node->Start( 0, bootstrap_nodes ) );
 
@@ -141,7 +144,9 @@ public:
         for ( auto &pubs : s_pubsub_nodes )
         {
             if ( pubs )
+            {
                 pubs->Stop();
+            }
         }
         // Allow time for libp2p shutdown
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
@@ -161,18 +166,17 @@ public:
         }
 
         // Reuse the suite-level pubsub nodes instead of creating new ones.
-        m_pubsub_nodes   = s_pubsub_nodes;
+        m_pubsub_nodes = s_pubsub_nodes;
         m_pubsub_futures.clear();
 
         // Create fresh accessors, managers, and engines per test (same as
         // the second half of ProcessingServiceTest::Initialize).
         for ( size_t i = 0; i < 2; ++i )
         {
-            std::string nodeId = "NODE_" + std::to_string( i + 1 );
+            std::string nodeId      = "NODE_" + std::to_string( i + 1 );
             auto        pubsub_node = m_pubsub_nodes[i];
 
-            auto processingCore = m_processing_cores.emplace_back(
-                std::make_shared<ProcessingCoreImpl>( 50 ) );
+            auto processingCore     = m_processing_cores.emplace_back( std::make_shared<ProcessingCoreImpl>( 50 ) );
             auto queuePubSubChannel = m_processing_queues_channel_pub_subs.emplace_back(
                 std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubsub_node, "QUEUE_CHANNEL_ID" ) );
             auto processingQueueManager = m_processing_queues_managers.emplace_back(
@@ -184,17 +188,16 @@ public:
                 std::make_shared<ProcessingEngine>( nodeId, processingCore, []( const std::string & ) {}, [] {} ) );
             m_IsTaskFinalized.emplace_back( std::make_unique<std::atomic<bool>>( false ) );
 
-            auto queueAccessor = m_processing_queues_accessors.emplace_back(
-                std::make_shared<SubTaskQueueAccessorImpl>(
-                    pubsub_node,
-                    processingQueueManager,
-                    std::make_shared<SubTaskResultStorageMock>(),
-                    [this, i, nodeId]( const SGProcessing::TaskResult & )
-                    {
-                        m_IsTaskFinalized[i]->store( true );
-                        Color::PrintInfo( "Task finalized by ", nodeId );
-                    },
-                    []( const std::string & ) {} ) );
+            auto queueAccessor = m_processing_queues_accessors.emplace_back( std::make_shared<SubTaskQueueAccessorImpl>(
+                pubsub_node,
+                processingQueueManager,
+                std::make_shared<SubTaskResultStorageMock>(),
+                [this, i, nodeId]( const SGProcessing::TaskResult & )
+                {
+                    m_IsTaskFinalized[i]->store( true );
+                    Color::PrintInfo( "Task finalized by ", nodeId );
+                },
+                []( const std::string & ) {} ) );
             queueAccessor->CreateResultsChannel( "test" );
         }
 
@@ -203,8 +206,9 @@ public:
         ASSERT_NE( host, nullptr );
 
         bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>(
-            *host, *bitswap_event_bus_, m_pubsub_nodes[0]->GetAsioContext() );
+        bitswap_           = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *host,
+                                                                            *bitswap_event_bus_,
+                                                                            m_pubsub_nodes[0]->GetAsioContext() );
 
         // Use a temp directory as cache dir so tests are isolated.
         temp_cache_dir_ = fs::temp_directory_path() / "sgns_test_durability";
@@ -221,9 +225,13 @@ public:
     {
         // Reset bitswap before tearing down accessors (bitswap holds host refs).
         if ( bitswap_ )
+        {
             bitswap_.reset();
+        }
         if ( bitswap_event_bus_ )
+        {
             bitswap_event_bus_.reset();
+        }
 
         // Clean up temp cache.
         std::error_code ec;
@@ -233,13 +241,19 @@ public:
         // but NOT the pubsub nodes — they live in s_pubsub_nodes across tests.
         for ( auto &s : m_processing_services )
         {
-            if ( s ) s->StopProcessing();
+            if ( s )
+            {
+                s->StopProcessing();
+            }
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         for ( auto &engine : m_processing_engines )
         {
-            if ( engine ) engine->StopQueueProcessing();
+            if ( engine )
+            {
+                engine->StopQueueProcessing();
+            }
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
         m_processing_engines.clear();
@@ -263,17 +277,16 @@ public:
     std::string publishTestBlock( const std::vector<uint8_t> &data )
     {
         std::promise<libp2p::multi::ContentIdentifier> cid_promise;
-        auto cid_future = cid_promise.get_future();
+        auto                                           cid_future = cid_promise.get_future();
 
-        bitswap_->PublishData(
-            data,
-            [&cid_promise]( libp2p::outcome::result<libp2p::multi::ContentIdentifier> result )
-            {
-                if ( result )
-                {
-                    cid_promise.set_value( result.value() );
-                }
-            } );
+        bitswap_->PublishData( data,
+                               [&cid_promise]( libp2p::outcome::result<libp2p::multi::ContentIdentifier> result )
+                               {
+                                   if ( result )
+                                   {
+                                       cid_promise.set_value( result.value() );
+                                   }
+                               } );
 
         auto cid = cid_future.get();
         return libp2p::multi::ContentIdentifierCodec::toString( cid ).value();
@@ -282,9 +295,9 @@ public:
     /**
      * @brief Helper: create a SubTaskResult with the given ipfs_results_data_id.
      */
-    static SGProcessing::SubTaskResult makeResult( const std::string       &subTaskId,
-                                                   const std::string       &ipfsDataId,
-                                                   const std::string       &nodeAddress = "test_node" )
+    static SGProcessing::SubTaskResult makeResult( const std::string &subTaskId,
+                                                   const std::string &ipfsDataId,
+                                                   const std::string &nodeAddress = std::string( 128, 'a' ) )
     {
         SGProcessing::SubTaskResult result;
         result.set_subtaskid( subTaskId );
@@ -293,6 +306,10 @@ public:
         // Add a minimal valid chunk hash so basic validation passes.
         std::string hash = "hash_" + subTaskId;
         result.add_chunk_hashes( hash );
+        // Payout metadata required by ProcessingValidationCore::ValidateIndividualResult.
+        result.set_developer_address( "0xcafe" );
+        result.set_developer_cut( 350000 );
+        result.set_token_id( std::string( 32, '\0' ) );
         return result;
     }
 
@@ -339,7 +356,7 @@ TEST_F( ResultDurabilityTest, MirrorCallbackInvokedOnPubsubResult )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId2 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "MIRROR_TEST" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -366,8 +383,7 @@ TEST_F( ResultDurabilityTest, MirrorCallbackInvokedOnPubsubResult )
                                &resultTime );
 
     // Publish a result from accessor 1 with an ipfs_results_data_id.
-    SGProcessing::SubTaskResult result = makeResult(
-        "MIRROR_TEST", "ipfs://QmTest123Mirror\nipfs://QmTest456Mirror" );
+    SGProcessing::SubTaskResult result = makeResult( "MIRROR_TEST", "ipfs://QmTest123Mirror\nipfs://QmTest456Mirror" );
 
     // We need to get the result onto the pubsub channel.  CompleteSubTask on
     // accessor 1 will publish to the results channel, which accessor 0
@@ -400,7 +416,7 @@ TEST_F( ResultDurabilityTest, SchemeValidation_RejectsNonIpfsPrefix )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "SCHEME_TEST" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -408,10 +424,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_RejectsNonIpfsPrefix )
 
     auto item = queue->mutable_processing_queue()->add_items();
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "SCHEME_QUEUE" );
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1,
-        []( const std::string & ) {} );
+    auto queueChannel           = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "SCHEME_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
     processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
 
     std::atomic<bool> error_occurred{ false };
@@ -444,11 +461,10 @@ TEST_F( ResultDurabilityTest, SchemeValidation_RejectsNonIpfsPrefix )
     accessor->CompleteSubTask( "SCHEME_TEST", badResult );
 
     std::chrono::milliseconds elapsed;
-    ASSERT_WAIT_FOR_CONDITION(
-        [&error_occurred]() { return error_occurred.load(); },
-        std::chrono::milliseconds( 500 ),
-        "Scheme validation should reject file:// prefix",
-        &elapsed );
+    ASSERT_WAIT_FOR_CONDITION( [&error_occurred]() { return error_occurred.load(); },
+                               std::chrono::milliseconds( 500 ),
+                               "Scheme validation should reject file:// prefix",
+                               &elapsed );
 
     EXPECT_TRUE( error_occurred.load() ) << "Scheme validation should reject file:// prefix";
 }
@@ -465,7 +481,7 @@ TEST_F( ResultDurabilityTest, SchemeValidation_AcceptsValidIpfsPrefix )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "SCHEME_OK" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -473,10 +489,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_AcceptsValidIpfsPrefix )
 
     auto item = queue->mutable_processing_queue()->add_items();
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "SCHEME_OK_QUEUE" );
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1,
-        []( const std::string & ) {} );
+    auto queueChannel           = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "SCHEME_OK_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
     processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
 
     std::atomic<bool> error_occurred{ false };
@@ -500,15 +517,13 @@ TEST_F( ResultDurabilityTest, SchemeValidation_AcceptsValidIpfsPrefix )
                                &resultTime );
 
     // Valid: ipfs:// prefix with multi-line CIDs.
-    auto goodResult = makeResult( "SCHEME_OK",
-                                  "ipfs://QmValidCID1\nipfs://QmValidCID2" );
+    auto goodResult = makeResult( "SCHEME_OK", "ipfs://QmValidCID1\nipfs://QmValidCID2" );
     accessor->CompleteSubTask( "SCHEME_OK", goodResult );
 
-    EXPECT_WAIT_FOR_CONDITION(
-        [&error_occurred]() { return !error_occurred.load(); },
-        std::chrono::milliseconds( 600 ),
-        "Valid ipfs:// scheme should be accepted (9a only, no bitswap check)",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&error_occurred]() { return !error_occurred.load(); },
+                               std::chrono::milliseconds( 600 ),
+                               "Valid ipfs:// scheme should be accepted (9a only, no bitswap check)",
+                               nullptr );
 }
 
 /**
@@ -523,7 +538,7 @@ TEST_F( ResultDurabilityTest, SchemeValidation_EmptyDataIdPasses )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "EMPTY_ID" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -531,10 +546,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_EmptyDataIdPasses )
 
     auto item = queue->mutable_processing_queue()->add_items();
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EMPTY_ID_QUEUE" );
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1,
-        []( const std::string & ) {} );
+    auto queueChannel           = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EMPTY_ID_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
     processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
 
     std::atomic<bool> error_occurred{ false };
@@ -561,11 +577,10 @@ TEST_F( ResultDurabilityTest, SchemeValidation_EmptyDataIdPasses )
     auto emptyResult = makeResult( "EMPTY_ID", "" );
     accessor->CompleteSubTask( "EMPTY_ID", emptyResult );
 
-    EXPECT_WAIT_FOR_CONDITION(
-        [&error_occurred]() { return !error_occurred.load(); },
-        std::chrono::milliseconds( 600 ),
-        "Empty ipfs_results_data_id should pass validation",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&error_occurred]() { return !error_occurred.load(); },
+                               std::chrono::milliseconds( 600 ),
+                               "Empty ipfs_results_data_id should pass validation",
+                               nullptr );
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -599,7 +614,7 @@ TEST_F( ResultDurabilityTest, AvailabilityGate_AcceptsWhenDataAvailable )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "AVAIL_OK" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -629,11 +644,10 @@ TEST_F( ResultDurabilityTest, AvailabilityGate_AcceptsWhenDataAvailable )
     m_processing_queues_accessors[1]->CompleteSubTask( "AVAIL_OK", goodResult );
 
     // Wait for pubsub to deliver to owner (accessor 0).
-    ASSERT_WAIT_FOR_CONDITION(
-        [this]() { return m_processing_queues_accessors[0]->GetResults().size() > 0; },
-        std::chrono::milliseconds( 10000 ),
-        "Result with available CID was not accepted",
-        &resultTime );
+    ASSERT_WAIT_FOR_CONDITION( [this]() { return m_processing_queues_accessors[0]->GetResults().size() > 0; },
+                               std::chrono::milliseconds( 10000 ),
+                               "Result with available CID was not accepted",
+                               &resultTime );
 
     EXPECT_EQ( m_processing_queues_accessors[0]->GetResults().size(), 1u );
 }
@@ -654,7 +668,7 @@ TEST_F( ResultDurabilityTest, AvailabilityGate_RejectsWhenDataUnavailable )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "AVAIL_FAIL" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -684,11 +698,10 @@ TEST_F( ResultDurabilityTest, AvailabilityGate_RejectsWhenDataUnavailable )
     m_processing_queues_accessors[1]->CompleteSubTask( "AVAIL_FAIL", badResult );
 
     // Allow time for pubsub propagation.  Result should NOT appear on owner.
-    EXPECT_WAIT_FOR_CONDITION(
-        [this]() { return m_processing_queues_accessors[0]->GetResults().size() == 0u; },
-        std::chrono::milliseconds( 1500 ),
-        "Result with unavailable CID should have been rejected",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [this]() { return m_processing_queues_accessors[0]->GetResults().size() == 0u; },
+                               std::chrono::milliseconds( 1500 ),
+                               "Result with unavailable CID should have been rejected",
+                               nullptr );
 }
 
 /**
@@ -703,7 +716,7 @@ TEST_F( ResultDurabilityTest, SchemeValidation_SkipsEmptyLines )
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto  subTask = queue->mutable_subtasks()->add_items();
+    auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid( "EMPTY_LINES" );
     auto chunk = subTask->add_chunkstoprocess();
     chunk->set_chunkid( "CHUNK_1" );
@@ -711,10 +724,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_SkipsEmptyLines )
 
     auto item = queue->mutable_processing_queue()->add_items();
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EMPTY_LINES_QUEUE" );
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1,
-        []( const std::string & ) {} );
+    auto queueChannel           = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EMPTY_LINES_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
     processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
 
     std::atomic<bool> error_occurred{ false };
@@ -738,13 +752,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_SkipsEmptyLines )
                                &resultTime );
 
     // Lines with empty lines between valid CIDs.
-    auto result = makeResult( "EMPTY_LINES",
-                              "ipfs://QmAlpha\n\nipfs://QmBeta\n\n" );
+    auto result = makeResult( "EMPTY_LINES", "ipfs://QmAlpha\n\nipfs://QmBeta\n\n" );
     accessor->CompleteSubTask( "EMPTY_LINES", result );
 
-    EXPECT_WAIT_FOR_CONDITION(
-        [&error_occurred]() { return !error_occurred.load(); },
-        std::chrono::milliseconds( 600 ),
-        "Empty lines should be skipped, valid CIDs should pass",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&error_occurred]() { return !error_occurred.load(); },
+                               std::chrono::milliseconds( 600 ),
+                               "Empty lines should be skipped, valid CIDs should pass",
+                               nullptr );
 }

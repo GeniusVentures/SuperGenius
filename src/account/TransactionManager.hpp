@@ -26,6 +26,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
 #include "account/PublicChainInputValidator.hpp"
@@ -65,9 +66,10 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
+            5 ); ///< Unified timeout for all nonce requests
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
         /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
@@ -127,7 +129,7 @@ namespace sgns
          * @param[in] processing_db Database of the CRDT
          * @param[in] ctx The io context used to run its inner methods
          * @param[in] account Genius account to be used
-         * @param[in] full_node Parameter to indicate if the account is a full node
+         * @param[in] node_type Deployment role of this node (Full / Light / Archive)
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
          * @return shared_ptr to the fully-wired TransactionManager instance
@@ -136,16 +138,16 @@ namespace sgns
          * @note timestamp_tolerance must be smaller than mutability_window
          */
         static std::shared_ptr<TransactionManager> New(
-            std::shared_ptr<crdt::GlobalDB>          processing_db,
-            std::shared_ptr<boost::asio::io_context> ctx,
-            std::shared_ptr<GeniusAccount>           account,
-            std::shared_ptr<Blockchain>              blockchain,
-            bool                                     full_node           = false,
-            uint16_t                                 subnet_id           = 0,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ),
-            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
-            std::shared_ptr<sgns::account::BurnConfig> burn_config             = nullptr );
+            std::shared_ptr<crdt::GlobalDB>            processing_db,
+            std::shared_ptr<boost::asio::io_context>   ctx,
+            std::shared_ptr<GeniusAccount>             account,
+            std::shared_ptr<Blockchain>                blockchain,
+            NodeType                                   node_type                 = NodeType::Light,
+            uint16_t                                   subnet_id                 = 0,
+            std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
+            std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
+            uint64_t                                   initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::shared_ptr<sgns::account::BurnConfig> burn_config               = nullptr );
 
         ~TransactionManager();
 
@@ -313,18 +315,19 @@ namespace sgns
          * selects UTXOs, reserves them, and signs the transaction.
          *
          * @param[in] amount  Total amount to lock in escrow.
-         * @param[in] dev_addr  Developer address that receives the remainder after peer payouts.
-         * @param[in] peers_cut  Multiplier (as a TokenAmount) applied to the escrow amount to calculate the per-peer share.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
+         *
+         * @note The escrow hold carries no payout metadata. The developer address and cut are
+         *       reported per subtask by the processing peer that ran the work, since peers of a
+         *       single job may be running apps from different developers.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
-                                                                            const std::string &dev_addr,
-                                                                            uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         /**
          * @brief Submits an escrow payout and observes it without blocking for confirmation.
@@ -464,6 +467,38 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
+        /// Destination of the burned fraction of an escrow payout.
+        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+
+        /**
+         * @brief Splits an escrow amount across contributing peers, their developers and the burn.
+         *
+         * Each subtask result names the peer that did the work plus the developer of the app that
+         * ran it, so a single job whose subtasks were processed by different apps pays each
+         * developer its own cut. The results share an even split of the amount left after the
+         * burn (the split remainder is burned too); each result's share is divided by its
+         * @c developer_cut, floored in the developer's disfavor, and minted in that result's
+         * token. Results with malformed metadata are skipped, they neither block the payout nor
+         * earn from it.
+         *
+         * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
+         * @param[in] escrow_amount Total amount locked by the escrow hold.
+         * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
+         * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
+         * @return Outputs in result order, then developers by (address, token), burn last; the
+         *         burn output is always present, zero-valued peer and developer credits are omitted.
+         */
+        static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
+            const SGProcessing::TaskResult &task_result,
+            uint64_t                        escrow_amount,
+            const TokenID                  &escrow_token_id,
+            uint64_t                        burn_basis_points );
+
+        friend class PayoutOutputsTestAccess;
+
         struct PendingTransactionWait
         {
             PendingTransactionWait( boost::asio::io_context              &context,
@@ -503,23 +538,15 @@ namespace sgns
             bool          initialized{ false };
         };
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            uint16_t                                 subnet_id,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window,
-                            uint64_t                                 initial_burn_basis_points,
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>            processing_db,
+                            std::shared_ptr<boost::asio::io_context>   ctx,
+                            std::shared_ptr<GeniusAccount>             account,
+                            std::shared_ptr<Blockchain>                blockchain,
+                            NodeType                                   node_type,
+                            uint16_t                                   subnet_id,
+                            std::chrono::milliseconds                  timestamp_tolerance,
+                            std::chrono::milliseconds                  mutability_window,
+                            uint64_t                                   initial_burn_basis_points,
                             std::shared_ptr<sgns::account::BurnConfig> burn_config );
 
         // Parser function pointer alias: returns a set of topic strings or an error
@@ -691,7 +718,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<Blockchain>              blockchain_;
-        bool                                     full_node_m;
+        NodeType                                 node_type_m;       ///< Deployment role driving replication behavior.
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;

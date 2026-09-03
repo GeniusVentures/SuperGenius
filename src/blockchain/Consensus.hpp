@@ -24,6 +24,7 @@
 #include <atomic>
 #include <limits>
 
+#include "account/NodeType.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
@@ -72,8 +73,10 @@ namespace sgns
          *             The callback is invoked AFTER proposal_id/voter_id/approve/
          *             timestamp are set but BEFORE VoteSigningBytes, so the
          *             resulting signature commits to the slot hashes (T-06-01).
+         *             The proposal's subject is passed so the populator can bind
+         *             slot hashes to the exact claim that was verified (#364).
          */
-        using SlotHashPopulator = std::function<void( ConsensusVote &vote )>;
+        using SlotHashPopulator = std::function<void( ConsensusVote &vote, const Subject &subject )>;
 
         /**
          * @brief Creates a ConsensusManager instance.
@@ -83,6 +86,10 @@ namespace sgns
          * @param[in] signer Local signing callback for outbound signed objects.
          * @param[in] address Local validator/account identifier.
          * @param[in] consensus_topic Optional topic override used to derive consensus channels.
+         * @param[in] node_type Deployment role. Archive nodes never emit a self-vote; every other
+         *            role votes normally. Passed at construction rather than set afterwards because
+         *            New() subscribes to the consensus topic before returning, so a later setter
+         *            would leave a window in which a proposal could arrive and be voted on.
          * @return Shared pointer to a new manager instance.
          */
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
@@ -90,7 +97,8 @@ namespace sgns
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
-                                                      std::string                                consensus_topic = "" );
+                                                      std::string                                consensus_topic = "",
+                                                      NodeType                                   node_type = NodeType::Full );
         /**
          * @brief      Destroys the Consensus Manager object
          */
@@ -326,12 +334,16 @@ namespace sgns
          * @param[in] voter_id Validator identifier of the voter.
          * @param[in] approve `true` for approval vote, `false` for rejection vote.
          * @param[in] sign Signing callback.
+         * @param[in] subject Subject of the proposal being voted on. Required to bind
+         *            RPC slot hashes to the exact verified claim (#364). When null,
+         *            the vote fails closed and carries no slot hashes.
          * @return Signed vote on success, otherwise an error.
          */
         outcome::result<Vote> CreateVote( const std::string &proposal_id,
                                           const std::string &voter_id,
                                           bool               approve,
-                                          Signer             sign );
+                                          Signer             sign,
+                                          const Subject     *subject = nullptr );
 
         /**
          * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
@@ -528,6 +540,18 @@ namespace sgns
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         /**
+         * @brief Whether this node takes an active part in consensus.
+         * @return False only for Archive nodes, which neither self-vote nor aggregate.
+         *
+         * Exposed so Blockchain can gate registry-batch authoring on the role without
+         * duplicating the flag; this instance is the single source of truth.
+         */
+        bool ParticipatesInConsensus() const noexcept
+        {
+            return participates_in_consensus_;
+        }
+
+        /**
          * @brief Retrieves a certificate by subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return Certificate when present, or an error.
@@ -560,13 +584,15 @@ namespace sgns
          * @param[in] signer Local signing callback.
          * @param[in] address Local validator/account id.
          * @param[in] consensus_topic Consensus topic base.
+         * @param[in] node_type Deployment role; drives @ref participates_in_consensus_.
          */
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                    std::shared_ptr<crdt::GlobalDB>            db,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
-                                   std::string                                consensus_topic );
+                                   std::string                                consensus_topic,
+                                   NodeType                                   node_type );
         /**
          * @brief Starts the background round timer loop.
          */
@@ -842,6 +868,7 @@ namespace sgns
         SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
         std::string                     account_address_;            ///< Local validator/account id.
+        const bool                      participates_in_consensus_ = true;
         std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>

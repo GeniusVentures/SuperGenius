@@ -5,7 +5,7 @@ milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 11
 status: executing
 last_updated: "2026-07-24T18:58:19.372Z"
-last_activity: 2026-07-24 -- Phase 11 execution started
+last_activity: 2026-08-27 -- Completed quick task 260827-hbf: GetGraphsyncNetwork accessor
 progress:
   total_phases: 5
   completed_phases: 3
@@ -63,6 +63,12 @@ Last activity: 2026-07-24 -- Phase 11 execution started
 
 - Review `.planning/ROADMAP.md` (Milestone v1.1 section) and `.planning/REQUIREMENTS.md` traceability
 - Run `/gsd:plan-phase 8` to begin planning the MultiSig Primitive phase
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260827-hbf | Add GetGraphsyncNetwork() accessor to GeniusNode (SDK needs it — no public path existed) | 2026-08-27 | 8c9e1b4f | [260827-hbf-check-if-graphsyncnetwork-can-be-obtaine](./quick/260827-hbf-check-if-graphsyncnetwork-can-be-obtaine/) |
 
 ### v1.0 History
 

@@ -38,6 +38,13 @@ addtest(account_management_test
 
 target_link_libraries(account_management_test genius_node_test json_secure_storage)
 
+# Absolute path to the shared processing test assets. Passed in rather than derived
+# from the binary location at runtime: that walked a fixed number of parent
+# directories and so silently depended on the build layout (the Visual Studio
+# per-config subdirectory, or the ABI subdirectory on Linux) supplying a level.
+target_compile_definitions(account_management_test PRIVATE
+    SGNS_PROCESSING_ASSETS_DIR="${PROJECT_ROOT}/test/src/processing_nodes")
+
 addtest(result_gc_test
     result_gc_test.cpp
 )
@@ -245,6 +252,27 @@ else()
     target_link_options(node_type_derivation_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+addtest(payout_outputs_test
+    payout_outputs_test.cpp
+)
+
+target_link_libraries(payout_outputs_test
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(payout_outputs_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(payout_outputs_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(payout_outputs_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()

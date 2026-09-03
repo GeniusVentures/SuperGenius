@@ -1,10 +1,10 @@
 # addtest(processing_service_test
-    # processing_service_test.cpp
-    # processing_engine_test.cpp
-    # processing_subtask_queue_accessor_impl_test.cpp
-    # processing_subtask_queue_channel_pubsub_test.cpp
-    # processing_subtask_queue_manager_test.cpp
-    # processing_subtask_validation_test.cpp
+# processing_service_test.cpp
+# processing_engine_test.cpp
+# processing_subtask_queue_accessor_impl_test.cpp
+# processing_subtask_queue_channel_pubsub_test.cpp
+# processing_subtask_queue_manager_test.cpp
+# processing_subtask_validation_test.cpp
 # )
 
 # target_include_directories(processing_service_test PRIVATE ${GSL_INCLUDE_DIR})
@@ -76,6 +76,21 @@ addtest(processing_validate_result_data_test
 target_include_directories(processing_validate_result_data_test PRIVATE ${GSL_INCLUDE_DIR})
 
 target_link_libraries(processing_validate_result_data_test
+    processing_service
+    SGProcessingProto
+    logger
+    Boost::headers
+    p2p::p2p_logger
+    ipfs-pubsub
+)
+
+addtest(processing_payout_metadata_test
+    processing_payout_metadata_test.cpp
+)
+
+target_include_directories(processing_payout_metadata_test PRIVATE ${GSL_INCLUDE_DIR})
+
+target_link_libraries(processing_payout_metadata_test
     processing_service
     SGProcessingProto
     logger

@@ -237,9 +237,9 @@ protected:
 
 std::array<std::shared_ptr<GeniusNode>, BridgeAnvilE2ETest::kNodeCount> BridgeAnvilE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeAnvilE2ETest::kNodeCount>            BridgeAnvilE2ETest::s_configs = { {
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node0" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node1" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node2" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node0" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node1" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_anvil_node2" },
 } };
 sgns::test::anvil::AnvilProcess                                         BridgeAnvilE2ETest::s_anvil;
 
@@ -290,7 +290,8 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     spdlog::info( "bridge_anvil: fork_url={}", fork_url );
 
     // D-01: start Anvil subprocess forking Sepolia.
-    ASSERT_TRUE( s_anvil.Start( fork_url ) ) << "Failed to start anvil subprocess";
+    ASSERT_TRUE( s_anvil.Start( fork_url, sgns::test::anvil::kAnvilPortBandE2E ) )
+        << "Failed to start anvil subprocess";
 
     // D-04: poll Anvil readiness via cast block-number.
     ASSERT_TRUE( s_anvil.WaitForReady() ) << "Anvil did not become ready";

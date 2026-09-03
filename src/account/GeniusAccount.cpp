@@ -56,8 +56,8 @@ namespace
         GeniusSigner::PrivateKey secret_key{};
         for ( size_t i = secret_key.size(); i-- > 0; )
         {
-            secret_key[i]  = static_cast<uint8_t>( reduced & 0xFFu );
-            reduced      >>= 8;
+            secret_key[i]   = static_cast<uint8_t>( reduced & 0xFFu );
+            reduced       >>= 8;
         }
         return secret_key;
     }
@@ -278,14 +278,9 @@ namespace sgns
 {
     bool GeniusAccount::IsValidPublicKey( std::string_view key ) noexcept
     {
-        if ( key.length() != PUBLIC_KEY_HEX_LENGTH )
-        {
-            return false;
-        }
-        return std::all_of(
-            key.begin(),
-            key.end(),
-            []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
+        // Public keys are rendered by base::hex_lower, so only the lowercase form is a real key;
+        // see sgns::base::IsHexAddress, which also pins the PUBLIC_KEY_HEX_LENGTH.
+        return base::IsHexAddress( key );
     }
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED{
@@ -304,45 +299,41 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
-                                                                              StorageWithAddress response_value,
-                                                                              bool               full_node )
+                                                                              StorageWithAddress response_value )
     {
         auto [storage, private_key] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ), full_node ) );
+            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ) ) );
 
         return instance;
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const boost::filesystem::path &base_path,
-                                                       bool                           full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID token_id, const boost::filesystem::path &base_path )
     {
         if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
         }
 
         genius_account_logger()->error(
             "Could not find existing Genius address, generating one from a random mnemonic" );
 
-        return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+        return NewFromRandomMnemonic( token_id, base_path ).first;
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id, bool full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id )
     {
         auto signer  = GeniusSigner::Generate();
         auto storage = std::make_shared<MemorySecureStorage>( "ephemeral:" + signer.GetAddress() );
         return std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( std::move( signer ), token_id, std::move( storage ), full_node ) );
+            new GeniusAccount( std::move( signer ), token_id, std::move( storage ) ) );
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPrivateKey( TokenID                        token_id,
                                                                      const char                    *eth_private_key,
-                                                                     const boost::filesystem::path &base_path,
-                                                                     bool                           full_node )
+                                                                     const boost::filesystem::path &base_path )
     {
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )
@@ -352,17 +343,15 @@ namespace sgns
         }
 
         genius_account_logger()->debug( "Generated a Genius address from private key" );
-        return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+        return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID          token_id,
-                                                                    std::string_view public_key,
-                                                                    bool             full_node )
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID token_id, std::string_view public_key )
     {
         if ( auto response = LoadGeniusAccount( public_key ); response.has_value() )
         {
             genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            return CreateInstanceFromResponse( token_id, std::move( response.value() ) );
         }
 
         genius_account_logger()->error( "Could not load Genius address from storage" );
@@ -372,8 +361,7 @@ namespace sgns
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromMnemonic( TokenID                        token_id,
                                                                    const std::string             &mnemonic,
-                                                                   const boost::filesystem::path &base_path,
-                                                                   bool                           full_node )
+                                                                   const boost::filesystem::path &base_path )
     {
         try
         {
@@ -389,7 +377,7 @@ namespace sgns
             }
 
             genius_account_logger()->debug( "Generated a Genius address from private key" );
-            auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+            auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ) );
 
             if ( account->storage_->Save( "mnemonic", wallet.getMnemonic() ).has_failure() )
             {
@@ -408,12 +396,11 @@ namespace sgns
 
     std::pair<std::shared_ptr<GeniusAccount>, std::string> GeniusAccount::NewFromRandomMnemonic(
         TokenID                        token_id,
-        const boost::filesystem::path &base_path,
-        bool                           full_node )
+        const boost::filesystem::path &base_path )
     {
         TW::HDWallet wallet( 128, "" );
         std::string  mnemonic = wallet.getMnemonic();
-        auto         account  = NewFromMnemonic( token_id, mnemonic, base_path, full_node );
+        auto         account  = NewFromMnemonic( token_id, mnemonic, base_path );
         return { account, mnemonic };
     }
 
@@ -685,6 +672,14 @@ namespace sgns
         return ret;
     }
 
+    void GeniusAccount::StopMessenger()
+    {
+        if ( messenger_ )
+        {
+            messenger_->Stop();
+        }
+    }
+
     bool GeniusAccount::ConfigureDatabaseDependencies( std::shared_ptr<crdt::GlobalDB> global_db )
     {
         bool ret = false;
@@ -760,13 +755,9 @@ namespace sgns
         genius_account_logger()->debug( "Cleared database dependency handlers" );
     }
 
-    GeniusAccount::GeniusAccount( GeniusSigner                    signer,
-                                  TokenID                         token_id,
-                                  std::shared_ptr<ISecureStorage> storage,
-                                  bool                            full_node ) :
+    GeniusAccount::GeniusAccount( GeniusSigner signer, TokenID token_id, std::shared_ptr<ISecureStorage> storage ) :
         token( token_id ),
         storage_( std::move( storage ) ),
-        is_full_node_( full_node ),
         signer_( std::move( signer ) ),
         utxo_manager_(
             GetAddress(),
@@ -983,15 +974,15 @@ namespace sgns
         return outcome::failure( std::errc::no_message );
     }
 
-    outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
+    outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( std::chrono::milliseconds timeout ) const
     {
         if ( !messenger_ )
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        genius_account_logger()->debug( "Fetching nonce from the network with timeout {} ms", timeout_ms );
+        genius_account_logger()->debug( "Fetching nonce from the network with timeout {} ms", timeout.count() );
 
-        auto result = messenger_->GetLatestNonce( timeout_ms );
+        auto result = messenger_->GetLatestNonce( timeout );
         if ( result.has_value() )
         {
             genius_account_logger()->debug( "Nonce replied with value {}", result.value() );
@@ -1006,7 +997,7 @@ namespace sgns
         return outcome::failure( result.error() );
     }
 
-    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
+    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( std::chrono::milliseconds timeout ) const
     {
         if ( !messenger_ )
         {
@@ -1017,16 +1008,17 @@ namespace sgns
         // Check if we have a fresh cached result (within 5 seconds)
         if ( cached_nonce_result_.has_value() )
         {
-            auto     now = std::chrono::steady_clock::now();
-            uint64_t cache_age_ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ ).count();
+            const auto now       = std::chrono::steady_clock::now();
+            const auto cache_age = std::chrono::duration_cast<std::chrono::milliseconds>( now -
+                                                                                          cached_nonce_timestamp_ );
 
-            if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
+            if ( cache_age < NONCE_CACHE_DURATION )
             {
-                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age_ms );
+                genius_account_logger()->debug( "Returning cached nonce result (age: {} ms)", cache_age.count() );
                 return cached_nonce_result_.value();
             }
-            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce", cache_age_ms );
+            genius_account_logger()->debug( "Cached nonce expired (age: {} ms), fetching fresh nonce",
+                                            cache_age.count() );
         }
 
         // If a request is already in progress, wait for it
@@ -1052,9 +1044,9 @@ namespace sgns
         // Release lock while making the network call
         lock.unlock();
 
-        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout_ms );
+        genius_account_logger()->info( "Requesting nonce from the network with timeout {} ms", timeout.count() );
 
-        auto latest_nonce_result = messenger_->GetLatestNonce( timeout_ms );
+        auto latest_nonce_result = messenger_->GetLatestNonce( timeout );
 
         outcome::result<uint64_t> result = outcome::failure( std::errc::io_error );
         if ( latest_nonce_result.has_value() )
@@ -1101,7 +1093,7 @@ namespace sgns
     }
 
     outcome::result<void> GeniusAccount::RequestGenesis(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1110,11 +1102,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        return messenger_->RequestGenesis( timeout_ms, std::move( callback ) );
+        return messenger_->RequestGenesis( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestAccountCreation(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1123,11 +1115,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Genesis block from the network" );
 
-        return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
+        return messenger_->RequestAccountCreation( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestValidatorRegistry(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
         if ( !messenger_ )
@@ -1136,7 +1128,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting Validator Registry block from the network" );
 
-        return messenger_->RequestValidatorRegistry( timeout_ms, std::move( callback ) );
+        return messenger_->RequestValidatorRegistry( timeout, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestHeads( const std::unordered_set<std::string> &topics ) const
@@ -1151,7 +1143,7 @@ namespace sgns
     }
 
     outcome::result<void> GeniusAccount::RequestRegularBlock(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         const std::string                                  &cid,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
@@ -1161,11 +1153,11 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting block by CID {}", cid );
 
-        return messenger_->RequestRegularBlock( timeout_ms, cid, std::move( callback ) );
+        return messenger_->RequestRegularBlock( timeout, cid, std::move( callback ) );
     }
 
     outcome::result<void> GeniusAccount::RequestTransaction(
-        uint64_t                                            timeout_ms,
+        std::chrono::milliseconds                           timeout,
         const std::string                                  &tx_hash,
         std::function<void( outcome::result<std::string> )> callback ) const
     {
@@ -1175,12 +1167,13 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting transaction {:.8}", tx_hash );
 
-        return messenger_->RequestTransaction( timeout_ms, tx_hash, std::move( callback ) );
+        return messenger_->RequestTransaction( timeout, tx_hash, std::move( callback ) );
     }
 
-    outcome::result<std::unordered_set<std::string>> GeniusAccount::RequestUTXOs( uint64_t           timeout_ms,
-                                                                                  const std::string &address,
-                                                                                  uint64_t silent_time_ms ) const
+    outcome::result<std::unordered_set<std::string>> GeniusAccount::RequestUTXOs(
+        std::chrono::milliseconds timeout,
+        const std::string        &address,
+        std::chrono::milliseconds silent_time ) const
     {
         if ( !messenger_ )
         {
@@ -1188,7 +1181,7 @@ namespace sgns
         }
         genius_account_logger()->debug( "Requesting UTXOs for {:.8}", address );
 
-        return messenger_->RequestUTXOs( timeout_ms, address, silent_time_ms );
+        return messenger_->RequestUTXOs( timeout, address, silent_time );
     }
 
     void GeniusAccount::SetGetBlockChainCIDMethod(

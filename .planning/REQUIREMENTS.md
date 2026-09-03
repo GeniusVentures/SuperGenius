@@ -57,6 +57,43 @@
 
 Coverage: 15/15 v1.1 requirements mapped.
 
+### ELM Bridging (added 2026-08-26 — product-v1.0 requirement, pre-ship; extends v1.1)
+
+Source: `.planning/notes/ELM-bridging-gaps.md` (ingested DOC); full detail in `.planning/intel/requirements.md`. Rate conflict resolved by owner: **$0.0003/hour**.
+
+**Job model & scheduler boundary**
+- [ ] **ELM-01:** A GCS instance creates ONE normal SuperGenius processing job (`job_type: "elm_processing"`) containing one or more ELM work items; the `elms[]` array lives entirely in the existing `Task.json_data` (no main-protobuf change)
+- [ ] **ELM-02:** The existing processing grid owns worker participation, task ownership, subtask distribution, and result publication for ELM subtasks; GCS performs no worker selection, bid solicitation, quote collection, intent windows, claims, or leases
+- [ ] **ELM-03:** Issue #369's removed scope stays removed: no `NodeElmCapabilities`, no ELM/cache inventory advertising, no `ElmProcessingIntent`, no requester-side selection, no per-node quotes, no GCS-managed claims/leases, no price negotiation, no resource bidding — in code or protobuf
+
+**Model manifests & cache (SGProcessingManager)**
+- [ ] **ELM-04:** Each work item references an immutable manifest (URI + hash); the node loads, hash-verifies, checks cache, fetches and verifies each artifact (sha256), and pins the cache entry while processing — a node never executes an unverified model
+- [ ] **ELM-05:** Local content-addressed cache keyed by manifest hash (`cache/<model-manifest-hash>/`): dedup downloads, pin active, keep recently used, evict under disk pressure, recover from partial downloads, verify before reuse; cache state is never advertised and never affects eligibility (an empty-cache node can complete any assigned subtask)
+
+**ELM runtime (SGProcessingManager — split candidate, separate issue)**
+- [ ] **ELM-06:** A real ELM processor: tokenizer loading, chat-template support, prompt tokenization, prefill, autoregressive generation, KV cache, sampling, stop tokens/strings, detokenization, token counts, cancellation, final output creation — honoring `max_output_tokens`/`temperature`/`top_p`/`seed`
+- [ ] **ELM-07:** Results identify their originating ELM work item (existing `SubTask.subtaskid` mapping); GCS aggregates by work-item ID with no SuperGenius-side aggregation logic
+
+**Funding**
+- [ ] **ELM-08:** Fixed built-in rate **$0.0003/processing-hour**, no negotiation; funding deterministic from job JSON (`funding.maximum_processing_hours`, `escrow_path`); model download is part of the job's billable work via existing accounting/escrow
+
+**Traceability**
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| ELM-01 | Phase 13 | Pending |
+| ELM-02 | Phase 13 | Pending |
+| ELM-03 | Phase 13 | Pending |
+| ELM-04 | Phase 14 | Pending |
+| ELM-05 | Phase 14 | Pending |
+| ELM-06 | Phase 14 | Pending |
+| ELM-07 | Phase 14 | Pending |
+| ELM-08 | Phase 13 | Pending |
+
+Coverage: 8/8 ELM requirements mapped (Phase 14 executes in the SGProcessingManager repo; tracked in SuperGenius via cross-repo issue).
+
+> ELM-09 (streaming proto) **dropped** 2026-08-26 per owner: streaming, if ever needed, rides the existing gossip-pubsub results channel (seq-numbered JSON events on `Task.results_channel`) — no `SGElmProcessing.proto`.
+
 ## Slot-Based Network Voting (Phase 6)
 
 ### Active

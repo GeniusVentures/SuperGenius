@@ -613,12 +613,12 @@ static std::string generate_eth_private_key()
     return oss.str();
 }
 
-GeniusNodeConfig DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
+GeniusNodeConfig DEV_CONFIG{ "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
 
 int main( int argc, char *argv[] )
 {
-    bool        start_processing = false; // Default behavior for "process"
-    bool        terminal_mode    = false;
+    bool start_processing = false; // Default behavior for "process"
+    bool terminal_mode    = false;
 
     //full node flag is now defined in the sgns_config.json file, so we don't need to pass it as a command line argument anymore
     std::string path_override;
