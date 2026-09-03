@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <chrono>
+#include <atomic>
 
 #include <libp2p/host/host.hpp>
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
@@ -51,7 +52,7 @@ namespace sgns::crdt
 
         struct BlacklistEntry
         {
-            uint64_t timestamp;        // When the peer was last updated
+            uint64_t timestamp;        // When the peer was last updated (milliseconds since epoch, blacklist subsystem only)
             uint64_t failures;         // Number of consecutive failures
             bool     ever_connected;   // Flag indicating if we've ever successfully connected
             uint64_t backoff_attempts; // Count of backoff attempts (for exponential calculation)
@@ -118,6 +119,19 @@ namespace sgns::crdt
 
         bool IsOnBlackList( const PeerId &peer ) const;
 
+        /**
+         * @brief Test-only configuration seam for the blacklist backoff timeout
+         *        (developer directive 2026-09-03).
+         * @param override_ms flat backoff timeout in MILLISECONDS; 0 restores
+         *        production defaults (5000*2^failures capped at 30000 ms
+         *        ever-connected, 10000*2^failures capped at 1800000 ms
+         *        never-connected).
+         * @note The value is milliseconds so tests may configure a sub-second
+         *       backoff and observe blacklist expiry within a test window.
+         *       No production caller may invoke this method.
+         */
+        static void SetBlacklistBackoffTimeoutForTest( uint64_t override_ms );
+
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
@@ -160,9 +174,14 @@ namespace sgns::crdt
         void                             ClearRequestStatus( const CID &cid ) const;
 
         static uint64_t GetCurrentTimestamp();
+        static uint64_t GetCurrentTimestampMs();
 
-        /// Using exponential backoff for both cases but with different base values
+        /// Using exponential backoff for both cases but with different base values;
+        /// returns MILLISECONDS; a nonzero test override short-circuits the formula.
         static uint64_t getBackoffTimeout( uint64_t attempts, bool ever_connected );
+
+        /// Test-only flat override (milliseconds) for getBackoffTimeout; 0 == production formula.
+        static std::atomic<uint64_t> blacklist_backoff_override_ms_for_test_;
 
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer ) const;
