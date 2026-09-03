@@ -50,6 +50,7 @@
 #include "securecrdt/QuorumThresholdValidation.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "networkregistry/NetworkRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
@@ -1081,12 +1082,20 @@ namespace sgns
                 {
                     const auto network_quorum_floor =
                         sgns::securecrdt::StrictMajorityQuorumFloor( network_bootstrap_peers_.size() );
+                    // The trailing arguments enable the registry's live cache refresh:
+                    // with tx_globaldb_ passed as global_db, membership changes
+                    // replicated through the network-registry CRDT key refresh the
+                    // cached PeerId set without a restart (BurnConfig pattern; the
+                    // 15-09-fixed refresh loop wakes per notification and never spins).
                     auto network_registry_result = sgns::networkregistry::NetworkRegistry::New(
                         secure_crdt_,
                         trusted_peer_registry_,
                         private_network_id_,
                         network_bootstrap_peers_,
-                        network_quorum_floor );
+                        network_quorum_floor,
+                        /*initial_network_signers=*/{},
+                        /*pnet_key_fingerprint=*/{},
+                        tx_globaldb_ );
                     if ( network_registry_result.has_error() )
                     {
                         node_logger_->error(
@@ -1101,6 +1110,21 @@ namespace sgns
                         return;
                     }
                     network_registry_ = network_registry_result.value();
+
+                    // D-07 (15-12) enforcement posture: pnet proves PSK possession at
+                    // the transport; THIS filter is the identity/membership decision —
+                    // the registry's cached membership authorizes every inbound gossip
+                    // message before it enters CRDT replication (application-layer
+                    // ingest gate per the owner direction, deferred-items.md §3). The
+                    // direct processing-path channels (grid/results/queue) receive the
+                    // same filter in the processing-path gate plan (15-13).
+                    if ( tx_globaldb_ && tx_globaldb_->GetBroadcaster() )
+                    {
+                        tx_globaldb_->GetBroadcaster()->SetMembershipFilter(
+                            sgns::networkregistry::MakeNetworkMembershipFilter( network_registry_ ) );
+                        node_logger_->info( "Gossip ingest membership filtering active for private network {}",
+                                            private_network_id_ );
+                    }
                     node_logger_->info( "NetworkRegistry active for private network {} (bootstrap membership: "
                                         "{} peers)",
                                         private_network_id_,
@@ -2286,6 +2310,16 @@ namespace sgns
         // The controller owns candidate callbacks into SecureCrdt and retains both
         // policy services. Release it before unregistering those owners.
         trust_startup_controller_.reset();
+
+        // 15-12: clear the gossip-ingest membership filter BEFORE releasing the
+        // registry it consults. The weak_ptr-backed predicate would deny-all anyway
+        // (fail-closed) once the registry is gone, but the explicit clear keeps the
+        // post-teardown state clean and testable; it is a no-op when no filter was
+        // ever installed (public node).
+        if ( tx_globaldb_ && tx_globaldb_->GetBroadcaster() )
+        {
+            tx_globaldb_->GetBroadcaster()->ClearMembershipFilter();
+        }
 
         // Unregister while the policy owners and their owner tokens are still alive.
         // Their destructors repeat this defensively, so partial initialization is safe.
