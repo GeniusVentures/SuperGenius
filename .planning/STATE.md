@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 15
 status: executing
-last_updated: "2026-09-03T11:38:21.978Z"
+last_updated: "2026-09-03T11:50:48.297Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 19
   completed_phases: 6
   total_plans: 65
-  completed_plans: 45
+  completed_plans: 46
   percent: 32
 ---
 
@@ -30,9 +30,15 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 15 (private-networks-consume-privatenetworkid-identity-and-bind-) — EXECUTING
-Plan: 2 of 13
+Plan: 11 of 13
 Status: Ready to execute
 Last activity: 2026-09-03
+**Progress:** [███████░░░] 71%
+
+Last session:
+2026-09-03T11:50:48.292Z
+Stopped At:
+Completed 15-10-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -83,8 +89,11 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 15 P09 | 18min | 2 tasks | 3 files |
+| Phase 15 P10 | 6min | 2 tasks | 2 files |
 
 ## Decisions
 
 - [Phase 15]: 15-09: NetworkRegistry::New re-runs SecureCrdt::RegisterFilters() after late pattern registration (idempotent; covers both GeniusNode wiring paths) so network-registry/<id> gets its ingest element filter (WR-04)
 - [Phase 15]: 15-09: RefreshLoop drains refresh_pending_ under the mutex before TryConfirm (WR-02 busy-spin fixed ahead of 15-12 tx_globaldb_ wiring); duplicate New fail-closes with address_in_use without registering anything (WR-03)
+- [Phase 15]: 15-10: missing network_config.json stays public-default (D-01) while an existing-but-unparseable one is fatal — exploit chain closed by writer escaping + fatal parse errors, not by making the file mandatory
+- [Phase 15]: 15-10: WriteNetworkConfig escapes all JSON string-unsafe chars (CR-01) incl. swarm-key newlines; LoadNetworkConfig parse-error branch sets settings.valid=false (WR-01) so corrupt configs can never silently boot public
