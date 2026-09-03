@@ -16,6 +16,7 @@ target_link_libraries(crdt_globaldb
     ipfs-pubsub
     crdt_datastore
     p2p::p2p_peer_address
+    gossip_auth
     PRIVATE
     rapidjson
     crdt_graphsync_dagsyncer

@@ -182,9 +182,22 @@ namespace sgns::crdt
             return outcome::failure( Error::KEYPAIR_LOAD_FAILED );
         }
 
+        // CR-G01: retain a copy of the gossip host keypair BEFORE it is moved
+        // into GossipPubSub -- the private network seals its private-network
+        // publishes with exactly this key so the envelope-embedded public key
+        // derives the from-field PeerId every gated receiver checks
+        // (gossip.hpp:129-135 keeps the gossip-layer signature/key fields
+        // unreachable by subscribers, hence the application-layer envelope).
+        auto gossip_signing_key = std::make_shared<const libp2p::crypto::KeyPair>( keypair_result.value() );
+
         libp2p::protocol::gossip::Config pubsub_config;
         pubsub_config.echo_forward_mode       = false;
-        pubsub_config.sign_messages           = false;
+        // CR-G01: sign at the gossip layer too -- adds wire signatures for any
+        // future vendored verification and aligns production with the test
+        // fixtures. SGNUS gates do NOT consume these fields (subscriber-facing
+        // Gossip::Message exposes only {from, topic, data}); their
+        // authentication is the application-layer envelope above.
+        pubsub_config.sign_messages           = true;
         pubsub_config.seen_cache_limit        = 10;
         pubsub_config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
         pubsub_config.rw_timeout_msec         = std::chrono::seconds{ 30 };
@@ -227,6 +240,15 @@ namespace sgns::crdt
         }
 
         auto global_db = std::move( db_result.value() );
+
+        // CR-G01: wire the retained gossip host keypair into the broadcaster so
+        // private-network publishes are sealed (harmless on public nodes -- the
+        // key is unused unless a membership filter is installed).
+        if ( auto broadcaster = global_db->GetBroadcaster() )
+        {
+            broadcaster->SetGossipSigningKey( std::move( gossip_signing_key ) );
+        }
+
         global_db->AddListenTopic( config_.listen_topic );
         auto add_broadcast_result = global_db->AddBroadcastTopic( config_.broadcast_topic );
         if ( add_broadcast_result.has_error() )

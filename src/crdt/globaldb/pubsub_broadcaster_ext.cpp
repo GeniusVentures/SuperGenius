@@ -1,5 +1,6 @@
 #include "pubsub_broadcaster_ext.hpp"
 #include "base/sgns_version.hpp"
+#include "base/gossip_auth.hpp"
 #include "crdt/globaldb/proto/broadcast.pb.h"
 #include "crdt/crdt_datastore.hpp"
 #include <ipfs_lite/ipld/ipld_node.hpp>
@@ -136,8 +137,67 @@ namespace sgns::crdt
                 m_logger->error( "No message to process" );
                 break;
             }
+
+            // Membership gate (15-11) + payload authentication (15-14, CR-G01).
+            //
+            // When a private-network membership filter is installed, the
+            // message is FIRST authenticated and only then authorized:
+            // sgns::base::OpenGossipPayload verifies that message->data
+            // carries an application-layer envelope whose embedded public key
+            // derives EXACTLY the PeerId named by the transport from-field
+            // (message->from) and that its signature covers magic + from +
+            // payload. Membership is consulted only AFTER that binding
+            // succeeds, on the authenticated identity -- an unsigned or
+            // unverifiable message is DENIED under a set filter even when its
+            // from-field (or protobuf-declared peer) names a member, so a
+            // same-PSK forger cannot pass this gate by writing a member's id
+            // into the wire fields (both are attacker-suppliable; the
+            // signature over the key<->from binding is not).
+            //
+            // The remaining declared-protobuf-peer check below is a POLICY
+            // check on bmsg.peer().id() (it may legitimately carry a peerInfo
+            // override); authentication binds key <-> from, not the declared
+            // peer. The from-field membership check is unchanged in
+            // semantics: OpenGossipPayload already derived and matched the
+            // from PeerId, so the authenticated identity is evaluated
+            // directly (an empty/malformed `from` fails OpenGossipPayload
+            // itself -- fail-closed, no emptiness skip branch).
+            //
+            // NOTE (vendored constraint): the gossip wire Message carries
+            // signature/key fields, but Gossip::Message exposes only
+            // {from, topic, data} to subscribers (gossip.hpp:129-135) and the
+            // vendored receive path never verifies them -- SGNUS gates cannot
+            // consume those fields; this application-layer envelope is the
+            // owner-directed equivalent authenticated mapping. No filter
+            // installed -> raw public pass-through, byte-identical to the
+            // pre-gate behavior.
+            std::function<bool( const libp2p::peer::PeerId & )> membershipFilter;
+            {
+                std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+                membershipFilter = membership_filter_;
+            }
+            gsl::span<const uint8_t> parse_source( reinterpret_cast<const uint8_t *>( message->data.data() ),
+                                                   message->data.size() );
+            boost::optional<libp2p::peer::PeerId> authenticated_from;
+            if ( membershipFilter )
+            {
+                auto opened = sgns::base::OpenGossipPayload(
+                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ),
+                    gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( message->data.data() ),
+                                              message->data.size() ) );
+                if ( opened.has_error() )
+                {
+                    m_logger->debug( "Dropping unauthenticated gossip message on topic {} (OpenGossipPayload: {})",
+                                     incomingTopic,
+                                     static_cast<int>( opened.error() ) );
+                    break;
+                }
+                parse_source       = opened.value().payload;
+                authenticated_from = opened.value().authenticated_peer;
+            }
+
             sgns::crdt::broadcasting::BroadcastMessage bmsg;
-            if ( !bmsg.ParseFromArray( message->data.data(), message->data.size() ) )
+            if ( !bmsg.ParseFromArray( parse_source.data(), parse_source.size() ) )
             {
                 m_logger->error( "Failed to parse BroadcastMessage" );
                 break;
@@ -156,24 +216,11 @@ namespace sgns::crdt
             auto peerId = peer_id_res.value();
             m_logger->trace( "Message from peer {}", peerId.toBase58() );
 
-            // Membership gate (15-11): when a private-network membership
-            // filter is installed, drop the message BEFORE any CID decode,
-            // route, or queueing unless BOTH identities are authorized
-            // members: the declared protobuf peer (peerId above) and the
-            // transport sender (message->from). Checking both defends
-            // against spoofing either field. This is deliberately a
-            // line-for-line MIRROR of sgns::networkregistry::
-            // AuthorizeGossipSender rather than a call: the layering rule
-            // forbids this .cpp from including any networkregistry/ header.
-            // Fail-closed: an EMPTY or malformed `from` fails
-            // PeerId::fromBytes and is DENIED -- there is no emptiness skip
-            // branch. No filter installed -> public pass-through (zero
-            // behavior change).
-            std::function<bool( const libp2p::peer::PeerId & )> membershipFilter;
-            {
-                std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
-                membershipFilter = membership_filter_;
-            }
+            // Authorization on the AUTHENTICATED identity (CR-G01): both the
+            // declared protobuf peer and the authenticated transport sender
+            // must be members. Deliberately mirrors sgns::networkregistry::
+            // AuthorizeGossipSender semantics without including any
+            // networkregistry/ header (layering rule).
             if ( membershipFilter )
             {
                 if ( !membershipFilter( peerId ) )
@@ -181,9 +228,7 @@ namespace sgns::crdt
                     m_logger->debug( "Dropping message from non-member peer {}", peerId.toBase58() );
                     break;
                 }
-                auto from_peer_res = libp2p::peer::PeerId::fromBytes(
-                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ) );
-                if ( !from_peer_res || !membershipFilter( from_peer_res.value() ) )
+                if ( !authenticated_from || !membershipFilter( authenticated_from.value() ) )
                 {
                     m_logger->debug( "Dropping message with unauthorized transport sender (from)" );
                     break;
@@ -253,6 +298,18 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
         membership_filter_ = nullptr;
+    }
+
+    void PubSubBroadcasterExt::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+        gossip_signing_key_ = std::move( key );
+    }
+
+    bool PubSubBroadcasterExt::HasGossipSigningKey() const
+    {
+        std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+        return gossip_signing_key_ != nullptr;
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer                     &buff,
@@ -331,9 +388,58 @@ namespace sgns::crdt
             return std::errc::bad_message;
         }
 
+        // Private-network publish sealing (CR-G01): under a set membership
+        // filter every gated receiver requires an authenticated envelope, so
+        // seal the serialized BroadcastMessage with the gossip host keypair
+        // (PeerId::fromPublicKey(marshal(key.publicKey)) == the from-field
+        // the vendored gossip stamps). Fail closed when a filter is set but
+        // no signing key is wired: publishing raw would leak the payload to
+        // the mesh only to be denied at every gated receiver. No filter ->
+        // raw publish, byte-identical to the public behavior.
+        std::function<bool( const libp2p::peer::PeerId & )> membershipFilter;
+        std::shared_ptr<const libp2p::crypto::KeyPair>      signingKey;
+        {
+            std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+            membershipFilter = membership_filter_;
+            signingKey       = gossip_signing_key_;
+        }
+        std::vector<uint8_t> wire_payload = std::move( serialized_proto );
+        if ( membershipFilter )
+        {
+            if ( !signingKey )
+            {
+                m_logger->error(
+                    "Broadcast FAILED CLOSED for topic '{}': membership filter is installed but no "
+                    "gossip signing key is wired (SetGossipSigningKey) -- refusing to publish "
+                    "unauthenticated data into a private network",
+                    topic );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+            if ( from_bytes.has_error() )
+            {
+                m_logger->error( "Broadcast FAILED CLOSED for topic '{}': cannot derive from-bytes "
+                                 "from the gossip signing key",
+                                 topic );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            auto sealed = sgns::base::SealGossipPayload( *signingKey,
+                                                         from_bytes.value(),
+                                                         gsl::span<const uint8_t>( wire_payload.data(),
+                                                                                   wire_payload.size() ) );
+            if ( sealed.has_error() )
+            {
+                m_logger->error( "Broadcast FAILED CLOSED for topic '{}': payload sealing failed ({})",
+                                 topic,
+                                 static_cast<int>( sealed.error() ) );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            wire_payload = std::move( sealed.value() );
+        }
+
         for ( auto &topic : broadcastTopicsCopy )
         {
-            pubSub_->PublishBuffered( topic, serialized_proto );
+            pubSub_->PublishBuffered( topic, wire_payload );
             if ( m_logger->level() <= spdlog::level::trace )
             {
                 m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
