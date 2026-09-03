@@ -10,6 +10,8 @@
 #include <mutex>
 #include "outcome/outcome.hpp"
 
+#include <libp2p/crypto/key.hpp>
+
 #include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_subtask_queue_channel.hpp"
 
@@ -57,6 +59,12 @@ namespace sgns::processing
          */
         void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
+        /** Sets the gossip host keypair sealing private-network queue-channel publishes
+         *  and authenticating inbound envelopes (CR-G01). Filter set + no key =
+         *  publishes fail closed. Empty filter = raw, byte-identical.
+         */
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
+
         /** Starts a listening to pubsub channel
          * @param msSubscriptionWaitingDuration - Duration to wait for subscription, 0 means no waiting
          * @return If msSubscriptionWaitingDuration > 0: outcome with success/failure and actual wait time
@@ -92,7 +100,11 @@ namespace sgns::processing
         std::function<bool( SGProcessing::SubTaskQueue * )>              m_queueUpdateSink;
 
         sgns::networkregistry::MembershipFilter m_membershipFilter;       ///< Membership gate for queue-channel messages (empty = public).
-        mutable std::mutex                     m_mutexMembershipFilter; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
+        mutable std::mutex                     m_mutexMembershipFilter; ///< Guards m_membershipFilter and m_gossipSigningKey (setters vs pubsub callback threads).
+
+        /// Gossip host keypair sealing private-network queue-channel publishes
+        /// (CR-G01); guarded by m_mutexMembershipFilter.
+        std::shared_ptr<const libp2p::crypto::KeyPair> m_gossipSigningKey;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
 

@@ -3,6 +3,8 @@
 
 #include <unordered_map>
 
+#include <libp2p/crypto/key.hpp>
+
 #include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_node.hpp"
 #include "processing/processing_subtask_enqueuer.hpp"
@@ -76,6 +78,18 @@ namespace sgns::processing
         ///        creation, so there is no enrollment window (T-15-13-06).
         void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
+        /// @brief Set the gossip host keypair used to SEAL private-network
+        ///        processing-channel publishes and authenticate inbound ones
+        ///        (CR-G01). Under a set membership filter every publish is
+        ///        sealed (sgns::base::SealGossipPayload) and every inbound
+        ///        message must open a verifiable envelope whose embedded key
+        ///        derives the from-field PeerId (sgns::base::OpenGossipPayload)
+        ///        BEFORE the membership predicate runs. Filter set + no key =
+        ///        publishes fail closed. Propagates to all existing processing
+        ///        nodes and applies at both node-creation sites, symmetric
+        ///        with SetMembershipFilter. No filter -> raw, byte-identical.
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
+
     private:
         /** Listen to data feed channel.
         * @param processingGridChannelId - identifier of a data feed channel
@@ -130,7 +144,11 @@ namespace sgns::processing
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap;             ///< Bitswap for data availability checks.
 
         sgns::networkregistry::MembershipFilter m_membershipFilter; ///< Membership gate for grid-channel messages (empty = public).
-        mutable std::mutex                      m_membershipFilterMutex; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
+        mutable std::mutex                      m_membershipFilterMutex; ///< Guards m_membershipFilter and m_gossipSigningKey (setters vs pubsub callback threads).
+
+        /// Gossip host keypair sealing private-network grid-channel publishes
+        /// (CR-G01); guarded by m_membershipFilterMutex.
+        std::shared_ptr<const libp2p::crypto::KeyPair> m_gossipSigningKey;
 
         std::set<std::string>                 m_competingPeers;
         std::chrono::steady_clock::time_point m_pendingCreationTimestamp;

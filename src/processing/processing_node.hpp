@@ -10,6 +10,7 @@
 #include <thread>
 #include <optional>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <libp2p/crypto/key.hpp>
 
 #include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_engine.hpp"
@@ -72,6 +73,11 @@ namespace sgns::processing
         /** Set membership filter forwarded to this node's results channel (queue accessor)
          *  and processing queue channel — gates non-member senders at both handlers. */
         void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
+
+        /** Set gossip signing key forwarded to this node's results channel and
+         *  processing queue channel — seals private-network publishes and
+         *  authenticates inbound envelopes at both handlers (CR-G01). */
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
 
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)

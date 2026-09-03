@@ -59,6 +59,7 @@ target_link_libraries(processing_service
     SGProcessingProto
     ipfs-pubsub
     networkregistry
+    gossip_auth
     PRIVATE
     crdt_globaldb
     ${WIN_CRYPT_LIBRARY}

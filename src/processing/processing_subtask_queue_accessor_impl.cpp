@@ -4,6 +4,7 @@
 #include <string_view>
 #include <thread>
 #include <utility>
+#include "base/gossip_auth.hpp"
 #include "base/sgns_version.hpp"
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <bitswap.hpp>
@@ -79,6 +80,12 @@ namespace sgns::processing
     {
         std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
         m_membershipFilter = std::move( filter );
+    }
+
+    void SubTaskQueueAccessorImpl::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+        m_gossipSigningKey = std::move( key );
     }
 
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
@@ -253,7 +260,49 @@ namespace sgns::processing
 
         if ( m_resultChannel )
         {
-            m_resultChannel->Publish( subTaskResult.SerializeAsString() );
+            // Private-network publish sealing (CR-G01): seal under a set
+            // filter with the gossip host keypair; fail closed when a filter
+            // is set but no key is wired. No filter -> raw publish,
+            // byte-identical.
+            const std::string raw_payload = subTaskResult.SerializeAsString();
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+            if ( !membershipFilter )
+            {
+                m_resultChannel->Publish( raw_payload );
+            }
+            else if ( !signingKey )
+            {
+                m_logger->error( "Results channel publish FAILED CLOSED: membership filter set but no "
+                                 "gossip signing key wired" );
+            }
+            else
+            {
+                auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                if ( from_bytes.has_error() )
+                {
+                    m_logger->error( "Results channel publish FAILED CLOSED: cannot derive from-bytes "
+                                     "from the gossip signing key" );
+                }
+                else
+                {
+                    auto sealed = sgns::base::SealGossipPayload( *signingKey, from_bytes.value(), sgns::base::detail::StringSpan( raw_payload ) );
+                    if ( sealed.has_error() )
+                    {
+                        m_logger->error( "Results channel publish FAILED CLOSED: sealing failed ({})",
+                                         static_cast<int>( sealed.error() ) );
+                    }
+                    else
+                    {
+                        m_resultChannel->Publish( sealed.value() );
+                    }
+                }
+            }
 
             m_logger->debug( "Published SubTask results to Results Channel" );
         }
@@ -398,20 +447,41 @@ namespace sgns::processing
             return;
         }
 
-        // Membership gate (15-13): drop messages whose transport sender is not an
-        // authorized member BEFORE any result/mirror handling. Empty filter = public
-        // pass-through; empty/malformed `from` is denied under a set filter (fail-closed).
+        // Membership gate (15-13) + payload authentication (15-14, CR-G01):
+        // under a set membership filter the message is FIRST authenticated
+        // (OpenGossipPayload: envelope present, embedded key derives the
+        // from-field PeerId, signature covers from+payload) and only THEN
+        // authorized BEFORE any result/mirror handling. Unsigned or
+        // unverifiable messages are denied under a set filter even when
+        // `from` names a member. Empty filter = public pass-through (raw
+        // parse, byte-identical); empty/malformed `from` fails
+        // OpenGossipPayload itself (fail-closed).
+        gsl::span<const uint8_t> result_parse_source;
         if ( message )
         {
+            result_parse_source = gsl::span<const uint8_t>( message->data.data(), message->data.size() );
             sgns::networkregistry::MembershipFilter membershipFilter;
             {
                 std::lock_guard<std::mutex> guard( _this->m_mutexMembershipFilter );
                 membershipFilter = _this->m_membershipFilter;
             }
-            if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+            if ( membershipFilter )
             {
-                _this->m_logger->debug( "Results channel message from unauthorized sender ignored" );
-                return;
+                auto opened = sgns::base::OpenGossipPayload(
+                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ),
+                    result_parse_source );
+                if ( opened.has_error() )
+                {
+                    _this->m_logger->debug( "Results channel message failed payload authentication ({}) -- ignored",
+                                            static_cast<int>( opened.error() ) );
+                    return;
+                }
+                result_parse_source = opened.value().payload;
+                if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+                {
+                    _this->m_logger->debug( "Results channel message from unauthorized sender ignored" );
+                    return;
+                }
             }
         }
 
@@ -420,7 +490,8 @@ namespace sgns::processing
         if ( message )
         {
             SGProcessing::SubTaskResult result;
-            if ( result.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
+            if ( result.ParseFromArray( result_parse_source.data(),
+                                        static_cast<int>( result_parse_source.size() ) ) )
             {
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
 
@@ -509,7 +580,50 @@ namespace sgns::processing
         {
             if ( m_resultChannel )
             {
-                m_resultChannel->Publish( result.SerializeAsString() );
+                // Private-network publish sealing (CR-G01): seal under a set
+                // filter; fail closed when a filter is set but no key is
+                // wired. No filter -> raw publish, byte-identical.
+                const std::string raw_payload = result.SerializeAsString();
+                sgns::networkregistry::MembershipFilter membershipFilter;
+                std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+                {
+                    std::lock_guard<std::mutex> filter_guard( m_mutexMembershipFilter );
+                    membershipFilter = m_membershipFilter;
+                    signingKey       = m_gossipSigningKey;
+                }
+                if ( !membershipFilter )
+                {
+                    m_resultChannel->Publish( raw_payload );
+                }
+                else if ( !signingKey )
+                {
+                    m_logger->error( "Results channel publish FAILED CLOSED: membership filter set but no "
+                                     "gossip signing key wired" );
+                }
+                else
+                {
+                    auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                    if ( from_bytes.has_error() )
+                    {
+                        m_logger->error( "Results channel publish FAILED CLOSED: cannot derive from-bytes "
+                                         "from the gossip signing key" );
+                    }
+                    else
+                    {
+                        auto sealed = sgns::base::SealGossipPayload( *signingKey,
+                                                                    from_bytes.value(),
+                                                                    sgns::base::detail::StringSpan( raw_payload ) );
+                        if ( sealed.has_error() )
+                        {
+                            m_logger->error( "Results channel publish FAILED CLOSED: sealing failed ({})",
+                                             static_cast<int>( sealed.error() ) );
+                        }
+                        else
+                        {
+                            m_resultChannel->Publish( sealed.value() );
+                        }
+                    }
+                }
                 m_logger->debug( "Published existing result for {}", subTaskId );
             }
         }

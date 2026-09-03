@@ -151,6 +151,28 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingNode::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        // Results channel (SubTaskQueueAccessorImpl publish sealing + gate authentication)
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->SetGossipSigningKey( key );
+            }
+        }
+        // Processing queue channel (ProcessingSubTaskQueueChannelPubSub publish sealing + gate)
+        if ( m_queueChannel )
+        {
+            auto channel = std::dynamic_pointer_cast<ProcessingSubTaskQueueChannelPubSub>( m_queueChannel );
+            if ( channel )
+            {
+                channel->SetGossipSigningKey( std::move( key ) );
+            }
+        }
+    }
+
     void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
                                      std::chrono::milliseconds msSubscriptionWaitingDuration )
     {

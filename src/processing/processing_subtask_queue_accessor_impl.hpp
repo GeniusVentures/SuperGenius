@@ -7,6 +7,7 @@
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 
 #include "networkregistry/NetworkMembershipFilter.hpp"
+#include <libp2p/crypto/key.hpp>
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
@@ -66,6 +67,11 @@ namespace sgns::processing
         ///        pass-through; non-member senders are dropped before any result handling).
         void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
+        /// @brief Set the gossip host keypair sealing private-network results-channel
+        ///        publishes and authenticating inbound envelopes (CR-G01). Filter set +
+        ///        no key = publishes fail closed. Empty filter = raw, byte-identical.
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
+
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
     */
@@ -115,7 +121,11 @@ namespace sgns::processing
         mutable std::mutex                         m_mutexMirrorCallback;
 
         sgns::networkregistry::MembershipFilter m_membershipFilter;    ///< Membership gate for results-channel messages (empty = public).
-        mutable std::mutex                      m_mutexMembershipFilter; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
+        mutable std::mutex                      m_mutexMembershipFilter; ///< Guards m_membershipFilter and m_gossipSigningKey (setters vs pubsub callback threads).
+
+        /// Gossip host keypair sealing private-network results-channel publishes
+        /// (CR-G01); guarded by m_mutexMembershipFilter.
+        std::shared_ptr<const libp2p::crypto::KeyPair> m_gossipSigningKey;
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap; ///< For data availability checks on IPFS results.
 

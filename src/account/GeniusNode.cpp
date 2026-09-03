@@ -1879,10 +1879,17 @@ namespace sgns
         base58key_              = maybe_base58.value();
         gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key_;
 
-        //Set a pubsub config, use no signing because we can verify with proof and dag structure
+        // PubSub config. CR-G01: sign gossip messages at the wire layer too --
+        // production now aligns with the test fixtures (GetDefaultConfig) and
+        // adds wire signatures for any future vendored verification. SGNUS
+        // gates do NOT consume these fields (the subscriber-facing
+        // Gossip::Message exposes only {from, topic, data},
+        // gossip.hpp:129-135); their authentication is the application-layer
+        // envelope (base/gossip_auth.hpp) sealed with the retained keypair
+        // below.
         libp2p::protocol::gossip::Config config;
         config.echo_forward_mode       = false;
-        config.sign_messages           = false;
+        config.sign_messages           = true;
         config.seen_cache_limit        = 10;
         config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
         config.rw_timeout_msec         = std::chrono::seconds{ 30 };
@@ -1890,6 +1897,12 @@ namespace sgns
         auto keypair = crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
                            .GetKeyPair()
                            .value();
+
+        // Retain a member copy of the gossip host keypair BEFORE it is moved
+        // into GossipPubSub (CR-G01): private-network publishes are sealed
+        // with exactly this key so the envelope-embedded public key derives
+        // the from-field PeerId every gated receiver checks.
+        gossip_signing_keypair_ = std::make_shared<const libp2p::crypto::KeyPair>( keypair );
 
         // A non-empty network key puts PubSub in private-network (pnet) mode: every
         // connection passes the PSK boundary on both dial and accept paths. The pnet
@@ -2123,6 +2136,20 @@ namespace sgns
                 break;
             }
             tx_globaldb_ = std::move( global_db_ret.value() );
+
+            // CR-G01: wire the retained gossip host keypair into the GlobalDB
+            // broadcaster so private-network CRDT publishes are sealed
+            // (PeerId::fromPublicKey(marshal(key.publicKey)) == the host's
+            // peer id == the from-field the vendored gossip stamps).
+            // Unconditional when the member is set: harmless for public nodes
+            // -- the key is unused unless a membership filter is installed.
+            if ( gossip_signing_keypair_ )
+            {
+                if ( auto broadcaster = tx_globaldb_->GetBroadcaster() )
+                {
+                    broadcaster->SetGossipSigningKey( gossip_signing_keypair_ );
+                }
+            }
 
             tx_globaldb_->Start();
 
@@ -3558,14 +3585,17 @@ namespace sgns
     {
         if ( processing_service_ )
         {
-            // Private nodes: bind the registry-backed membership filter to the processing
-            // service BEFORE its grid/results/queue channels go live — the same
-            // enforcement posture as the gossip host (deferred-items.md §3, D-11).
-            // Public nodes install nothing (default-arg public path unchanged).
+            // Private nodes: bind the registry-backed membership filter AND the
+            // gossip signing key to the processing service BEFORE its
+            // grid/results/queue channels go live — the same enforcement
+            // posture as the gossip host (deferred-items.md §3, D-11), now
+            // authenticated (CR-G01). Public nodes install nothing
+            // (default-arg public path unchanged).
             if ( !private_network_id_.empty() && network_registry_ )
             {
                 processing_service_->SetMembershipFilter(
                     sgns::networkregistry::MakeNetworkMembershipFilter( network_registry_ ) );
+                processing_service_->SetGossipSigningKey( gossip_signing_keypair_ );
                 node_logger_->info( "Processing membership filtering active for private network {}",
                                     private_network_id_ );
             }

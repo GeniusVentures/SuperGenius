@@ -20,6 +20,7 @@
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <libp2p/crypto/key.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
@@ -905,6 +906,13 @@ namespace sgns
         /// It must outlive @ref graphsyncnetwork_, hence the declaration here, above it.
         std::shared_ptr<boost::asio::io_context>   pubsub_context_keepalive_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_; ///< PubSub networking service.
+
+        /// Retained copy of the gossip host keypair loaded in StartPubSub
+        /// (CR-G01): private-network publishes are sealed with this key
+        /// (broadcaster + processing channels) so the envelope-embedded public
+        /// key derives the from-field PeerId every gated receiver checks.
+        /// Unused on public nodes (no membership filter installed).
+        std::shared_ptr<const libp2p::crypto::KeyPair> gossip_signing_keypair_;
 
     protected:
         /// Active account used by node services. Declared after @ref pubsub_ because
