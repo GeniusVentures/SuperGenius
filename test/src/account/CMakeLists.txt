@@ -282,3 +282,11 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+# Several suites in this directory boot multiple full nodes; running them
+# concurrently starves CPU on smaller CI runners (observed: a genesis creator
+# starved for 30s while eight test binaries ran), stalling startup past any
+# sane timeout. Sharing this lock serializes them against the other
+# node-booting suites while light suites keep running in parallel.
+set_tests_properties(account_management_test
+    PROPERTIES RESOURCE_LOCK genius_node_pool)

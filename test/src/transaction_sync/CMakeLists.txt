@@ -99,3 +99,11 @@ add_custom_command(TARGET migration_sync_test POST_BUILD
         "$<TARGET_FILE_DIR:migration_sync_test>/node20_0_2_0"
         COMMENT "Copying node20_0_2_0 data"
 )
+
+# Several suites in this directory boot multiple full nodes; running them
+# concurrently starves CPU on smaller CI runners (observed: a genesis creator
+# starved for 30s while eight test binaries ran), stalling startup past any
+# sane timeout. Sharing this lock serializes them against the other
+# node-booting suites while light suites keep running in parallel.
+set_tests_properties(genius_node_bootstrap_reconnect_test migration_sync_test transaction_crash_test transaction_sync_test
+    PROPERTIES RESOURCE_LOCK genius_node_pool)
