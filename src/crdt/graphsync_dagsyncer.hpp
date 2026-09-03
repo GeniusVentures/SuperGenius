@@ -125,8 +125,9 @@ namespace sgns::crdt
         void Stop() override;
 
     private:
-        static constexpr uint64_t TIMEOUT_SECONDS = 1200;
-        static constexpr uint64_t MAX_FAILURES    = 3;
+        // Per-(peer, CID) re-request suppression. Must stay below CrdtDatastore's
+        // failed-root retry cadence, or local retries against a sole route no-op.
+        static constexpr std::chrono::seconds CID_FAILURE_SUPPRESSION{ 30 };
 
         outcome::result<ipfs_lite::ipfs::graphsync::Subscription> RequestNode(
             const PeerId                              &peer,
@@ -149,14 +150,14 @@ namespace sgns::crdt
         outcome::result<void> BlackListPeer( const PeerId &peer ) const;
 
         outcome::result<std::vector<PeerKey>> GetRouteKeys( const CID &cid ) const;
-        outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
-        void                       MoveRoutePeerToFront( const CID &cid, PeerKey peerKey ) const;
-        void                       EraseRoute( const CID &cid );
+        outcome::result<PeerEntry>            GetRoute( const CID &cid ) const;
+        void                                  MoveRoutePeerToFront( const CID &cid, PeerKey peerKey ) const;
+        void                                  EraseRoute( const CID &cid );
 
-        static bool IsConnectionFailureStatus( ResponseStatusCode code );
-        void        SetRequestStatus( const CID &cid, ResponseStatusCode code ) const;
+        static bool                         IsConnectionFailureStatus( ResponseStatusCode code );
+        void                                SetRequestStatus( const CID &cid, ResponseStatusCode code ) const;
         boost::optional<ResponseStatusCode> GetRequestStatus( const CID &cid ) const;
-        void                             ClearRequestStatus( const CID &cid ) const;
+        void                                ClearRequestStatus( const CID &cid ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -177,7 +178,7 @@ namespace sgns::crdt
         mutable std::mutex                                                dagMutex_;
         std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl> dagService_;
         // ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
-        std::shared_ptr<Graphsync>                                        graphsync_;
+        std::shared_ptr<Graphsync> graphsync_;
 
         std::shared_ptr<libp2p::Host> host_;
 
