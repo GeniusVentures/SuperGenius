@@ -56,6 +56,7 @@ target_link_libraries(processing_service
     SGProcessingProto
     ipfs-pubsub
     networkregistry
+    gossip_auth
     crdt_globaldb
     outcome
     # Public header processing_validation_core.hpp includes <Parameter.hpp>

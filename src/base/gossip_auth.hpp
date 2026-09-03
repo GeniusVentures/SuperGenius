@@ -57,6 +57,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <gsl/span>
@@ -114,6 +115,13 @@ namespace sgns::base
 
     namespace detail
     {
+        /// std::string -> byte-span convenience for string-serialized
+        /// protobuf payloads handed to SealGossipPayload.
+        inline gsl::span<const uint8_t> StringSpan( const std::string &s )
+        {
+            return gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( s.data() ), s.size() );
+        }
+
         /// Crypto provider instantiation recipe copied from
         /// crdt/globaldb/keypair_file_storage.cpp:20-52.
         inline std::shared_ptr<libp2p::crypto::CryptoProviderImpl> MakeGossipAuthProvider()
