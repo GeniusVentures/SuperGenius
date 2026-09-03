@@ -156,6 +156,12 @@ TEST( PrivateNetworkRegistryBinding, PrivateNodeConstructsNetworkRegistryFromBoo
     ASSERT_EQ( membership.size(), 2u );
     EXPECT_EQ( membership[0], BOOTSTRAP_PEER_ONE );
     EXPECT_EQ( membership[1], BOOTSTRAP_PEER_TWO );
+
+    // D-07 app-layer enforcement (15-12): the node's gossip ingest is
+    // membership-filtered from the moment its NetworkRegistry is constructed —
+    // cached registry membership authorizes every inbound replicated message.
+    EXPECT_TRUE( GeniusNodeTestAccess::BroadcasterMembershipFilterInstalled( node ) )
+        << "private node reached READY without the registry-backed gossip membership filter";
 }
 
 // A public node (no private_network_id) constructs NO NetworkRegistry even though its
@@ -175,6 +181,11 @@ TEST( PrivateNetworkRegistryBinding, PublicNodeConstructsNoNetworkRegistry )
 
     EXPECT_EQ( GeniusNodeTestAccess::NetworkRegistry( node ), nullptr )
         << "public node constructed a NetworkRegistry without a private_network_id";
+
+    // Public path installs NOTHING on the gossip ingest (regression pin): public
+    // nodes keep byte-identical pass-through broadcaster behavior.
+    EXPECT_FALSE( GeniusNodeTestAccess::BroadcasterMembershipFilterInstalled( node ) )
+        << "public node installed a gossip membership filter";
 }
 
 // Fail-closed: a private-network node whose bootstrap membership is empty cannot
@@ -208,4 +219,57 @@ TEST( PrivateNetworkRegistryBinding, PrivateNodeWithoutBootstrapMembershipFailsC
         << static_cast<int>( node->GetState() ) << ")";
     EXPECT_EQ( GeniusNodeTestAccess::NetworkRegistry( node ), nullptr )
         << "fail-closed node must not retain a NetworkRegistry";
+}
+
+// Teardown clears the broadcaster's membership filter: driven through the REAL
+// destruction route (ShutdownForDestruction — PRIVATE at GeniusNode.hpp, hence the
+// test-access friend route) and observed on the SAME broadcaster object.
+//
+// Non-vacuity (why the broadcaster handle is captured BEFORE shutdown):
+// GlobalDB::ShutdownNow MOVES m_broadcaster out and Stops it, so GetBroadcaster()
+// through the node AFTER shutdown returns null — a post-shutdown
+// BroadcasterMembershipFilterInstalled check would pass vacuously (null broadcaster
+// -> false). The test-held shared_ptr keeps the same broadcaster object alive;
+// Stop() does not touch the membership filter, so HasMembershipFilter() going true
+// -> false is attributable solely to the ClearMembershipFilter() call inside
+// ShutdownNodePolicyServices (which ShutdownForDestruction reaches via
+// ShutdownAccountBoundServices -> ShutdownNodePolicyServices -> tx_globaldb_->ShutdownNow).
+//
+// Double-shutdown safety: ~GeniusNode (when the node shared_ptr drops at test end)
+// calls ShutdownForDestruction again; the shutdown_started_ compare_exchange makes
+// that second call a no-op, so explicit-call-then-destroy is safe.
+TEST( PrivateNetworkRegistryBinding, TeardownClearsBroadcasterMembershipFilter )
+{
+    UseMemorySecureStorage();
+    auto node = MakeGenesisNode( "pnr_binding_teardown",
+                                 { /*private_network=*/true, { BOOTSTRAP_PEER_ONE, BOOTSTRAP_PEER_TWO } } );
+    ASSERT_NE( node, nullptr );
+
+    ASSERT_NO_FATAL_FAILURE( ConfirmLocalSelfGenesis( node ) );
+
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::seconds( 50 ),
+        "private-network node with provisioned membership did not reach READY" ) );
+
+    // The filter is installed while the node is live (D-07 enforcement active).
+    ASSERT_TRUE( GeniusNodeTestAccess::BroadcasterMembershipFilterInstalled( node ) )
+        << "live private node has no membership filter on its gossip ingest";
+
+    // Capture the broadcaster object BEFORE any shutdown: the held shared_ptr keeps
+    // it alive across GlobalDB::ShutdownNow's move-out.
+    auto broadcaster = GeniusNodeTestAccess::BroadcasterOf( node );
+    ASSERT_NE( broadcaster, nullptr ) << "live node's GlobalDB exposed no broadcaster";
+    ASSERT_TRUE( broadcaster->HasMembershipFilter() )
+        << "captured broadcaster handle lacks the membership filter installed at construction";
+
+    // Drive the real teardown route while the node shared_ptr is still alive.
+    GeniusNodeTestAccess::RequestShutdownForDestruction( node );
+
+    // Assert on the HELD handle — the same object that carried the filter before
+    // shutdown; false here means ClearMembershipFilter ran, not that the
+    // broadcaster vanished.
+    EXPECT_FALSE( broadcaster->HasMembershipFilter() )
+        << "teardown left a membership filter installed on the broadcaster (asserted on the "
+           "pre-captured handle — not a null-broadcaster pass)";
 }
