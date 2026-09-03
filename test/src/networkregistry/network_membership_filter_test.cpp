@@ -449,8 +449,11 @@ namespace
 
     // (5) Gap-1/gap-4 truth: a same-PSK peer outside the membership meshes at
     //     the transport layer but cannot PARTICIPATE -- its CRDT writes never
-    //     enter the member's replicated state -- while an authorized member's
-    //     writes replicate; a wrong-PSK node never even connects.
+    //     enter ANY gated member's replicated state -- while an authorized
+    //     member's writes replicate member-to-member; a wrong-PSK node never
+    //     even connects. Both members install the gate (an ungated member
+    //     would merge and re-origin the intruder's delta via its head
+    //     rebroadcasts, muling the data past the receiver's filter).
     TEST_F( NetworkMembershipFilterFlowTest, UnauthorizedSamePskPeerCannotParticipateWhileMembersCan )
     {
         const std::string                topic             = std::string( "chain/" ) + kFlowNetworkId + "/tasks";
@@ -482,12 +485,26 @@ namespace
         JoinTopic( *pnetB, topic );
         JoinTopic( *intruder, topic );
 
-        // Receiver-side membership gate: only pnetB is a member.
+        // Membership gate on EVERY member node (only pnetB is a member).
+        // Both gated members are load-bearing for the negative window: an
+        // UNGATED member would merge the intruder's delta and re-origin it --
+        // CrdtDatastore::RebroadcastHeads republishes the per-topic head list
+        // (now containing the intruder's head CID) under the member's OWN
+        // identity, and CIDs carry no origin, so the filtered node would
+        // authorize the announcement and graphsync-fetch the intruder's
+        // blocks from its trusted member. Gating only the receiver made the
+        // negative window a race against that relay (intermittent failures);
+        // with every member gated there is no path left for the intruder's
+        // data to enter ANY member's replicated state.
         membership->members.insert( idB.toBase58() );
         auto broadcaster_a = pnetA->db->GetBroadcaster();
         ASSERT_NE( broadcaster_a, nullptr );
         broadcaster_a->SetMembershipFilter( MakeSharedSetFilter( membership ) );
         EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+        auto broadcaster_b = pnetB->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_b, nullptr );
+        broadcaster_b->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        EXPECT_TRUE( broadcaster_b->HasMembershipFilter() );
 
         // All three same-PSK pairs mesh; the public control dials and must
         // fail the pnet handshake.
@@ -524,19 +541,27 @@ namespace
             std::chrono::milliseconds( 20000 ),
             "authorized member write did not replicate to the filtered node" );
 
-        // (b) The same-PSK non-member cannot participate: its write is
-        //     dropped at ingest (the 100ms rebroadcast loop keeps retrying,
-        //     so the window observes repeated denials, not a one-shot miss).
+        // (b) The same-PSK non-member cannot participate: its write is dropped
+        //     at ingest by BOTH gated members (the 100ms rebroadcast loop
+        //     keeps retrying, so the windows observe repeated denials, not a
+        //     one-shot miss). Checking pnetB too pins the second gate --
+        //     an ungated member would relay the intruder's delta onward (see
+        //     the filter-install comment above).
         CommitPut( *intruder->db, key_from_intruder, { 0x13, 0x37, 0x13, 0x37 }, topic );
         AssertKeyNeverPresentWithin( *pnetA->db,
                                      key_from_intruder,
                                      std::chrono::milliseconds( 3000 ),
                                      "intruder write" );
+        AssertKeyNeverPresentWithin( *pnetB->db,
+                                     key_from_intruder,
+                                     std::chrono::milliseconds( 3000 ),
+                                     "intruder write (gated member)" );
 
         // (c) Transport-boundary control: the wrong-PSK node never connects.
         EXPECT_FALSE( IsConnectedTo( pnetA->pubsub, idPublic ) )
             << "public control node connected despite pnet mismatch";
 
+        broadcaster_b->ClearMembershipFilter();
         TearDownNodes( broadcaster_a, io_context, io_thread,
                        { pnetA->pubsub, pnetB->pubsub, intruder->pubsub, publicControl } );
     }
