@@ -3558,6 +3558,17 @@ namespace sgns
     {
         if ( processing_service_ )
         {
+            // Private nodes: bind the registry-backed membership filter to the processing
+            // service BEFORE its grid/results/queue channels go live — the same
+            // enforcement posture as the gossip host (deferred-items.md §3, D-11).
+            // Public nodes install nothing (default-arg public path unchanged).
+            if ( !private_network_id_.empty() && network_registry_ )
+            {
+                processing_service_->SetMembershipFilter(
+                    sgns::networkregistry::MakeNetworkMembershipFilter( network_registry_ ) );
+                node_logger_->info( "Processing membership filtering active for private network {}",
+                                    private_network_id_ );
+            }
             processing_service_->StartProcessing( ScopedProcessingGridChannel() );
         }
         else

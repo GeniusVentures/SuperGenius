@@ -4,6 +4,10 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <gtest/gtest.h>
+#include <atomic>
+#include <thread>
+#include <unordered_set>
+#include "base/sgns_version.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::processing;
@@ -274,11 +278,20 @@ TEST_F( ProcessingServiceTest, DISABLED_ProcessingSlotsAreAvailable )
     auto taskQueue      = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer       = std::make_shared<SubTaskEnqueuerImpl>( taskQueue );
 
+    std::atomic<bool> successCallbackFired{ false };
+    std::atomic<bool> errorCallbackFired{ false };
+
     auto processingService = std::make_shared<ProcessingServiceImpl>( pubs1,
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-                                                                      processingCore );
+                                                                      processingCore,
+                                                                      [&successCallbackFired]( const std::string &,
+                                                                                               const SGProcessing::TaskResult & )
+                                                                      { successCallbackFired = true; },
+                                                                      [&errorCallbackFired]( const std::string & )
+                                                                      { errorCallbackFired = true; },
+                                                                      "TEST_NODE_ADDRESS_1" );
 
     m_processing_services.push_back( processingService );
 
@@ -319,11 +332,20 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
     auto taskQueue      = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer       = std::make_shared<SubTaskEnqueuerImpl>( taskQueue );
 
+    std::atomic<bool> successCallbackFired{ false };
+    std::atomic<bool> errorCallbackFired{ false };
+
     auto processingService = std::make_shared<ProcessingServiceImpl>( pubs1,
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-                                                                      processingCore );
+                                                                      processingCore,
+                                                                      [&successCallbackFired]( const std::string &,
+                                                                                               const SGProcessing::TaskResult & )
+                                                                      { successCallbackFired = true; },
+                                                                      [&errorCallbackFired]( const std::string & )
+                                                                      { errorCallbackFired = true; },
+                                                                      "TEST_NODE_ADDRESS_2" );
 
     // Track the ProcessingServiceImpl for proper cleanup
     m_processing_services.push_back( processingService );
@@ -344,4 +366,141 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
         std::chrono::milliseconds( 3000 ),
         "No processing node should have been created",
         nullptr );
+}
+
+/**
+ * @given A processing service on pubs1 with a membership filter allowing only the
+ *        service host itself and pubs2; a mesh-connected third pubsub host that is
+ *        NOT a member
+ * @when The allowed peer publishes a grid-channel processing_channel_response, then
+ *       the non-member third host publishes an otherwise-identical response with a
+ *       distinct channel id
+ * @then The allowed message creates a processing node (AcceptProcessingChannel path)
+ *       and the non-member's message leaves the node count unchanged — its sender is
+ *       denied at OnMessage entry before any grid handling.
+ */
+TEST_F( ProcessingServiceTest, GridMessagesFromNonMemberPeersAreIgnored )
+{
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
+
+    auto processingCore = std::make_shared<ProcessingCoreImpl>();
+    auto taskQueue      = std::make_shared<ProcessingTaskQueueImpl>();
+    auto enqueuer       = std::make_shared<SubTaskEnqueuerImpl>( taskQueue );
+
+    std::atomic<bool> successCallbackFired{ false };
+    std::atomic<bool> errorCallbackFired{ false };
+
+    // maximalNodesCount = 2 so a BROKEN gate on the negative leg would observably
+    // grow the node count (a second node for the distinct denied channel id) —
+    // the negative window cannot pass vacuously on room capacity.
+    auto processingService = std::make_shared<ProcessingServiceImpl>( pubs1,
+                                                                      2,
+                                                                      enqueuer,
+                                                                      std::make_shared<SubTaskResultStorageMock>(),
+                                                                      processingCore,
+                                                                      [&successCallbackFired]( const std::string &,
+                                                                                               const SGProcessing::TaskResult & )
+                                                                      { successCallbackFired = true; },
+                                                                      [&errorCallbackFired]( const std::string & )
+                                                                      { errorCallbackFired = true; },
+                                                                      "TEST_NODE_GRID_GATE" );
+
+    m_processing_services.push_back( processingService );
+
+    // The service's grid topic internally appends the net-and-version appendix
+    // (ProcessingServiceImpl::Listen) — the raw topics must match it exactly.
+    const std::string gridTopic = "GRID_CHANNEL_ID" + sgns::version::GetNetAndVersionAppendix();
+    GossipPubSubTopic gridChannel1( pubs1, gridTopic );
+    GossipPubSubTopic gridChannel2( pubs2, gridTopic );
+    gridChannel1.Subscribe( []( boost::optional<const GossipPubSub::Message &> message ) {} );
+    gridChannel2.Subscribe( []( boost::optional<const GossipPubSub::Message &> message ) {} );
+
+    // Wait for the topic mesh: both hosts must see each other on the grid topic
+    std::vector<libp2p::peer::PeerId> peers1;
+    std::vector<libp2p::peer::PeerId> peers2;
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&gridChannel1, &gridChannel2, &peers1, &peers2]()
+        {
+            peers1 = gridChannel1.getAllPeers();
+            peers2 = gridChannel2.getAllPeers();
+            return !peers1.empty() && !peers2.empty();
+        } ),
+        std::chrono::milliseconds( 5000 ),
+        "Grid topic mesh not established between the two hosts",
+        nullptr );
+
+    processingService->StartProcessing( "GRID_CHANNEL_ID" );
+
+    // Allow list: the service host's own id and pubs2's id — and nothing else.
+    // Snapshot BEFORE the third node joins so it cannot be in the set.
+    std::unordered_set<std::string> members;
+    for ( const auto &peer : peers1 )
+    {
+        members.insert( peer.toBase58() );
+    }
+    for ( const auto &peer : peers2 )
+    {
+        members.insert( peer.toBase58() );
+    }
+    processingService->SetMembershipFilter(
+        [members]( const libp2p::peer::PeerId &peer ) { return members.count( peer.toBase58() ) > 0; } );
+
+    // --- Positive leg: the allowed peer's channel response creates a processing node
+    SGProcessing::GridChannelMessage allowedMessage;
+    allowedMessage.mutable_processing_channel_response()->set_channel_id( "PROCESSING_QUEUE_ID_ALLOWED" );
+    gridChannel2.Publish( allowedMessage.SerializeAsString() );
+
+    EXPECT_WAIT_FOR_CONDITION(
+        [&processingService]() { return processingService->GetProcessingNodesCount() > 0; },
+        std::chrono::milliseconds( 5000 ),
+        "Allowed peer's grid message did not create a processing node",
+        nullptr );
+    const size_t countAfterPositiveLeg = processingService->GetProcessingNodesCount();
+    EXPECT_GE( countAfterPositiveLeg, 1 );
+
+    // --- Negative leg: a mesh-connected THIRD (non-member) pubsub publishes the
+    // same message shape with a distinct channel id
+    libp2p::protocol::gossip::Config config;
+    config.echo_forward_mode       = true;
+    config.sign_messages           = true; // from IS populated — the deny is attributable to the filter
+    config.seen_cache_limit        = 10;
+    config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
+    auto pubs3 = std::make_shared<GossipPubSub>( config );
+    auto pubs3StartFuture          = pubs3->Start( 0, { pubs1->GetInterfaceAddress() } );
+    if ( auto result = pubs3StartFuture.get(); result )
+    {
+        FAIL() << "Third pubsub node failed to start: " << result.message();
+    }
+    GossipPubSubTopic gridChannel3( pubs3, gridTopic );
+    gridChannel3.Subscribe( []( boost::optional<const GossipPubSub::Message &> message ) {} );
+    // Wait for the third node to join the mesh BEFORE publishing — an unconnected
+    // third node would make the negative window prove nothing
+    ASSERT_WAIT_FOR_CONDITION( [&gridChannel3]() { return gridChannel3.getPeerCount() > 0; },
+                               std::chrono::milliseconds( 5000 ),
+                               "Third pubsub did not join the grid topic mesh",
+                               nullptr );
+
+    SGProcessing::GridChannelMessage deniedMessage;
+    deniedMessage.mutable_processing_channel_response()->set_channel_id( "PROCESSING_QUEUE_ID_DENIED" );
+    gridChannel3.Publish( deniedMessage.SerializeAsString() );
+
+    // Bounded negative window (grace-loop pattern): the node count must stay unchanged
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( countAfterPositiveLeg, processingService->GetProcessingNodesCount() )
+            << "Non-member peer's grid message was processed although the filter denies it";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( countAfterPositiveLeg, processingService->GetProcessingNodesCount() );
+
+    // Neither user callback fired during the scene (spurious-callback detectors)
+    EXPECT_FALSE( successCallbackFired.load() );
+    EXPECT_FALSE( errorCallbackFired.load() );
+
+    // Stop the standalone third node (not tracked by the fixture): unsubscribe its
+    // topic first, then stop the host — the same order TearDown uses for the rest.
+    gridChannel3.Unsubscribe();
+    pubs3->Stop();
 }
