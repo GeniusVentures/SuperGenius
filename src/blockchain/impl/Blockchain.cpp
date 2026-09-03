@@ -7,6 +7,7 @@
 #include <chrono>
 #include <mutex>
 #include <system_error>
+#include <thread>
 #include <unordered_set>
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -149,9 +150,19 @@ namespace sgns
                         // Registry became ready after Start() deferred. Retry immediately
                         // instead of waiting for GeniusNode's ScheduleBlockchainRetry timer
                         // (default 5s), which would otherwise idle here until it fires.
+                        // Off-thread: this callback runs on the CRDT DAG worker, and
+                        // Start() -> db_->Put -> WaitForJob would self-deadlock it.
                         strong->logger_->info( "[{}] Validator registry ready — retrying deferred blockchain start",
                                                strong->account_->GetAddress().substr( 0, 8 ) );
-                        (void) strong->Start();
+                        std::thread(
+                            [weak_instance]
+                            {
+                                if ( auto retry = weak_instance.lock() )
+                                {
+                                    (void) retry->Start();
+                                }
+                            } )
+                            .detach();
                     }
                 }
             } );
@@ -481,6 +492,9 @@ namespace sgns
             // after this blockchain was constructed (EnsureValidatorRegistry() at
             // construction time then skipped the genesis-registry write). Re-run it —
             // it is a no-op for non-authorized nodes and skips when already written.
+            // Clear the deferred flag first: the write below fires the init callback,
+            // which would otherwise launch a second, concurrent Start().
+            start_deferred_.store( false );
             if ( EnsureValidatorRegistry().has_error() )
             {
                 logger_->error( "[{}] Failed to ensure validator registry while deferred",

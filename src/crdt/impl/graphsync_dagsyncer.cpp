@@ -15,6 +15,9 @@ namespace
 {
     std::mutex              g_request_wait_mutex;
     std::condition_variable g_request_wait_cv;
+    // Longer than graphsync's own 3-minute activity sweep is pointless; shorter
+    // keeps a single dead peer from stalling replication for minutes.
+    constexpr auto kInProgressRequestTimeout = std::chrono::seconds( 120 );
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
@@ -366,6 +369,21 @@ namespace sgns::crdt
                         // Still in progress, keep waiting
                         ++in_progress_checks;
                         const auto now = std::chrono::steady_clock::now();
+                        // A response that never delivers its blocks stays IN_PROGRESS
+                        // indefinitely and would pin this (single) CRDT worker. Give up
+                        // on the peer and let the route failover / root retry handle it.
+                        if ( now - request_start_time >= kInProgressRequestTimeout )
+                        {
+                            logger_->error( "Request for CID {} from peer {} still IN_PROGRESS after {}s - giving up on peer",
+                                            cid.toString().value(),
+                                            peerID.toBase58(),
+                                            std::chrono::duration_cast<std::chrono::seconds>( now - request_start_time )
+                                                .count() );
+                            RecordCIDFailure( peerID, cid );
+                            ClearRequestStatus( cid );
+                            try_next_peer = true;
+                            break;
+                        }
                         if ( now >= next_in_progress_log_at )
                         {
                             const auto elapsed_seconds =
