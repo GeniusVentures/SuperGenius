@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-03T13:51:27.508Z"
+last_updated: "2026-09-03T14:07:30.062Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 32
-  completed_plans: 33
+  completed_plans: 34
   percent: 80
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 2 of 20
+Plan: 3 of 20
 Status: Ready to execute
 Last activity: 2026-09-03
 
@@ -69,6 +69,7 @@ Progress: [██████████] 100%
 | Phase 12 P15 | 25m | 3 tasks | 2 files |
 | Phase 12 P16 | 20m | 3 tasks | 3 files |
 | Phase 12 P18 | 37m | 3 tasks | 10 files |
+| Phase 12 P19 | 13m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Progress: [██████████] 100%
 - [Phase 12]: The GraphsyncDAGSyncer blacklist-backoff seam is static/process-wide (fetchers' syncer instances live inside GlobalDB, unreachable from the test; all four peers share one process) and converts only the blacklist subsystem to a millisecond clock — production constants 5000/30000 and 10000/1800000 are duration-identical; cid_failures_ stays on the seconds clock (12-18)
 - [Phase 12]: CR-03 closed: node.registry.reset() between manager and db resets in both lifecycle teardown loops before pubsub->Stop() — registry co-owns GlobalDB via ValidatorRegistry.hpp:530, so the 12-16 WR-01 reorder was ineffective; STATE.md:129 corrected (12-18)
 - [Phase 12]: Boot-window masking hypothesis DISPROVEN with the 100ms seam override provably live (0.91s re-dial after first blacklist, impossible under the >=5s production backoff): the persisting mechanism is route erasure on blacklist plus the restarted host's boot-window port handover plus absent surviving replica/re-publication — not the blacklist duration — plan 12-19's fallback (post-restart certificate re-publication / surviving-replica serving) is activated per the developer directive; verdict with citations at round4-traces/hypothesis-verdict.md (12-18)
+- [Phase 12]: 12-19 resolved the directive's conditional to the repair branch (verdict DISPROVEN) and implemented post-restart certificate re-publication through public GetCertificateBySlot->SubmitCertificate on the recreated publisher after RestartPeer+ConnectPeers (SubmitProposal precedent; CERT-02/CERT-05 preserved) — Focused evidence 1 pass / 1 fail shows single-shot re-publication is necessary-but-insufficient: recipients either miss the re-published gossip during topic-mesh re-formation or still depend on the CRDT DAG CID fetch that dead-ends on the reused host identity; honest STOP per the plan's own rule, new decision routed
 
 ### Pending Todos
 
@@ -150,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-03T13:51:27.501Z
+Last session: 2026-09-03T14:07:30.057Z
 Stopped at: Completed 12-18-PLAN.md (seam + CR-03 + hypothesis verdict DISPROVEN; 12-19 fallback activated)
 Resume file: None
