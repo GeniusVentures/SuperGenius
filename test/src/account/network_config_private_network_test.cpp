@@ -5,6 +5,7 @@
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
+#include <algorithm>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <fstream>
@@ -238,4 +239,54 @@ TEST( NetworkConfigPrivateNetwork, HalfProvisionedIdentityPairFailsNodeStart )
             ", \"private_network_id\": \"" + std::string( VALID_PRIVATE_NETWORK_ID ) + "\"" );
         EXPECT_EQ( node, nullptr ) << "private_network_id without network_key must fail the load";
     }
+}
+
+// CR-01 regression: the canonical go-ipfs swarm-key text (SWARM_KEY_PNET shape with embedded
+// literal newline bytes - the format Psk::fromSwarmKeyText parses) must survive a
+// WriteNetworkConfig -> GeniusNode::New round-trip. Pre-fix the writer emitted raw newline
+// bytes (illegal in JSON strings), the reload hit the parse-error branch, and the node
+// silently booted PUBLIC with an empty private_network_id.
+TEST( NetworkConfigPrivateNetwork, SwarmKeyTextWithNewlinesRoundTrips )
+{
+    UseMemorySecureStorage();
+    auto       base       = MakeTempDir( "ncpn_swarm_key_text" );
+    const auto dev_config = MakeDevConfig( base );
+
+    // Canonical swarm-key text: literal '\n' bytes embedded in the string.
+    const std::string swarm_key_text =
+        "/key/swarm/psk/1.0.0/\n/base16/" + std::string( VALID_NETWORK_KEY_BASE16 ) + "\n";
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath,
+                                          /*port_seed=*/0,
+                                          /*auto_dht=*/false,
+                                          swarm_key_text,
+                                          VALID_PRIVATE_NETWORK_ID,
+                                          { BOOTSTRAP_PEER_ONE, BOOTSTRAP_PEER_TWO } );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                       /*node_type=*/"Full",
+                                       /*is_processor=*/true,
+                                       /*rpc_catchup=*/false );
+
+    // The file must contain the ESCAPED two-character sequence backslash+'n' - never a raw
+    // newline byte (the writer emits no trailing newline, so the whole file is one line).
+    const auto config_text = ReadConfigFile( dev_config.BaseWritePath );
+    EXPECT_NE( config_text.find( "/key/swarm/psk/1.0.0/\\n/base16/" ), std::string::npos );
+    EXPECT_EQ( std::count( config_text.begin(), config_text.end(), '\n' ), 0 );
+
+    // The reload retains the private-network identity (pre-fix: parse error silently
+    // swallowed, node booted public with an EMPTY id - the retained id discriminates).
+    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    ASSERT_NE( node, nullptr );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    EXPECT_EQ( GeniusNodeTestAccess::PrivateNetworkId( node ), VALID_PRIVATE_NETWORK_ID );
+    ASSERT_NO_FATAL_FAILURE( WaitForStartupSettled( node ) );
+}
+
+// WR-01 regression: a network_config.json that EXISTS but cannot be parsed must fail the node
+// load (GeniusNode::New returns nullptr). Pre-fix the parse-error branch returned valid
+// settings and the node started PUBLIC - bypassing every identity validation, which only runs
+// after a successful parse.
+TEST( NetworkConfigPrivateNetwork, CorruptConfigFailsNodeStart )
+{
+    auto node = NodeFromRawConfig( "ncpn_corrupt", ", \"broken\": [unclosed" );
+    EXPECT_EQ( node, nullptr ) << "an existing-but-unparseable network_config.json must fail the load";
 }
