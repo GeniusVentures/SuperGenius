@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-03T12:33:19.842Z"
-last_activity: 2026-09-03 -- Phase 12 planning complete
+last_updated: "2026-09-03T13:11:12.761Z"
+last_activity: 2026-09-03 -- Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 4
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 17 of 17 (STOPPED at 12-17 gate-entry; series withheld)
-Status: Ready to execute
-Last activity: 2026-09-03 -- Phase 12 planning complete
+Plan: 1 of 20
+Status: Executing Phase 12
+Last activity: 2026-09-03 -- Phase 12 execution started
 
 Progress: [██████████] 100%
 
@@ -126,9 +126,10 @@ None yet.
 - Phase 12 Plan 12-12 resolved: multi_node_finality_fault_test three-consecutive-serial evidence was temporarily blocked by leftover artificial CPU load from the 2026-09-01 same-burn diagnosis run (about six orphaned busy-loop shells, load 15-20 on 8 cores); the orphans terminated on their own at about 15:50 local and the gate then closed with three consecutive serial full passes (logs at /tmp/p12_mn_triple_{a,b,c}.log). Residual note: PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch failed once at low load with the usual child-readiness signature, so its pre-existing intermittence stands under the Plan 12-08 discipline; no repair was authorized or applied by 12-12.
 - Phase 12 Plan 12-14 evidence gap: multi_node_finality_fault_test currently flakes ~40-60% per full serial run from order-independent signatures (SameBurnContention bridge-marker timing, RestartAtVote block-3 certificate reconvergence, PublisherLoss child-readiness), blocking the three-consecutive-pass 12-12 evidence standard. Crash fix itself confirmed (8 crash-free reordered runs vs 2 pre-fix control crashes). Diagnosis scope recorded in phases/12-multi-node-finality-fault-proof/deferred-items.md; prime suspect WR-07 mint-v2 retry (caf34458).
 - 12-15 update: SameBurnContention flake closed (test check-then-act race fixed, 3/3 focused + full serial pass). RestartAtVote block-3 residual risk stands for 12-17's three-pass gate: certificate-CID graphsync route loss + host blacklist after RestartPeer (WR-02 parked-hold excluded 4/4, repair withheld per gate); PublisherLoss child-readiness ~18%/run un-repaired per 12-08 discipline.
-- 12-16 update: gap 3 closed - teardown invariant now holds across all phase proof artifacts (4 affected suites green, 0 new crash reports). One full serial run FAILED (CTest Timeout 300s) in RestartAtVote via the pre-attributed cert-propagation race (wait cascade 20+25+20+25s in /tmp/p12_16_full_1.log); preserved honestly for 12-17's three-pass gate risk context.
+- 12-16 update: gap 3 partially closed - CR-01/CR-02 hold; the lifecycle loops' leg was found ineffective by fresh-review CR-03 (registry co-owns the GlobalDB and was never reset), corrected in 12-18 (4 affected suites green, 0 new crash reports). One full serial run FAILED (CTest Timeout 300s) in RestartAtVote via the pre-attributed cert-propagation race (wait cascade 20+25+20+25s in /tmp/p12_16_full_1.log); preserved honestly for 12-17's three-pass gate risk context.
 - 12-17 gate-entry STOP (round 3, 2026-09-02): the Task-1 gate-entry check FIRED before run A — the RestartAtVote residual recorded live and unrepaired (12-15 Verdict 2: certificate-CID graphsync route loss + blacklist of the reused host identity, repair withheld on both failed authorization clauses) struck again in 12-16's preserved full run on the final build (/tmp/p12_16_full_1.log: CANNOT_CONNECT/blacklist/no-route lines 4342-4360 and 5537-5569, timeout cascade 4406/4672/5063/5731, load 1.58 — no contamination). The three-run series was NOT started: no /tmp/p12_17_triple_* logs or crash baseline marker exist, and the round's no-reroll evidence budget is unspent. The 12-14 evidence-gap blocker stays OPEN pending the developer go/no-go routed by 12-17-SUMMARY.md: repair-first (recommended: scoped post-restart certificate re-publication / blacklist-expiry plan, then re-gate under a new attributed fix) vs. run-anyway (~7-12% series pass odds).
 - 12-17 NO-GO decision (developer, relayed by coordinator, 2026-09-03): the three-run series stays withheld, the round-3 no-reroll budget remains unspent, and 12-17 stays stopped at the gate-entry branch — not complete, no counters advanced. Directive for the round-4 repair plan (verbatim): "NO-GO. Directive for the round-4 repair plan: add a test-only method to configure the GraphsyncDAGSyncer blacklist backoff timeout (production defaults unchanged; tests set it small, e.g. sub-second) so the boot-window masking hypothesis can be tested directly — a peer that hits CANNOT_CONNECT against a node still booting after restart gets blacklisted for 5-30s (getBackoffTimeout, graphsync_dagsyncer.cpp) and stays skipped even once the host is reachable inside the suite's 25s recovery window. The scoped plan should test this hypothesis first (cheap: seam + re-run focused RestartAtVote), and only if it is disproven fall back to post-restart certificate re-publication / surviving-replica serving as the repair."
+- 12-18 update (round-4 gap closure, part 1): CR-03 fixed in both lifecycle teardown loops (node.registry.reset() between node.manager.reset() and node.db.reset(), before pubsub->Stop(), with the ValidatorRegistry.hpp:530 co-ownership comment; invariant comments now list registry among the GlobalDB host co-owners) — gap 3 is NOW actually closed. Lifecycle suite re-run green on the fixed build (Passed 43.08s, 100% tests passed; log preserved at .planning/phases/12-multi-node-finality-fault-proof/round4-traces/lifecycle-fixed.log — all round-4 evidence lives under round4-traces/, never /tmp). Load-discipline deviation recorded honestly: 1-min load plateaued at 3.3-3.5 for 20+ minutes of polling from sustained post-reboot system daemons (mediaanalysisd ~90% + mds_stores ~50% Spotlight indexing; 8 cores, ~44% utilization), not a drainable spike per the 12-14 precedent, so the run proceeded with the load recorded in the log header; this is far below the 12-12 contamination regime (15-20 on 8 cores).
 
 ## Deferred Items
 
