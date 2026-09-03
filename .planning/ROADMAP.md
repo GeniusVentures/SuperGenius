@@ -181,7 +181,7 @@ Plans:
 
 **Wave 21** *(gap closure round 5 — VERIFICATION gaps 1+2: Option A repair + WR-06 clamp + focused graduation; depends on 12-19 and 12-20)*
 
-- [ ] 12-21-PLAN.md — Implement the developer's Option A verbatim as the composed repair in RestartAtVote's restart-mint block (pre-restart surviving-replica CheckCertificateForSlot wait on second/third/passive + readiness-gated re-advertisement requiring >= 2 consensus-topic peers on every peer), clamp WR-06's unbounded shift exponent at both getBackoffTimeout branches, and graduate the repair to an attributed fix with three all-green focused RestartAtVote runs at durable round5-traces paths (STOP-on-first-strike with the failing leg named).
+- [x] 12-21-PLAN.md — Implement the developer's Option A verbatim as the composed repair in RestartAtVote's restart-mint block (pre-restart surviving-replica CheckCertificateForSlot wait on second/third/passive + readiness-gated re-advertisement requiring >= 2 consensus-topic peers on every peer), clamp WR-06's unbounded shift exponent at both getBackoffTimeout branches, and graduate the repair to an attributed fix with three all-green focused RestartAtVote runs at durable round5-traces paths (STOP-on-first-strike with the failing leg named).
 
 **Wave 22** *(gap closure round 5 — evidence gate re-attempt carrying the graduated round-5 fix; depends on 12-21)*
 
@@ -200,7 +200,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 20/22 | In Progress (round 5: Option A repair + WR-06, then evidence gate re-attempt) |  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 21/22 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-09-03 with round-5 gap closure plans 12-21/12-22*
