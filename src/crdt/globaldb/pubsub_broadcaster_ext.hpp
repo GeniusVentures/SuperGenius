@@ -6,6 +6,7 @@
 #include "crdt/crdt_datastore.hpp"
 #include "base/logger.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <functional>
 #include <queue>
 #include <tuple>
 #include <vector>
@@ -105,6 +106,38 @@ namespace sgns::crdt
 
         void Stop();
 
+        /**
+         * @brief Installs (or replaces) the private-network membership filter
+         *        consulted by OnMessage for EVERY inbound gossip message.
+         *
+         *        When set, a message is dropped before any CID decode, route,
+         *        or queueing unless BOTH its declared protobuf peer
+         *        (bmsg.peer().id()) AND its transport sender
+         *        (Gossip::Message::from) pass the predicate. An empty or
+         *        malformed transport `from` is denied under a set filter
+         *        (fail-closed -- mirrors
+         *        sgns::networkregistry::AuthorizeGossipSender without
+         *        including any networkregistry header; layering rule).
+         *
+         *        With no filter installed, OnMessage is byte-identical to the
+         *        pre-filter behavior (public pass-through).
+         * @param[in] filter Membership predicate; an empty std::function
+         *            behaves like ClearMembershipFilter().
+         */
+        void SetMembershipFilter( std::function<bool( const libp2p::peer::PeerId & )> filter );
+
+        /**
+         * @brief Reports whether a membership filter is currently installed.
+         * @return true when OnMessage enforces membership.
+         */
+        bool HasMembershipFilter() const;
+
+        /**
+         * @brief Removes the membership filter, restoring public pass-through
+         *        ingest (teardown counterpart of SetMembershipFilter).
+         */
+        void ClearMembershipFilter();
+
         bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
 
     private:
@@ -132,6 +165,14 @@ namespace sgns::crdt
         std::mutex              listenTopicsMutex_;      ///< protects topicsToListen_
         std::mutex              broadcastTopicsMutex_;   ///< protects topicsToListen_
         std::mutex              subscriptionMutex_;      ///< protects subscriptionFutures_
+
+        /// Membership gate state (15-11): OnMessage snapshots the filter under
+        /// this mutex on the pubsub callback threads while the setters run on
+        /// node init/teardown -- the mutex is required.
+        mutable std::mutex membership_filter_mutex_; ///< protects membership_filter_
+        std::function<bool( const libp2p::peer::PeerId & )>
+            membership_filter_; ///< set -> inbound gossip requires membership (fail-closed)
+
         std::atomic_bool        started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );

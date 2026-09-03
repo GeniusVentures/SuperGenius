@@ -156,6 +156,40 @@ namespace sgns::crdt
             auto peerId = peer_id_res.value();
             m_logger->trace( "Message from peer {}", peerId.toBase58() );
 
+            // Membership gate (15-11): when a private-network membership
+            // filter is installed, drop the message BEFORE any CID decode,
+            // route, or queueing unless BOTH identities are authorized
+            // members: the declared protobuf peer (peerId above) and the
+            // transport sender (message->from). Checking both defends
+            // against spoofing either field. This is deliberately a
+            // line-for-line MIRROR of sgns::networkregistry::
+            // AuthorizeGossipSender rather than a call: the layering rule
+            // forbids this .cpp from including any networkregistry/ header.
+            // Fail-closed: an EMPTY or malformed `from` fails
+            // PeerId::fromBytes and is DENIED -- there is no emptiness skip
+            // branch. No filter installed -> public pass-through (zero
+            // behavior change).
+            std::function<bool( const libp2p::peer::PeerId & )> membershipFilter;
+            {
+                std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+                membershipFilter = membership_filter_;
+            }
+            if ( membershipFilter )
+            {
+                if ( !membershipFilter( peerId ) )
+                {
+                    m_logger->debug( "Dropping message from non-member peer {}", peerId.toBase58() );
+                    break;
+                }
+                auto from_peer_res = libp2p::peer::PeerId::fromBytes(
+                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ) );
+                if ( !from_peer_res || !membershipFilter( from_peer_res.value() ) )
+                {
+                    m_logger->debug( "Dropping message with unauthorized transport sender (from)" );
+                    break;
+                }
+            }
+
             base::Buffer buf;
             buf.put( bmsg.data() );
 
@@ -201,6 +235,24 @@ namespace sgns::crdt
                 m_logger->debug( "No new content from message" );
             }
         } while ( 0 );
+    }
+
+    void PubSubBroadcasterExt::SetMembershipFilter( std::function<bool( const libp2p::peer::PeerId & )> filter )
+    {
+        std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+        membership_filter_ = std::move( filter );
+    }
+
+    bool PubSubBroadcasterExt::HasMembershipFilter() const
+    {
+        std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+        return static_cast<bool>( membership_filter_ );
+    }
+
+    void PubSubBroadcasterExt::ClearMembershipFilter()
+    {
+        std::lock_guard<std::mutex> lock( membership_filter_mutex_ );
+        membership_filter_ = nullptr;
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer                     &buff,
