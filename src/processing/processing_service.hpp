@@ -74,8 +74,14 @@ namespace sgns::processing
 
         /// @brief Set membership filter enforced at every processing-path message handler
         ///        (grid, results, and processing queue channels). Empty filter = public
-        ///        pass-through. Applied to all existing processing nodes AND at node
-        ///        creation, so there is no enrollment window (T-15-13-06).
+        ///        pass-through. The filter is snapshotted BEFORE node creation at both
+        ///        creation sites and passed INTO ProcessingNode::New, where it is
+        ///        installed BEFORE any subscription goes live -- before the
+        ///        queue-channel Listen() and before the results-channel
+        ///        CreateResultsChannel/ConnectToSubTaskQueue -- so there is no
+        ///        creation-time enrollment window (T-15-13-06, delivered by the
+        ///        pre-subscription install; CR-G02a closed). Set-time propagation
+        ///        (this call) refreshes existing nodes.
         void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
 
         /// @brief Set the gossip host keypair used to SEAL private-network
@@ -86,8 +92,10 @@ namespace sgns::processing
         ///        derives the from-field PeerId (sgns::base::OpenGossipPayload)
         ///        BEFORE the membership predicate runs. Filter set + no key =
         ///        publishes fail closed. Propagates to all existing processing
-        ///        nodes and applies at both node-creation sites, symmetric
-        ///        with SetMembershipFilter. No filter -> raw, byte-identical.
+        ///        nodes and, symmetric with SetMembershipFilter, is snapshotted
+        ///        BEFORE node creation and passed INTO ProcessingNode::New to be
+        ///        installed BEFORE any subscription goes live. No filter ->
+        ///        raw, byte-identical.
         void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
 
     private:
