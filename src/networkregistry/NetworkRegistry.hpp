@@ -334,8 +334,13 @@ namespace sgns::networkregistry
         uint64_t RefreshAttemptsForTesting() const;
 
         /**
-         * @brief Unregisters this instance's signer-set source and change
-         *        callback (test-fixture teardown helper).
+         * @brief Unregisters this instance's signer-set source, change
+         *        callback, AND the GlobalDB ingest element filter
+         *        RegisterFilters installed for its pattern (G-WR-01: no
+         *        stale filter callback outlives the policy owner on a live
+         *        GlobalDB; test-fixture teardown helper and failure-path
+         *        cleanup). Idempotent -- safe to call from both an explicit
+         *        teardown and the re-entering destructor.
          */
         void Unregister();
 

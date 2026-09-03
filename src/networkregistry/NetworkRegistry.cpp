@@ -694,12 +694,15 @@ namespace sgns::networkregistry
 
     void NetworkRegistry::Unregister()
     {
-        if ( secure_crdt_ )
-        {
-            secure_crdt_->Registry().UnregisterIf( EscapeRegex( base_key_.GetKey() ), &registry_token_ );
-        }
-        // Stop + join the refresh thread BEFORE tearing down the callback or
-        // the db references it uses.
+        // Step 1: remove the policy entry (compare-and-remove with the owner
+        // token). `removed_own_entry` scopes the Step-4 filter teardown to the
+        // case where THIS instance owned the pattern -- a duplicate-New loser
+        // (or a teardown racing a newer owner) must never strip the LIVE
+        // registry's ingest filter.
+        const bool removed_own_entry = secure_crdt_
+            && secure_crdt_->Registry().UnregisterIf( EscapeRegex( base_key_.GetKey() ), &registry_token_ );
+        // Step 2: stop + join the refresh thread BEFORE tearing down the
+        // callback or the db references it uses.
         refresh_stopping_.store( true, std::memory_order_release );
         {
             std::lock_guard<std::mutex> lock( refresh_mutex_ );
@@ -709,10 +712,26 @@ namespace sgns::networkregistry
         {
             refresh_thread_.join();
         }
+        // Step 3: remove the change callback (only when OUR registration is
+        // the live one -- the pattern is empty on every path that did not
+        // register, so a pre-existing foreign callback under the same pattern
+        // is never touched).
         if ( global_db_ && !change_callback_pattern_.empty() )
         {
             global_db_->UnregisterNewElementCallback( change_callback_pattern_ );
             change_callback_pattern_.clear();
+        }
+        // Step 4 (G-WR-01): remove the ingest element filter LAST. The
+        // filter's lambda captures the registry entry BY VALUE (strong
+        // peer_registry pin, 15-11) -- removing it may drop the final
+        // NetworkRegistry reference and re-enter ~NetworkRegistry ->
+        // Unregister(); every earlier step is already torn down by then, and
+        // the re-entered call's Step 1/Step 4 are no-ops (entry gone ->
+        // removed_own_entry false; pattern already removed -> erase-remove on
+        // a missing pattern).
+        if ( secure_crdt_ && removed_own_entry )
+        {
+            secure_crdt_->UnregisterFiltersFor( EscapeRegex( base_key_.GetKey() ) );
         }
     }
 } // namespace sgns::networkregistry

@@ -76,6 +76,26 @@ namespace
             window );
     }
 
+    /// @brief Mirror of NetworkRegistry.cpp's file-local EscapeRegex so the
+    ///        tests build byte-identical pattern strings (the change-callback
+    ///        and ingest-filter patterns are regexes over the ESCAPED base
+    ///        key). Must be kept in sync with the production metacharacter set.
+    std::string EscapeRegexForTest( const std::string &value )
+    {
+        static const std::string metacharacters = R"(\.^$|()[]{}*+?)";
+        std::string              result;
+        result.reserve( value.size() * 2 );
+        for ( const char byte : value )
+        {
+            if ( metacharacters.find( byte ) != std::string::npos )
+            {
+                result.push_back( '\\' );
+            }
+            result.push_back( byte );
+        }
+        return result;
+    }
+
     class NetworkRegistryTest : public ::testing::Test
     {
     protected:
@@ -622,5 +642,217 @@ namespace
         // before stopping the attacker's io thread.
         attacker->db->ShutdownNow();
         attacker.reset();
+    }
+
+    //
+    // (10) Teardown removes the ingest filter it installed (G-WR-01): while
+    //      the registry lives, a remote-originated unsigned element under
+    //      network-registry/<id> is rejected at ingest (the 15-09 probe);
+    //      after Unregister() the identical class of write LANDS -- the
+    //      GlobalDB outlives the policy stack, and no stale filter callback
+    //      (with its captured policy entry) may keep running post-owner.
+    //
+
+    TEST_F( NetworkRegistryTest, TeardownRemovesIngestFilter )
+    {
+        MakeRegistry();
+        ASSERT_TRUE( secure_crdt_->Registry().Resolve( registry_->BaseKey().GetKey() ).has_value() );
+
+        auto attacker = sgns::test::securecrdt::MakeSecureCrdtTestNode( "networkregistry-attacker" );
+        ASSERT_NE( attacker, nullptr );
+        ASSERT_FALSE( attacker->db->AddBroadcastTopic( "networkregistry-test" ).has_error() );
+        attacker->db->AddListenTopic( "networkregistry-test" );
+
+        node_->pubsub->AddPeers( { attacker->pubsub->GetInterfaceAddress() } );
+        EXPECT_TRUE( waitForCondition(
+            [&]()
+            {
+                const auto &a_host = node_->pubsub->GetHost();
+                const auto &b_host = attacker->pubsub->GetHost();
+                return a_host->getNetwork().getConnectionManager().getConnections().size() >= 1
+                    && b_host->getNetwork().getConnectionManager().getConnections().size() >= 1;
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "attacker node did not connect to the registry node";
+
+        const auto                  branch_key = registry_->BaseKey();
+        const crdt::HierarchicalKey probe_key( "gwr01-unfiltered-probe" );
+        base::Buffer                garbage;
+        garbage.put( "definitely-not-a-membership-record" );
+        base::Buffer probe_value;
+        probe_value.put( "gwr01-control" );
+
+        // Phase A -- filter ACTIVE: the unsigned branch element is rejected,
+        // the probe control in the same delta replicates.
+        {
+            const auto tx = attacker->db->BeginTransaction();
+            ASSERT_NE( tx, nullptr );
+            ASSERT_FALSE( tx->Put( branch_key, garbage ).has_error() );
+            ASSERT_FALSE( tx->Put( probe_key, probe_value ).has_error() );
+            ASSERT_FALSE( tx->Commit( { "networkregistry-test" } ).has_error() );
+
+            ASSERT_TRUE( waitForCondition(
+                [&]()
+                {
+                    auto res = node_->db->Get( probe_key );
+                    return res.has_value() && res.value().toString() == "gwr01-control";
+                },
+                std::chrono::milliseconds( 10000 ) ) )
+                << "control element must replicate (sync path works)";
+            EXPECT_FALSE( waitForCondition(
+                [&]() { return node_->db->Get( branch_key ).has_value(); },
+                std::chrono::milliseconds( 500 ) ) )
+                << "while the registry lives, the ingest filter must reject unsigned branch writes";
+            auto stored = node_->db->Get( branch_key );
+            EXPECT_TRUE( stored.has_error() ) << "filter-active phase: branch must stay empty";
+        }
+
+        // Teardown: Unregister() must remove the GlobalDB ingest element
+        // filter along with the policy entry and change callback.
+        registry_->Unregister();
+        EXPECT_FALSE( secure_crdt_->Registry().Resolve( branch_key.GetKey() ).has_value() )
+            << "teardown must remove the policy entry";
+
+        // Phase B -- filter GONE: a second unsigned write under the same
+        // branch (distinct value => novel delta element) plus a fresh probe
+        // control. The branch is an unmanaged key now: the element lands.
+        {
+            base::Buffer garbage_after;
+            garbage_after.put( "definitely-not-a-membership-record-post-teardown" );
+            base::Buffer probe_after_value;
+            probe_after_value.put( "gwr01-control-after" );
+            const crdt::HierarchicalKey probe_after_key( "gwr01-unfiltered-probe-after" );
+
+            const auto tx = attacker->db->BeginTransaction();
+            ASSERT_NE( tx, nullptr );
+            ASSERT_FALSE( tx->Put( branch_key, garbage_after ).has_error() );
+            ASSERT_FALSE( tx->Put( probe_after_key, probe_after_value ).has_error() );
+            ASSERT_FALSE( tx->Commit( { "networkregistry-test" } ).has_error() );
+
+            ASSERT_TRUE( waitForCondition(
+                [&]()
+                {
+                    auto res = node_->db->Get( probe_after_key );
+                    return res.has_value() && res.value().toString() == "gwr01-control-after";
+                },
+                std::chrono::milliseconds( 10000 ) ) )
+                << "post-teardown control must replicate (sync path still works)";
+            ASSERT_TRUE( waitForCondition(
+                [&]()
+                {
+                    auto res = node_->db->Get( branch_key );
+                    return res.has_value()
+                        && res.value().toString() == "definitely-not-a-membership-record-post-teardown";
+                },
+                std::chrono::milliseconds( 10000 ) ) )
+                << "after Unregister() the identical unsigned write must land unfiltered "
+                   "(the filter was removed, not left stale)";
+        }
+
+        attacker->db->ShutdownNow();
+        attacker.reset();
+    }
+
+    //
+    // (11) Callback-registration failure fails New (G-WR-02): when the exact
+    //      change-callback pattern is already live on the GlobalDB, New must
+    //      fail with address_in_use instead of succeeding with a silently
+    //      dead live refresh -- and leave no half-constructed state behind.
+    //
+
+    TEST_F( NetworkRegistryTest, CallbackRegistrationFailureFailsNew )
+    {
+        const auto        base_key   = NetworkRegistry::DefaultBaseKey( kPrivateNetworkId );
+        const std::string cb_pattern = "/?" + EscapeRegexForTest( base_key.GetKey() ) + "(/sig/.*)?";
+
+        // Occupy the change-callback pattern RegisterCrdtChangeCallback wants.
+        ASSERT_TRUE( node_->db->RegisterNewElementCallback(
+            cb_pattern,
+            []( crdt::CRDTCallbackManager::NewDataPair, const std::string & ) {
+                // Foreign registration: must never be removed by the failed
+                // New's teardown (its pattern was cleared on failure).
+            } ) )
+            << "pre-condition: the change-callback pattern must be free before the test occupies it";
+
+        auto result = NetworkRegistry::New( secure_crdt_,
+                                            tpr_,
+                                            kPrivateNetworkId,
+                                            kInitialPeers,
+                                            /*network_quorum_threshold=*/2,
+                                            member_signers_,
+                                            kPnetKeyFingerprint,
+                                            /*global_db=*/node_->db );
+        ASSERT_TRUE( result.has_error() );
+        EXPECT_TRUE( result.error() == std::errc::address_in_use )
+            << "expected address_in_use, got: " << result.error().message();
+
+        // No half-constructed state: the failed attempt registered and then
+        // removed its policy entry -- nothing is left behind.
+        EXPECT_FALSE( secure_crdt_->Registry().Resolve( base_key.GetKey() ).has_value() )
+            << "the failed construction must not leave its policy entry behind";
+
+        // The retry must now succeed once the pattern is free (the failed
+        // attempt poisoned nothing).
+        node_->db->UnregisterNewElementCallback( cb_pattern );
+        auto retry = NetworkRegistry::New( secure_crdt_,
+                                           tpr_,
+                                           kPrivateNetworkId,
+                                           kInitialPeers,
+                                           /*network_quorum_threshold=*/2,
+                                           member_signers_,
+                                           kPnetKeyFingerprint,
+                                           /*global_db=*/node_->db );
+        ASSERT_FALSE( retry.has_error() ) << retry.error().message();
+        // Adopt the retry so TearDown unregisters it (a SECOND registry for
+        // the same id would otherwise trip the duplicate guard in TearDown's
+        // eyes -- registry_ is the fixture-owned instance).
+        registry_ = retry.value();
+        EXPECT_TRUE( secure_crdt_->Registry().Resolve( base_key.GetKey() ).has_value() );
+    }
+
+    //
+    // (12) RegisterIfAbsent never replaces a live entry (G-WR-04): a racing
+    //      second registration for the same pattern is refused and the
+    //      original entry (identified by its owner_token) stays resolvable --
+    //      the duplicate-New TOCTOU cannot resurrect the clobber.
+    //
+
+    TEST_F( NetworkRegistryTest, RegisterIfAbsentDoesNotReplaceLiveEntry )
+    {
+        MakeRegistry();
+        const auto base_key = NetworkRegistry::DefaultBaseKey( kPrivateNetworkId );
+
+        const auto live = secure_crdt_->Registry().Resolve( base_key.GetKey() );
+        ASSERT_TRUE( live.has_value() );
+        const void *live_token = live->owner_token;
+
+        int challenger_token = 0;
+        auto make_entry = [&challenger_token]() {
+            sgns::securecrdt::SecureCrdtRegistryEntry entry;
+            entry.signer_set_source = []( const std::string & )
+                -> outcome::result<sgns::securecrdt::SignerSetSnapshot>
+            { return sgns::securecrdt::SignerSetSnapshot{}; };
+            entry.make_instance = []() -> std::shared_ptr<sgns::securecrdt::ISignedCRDTData>
+            { return std::make_shared<NetworkMembershipPayload>(); };
+            entry.owner_token = &challenger_token;
+            return entry;
+        };
+
+        // Refused: the pattern is live.
+        EXPECT_FALSE( secure_crdt_->Registry().RegisterIfAbsent(
+            EscapeRegexForTest( base_key.GetKey() ), make_entry() ) )
+            << "RegisterIfAbsent must refuse a live pattern instead of replacing it";
+
+        // The original entry survived untouched.
+        const auto after = secure_crdt_->Registry().Resolve( base_key.GetKey() );
+        ASSERT_TRUE( after.has_value() );
+        EXPECT_EQ( after->owner_token, live_token )
+            << "the live entry (same owner_token) must still resolve after the refused attempt";
+
+        // Positive control -- RegisterIfAbsent succeeds for a genuinely
+        // absent pattern (proves the refusal above is not vacuous).
+        EXPECT_TRUE( secure_crdt_->Registry().RegisterIfAbsent( "gwr04-fresh-control", make_entry() ) );
+        secure_crdt_->Registry().UnregisterIf( "gwr04-fresh-control", &challenger_token );
+        EXPECT_FALSE( secure_crdt_->Registry().Resolve( "gwr04-fresh-control" ).has_value() );
     }
 } // namespace
