@@ -207,7 +207,7 @@ namespace sgns::base
         {
             return GossipPayloadAuthError::DERIVE_FAILED;
         }
-        return outcome::success( peer_id.value().toVector() );
+        return libp2p::outcome::success( peer_id.value().toVector() );
     }
 
     /// @brief Seals \p payload into an authenticated envelope signed with
@@ -248,7 +248,7 @@ namespace sgns::base
         detail::AppendU32Be( envelope, static_cast<uint32_t>( signature.value().size() ) );
         envelope.insert( envelope.end(), signature.value().begin(), signature.value().end() );
         envelope.insert( envelope.end(), payload.begin(), payload.end() );
-        return outcome::success( std::move( envelope ) );
+        return libp2p::outcome::success( std::move( envelope ) );
     }
 
     /// @brief Verifies an authenticated gossip envelope (CR-G01 gate side).
@@ -328,7 +328,7 @@ namespace sgns::base
             return GossipPayloadAuthError::SIGNATURE_INVALID;
         }
 
-        return outcome::success( OpenedGossipPayload{ key_peer_id.value(), payload } );
+        return libp2p::outcome::success( OpenedGossipPayload{ key_peer_id.value(), payload } );
     }
 
 } // namespace sgns::base

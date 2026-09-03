@@ -183,6 +183,7 @@ void ProcessingServiceTest::TearDown()
 
     // Clear collections
     m_pubsub_nodes.clear();
+    m_pubsub_keypairs.clear();
     m_processing_queues_accessors.clear();
     m_processing_queues_managers.clear();
     m_processing_engines.clear();
@@ -207,7 +208,13 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
     config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
     for ( size_t i = 0; i < numNodes; ++i )
     {
-        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( config ) );
+        // CR-G01 fixture repair: construct every gossip host from an EXPLICIT
+        // keypair and retain a copy -- the single-arg ctor's internal keypair
+        // is inaccessible, and gated-surface tests must seal sender-side
+        // payloads / wire signing keys with the host's own key material.
+        auto keypair = GenerateEd25519KeyPair();
+        m_pubsub_keypairs.emplace_back( std::make_shared<const libp2p::crypto::KeyPair>( keypair ) );
+        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( std::move( keypair ), config ) );
 
         Color::PrintInfo( "Attempting to start PubSub node ", i, " on an OS-assigned port" );
         for ( auto node : bootstrap_nodes )
@@ -445,11 +452,17 @@ TEST_F( ProcessingServiceTest, GridMessagesFromNonMemberPeersAreIgnored )
     }
     processingService->SetMembershipFilter(
         [members]( const libp2p::peer::PeerId &peer ) { return members.count( peer.toBase58() ) > 0; } );
+    // CR-G01: a filtered service must also be able to SEAL its own publishes.
+    processingService->SetGossipSigningKey( m_pubsub_keypairs[0] );
 
-    // --- Positive leg: the allowed peer's channel response creates a processing node
+    // --- Positive leg: the allowed peer's channel response creates a processing
+    //     node. The payload is SEALED with the publisher's own host keypair --
+    //     the gated service authenticates before it consults membership.
     SGProcessing::GridChannelMessage allowedMessage;
     allowedMessage.mutable_processing_channel_response()->set_channel_id( "PROCESSING_QUEUE_ID_ALLOWED" );
-    gridChannel2.Publish( allowedMessage.SerializeAsString() );
+    const auto allowedSealed = SealPayloadForKey( *m_pubsub_keypairs[1], allowedMessage.SerializeAsString() );
+    ASSERT_FALSE( allowedSealed.empty() ) << "sender-side sealing failed";
+    gridChannel2.Publish( allowedSealed );
 
     EXPECT_WAIT_FOR_CONDITION(
         [&processingService]() { return processingService->GetProcessingNodesCount() > 0; },
@@ -460,14 +473,17 @@ TEST_F( ProcessingServiceTest, GridMessagesFromNonMemberPeersAreIgnored )
     EXPECT_GE( countAfterPositiveLeg, 1 );
 
     // --- Negative leg: a mesh-connected THIRD (non-member) pubsub publishes the
-    // same message shape with a distinct channel id
+    // same message shape with a distinct channel id. Its payload is SEALED with
+    // its OWN host keypair (an honestly-envelope'd non-member), so the deny is
+    // attributable to the MEMBERSHIP predicate, not to a missing envelope.
     libp2p::protocol::gossip::Config config;
     config.echo_forward_mode       = true;
     config.sign_messages           = true; // from IS populated — the deny is attributable to the filter
     config.seen_cache_limit        = 10;
     config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
-    auto pubs3 = std::make_shared<GossipPubSub>( config );
-    auto pubs3StartFuture          = pubs3->Start( 0, { pubs1->GetInterfaceAddress() } );
+    auto pubs3_keypair = GenerateEd25519KeyPair();
+    auto pubs3         = std::make_shared<GossipPubSub>( pubs3_keypair, config );
+    auto pubs3StartFuture = pubs3->Start( 0, { pubs1->GetInterfaceAddress() } );
     if ( auto result = pubs3StartFuture.get(); result )
     {
         FAIL() << "Third pubsub node failed to start: " << result.message();
@@ -483,7 +499,9 @@ TEST_F( ProcessingServiceTest, GridMessagesFromNonMemberPeersAreIgnored )
 
     SGProcessing::GridChannelMessage deniedMessage;
     deniedMessage.mutable_processing_channel_response()->set_channel_id( "PROCESSING_QUEUE_ID_DENIED" );
-    gridChannel3.Publish( deniedMessage.SerializeAsString() );
+    const auto deniedSealed = SealPayloadForKey( pubs3_keypair, deniedMessage.SerializeAsString() );
+    ASSERT_FALSE( deniedSealed.empty() ) << "non-member sender-side sealing failed";
+    gridChannel3.Publish( deniedSealed );
 
     // Bounded negative window (grace-loop pattern): the node count must stay unchanged
     const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
