@@ -200,7 +200,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 22/22 | Complete   | 2026-09-03 |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 22/22 | Complete    | 2026-09-03 |
 
 ---
 *Roadmap last updated: 2026-09-03 with round-5 gap closure plans 12-21/12-22*

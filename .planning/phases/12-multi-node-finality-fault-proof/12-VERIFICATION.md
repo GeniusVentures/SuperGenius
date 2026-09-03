@@ -1,18 +1,20 @@
 ---
 phase: 12-multi-node-finality-fault-proof
-verified: 2026-09-01T20:05:00Z
+verified: 2026-09-03T18:46:49Z
 status: passed
-score: 5/5 must-haves verified
-overrides_applied: 0
+score: 27/27 must-haves verified
+overrides_applied: 1
+overrides:
+  - must_have: "12-15: WR-02 notify-under-paired-mutex in Stop()/Close()"
+    reason: "Production hardening item withheld under the 12-15 repair-authorization gate (both authorization clauses failed); round-5 production budget was explicitly limited to the WR-06 clamp alone (12-21). Carried as a production follow-up in STATE.md Deferred Items and 12-REVIEW.md WR-02. Not part of the phase goal (regression proof of finality safety/liveness) — the six scenario proofs do not depend on it. Recorded as an override for milestone-audit visibility."
+    accepted_by: "developer (12-15 authorization gate; 12-21 scope decision 'round-5 production budget is the clamp alone'; STATE.md Deferred Items table)"
+    accepted_at: "2026-09-03T18:26:41Z"
 re_verification:
   previous_status: gaps_found
-  previous_score: 1/5
+  previous_score: 24/27
   gaps_closed:
-    - "Competing same-burn proposals produce one canonical slot, one authoritative certificate, and one exact winner (fresh focused run PASSED 17.7s; full suite 13/13)."
-    - "Late contender cannot acquire a second vote/certificate and passive recipient remains receive-only (fresh focused run PASSED; zero certificate write attempts asserted and observed)."
-    - "Three-boundary restart proof preserves the original vote with no duplicate mint (fresh focused run PASSED 71.6s combined; full suite green)."
-    - "Publisher-loss proves persist-before-advertise and deterministic non-conflicting recovery (fresh focused run PASSED 18.2s; full suite green)."
-    - "UAT Test 1 same-burn FilterCertificate fixture repaired via production PutConvergentImmutable per direction (12-12, commit e08288c3); focused test and full lifecycle CTest target re-passed in this verification round."
+    - "Round-5 gap 1 (three-consecutive-serial-pass evidence gate): CLOSED. The developer resolved the routed (a)/(b)/(c) decision on 2026-09-03 as DIRECTED REMOVAL (verbatim directive recorded in 12-23-APPARATUS-REMOVAL.md and STATE.md:158): the seven PublisherObserver*/collector meta-tests and their dead machinery deleted (commit 6fa285fe, test file +4/-800, 2724->1928 lines; runner +4/-1 filter repoint; ZERO src/ changes — verified via numstat). The round-6 gate (evidence commit 4f7f674f, round6-traces/) delivered THREE CONSECUTIVE SERIAL FULL PASSES on the reduced 6-case suite: 132.65s / 134.77s / 136.88s, each ctest trailer '100% tests passed, 0 tests failed', ctest-rc=0, git-head 6fa285fe. Independently parsed all three xunit XMLs with ElementTree this session: root tests='6' failures='0' errors='0' each; 6 testcase entries per file, every one status='run' result='completed' with zero <failure>/<error> children; three distinct timestamps (15:29:46 / 15:32:17 / 15:34:43 local) and three distinct sha256 prefixes (026fbd1f/2bcc9857/d94210f0) — genuine per-run captures, not copies. XML testcase line attributes (1115/1217/1324/1428/1523/1790) match the committed working-tree source exactly. Crash-freedom independently confirmed live: newest .ips is still processing_core_gating_test-2026-09-02-175810, zero newer than the gate window (crash-check.txt PASS corroborated by direct find). Build provenance: gate binary epoch 15:28:33 strictly newer than both modified sources (15:27:58/15:28:03); no commit after 6fa285fe touches test/ or src/; working tree clean for both. The suite reduction 13->6 is a developer-directed, fully recorded scope change (12-23 table + STATE.md:158), not a silent reduction; no must-have and no REQUIREMENTS TEST-01..06 item referenced the deleted apparatus."
+    - "Round-5 gap 2 (restart/publisher-loss stable property inside full-suite runs): CLOSED. RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce is green inside ALL THREE round-6 gate XMLs (53.878/54.384/53.931s) — 8 consecutive full-suite greens on the Option-A repaired build across rounds 5-6, plus the 3 focused graduation greens. PublisherLossAfterPersistenceUsesDeterministicFailover is green inside ALL THREE round-6 XMLs (18.163/19.648/18.182s) and in every full run ever recorded. Exact-once held in every run this phase (no duplicate-mint assertion failure in any log); CERT-02 (PutConvergentImmutable count 0 in test) and CERT-05 (single SubmitCertificate call site, :1763) re-verified in the reduced file. The completing three-XML demonstration now exists."
   gaps_remaining: []
   regressions: []
 ---
@@ -20,9 +22,17 @@ re_verification:
 # Phase 12: Multi-Node Finality Fault Proof Verification Report
 
 **Phase Goal:** Operators have production-path regression proof that canonical slot finality remains safe and live through contention, propagation disorder, publisher loss, and restart.
-**Verified:** 2026-09-01T20:05:00Z
+**Verified:** 2026-09-03T18:46:49Z
 **Status:** passed
-**Re-verification:** Yes — prior round (2026-08-31, score 1/5) found all four fault scenarios failing at runtime; this round re-ran every scenario in fresh processes and all gaps are closed.
+**Re-verification:** Yes — round-6 close after the developer-directed apparatus removal (12-23) resolved the round-5 routed decision
+
+## Round-6 Adjudication (scope of this verification)
+
+1. **The round-5 gaps are closed, and the closure mechanism is legitimate.** The 12-22-routed decision (repair / re-scope / accept) was resolved by the developer on 2026-09-03 as a directed removal — recorded verbatim ("I don't want failing tests and apparatus that serves nothing but to follow some rule of thumb regarding approval of a test. This seems like huge overengineering.") in 12-23-APPARATUS-REMOVAL.md and STATE.md:158. This verification confirmed the removal is exactly what the record claims: commit 6fa285fe numstat = runner +4/-1, test file +4/-800 (2724 -> 1928 lines exactly), zero src/ changes; the only 4 added lines in the test file are one 3-line comment and one `std::cerr << record` line simplifying the retained observer's `Write` — **no scenario body was touched**; all ten deleted-symbol greps return 0; all six scenario names plus PublisherReadinessObserver/Snapshot and MintRecoveryDiagnostics grep counts confirm the kept surface; the runner filter now points at `FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover` (:413), the same real-socket child shape/ports the retired meta-test used, and the ownership CTest re-verified green (0.21s). The suite change 13 -> 6 is developer-directed and explicitly recorded — not a silent reduction — and no must-have or TEST-01..06 requirement referenced the deleted meta-apparatus (it was evidence-collection tooling, not finality behavior).
+2. **The three-consecutive-serial-pass standard is met on the developer-defined suite.** All three gate runs passed in series on build 6fa285fe; each xunit XML independently parsed: tests="6" failures="0" errors="0", six green testcase entries, zero failure elements. Runs are distinct (timestamps and hashes differ). RestartAtVote and PublisherLoss are green in every one of the three XMLs — the exact completing demonstration round 4 demanded. Crash-freedom re-verified live by this verifier (newest .ips still 2026-09-02; zero new). Binary provenance verified (binary epoch > source epochs; XML line attrs match committed source; no src/test commits after 6fa285fe; tree clean).
+3. **Load disclosure adjudication.** Pre-run 1-min loads were 2.45 / 19.90 / 27.72 — runs B and C executed inside/above the historical 15-20 contamination band. The earlier quiet-load entry clause (load < 2) belonged to the failure-attribution discipline: it existed so a mid-series strike could not be blamed on ambient load. With zero strikes there is nothing to mis-attribute, and heavy load stresses timeouts rather than masking state-based assertions (exact-once, single-canonical-slot, bridge markers are state predicates, not timing passes); run durations moved only 132.65 -> 136.88s across the series, showing no degradation. The 12-23 procedure the developer directed replaced load gating with honest per-header recording, which the logs carry; 12-23-APPARATUS-REMOVAL.md and STATE.md disclose the B/C contamination-regime fact explicitly. Passing under load is accepted as stronger, not weaker, stability evidence.
+4. **Quick regression on all previously-passed truths found no damage from the removal.** Teardown order intact in the fault test (:396-400), smoke (:287-291), and lifecycle (registry.reset() x2); SameBurn four-peer predicate intact (:1206-1212); Option-A waits intact with distinct messages (:1716 retention, :1742 readiness gate); observer scenario integration intact (:1829 -> :1927); backoff seam intact (:1539 setter, :1544 RAII reset; src untouched since 0e99efa3); CERT-02/CERT-05 intact; CTest registrations untouched. Sibling matrix 4/4 green on the gate generation (compat 5.66s, consensus_pending 41.55s, tx_cert_fallback 30.93s, ownership 0.21s).
+5. **Truth 20 (WR-02) is carried as an explicit override** (frontmatter) — the plan-authorized withholding already adjudicated non-goal-blocking in round 5, now formalized for milestone-audit visibility.
 
 ## Goal Achievement
 
@@ -30,118 +40,112 @@ re_verification:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | A multi-node production-path scenario with competing proposals for one burn produces one canonical slot, one authoritative certificate, and one exact winning proposal. | ✓ VERIFIED | `FinalityFaultNetwork.SameBurnContentionUsesOneCanonicalSlotAndExactMint` (multi_node_finality_fault_test.cpp:1995-2098): two distinct same-slot Mint proposals submitted through public `CreateProposal`/`SubmitProposal` on different peers; asserts canonical slot equality, certificate convergence on all three validators, uniform winner hash on every peer, exactly one mint effect per peer, loser no-output, bridge marker, and post-restart durability. **Fresh focused run in this verification: PASSED 17.7s, exit 0.** Full suite green. |
-| 2 | A late contender cannot acquire a second usable vote or certificate for a slot, and PubSub recipients neither write the certificate key nor stall on a CID they wrote themselves. | ✓ VERIFIED | `LateContenderAndPassiveRecipientRemainReceiveOnly` (:2100-2202): late submissions from two peers after the durable active-vote boundary; asserts durable active-vote proposal ID unchanged on all validators, passive peer recovers via notification + accepted-certificate readback with `CertificateWriteAttempts == 0`, exactly one mint effect, and post-restart exactness. **Fresh focused run: PASSED** (71.6s combined with restart scenario). |
-| 3 | Restart scenarios before certificate arrival, after durable certificate acceptance, and during mint application preserve the original vote and produce no duplicate mint. | ✓ VERIFIED | `RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce` (:2299-2478): three subcases — vote boundary (durable `/consensus/vote/<slot>` record across same-root StopPeer/recreate before reconnection, `DurableActiveVoteProposalId` equality), accepted-certificate boundary, and mint-application boundary (marker absent → apply → marker present, exact-once outputs). **Fresh focused run: PASSED.** |
-| 4 | Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records. | ✓ VERIFIED | `PublisherLossAfterPersistenceUsesDeterministicFailover` (:2479-2617): arms the post-persist/pre-notify barrier, observes the production-selected publisher, asserts `CheckCertificateForSlot` true + `CertificateWriteSuccesses == 1` + `CertificateNotificationsPublished == 0` (persistence-before-advertisement), stops the publisher, restarts, and asserts single durable mint per peer, `CertificateWriteAttempts <= 1` (no conflicting slot record), one live mint effect, and full-network post-restart exactness. **Fresh focused run: PASSED 18.2s, exit 0.** |
-| 5 | The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts. | ✓ VERIFIED | Shortcut scan of the fault test found no `sleep_for`, mock transport, direct certificate handler registration, or forced-timer pattern. `MultiNodeFinalityFaultTestAccess` friendship (Consensus.hpp:553, TransactionManager.hpp:298) is observe/pause-only at durable boundaries; all protocol entry is public `SubmitProposal`/`CreateNonceSubject`; persistence is production `PutConvergentImmutable` (Consensus.cpp:2115); mint effects flow through registered `TransactionManager` handling. Runtime proof: the suite passes over real sockets and real RocksDB roots. |
+| 1 | SC-1: Competing same-burn proposals produce one canonical slot, one authoritative certificate, one exact winner | ✓ VERIFIED | `SameBurnContentionUsesOneCanonicalSlotAndExactMint` intact (:1217, predicate :1206-1212); green in all 3 round-6 XMLs (17.17/17.163/18.696s) |
+| 2 | SC-2: Late contender cannot acquire second vote/certificate; recipients receive-only, no self-CID stall | ✓ VERIFIED | `LateContenderAndPassiveRecipientRemainReceiveOnly` intact (:1324); green in all 3 round-6 XMLs |
+| 3 | SC-3: Three restart boundaries preserve the original vote, no duplicate mint | ✓ VERIFIED | `RestartAtVote...RecoversExactlyOnce` intact (:1523); green in all 3 round-6 XMLs (53.878/54.384/53.931s); exact-once held in every run ever recorded |
+| 4 | SC-4: Publisher-loss proves persist-before-advertise and deterministic failover | ✓ VERIFIED | `PublisherLossAfterPersistenceUsesDeterministicFailover` intact (:1790) with observer integration (:1829/:1927); green in all 3 round-6 XMLs and every recorded full run |
+| 5 | SC-5: Suite exercises production PubSub/CRDT/RocksDB/mint ingress, no local-author shortcuts | ✓ VERIFIED | `ProductionRouteAudit...` green in all 3 XMLs; CMake registration untouched by 6fa285fe; ownership CTest green 0.21s |
+| 6 | 12-13: Stale CRDT.Datastore.TEST.* db cannot be reopened (pid+counter paths) | ✓ VERIFIED | base_crdt_test.cpp untouched (6fa285fe touched only the two multi_node files; nothing after) |
+| 7 | 12-13: cert-fallback passes with stale legacy db dir present | ✓ VERIFIED | Round-6 sibling matrix: Passed 30.93s |
+| 8 | 12-13: No-quorum certificate rejection emits warn-level log | ✓ VERIFIED | Consensus.cpp untouched (zero src/ changes in 6fa285fe; zero src/ commits after) |
+| 9 | Sibling CRDTFixture suites green (no blast-radius regression) | ✓ VERIFIED | Round-6 matrix 4/4: compat 5.66s, lifecycle 41.55s, cert-fallback 30.93s, ownership 0.21s (incl. the changed runner) |
+| 10 | 12-14: Peer::Stop releases GlobalDB host co-owners BEFORE GossipPubSub::Stop | ✓ VERIFIED | Order intact in reduced file (:396-400: db.reset -> account.reset -> pubsub->Stop -> pubsub.reset -> io.reset) |
+| 11 | Evidence standard: three consecutive serial full passes, zero new crash reports | ✓ VERIFIED | **Round-6 gate**: 3/3 passes (132.65/134.77/136.88s), each XML tests="6" failures="0" with zero failure elements (ElementTree-parsed); distinct timestamps/hashes; zero new .ips (independently confirmed live); binary provenance verified. Load disclosure adjudicated in Round-6 Adjudication point 3 |
+| 12 | 12-14: consensus_pending_lifecycle_test passes on the same build | ✓ VERIFIED | Passed 41.55s in round-6 matrix; its source untouched by the removal, binary current |
+| 13 | Restart exact-once and publisher-loss still pass as a stable property inside full-suite runs | ✓ VERIFIED | **Completing demonstration exists**: RestartAtVote green in all 3 round-6 XMLs (8 consecutive full-suite greens on the repaired build); PublisherLoss green in all 3; zero failure elements anywhere |
+| 14 | 12-15: SameBurn wait predicate covers the exact durable boundary it asserts | ✓ VERIFIED | Four CheckCertificateForSlot + four HasBridgeMarker terms at :1206-1212 (re-grepped in reduced file) |
+| 15 | 12-15: Every intermittent signature has an attribution verdict backed by citations | ✓ VERIFIED | Attribution records (12-06/12-15 docs) untouched; round-6 adds the terminal gate outcome — the sole remaining intermittent (collector child-readiness) was removed by developer direction, with its Verdict 3 characterization preserved in the record |
+| 16 | 12-16: ComponentPeer::Stop releases db/account before pubsub->Stop (CR-01) | ✓ VERIFIED | Smoke :287-291 intact; suite green 5.66s in round-6 matrix |
+| 17 | 12-16: ~CRDTFixture releases db_ before pubs_->Stop (CR-02) | ✓ VERIFIED | base_crdt_test.cpp untouched since its verification |
+| 18 | 12-16: teardown invariant holds across ALL phase proof artifacts (WR-01 loops) | ✓ VERIFIED | registry.reset() count exactly 2 in consensus_pending_lifecycle_test.cpp (re-grepped); lifecycle green 41.55s |
+| 19 | 12-20: gate-entry check consults the record and routes go/no-go BEFORE the series | ✓ VERIFIED | Round-6 mirror: 12-23 recorded the developer decision before the gate; crash marker created before run A (crash-check.txt window definition); loads recorded per header; no strike occurred so the stop rule was never needed |
+| 20 | 12-15: WR-02 notify-under-paired-mutex in Stop()/Close() | PASSED (override) | Override: plan-authorized withholding under the 12-15 gate; round-5 budget scoped to the clamp alone; tracked in STATE.md Deferred Items + 12-REVIEW.md WR-02 — accepted by developer, recorded 2026-09-03 |
+| 21 | 12-18: Backoff seam is test-configurable sub-second while unconfigured processes keep exact production durations | ✓ VERIFIED | Seam intact (:1539 setter + :1544 RAII reset in reduced file); graphsync_dagsyncer.cpp untouched since 0e99efa3 |
+| 22 | 12-18/12-19: CRDT write authority not granted to test code (CERT-02) and byte-identical replay only (CERT-05) | ✓ VERIFIED | PutConvergentImmutable count 0; exactly one SubmitCertificate call site (:1763), after the readiness gate; re-publication via GetCertificateBySlot |
+| 23 | 12-21: Option A implemented verbatim as the composed repair — test-file only, no existing bound relaxed, CERT-02/CERT-05 preserved | ✓ VERIFIED | Both waits present with exact distinct messages (:1716, :1742 — line shift from :2512/:2538 is the removal delta, content unchanged) |
+| 24 | 12-21: The composed repair graduates to an attributed fix — 3/3 focused all-green, durable in-repo logs | ✓ VERIFIED | round5-traces/option-a-restart-{1,2,3}.log unchanged on disk (no commits touched them); corroborated by 8 subsequent full-suite greens |
+| 25 | 12-21: getBackoffTimeout exponent clamped at both branches — no UB, production behavior identical, override path unchanged (WR-06) | ✓ VERIFIED | src/ untouched by 6fa285fe and by everything after (git-verified this session); round-5 verification + 12-REVIEW.md stand |
+| 26 | 12-22: gate-entry re-evaluated on the record BEFORE any run — GO with all clauses on direct evidence | ✓ VERIFIED | Historical record intact (STATE.md:152); round-5 verification's evidence unchanged |
+| 27 | 12-22: sibling matrix passes serially on the same build generation, cert-fallback included | ✓ VERIFIED | Round-6 matrix 4/4 green on the gate generation incl. cert-fallback 30.93s and the repointed ownership target 0.21s |
 
-**Score:** 5/5 truths verified
+**Score:** 27/27 truths verified (26 VERIFIED + 1 PASSED (override))
 
 ### Deferred Items
 
-No later milestone phase exists (Phase 12 is the final v3.0 phase), so nothing is deferred to a future phase. The following are explicitly tracked, out-of-scope production follow-ups recorded in `.planning/STATE.md` by plan 12-12 (category `crdt-hardening`, both rows verified present at STATE.md:118-119):
-
-| # | Item | Addressed In | Evidence |
-| --- | --- | --- | ---|
-| 1 | Equal-priority different-value overwrite guard in `CrdtSet::SetValue` | STATE.md deferred item | crdt-hardening row; not required by any Phase 12 truth (the canonical slot key is written only via reserved-priority `PutConvergentImmutable`) |
-| 2 | DAG head advancement for no-topic self-created writes | STATE.md deferred item | crdt-hardening row; same rationale |
+None within verification scope. Phase 12 is the final v3.0 phase; the round-6 work was in-phase gap closure. STATE.md's Deferred Items table (crdt-hardening x2, thirdparty GossipPubSub::StopImpl hardening, teardown-uaf diagnostics) and WR-02 remain recorded production follow-ups outside the phase goal — surfaced via the override above and the STATE record at milestone audit.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | -------- | ----------- | ------ | ------- |
-| `test/src/blockchain/multi_node_finality_fault_test.cpp` | Four-peer real-route fault scenarios (TEST-01–TEST-05) | ✓ VERIFIED | 2,617 lines; 13 GTests listed (`--gtest_list_tests` = 13); all four fault scenarios plus production-route audit are substantive (full durable-state assertions, not smoke); **passed 13/13 in a fresh full-suite CTest run (217.18s)** |
-| `test/src/blockchain/multi_node_finality_fault_runner.cpp` | POSIX invocation-owned session launcher (12-11) | ✓ VERIFIED | 416 lines; registered as CTest `TEST_LAUNCHER` (CMakeLists.txt:116); `multi_node_finality_fault_process_ownership_test` **passed 0.22s in this round** |
-| `test/src/blockchain/multi_node_finality_fault_compatibility_smoke_test.cpp` | Production `Blockchain` + `TransactionManager` lifecycle composition (TEST-06) | ✓ VERIFIED | 407 lines; registered (CMakeLists.txt:57, TIMEOUT 120 RUN_SERIAL); **passed 6.21s in this round** |
-| `test/src/blockchain/consensus_pending_lifecycle_test.cpp` | 12-12 fixture repair: per-direction production-path slot writes | ✓ VERIFIED | `WriteConvergentCertificateAtKey` (:157-165) writes via `db_->PutConvergentImmutable`, mirroring production SubmitCertificate; `verify_order` uses per-direction fresh node DBs with Approve + `GetCertificateBySlot` readback guards (:1287); **focused test PASSED in this round (6.1s) and full lifecycle CTest target PASSED (42.17s)** |
-| `test/src/blockchain/CMakeLists.txt` | Serial bounded CTest registration with port lock | ✓ VERIFIED | 4 targets registered: lifecycle (#23), smoke (#24), fault test (#25, TIMEOUT 300 RUN_SERIAL RESOURCE_LOCK phase12_real_socket_ports TEST_LAUNCHER runner), ownership (#26) |
-| `src/blockchain/Consensus.cpp` | Durable vote/certificate boundaries (12-01/12-05) | ✓ VERIFIED | `PersistOrLoadExactActiveVote` (:1282), `RecoverActiveVotes` (:1358, called at :121), `ReleaseActiveVoteForAcceptedSlot` (:1183, :3770), `PutConvergentImmutable` before Publish (:2115) |
-| `src/account/TransactionManager.cpp` | Mint-effect boundary before durable marker | ✓ VERIFIED | `PersistBridgeExecutedMarker` (:2025) ordered after successful parse and applied at :5450; exercised at runtime by the passing scenarios |
-| `.planning/STATE.md` | Two crdt-hardening deferred rows | ✓ VERIFIED | Rows present at lines 118-119 |
+| `test/src/blockchain/multi_node_finality_fault_test.cpp` | Six FinalityFaultNetwork scenarios intact; meta-apparatus deleted | ✓ VERIFIED | 1928 lines; TEST_F count exactly 6 (verified by grep and by binary `--gtest_list_tests`); all 10 deleted symbols return 0 hits; scenario bodies untouched (+4 comment/cerr lines only) |
+| `test/src/blockchain/multi_node_finality_fault_runner.cpp` | Controlled-cancellation filter repointed to a surviving real-socket scenario | ✓ VERIFIED | :413 filter = `FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover`; diff is the repoint + 3-line comment; ownership CTest green 0.21s |
+| `round6-traces/gate-{a,b,c}.log` | Three serial full-pass runs with honest headers | ✓ VERIFIED | Each: "100% tests passed, 0 tests failed", ctest-rc=0, git-head 6fa285fe, per-run 1-min load recorded (2.45/19.90/27.72); note-line blemish flagged under Anti-Patterns |
+| `round6-traces/gate-{a,b,c}.xml` | Per-run xunit proof, tests=6 failures=0 | ✓ VERIFIED | ElementTree-parsed: root and suite tests="6" failures="0" errors="0"; 6 green cases each; distinct timestamps (15:29:46/15:32:17/15:34:43) and distinct sha256 — not copies; line attrs match committed source |
+| `round6-traces/crash-check.txt` | Zero new crash reports across gate + matrix | ✓ VERIFIED | PASS recorded; independently re-confirmed live by this verifier (newest .ips still 2026-09-02-175810; zero newer than the window) |
+| `round6-traces/sibling-matrix.log` | Four sibling suites green on the gate generation | ✓ VERIFIED | 4/4 Passed: 5.66/41.55/30.93/0.21s, each "100% tests passed" |
+| `12-23-APPARATUS-REMOVAL.md` | Verbatim developer directive + deletion inventory + gate record | ✓ VERIFIED | Directive quoted verbatim; 13->6 composition table; deleted/kept inventory matches the code exactly (all claims re-checked against commit 6fa285fe) |
+| `.planning/STATE.md` | Decision chain with the 12-23 entry and honest load disclosure | ✓ VERIFIED | STATE.md:158 carries the directed-removal entry, gate outcome, and load disclosure; Session Continuity updated |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | ---- | --- | --- | ------ | ------- |
-| Fault scenarios | `ConsensusManager::SubmitProposal` | public proposal ingress | ✓ WIRED | Every substantive scenario calls public create/submit; verified at runtime by green runs |
-| `Consensus.cpp` | `PutConvergentImmutable` then `Publish` | persistence-before-advertisement | ✓ WIRED | :2115 persists into CRDT topic before notification; publisher-loss test observes the barrier (CertificateNotificationsPublished == 0 with certificate durable) |
-| `Consensus.cpp` | active-vote recovery/release | durable record → recovery → accepted-slot release | ✓ WIRED | :121, :1183, :1282, :1358, :3770; restart scenario proves the record survives same-root reopen |
-| `TransactionManager.cpp` | `PersistBridgeExecutedMarker` | mint effects → marker | ✓ WIRED | :5450 order preserved; exact-once marker asserted across all restart/publisher scenarios |
-| `multi_node_finality_fault_test` CTest | `multi_node_finality_fault_runner` | CMake TEST_LAUNCHER | ✓ WIRED | CMakeLists.txt:108-123; runner forwards normal GTest execution (xunit argument preserved); target passed in this round |
-| Lifecycle fixture `verify_order` | `WriteConvergentCertificateAtKey` → `PutConvergentImmutable` | production slot-write path | ✓ WIRED | :1287 → :163; focused and full lifecycle runs green in this round |
+| Six scenario tests | Production Consensus/CRDT/PubSub/mint paths | real socket fixture, no shortcuts | ✓ WIRED | ProductionRouteAudit green x3; CMake registration untouched |
+| PublisherLoss scenario | PublisherReadinessObserver | `observer(network)` :1829 -> `EmitTerminal(all_released)` :1927 | ✓ WIRED | Retained observer integration verified in the reduced file |
+| RestartAtVote | Option-A waits | retention wait :1716, readiness gate :1742 before re-publication :1763 | ✓ WIRED | Gate precedes the single SubmitCertificate call site |
+| Ownership runner child | Surviving publisher-loss scenario | `--gtest_filter` :413 | ✓ WIRED | Repoint verified in source + diff; CTest green 0.21s (connect gate exercised) |
+| Gate evidence chain | Build 6fa285fe | git-head headers + XML line attrs + binary epoch | ✓ WIRED | Binary (15:28:33) newer than sources (15:27:58/15:28:03); XML line attrs 1115/1217/1324/1428/1523/1790 match committed file; no code commits after 6fa285fe |
 
 ### Data-Flow Trace (Level 4)
 
-| Artifact | Data Variable | Source | Produces Real Data | Status |
-| -------- | ------------- | ------ | ------------------ | ------ |
-| Fault scenarios | canonical slot certificate / durable mint state | public ingress → GossipPubSub → CRDT/RocksDB → registered Mint consumer | Yes — every assertion reads durable per-peer state (`GetCertificateBySlot`, UTXO/bridge-marker readback) after real propagation and after same-root peer recreation | ✓ FLOWING |
-| Lifecycle same-burn fixture | existing certificate at canonical slot | per-direction fresh node GlobalDB written via production `PutConvergentImmutable` | Yes — readback guard via public `GetCertificateBySlot` proved the written record is the read record | ✓ FLOWING |
-| Evidence collector (12-09/12-10) | child process observer records | fork/exec child capture, waitpid, 66-byte control frame | Yes — two-run real-socket collector classification exercised and passing inside the suite | ✓ FLOWING |
+Not applicable — no dynamic-data rendering artifacts. The phase's assertions read durable per-peer RocksDB state and pubsub topic-peer counts; the evidence chain (logs -> XMLs -> STATE.md) was verified line-by-line against the raw committed artifacts including independent XML parsing of all three gate files.
 
 ### Behavioral Spot-Checks
 
-All checks executed in this verification round on `build/OSX/Release` (binaries confirmed newer than all sources; incremental build up to date).
-
 | Behavior | Command | Result | Status |
 | -------- | ------- | ------ | ------ |
-| Full serial fault suite (all scenarios) | `ctest --test-dir build/OSX/Release --timeout 300 -R '^multi_node_finality_fault_test$'` | Passed 217.18s, 100% (0 failed out of 1) | ✓ PASS |
-| GTest count within target | xunit output from the run | `tests="13" failures="0"` | ✓ PASS |
-| Focused same-burn contention | binary `--gtest_filter='FinalityFaultNetwork.SameBurnContentionUsesOneCanonicalSlotAndExactMint'` | PASSED 1 test, 17.7s, exit 0 | ✓ PASS |
-| Focused publisher loss | binary `--gtest_filter='...PublisherLossAfterPersistenceUsesDeterministicFailover'` | PASSED 1 test, 18.2s, exit 0 | ✓ PASS |
-| Focused late-contender + restart | binary `--gtest_filter='...LateContender...:...RestartAtVoteCertificateAndMintDurableBoundaries...'` | PASSED 2 tests, 71.6s, exit 0 | ✓ PASS |
-| Focused 12-12 lifecycle fixture | binary `--gtest_filter='ConsensusPendingLifecycleTest.FilterCertificateTreatsSameMintAlternatesAsNormal...'` | PASSED 1 test, 6.1s, exit 0 | ✓ PASS |
-| Full lifecycle CTest target | `ctest ... -R '^consensus_pending_lifecycle_test$'` | Passed 42.17s | ✓ PASS |
-| Smoke + ownership targets | `ctest ... -R 'compatibility_smoke_test|process_ownership_test'` | Both Passed (6.21s / 0.22s) | ✓ PASS |
-| Executor evidence corroboration | inspect `/tmp/p12_mn_triple_{a,b,c}.log`, `/tmp/p12_lifecycle_full{1,2,3}.log`, `/private/tmp/phase12-11-normal-final-{1,2,3}.log` | All 9 logs exist; sampled logs show 100% passes (211.48s, 43.21s) | ✓ PASS |
-
-The four runtime gaps from the prior round (topology readiness failures blocking every scenario) did not reproduce: every previously-failing scenario now passes in a fresh isolated process and in the full serial suite.
+| Suite composition (developer-defined suite) | `multi_node_finality_fault_test --gtest_list_tests` | Exactly the six FinalityFaultNetwork cases, nothing else | ✓ PASS |
+| Gate XML integrity x3 | ElementTree parse of gate-{a,b,c}.xml | tests=6 failures=0 errors=0; 6 green cases each; distinct hashes/timestamps | ✓ PASS |
+| Crash-report absence (live, independent) | `find ~/Library/Logs/DiagnosticReports -name "*.ips" -newermt <gate window>` | 0; newest remains processing_core_gating_test-2026-09-02-175810 | ✓ PASS |
+| Removal surgicality | `git show --numstat 6fa285fe` + added-lines extraction | test +4/-800 (2724->1928), runner +4/-1, zero src/; only 4 added lines (comment + one cerr) | ✓ PASS |
+| Full-suite re-run by verifier | not executed | No-reroll budget discipline; each run ~135s exceeds spot-check constraints; on-disk evidence independently corroborated (5 points per run: log trailer, XML root, per-case entries, timestamps, hashes) | ? SKIP |
 
 ### Probe Execution
 
-Step 7c: SKIPPED — no declared or conventional `scripts/**/tests/probe-*.sh` probes exist in this repository. Behavioral coverage was provided instead by direct CTest/GTest execution (above).
+Step 7c: SKIPPED — no declared or conventional `scripts/**/tests/probe-*.sh` probes exist in this repository (re-checked this session).
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | ----------- | ---------- | ----------- | ------ | -------- |
-| TEST-01 | 12-02, 12-06, 12-12 | Same-burn contention yields one slot, certificate, winner | ✓ SATISFIED | Contention scenario green (focused + suite); deterministic same-burn FilterCertificate regression repaired and green (focused + full lifecycle target) |
-| TEST-02 | 12-02, 12-06 | Late contender cannot obtain second usable vote/certificate | ✓ SATISFIED | Late-contender scenario green; durable active-vote proposal ID asserted unchanged on all validators |
-| TEST-03 | 12-02, 12-06 | Recipient receive-only, no self-CID stall | ✓ SATISFIED | `CertificateWriteAttempts == 0` on passive peer with notification + accepted-certificate readback + exactly one mint effect |
-| TEST-04 | 12-03, 12-04, 12-05, 12-07, 12-06 | Three restart boundaries, no changed vote, no duplicate mint | ✓ SATISFIED | Three-boundary scenario green; vote record proven durable across same-root reopen before reconnection |
-| TEST-05 | 12-03, 12-04, 12-08–12-11 | Publisher loss: persist-before-advertise, deterministic failover, no conflicting records | ✓ SATISFIED | Publisher-loss scenario green; `CertificateNotificationsPublished == 0` with durable certificate, `CertificateWriteAttempts <= 1`, exact-once durable mint on every peer |
-| TEST-06 | 12-01, 12-08–12-11 | Production route only, no local-author shortcuts | ✓ SATISFIED | Static shortcut scan clean; ownership runner + serial CTest registration; suite runs over real PubSub/CRDT/RocksDB |
+| TEST-01 | 12-01..12-05 | Same-burn contention -> one slot, one certificate, one winner | ✓ SATISFIED | SameBurn case green in all 3 round-6 XMLs |
+| TEST-02 | 12-01..12-05 | Late contender cannot obtain second vote/certificate | ✓ SATISFIED | LateContender case green in all 3 round-6 XMLs |
+| TEST-03 | 12-01..12-05 | Recipients receive-only; no self-CID sync timeout | ✓ SATISFIED | Passive-recipient assertions inside LateContender case; green x3 |
+| TEST-04 | 12-01..12-05 | Restart at three boundaries; no changed vote, no duplicate mint | ✓ SATISFIED | RestartAtVote green in all 3 round-6 XMLs (8 consecutive full-suite greens); exact-once never violated |
+| TEST-05 | 12-01..12-05 | Publisher-loss: persist-before-advertise + deterministic failover | ✓ SATISFIED | PublisherLoss case green in all 3 round-6 XMLs and every recorded run |
+| TEST-06 | 12-01..12-05 | Production paths exercised, no local-author shortcuts | ✓ SATISFIED | ProductionRouteAudit green x3; ownership target green |
 
-No requirements are orphaned: all six Phase 12 requirement IDs from REQUIREMENTS.md are claimed by plans and satisfied. Roadmap contains no later milestone phase, so no gap deferral applies.
+Orphaned requirements: none — REQUIREMENTS.md maps exactly TEST-01..TEST-06 to Phase 12 (all Complete), and all six are covered above.
 
 ### Anti-Patterns Found
 
-Debt-marker scan (TBD/FIXME/XXX) across all four phase test files: clean. No placeholder, mock-transport, sleep-synchronization, or forced-timer pattern in the fault test. Findings below are from `12-REVIEW.md` (2026-09-01 round), independently confirmed in current source during this verification.
-
 | File | Line | Pattern | Severity | Impact |
 | ---- | ---- | ------- | -------- | ------ |
-| `src/blockchain/Consensus.cpp` | 3017-3036 | CR-01: `CreateProposalState` mutates `proposals_`/`slot_states_` without `proposals_mutex_` while called unlocked from `HandleCertificate` (:2993) on the pubsub receive thread; ~20 other sites lock the same mutex | ⚠️ Warning | Real pre-existing production data race (UB window on every received certificate). Confirmed real. Does not falsify any Phase 12 truth — the proof scenarios pass deterministically — but it is an unresolved Critical production defect on the exact path this phase certifies. Not tracked in STATE.md. |
-| `src/account/TransactionManager.cpp` | 3430-3435, 3962-3965 | CR-02: `tx_processed_m.find( GetTransactionPath(...) )` dereferenced without `end()` check; key namespace can miss for multi-network tracked entries on DEV_NET | ⚠️ Warning | Real pre-existing UB/crash path on the conflicting-transaction ingress. Confirmed real (misleading "No need to check" comment at first site). Not goal-falsifying; not tracked in STATE.md. |
-| `src/blockchain/Consensus.cpp` | 1566 | WR-05: `active_vote_announcements_for_test_.push_back` runs unconditionally in the production vote loop, unbounded and outside `fault_test_mutex_` | ⚠️ Warning | Phase-12-introduced instrumentation (unlike CR-01/CR-02): unbounded memory growth on long-running production nodes plus an unsynchronized test read. Not goal-falsifying; should be gated/bounded. |
-| `test/src/blockchain/multi_node_finality_fault_test.cpp` | — | Residual documented low-rate readiness flake in the collector child (`RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch`) | ℹ️ Info | Recorded in STATE.md under the Plan 12-08 discipline (repair requires two matching fresh failures); did not occur in this verification round's runs. |
+| round6-traces/gate-b.log, gate-c.log | header `note:` | Stale template note "today's load is far below it" contradicts the same headers' numeric loads (19.90/27.72 vs the 15-20 band) | ℹ️ Info | Cosmetic evidence blemish only — the load-bearing `pre-run-1min-load:` values are honest, and 12-23/STATE.md disclose the contamination-regime fact explicitly |
+| multi_node_finality_fault_test.cpp | observer `Write` | P12_PUBLISHER_OBSERVER_* telemetry lines now unparsed when a run token is present | ℹ️ Info | Documented in 12-23 as intentionally harmless; plain ctest runs print nothing |
 
-### Code Review Findings Assessment (12-REVIEW.md, status issues_found)
-
-The review's 2 Critical / 7 Warning / 8 Info findings were checked against the goal:
-
-- **CR-01 and CR-02 are real** — both were independently re-confirmed in current source (unlocked `proposals_` mutation on the certificate receive path; unchecked `tx_processed_m.find` dereference). Both are pre-existing defects (`CreateProposalState` predates Phase 12; the only Phase 12 production commits touched Consensus.cpp observation accessors, +8 lines), not regressions introduced by this phase.
-- **They do not undermine goal achievement.** The goal is production-path regression proof; the proof artifact exists, runs the production path with no shortcuts (SC-5), and passes deterministically — reproduced in this round by one full-suite run, four focused fresh-process runs, and corroborated by the executor's nine preserved green logs. Neither defect falsifies any of the five success criteria, and neither manifested in any Phase 12 run.
-- **However, neither Critical is tracked anywhere** (no STATE.md row, unlike the two crdt-hardening deferrals from 12-12, and no review-fix round exists for the 2026-09-01 review). Recommendation: record CR-01, CR-02, and WR-05 as tracked deferred items in STATE.md, or open a follow-up repair plan, before milestone close — otherwise these Critical findings are an untracked audit gap. WR-05 deserves priority since Phase 12 itself introduced it into production code.
+Debt markers: zero `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` in either modified file. Dead includes confirmed removed (all nine listed headers absent; `environ` declaration gone).
 
 ### Human Verification Required
 
-None. All goal-relevant checks were verified programmatically in this round (source inspection plus fresh test execution). The prior UAT round (12-UAT.md) provided human acceptance for 4/5 tests, and the single blocker (same-burn canonical finality) was closed by 12-12 and independently re-verified here; no visual, external-service, or otherwise un-testable items remain.
+None. All goal evidence is machine-verifiable and was independently parsed this session (XML integrity, crash-report absence, binary composition, commit surgicality, provenance chain). The phase produces a regression suite, not user-facing behavior; prior rounds likewise carried no human items for this phase.
 
 ### Gaps Summary
 
-No gaps. All five roadmap success criteria are verified with fresh in-process evidence: the four fault scenarios (contention, late-contender/passive-recipient, three-boundary restart, publisher loss) each pass in isolated fresh runs and in the full serial 13-test CTest suite, over the real PubSub/CRDT/RocksDB/Mint production route with no shortcuts. The prior round's four runtime gaps and the UAT Test 1 fixture defect are all closed. The 2026-09-01 code review's two Critical production findings (CR-01 data race, CR-02 unchecked dereference) are confirmed real but pre-existing, non-goal-falsifying, and advisory — with the explicit recommendation above to give them tracked follow-up before milestone close.
+No gaps. The two round-5 failures shared one root cause — the collector meta-test's child-readiness intermittence — and the developer resolved it by directed removal of the apparatus (fully recorded, zero src/ impact, scenario bodies untouched). The round-6 gate then completed the exact standard round 4 set: three consecutive serial full passes with per-run xunit proof and zero new crash reports, on the developer-defined six-scenario suite, with the restart and publisher-loss stable properties demonstrated inside all three runs. One plan-authorized withholding (WR-02) is carried as a documented override; STATE.md's production follow-ups remain recorded for milestone audit.
 
 ---
 
-_Verified: 2026-09-01T20:05:00Z_
+_Verified: 2026-09-03T18:46:49Z_
 _Verifier: Claude (gsd-verifier)_
