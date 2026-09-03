@@ -832,6 +832,6 @@ Plans:
 - [x] 15-10-PLAN.md — gap closure: fail-closed provisioning chain — WriteNetworkConfig control-char escaping (CR-01) + corrupt-config fail-closed load (WR-01) (D-01, PNET-CFG)
 - [x] 15-11-PLAN.md — gap closure: SuperGenius-side membership filter component + broadcaster ingest enforcement with three-node same-PSK flow proofs (D-07 replacement per deferred-items §3)
 - [x] 15-12-PLAN.md — gap closure: GeniusNode installs the registry-backed gossip membership filter + live cache refresh (needs 15-09/10/11) (D-06, D-07)
-- [ ] 15-13-PLAN.md — gap closure: processing-path membership gates — grid/results/queue channel handlers (needs 15-11/12) (D-11, PNET-PROC)
+- [x] 15-13-PLAN.md — gap closure: processing-path membership gates — grid/results/queue channel handlers (needs 15-11/12) (D-11, PNET-PROC)
 
 > Gap wave layout: wave 1 = {15-09, 15-10, 15-11} (disjoint files); wave 2 = {15-12} (exclusive GeniusNode.cpp after 15-10); wave 3 = {15-13} (GeniusNode.cpp again after 15-12). 15-12 depends on 15-09 because wiring the live membership refresh (tx_globaldb_ as global_db) must come after the WR-02 busy-spin fix.

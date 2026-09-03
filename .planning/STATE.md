@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 15
-status: executing
-last_updated: "2026-09-03T13:41:43.616Z"
+status: verifying
+last_updated: "2026-09-03T14:06:49.555Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 19
   completed_phases: 6
   total_plans: 65
-  completed_plans: 48
+  completed_plans: 49
   percent: 32
 ---
 
@@ -31,14 +31,14 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 
 Phase: 15 (private-networks-consume-privatenetworkid-identity-and-bind-) — EXECUTING
 Plan: 13 of 13
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-03
-**Progress:** [███████░░░] 74%
+**Progress:** [████████░░] 75%
 
 Last session:
-2026-09-03T13:41:43.611Z
+2026-09-03T14:06:42.553Z
 Stopped At:
-Completed 15-10-PLAN.md
+Completed 15-13-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -92,6 +92,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 15 P10 | 6min | 2 tasks | 2 files |
 | Phase 15 P11 | 28min | 2 tasks | 5 files |
 | Phase 15 P12 | 11min | 2 tasks | 3 files |
+| Phase 15 P13 | 20min | 2 tasks | 13 files |
 
 ## Decisions
 
@@ -103,3 +104,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 15]: 15-11: inline-mirror layering — OnMessage reproduces AuthorizeGossipSender line-for-line instead of calling it (no networkregistry include in crdt); expiry fail-closure proven with an unregistered direct-ctor registry because New-built registries stay pinned by the RegisterFilters D-04 entry capture
 - [Phase 15]: 15-12: filter install is colocated with NetworkRegistry construction (unconditional-on-success inside the guarded block, pre-READY) — a private node either runs membership-enforced gossip or fails closed; every private node's broadcaster carries the filter, closing the ungated-member relay vector at node level
 - [Phase 15]: 15-12: live registry cache refresh enabled in-node (tx_globaldb_ as NetworkRegistry::New trailing global_db — the deferred 15-05 wiring, safe post-15-09 WR-02); teardown clears the broadcaster filter before registry release (fail-closed either way)
+- [Phase 15]: 15-13: membership gates live at the three real SGNUS processing message handlers (grid OnMessage, results OnResultChannelMessage, queue OnProcessingChannelMessage) — same fail-closed AuthorizeGossipSender semantics as the 15-11 gossip chokepoint; empty filter = public pass-through
+- [Phase 15]: 15-13: filter propagation covers both time axes — set-time (setBitswap mirror over existing nodes) and creation-time (both m_processingNodes insertion sites), so no enrollment window exists
+- [Phase 15]: 15-13: processing test targets registered standalone with per-target source lists (single-source processing_service_test; channel-pubsub test + base.cpp) — registration gate ctest -N >=2 enforced before any test run; both new gate scenes mutation-verified non-vacuous
