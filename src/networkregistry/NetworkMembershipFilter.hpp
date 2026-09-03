@@ -87,6 +87,46 @@ namespace sgns::networkregistry
     }
 
     /**
+     * @brief Builds a config-backed, fail-closed MembershipFilter over the
+     *        provisioned bootstrap membership (network_bootstrap_peers_).
+     *
+     *        Boot-window gate (CR-G02b / G-WR-03): on a private node the
+     *        GlobalDB goes live and subscribes its topics from
+     *        INITIALIZING_DATABASE, while the registry-backed filter installs
+     *        only at NetworkRegistry construction in INITIALIZING_TRANSACTIONS
+     *        -- this predicate covers that startup window from the first live
+     *        subscription. The argument strings are the SAME base58 PeerId
+     *        strings the NetworkRegistry stores verbatim as its cached
+     *        membership (cached_network_peers_ = initial_network_peers), and
+     *        membership matching is base58 string comparison against
+     *        PeerId::toBase58(), so the interim verdict matches the
+     *        registry-backed verdict for the provisioned set; the registry
+     *        filter later REPLACES this one via SetMembershipFilter.
+     *
+     *        Semantics per invocation:
+     *        - empty bootstrap set -> DENY everything (fail-closed: a private
+     *          node with no bootstrap membership can never reach READY anyway
+     *          per the 15-05 posture -- empty membership NEVER fails open);
+     *        - otherwise -> allow iff the peer's base58 id is in the set.
+     * @param[in] bootstrap_peer_ids Provisioned bootstrap member PeerId base58
+     *            strings (copied ONCE into a shared_ptr-held unordered_set for
+     *            cheap per-message consultation).
+     * @return The membership predicate (never null).
+     */
+    inline MembershipFilter MakeBootstrapMembershipFilter( const std::vector<std::string> &bootstrap_peer_ids )
+    {
+        auto member_set = std::make_shared<const std::unordered_set<std::string>>(
+            bootstrap_peer_ids.begin(), bootstrap_peer_ids.end() );
+        return [member_set = std::move( member_set )]( const libp2p::peer::PeerId &peer ) {
+            if ( member_set->empty() )
+            {
+                return false; // empty bootstrap membership never fails open
+            }
+            return member_set->count( peer.toBase58() ) > 0;
+        };
+    }
+
+    /**
      * @brief Authorizes a gossip message by its TRANSPORT sender field
      *        (Gossip::Message::from -- a ByteArray carrying the serialized
      *        PeerId of the message creator).
