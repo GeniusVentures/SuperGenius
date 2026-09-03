@@ -1,5 +1,26 @@
 # Milestones
 
+## v3.0 Canonical Burn Finality Rebuild (Shipped: 2026-09-03)
+
+**Phases completed:** 5 phases (8-12), 34 plans, 48 tasks
+
+**Stats:** 186 files changed, +72,648 / −1,029 lines · 21/21 requirements validated · 290 commits · 14 days (2026-08-20 → 2026-09-03) · git range `8d66d670a → 94b54905e`
+
+**Key accomplishments:**
+
+- Canonical burn-slot identity shared by every competing mint proposal, cryptographically bound to the exact winning proposal (Phase 8)
+- Durable one-vote-per-slot lock persisted to RocksDB before broadcast, cleared only on matching durable finality (Phase 9)
+- Deterministic verifiable publisher authority: persistence-before-advertisement, lowest-SHA-256 convergence for contested immutable records, safe failover with no bridge-specific finality side channel (Phase 10)
+- Convergent certificate consumption with the CRDT work journal as the sole retry boundary; certificate-first Mint recovery with tightly validated embedded fallback; Mint V2 held VERIFYING until idempotent effects and bridge marker both persist (Phase 11)
+- Real-socket four-peer production-path fault proof: one canonical slot, one authoritative certificate, one exact mint effect through contention, propagation disorder, publisher loss, and restart — exact-once held in every run ever recorded (Phase 12, TEST-01..06)
+- Post-restart certificate recovery made reliable: surviving-replica retention before publisher restart + mesh-readiness-gated re-advertisement (RestartAtVote from ~50%/run to 8 consecutive full-suite greens)
+- Real production defects found and fixed under evidence discipline: asio teardown-order SIGSEGV (propagated across all proof artifacts), stale test-fixture RocksDB reuse (run-unique + reap), SameBurn check-then-act wait race, silent no-quorum rejection made visible
+- Publisher-observer meta-test apparatus removed by developer directive at close (801 lines) — the regression suite is the six finality scenarios, three-consecutive-serial-pass verified with zero crash reports
+
+**Known deferred items at close:** 13 (see STATE.md Deferred Items — stale v1.0-era items, June quick-tasks from the TokenId subsystem, and debug sessions mooted by the apparatus removal). Plus standing deferred: thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard.
+
+---
+
 ## v1.0 GeniusNode Construction Refactor (Shipped: 2026-07-03)
 
 **Phases completed:** 3 phases, 5 plans, 0 tasks

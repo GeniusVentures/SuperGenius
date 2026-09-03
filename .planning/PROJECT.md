@@ -125,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-03 after closing Phase 12's UAT/verification gaps (rounds 2-6) — milestone v3.0 ready for completion*
+*Last updated: 2026-09-03 after v3.0 milestone (Canonical Burn Finality Rebuild shipped; 13 acknowledged deferred items in STATE.md; next milestone not yet planned)*
