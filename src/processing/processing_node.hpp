@@ -46,6 +46,16 @@ namespace sgns::processing
          * @param subTasks Optional initial subtask list.
          * @param msSubscriptionWaitingDuration Wait duration for queue subscription.
          * @param ttl Time-to-live for node ownership.
+         * @param membershipFilter Membership gate installed BEFORE any
+         *        subscription goes live: on the queue channel before Listen()
+         *        and on the results accessor before
+         *        CreateResultsChannel/ConnectToSubTaskQueue (CR-G02a -- the
+         *        creation-site snapshot eliminates the enrollment window).
+         *        Empty (public node) -> nothing installed, byte-identical.
+         * @param gossipSigningKey Gossip host keypair installed beside the
+         *        filter at the same pre-subscription points (CR-G01 symmetry:
+         *        sealed publishes + authenticated ingest from the first
+         *        message).
          */
         static std::shared_ptr<ProcessingNode> New(
             std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
@@ -58,7 +68,9 @@ namespace sgns::processing
             const std::string                                      &processingQueueChannelId,
             std::list<SGProcessing::SubTask>                        subTasks = {},
             std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
-            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
+            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ),
+            sgns::networkregistry::MembershipFilter               membershipFilter = {},
+            std::shared_ptr<const libp2p::crypto::KeyPair>        gossipSigningKey = {} );
 
         ~ProcessingNode();
 
@@ -106,8 +118,10 @@ namespace sgns::processing
 
         bool AttachTo( const std::string &processingQueueChannelId );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
-        void Initialize( const std::string        &processingQueueChannelId,
-                         std::chrono::milliseconds msSubscriptionWaitingDuration );
+        void Initialize( const std::string                          &processingQueueChannelId,
+                         std::chrono::milliseconds                   msSubscriptionWaitingDuration,
+                         sgns::networkregistry::MembershipFilter     membershipFilter,
+                         std::shared_ptr<const libp2p::crypto::KeyPair> gossipSigningKey );
 
         void InitTTL();
         void StartTTLTimer();

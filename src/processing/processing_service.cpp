@@ -130,8 +130,9 @@ namespace sgns::processing
             std::scoped_lock lockFilter( m_membershipFilterMutex );
             m_membershipFilter = filter;
         }
-        // Apply to all existing nodes (mirrors setBitswap); nodes created later pick the
-        // filter up at the node-creation sites, so there is no enrollment window.
+        // Apply to all existing nodes (mirrors setBitswap); nodes created later
+        // receive the filter INSIDE ProcessingNode::New (pre-subscription
+        // install at both creation sites), so there is no enrollment window.
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &[id, node] : m_processingNodes )
         {
@@ -145,8 +146,9 @@ namespace sgns::processing
     void ProcessingServiceImpl::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
     {
         // Store the key, then propagate a copy to all existing nodes symmetric
-        // with the filter (CR-G01); nodes created later pick the key up at the
-        // node-creation sites. The filter mutex is released before m_mutexNodes
+        // with the filter (CR-G01); nodes created later receive the key INSIDE
+        // ProcessingNode::New (pre-subscription install at both creation
+        // sites). The filter mutex is released before m_mutexNodes
         // is acquired (same ordering discipline as SetMembershipFilter).
         std::shared_ptr<const libp2p::crypto::KeyPair> key_copy = key;
         {
@@ -475,6 +477,19 @@ namespace sgns::processing
         {
             m_logger->debug( "[{}] Accept Channel: Creating Node for queue {}", node_address_, channelId );
 
+            // CR-G02a: snapshot the membership filter + gossip signing key
+            // BEFORE creating the node and pass them INTO ProcessingNode::New,
+            // which installs them on the queue channel before Listen() and on
+            // the results accessor before CreateResultsChannel/
+            // ConnectToSubTaskQueue -- no subscription goes live ungated.
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+
             auto weakSelf = weak_from_this();
 
             auto node = ProcessingNode::New(
@@ -503,7 +518,12 @@ namespace sgns::processing
                     }
                 },
                 node_address_,
-                channelId );
+                channelId,
+                /*subTasks=*/{},
+                /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+                /*ttl=*/std::chrono::minutes( 2 ),
+                membershipFilter,
+                signingKey );
 
             if ( node != nullptr )
             {
@@ -518,23 +538,10 @@ namespace sgns::processing
                 {
                     node->setBitswap( m_bitswap );
                 }
-                // Apply membership filter + gossip signing key to newly created
-                // node (no enrollment window); symmetric CR-G01 wiring.
-                sgns::networkregistry::MembershipFilter membershipFilter;
-                std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
-                {
-                    std::scoped_lock lockFilter( m_membershipFilterMutex );
-                    membershipFilter = m_membershipFilter;
-                    signingKey       = m_gossipSigningKey;
-                }
-                if ( membershipFilter )
-                {
-                    node->SetMembershipFilter( membershipFilter );
-                }
-                if ( signingKey )
-                {
-                    node->SetGossipSigningKey( signingKey );
-                }
+                // Membership filter + gossip signing key were passed INTO
+                // ProcessingNode::New above (pre-subscription install; the
+                // set-time propagation in SetMembershipFilter/
+                // SetGossipSigningKey refreshes EXISTING nodes).
             }
         }
 
@@ -961,6 +968,21 @@ namespace sgns::processing
             return;
         }
 
+        // CR-G02a: snapshot the membership filter + gossip signing key
+        // BEFORE creating the node and pass them INTO ProcessingNode::New,
+        // which installs them on the queue channel before Listen() and on
+        // the results accessor before CreateResultsChannel/
+        // ConnectToSubTaskQueue -- no subscription goes live ungated.
+        // (Taken while m_mutexNodes is held; the filter mutex is never held
+        // across m_mutexNodes -- same ordering discipline as the setters.)
+        sgns::networkregistry::MembershipFilter membershipFilter;
+        std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+        {
+            std::scoped_lock lockFilter( m_membershipFilterMutex );
+            membershipFilter = m_membershipFilter;
+            signingKey       = m_gossipSigningKey;
+        }
+
         // Create the ProcessingNode
         auto weakSelf = weak_from_this();
 
@@ -991,28 +1013,19 @@ namespace sgns::processing
             },
             node_address_,
             subTaskQueueId,
-            subTasks );
+            subTasks,
+            /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+            /*ttl=*/std::chrono::minutes( 2 ),
+            membershipFilter,
+            signingKey );
 
         if ( node != nullptr )
         {
             m_processingNodes[subTaskQueueId] = node;
-            // Apply membership filter + gossip signing key to newly created
-            // node (no enrollment window); symmetric CR-G01 wiring.
-            sgns::networkregistry::MembershipFilter membershipFilter;
-            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
-            {
-                std::scoped_lock lockFilter( m_membershipFilterMutex );
-                membershipFilter = m_membershipFilter;
-                signingKey       = m_gossipSigningKey;
-            }
-            if ( membershipFilter )
-            {
-                node->SetMembershipFilter( membershipFilter );
-            }
-            if ( signingKey )
-            {
-                node->SetGossipSigningKey( signingKey );
-            }
+            // Membership filter + gossip signing key were passed INTO
+            // ProcessingNode::New above (pre-subscription install; the
+            // set-time propagation in SetMembershipFilter/
+            // SetGossipSigningKey refreshes EXISTING nodes).
         }
 
         lock.unlock(); // Release the mutex before potentially long operations
