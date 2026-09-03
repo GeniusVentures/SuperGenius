@@ -66,7 +66,7 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 
 ## Context
 
-**Current State:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof; the old exploratory worktree remains forensic reference only.
+**Current State:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof. Phase 12's UAT round-2 gaps closed across six gap-closure rounds (teardown-invariant propagation, stale-fixture db immunity, SameBurn wait-predicate fix, post-restart certificate re-publication with surviving-replica retention + mesh-readiness gating); the publisher-observer meta-test apparatus was removed by developer directive (2026-09-03) — the suite is the six finality scenarios, three-consecutive-serial-pass verified with zero crashes. Exact-once mint held in every run ever recorded. Deferred (STATE.md): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard. The old exploratory worktree remains forensic reference only.
 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
@@ -125,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-01 after completing Phase 12 of milestone v3.0 (final phase)*
+*Last updated: 2026-09-03 after closing Phase 12's UAT/verification gaps (rounds 2-6) — milestone v3.0 ready for completion*
