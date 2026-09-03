@@ -48,10 +48,56 @@
 
 ---
 
-## Cross-Milestone Trends
+## Milestone: v3.0 — Canonical Burn Finality Rebuild
 
-*(First milestone — trends will accumulate as v1.1+ ship.)*
+**Shipped:** 2026-09-03
+**Phases:** 5 (8-12) | **Plans:** 37 | **Stats:** 186 files, +72,648/−1,029 LOC, 290 commits, 14 days
+
+### What Was Built
+
+- Canonical burn-slot identity: every competing Mint proposal for one verified burn resolves to one slot derived from verified facts (chain, token, source tx, amount, destination) — proposer/nonce cannot move it; certificates bind to the exact winning proposal (Phase 8)
+- Durable one-vote-per-slot: direct RocksDB active-vote record written before broadcast, exact-vote-only recovery, cleared only on matching durable finality (Phase 9)
+- Authoritative publication at `/cert/<canonical-slot-id>` only: deterministic protocol-visible publisher authority, persistence-before-advertisement, lowest-SHA-256 immutable-record convergence for contested slots, recipients consume-only (Phase 10)
+- Convergent consumption: CRDT work journal as the sole retry boundary, certificate-first Mint recovery with validated embedded fallback, Mint V2 held VERIFYING until effects + marker persist (Phase 11)
+- Real-socket four-peer fault proof: one slot, one certificate, one mint through contention, disorder, publisher loss, restart — exact-once in every run ever recorded (Phase 12, six gap-closure rounds)
+
+### What Worked
+
+- **Evidence discipline prevented mis-repairs.** Twice-reproduced-before-repair and honest no-reroll preservation stopped at least two wrong fixes: 12-15 correctly withheld the WR-02 production change (attribution excluded the hypothesis 4/4), and the blacklist backoff hypothesis was disproven for the cost of a seam instead of a blind "fix". The A/B control-build method cleanly separated crash-freedom from pass-rate flakiness.
+- **Fresh verification each gap round.** Re-verifying from source and raw logs (not SUMMARY trust) repeatedly caught what execution self-checks missed — including a plan whose gate assertion could never pass on a green run (ctest `--output-on-failure` suppresses passing output) and an "effective" fix that missed a GlobalDB co-owner (`ValidatorRegistry::db_`).
+- **Durable evidence paths.** Moving evidence from `/tmp` into the repo (`round4-traces/`+) after a reboot wiped every round-2/3 log made subsequent rounds possible at all.
+- **Developer escalation gates at evidence spend.** Routing go/no-go decisions before burning one-shot no-reroll budgets (12-17, 12-19, 12-22) kept every round's evidence honest and the decisions explicit.
+
+### What Was Inefficient
+
+- **The publisher-observer apparatus accreted into the milestone's biggest time sink.** Built to fix one real contamination incident (mixed-process evidence in 12-06→12-09), it grew to 9 of 13 tests in the fault suite, all mapping to no requirement and no production code — and its flaky child-readiness meta-test became the sole blocker across four gap rounds. Removed by developer directive at close (801 lines). The lesson: process safeguards should be scaffolding, not shipped infrastructure; when a test certifies the test-harness rather than the protocol, it does not belong in the deliverable's gate.
+- **Six gap-closure rounds on Phase 12.** Rounds 3-5 each ended honestly (STOP branches, no rerolls) — the discipline was right, but the flake (RestartAtVote route loss) needed the developer's Option A insight (surviving-replica retention + mesh-readiness gating) that the diagnose-repair loop hadn't converged on earlier. Escalating the mechanism analysis to the developer one round earlier would have saved two rounds.
+- **Suites depending on undeclared load conditions.** Several flakes were only attributable by re-deriving load/timing context from logs across rounds; recording pre-run load in every log header from the start (the 12-15+ practice) would have shortened attribution.
+
+### Patterns Established
+
+- **Teardown invariant:** in fixtures owning a pubsub host, release every GlobalDB/registry/account co-owner BEFORE `pubsub->Stop()` (asio io_context outlives all I/O objects) — now commented at every site.
+- **Run-unique fixture state:** CRDTFixture db paths embed pid + counter and are reaped at construction; stale-state immunity is proven, not assumed.
+- **Durable in-repo evidence directories** (`roundN-traces/`) with per-run xunit XML copies and crash-baseline markers for any gated evidence series.
+- **Readiness gating for re-publication:** wait for topic-mesh connectivity (`getPeerCount >= 2` on every peer) before re-advertising after restart; create surviving replicas before killing a publisher.
+
+### Key Lessons
+
+- **Scaffolding must be removable.** Any test-only machinery should be deletable in one commit without touching `src/` — the final cleanup (801 lines, zero production diff, suite immediately green) is what the apparatus should have been all along.
+- **Attribute before repairing, but time-box attribution.** The twice-reproduced rule is right; the corollary is an explicit escalation point when two rounds of attribution haven't converged — the developer's cross-mechanism insight (mesh race vs DAG route) resolved what the loop couldn't.
+- **A gate's pass condition must only contain tests that measure the deliverable.** Meta-tests protecting diagnosis integrity belong before or beside the gate, never inside it.
+
+### Cost Observations
+
+- **Execution mode:** multi-agent GSD runtime restored (executors/verifiers/checkers/code-reviewers as subagents) — contrast with v1.0's forced-inline milestone; planner/checker/verifier separation caught plan-level defects (unsatisfiable assertions, wrong binary paths) before execution burned evidence budgets.
+- **Phase 12 dominated cost:** 22 of 37 plans (6 original + 16 gap-closure), driven by intermittent-fault attribution under real-socket conditions.
+- **Notable:** the final close (apparatus removal + fresh 3-pass gate + verification + archive) took under an hour once the scope decision was made — decisive scope calls are the cheapest lever available.
+
+---
+
+## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Build round-trips | Inline? | Notes |
 |-----------|--------|-------|-------------------|---------|-------|
 | v1.0 | 3 | 5 | ~7 | yes (subagents broken) | Config-helper design churn; build-gate caught all defects |
+| v3.0 | 5 | 37 | n/a (subagent executors) | no (multi-agent) | Evidence discipline strong; observer apparatus overgrowth cost 4 gap rounds — removed at close |
