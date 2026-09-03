@@ -224,8 +224,11 @@ namespace sgns
             << ", \"upnp_enabled\": false";
         if ( !network_key.empty() )
         {
-            // Escape backslashes/quotes so any of the accepted PSK encodings survives a
-            // round-trip through the JSON config file.
+            // Full JSON string escaping so any of the accepted PSK encodings survives a
+            // round-trip through the JSON config file. The canonical go-ipfs swarm-key text
+            // ("/key/swarm/psk/1.0.0/\n/base16/<64 hex>\n") contains literal newline bytes,
+            // which are illegal raw inside JSON strings (CR-01): every control character is
+            // escaped here so the written file is always parseable.
             std::string escaped;
             escaped.reserve( network_key.size() );
             for ( char c : network_key )
@@ -238,8 +241,30 @@ namespace sgns
                     case '"':
                         escaped += "\\\"";
                         break;
+                    case '\n':
+                        escaped += "\\n";
+                        break;
+                    case '\r':
+                        escaped += "\\r";
+                        break;
+                    case '\t':
+                        escaped += "\\t";
+                        break;
+                    case '\b':
+                        escaped += "\\b";
+                        break;
+                    case '\f':
+                        escaped += "\\f";
+                        break;
                     default:
-                        escaped += c;
+                        if ( static_cast<unsigned char>( c ) < 0x20 )
+                        {
+                            escaped += fmt::format( "\\u{:04x}", static_cast<unsigned>( static_cast<unsigned char>( c ) ) );
+                        }
+                        else
+                        {
+                            escaped += c;
+                        }
                         break;
                 }
             }
@@ -1588,6 +1613,9 @@ namespace sgns
         std::ifstream config_file( write_base_path_ + "/network_config.json" );
         if ( !config_file.good() )
         {
+            // Deliberate distinction (D-01): a MISSING file is the documented public-node
+            // provisioning state (absent identity keys -> public defaults), while a
+            // PRESENT-but-corrupt file below is a provisioning failure and is fatal.
             GeniusNodeLogger()->error( "Could not read network config file" );
             return settings;
         }
@@ -1598,7 +1626,11 @@ namespace sgns
         config_json.Parse( buffer.str().c_str() );
         if ( config_json.HasParseError() || !config_json.IsObject() )
         {
-            GeniusNodeLogger()->error( "Could not parse network config file" );
+            // Fail closed (WR-01): an unparseable existing config must abort the load, never
+            // silently boot public defaults - identity validation below only runs after a
+            // successful parse. Only the file and condition are named, never key values (D-03).
+            GeniusNodeLogger()->error( "network_config.json is unreadable or invalid JSON - refusing to start" );
+            settings.valid = false;
             return settings;
         }
 
