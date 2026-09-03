@@ -120,7 +120,7 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: 17 plans
+**Plans**: 20 plans
 Plans:
 
 **Wave 1**
@@ -165,7 +165,19 @@ Plans:
 
 **Wave 17** *(gap closure round 3 — evidence gate; depends on 12-15 and 12-16)*
 
-- [ ] 12-17-PLAN.md — Re-run the three-consecutive-serial-pass evidence gate on the final build with crash-report absence proof, the sibling suite matrix, and an honest STATE.md resolution of the 12-14 evidence-gap blocker.
+- [ ] 12-17-PLAN.md — Re-run the three-consecutive-serial-pass evidence gate on the final build with crash-report absence proof, the sibling suite matrix, and an honest STATE.md resolution of the 12-14 evidence-gap blocker. (STOPPED at its own gate-entry branch — plan-faithful; developer NO-GO 2026-09-03 routes round 4; the record stands and the gate re-attempt moves to 12-20)
+
+**Wave 18** *(gap closure round 4 — developer NO-GO directive: blacklist-backoff seam + CR-03; depends on 12-17)*
+
+- [ ] 12-18-PLAN.md — Add the test-only GraphsyncDAGSyncer blacklist-backoff seam (production defaults unchanged, millisecond resolution), fix CR-03's node.registry reset in both lifecycle teardown loops with the STATE.md:129 correction, and run the boot-window masking hypothesis test (three focused RestartAtVote runs, durable round4-traces evidence, recorded verdict).
+
+**Wave 19** *(gap closure round 4 — directive's conditional fallback; depends on 12-18)*
+
+- [ ] 12-19-PLAN.md — Resolve the directive's conditional tail: record the justified skip when the hypothesis is proven, or implement post-restart certificate re-publication / surviving-replica serving and focused-verify three consecutive RestartAtVote passes.
+
+**Wave 20** *(gap closure round 4 — evidence gate re-attempt carrying the round-4 attributed fix; depends on 12-18 and 12-19)*
+
+- [ ] 12-20-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate with crash baseline, per-log four-case assertions, STOP-on-first-strike discipline, the sibling suite matrix, and the honest STATE.md resolution of the 12-14 evidence-gap blocker, all evidence at durable repo-relative round4-traces paths.
 
 ## Progress
 
@@ -180,7 +192,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 16/17 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 16/20 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
