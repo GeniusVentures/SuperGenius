@@ -36,6 +36,7 @@
 #include <libp2p/multi/multihash.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "base/gossip_auth.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "networkregistry/NetworkMembershipFilter.hpp"
@@ -303,6 +304,90 @@ namespace
         EXPECT_FALSE( sgns::networkregistry::AuthorizeGossipSender( filter, empty_from_bytes ) );
     }
 
+    // (4b) CR-G01 decision table for the application-layer payload
+    //      authenticator (the forged-from proof at the primitive level): a
+    //      same-PSK attacker sealing with its OWN key cannot pass a member's
+    //      from-field; tampered payloads and corrupted signatures fail
+    //      verification; raw data is recognized as not-an-envelope; an empty
+    //      from is denied under an otherwise-valid seal (fail-closed).
+    TEST( GossipPayloadAuthDecisionTable, SealOpenForgeAndTamperCases )
+    {
+        using sgns::base::GossipPayloadAuthError;
+
+        const libp2p::crypto::KeyPair member_key  = GenerateKeyPair();
+        const libp2p::crypto::KeyPair attacker_key = GenerateKeyPair();
+
+        auto member_from_res  = sgns::base::DeriveGossipFromBytes( member_key );
+        auto attacker_from_res = sgns::base::DeriveGossipFromBytes( attacker_key );
+        ASSERT_FALSE( member_from_res.has_error() );
+        ASSERT_FALSE( attacker_from_res.has_error() );
+        const auto member_from  = member_from_res.value();
+        const auto attacker_from = attacker_from_res.value();
+        ASSERT_NE( member_from, attacker_from ) << "member and attacker derived the same PeerId";
+
+        const std::vector<uint8_t> payload = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+        // (a) Honest seal -> open round trip: payload intact, authenticated
+        //     peer equals the PeerId derived from the sealing key.
+        auto sealed = sgns::base::SealGossipPayload( member_key, member_from, payload );
+        ASSERT_FALSE( sealed.has_error() ) << "honest sealing failed";
+        auto opened = sgns::base::OpenGossipPayload( member_from, sealed.value() );
+        ASSERT_FALSE( opened.has_error() ) << "honest envelope failed to open: "
+                                           << static_cast<int>( opened.error() );
+        const std::vector<uint8_t> inner_payload( opened.value().payload.begin(),
+                                                  opened.value().payload.end() );
+        EXPECT_EQ( inner_payload, payload );
+        auto member_peer_id = libp2p::peer::PeerId::fromBytes( member_from );
+        ASSERT_FALSE( member_peer_id.has_error() );
+        EXPECT_EQ( opened.value().authenticated_peer, member_peer_id.value() );
+
+        // (b) FORGED FROM (the CR-G01 core): envelope sealed by the attacker's
+        //     key but presented under the member's from-field. The binding
+        //     check denies it: the embedded key derives the ATTACKER's PeerId,
+        //     not the member's.
+        auto forged = sgns::base::SealGossipPayload( attacker_key, member_from, payload );
+        ASSERT_FALSE( forged.has_error() );
+        auto opened_forged = sgns::base::OpenGossipPayload( member_from, forged.value() );
+        ASSERT_TRUE( opened_forged.has_error() );
+        EXPECT_EQ( opened_forged.error(), GossipPayloadAuthError::KEY_FROM_MISMATCH );
+
+        // (c) Tampered payload: one flipped byte AFTER sealing.
+        auto tampered     = sealed.value();
+        tampered.back()   = tampered.back() ^ 0xFF;
+        auto opened_tampered = sgns::base::OpenGossipPayload( member_from, tampered );
+        ASSERT_TRUE( opened_tampered.has_error() );
+        EXPECT_EQ( opened_tampered.error(), GossipPayloadAuthError::SIGNATURE_INVALID );
+
+        // (d) Corrupted signature bytes: the signature region starts after
+        //     magic + u32be key length + key + u32be; flip its first byte.
+        const auto &envelope = sealed.value();
+        ASSERT_GT( envelope.size(), sgns::base::kGossipAuthEnvelopeMagic.size() + 8 );
+        const size_t key_len_offset = sgns::base::kGossipAuthEnvelopeMagic.size();
+        const uint32_t key_len = ( static_cast<uint32_t>( envelope[key_len_offset] ) << 24 )
+                               | ( static_cast<uint32_t>( envelope[key_len_offset + 1] ) << 16 )
+                               | ( static_cast<uint32_t>( envelope[key_len_offset + 2] ) << 8 )
+                               | static_cast<uint32_t>( envelope[key_len_offset + 3] );
+        const size_t signature_offset = key_len_offset + 4 + key_len + 4;
+        ASSERT_LT( signature_offset, envelope.size() );
+        auto corrupted   = envelope;
+        corrupted[signature_offset] = corrupted[signature_offset] ^ 0xFF;
+        auto opened_corrupted = sgns::base::OpenGossipPayload( member_from, corrupted );
+        ASSERT_TRUE( opened_corrupted.has_error() );
+        EXPECT_EQ( opened_corrupted.error(), GossipPayloadAuthError::SIGNATURE_INVALID );
+
+        // (e) Raw payload with no envelope magic: a distinct not-an-envelope
+        //     error (a set filter treats this as deny -- fail-closed).
+        auto opened_raw = sgns::base::OpenGossipPayload( member_from, payload );
+        ASSERT_TRUE( opened_raw.has_error() );
+        EXPECT_EQ( opened_raw.error(), GossipPayloadAuthError::NOT_AN_ENVELOPE );
+
+        // (f) EMPTY from under an honest seal: PeerId::fromBytes fails inside
+        //     the binding check -> deny (no emptiness skip branch).
+        auto opened_empty_from = sgns::base::OpenGossipPayload( {}, sealed.value() );
+        ASSERT_TRUE( opened_empty_from.has_error() );
+        EXPECT_EQ( opened_empty_from.error(), GossipPayloadAuthError::KEY_FROM_MISMATCH );
+    }
+
     //
     // Flow fixture: pnet pubsub nodes carrying real GlobalDBs
     // (pubsub_graphsync replication shape + pubsub_counts pnet nodes).
@@ -313,6 +398,7 @@ namespace
     struct PnetGdbNode
     {
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                     pubsub;
+        std::shared_ptr<const libp2p::crypto::KeyPair>                       signing_key;
         std::shared_ptr<libp2p::basic::Scheduler>                            scheduler;
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>           graphsync_network;
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator;
@@ -342,6 +428,11 @@ namespace
             sgns::test::removeAllWithRetry( basePath );
 
             auto node   = std::make_shared<PnetGdbNode>();
+            // CR-G01 fixture repair: retain a copy of the gossip host keypair
+            // BEFORE it is moved into GossipPubSub -- a gated node seals its
+            // private-network publishes with exactly this key (it derives the
+            // transport from-field the vendored gossip stamps).
+            node->signing_key = std::make_shared<const libp2p::crypto::KeyPair>( keypair );
             node->pubsub = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( std::move( keypair ),
                                                                               MakeGossipConfig(),
                                                                               swarm_key );
@@ -500,11 +591,26 @@ namespace
         auto broadcaster_a = pnetA->db->GetBroadcaster();
         ASSERT_NE( broadcaster_a, nullptr );
         broadcaster_a->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_a->SetGossipSigningKey( pnetA->signing_key );
         EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+        EXPECT_TRUE( broadcaster_a->HasGossipSigningKey() );
         auto broadcaster_b = pnetB->db->GetBroadcaster();
         ASSERT_NE( broadcaster_b, nullptr );
         broadcaster_b->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_b->SetGossipSigningKey( pnetB->signing_key );
         EXPECT_TRUE( broadcaster_b->HasMembershipFilter() );
+        EXPECT_TRUE( broadcaster_b->HasGossipSigningKey() );
+
+        // CR-G01: the intruder is gated and keyed TOO (every private node
+        // gates; every gated node seals), so its denial stays attributable to
+        // the MEMBERSHIP layer -- its envelope authenticates fine (own key,
+        // own from), it simply is not a member. An ungated raw publisher
+        // would be denied one layer earlier (UnsignedPayloadFromMember scene).
+        auto broadcaster_i = intruder->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_i, nullptr );
+        broadcaster_i->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_i->SetGossipSigningKey( intruder->signing_key );
+        EXPECT_TRUE( broadcaster_i->HasMembershipFilter() );
 
         // All three same-PSK pairs mesh; the public control dials and must
         // fail the pnet handshake.
@@ -562,6 +668,7 @@ namespace
             << "public control node connected despite pnet mismatch";
 
         broadcaster_b->ClearMembershipFilter();
+        broadcaster_i->ClearMembershipFilter();
         TearDownNodes( broadcaster_a, io_context, io_thread,
                        { pnetA->pubsub, pnetB->pubsub, intruder->pubsub, publicControl } );
     }
@@ -596,6 +703,15 @@ namespace
         auto broadcaster_a = pnetA->db->GetBroadcaster();
         ASSERT_NE( broadcaster_a, nullptr );
         broadcaster_a->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_a->SetGossipSigningKey( pnetA->signing_key );
+        // CR-G01 fixture repair: pnetB must SEAL its publishes (the gated
+        // receiver denies raw data), so it is gated+keyed with the same
+        // shared-set filter -- its denial then stays attributable to the
+        // membership layer, and after the widening its sealed writes land.
+        auto broadcaster_b = pnetB->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_b, nullptr );
+        broadcaster_b->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_b->SetGossipSigningKey( pnetB->signing_key );
 
         pnetA->pubsub->AddPeers( { pnetB->pubsub->GetInterfaceAddress() } );
         pnetB->pubsub->AddPeers( { pnetA->pubsub->GetInterfaceAddress() } );
@@ -633,6 +749,7 @@ namespace
             std::chrono::milliseconds( 20000 ),
             "newly admitted peer's second write did not replicate" );
 
+        broadcaster_b->ClearMembershipFilter();
         TearDownNodes( broadcaster_a, io_context, io_thread, { pnetA->pubsub, pnetB->pubsub } );
     }
 
@@ -661,7 +778,15 @@ namespace
         auto broadcaster_a = pnetA->db->GetBroadcaster();
         ASSERT_NE( broadcaster_a, nullptr );
         broadcaster_a->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_a->SetGossipSigningKey( pnetA->signing_key );
         EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+        // CR-G01 fixture repair: gate+key the writer too so it SEALS (the
+        // gated receiver denies raw data); the denial then remains
+        // attributable to the EMPTY membership set, not to a missing envelope.
+        auto broadcaster_b = pnetB->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_b, nullptr );
+        broadcaster_b->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_b->SetGossipSigningKey( pnetB->signing_key );
 
         pnetA->pubsub->AddPeers( { pnetB->pubsub->GetInterfaceAddress() } );
         pnetB->pubsub->AddPeers( { pnetA->pubsub->GetInterfaceAddress() } );
@@ -681,7 +806,200 @@ namespace
                                      std::chrono::milliseconds( 4000 ),
                                      "member write under empty membership" );
 
+        broadcaster_b->ClearMembershipFilter();
         TearDownNodes( broadcaster_a, io_context, io_thread, { pnetA->pubsub, pnetB->pubsub } );
+    }
+
+    // (8) CR-G01 forged-from proof at the flow level: a MEMBER (membership
+    //     includes it; honest transport from = its own host id) whose envelope
+    //     is sealed under ANOTHER member's public key is DROPPED by the gated
+    //     ingest -- only the authentication check can deny here, because
+    //     membership alone would admit it (non-vacuity by construction). The
+    //     honestly-sealed member keeps replicating (positive control).
+    //
+    //     The impostor shape: the broadcaster's signing key is wired to the
+    //     OTHER member's keypair, so every envelope it publishes embeds a key
+    //     deriving the other member's PeerId while the transport from-field
+    //     carries the impostor's own id -> OpenGossipPayload KEY_FROM_MISMATCH
+    //     -> deny before any membership consultation. (A garbage-signature
+    //     variant of the same envelope is pinned at the unit level, case (d).)
+    TEST_F( NetworkMembershipFilterFlowTest, MemberImpostorEnvelopeIsDroppedByGatedIngest )
+    {
+        const std::string                topic = std::string( "chain/" ) + kFlowNetworkId + "/tasks";
+        const sgns::crdt::HierarchicalKey key_honest( "/chain/" + kFlowNetworkId + "/fromHonest" );
+        const sgns::crdt::HierarchicalKey key_impostor( "/chain/" + kFlowNetworkId + "/fromImpostor" );
+
+        auto membership = std::make_shared<SharedMembership>();
+        auto io_context = std::make_shared<boost::asio::io_context>();
+
+        auto gated    = MakeNode( io_context, "nmf_flow8_A", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto honest   = MakeNode( io_context, "nmf_flow8_H", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto impostor = MakeNode( io_context, "nmf_flow8_I", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        ASSERT_NE( gated, nullptr );
+        ASSERT_NE( honest, nullptr );
+        ASSERT_NE( impostor, nullptr );
+
+        const auto idGated    = gated->pubsub->GetHost()->getId();
+        const auto idHonest   = honest->pubsub->GetHost()->getId();
+        const auto idImpostor = impostor->pubsub->GetHost()->getId();
+        ASSERT_EQ( ( std::set<libp2p::peer::PeerId>{ idGated, idHonest, idImpostor } ).size(), 3u );
+
+        JoinTopic( *gated, topic );
+        JoinTopic( *honest, topic );
+        JoinTopic( *impostor, topic );
+
+        // BOTH writers are members: membership alone would admit the impostor.
+        membership->members.insert( idHonest.toBase58() );
+        membership->members.insert( idImpostor.toBase58() );
+
+        auto broadcaster_gated = gated->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_gated, nullptr );
+        broadcaster_gated->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_gated->SetGossipSigningKey( gated->signing_key );
+
+        auto broadcaster_honest = honest->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_honest, nullptr );
+        broadcaster_honest->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_honest->SetGossipSigningKey( honest->signing_key );
+
+        // The IMPOSTOR: gated like every private node, but its sealing key is
+        // the OTHER member's keypair -- its envelopes claim honest's identity.
+        auto broadcaster_impostor = impostor->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_impostor, nullptr );
+        broadcaster_impostor->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_impostor->SetGossipSigningKey( honest->signing_key );
+        EXPECT_TRUE( broadcaster_impostor->HasGossipSigningKey() );
+
+        gated->pubsub->AddPeers( { honest->pubsub->GetInterfaceAddress() } );
+        honest->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+        gated->pubsub->AddPeers( { impostor->pubsub->GetInterfaceAddress() } );
+        impostor->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+
+        std::thread io_thread( [io_context]() { io_context->run(); } );
+
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]()
+            {
+                return IsConnectedTo( gated->pubsub, idHonest ) && IsConnectedTo( gated->pubsub, idImpostor );
+            },
+            std::chrono::milliseconds( 15000 ),
+            "members did not connect to the gated node",
+            nullptr );
+
+        // (a) Positive control: the honestly-sealed member's write replicates.
+        CommitPut( *honest->db, key_honest, { 0xde, 0xad, 0xbe, 0xef }, topic );
+        assertWaitForCondition(
+            [&]()
+            {
+                auto result = gated->db->Get( key_honest );
+                return result.has_value();
+            },
+            std::chrono::milliseconds( 20000 ),
+            "honestly sealed member write did not replicate to the gated node" );
+
+        // (b) Impostor write: membership would admit it (it IS a member), but
+        //     its envelope claims another member's key -> dropped at ingest;
+        //     its data never enters the gated node's replicated state.
+        CommitPut( *impostor->db, key_impostor, { 0x13, 0x37, 0x13, 0x37 }, topic );
+        AssertKeyNeverPresentWithin( *gated->db,
+                                     key_impostor,
+                                     std::chrono::milliseconds( 3000 ),
+                                     "impostor envelope write" );
+
+        broadcaster_honest->ClearMembershipFilter();
+        broadcaster_impostor->ClearMembershipFilter();
+        TearDownNodes( broadcaster_gated, io_context, io_thread,
+                       { gated->pubsub, honest->pubsub, impostor->pubsub } );
+    }
+
+    // (9) CR-G01 fail-closed proof: a MEMBER publishing RAW (unsealed) data is
+    //     dropped by the gated ingest -- under a set filter the absence of an
+    //     envelope is itself a denial, even though membership would admit the
+    //     sender. The sealed positive control keeps flowing.
+    TEST_F( NetworkMembershipFilterFlowTest, UnsignedPayloadFromMemberIsDroppedUnderFilter )
+    {
+        const std::string                topic = std::string( "chain/" ) + kFlowNetworkId + "/tasks";
+        const sgns::crdt::HierarchicalKey key_sealed( "/chain/" + kFlowNetworkId + "/fromSealed" );
+        const sgns::crdt::HierarchicalKey key_raw( "/chain/" + kFlowNetworkId + "/fromRaw" );
+
+        auto membership = std::make_shared<SharedMembership>();
+        auto io_context = std::make_shared<boost::asio::io_context>();
+
+        auto gated  = MakeNode( io_context, "nmf_flow9_A", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto sealer = MakeNode( io_context, "nmf_flow9_S", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto rawp   = MakeNode( io_context, "nmf_flow9_R", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        ASSERT_NE( gated, nullptr );
+        ASSERT_NE( sealer, nullptr );
+        ASSERT_NE( rawp, nullptr );
+
+        const auto idGated  = gated->pubsub->GetHost()->getId();
+        const auto idSealer = sealer->pubsub->GetHost()->getId();
+        const auto idRaw    = rawp->pubsub->GetHost()->getId();
+        ASSERT_EQ( ( std::set<libp2p::peer::PeerId>{ idGated, idSealer, idRaw } ).size(), 3u );
+
+        JoinTopic( *gated, topic );
+        JoinTopic( *sealer, topic );
+        JoinTopic( *rawp, topic );
+
+        // BOTH writers are members (the raw publisher's denial cannot be
+        // attributed to membership).
+        membership->members.insert( idSealer.toBase58() );
+        membership->members.insert( idRaw.toBase58() );
+
+        auto broadcaster_gated = gated->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_gated, nullptr );
+        broadcaster_gated->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_gated->SetGossipSigningKey( gated->signing_key );
+
+        auto broadcaster_sealer = sealer->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_sealer, nullptr );
+        broadcaster_sealer->SetMembershipFilter( MakeSharedSetFilter( membership ) );
+        broadcaster_sealer->SetGossipSigningKey( sealer->signing_key );
+
+        // The raw publisher installs NOTHING: no filter -> its publishes stay
+        // raw (the unsigned-member shape under a gated receiver).
+        auto broadcaster_raw = rawp->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_raw, nullptr );
+        EXPECT_FALSE( broadcaster_raw->HasMembershipFilter() );
+
+        gated->pubsub->AddPeers( { sealer->pubsub->GetInterfaceAddress() } );
+        sealer->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+        gated->pubsub->AddPeers( { rawp->pubsub->GetInterfaceAddress() } );
+        rawp->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+
+        std::thread io_thread( [io_context]() { io_context->run(); } );
+
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]()
+            {
+                return IsConnectedTo( gated->pubsub, idSealer ) && IsConnectedTo( gated->pubsub, idRaw );
+            },
+            std::chrono::milliseconds( 15000 ),
+            "members did not connect to the gated node",
+            nullptr );
+
+        // (a) Positive control: the sealed member's write replicates.
+        CommitPut( *sealer->db, key_sealed, { 0xde, 0xad, 0xbe, 0xef }, topic );
+        assertWaitForCondition(
+            [&]()
+            {
+                auto result = gated->db->Get( key_sealed );
+                return result.has_value();
+            },
+            std::chrono::milliseconds( 20000 ),
+            "sealed member write did not replicate to the gated node" );
+
+        // (b) The raw member's write: no envelope -> NOT_AN_ENVELOPE denial
+        //     under the set filter (fail-closed), despite membership.
+        CommitPut( *rawp->db, key_raw, { 0x13, 0x37, 0x13, 0x37 }, topic );
+        AssertKeyNeverPresentWithin( *gated->db,
+                                     key_raw,
+                                     std::chrono::milliseconds( 3000 ),
+                                     "unsigned member write" );
+
+        broadcaster_sealer->ClearMembershipFilter();
+        TearDownNodes( broadcaster_gated, io_context, io_thread,
+                       { gated->pubsub, sealer->pubsub, rawp->pubsub } );
     }
 
 } // namespace

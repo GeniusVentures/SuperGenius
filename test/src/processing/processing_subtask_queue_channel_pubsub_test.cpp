@@ -359,6 +359,17 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, MembershipFilterBlocksNonMemberQueue
         memberSenders.insert( peer.toBase58() );
     }
 
+    // CR-G01 fixture repair: the SENDER must seal (a gated receiver denies
+    // raw data), so it installs the same membership shape + its own signing
+    // key; the receiver is keyed too. The sender's envelope authenticates
+    // fine (own key, own from) -- the deny phase is then attributable to the
+    // receiver's MEMBERSHIP predicate alone.
+    queueChannel1->SetMembershipFilter(
+        [memberSenders]( const libp2p::peer::PeerId &peer )
+        { return memberSenders.count( peer.toBase58() ) > 0; } );
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[0] );
+    queueChannel2->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
     // Deny-all filter on the receiving channel
     queueChannel2->SetMembershipFilter(
         []( const libp2p::peer::PeerId & ) { return false; } );
@@ -397,5 +408,110 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, MembershipFilterBlocksNonMemberQueue
         std::lock_guard lock( mutex2 );
         EXPECT_EQ( 1, requestedNodeIds2.count( "NODE_MEMBER" ) );
         EXPECT_EQ( 0, requestedNodeIds2.count( "NODE_NON_MEMBER" ) );
+    }
+}
+
+/**
+ * @given 2 channels on different pubsub hosts; the receiver's membership filter
+ *        ALLOWS the sender (it is in the allow-set), and both sides are keyed
+ *        for CR-G01 sealing
+ * @when The sender's signing key is wired to ANOTHER member's keypair, so its
+ *       envelope embeds a public key deriving a DIFFERENT member's PeerId than
+ *       the transport from-field it actually publishes under (impersonation
+ *       attempt), then the sender re-wires its OWN key and publishes again
+ * @then The impostor envelope is dropped at the authentication check (the
+ *       request sink stays at 0 although membership alone would admit the
+ *       sender); the honestly-sealed request propagates (positive control).
+ */
+TEST_F( ProcessingSubTaskChannelPubSubTest, QueueChannelImpostorEnvelopeIgnored )
+{
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
+
+    const std::string queueChannelId = "PROCESSING_IMPOSTOR_CHANNEL";
+
+    auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, queueChannelId );
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, queueChannelId );
+
+    std::atomic<size_t>   requestCount2{ 0 };
+    std::set<std::string> requestedNodeIds2;
+    std::mutex            mutex2;
+    queueChannel2->SetQueueRequestSink(
+        [&requestCount2, &requestedNodeIds2, &mutex2]( const SGProcessing::SubTaskQueueRequest &request )
+        {
+            std::lock_guard lock( mutex2 );
+            requestedNodeIds2.insert( request.node_id() );
+            ++requestCount2;
+            return true;
+        } );
+
+    auto listen_result = queueChannel1->Listen();
+    ASSERT_TRUE( listen_result ) << "Sender channel subscription failed to establish";
+    listen_result = queueChannel2->Listen();
+    ASSERT_TRUE( listen_result ) << "Receiver channel subscription failed to establish";
+
+    // Learn the sender's transport peer id from the receiver's topic view: the
+    // allow-set deliberately CONTAINS the sender (membership alone would admit
+    // it -- only the authentication check can deny the impostor envelope).
+    std::vector<libp2p::peer::PeerId> senderPeers;
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&queueChannel2, &senderPeers]()
+        {
+            senderPeers = queueChannel2->GetActiveNodes();
+            return !senderPeers.empty();
+        } ),
+        std::chrono::milliseconds( 5000 ),
+        "Sender peer not visible on the receiver's queue topic",
+        nullptr );
+    std::unordered_set<std::string> memberSenders;
+    for ( const auto &peer : senderPeers )
+    {
+        memberSenders.insert( peer.toBase58() );
+    }
+
+    const auto senderAllowFilter = [memberSenders]( const libp2p::peer::PeerId &peer )
+    { return memberSenders.count( peer.toBase58() ) > 0; };
+
+    // Receiver: allow-set filter + own signing key.
+    queueChannel2->SetMembershipFilter( senderAllowFilter );
+    queueChannel2->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
+    // Sender: allow-set filter (production shape; triggers sealing) but the
+    // signing key of the OTHER member -- every envelope it publishes claims
+    // the other member's identity while its transport from stays its own.
+    queueChannel1->SetMembershipFilter( senderAllowFilter );
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
+    queueChannel1->RequestQueueOwnership( "NODE_IMPOSTOR" );
+
+    // Bounded negative window (grace-loop pattern): membership would admit the
+    // sender; only the key<->from binding check denies the impostor envelope.
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( 0, requestCount2.load() )
+            << "Impostor envelope reached the receiver's sink although the from-field binding denies it";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( 0, requestCount2.load() );
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 0, requestedNodeIds2.size() );
+    }
+
+    // Positive control: re-wire the sender's OWN key and publish again -- the
+    // honestly-sealed request propagates (the mesh and both gates are fine).
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[0] );
+    queueChannel1->RequestQueueOwnership( "NODE_HONEST" );
+
+    ASSERT_WAIT_FOR_CONDITION( [&requestCount2]() { return requestCount2.load() >= 1; },
+                               std::chrono::milliseconds( 5000 ),
+                               "Honestly sealed queue message was not received",
+                               nullptr );
+
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 1, requestedNodeIds2.count( "NODE_HONEST" ) );
+        EXPECT_EQ( 0, requestedNodeIds2.count( "NODE_IMPOSTOR" ) );
     }
 }
