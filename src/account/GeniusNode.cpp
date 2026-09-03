@@ -754,6 +754,34 @@ namespace sgns
                     return;
                 }
                 account_->ConfigureDatabaseDependencies( tx_globaldb_ );
+                // CR-G02b / G-WR-03 startup-window gate: on a private node the
+                // GlobalDB gossip ingest is live from the FIRST AddListenTopic
+                // below, but the registry-backed filter installs only at
+                // NetworkRegistry construction in INITIALIZING_TRANSACTIONS.
+                // Install a bootstrap-membership-backed interim filter NOW --
+                // before any subscription goes live -- so no ungated CRDT
+                // ingest window exists on boot. The predicate consults the
+                // provisioned network_bootstrap_peers_ (the same base58
+                // strings the registry caches verbatim) and the registry-backed
+                // filter REPLACES it via SetMembershipFilter at
+                // INITIALIZING_TRANSACTIONS (a replace on the same
+                // mutex-guarded slot -- worst case the stricter interim filter
+                // persists slightly longer, never a gap). Empty bootstrap set
+                // denies everything (fail-closed, consistent with the 15-05
+                // posture -- such a node never reaches READY). Public nodes
+                // take the guard and install nothing. Only the PUBLIC
+                // private_network_id_ is logged (D-03), never key material.
+                if ( !private_network_id_.empty() )
+                {
+                    if ( auto broadcaster = tx_globaldb_ ? tx_globaldb_->GetBroadcaster() : nullptr )
+                    {
+                        broadcaster->SetMembershipFilter(
+                            sgns::networkregistry::MakeBootstrapMembershipFilter( network_bootstrap_peers_ ) );
+                        node_logger_->info( "Interim bootstrap-membership gossip gating active for private "
+                                            "network {} (until the registry-backed filter replaces it)",
+                                            private_network_id_ );
+                    }
+                }
                 tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
