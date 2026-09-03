@@ -173,7 +173,7 @@ Plans:
 
 **Wave 19** *(gap closure round 4 — directive's conditional fallback; depends on 12-18)*
 
-- [ ] 12-19-PLAN.md — Resolve the directive's conditional tail: record the justified skip when the hypothesis is proven, or implement post-restart certificate re-publication / surviving-replica serving and focused-verify three consecutive RestartAtVote passes.
+- [x] 12-19-PLAN.md — Resolve the directive's conditional tail: record the justified skip when the hypothesis is proven, or implement post-restart certificate re-publication / surviving-replica serving and focused-verify three consecutive RestartAtVote passes.
 
 **Wave 20** *(gap closure round 4 — evidence gate re-attempt carrying the round-4 attributed fix; depends on 12-18 and 12-19)*
 
@@ -192,7 +192,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 18/20 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 19/20 | In Progress|  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
