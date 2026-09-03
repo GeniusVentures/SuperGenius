@@ -1,0 +1,10 @@
+# pre-run 1-min load (elevated external plateau, deviation noted in 12-18-SUMMARY): 10:39  up  2:47, 7 users, load averages: 3.29 3.46 3.24
+# run start: 2026-09-03T13:38:30Z (header written post-run with recorded pre-run load)
+Internal ctest changing into directory: /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+Test project /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+    Start 23: consensus_pending_lifecycle_test
+1/1 Test #23: consensus_pending_lifecycle_test ...   Passed   43.08 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =  43.09 sec
