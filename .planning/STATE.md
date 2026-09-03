@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 15
 status: executing
-last_updated: "2026-09-01T11:11:26.361Z"
-last_activity: 2026-09-01 -- Phase 15 execution started
+last_updated: "2026-09-03T11:38:21.978Z"
+last_activity: 2026-09-03
 progress:
-  total_phases: 8
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 8
-  percent: 50
+  total_phases: 19
+  completed_phases: 6
+  total_plans: 65
+  completed_plans: 45
+  percent: 32
 ---
 
 # State: SuperGenius — Multi-Signature Secure CRDT Storage
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 15 (private-networks-consume-privatenetworkid-identity-and-bind-) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 15
-Last activity: 2026-09-01 -- Phase 15 execution started
+Plan: 2 of 13
+Status: Ready to execute
+Last activity: 2026-09-03
 
 ## Roadmap Snapshot
 
@@ -77,3 +77,14 @@ Last activity: 2026-09-01 -- Phase 15 execution started
 ### v1.0 History
 
 v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 15 P09 | 18min | 2 tasks | 3 files |
+
+## Decisions
+
+- [Phase 15]: 15-09: NetworkRegistry::New re-runs SecureCrdt::RegisterFilters() after late pattern registration (idempotent; covers both GeniusNode wiring paths) so network-registry/<id> gets its ingest element filter (WR-04)
+- [Phase 15]: 15-09: RefreshLoop drains refresh_pending_ under the mutex before TryConfirm (WR-02 busy-spin fixed ahead of 15-12 tx_globaldb_ wiring); duplicate New fail-closes with address_in_use without registering anything (WR-03)

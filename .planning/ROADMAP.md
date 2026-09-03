@@ -828,7 +828,7 @@ Plans:
 **Gap-closure waves** (from 15-VERIFICATION.md — 29/37 must-haves; 15-04 remains permanently skipped per owner):
 
 Plans:
-- [ ] 15-09-PLAN.md — gap closure: NetworkRegistry lifecycle hardening — refresh busy-spin (WR-02), duplicate-New clobber (WR-03), unfiltered network-registry ingest (WR-04) (D-06, PNET-NETREG)
+- [x] 15-09-PLAN.md — gap closure: NetworkRegistry lifecycle hardening — refresh busy-spin (WR-02), duplicate-New clobber (WR-03), unfiltered network-registry ingest (WR-04) (D-06, PNET-NETREG)
 - [ ] 15-10-PLAN.md — gap closure: fail-closed provisioning chain — WriteNetworkConfig control-char escaping (CR-01) + corrupt-config fail-closed load (WR-01) (D-01, PNET-CFG)
 - [ ] 15-11-PLAN.md — gap closure: SuperGenius-side membership filter component + broadcaster ingest enforcement with three-node same-PSK flow proofs (D-07 replacement per deferred-items §3)
 - [ ] 15-12-PLAN.md — gap closure: GeniusNode installs the registry-backed gossip membership filter + live cache refresh (needs 15-09/10/11) (D-06, D-07)
