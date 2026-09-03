@@ -2488,9 +2488,54 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         EXPECT_TRUE( HasOnlyWinnerOutput( network.first, *winner, *loser ) );
         EXPECT_FALSE( HasBridgeMarker( network.first, *winner ) );
 
+        // 2026-09-03 developer decision Option A (round-5 gap closure,
+        // STATE.md:143, commit 633d6ff1): "add a pre-restart
+        // CheckCertificateForSlot wait on second/third peers first (making a
+        // true surviving replica)". 12-19 attributed the block-3 residual to
+        // route_count=1 — only the restarted publisher served the certificate
+        // CID, and no pre-restart holder was proven in this block. This wait
+        // both proves and creates the surviving replicas: the 20s window runs
+        // while first is still alive and routable, so recipients' CRDT CID
+        // fetches from first succeed even when the gossip publication raced
+        // the still-forming mesh — the certificate's convergent-immutable
+        // CRDT put broadcasting on consensus_datastore_topic_ and the
+        // certificate Publish both fire before the mint-effects barrier
+        // pauses first (src/blockchain/Consensus.cpp SubmitCertificate
+        // :2126-2152).
+        // Passive is included alongside the named second/third following the
+        // block-2 precedent, which waits on every non-restarted peer.
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            return network.second.consensus->CheckCertificateForSlot( slot ) &&
+                   network.third.consensus->CheckCertificateForSlot( slot ) &&
+                   network.passive.consensus->CheckCertificateForSlot( slot );
+        }, std::chrono::seconds( 20 ),
+                           "surviving peers retained the accepted certificate before publisher restart", nullptr );
+
         RestartPeer( network.first );
         ASSERT_TRUE( network.first.consensus );
         ConnectPeers( Peers( network ) );
+        // 2026-09-03 developer decision Option A (round-5 gap closure,
+        // STATE.md:143, commit 633d6ff1): "delay the re-advertisement until
+        // recipient gossip-topic readiness is observable". ConnectPeers only
+        // proves >= 1 consensus-topic peer plus libp2p links — exactly the
+        // mesh race 12-19 attributed (GossipPubSub does not replay the missed
+        // publication). With four peers, requiring >= 2 consensus-topic peers
+        // on EVERY peer forces a connected mesh: a disconnected component of
+        // size k permits maximum degree k-1 (a 2+2 split caps degree at 1, a
+        // 3+1 split leaves the singleton at degree 0), so the predicate
+        // holding means the re-published ConsensusMessage can reach every
+        // recipient. The 10s bound is NEW for this NEW wait — no existing
+        // bound is relaxed.
+        ASSERT_WAIT_FOR_CONDITION( [&] {
+            for ( auto *peer : Peers( network ) )
+            {
+                if ( peer->pubsub->getPeerCount(
+                         sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) ) < 2 )
+                    return false;
+            }
+            return true;
+        }, std::chrono::seconds( 10 ),
+                           "consensus-topic mesh re-formed with at least two topic peers on every peer before certificate re-advertisement", nullptr );
         // 2026-09-03 developer directive fallback (round-4 gap closure):
         // "post-restart certificate re-publication / surviving-replica serving".
         // The blacklist-duration hypothesis was DISPROVEN (round4-traces/
