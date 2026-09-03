@@ -88,33 +88,14 @@ namespace sgns::trustedpeer
 
     bool TrustedPeerListPayload::Verify( const std::vector<uint8_t> &payload ) const
     {
-        if ( payload.empty() )
-        {
-            return false;
-        }
-
-        std::string              raw( payload.begin(), payload.end() );
-        std::vector<std::string> entries;
-        size_t                   start = 0;
-        while ( start <= raw.size() )
-        {
-            const auto pos = raw.find( '\n', start );
-            if ( pos == std::string::npos )
-            {
-                entries.push_back( raw.substr( start ) );
-                break;
-            }
-            entries.push_back( raw.substr( start, pos - start ) );
-            start = pos + 1;
-        }
-
-        if ( entries.empty() )
+        auto parsed = FromBytes( payload );
+        if ( !parsed || parsed->peers_.empty() )
         {
             return false;
         }
 
         std::unordered_set<std::string> unique_entries;
-        for ( const auto &entry : entries )
+        for ( const auto &entry : parsed->peers_ )
         {
             if ( !sgns::base::IsHexAddress( entry ) )
             {
