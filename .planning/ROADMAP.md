@@ -120,7 +120,7 @@ Plans:
   4. Publisher-loss scenarios prove persistence-before-advertisement and deterministic failover without conflicting slot certificate records.
   5. The regression suite exercises production PubSub, CRDT, RocksDB persistence, and mint ingress rather than direct local-author shortcuts.
 
-**Plans**: 20 plans
+**Plans**: 22 plans
 Plans:
 
 **Wave 1**
@@ -179,6 +179,14 @@ Plans:
 
 - [x] 12-20-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate with crash baseline, per-log four-case assertions, STOP-on-first-strike discipline, the sibling suite matrix, and the honest STATE.md resolution of the 12-14 evidence-gap blocker, all evidence at durable repo-relative round4-traces paths. (STOPPED at its own gate-entry branch — plan-faithful; round 4 carried no attributed fix: 12-18 hypothesis DISPROVEN, 12-19 repair necessary-but-insufficient at 1 pass/1 fail; series withheld with the no-reroll budget unspent; round-5 Option A repair then gate re-attempt follows; the 12-14 evidence-gap blocker stays open)
 
+**Wave 21** *(gap closure round 5 — VERIFICATION gaps 1+2: Option A repair + WR-06 clamp + focused graduation; depends on 12-19 and 12-20)*
+
+- [ ] 12-21-PLAN.md — Implement the developer's Option A verbatim as the composed repair in RestartAtVote's restart-mint block (pre-restart surviving-replica CheckCertificateForSlot wait on second/third/passive + readiness-gated re-advertisement requiring >= 2 consensus-topic peers on every peer), clamp WR-06's unbounded shift exponent at both getBackoffTimeout branches, and graduate the repair to an attributed fix with three all-green focused RestartAtVote runs at durable round5-traces paths (STOP-on-first-strike with the failing leg named).
+
+**Wave 22** *(gap closure round 5 — evidence gate re-attempt carrying the graduated round-5 fix; depends on 12-21)*
+
+- [ ] 12-22-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate under the no-reroll rule (gate-entry clause re-check on the round-5 record, fresh crash baseline, three serial full runs with per-run xunit XML copies asserting all four fault-scenario case names green and zero failure elements, STOP-on-first-strike), run the sibling matrix including cert-fallback on the same build generation, and resolve the 12-14 evidence-gap blocker honestly in STATE.md.
+
 ## Progress
 
 **Execution Order:** Phases execute in numeric order: 8 → 9 → 10 → 11 → 12.
@@ -192,7 +200,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 20/20 | In Progress (round-5 scope funded: Option A repair, then evidence gate re-attempt) |  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 20/22 | In Progress (round 5: Option A repair + WR-06, then evidence gate re-attempt) |  |
 
 ---
-*Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
+*Roadmap last updated: 2026-09-03 with round-5 gap closure plans 12-21/12-22*
