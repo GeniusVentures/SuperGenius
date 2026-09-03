@@ -117,6 +117,14 @@ Options, with the evidence constraint that no surviving never-restarted holder i
 | B (needs seam/production decision) | Make CRDT sync resilient to the boot window (e.g. re-provide/route recovery for the restarted host identity) | Outside the test file; broader blast radius into graphsync/CRDT territory previously kept out of scope |
 | C | Accept the RestartAtVote block-3 residual as a documented race and scope 12-20's gate to the stabilized signature | No code change; the three-pass gate would keep failing at ~50% per focused-run odds unless the filter excludes this case |
 
+### Decision RECEIVED (developer, relayed by coordinator, 2026-09-03): Option A
+
+The routed decision is resolved. Verbatim record:
+
+> "Developer decision (2026-09-03): Option A — delay the re-advertisement until recipient gossip-topic readiness is observable, OR add a pre-restart CheckCertificateForSlot wait on second/third peers first (making a true surviving replica). Test-file change only; stays inside the directive's named shapes; must not relax any existing wait bound. Funded as round-5 scope before the 12-20 gate re-attempt."
+
+Consequences: the round-5 plan implements Option A (readiness-gated re-advertisement or a pre-restart retention wait creating a true surviving replica — test-file only, no existing wait bound relaxed); the repair 12-19 shipped stays as the honest intermediate state (run evidence 1 pass / 1 fail preserved); 12-20's gate re-attempt waits on the round-5 outcome and still carries no fix until then; TEST-03/TEST-04 remain unmarked.
+
 ## Durable Evidence Paths (nothing in /tmp)
 
 - round4-traces/fallback-restart-1.log — focused run 1, OK (pre-run load header)
