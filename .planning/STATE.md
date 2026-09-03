@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-03T13:11:12.761Z"
-last_activity: 2026-09-03 -- Phase 12 execution started
+last_updated: "2026-09-03T13:51:27.508Z"
+last_activity: 2026-09-03
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 32
-  completed_plans: 32
+  completed_plans: 33
   percent: 80
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 1 of 20
-Status: Executing Phase 12
-Last activity: 2026-09-03 -- Phase 12 execution started
+Plan: 2 of 20
+Status: Ready to execute
+Last activity: 2026-09-03
 
 Progress: [██████████] 100%
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 12 P14 | 90m | 2 tasks | 3 files |
 | Phase 12 P15 | 25m | 3 tasks | 2 files |
 | Phase 12 P16 | 20m | 3 tasks | 3 files |
+| Phase 12 P18 | 37m | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Progress: [██████████] 100%
 - [Phase ?]: The 12-14 Peer::Stop teardown invariant is propagated to every phase proof artifact teardown site: ComponentPeer::Stop (smoke), ~CRDTFixture (shared base, 7 binaries), and both lifecycle multi-validator loops - CR-01/CR-02 closed, WR-01 same-class sites closed in the same mechanical pass (12-16).
 - [Phase ?]: 12-16's one full serial fault-suite run is preserved verbatim as FAILED (CTest Timeout): the RestartAtVote wait-timeout cascade is 12-15's already-attributed certificate-CID graphsync route-loss race (WR-02 withheld), not a teardown-order regression; no reroll, the three-pass gate belongs to 12-17.
 - [Phase ?]: 12-17's gate-entry check FIRED before run A — RestartAtVote's recorded-live-unrepaired residual (12-15 Verdict 2, repair withheld on both failed authorization clauses) struck again in 12-16's preserved full run, so the round-3 three-run series was never started and the no-reroll evidence budget is preserved; a developer go/no-go (repair-first recommended vs. run-anyway at ~7-12% odds) is routed per the plan's own STOP branch (12-17).
+- [Phase 12]: The GraphsyncDAGSyncer blacklist-backoff seam is static/process-wide (fetchers' syncer instances live inside GlobalDB, unreachable from the test; all four peers share one process) and converts only the blacklist subsystem to a millisecond clock — production constants 5000/30000 and 10000/1800000 are duration-identical; cid_failures_ stays on the seconds clock (12-18)
+- [Phase 12]: CR-03 closed: node.registry.reset() between manager and db resets in both lifecycle teardown loops before pubsub->Stop() — registry co-owns GlobalDB via ValidatorRegistry.hpp:530, so the 12-16 WR-01 reorder was ineffective; STATE.md:129 corrected (12-18)
+- [Phase 12]: Boot-window masking hypothesis DISPROVEN with the 100ms seam override provably live (0.91s re-dial after first blacklist, impossible under the >=5s production backoff): the persisting mechanism is route erasure on blacklist plus the restarted host's boot-window port handover plus absent surviving replica/re-publication — not the blacklist duration — plan 12-19's fallback (post-restart certificate re-publication / surviving-replica serving) is activated per the developer directive; verdict with citations at round4-traces/hypothesis-verdict.md (12-18)
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-03T13:11:49Z
-Stopped at: 12-18 complete — seam added (Task 1), CR-03 closed + STATE.md:129 corrected + lifecycle green (Task 2), seam wired into RestartAtVote + three focused runs + verdict DISPROVEN recorded durably (Task 3); 12-19 fallback (post-restart certificate re-publication / surviving-replica serving) is the activated next step
-Resume file: .planning/phases/12-multi-node-finality-fault-proof/round4-traces/hypothesis-verdict.md
+Last session: 2026-09-03T13:51:27.501Z
+Stopped at: Completed 12-18-PLAN.md (seam + CR-03 + hypothesis verdict DISPROVEN; 12-19 fallback activated)
+Resume file: None
