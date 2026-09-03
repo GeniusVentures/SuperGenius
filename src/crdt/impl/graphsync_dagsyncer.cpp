@@ -41,6 +41,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 
 namespace sgns::crdt
 {
+    // Test-only blacklist backoff override (milliseconds); 0 == production formula.
+    // Default-initialized to 0 so an unconfigured process keeps production durations.
+    std::atomic<uint64_t> GraphsyncDAGSyncer::blacklist_backoff_override_ms_for_test_{ 0 };
+
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
@@ -798,7 +802,7 @@ namespace sgns::crdt
     {
         std::lock_guard lock( blacklist_mutex_ );
 
-        uint64_t now = GetCurrentTimestamp();
+        uint64_t now = GetCurrentTimestampMs();
 
         if ( auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) ); !inserted )
         {
@@ -819,27 +823,40 @@ namespace sgns::crdt
 
     uint64_t GraphsyncDAGSyncer::getBackoffTimeout( uint64_t failures, bool ever_connected )
     {
+        // Test-only override (developer directive 2026-09-03): a nonzero value is
+        // returned verbatim as a flat (non-exponential) millisecond backoff.
+        if ( uint64_t override_ms = blacklist_backoff_override_ms_for_test_.load( std::memory_order_relaxed );
+             override_ms != 0 )
+        {
+            return override_ms;
+        }
+
         if ( ever_connected )
         {
             // For previously connected peers:
-            // - Start with 5 seconds
-            // - Cap at 30 seconds
-            uint64_t base_seconds = 5;
-            uint64_t max_seconds  = 30;
+            // - Start with 5000 milliseconds (5 seconds)
+            // - Cap at 30000 milliseconds (30 seconds)
+            uint64_t base_ms = 5000;
+            uint64_t max_ms  = 30000;
 
             // Calculate exponential backoff
-            uint64_t timeout = base_seconds * ( 1ULL << failures );
-            return std::min( timeout, max_seconds );
+            uint64_t timeout = base_ms * ( 1ULL << failures );
+            return std::min( timeout, max_ms );
         }
         // For never-connected peers:
-        // - Start with 10 seconds
-        // - Cap at 1800 seconds (30 minutes)
-        uint64_t base_seconds = 10;
-        uint64_t max_seconds  = 1800;
+        // - Start with 10000 milliseconds (10 seconds)
+        // - Cap at 1800000 milliseconds (30 minutes)
+        uint64_t base_ms = 10000;
+        uint64_t max_ms  = 1800000;
 
         // Calculate exponential backoff
-        uint64_t timeout = base_seconds * ( 1ULL << failures );
-        return std::min( timeout, max_seconds );
+        uint64_t timeout = base_ms * ( 1ULL << failures );
+        return std::min( timeout, max_ms );
+    }
+
+    void GraphsyncDAGSyncer::SetBlacklistBackoffTimeoutForTest( uint64_t override_ms )
+    {
+        blacklist_backoff_override_ms_for_test_.store( override_ms, std::memory_order_relaxed );
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
@@ -855,7 +872,7 @@ namespace sgns::crdt
                 break;
             }
 
-            uint64_t        now   = GetCurrentTimestamp();
+            uint64_t        now   = GetCurrentTimestampMs();
             BlacklistEntry &entry = it->second;
 
             // If no failures yet, not blacklisted
@@ -883,7 +900,7 @@ namespace sgns::crdt
 
             // Still within blacklist timeout and has failures
             ret = true; // This peer IS on the blacklist
-            logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}s)",
+            logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}ms)",
                             peer.toBase58(),
                             entry.failures,
                             timeout );
@@ -1018,6 +1035,13 @@ namespace sgns::crdt
     {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+    }
+
+    uint64_t GraphsyncDAGSyncer::GetCurrentTimestampMs()
+    {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
     }
 
