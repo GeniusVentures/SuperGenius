@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-03T17:27:20.913Z"
+last_updated: "2026-09-03T17:45:49.195Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 34
-  completed_plans: 36
-  percent: 80
+  completed_plans: 37
+  percent: 100
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 2 of 22
+Plan: 3 of 22
 Status: Ready to execute
 Last activity: 2026-09-03
 
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 12 P19 | 13m | 2 tasks | 5 files |
 | Phase 12 P20 | 8m | 2 tasks | 2 files |
 | Phase 12 P21 | 9m | 3 tasks | 7 files |
+| Phase 12 P22 | 15m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,7 @@ Progress: [██████████] 100%
 - [Phase 12]: 12-20's gate-entry check FIRED on clauses (a) and (c) — round 4 produced no attributed fix (12-18 hypothesis DISPROVEN; 12-19 repair necessary-but-insufficient at 1 pass/1 fail) and RestartAtVote block-3 stays live-unrepaired on the final source beyond the gate-eligible PublisherLoss residual — so the three-run series was withheld WITHOUT spending the no-reroll budget; round 5 must land Option A (readiness/surviving-replica, test-file only, no wait bound relaxed) with all-green focused evidence before this gate re-attempts (12-20)
 - [Phase 12]: Round-5 Option A is implemented as the COMPOSED repair (pre-restart CheckCertificateForSlot retention wait on second/third/passive creating surviving CID replicas + consensus-topic readiness gate at >= 2 peers on every peer before the 12-19 re-publication) and graduated 3/3 focused all-green — the attributed fix 12-22's gate re-attempt carries (12-21)
 - [Phase 12]: getBackoffTimeout's exponent is clamped at 16 in both branches (WR-06 closed; UB impossible, behavior identical for every reachable failure count); IN-08 dead constants deliberately left in place — round-5 production budget is the clamp alone (12-21)
+- [Phase 12]: 12-22 evidence gate: series FAILED at run B on the pre-declared PublisherLoss child-readiness strike (exact 12-15 Verdict 3 boundary); STOP-on-first-strike honored, run C never started, no reroll - all four FinalityFaultNetwork scenario cases green in BOTH executed runs (graduated Option A held); sibling matrix 4/4 incl. cert-fallback first run on this generation; 12-14 blocker OPEN, next decision routed (D-25 repair vs gate-standard re-examination vs accept-and-close).
 
 ### Pending Todos
 
@@ -165,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-03T17:45:00Z
-Stopped at: Completed 12-22-PLAN.md (gate-entry GO; series FAILED at run B on the gate-eligible PublisherLoss child-readiness strike, no reroll; sibling matrix 4/4 green incl. cert-fallback first run on this generation; 12-14 blocker OPEN, next decision routed to developer)
+Last session: 2026-09-03T17:45:49.190Z
+Stopped at: Completed 12-22-PLAN.md (series FAILED run B, PublisherLoss child-readiness strike, no reroll; sibling matrix 4/4; blocker routed)
 Resume file: None

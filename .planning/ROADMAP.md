@@ -185,7 +185,7 @@ Plans:
 
 **Wave 22** *(gap closure round 5 — evidence gate re-attempt carrying the graduated round-5 fix; depends on 12-21)*
 
-- [ ] 12-22-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate under the no-reroll rule (gate-entry clause re-check on the round-5 record, fresh crash baseline, three serial full runs with per-run xunit XML copies asserting all four fault-scenario case names green and zero failure elements, STOP-on-first-strike), run the sibling matrix including cert-fallback on the same build generation, and resolve the 12-14 evidence-gap blocker honestly in STATE.md.
+- [x] 12-22-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate under the no-reroll rule (gate-entry clause re-check on the round-5 record, fresh crash baseline, three serial full runs with per-run xunit XML copies asserting all four fault-scenario case names green and zero failure elements, STOP-on-first-strike), run the sibling matrix including cert-fallback on the same build generation, and resolve the 12-14 evidence-gap blocker honestly in STATE.md.
 
 ## Progress
 
@@ -200,7 +200,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 21/22 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 22/22 | Complete   | 2026-09-03 |
 
 ---
 *Roadmap last updated: 2026-09-03 with round-5 gap closure plans 12-21/12-22*
