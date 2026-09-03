@@ -72,6 +72,19 @@ namespace sgns::securecrdt
             return "/?" + EscapeRegex( domain ) + "/candidate/v[1-9][0-9]*/[0-9a-f]{64}/approval/[0-9a-f]{128}";
         }
 
+        /// @brief Exact ingest-filter pattern RegisterFilters installs for a
+        ///        registered key pattern (wide sig shape, phase-13). The ONE
+        ///        construction site for both installation (RegisterFilters)
+        ///        and removal (UnregisterFiltersFor) so the two can never
+        ///        drift apart (G-WR-01).
+        std::string IngestFilterPatternFor( const std::string &key_pattern )
+        {
+            // Wide sig pattern (phase-13): nested /sig/... keys must reach the
+            // filter so noncanonical remote signature keys are rejected
+            // instead of bypassing it.
+            return "/?" + key_pattern + "(/sig(/.*)?)?";
+        }
+
         struct StoredCandidateRecord
         {
             CandidateKey            key;
@@ -658,9 +671,9 @@ namespace sgns::securecrdt
         const auto entries        = registry_->AllEntries();
         for ( const auto &entry : entries )
         {
-            // Wide sig pattern (phase-13): nested /sig/... keys must reach the filter
-            // so noncanonical remote signature keys are rejected instead of bypassing it.
-            const std::string pattern = "/?" + entry.key_pattern + "(/sig(/.*)?)?";
+            // Shared construction helper -- UnregisterFiltersFor removes the
+            // byte-identical pattern string (G-WR-01 single construction site).
+            const std::string pattern = IngestFilterPatternFor( entry.key_pattern );
             const bool registered = db_->RegisterElementFilter(
                 pattern,
                 [weak_self, entry]( const sgns::crdt::pb::Element &element )
@@ -693,6 +706,18 @@ namespace sgns::securecrdt
         db_->AddListenTopic( topic_ );
         logger_->info( "{}: result={}", __func__, all_registered );
         return all_registered;
+    }
+
+    void SecureCrdt::UnregisterFiltersFor( const std::string &escaped_base_key )
+    {
+        logger_->trace( "{}: entry pattern={}", __func__, escaped_base_key );
+        // Byte-identical to the pattern RegisterFilters installs for the same
+        // key (shared IngestFilterPatternFor construction helper). Destroying
+        // the removed filter's lambda drops its BY-VALUE captured registry
+        // entry (the strong peer_registry pin documented in 15-11) -- callers
+        // must order this LAST in their teardown. Removing a pattern that is
+        // not installed is a safe no-op (erase-remove on the missing pattern).
+        db_->UnregisterElementFilter( IngestFilterPatternFor( escaped_base_key ) );
     }
 
     std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterSecureCrdtUpdate(

@@ -163,6 +163,25 @@ namespace sgns::securecrdt
          */
         bool RegisterFilters();
 
+        /**
+         * @brief Removes the ingest element filter RegisterFilters installed
+         *        for `escaped_base_key`'s pattern -- teardown counterpart of
+         *        RegisterFilters for ONE registry entry (G-WR-01: no stale
+         *        filter callback, with its captured policy entry, may outlive
+         *        the policy owner on a GlobalDB that keeps running).
+         *
+         *        The removed pattern is built by the SAME construction helper
+         *        RegisterFilters uses ("/?" + escaped_base_key +
+         *        "(/sig(/.*)?)?"), so removal can never drift from
+         *        installation. Removing a pattern that was never installed is
+         *        a safe no-op (CRDTDataFilter::UnregisterElementFilter is an
+         *        erase-remove over the pattern registry).
+         * @param[in] escaped_base_key Regex-escaped base key pattern exactly
+         *            as registered with SecureCrdtRegistry (the caller of
+         *            Register passed the same escaping).
+         */
+        void UnregisterFiltersFor( const std::string &escaped_base_key );
+
     private:
         /**
          * @brief Filter callback re-running the identical enforcement logic as
