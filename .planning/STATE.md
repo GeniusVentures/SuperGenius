@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: executing
-last_updated: "2026-09-03T17:14:55.848Z"
-last_activity: 2026-09-03 -- Phase 12 execution started
+last_updated: "2026-09-03T17:27:20.913Z"
+last_activity: 2026-09-03
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 34
-  completed_plans: 35
+  completed_plans: 36
   percent: 80
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-08-20)
 ## Current Position
 
 Phase: 12 (multi-node-finality-fault-proof) — EXECUTING
-Plan: 1 of 22
-Status: Executing Phase 12
-Last activity: 2026-09-03 -- Phase 12 execution started
+Plan: 2 of 22
+Status: Ready to execute
+Last activity: 2026-09-03
 
 Progress: [██████████] 100%
 
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 12 P18 | 37m | 3 tasks | 10 files |
 | Phase 12 P19 | 13m | 2 tasks | 5 files |
 | Phase 12 P20 | 8m | 2 tasks | 2 files |
+| Phase 12 P21 | 9m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Progress: [██████████] 100%
 - [Phase 12]: Boot-window masking hypothesis DISPROVEN with the 100ms seam override provably live (0.91s re-dial after first blacklist, impossible under the >=5s production backoff): the persisting mechanism is route erasure on blacklist plus the restarted host's boot-window port handover plus absent surviving replica/re-publication — not the blacklist duration — plan 12-19's fallback (post-restart certificate re-publication / surviving-replica serving) is activated per the developer directive; verdict with citations at round4-traces/hypothesis-verdict.md (12-18)
 - [Phase 12]: 12-19 resolved the directive's conditional to the repair branch (verdict DISPROVEN) and implemented post-restart certificate re-publication through public GetCertificateBySlot->SubmitCertificate on the recreated publisher after RestartPeer+ConnectPeers (SubmitProposal precedent; CERT-02/CERT-05 preserved) — Focused evidence 1 pass / 1 fail shows single-shot re-publication is necessary-but-insufficient: recipients either miss the re-published gossip during topic-mesh re-formation or still depend on the CRDT DAG CID fetch that dead-ends on the reused host identity; honest STOP per the plan's own rule, new decision routed
 - [Phase 12]: 12-20's gate-entry check FIRED on clauses (a) and (c) — round 4 produced no attributed fix (12-18 hypothesis DISPROVEN; 12-19 repair necessary-but-insufficient at 1 pass/1 fail) and RestartAtVote block-3 stays live-unrepaired on the final source beyond the gate-eligible PublisherLoss residual — so the three-run series was withheld WITHOUT spending the no-reroll budget; round 5 must land Option A (readiness/surviving-replica, test-file only, no wait bound relaxed) with all-green focused evidence before this gate re-attempts (12-20)
+- [Phase 12]: Round-5 Option A is implemented as the COMPOSED repair (pre-restart CheckCertificateForSlot retention wait on second/third/passive creating surviving CID replicas + consensus-topic readiness gate at >= 2 peers on every peer before the 12-19 re-publication) and graduated 3/3 focused all-green — the attributed fix 12-22's gate re-attempt carries (12-21)
+- [Phase 12]: getBackoffTimeout's exponent is clamped at 16 in both branches (WR-06 closed; UB impossible, behavior identical for every reachable failure count); IN-08 dead constants deliberately left in place — round-5 production budget is the clamp alone (12-21)
 
 ### Pending Todos
 
@@ -156,6 +159,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-03T17:15:41Z
-Stopped at: Completed 12-21-PLAN.md (Option A composed repair implemented + graduated 3/3 focused all-green; WR-06 closed; 12-22 gate re-attempt next)
+Last session: 2026-09-03T17:27:20.909Z
+Stopped at: Completed 12-21-PLAN.md (Option A graduated 3/3; WR-06 closed; 12-22 gate re-attempt next)
 Resume file: None
