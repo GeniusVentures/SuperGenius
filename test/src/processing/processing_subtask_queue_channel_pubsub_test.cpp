@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <thread>
+#include <unordered_set>
 #include <boost/chrono/duration.hpp>
 
 #include "testutil/wait_condition.hpp"
@@ -301,4 +302,100 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
     ASSERT_EQ( 2, queueCount2.load() );
     EXPECT_EQ( nodeId1, queueSnapshotSet2[0]->processing_queue().owner_node_id() );
     EXPECT_EQ( nodeId2, queueSnapshotSet2[1]->processing_queue().owner_node_id() );
+}
+
+/**
+ * @given 2 channels connected to different pubsub hosts; a deny-all membership
+ *        filter installed on the receiving channel
+ * @when The sender publishes a queue ownership request
+ * @then The receiver's request sink is NOT invoked while the filter denies the
+ *       sender; after the filter is REPLACED with one allowing the sender's peer id,
+ *       the sender's next queue message propagates (set-time consultation at the
+ *       processing layer — runtime admission with no reinstall).
+ */
+TEST_F( ProcessingSubTaskChannelPubSubTest, MembershipFilterBlocksNonMemberQueueMessages )
+{
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
+
+    const std::string queueChannelId = "PROCESSING_MEMBERSHIP_CHANNEL";
+
+    auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, queueChannelId );
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, queueChannelId );
+
+    std::atomic<size_t>   requestCount2{ 0 };
+    std::set<std::string> requestedNodeIds2;
+    std::mutex            mutex2;
+    queueChannel2->SetQueueRequestSink(
+        [&requestCount2, &requestedNodeIds2, &mutex2]( const SGProcessing::SubTaskQueueRequest &request )
+        {
+            std::lock_guard lock( mutex2 );
+            requestedNodeIds2.insert( request.node_id() );
+            ++requestCount2;
+            return true;
+        } );
+
+    auto listen_result = queueChannel1->Listen();
+    ASSERT_TRUE( listen_result ) << "Sender channel subscription failed to establish";
+    listen_result = queueChannel2->Listen();
+    ASSERT_TRUE( listen_result ) << "Receiver channel subscription failed to establish";
+
+    // Learn the sender's transport peer id from the receiver's topic view (bounded
+    // wait for the mesh — the sender must be visible before the filter is built).
+    std::vector<libp2p::peer::PeerId> senderPeers;
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&queueChannel2, &senderPeers]()
+        {
+            senderPeers = queueChannel2->GetActiveNodes();
+            return !senderPeers.empty();
+        } ),
+        std::chrono::milliseconds( 5000 ),
+        "Sender peer not visible on the receiver's queue topic",
+        nullptr );
+    ASSERT_FALSE( senderPeers.empty() );
+    std::unordered_set<std::string> memberSenders;
+    for ( const auto &peer : senderPeers )
+    {
+        memberSenders.insert( peer.toBase58() );
+    }
+
+    // Deny-all filter on the receiving channel
+    queueChannel2->SetMembershipFilter(
+        []( const libp2p::peer::PeerId & ) { return false; } );
+
+    // The sender-side operation the passing tests above prove propagates
+    queueChannel1->RequestQueueOwnership( "NODE_NON_MEMBER" );
+
+    // Bounded negative window (grace-loop pattern): the receiver's observable must
+    // NOT change while the filter denies the sender
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( 0, requestCount2.load() )
+            << "Non-member queue message reached the receiver's sink although the filter denies it";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( 0, requestCount2.load() );
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 0, requestedNodeIds2.size() );
+    }
+
+    // Widen the SAME live channel: replace the filter with one allowing the sender
+    queueChannel2->SetMembershipFilter(
+        [memberSenders]( const libp2p::peer::PeerId &peer )
+        { return memberSenders.count( peer.toBase58() ) > 0; } );
+
+    queueChannel1->RequestQueueOwnership( "NODE_MEMBER" );
+
+    ASSERT_WAIT_FOR_CONDITION( [&requestCount2]() { return requestCount2.load() >= 1; },
+                               std::chrono::milliseconds( 5000 ),
+                               "Member's queue message was not received after the filter widened",
+                               nullptr );
+
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 1, requestedNodeIds2.count( "NODE_MEMBER" ) );
+        EXPECT_EQ( 0, requestedNodeIds2.count( "NODE_NON_MEMBER" ) );
+    }
 }
