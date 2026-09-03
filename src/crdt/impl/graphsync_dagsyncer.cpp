@@ -1015,13 +1015,12 @@ namespace sgns::crdt
             return false; // No failure recorded
         }
 
-        // Consider failure "recent" for 3 minutes (180 seconds)
-        // This prevents immediate re-requests but allows retry after some time
-        uint64_t       now             = GetCurrentTimestamp();
-        uint64_t       failure_age     = now - it->second;
-        const uint64_t FAILURE_TIMEOUT = 180; // 3 minutes
+        // Short rather than minutes: when the failing peer is the only route (common
+        // in small meshes), a long suppression makes the CID unfetchable for the
+        // whole window even after the peer recovers.
+        const std::chrono::seconds failure_age{ GetCurrentTimestamp() - it->second };
 
-        if ( failure_age > FAILURE_TIMEOUT )
+        if ( failure_age > CID_FAILURE_SUPPRESSION )
         {
             // Failure is old, remove it and allow retry
             cid_failures_.erase( it );
