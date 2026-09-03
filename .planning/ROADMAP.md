@@ -839,7 +839,7 @@ Plans:
 **Re-verification gap-closure waves** (cycle 2, from 15-REVERIFICATION.md — CR-G01/CR-G02 blockers + G-WR-01/02/04 warnings; owner decision 2026-09-03: FIX BOTH blockers, no relabeling):
 
 Plans:
-- [ ] 15-14-PLAN.md — gap closure: CR-G01 authenticated sender — application-layer gossip payload authentication (seal with the gossip-host keypair, verify key/from binding + signature in all four gates, fail-closed on unsigned under a set filter) + sign_messages=true at both production sites + forged-from proofs (D-07, D-11, PNET-GATE, PNET-PROC)
+- [x] 15-14-PLAN.md — gap closure: CR-G01 authenticated sender — application-layer gossip payload authentication (seal with the gossip-host keypair, verify key/from binding + signature in all four gates, fail-closed on unsigned under a set filter) + sign_messages=true at both production sites + forged-from proofs (D-07, D-11, PNET-GATE, PNET-PROC)
 - [ ] 15-16-PLAN.md — gap closure: registry lifecycle warnings — G-WR-01 teardown removes the ingest element filter, G-WR-02 callback-registration failure fails New, G-WR-04 RegisterIfAbsent atomic registration (D-06, PNET-NETREG)
 - [ ] 15-15-PLAN.md — gap closure: CR-G02 no ungated windows — filter passed into ProcessingNode::New before any subscription (both creation sites) + bootstrap-membership interim filter for the GlobalDB startup window + truthful processing_service.hpp contract (needs 15-14; GeniusNode.cpp serialized) (D-07, D-11, PNET-GATE, PNET-PROC)
 

@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
 current_phase: 15
 status: verifying
-last_updated: "2026-09-03T14:06:49.555Z"
+last_updated: "2026-09-03T18:06:33.264Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 19
   completed_phases: 6
-  total_plans: 65
-  completed_plans: 49
+  total_plans: 68
+  completed_plans: 50
   percent: 32
 ---
 
@@ -30,15 +30,15 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 15 (private-networks-consume-privatenetworkid-identity-and-bind-) — EXECUTING
-Plan: 13 of 13
-Status: Phase complete — ready for verification
+Plan: 14 of 16 (cycle-2 gap closure: 15-14 done; 15-15, 15-16 remain; 15-04 permanently skipped by owner order)
+Status: Executing — gap-closure cycle 2 (CR-G01 closed by 15-14; CR-G02 → 15-15)
 Last activity: 2026-09-03
-**Progress:** [████████░░] 75%
+**Progress:** [███████░░░] 74%
 
 Last session:
-2026-09-03T14:06:42.553Z
+2026-09-03T18:05:59.677Z
 Stopped At:
-Completed 15-13-PLAN.md
+Completed 15-14-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -93,6 +93,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 15 P11 | 28min | 2 tasks | 5 files |
 | Phase 15 P12 | 11min | 2 tasks | 3 files |
 | Phase 15 P13 | 20min | 2 tasks | 13 files |
+| Phase 15 P14 | 41min | 3 tasks | 23 files |
 
 ## Decisions
 
@@ -107,3 +108,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 15]: 15-13: membership gates live at the three real SGNUS processing message handlers (grid OnMessage, results OnResultChannelMessage, queue OnProcessingChannelMessage) — same fail-closed AuthorizeGossipSender semantics as the 15-11 gossip chokepoint; empty filter = public pass-through
 - [Phase 15]: 15-13: filter propagation covers both time axes — set-time (setBitswap mirror over existing nodes) and creation-time (both m_processingNodes insertion sites), so no enrollment window exists
 - [Phase 15]: 15-13: processing test targets registered standalone with per-target source lists (single-source processing_service_test; channel-pubsub test + base.cpp) — registration gate ctest -N >=2 enforced before any test run; both new gate scenes mutation-verified non-vacuous
+- [Phase 15]: 15-14: CR-G01 closed — all four membership gates authenticate before authorizing via an application-layer envelope (embedded pubkey must derive the from-field PeerId + signature over magic+from+payload); unsigned/unverifiable denied under a set filter; public nodes byte-identical raw
+- [Phase 15]: 15-14: publishers seal with the SAME keypair that constructs the gossip host (SealGossipPayload); filter set + no key = publish fails closed; sign_messages=true at both production sites (wire sigs exist but are not consumed by SGNUS gates — gossip.hpp:129-135)
+- [Phase 15]: 15-14: forged-from proven mutation-verified — impostor envelope (member sealing with another member's key) dropped at gated ingest although membership admits; signature rebuilt over the wire from-field gives double protection (binding OR verify disabled still denies)
