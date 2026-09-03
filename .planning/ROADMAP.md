@@ -177,7 +177,7 @@ Plans:
 
 **Wave 20** *(gap closure round 4 — evidence gate re-attempt carrying the round-4 attributed fix; depends on 12-18 and 12-19)*
 
-- [ ] 12-20-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate with crash baseline, per-log four-case assertions, STOP-on-first-strike discipline, the sibling suite matrix, and the honest STATE.md resolution of the 12-14 evidence-gap blocker, all evidence at durable repo-relative round4-traces paths.
+- [x] 12-20-PLAN.md — Re-attempt the three-consecutive-serial-pass evidence gate with crash baseline, per-log four-case assertions, STOP-on-first-strike discipline, the sibling suite matrix, and the honest STATE.md resolution of the 12-14 evidence-gap blocker, all evidence at durable repo-relative round4-traces paths. (STOPPED at its own gate-entry branch — plan-faithful; round 4 carried no attributed fix: 12-18 hypothesis DISPROVEN, 12-19 repair necessary-but-insufficient at 1 pass/1 fail; series withheld with the no-reroll budget unspent; round-5 Option A repair then gate re-attempt follows; the 12-14 evidence-gap blocker stays open)
 
 ## Progress
 
@@ -192,7 +192,7 @@ Plans:
 | 9. Durable One-Vote Finality | v3.0 | 2/2 | Complete    | 2026-08-20 |
 | 10. Authoritative Slot Certificate Publication | v3.0 | 7/5 | Complete    | 2026-08-21 |
 | 11. Convergent Certificate Consumption & Mint Recovery | v3.0 | 5/4 | Complete    | 2026-08-24 |
-| 12. Multi-Node Finality Fault Proof | v3.0 | 19/20 | In Progress|  |
+| 12. Multi-Node Finality Fault Proof | v3.0 | 20/20 | In Progress (round-5 scope funded: Option A repair, then evidence gate re-attempt) |  |
 
 ---
 *Roadmap last updated: 2026-08-20 after renumbering v3.0 to avoid retained historical phase directories*
