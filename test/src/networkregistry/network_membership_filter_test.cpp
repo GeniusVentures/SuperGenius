@@ -388,6 +388,34 @@ namespace
         EXPECT_EQ( opened_empty_from.error(), GossipPayloadAuthError::KEY_FROM_MISMATCH );
     }
 
+    // (4c) Bootstrap-membership predicate (CR-G02b / G-WR-03 boot-window
+    //      gate): config-backed and fail-closed. A bootstrap member passes, a
+    //      fresh non-bootstrap PeerId is denied, and an EMPTY bootstrap set
+    //      denies everything (a private node with no bootstrap membership can
+    //      never reach READY anyway -- the 15-05 posture never fails open).
+    TEST( BootstrapMembershipFilterSemantics, ConfigBackedFailClosedPredicate )
+    {
+        const auto bootstrap_member_1 = GenerateFreshPeerId();
+        const auto bootstrap_member_2 = GenerateFreshPeerId();
+
+        auto filter = MakeBootstrapMembershipFilter(
+            { bootstrap_member_1.toBase58(), bootstrap_member_2.toBase58() } );
+        ASSERT_TRUE( filter );
+        EXPECT_TRUE( filter( bootstrap_member_1 ) ) << "bootstrap member denied";
+        EXPECT_TRUE( filter( bootstrap_member_2 ) ) << "bootstrap member denied";
+
+        const auto outsider = GenerateFreshPeerId();
+        EXPECT_NE( outsider.toBase58(), bootstrap_member_1.toBase58() );
+        EXPECT_NE( outsider.toBase58(), bootstrap_member_2.toBase58() );
+        EXPECT_FALSE( filter( outsider ) ) << "non-bootstrap peer allowed through the interim filter";
+
+        // Fail-closed: the empty bootstrap set denies EVERY peer.
+        auto empty_set_filter = MakeBootstrapMembershipFilter( {} );
+        ASSERT_TRUE( empty_set_filter );
+        EXPECT_FALSE( empty_set_filter( bootstrap_member_1 ) );
+        EXPECT_FALSE( empty_set_filter( outsider ) );
+    }
+
     //
     // Flow fixture: pnet pubsub nodes carrying real GlobalDBs
     // (pubsub_graphsync replication shape + pubsub_counts pnet nodes).
@@ -1000,6 +1028,102 @@ namespace
         broadcaster_sealer->ClearMembershipFilter();
         TearDownNodes( broadcaster_gated, io_context, io_thread,
                        { gated->pubsub, sealer->pubsub, rawp->pubsub } );
+    }
+
+    // (10) CR-G02b / G-WR-03 boot-window truth: a GlobalDB whose broadcaster
+    //      carries ONLY MakeBootstrapMembershipFilter (no registry -- exactly
+    //      the private-node boot posture between INITIALIZING_DATABASE and the
+    //      registry-backed install at INITIALIZING_TRANSACTIONS) gates gossip
+    //      ingest from the first live subscription: a same-PSK peer OUTSIDE
+    //      the bootstrap set fails to land any CRDT key although it seals
+    //      honestly with its own key (per 15-14), while the bootstrap member's
+    //      sealed writes replicate through the interim-filtered ingest.
+    TEST_F( NetworkMembershipFilterFlowTest, StartupWindowFilterCoversGlobalDBIngest )
+    {
+        const std::string                topic = std::string( "chain/" ) + kFlowNetworkId + "/tasks";
+        const sgns::crdt::HierarchicalKey key_from_member( "/chain/" + kFlowNetworkId + "/fromBootstrapMember" );
+        const sgns::crdt::HierarchicalKey key_from_outsider( "/chain/" + kFlowNetworkId + "/fromBootOutsider" );
+
+        auto io_context = std::make_shared<boost::asio::io_context>();
+
+        auto gated    = MakeNode( io_context, "nmf_flow10_A", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto member   = MakeNode( io_context, "nmf_flow10_M", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto outsider = MakeNode( io_context, "nmf_flow10_O", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        ASSERT_NE( gated, nullptr );
+        ASSERT_NE( member, nullptr );
+        ASSERT_NE( outsider, nullptr );
+
+        const auto idGated    = gated->pubsub->GetHost()->getId();
+        const auto idMember   = member->pubsub->GetHost()->getId();
+        const auto idOutsider = outsider->pubsub->GetHost()->getId();
+        ASSERT_EQ( ( std::set<libp2p::peer::PeerId>{ idGated, idMember, idOutsider } ).size(), 3u );
+
+        JoinTopic( *gated, topic );
+        JoinTopic( *member, topic );
+        JoinTopic( *outsider, topic );
+
+        // The boot-window posture: the gated node's broadcaster carries ONLY
+        // the config-backed interim filter -- no registry exists yet.
+        auto broadcaster_gated = gated->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_gated, nullptr );
+        broadcaster_gated->SetMembershipFilter( MakeBootstrapMembershipFilter( { idMember.toBase58() } ) );
+        broadcaster_gated->SetGossipSigningKey( gated->signing_key );
+        EXPECT_TRUE( broadcaster_gated->HasMembershipFilter() );
+
+        // Both writers adopt the production private-node shape (gated+keyed)
+        // so each seals honestly with its OWN key -- the outsider's denial is
+        // then attributable to the bootstrap MEMBERSHIP set alone, not to a
+        // missing envelope.
+        auto broadcaster_member = member->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_member, nullptr );
+        broadcaster_member->SetMembershipFilter( MakeBootstrapMembershipFilter( { idMember.toBase58() } ) );
+        broadcaster_member->SetGossipSigningKey( member->signing_key );
+
+        auto broadcaster_outsider = outsider->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_outsider, nullptr );
+        broadcaster_outsider->SetMembershipFilter( MakeBootstrapMembershipFilter( { idMember.toBase58() } ) );
+        broadcaster_outsider->SetGossipSigningKey( outsider->signing_key );
+
+        gated->pubsub->AddPeers( { member->pubsub->GetInterfaceAddress() } );
+        member->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+        gated->pubsub->AddPeers( { outsider->pubsub->GetInterfaceAddress() } );
+        outsider->pubsub->AddPeers( { gated->pubsub->GetInterfaceAddress() } );
+
+        std::thread io_thread( [io_context]() { io_context->run(); } );
+
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]()
+            {
+                return IsConnectedTo( gated->pubsub, idMember ) && IsConnectedTo( gated->pubsub, idOutsider );
+            },
+            std::chrono::milliseconds( 15000 ),
+            "same-PSK peers did not connect to the boot-window-gated node",
+            nullptr );
+
+        // (a) Bootstrap member (sealed with its own key): its write replicates
+        //     in through the interim-filtered ingest.
+        CommitPut( *member->db, key_from_member, { 0xde, 0xad, 0xbe, 0xef }, topic );
+        assertWaitForCondition(
+            [&]()
+            {
+                auto result = gated->db->Get( key_from_member );
+                return result.has_value();
+            },
+            std::chrono::milliseconds( 20000 ),
+            "bootstrap member write did not replicate through the interim-filtered ingest" );
+
+        // (b) Same-PSK non-bootstrap peer (sealed honestly): never lands on
+        //     the gated node across the whole negative window.
+        CommitPut( *outsider->db, key_from_outsider, { 0x13, 0x37, 0x13, 0x37 }, topic );
+        AssertKeyNeverPresentWithin( *gated->db,
+                                     key_from_outsider,
+                                     std::chrono::milliseconds( 3000 ),
+                                     "non-bootstrap peer write during the boot window" );
+
+        broadcaster_member->ClearMembershipFilter();
+        broadcaster_outsider->ClearMembershipFilter();
+        TearDownNodes( broadcaster_gated, io_context, io_thread,
+                       { gated->pubsub, member->pubsub, outsider->pubsub } );
     }
 
 } // namespace
