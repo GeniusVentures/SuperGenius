@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
-status: executing
-last_updated: "2026-09-03T14:07:30.062Z"
+status: paused
+last_updated: "2026-09-03T14:27:02.205Z"
 last_activity: 2026-09-03
 progress:
   total_phases: 5
@@ -70,6 +70,7 @@ Progress: [██████████] 100%
 | Phase 12 P16 | 20m | 3 tasks | 3 files |
 | Phase 12 P18 | 37m | 3 tasks | 10 files |
 | Phase 12 P19 | 13m | 2 tasks | 5 files |
+| Phase 12 P20 | 8m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
