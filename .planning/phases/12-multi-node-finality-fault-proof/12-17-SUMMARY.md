@@ -22,6 +22,7 @@ key-files:
     - .planning/STATE.md
 key-decisions:
   - "Gate-entry check FIRED: the RestartAtVote signature that struck in 12-16's preserved full run is recorded live and unrepaired in 12-15's verdict table (repair withheld, both authorization clauses failed), so the plan's own Task-1 STOP branch applies — the three-run series was NOT started and the round's single no-reroll evidence budget is preserved."
+  - "Developer decision received 2026-09-03: NO-GO — series stays withheld, budget unspent, 12-17 stays stopped; round-4 directive recorded verbatim in the body (test-only GraphsyncDAGSyncer blacklist-backoff seam to test the boot-window masking hypothesis first; certificate re-publication only as fallback)."
   - "The two authorized repairs do not address the striking mechanism: 12-15's SameBurn fix is a different test's wait predicate and 12-16's CR-01/CR-02/WR-01 are teardown-order changes outside the failing mid-test recovery path (12-16's own attribution: '12-16's changes are not in the failing path')."
 metrics:
   duration: 8m
@@ -94,6 +95,16 @@ This residual remains gate-eligible WITHOUT a go/no-go (the developer funded the
 | Re-scope the gate | Redefine the evidence standard (e.g., accept focused-run evidence). | Contradicts the phase's own 12-12/12-14 standard; not recommended — soften nothing. |
 
 **Recommendation: NO-GO — repair first.** The gate-entry rule exists in this plan precisely so the round's evidence budget is never spent on a verdict-table-predicted failure; the mechanism, expected strike point, and re-publication gap are all already attributed, so the repair target is well-defined.
+
+## Decision Received: NO-GO (series stays withheld)
+
+Decided by the developer, relayed by the coordinator on 2026-09-03. The three-run series stays withheld, 12-17 remains stopped at the gate-entry branch exactly as recorded above, the round-3 no-reroll evidence budget stays unspent, and no part of the series or the Task-2 sibling matrix runs from this plan. The plan is not marked complete and no counters advance.
+
+Developer directive for the round-4 repair plan (verbatim):
+
+> "NO-GO. Directive for the round-4 repair plan: add a test-only method to configure the GraphsyncDAGSyncer blacklist backoff timeout (production defaults unchanged; tests set it small, e.g. sub-second) so the boot-window masking hypothesis can be tested directly — a peer that hits CANNOT_CONNECT against a node still booting after restart gets blacklisted for 5-30s (getBackoffTimeout, graphsync_dagsyncer.cpp) and stays skipped even once the host is reachable inside the suite's 25s recovery window. The scoped plan should test this hypothesis first (cheap: seam + re-run focused RestartAtVote), and only if it is disproven fall back to post-restart certificate re-publication / surviving-replica serving as the repair."
+
+Consequence for round 4: the repair target is hypothesis-first — (1) add the test-only GraphsyncDAGSyncer blacklist-backoff seam (production defaults unchanged) and re-run focused RestartAtVote to test the boot-window masking hypothesis directly (the 12-16 log lines 4358/4360 and 5537-5569 — CANNOT_CONNECT on the restarting host, blacklist, "No usable route candidates left" — are the exact observations this hypothesis explains); (2) only if that hypothesis is disproven, fall back to post-restart certificate re-publication / surviving-replica serving as the repair. The three-pass gate may then be re-attempted under the no-reroll rule carrying that new attributed fix.
 
 ## Deviations from Plan
 
