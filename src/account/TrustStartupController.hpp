@@ -12,6 +12,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include <fmt/format.h>
@@ -127,6 +128,10 @@ namespace sgns::account
 
         void SetState( State state );
         void Emit( EventCode code, std::vector<std::string> fields = {} ) const;
+        void EmitActivationFailed( const std::string &domain,
+                                   const std::string &version,
+                                   const std::string &content_hash,
+                                   const std::error_code &error ) const;
         void RequestRefresh();
         void QueuePendingCandidate( const sgns::securecrdt::CandidateId &candidate );
         void MarkCandidateFailed( const sgns::securecrdt::CandidateId &candidate );
@@ -148,7 +153,6 @@ namespace sgns::account
         EventCallback                                           event_callback_;
         StateCallback                                           state_callback_;
         std::atomic<State>                                      state_{ State::FreshWaitingForGenesis };
-        int                                                     callback_owner_token_ = 0;
         std::mutex                                              refresh_execution_mutex_;
         std::shared_ptr<RefreshDispatchState>                   refresh_dispatch_;
         mutable std::mutex                                      candidate_mutex_;
