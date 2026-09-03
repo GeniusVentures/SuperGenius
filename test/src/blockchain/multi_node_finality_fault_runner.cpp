@@ -407,7 +407,10 @@ int main( int argc, char **argv )
     if ( argc == 3 && std::strcmp( argv[1], "--verify-controlled-cancellation" ) == 0 ) return ControlledCancellation( argv[0], argv[2] );
     if ( argc == 4 && std::strcmp( argv[1], "--launcher-controlled" ) == 0 )
     {
-        const char *filter = "--gtest_filter=PublisherObserverProcessEvidenceCollector.RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch";
+        // Controlled-cancellation child: the real-socket publisher-loss scenario
+        // binds the four fixture ports long enough for the gate/signal/reap
+        // sequence (it is the same scenario the retired collector meta-test used).
+        const char *filter = "--gtest_filter=FinalityFaultNetwork.PublisherLossAfterPersistenceUsesDeterministicFailover";
         char *const child_argv[]{ argv[2], const_cast<char *>( filter ), nullptr };
         return Launcher( child_argv, true, std::atoi( argv[3] ) );
     }
