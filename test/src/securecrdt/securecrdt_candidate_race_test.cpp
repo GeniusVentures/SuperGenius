@@ -13,38 +13,19 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt_test_node.hpp"
+#include "testutil/trust_candidate_core.hpp"
+#include "testutil/two_party_barrier.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 
 namespace
 {
     using namespace sgns;
     using namespace sgns::securecrdt;
+    using sgns::testutil::TwoPartyBarrier;
 
     const std::string PREDECESSOR( 64, 'a' );
     const std::string AUTHORIZER( 64, 'b' );
     const std::string SUCCESSOR( 64, 'c' );
-
-    class TwoPartyBarrier
-    {
-    public:
-        void ArriveAndWait()
-        {
-            std::unique_lock<std::mutex> lock( mutex_ );
-            if ( ++arrived_ == 2 )
-            {
-                released_ = true;
-                condition_.notify_all();
-                return;
-            }
-            condition_.wait( lock, [&] { return released_; } );
-        }
-
-    private:
-        std::mutex              mutex_;
-        std::condition_variable condition_;
-        size_t                  arrived_  = 0;
-        bool                    released_ = false;
-    };
 
     class SecureCrdtCandidateRaceTest : public ::testing::Test
     {
@@ -202,17 +183,7 @@ TEST( SecureCrdtCandidateDurableRaceTest, ExactlyOneStoreBackedPolicyWinnerSurvi
     manifest.burn_threshold = 2;
     const auto manifest_bytes = manifest.CanonicalBytes().value();
     auto initial = store->CommitGenesis( manifest, signers[0].Sign( manifest_bytes ) ).value();
-    const auto burn_bytes = initial.burn.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore burn_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "burn-config",
-        initial.burn.network_id,
-        sgns::securecrdt::CandidateKind::BurnConfig,
-        initial.burn.version,
-        initial.burn.expected_previous_hash,
-        initial.burn.authorizing_policy_hash,
-        burn_bytes,
-    };
+    const auto burn_core           = sgns::testutil::BurnCandidateCore( initial.burn ).value();
     const auto burn_authorization = burn_core.CanonicalBytes().value();
     const multisig::CollectedSignatures burn_proof{
         { signers[0].GetAddress(), signers[0].Sign( burn_authorization ) },
