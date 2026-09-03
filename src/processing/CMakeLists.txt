@@ -54,8 +54,9 @@ endif()
 target_link_libraries(processing_service
     PUBLIC
     SGProcessingProto
-    crdt_globaldb
     ipfs-pubsub
+    networkregistry
+    crdt_globaldb
     outcome
     # Public header processing_validation_core.hpp includes <Parameter.hpp>
     # (SGProcessingManager/generated) which itself includes nlohmann/json.hpp,

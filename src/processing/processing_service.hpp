@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_node.hpp"
 #include "processing/processing_subtask_enqueuer.hpp"
 
@@ -69,6 +70,12 @@ namespace sgns::processing
         /// @brief Set bitswap instance propagated to all processing nodes for data availability checks.
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
 
+        /// @brief Set membership filter enforced at every processing-path message handler
+        ///        (grid, results, and processing queue channels). Empty filter = public
+        ///        pass-through. Applied to all existing processing nodes AND at node
+        ///        creation, so there is no enrollment window (T-15-13-06).
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
+
     private:
         /** Listen to data feed channel.
         * @param processingGridChannelId - identifier of a data feed channel
@@ -121,6 +128,9 @@ namespace sgns::processing
 
         std::function<void( const std::string & )> m_mirrorResultCallback; ///< Mirror callback propagated to all nodes.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap;             ///< Bitswap for data availability checks.
+
+        sgns::networkregistry::MembershipFilter m_membershipFilter; ///< Membership gate for grid-channel messages (empty = public).
+        mutable std::mutex                      m_membershipFilterMutex; ///< Guards m_membershipFilter (setters vs pubsub callback threads).
 
         std::set<std::string>                 m_competingPeers;
         std::chrono::steady_clock::time_point m_pendingCreationTimestamp;
