@@ -233,7 +233,22 @@ namespace sgns::crdt
             }
 
             ClearRequestStatus( cid );
-            BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
+            auto subscription = RequestNode( peerID, address, cid );
+            if ( subscription.has_error() )
+            {
+                // The request failed synchronously (e.g. the dial was refused
+                // outright), which previously returned from getNode via
+                // BOOST_OUTCOME_TRY before any failover bookkeeping ran — one
+                // refused connection failed the fetch even when other routes
+                // to the CID existed. Record the failure the same way the
+                // wait loop does and fall through to the next peer.
+                logger_->warn( "Request setup failed for CID {} from peer {}: {}. Trying fallback.",
+                               cid.toString().value(),
+                               peerID.toBase58(),
+                               subscription.error().message() );
+                (void) BlackListPeer( peerID );
+                continue;
+            }
             const auto    request_start_time      = std::chrono::steady_clock::now();
             auto          next_in_progress_log_at = request_start_time + std::chrono::seconds( 30 );
             std::uint64_t in_progress_checks      = 0;
