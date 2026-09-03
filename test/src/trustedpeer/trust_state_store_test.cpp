@@ -12,7 +12,10 @@
 #include "securecrdt/SecureCrdtCandidate.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
+#include "testutil/trust_candidate_core.hpp"
+#include "testutil/two_party_barrier.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 
 namespace
 {
@@ -61,17 +64,7 @@ namespace
         ConfirmedTrustSnapshot ConfirmInitialBurn( const std::shared_ptr<TrustStateStore> &store,
                                                    const ConfirmedTrustSnapshot            &snapshot ) const
         {
-            const auto burn_bytes = snapshot.burn.CanonicalBytes().value();
-            const sgns::securecrdt::CandidateCore core{
-                sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-                "burn-config",
-                snapshot.burn.network_id,
-                sgns::securecrdt::CandidateKind::BurnConfig,
-                snapshot.burn.version,
-                snapshot.burn.expected_previous_hash,
-                snapshot.burn.authorizing_policy_hash,
-                burn_bytes,
-            };
+            const auto core = sgns::testutil::BurnCandidateCore( snapshot.burn ).value();
             const auto authorization = core.CanonicalBytes().value();
             auto result = store->CommitBurnSuccessor( snapshot.burn, Sign( authorization ), authorization );
             EXPECT_TRUE( result.has_value() );
@@ -276,30 +269,16 @@ TEST_F( TrustStateStoreTest, ConcurrentSuccessorsHaveOneWinnerAndOneStableStaleR
     const auto first_proof = Sign( first.CanonicalBytes().value() );
     const auto second_proof = Sign( second.CanonicalBytes().value() );
 
-    std::mutex gate_mutex;
-    std::condition_variable gate_cv;
-    size_t ready = 0;
-    bool go = false;
-    std::array<std::optional<std::error_code>, 2> errors;
+    sgns::testutil::TwoPartyBarrier                gate;
+    std::array<std::optional<std::error_code>, 2>  errors;
     auto run = [&]( size_t index, const QuorumPolicyState &candidate,
                     const sgns::multisig::CollectedSignatures &proof ) {
-        {
-            std::unique_lock<std::mutex> lock( gate_mutex );
-            ++ready;
-            gate_cv.notify_all();
-            gate_cv.wait( lock, [&] { return go; } );
-        }
+        gate.ArriveAndWait();
         auto result = store->CommitPolicySuccessor( candidate, proof );
         if ( result.has_error() ) errors[index] = result.error();
     };
     std::thread a( run, 0, std::cref( first ), std::cref( first_proof ) );
     std::thread b( run, 1, std::cref( second ), std::cref( second_proof ) );
-    {
-        std::unique_lock<std::mutex> lock( gate_mutex );
-        gate_cv.wait( lock, [&] { return ready == 2; } );
-        go = true;
-    }
-    gate_cv.notify_all();
     a.join();
     b.join();
 
@@ -409,17 +388,7 @@ TEST_F( TrustStateStoreTest, CommitPathsUseUnlockedVerifierWithoutSelfDeadlock )
     auto snapshot = genesis.get();
     ASSERT_TRUE( snapshot.has_value() );
 
-    const auto burn_v1_bytes = snapshot.value().burn.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore burn_v1_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "burn-config",
-        snapshot.value().burn.network_id,
-        sgns::securecrdt::CandidateKind::BurnConfig,
-        snapshot.value().burn.version,
-        snapshot.value().burn.expected_previous_hash,
-        snapshot.value().burn.authorizing_policy_hash,
-        burn_v1_bytes,
-    };
+    const auto burn_v1_core          = sgns::testutil::BurnCandidateCore( snapshot.value().burn ).value();
     const auto burn_v1_authorization = burn_v1_core.CanonicalBytes().value();
     auto burn_v1 = std::async( std::launch::async, [&] {
         return store->CommitBurnSuccessor(
@@ -472,17 +441,7 @@ TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirme
     policy_v2.version++;
     policy_v2.expected_previous_hash  = initial.policy.Hash().value();
     policy_v2.authorizing_policy_hash = initial.policy.Hash().value();
-    const auto policy_bytes = policy_v2.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore policy_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "trusted-peer-policy",
-        policy_v2.network_id,
-        sgns::securecrdt::CandidateKind::TrustPolicy,
-        policy_v2.version,
-        policy_v2.expected_previous_hash,
-        policy_v2.authorizing_policy_hash,
-        policy_bytes,
-    };
+    const auto policy_core           = TrustedPeerRegistry::PolicyCandidateCore( policy_v2 ).value();
     const auto policy_authorization = policy_core.CanonicalBytes().value();
 
     auto rejected = store->CommitPolicySuccessor( policy_v2, Sign( policy_authorization ), policy_authorization );
@@ -494,17 +453,7 @@ TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirme
     store = TrustStateStore::Open( path_.string(), 42 ).value();
     EXPECT_EQ( store->LoadAndVerify().value(), initial );
 
-    const auto burn_bytes = initial.burn.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore burn_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "burn-config",
-        initial.burn.network_id,
-        sgns::securecrdt::CandidateKind::BurnConfig,
-        initial.burn.version,
-        initial.burn.expected_previous_hash,
-        initial.burn.authorizing_policy_hash,
-        burn_bytes,
-    };
+    const auto burn_core          = sgns::testutil::BurnCandidateCore( initial.burn ).value();
     const auto burn_authorization = burn_core.CanonicalBytes().value();
     auto confirmed = store->CommitBurnSuccessor( initial.burn, Sign( burn_authorization ), burn_authorization );
     ASSERT_TRUE( confirmed.has_value() );
@@ -530,17 +479,7 @@ TEST_F( TrustStateStoreTest, BurnV2RejectedUntilInitialBurnPeerConfirmed )
     burn_v2.expected_previous_hash  = initial.burn.Hash().value();
     burn_v2.authorizing_policy_hash = initial.policy.Hash().value();
     burn_v2.basis_points            = 250;
-    const auto burn_v2_bytes = burn_v2.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore burn_v2_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "burn-config",
-        burn_v2.network_id,
-        sgns::securecrdt::CandidateKind::BurnConfig,
-        burn_v2.version,
-        burn_v2.expected_previous_hash,
-        burn_v2.authorizing_policy_hash,
-        burn_v2_bytes,
-    };
+    const auto burn_v2_core          = sgns::testutil::BurnCandidateCore( burn_v2 ).value();
     const auto burn_v2_authorization = burn_v2_core.CanonicalBytes().value();
 
     auto rejected = store->CommitBurnSuccessor( burn_v2, Sign( burn_v2_authorization ), burn_v2_authorization );
@@ -552,17 +491,7 @@ TEST_F( TrustStateStoreTest, BurnV2RejectedUntilInitialBurnPeerConfirmed )
     store = TrustStateStore::Open( path_.string(), 42 ).value();
     EXPECT_EQ( store->LoadAndVerify().value(), initial );
 
-    const auto burn_v1_bytes = initial.burn.CanonicalBytes().value();
-    const sgns::securecrdt::CandidateCore burn_v1_core{
-        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
-        "burn-config",
-        initial.burn.network_id,
-        sgns::securecrdt::CandidateKind::BurnConfig,
-        initial.burn.version,
-        initial.burn.expected_previous_hash,
-        initial.burn.authorizing_policy_hash,
-        burn_v1_bytes,
-    };
+    const auto burn_v1_core          = sgns::testutil::BurnCandidateCore( initial.burn ).value();
     const auto burn_v1_authorization = burn_v1_core.CanonicalBytes().value();
     auto confirmed = store->CommitBurnSuccessor( initial.burn, Sign( burn_v1_authorization ), burn_v1_authorization );
     ASSERT_TRUE( confirmed.has_value() );

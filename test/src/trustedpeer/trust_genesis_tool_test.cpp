@@ -331,17 +331,7 @@ TEST_F( TrustGenesisToolTest, ConfirmationTimeoutLeavesSecretAndReportsCriticalR
     network.start = [] { return outcome::success(); };
     network.submit = []( const GenesisManifest &manifest, const auto &, const auto &, auto )
         -> outcome::result<securecrdt::CandidateId>
-    {
-        securecrdt::CandidateCore core;
-        core.domain = "trusted-peer-genesis";
-        core.network_id = manifest.network_id;
-        core.kind = securecrdt::CandidateKind::TrustedPeerGenesis;
-        core.version = manifest.policy_version;
-        core.expected_previous_hash = manifest.Fingerprint().value();
-        core.authorizing_policy_hash = manifest.Fingerprint().value();
-        core.payload = manifest.CanonicalBytes().value();
-        return securecrdt::CandidateId::FromCore( core ).value();
-    };
+    { return securecrdt::CandidateId::FromCore( GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) ).value(); };
     network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
     { return std::optional<ConfirmedTrustSnapshot>{}; };
     EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
@@ -357,17 +347,7 @@ TEST_F( TrustGenesisToolTest, SecretConfirmationFailureRetainsKeyAndProducesNoCo
     network.start = [] { return outcome::success(); };
     network.submit = []( const GenesisManifest &manifest, const auto &, const auto &, auto )
         -> outcome::result<securecrdt::CandidateId>
-    {
-        securecrdt::CandidateCore core;
-        core.domain = "trusted-peer-genesis";
-        core.network_id = manifest.network_id;
-        core.kind = securecrdt::CandidateKind::TrustedPeerGenesis;
-        core.version = manifest.policy_version;
-        core.expected_previous_hash = manifest.Fingerprint().value();
-        core.authorizing_policy_hash = manifest.Fingerprint().value();
-        core.payload = manifest.CanonicalBytes().value();
-        return securecrdt::CandidateId::FromCore( core ).value();
-    };
+    { return securecrdt::CandidateId::FromCore( GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) ).value(); };
     network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
     { return outcome::failure( std::errc::io_error ); };
     EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
