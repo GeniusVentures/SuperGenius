@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="6" failures="0" disabled="0" errors="0" time="136.816" timestamp="2026-09-03T15:34:43.461" name="AllTests">
+  <testsuite name="FinalityFaultNetwork" tests="6" failures="0" disabled="0" skipped="0" errors="0" time="136.816" timestamp="2026-09-03T15:34:43.461">
+    <testcase name="ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1115" status="run" result="completed" time="17.698" timestamp="2026-09-03T15:34:43.461" classname="FinalityFaultNetwork" />
+    <testcase name="SameBurnContentionUsesOneCanonicalSlotAndExactMint" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1217" status="run" result="completed" time="18.696" timestamp="2026-09-03T15:35:01.160" classname="FinalityFaultNetwork" />
+    <testcase name="LateContenderAndPassiveRecipientRemainReceiveOnly" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1324" status="run" result="completed" time="17.654" timestamp="2026-09-03T15:35:19.857" classname="FinalityFaultNetwork" />
+    <testcase name="ActiveVoteRestartDiagnosticClassifiesLifecycleBoundary" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1428" status="run" result="completed" time="10.651" timestamp="2026-09-03T15:35:37.512" classname="FinalityFaultNetwork" />
+    <testcase name="RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1523" status="run" result="completed" time="53.931" timestamp="2026-09-03T15:35:48.164" classname="FinalityFaultNetwork" />
+    <testcase name="PublisherLossAfterPersistenceUsesDeterministicFailover" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1790" status="run" result="completed" time="18.182" timestamp="2026-09-03T15:36:42.097" classname="FinalityFaultNetwork" />
+  </testsuite>
+</testsuites>
