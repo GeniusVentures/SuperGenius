@@ -793,7 +793,7 @@ Plans:
 **Depends on**: GeniusVentures/libp2p#10 (gater + pnet implementation; do not start until complete)
 **Tracking**: GeniusVentures/SuperGenius#367
 **Requirements**: TBD — coverage derived from CONTEXT.md decisions D-01..D-11 (cited per plan in frontmatter `requirements`) plus research-derived PNET-CFG/REG/NETREG/GATE/SCOPE/VAL/PROC
-**Plans**: 13 plans — 8 in 5 waves + 5 gap-closure in 3 waves (post-verification)
+**Plans**: 17 plans — 8 in 5 waves + 5 gap-closure (cycle 1) + 3 gap-closure (cycle 2) + 1 gap-closure (cycle 3)
 
 **Wave 1** (parallel — no file overlap):
 
@@ -846,3 +846,10 @@ Plans:
 > Cycle-2 wave layout: wave 1 = {15-14, 15-16} (disjoint files — CR-G01 touches broadcaster/processing/GeniusNode.cpp one-line-config+key wiring; 15-16 touches NetworkRegistry/SecureCrdt only); wave 2 = {15-15} (GeniusNode.cpp + processing files overlap with 15-14, and the ordering fix layers on the final gate semantics). Design note: the vendored gossip does NOT surface wire signature/key fields to subscribers (Gossip::Message exposes only from/topic/data — gossip.hpp:129-135), so CR-G01 verification uses the owner-sanctioned equivalent authenticated mapping: SGNUS-sealed payloads signed with the same keypair that constructs the gossip host, verified from->key in the gates.
 >
 > Residual dispositions recorded (2026-09-03): IN-02 (public NetworkRegistry ctor null deref) and IN-03 (id/peers unescaped in WriteNetworkConfig — fails closed) remain optional hardening, not planned this cycle; WR-05 (shared_from_this pinning) remains deferred per 15-11; IN-01 folded into 15-15 in passing. Human items from 15-REVERIFICATION: owner acceptance of the CR-G01/CR-G02 disposition is GIVEN by this cycle's fix-both decision; the E2E two-node private-network flow stays recommended-manual (full multi-process GeniusNode E2E is blocked by the pre-existing no-genesis READY-stall base failures per deferred-items §1 — the new forged-from/impostor flow scenes provide the cheap automatable partial coverage).
+
+**Cycle-3 gap-closure wave** (from 15-REVERIFICATION-2.md — sole blocker CR-C2-01, truth 7 "fail-closed throughout"; all cycle-2 blockers/warnings closed and code-verified; 9/10 truths):
+
+Plans:
+- [ ] 15-17-PLAN.md — gap closure: CR-C2-01 fail-closed teardown — deny-all-on-private instead of ClearMembershipFilter in ShutdownNodePolicyServices on the policy-stack failure paths that leave the GlobalDB live (BurnConfig :1084 / RegisterFilters :1094 / NetworkRegistry::New :1137; clear gated to the destruction route where ShutdownNow follows) + SecureCrdt element-filter reject-on-expiry mirroring the candidate filter (WR-C2-01) + stalled-node filter regression in PrivateNodeWithoutBootstrapMembershipFailsClosed (D-06, D-07, PNET-NETREG, PNET-GATE)
+
+> Cycle-3 wave layout: single plan, wave 1 — no file contention (GeniusNode.hpp/.cpp + SecureCrdt.cpp + two test files in one plan; the GeniusNode.cpp serialization hotspot is moot with one plan). CR-C2-01 was created by the interaction of 15-15's interim gate with 15-16's fail-closed New (G-WR-02 made NetworkRegistry::New failure more reachable); the deny-all-on-private fix IS the already-decided posture, so no new owner decision is needed. Residual dispositions unchanged: WR-C2-02/03/04 latent warnings not planned; WR-05 deferred per 15-11; IN-02/IN-03 optional hardening; E2E two-node flow stays recommended-manual (deferred-items §1).
