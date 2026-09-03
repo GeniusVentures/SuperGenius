@@ -1,0 +1,12 @@
+# 12-22 gate run A (round-5 evidence gate re-attempt)
+# pre-run date/time: 2026-09-03 14:31:15 -0300
+# pre-run 1-min load: 1.42 (8 cores; contamination regime is 15-20)
+# build generation: multi_node_finality_fault_test binary epoch 1788455947 (> newest round-5 source 1788455931)
+Internal ctest changing into directory: /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+Test project /Users/henriqueklein/gnus/SuperGenius/build/OSX/Release
+    Start 25: multi_node_finality_fault_test
+1/1 Test #25: multi_node_finality_fault_test ...   Passed  214.81 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) = 214.83 sec

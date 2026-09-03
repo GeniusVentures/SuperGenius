@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="13" failures="1" disabled="0" errors="0" time="232.387" timestamp="2026-09-03T14:35:27.546" name="AllTests">
+  <testsuite name="PublisherObserverRecordClassifier" tests="2" failures="0" disabled="0" skipped="0" errors="0" time="0." timestamp="2026-09-03T14:35:27.546">
+    <testcase name="DistinguishesCompletePassFailurePartialAndForeignEvidence" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1776" status="run" result="completed" time="0." timestamp="2026-09-03T14:35:27.546" classname="PublisherObserverRecordClassifier" />
+    <testcase name="ParsesEligibleTriplesButCannotAuthorizeThem" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1812" status="run" result="completed" time="0." timestamp="2026-09-03T14:35:27.546" classname="PublisherObserverRecordClassifier" />
+  </testsuite>
+  <testsuite name="PublisherObserverProcessChild" tests="1" failures="0" disabled="0" skipped="0" errors="0" time="1.592" timestamp="2026-09-03T14:35:27.548">
+    <testcase name="WriterProbe" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1847" status="run" result="completed" time="1.592" timestamp="2026-09-03T14:35:27.548" classname="PublisherObserverProcessChild" />
+  </testsuite>
+  <testsuite name="PublisherObserverProcessEvidenceCollector" tests="4" failures="1" disabled="0" skipped="0" errors="0" time="96.725" timestamp="2026-09-03T14:35:29.140">
+    <testcase name="CapturesFocusedChildOutputAndRejectsUnattributedEvidence" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1852" status="run" result="completed" time="1.593" timestamp="2026-09-03T14:35:29.140" classname="PublisherObserverProcessEvidenceCollector" />
+    <testcase name="WriterProbeEvidenceNeverQualifies" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1862" status="run" result="completed" time="4.743" timestamp="2026-09-03T14:35:30.734" classname="PublisherObserverProcessEvidenceCollector" />
+    <testcase name="RealSocketPublisherLossOnlyQualifiesWhenTwoRunsMatch" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1877" status="run" result="completed" time="54.264" timestamp="2026-09-03T14:35:35.478" classname="PublisherObserverProcessEvidenceCollector">
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1889&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;Origin()&#x0A;    Which is: &quot;child-writer-probe-or-nonqualifying&quot;&#x0A;  &quot;real-socket-publisher-loss&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1889
+Expected equality of these values:
+  evidence->Origin()
+    Which is: "child-writer-probe-or-nonqualifying"
+  "real-socket-publisher-loss"
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1890&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;Classification()&#x0A;    Which is: &quot;invalid_or_partial_blocked&quot;&#x0A;  &quot;fully_attributed_complete_pass&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1890
+Expected equality of these values:
+  evidence->Classification()
+    Which is: "invalid_or_partial_blocked"
+  "fully_attributed_complete_pass"
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1891&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;CountWeight()&#x0A;    Which is: &apos;\0&apos;&#x0A;  1u&#x0A;    Which is: 1&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1891
+Expected equality of these values:
+  evidence->CountWeight()
+    Which is: '\0'
+  1u
+    Which is: 1
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1892&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;ChildStatus()&#x0A;    Which is: &quot;normal-exit-nonzero&quot;&#x0A;  &quot;normal-exit-0&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1892
+Expected equality of these values:
+  evidence->ChildStatus()
+    Which is: "normal-exit-nonzero"
+  "normal-exit-0"
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1895&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;Boundary()&#x0A;    Which is: &quot;&quot;&#x0A;  &quot;none&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1895
+Expected equality of these values:
+  evidence->Boundary()
+    Which is: ""
+  "none"
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1896&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;State()&#x0A;    Which is: &quot;&quot;&#x0A;  &quot;ready&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1896
+Expected equality of these values:
+  evidence->State()
+    Which is: ""
+  "ready"
+]]></failure>
+      <failure message="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1897&#x0A;Expected equality of these values:&#x0A;  evidence-&gt;Error()&#x0A;    Which is: &quot;&quot;&#x0A;  &quot;none&quot;&#x0A;" type=""><![CDATA[/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp:1897
+Expected equality of these values:
+  evidence->Error()
+    Which is: ""
+  "none"
+]]></failure>
+    </testcase>
+    <testcase name="CollectorOnlyDecisionPersistsNoRepairForReadinessFailure" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1902" status="run" result="completed" time="36.123" timestamp="2026-09-03T14:36:29.743" classname="PublisherObserverProcessEvidenceCollector" />
+  </testsuite>
+  <testsuite name="FinalityFaultNetwork" tests="6" failures="0" disabled="0" skipped="0" errors="0" time="134.068" timestamp="2026-09-03T14:37:05.868">
+    <testcase name="ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="1911" status="run" result="completed" time="16.771" timestamp="2026-09-03T14:37:05.868" classname="FinalityFaultNetwork" />
+    <testcase name="SameBurnContentionUsesOneCanonicalSlotAndExactMint" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="2013" status="run" result="completed" time="16.784" timestamp="2026-09-03T14:37:22.639" classname="FinalityFaultNetwork" />
+    <testcase name="LateContenderAndPassiveRecipientRemainReceiveOnly" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="2120" status="run" result="completed" time="16.774" timestamp="2026-09-03T14:37:39.425" classname="FinalityFaultNetwork" />
+    <testcase name="ActiveVoteRestartDiagnosticClassifiesLifecycleBoundary" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="2224" status="run" result="completed" time="10.677" timestamp="2026-09-03T14:37:56.200" classname="FinalityFaultNetwork" />
+    <testcase name="RestartAtVoteCertificateAndMintDurableBoundariesRecoversExactlyOnce" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="2319" status="run" result="completed" time="54.297" timestamp="2026-09-03T14:38:06.877" classname="FinalityFaultNetwork" />
+    <testcase name="PublisherLossAfterPersistenceUsesDeterministicFailover" file="/Users/henriqueklein/gnus/SuperGenius/test/src/blockchain/multi_node_finality_fault_test.cpp" line="2586" status="run" result="completed" time="18.762" timestamp="2026-09-03T14:39:01.176" classname="FinalityFaultNetwork" />
+  </testsuite>
+</testsuites>
