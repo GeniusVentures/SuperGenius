@@ -1,0 +1,30 @@
+12-22 pre-series crash-report baseline (gate-entry GO recorded same session)
+
+date/time: 2026-09-03 14:29:59 -0300 (2026-09-03T17:29:59Z)
+1-min load: 1.54 (8 cores; well below the 12-12 contamination regime 15-20)
+
+newest ~/Library/Logs/DiagnosticReports/*.ips (ls -t | head -1):
+  processing_core_gating_test-2026-09-02-175810.ips
+  (unrelated binary, yesterday; zero crash reports of any binary today 2026-09-03)
+
+newest multi_node_finality_fault_test .ips (phase-relevant):
+  multi_node_finality_fault_test-2026-09-02-125541.ips
+  (unchanged since the 12-14 pre-round-4 baseline; the Peer::Stop reorder fix
+   of 12-14 is the last crash-relevant change and has run crash-free since)
+
+Port preflight: lsof -nP -iTCP:54601-54634 -sTCP:LISTEN -> empty (exit 1)
+
+Zero-new-crash assertion for the gate series: after each run, the newest .ips
+identity above must still hold; any NEW .ips (any binary) fails the series
+honestly on the crash-freedom clause (T-12-22-03).
+
+Build generation at baseline (clause (b), epochs):
+  sources (round 5): multi_node_finality_fault_test.cpp 1788455874,
+                     graphsync_dagsyncer.cpp 1788455931 (newest)
+  binaries (all > newest source):
+    multi_node_finality_fault_test                      1788455947
+    multi_node_finality_fault_compatibility_smoke_test  1788456574
+    consensus_pending_lifecycle_test                    1788456576
+    transaction_manager_certificate_fallback_test       1788456580
+  (ownership reuses the multi_node binary; consensus_pending_lifecycle_test.cpp
+   1788441494 is a round-4 edit, excluded from the comparison per T-12-20-05)
