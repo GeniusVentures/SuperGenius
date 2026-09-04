@@ -683,7 +683,13 @@ namespace sgns::securecrdt
                     {
                         return strong->FilterSecureCrdtUpdate( entry, element );
                     }
-                    return std::nullopt;
+                    // Expired policy owner (WR-C2-01 / CR-C2-01): SecureCrdt can be
+                    // released while its GlobalDB keeps running (policy-stack
+                    // teardown paths, the healthy-shutdown window), and the owner's
+                    // FilterSecureCrdtUpdate can no longer run. The element is
+                    // DROPPED rather than passed through unfiltered -- the same
+                    // reject-on-expiry policy as the candidate filter below.
+                    return std::vector<sgns::crdt::pb::Element>{};
                 } );
             all_registered = all_registered && registered;
         }

@@ -855,4 +855,119 @@ namespace
         secure_crdt_->Registry().UnregisterIf( "gwr04-fresh-control", &challenger_token );
         EXPECT_FALSE( secure_crdt_->Registry().Resolve( "gwr04-fresh-control" ).has_value() );
     }
+
+    //
+    // (13) Element filter rejects on SecureCrdt expiry (WR-C2-01 / CR-C2-01):
+    //      the RegisterFilters element-filter lambda must treat an EXPIRED
+    //      owner (weak_self) as REJECT -- the same policy as the candidate
+    //      filter -- so once the fixture's SecureCrdt is released while its
+    //      GlobalDB keeps running, a remote-originated unsigned element under
+    //      a registered branch is dropped at datastore ingest instead of
+    //      accepted unfiltered.
+    //
+    //      Pin-release order is binding: the fixture's tpr_ pins secure_crdt_
+    //      BOTH directly (the TrustedPeerRegistry::secure_crdt_ member) and
+    //      via its registered entry's peer_registry capture, which a
+    //      RegisterFilters re-run would capture BY VALUE into a node_->db
+    //      lambda that TrustedPeerRegistry::Unregister (Registry()
+    //      .UnregisterIf only) cannot remove. tpr_ must therefore be
+    //      released BEFORE the re-run, or weak_self never expires. MakeRegistry
+    //      is equally unusable here (its entry capture pins secure_crdt).
+    //
+
+    TEST_F( NetworkRegistryTest, ElementFilterRejectsOnSecureCrdtExpiry )
+    {
+        // (1) A bare entry with a regex-special-free key: null peer_registry
+        //     and owner_token are fine -- the filter lambda never consults
+        //     the entry once weak_self is expired.
+        sgns::securecrdt::SecureCrdtRegistryEntry bare_entry;
+        ASSERT_TRUE( secure_crdt_->Registry().Register( "wrc201-expiry-branch", std::move( bare_entry ) ) );
+
+        // (2) Release the tpr_ pin FIRST, mirroring TearDown's own sequence:
+        //     the TPR entry leaves the SecureCrdt registry now, so the next
+        //     RegisterFilters sees only the bare entry and never installs the
+        //     TPR-pattern lambda that would re-pin TPR -> secure_crdt inside
+        //     node_->db.
+        if ( tpr_ )
+        {
+            tpr_->Unregister();
+            tpr_.reset();
+        }
+
+        // (3) Exactly one element filter installs (SetUp's RegisterFilters ran
+        //     with an empty registry; the TPR entry is gone); the
+        //     AddListenTopic re-run is the 15-09 idempotence.
+        ASSERT_TRUE( secure_crdt_->RegisterFilters() );
+
+        // (4) Attacker node, the (9) two-datastore pattern: local puts on the
+        //     fixture node are created_by_self and never traverse element
+        //     filters, so the unsigned write must arrive as a REMOTE delta.
+        auto attacker = sgns::test::securecrdt::MakeSecureCrdtTestNode( "networkregistry-attacker" );
+        ASSERT_NE( attacker, nullptr );
+        ASSERT_FALSE( attacker->db->AddBroadcastTopic( "networkregistry-test" ).has_error() );
+        attacker->db->AddListenTopic( "networkregistry-test" );
+
+        node_->pubsub->AddPeers( { attacker->pubsub->GetInterfaceAddress() } );
+        EXPECT_TRUE( waitForCondition(
+            [&]()
+            {
+                const auto &a_host = node_->pubsub->GetHost();
+                const auto &b_host = attacker->pubsub->GetHost();
+                return a_host->getNetwork().getConnectionManager().getConnections().size() >= 1
+                    && b_host->getNetwork().getConnectionManager().getConnections().size() >= 1;
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "attacker node did not connect to the registry node";
+
+        // (5) Expire the owner: with tpr_ released and only the bare entry
+        //     registered (its null peer_registry pins nothing), the fixture
+        //     member is the last strong reference -- resetting it expires
+        //     weak_self while node_->db keeps the registered filter
+        //     (SecureCrdt has no destructor that removes filters). TearDown
+        //     tolerates this (its if (tpr_) guard is a no-op and it never
+        //     calls methods on secure_crdt_).
+        secure_crdt_.reset();
+
+        // (6) One delta carrying an unsigned garbage element under the
+        //     registered branch plus a benign control element outside every
+        //     filter pattern.
+        const crdt::HierarchicalKey branch_key( "wrc201-expiry-branch" );
+        const crdt::HierarchicalKey control_key( "wrc201-control" );
+        base::Buffer                garbage;
+        garbage.put( "definitely-not-a-signed-value" );
+        base::Buffer control_value;
+        control_value.put( "wrc201-control" );
+
+        const auto tx = attacker->db->BeginTransaction();
+        ASSERT_NE( tx, nullptr );
+        ASSERT_FALSE( tx->Put( branch_key, garbage ).has_error() );
+        ASSERT_FALSE( tx->Put( control_key, control_value ).has_error() );
+        ASSERT_FALSE( tx->Commit( { "networkregistry-test" } ).has_error() );
+
+        // (7) Control replicates: the attacker's delta reached the fixture
+        //     node and the sync path itself works.
+        ASSERT_TRUE( waitForCondition(
+            [&]()
+            {
+                auto res = node_->db->Get( control_key );
+                return res.has_value() && res.value().toString() == "wrc201-control";
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "control element must replicate (sync path works)";
+
+        // The unsigned branch element never lands: the expired-owner element
+        // filter REJECTED it (WR-C2-01 reject-on-expiry).
+        EXPECT_FALSE( waitForCondition(
+            [&]() { return node_->db->Get( branch_key ).has_value(); },
+            std::chrono::milliseconds( 500 ) ) )
+            << "an expired SecureCrdt owner must reject unsigned remote elements on its registered branches";
+        auto stored = node_->db->Get( branch_key );
+        EXPECT_TRUE( stored.has_error() )
+            << "expired-owner element filter must keep the branch free of unsigned writes";
+
+        // (8) Proven GlobalDB teardown order (TestNodeCollection): shutdown
+        //     before stopping the attacker's io thread.
+        attacker->db->ShutdownNow();
+        attacker.reset();
+    }
 } // namespace
