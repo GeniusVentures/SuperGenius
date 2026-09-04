@@ -10,6 +10,7 @@
 #ifndef SGNS_TEST_SECURECRDT_TEST_NODE_HPP
 #define SGNS_TEST_SECURECRDT_TEST_NODE_HPP
 
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/dll.hpp>
 #include <boost/filesystem.hpp>
@@ -75,6 +76,8 @@ groups:
     struct SecureCrdtTestNode
     {
         std::string                                      basePath;
+        /// Application-work pool, mirroring GeniusNode::io_. Consumers that must not
+        /// block the libp2p host thread (TransactionManager) run here.
         std::shared_ptr<boost::asio::io_context>         io;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub;
         std::shared_ptr<sgns::crdt::GlobalDB>            db;
@@ -88,6 +91,14 @@ groups:
 
         ~SecureCrdtTestNode()
         {
+            // GossipPubSub::Stop() releases the libp2p host and its io_context, and
+            // CRDT/GraphSync teardown still talks to both, so the DB has to be shut
+            // down first. Same order as globaldb_integration.cpp's TestNodeCollection.
+            if ( db )
+            {
+                db->ShutdownNow();
+            }
+            db.reset();
             if ( io )
             {
                 io->stop();
@@ -100,7 +111,6 @@ groups:
             {
                 pubsub->Stop();
             }
-            db.reset();
             io.reset();
         }
     };
@@ -126,9 +136,13 @@ groups:
             return nullptr;
         }
 
+        // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+        // single-threaded per host, so the scheduler has to run on the host's
+        // io_context. A private one here races yamux's WriteQueue. `io` stays as the
+        // application pool, the same split GeniusNode uses.
         auto io        = std::make_shared<boost::asio::io_context>();
         auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
             libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
         auto graphsyncnetwork =
             std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
@@ -148,7 +162,14 @@ groups:
         node->pubsub    = pubsub;
         node->db        = std::move( globaldb_ret.value() );
         node->db->Start();
-        node->ioThread = std::thread( [io]() { io->run(); } );
+        // The scheduler no longer keeps `io` busy, so without a work guard run() would
+        // return before any application work is posted to it.
+        node->ioThread = std::thread(
+            [io]()
+            {
+                auto guard = boost::asio::make_work_guard( *io );
+                io->run();
+            } );
         return node;
     }
 } // namespace sgns::test::securecrdt
