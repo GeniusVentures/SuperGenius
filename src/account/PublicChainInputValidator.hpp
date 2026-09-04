@@ -174,10 +174,10 @@ namespace sgns
          * @return True when @p tx is present, @p params are non-empty, and the source reference verification succeeds.
          */
         IInputValidator::WitnessVerdict ValidateWitness(
-            const ConsensusSubject                   &subject,
-            const std::shared_ptr<GeniusTransaction> &tx,
-            const UTXOTxParameters                   &params,
-            const std::shared_ptr<Blockchain>        &blockchain ) const override;
+            const ConsensusSubject  &subject,
+            const GeniusTransaction &tx,
+            const UTXOTxParameters  &params,
+            const Blockchain        &blockchain ) const override;
 
         /**
          * @brief Public-chain validation does not require local UTXO witness data.
@@ -288,7 +288,7 @@ namespace sgns
          * @param[in] source_reference Public-chain transaction hash or external source reference.
          * @return True when the weighted consensus threshold is met.
          */
-        bool VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
+        bool VerifyPublicChainSmartContract( const GeniusTransaction &tx,
                                              const std::string                        &source_reference ) const;
 
         /**
@@ -304,8 +304,8 @@ namespace sgns
          * @param[in] source_reference Public-chain transaction hash or external source reference.
          * @return Claim-bound verification evidence.
          */
-        RpcVerificationEvidence GatherVerificationEvidence( const std::shared_ptr<GeniusTransaction> &tx,
-                                                            const std::string &source_reference ) const;
+        RpcVerificationEvidence GatherVerificationEvidence( const GeniusTransaction &tx,
+                                                            const std::string       &source_reference ) const;
 
         /// @brief Records evidence for a claim, evicting the oldest entry when full.
         void StoreEvidence( const std::string &claim_key, RpcVerificationEvidence evidence ) const;
