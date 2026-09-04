@@ -623,6 +623,71 @@ namespace
             return manager;
         }
 
+        // Builds a fully signed certificate whose proposal references an arbitrary
+        // registry CID/epoch (used for unsynced-registry Stalled evidence).  With
+        // tamper_subject the embedded subject payload hash is corrupted so the
+        // certificate becomes structurally invalid (ValidateSubject fails).
+        sgns::ConsensusManager::Certificate MakeCertificateForRegistry(
+            const std::shared_ptr<sgns::GeniusAccount> &account,
+            const std::string                          &registry_cid,
+            uint64_t                                    nonce,
+            const std::string                          &tx_hash,
+            bool                                        tamper_subject = false )
+        {
+            const auto now_ms = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() );
+
+            auto subject = sgns::ConsensusManager::CreateNonceSubject(
+                account->GetAddress(), nonce, tx_hash, sgns::EmbeddedTransaction{}, std::nullopt, std::nullopt );
+            EXPECT_TRUE( subject.has_value() );
+            if ( tamper_subject )
+            {
+                subject.value().set_payload_hash( std::string( 32, '\x01' ) );
+            }
+
+            sgns::ConsensusManager::Proposal proposal;
+            *proposal.mutable_subject() = subject.value();
+            proposal.set_proposer_id( account->GetAddress() );
+            proposal.set_registry_cid( registry_cid );
+            proposal.set_registry_epoch( 0 );
+            proposal.set_timestamp( now_ms );
+            // Replicates ConsensusManager::CreateProposalId (private static): hash the
+            // signing bytes of the proposal with its id cleared.
+            sgns::ConsensusManager::Proposal id_copy = proposal;
+            id_copy.clear_proposal_id();
+            auto id_signing = sgns::ConsensusManager::ProposalSigningBytes( id_copy );
+            EXPECT_TRUE( id_signing.has_value() );
+            auto id_hash = sgns::crypto::sha2_256( id_signing.value().data(), id_signing.value().size() );
+            proposal.set_proposal_id( sgns::base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
+            auto proposal_signing = sgns::ConsensusManager::ProposalSigningBytes( proposal );
+            EXPECT_TRUE( proposal_signing.has_value() );
+            auto proposal_signature = account->Sign( proposal_signing.value() );
+            proposal.set_signature( proposal_signature.data(), proposal_signature.size() );
+
+            sgns::ConsensusManager::Vote vote;
+            vote.set_proposal_id( proposal.proposal_id() );
+            vote.set_voter_id( account->GetAddress() );
+            vote.set_approve( true );
+            vote.set_timestamp( now_ms );
+            auto vote_signing = sgns::ConsensusManager::VoteSigningBytes( vote );
+            EXPECT_TRUE( vote_signing.has_value() );
+            auto vote_signature = account->Sign( vote_signing.value() );
+            vote.set_signature( vote_signature.data(), vote_signature.size() );
+
+            sgns::ConsensusManager::Certificate certificate;
+            certificate.set_proposal_id( proposal.proposal_id() );
+            certificate.set_registry_cid( registry_cid );
+            certificate.set_registry_epoch( 0 );
+            certificate.set_total_weight( 50000 );
+            certificate.set_approved_weight( 50000 );
+            certificate.set_timestamp( now_ms );
+            *certificate.add_votes() = vote;
+            *certificate.mutable_proposal() = proposal;
+            return certificate;
+        }
+
         struct MultiValidatorNode
         {
             std::string                                      path;
@@ -1336,6 +1401,89 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
         node.pubsub->Stop();
     }
     sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, FilterCertificateParksStalledCertificateForRegistrySync )
+{
+    /**
+     * Given a structurally valid certificate that references a registry snapshot
+     * this node has not synced, When it arrives through key-aware CRDT ingress,
+     * Then FilterCertificate parks it instead of dropping it: validation is
+     * Stalled, the authoritative slot lookup keeps reporting retry-later, and the
+     * work journal keeps the record retryable — while a structurally invalid
+     * certificate is still dropped and permanently-invalid journal work is
+     * retired (Reject -> MarkDone) instead of spinning.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    // Valid certificate bound to an unsynced registry CID: the only deferred
+    // dependency is the registry snapshot.
+    auto stalled_certificate = MakeCertificateForRegistry( account, "unsynced-registry-cid", 92, "0xstalled-registry-sync" );
+    const auto stalled_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( stalled_certificate );
+    ASSERT_FALSE( stalled_key.empty() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, stalled_certificate ),
+               sgns::ConsensusManager::Check::Stalled );
+
+    std::string stalled_serialized;
+    ASSERT_TRUE( stalled_certificate.SerializeToString( &stalled_serialized ) );
+    sgns::crdt::pb::Element stalled_element;
+    stalled_element.set_key( stalled_key );
+    stalled_element.set_value( stalled_serialized );
+    const auto stalled_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, stalled_element );
+    EXPECT_FALSE( stalled_filter.has_value() ); // parked, not dropped
+
+    // A structurally invalid certificate (corrupted subject payload hash) is dropped.
+    auto invalid_certificate = MakeCertificateForRegistry(
+        account, "unsynced-registry-cid", 93, "0xstalled-registry-sync-invalid", true );
+    const auto invalid_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( invalid_certificate );
+    ASSERT_FALSE( invalid_key.empty() );
+    std::string invalid_serialized;
+    ASSERT_TRUE( invalid_certificate.SerializeToString( &invalid_serialized ) );
+    sgns::crdt::pb::Element invalid_element;
+    invalid_element.set_key( invalid_key );
+    invalid_element.set_value( invalid_serialized );
+    const auto invalid_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, invalid_element );
+    ASSERT_TRUE( invalid_filter.has_value() );
+    EXPECT_TRUE( invalid_filter->empty() );
+
+    // The parked record is not yet an approved authority: slot lookup errors and
+    // the accepted-scan reports retry-later instead of a final decision.
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, stalled_key, stalled_serialized );
+    const auto stalled_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( stalled_certificate.proposal() );
+    auto stored = manager->GetCertificateBySlot( stalled_slot );
+    EXPECT_TRUE( stored.has_error() );
+    auto accepted = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, stalled_slot );
+    ASSERT_TRUE( accepted.has_error() );
+    EXPECT_EQ( accepted.error(), std::errc::resource_unavailable_try_again );
+
+    // Journal-driven recovery keeps the parked certificate retryable...
+    sgns::base::Buffer stalled_buffer;
+    stalled_buffer.put( stalled_serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ stalled_key, std::move( stalled_buffer ) } );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, stalled_key ) );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, stalled_key ) );
+
+    // ...while permanently invalid journal work is retired instead of spinning:
+    // the Reject -> MarkDone split removes the entry entirely, unlike the parked
+    // Stalled record which stays journaled for the next tick.
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, invalid_key, invalid_serialized );
+    sgns::base::Buffer invalid_buffer;
+    invalid_buffer.put( invalid_serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ invalid_key, std::move( invalid_buffer ) } );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, invalid_key ) );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, invalid_key ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, invalid_key ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
 TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnApprovedBoundCertificate )
