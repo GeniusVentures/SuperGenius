@@ -486,7 +486,8 @@ jobs:
 
       - name: Pick ctest parallelism (Windows)
         if: ${{ env.RUN_TESTS == 'true' && runner.os == 'Windows' }}
-        shell: pwsh
+        # Self-hosted Windows runner has Windows PowerShell but no pwsh.
+        shell: powershell
         run: Add-Content -Path $env:GITHUB_ENV -Value "CTEST_JOBS=$([Math]::Max(8, [Environment]::ProcessorCount))"
 
       - name: Run tests
