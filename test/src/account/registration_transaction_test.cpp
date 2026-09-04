@@ -251,8 +251,8 @@ namespace
             tm_ = TransactionManager::New(
                 db_, io_, account_,
                 blockchain_,
-                true,  // full_node — enables isolated boot in CheckNonce() when FetchNetworkNonce fails
-                0,     // subnet_id
+                sgns::NodeType::Full, // enables isolated boot in CheckNonce() when FetchNetworkNonce fails
+                0,                    // subnet_id
                 kTimestampTolerance,
                 kMutabilityWindow );
             assert( tm_ != nullptr );

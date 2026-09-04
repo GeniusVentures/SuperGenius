@@ -4471,7 +4471,7 @@ namespace sgns
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Parent-child authority check failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
+                                               node_type_m,
                                                __func__,
                                                tx->GetHash() );
             return ConsensusManager::ValidationResult::Reject();

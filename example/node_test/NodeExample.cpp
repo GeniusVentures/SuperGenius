@@ -369,10 +369,10 @@ static void cmd_registerchild( const std::vector<std::string> &args, std::shared
         return;
     }
 
-    auto dev_cut = sgns::TokenAmount::ParseMinions( DEV_CONFIG.Cut );
+    auto dev_cut = sgns::TokenAmount::ParseMinions( DEV_CONFIG.DevFraction );
     if ( !dev_cut )
     {
-        logger->error( "Failed to parse DEV_CONFIG.Cut '{}': {}", DEV_CONFIG.Cut, dev_cut.error().message() );
+        logger->error( "Failed to parse DEV_CONFIG.DevFraction '{}': {}", DEV_CONFIG.DevFraction, dev_cut.error().message() );
         return;
     }
 
