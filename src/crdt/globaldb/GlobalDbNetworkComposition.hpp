@@ -5,11 +5,8 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
-#include <boost/asio/executor_work_guard.hpp>
-#include <boost/asio/io_context.hpp>
 
 #include "base/logger.hpp"
 #include "outcome/outcome.hpp"
@@ -75,7 +72,7 @@ namespace sgns::crdt
         GlobalDbNetworkComposition &operator=( const GlobalDbNetworkComposition & ) = delete;
         ~GlobalDbNetworkComposition();
 
-        /** @brief Starts PubSub, GlobalDB, and the owned scheduler context. */
+        /** @brief Starts PubSub and GlobalDB; GraphSync runs on PubSub's io_context. */
         outcome::result<void> Start();
 
         /** @brief Stops and releases owned resources in reverse dependency order. */
@@ -97,8 +94,6 @@ namespace sgns::crdt
             int                      low_water{ 150 };
         };
 
-        using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-
         GlobalDbNetworkComposition( Config config, NetworkConfig network_config );
         static outcome::result<NetworkConfig> LoadNetworkConfig( const std::string &path, const base::Logger &logger );
 
@@ -108,14 +103,11 @@ namespace sgns::crdt
         mutable std::mutex mutex_;
         bool               started_{ false };
 
-        std::shared_ptr<boost::asio::io_context>                        io_;
-        std::unique_ptr<WorkGuard>                                      work_guard_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubsub_;
         std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_network_;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> request_id_generator_;
         std::shared_ptr<GlobalDB>                                       db_;
-        std::thread                                                     io_thread_;
     };
 } // namespace sgns::crdt
 
