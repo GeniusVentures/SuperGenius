@@ -434,14 +434,17 @@ namespace sgns
          * @param[in] target_registry_epoch Target registry epoch after applying batch.
          * @param[in] certificate_count Number of certificates in the batch.
          * @param[in] batch_root Merkle/root hash of the batch payload.
+         * @param[in] member_slots Canonical certificate slots of the batch members
+         *                         (size must equal certificate_count and none may be empty).
          * @return Constructed subject or an error.
          */
-        static outcome::result<Subject> CreateRegistryBatchSubject( const std::string &account_id,
-                                                                    const std::string &base_registry_cid,
-                                                                    uint64_t           base_registry_epoch,
-                                                                    uint64_t           target_registry_epoch,
-                                                                    uint32_t           certificate_count,
-                                                                    const std::string &batch_root );
+        static outcome::result<Subject> CreateRegistryBatchSubject( const std::string              &account_id,
+                                                                    const std::string              &base_registry_cid,
+                                                                    uint64_t                        base_registry_epoch,
+                                                                    uint64_t                        target_registry_epoch,
+                                                                    uint32_t                        certificate_count,
+                                                                    const std::string              &batch_root,
+                                                                    const std::vector<std::string> &member_slots );
         /**
          * @brief Creates a generic typed subject for application-owned payload schemas.
          * @param[in] account_id Account identifier bound to the subject.
@@ -501,6 +504,24 @@ namespace sgns
          */
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
+        /**
+         * @brief Computes the proposal slot key used for conflict resolution.
+         * @param[in] proposal Proposal to map to a slot.
+         * @return Slot key.
+         */
+        static std::string GetSlotKey( const Proposal &proposal );
+        /**
+         * @brief Computes the authoritative canonical-slot certificate key.
+         * @param[in] certificate Certificate whose embedded proposal supplies the slot.
+         * @return `/cert/<canonical-slot>` when the slot is available, otherwise empty.
+         */
+        static std::string GetExpectedCertificateSlotKey( const Certificate &certificate );
+        /**
+         * @brief Computes the deterministic batch root over member identifiers.
+         * @param[in] members Member identifiers (canonical certificate slots) in the batch.
+         * @return Lowercase-hex SHA-256 of the newline-joined sorted members, or an error.
+         */
+        static outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &members );
         /**
          * @brief Retrieves the validated authoritative certificate for a canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
@@ -700,12 +721,6 @@ namespace sgns
          */
         void FireProposalCleanupCallbacks( const Proposal &proposal );
         /**
-         * @brief Computes proposal slot key used for conflict resolution.
-         * @param[in] proposal Proposal to map to a slot.
-         * @return Slot key.
-         */
-        static std::string GetSlotKey( const Proposal &proposal );
-        /**
          * @brief Compares competing proposals for the same slot.
          * @param[in] candidate Candidate proposal.
          * @param[in] current Current best proposal.
@@ -904,12 +919,6 @@ namespace sgns
          * @return `true` when the supplied key matches the embedded proposal slot.
          */
         static bool ValidateCertificateKey( const Certificate &certificate, std::string_view key );
-        /**
-         * @brief Computes the authoritative canonical-slot certificate key.
-         * @param[in] certificate Certificate whose embedded proposal supplies the slot.
-         * @return `/cert/<canonical-slot>` when the slot is available, otherwise empty.
-         */
-        static std::string GetExpectedCertificateSlotKey( const Certificate &certificate );
         /**
          * @brief Computes deterministic proposal identifier.
          * @param[in] proposal Proposal to identify.
