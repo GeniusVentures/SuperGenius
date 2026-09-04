@@ -169,9 +169,6 @@ namespace sgns::crdt
 
         auto io         = std::make_shared<boost::asio::io_context>();
         auto work_guard = std::make_unique<WorkGuard>( io->get_executor() );
-        auto scheduler  = std::make_shared<libp2p::basic::SchedulerImpl>(
-            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
-            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
 
         auto keypair_result = KeyPairFileStorage( config_.database_path + "/pubsub" ).GetKeyPair();
         if ( keypair_result.has_error() )
@@ -203,6 +200,12 @@ namespace sgns::crdt
 
         pubsub->GetHost()->getConnectionManagerConfig().high_water = network_config_.high_water;
         pubsub->GetHost()->getConnectionManagerConfig().low_water  = network_config_.low_water;
+
+        // GraphSync writes to libp2p streams from its scheduler thread; libp2p is
+        // single-threaded per host, so the scheduler must run on the host's io_context.
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
 
         auto graphsync_network = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
         auto request_id_generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
