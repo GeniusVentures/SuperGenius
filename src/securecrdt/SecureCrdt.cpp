@@ -85,11 +85,11 @@ namespace sgns::securecrdt
         }
 
         outcome::result<std::vector<StoredCandidateRecord>> QueryCandidateRecords(
-            const std::shared_ptr<sgns::crdt::GlobalDB> &db,
-            const std::string                           &prefix,
-            const std::string                           &domain )
+            sgns::crdt::GlobalDB &db,
+            const std::string    &prefix,
+            const std::string    &domain )
         {
-            auto query = db->QueryKeyValues( prefix );
+            auto query = db.QueryKeyValues( prefix );
             if ( query.has_error() )
             {
                 return query.error();
@@ -99,7 +99,7 @@ namespace sgns::securecrdt
             records.reserve( query.value().size() );
             for ( const auto &[raw_key, value] : query.value() )
             {
-                const auto logical_key = db->KeyToString( raw_key );
+                const auto logical_key = db.KeyToString( raw_key );
                 if ( logical_key.has_error() )
                 {
                     continue;
@@ -407,7 +407,7 @@ namespace sgns::securecrdt
         // Scope the prefix scan to this one candidate instead of decoding the
         // whole domain subtree; this runs per approval element on the sync path.
         auto stored = QueryCandidateRecords(
-            db_,
+            *db_,
             sgns::crdt::HierarchicalKey( CandidateDomainPrefix( id.domain ) )
                 .ChildString( "v" + std::to_string( id.version ) )
                 .ChildString( id.content_hash )
@@ -453,7 +453,7 @@ namespace sgns::securecrdt
             }
         }
 
-        auto stored = QueryCandidateRecords( db_, CandidateDomainPrefix( domain ), domain );
+        auto stored = QueryCandidateRecords( *db_, CandidateDomainPrefix( domain ), domain );
         if ( stored.has_error() )
         {
             return stored.error();
@@ -578,7 +578,7 @@ namespace sgns::securecrdt
             return *record;
         }
 
-        auto stored = QueryCandidateRecords( db_, CandidateDomainPrefix( key->id.domain ), key->id.domain );
+        auto stored = QueryCandidateRecords( *db_, CandidateDomainPrefix( key->id.domain ), key->id.domain );
         if ( stored.has_error() )
         {
             return stored.error();

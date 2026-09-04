@@ -633,7 +633,7 @@ namespace sgns
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
-            outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<GeniusTransaction> & );
+            outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
 
@@ -696,8 +696,8 @@ namespace sgns
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
-        static outcome::result<std::string> GetExpectedProofKey( const std::string                        &tx_key,
-                                                                 const std::shared_ptr<GeniusTransaction> &tx );
+        static outcome::result<std::string> GetExpectedProofKey( const std::string       &tx_key,
+                                                                 const GeniusTransaction *tx );
 
         /**
          * @brief Inverse of GetExpectedProofKey — derives the tx key from a proof key.
@@ -712,16 +712,17 @@ namespace sgns
         /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.
          */
-        outcome::result<void> ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> ParseTransaction( const GeniusTransaction &tx );
 
         /**
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
-        outcome::result<void> RevertTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<GeniusTransaction> &tx ) const;
-        std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        outcome::result<void> RevertTransaction( const GeniusTransaction &tx );
+        bool                  DoesTransactionMutateUTXOState( const GeniusTransaction &tx ) const;
+        std::unordered_set<std::string> CollectTouchedAccounts( const GeniusTransaction &tx ) const;
         AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
         void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
+        void UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -914,15 +915,17 @@ namespace sgns
          * a burn left RESERVED reads as "mint in flight" forever, stalling the bridge
          * catch-up cursor and permanently stranding the burned tokens.
          */
-        void ReleaseBridgeMintReservation( const std::shared_ptr<GeniusTransaction> &tx );
+        void ReleaseBridgeMintReservation( const GeniusTransaction &tx );
         bool EnterFinalityFaultBarrier();
 
-        outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> RevertTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> ParseTransferTransaction( const GeniusTransaction &tx );
+        outcome::result<void> ParseMintTransaction( const GeniusTransaction &tx );
+        outcome::result<void> ParseEscrowTransaction( const GeniusTransaction &tx );
+        outcome::result<void> RevertTransferTransaction( const GeniusTransaction &tx );
+        outcome::result<void> RevertMintTransaction( const GeniusTransaction &tx );
+        outcome::result<void> RevertEscrowTransaction( const GeniusTransaction &tx );
+        outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
+        outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
         /**
          * @brief No-op parser for "registration" tx type (Phase 3 Plan 04 fix).
          * @details RegistrationTransaction carries no UTXO parameters — its CRDT
@@ -938,12 +941,12 @@ namespace sgns
          *          while implementing Plan 04's CONS-02 certification test.
          * @return Always outcome::success() — no state to mutate.
          */
-        outcome::result<void> ParseRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> ParseRegistrationTransaction( const GeniusTransaction &tx );
         /**
          * @brief No-op reverter for "registration" tx type — see ParseRegistrationTransaction.
          * @return Always outcome::success() — no state to mutate.
          */
-        outcome::result<void> RevertRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> RevertRegistrationTransaction( const GeniusTransaction &tx );
         /**
          * @brief Parser for "revoke" tx type — applies the RevokeTx's effect to the target
          *        reg/{child_addr} record (Phase 5).
@@ -964,7 +967,7 @@ namespace sgns
          *         or already-registration-typed-mismatched reg/{child_addr} record (logs and returns
          *         success) rather than failing the whole confirmed-transaction pipeline.
          */
-        outcome::result<void> ParseRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> ParseRevokeTransaction( const GeniusTransaction &tx );
         /**
          * @brief No-op reverter for "revoke" tx type (Phase 5).
          * @details Reverting a Revoke would require snapshotting the PRIOR reg/ state, which is
@@ -973,7 +976,7 @@ namespace sgns
          *          child remains protected, not accidentally re-exposed to main's authority.
          * @return Always outcome::success() — no state to mutate.
          */
-        outcome::result<void> RevertRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        outcome::result<void> RevertRevokeTransaction( const GeniusTransaction &tx );
 
         static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers;
@@ -1111,27 +1114,25 @@ namespace sgns
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
-        ConsensusManager::ValidationResult ValidateTransactionForConsensus(
-            const std::shared_ptr<GeniusTransaction> &tx ) const;
+        ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
         bool                   CheckParentChildAuthority( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const;
-        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
-            const std::shared_ptr<GeniusTransaction> &tx ) const;
-        std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<GeniusTransaction> &tx ) const;
-        bool                       ApplyTransactionToUTXOSnapshot( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                   std::vector<GeniusUTXO>                  &snapshot ) const;
-        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                   &subject,
-                                                                const std::shared_ptr<GeniusTransaction> &tx ) const;
+        bool                   CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
+        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
+        std::optional<UTXOWitness> BuildUTXOWitness( const GeniusTransaction &tx ) const;
+        bool                       ApplyTransactionToUTXOSnapshot( const GeniusTransaction &tx,
+                                                                   std::vector<GeniusUTXO> &snapshot ) const;
+        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject  &subject,
+                                                                const GeniusTransaction &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus                         new_status );
-        bool                  HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
+                                                      TransactionStatus new_status );
+        bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
 
@@ -1168,8 +1169,15 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        std::string               GetValidationChainId( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        std::string               GetValidationChainId( const GeniusTransaction &tx ) const;
         const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
+        struct InputValidatorSelection
+        {
+            std::string            chain_id;
+            const IInputValidator &validator;
+        };
+
+        InputValidatorSelection SelectInputValidator( const GeniusTransaction &tx ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
     };

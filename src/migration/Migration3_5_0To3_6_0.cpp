@@ -92,10 +92,16 @@ namespace sgns
             return outcome::success();
         }
 
+        if ( !db_3_6_0_ )
+        {
+            logger_->error( "Target {} DB not initialized", ToVersion() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
-        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( *db_3_5_1_, *db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( *db_3_5_1_, *db_3_6_0_ ) );
 
         auto                            crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
