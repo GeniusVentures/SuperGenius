@@ -2663,10 +2663,21 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( ValidateCertificate( certificate ) != Check::Approve )
+        const auto validation = ValidateCertificate( certificate );
+        if ( validation == Check::Reject )
         {
-            ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
+            ConsensusManagerLogger()->error( "{}: validation rejected, dropping: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
+        }
+        if ( validation == Check::Stalled )
+        {
+            // The certificate is exactly key-bound and structurally validated; only
+            // its registry-dependent quorum is deferred.  Park it (CertificateReceived
+            // journals it) so the round-timer recovery re-validates from durable
+            // readback until the referenced registry snapshot syncs.
+            ConsensusManagerLogger()->info( "{}: validation stalled, parking certificate for registry-sync retry: {}",
+                                            __func__,
+                                            element.key() );
         }
 
         auto existing = db_->Get( { element.key() } );
@@ -2684,12 +2695,21 @@ namespace sgns
         Certificate existing_certificate;
         const auto existing_serialized = std::string( existing.value().toString() );
         if ( !existing_certificate.ParseFromString( existing_serialized ) ||
-             !ValidateCertificateKey( existing_certificate, element.key() ) ||
-             ValidateCertificate( existing_certificate ) != Check::Approve )
+             !ValidateCertificateKey( existing_certificate, element.key() ) )
         {
             ConsensusManagerLogger()->error( "{}: invalid existing certificate, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
         }
+        const auto existing_validation = ValidateCertificate( existing_certificate );
+        if ( existing_validation == Check::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: existing certificate rejected validation, rejecting: {}",
+                                             __func__,
+                                             element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+        // A stored Approve-or-Stalled value falls through to the unchanged
+        // lower-hash ordering below.
 
         const auto candidate_mint_hash = VerifiedMintV2TransactionHash( certificate );
         const auto existing_mint_hash  = VerifiedMintV2TransactionHash( existing_certificate );
@@ -3831,10 +3851,23 @@ namespace sgns
             }
             Certificate certificate;
             if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
-                 !ValidateCertificateKey( certificate, entry.key ) ||
-                 ValidateCertificate( certificate ) != Check::Approve )
+                 !ValidateCertificateKey( certificate, entry.key ) )
             {
+                // The durable record is permanently invalid; retire the work instead
+                // of spinning on it every tick.
+                certificate_work_journal_->MarkDone( entry.key );
+                continue;
+            }
+            const auto validation = ValidateCertificate( certificate );
+            if ( validation == Check::Stalled )
+            {
+                // Registry-dependent quorum still deferred; keep the retry loop alive.
                 certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
+                continue;
+            }
+            if ( validation != Check::Approve )
+            {
+                certificate_work_journal_->MarkDone( entry.key );
                 continue;
             }
 
