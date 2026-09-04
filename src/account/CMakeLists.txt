@@ -81,7 +81,6 @@ set(GENIUS_NODE_SOURCES
     PublicChainInputValidator.cpp
     TransactionManager.cpp
     TokenAmount.cpp
-    GeniusNode.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
 )
@@ -125,8 +124,14 @@ set(GENIUS_NODE_LIBS
 )
 
 
+# Only GeniusNode.cpp differs between the production and test libraries
+# (SGNS_CONSOLE_LOG_TESTS below), so everything else is compiled once here.
+add_library(genius_node_objs OBJECT ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node_objs ${GENIUS_NODE_LIBS})
+target_include_directories(genius_node_objs PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
 # Production library — uses OS keychain (Apple/Windows/Linux secure storage)
-add_library(genius_node ${GENIUS_NODE_SOURCES})
+add_library(genius_node GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs>)
 target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
 target_include_directories(
     genius_node
@@ -134,8 +139,9 @@ target_include_directories(
     ${AsyncIOManager_INCLUDE_DIR}
 )
 # Test library — uses in-memory secure storage via DI factory (no keychain prompts)
-add_library(genius_node_test ${GENIUS_NODE_SOURCES})
+add_library(genius_node_test GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs>)
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
+target_include_directories(genius_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 # SGNS_CONSOLE_LOG_TESTS is consumed by GeniusNode.cpp (InitLoggers), which
 # compiles into THIS library — a definition on the test executable alone never
 # reached it. It forces console sinks (no per-node sgnslog2.log, which pins
@@ -145,11 +151,14 @@ target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 target_compile_definitions(genius_node_test PRIVATE SGNS_CONSOLE_LOG_TESTS)
 
 add_dependencies(genius_node rlp)
+add_dependencies(genius_node_objs rlp)
 
 if(MSVC AND NOT CLANG)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
+    target_compile_options(genius_node_objs PRIVATE /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
+    target_compile_options(genius_node_objs PRIVATE -fconstexpr-steps=10000000)
 endif()
 
 # Install production library only
