@@ -109,6 +109,34 @@ namespace sgns
             }
             return nonce.value().tx_hash();
         }
+
+        // Registry batch subjects must carry the canonical certificate slot of every
+        // member; hash-only batch subjects fail closed (CERT-02 slot authority).
+        // Callers log the rejection reason.
+        bool RegistryBatchSubjectMembersValid( const RegistryBatchSubject &payload )
+        {
+            const auto slot_count = payload.member_certificate_slots_size();
+            if ( slot_count == 0 || static_cast<uint32_t>( slot_count ) != payload.certificate_count() )
+            {
+                return false;
+            }
+            std::vector<std::string> slots;
+            slots.reserve( static_cast<size_t>( slot_count ) );
+            for ( const auto &slot : payload.member_certificate_slots() )
+            {
+                if ( slot.empty() )
+                {
+                    return false;
+                }
+                slots.push_back( slot );
+            }
+            auto root = ConsensusManager::ComputeBatchRoot( slots );
+            if ( root.has_error() || root.value() != std::string( payload.batch_root() ) )
+            {
+                return false;
+            }
+            return true;
+        }
     } // namespace
 
     base::Logger ConsensusManagerLogger()
@@ -3184,13 +3212,35 @@ const auto &proposal_id = proposal.proposal_id();
         return subject;
     }
 
+    outcome::result<std::string> ConsensusManager::ComputeBatchRoot( const std::vector<std::string> &members )
+    {
+        ConsensusManagerLogger()->trace( "{}: called members={}", __func__, members.size() );
+        if ( members.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: empty member list", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        std::vector<std::string> sorted_members( members.begin(), members.end() );
+        std::sort( sorted_members.begin(), sorted_members.end() );
+        std::string payload;
+        payload += sorted_members[0];
+        for ( size_t i = 1; i < sorted_members.size(); ++i )
+        {
+            payload.push_back( '\n' );
+            payload += sorted_members[i];
+        }
+        auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
+        return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+    }
+
     outcome::result<ConsensusManager::Subject> ConsensusManager::CreateRegistryBatchSubject(
-        const std::string &account_id,
-        const std::string &base_registry_cid,
-        uint64_t           base_registry_epoch,
-        uint64_t           target_registry_epoch,
-        uint32_t           certificate_count,
-        const std::string &batch_root )
+        const std::string              &account_id,
+        const std::string              &base_registry_cid,
+        uint64_t                        base_registry_epoch,
+        uint64_t                        target_registry_epoch,
+        uint32_t                        certificate_count,
+        const std::string              &batch_root,
+        const std::vector<std::string> &member_slots )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} base_epoch={} target_epoch={} certificates={}",
                                          __func__,
@@ -3198,6 +3248,22 @@ const auto &proposal_id = proposal.proposal_id();
                                          base_registry_epoch,
                                          target_registry_epoch,
                                          certificate_count );
+        if ( member_slots.empty() || member_slots.size() != static_cast<size_t>( certificate_count ) )
+        {
+            ConsensusManagerLogger()->error( "{}: member slot list must match certificate_count={} slots={}",
+                                             __func__,
+                                             certificate_count,
+                                             member_slots.size() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        for ( const auto &slot : member_slots )
+        {
+            if ( slot.empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: member slot list contains an empty slot", __func__ );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+        }
         Subject subject;
         subject.set_account_id( account_id );
         RegistryBatchSubject payload;
@@ -3206,8 +3272,16 @@ const auto &proposal_id = proposal.proposal_id();
         payload.set_target_registry_epoch( target_registry_epoch );
         payload.set_certificate_count( certificate_count );
         payload.set_batch_root( batch_root.data(), batch_root.size() );
-        BOOST_OUTCOME_TRY( auto type_hash, ComputeSubjectTypeHash( REGISTRY_BATCH_SUBJECT_TYPE ) );
-        BOOST_OUTCOME_TRY( SetSubjectPayload( subject, type_hash, payload ) );
+        for ( const auto &slot : member_slots )
+        {
+            *payload.add_member_certificate_slots() = slot;
+        }
+        auto type_hash = ComputeSubjectTypeHash( REGISTRY_BATCH_SUBJECT_TYPE );
+        if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        subject.mutable_subject_type_hash()->set_hash( type_hash.value().data(), type_hash.value().size() );
 
         ConsensusManagerLogger()->debug( "{}: success", __func__ );
         return subject;
@@ -3303,8 +3377,10 @@ const auto &proposal_id = proposal.proposal_id();
                        payload.value().target_registry_epoch() == payload.value().base_registry_epoch() + 1 &&
                        payload.value().certificate_count() > 0 && !payload.value().batch_root().empty();
             }
-            case BuiltinSubjectKind::Other:
-                return true;
+            return !payload.value().base_registry_cid().empty() &&
+                   payload.value().target_registry_epoch() == payload.value().base_registry_epoch() + 1 &&
+                   payload.value().certificate_count() > 0 && !payload.value().batch_root().empty() &&
+                   RegistryBatchSubjectMembersValid( payload.value() );
         }
         return false;
     }
@@ -3433,7 +3509,58 @@ const auto &proposal_id = proposal.proposal_id();
             case BuiltinSubjectKind::Other:
                 return true;
         }
-        return false;
+
+        if ( SubjectTypeMatches( subject, TASK_RESULT_SUBJECT_TYPE ) )
+        {
+            auto payload = DecodeTaskResultSubject( subject );
+            if ( payload.has_error() || payload.value().escrow_path().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_result escrow_path is empty", __func__ );
+                return false;
+            }
+            if ( payload.value().task_result_hash().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_result task_result_hash is empty", __func__ );
+                return false;
+            }
+            return true;
+        }
+
+        if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
+        {
+            auto payload = DecodeRegistryBatchSubject( subject );
+            if ( payload.has_error() )
+            {
+                return false;
+            }
+            if ( payload.value().base_registry_cid().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch base_registry_cid is empty", __func__ );
+                return false;
+            }
+            if ( payload.value().target_registry_epoch() != payload.value().base_registry_epoch() + 1 )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch target epoch mismatch", __func__ );
+                return false;
+            }
+            if ( payload.value().certificate_count() == 0 )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch certificate_count is zero", __func__ );
+                return false;
+            }
+            if ( payload.value().batch_root().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch batch_root is empty", __func__ );
+                return false;
+            }
+            if ( !RegistryBatchSubjectMembersValid( payload.value() ) )
+            {
+                ConsensusManagerLogger()->error( "{}: subject registry_batch member slots are invalid", __func__ );
+                return false;
+            }
+        }
+
+        return true;
     }
 
     bool ConsensusManager::CheckProposal( const Proposal &proposal )
