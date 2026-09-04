@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Canonical Burn Finality Rebuild
 status: Awaiting next milestone
-last_updated: "2026-09-03T20:21:45.593Z"
-last_activity: 2026-09-03 — Milestone v3.0 completed and archived
+last_updated: "2026-09-04T13:55:00Z"
+last_activity: 2026-09-04 — Restored validator-registry updates under canonical-slot authority (10-CR-02 follow-up closed)
 progress:
   total_phases: 5
   completed_phases: 5
@@ -121,6 +121,9 @@ Last activity: 2026-09-03 — Milestone v3.0 completed and archived
 - [Phase 12]: Round-5 Option A is implemented as the COMPOSED repair (pre-restart CheckCertificateForSlot retention wait on second/third/passive creating surviving CID replicas + consensus-topic readiness gate at >= 2 peers on every peer before the 12-19 re-publication) and graduated 3/3 focused all-green — the attributed fix 12-22's gate re-attempt carries (12-21)
 - [Phase 12]: getBackoffTimeout's exponent is clamped at 16 in both branches (WR-06 closed; UB impossible, behavior identical for every reachable failure count); IN-08 dead constants deliberately left in place — round-5 production budget is the clamp alone (12-21)
 - [Phase 12]: 12-22 evidence gate: series FAILED at run B on the pre-declared PublisherLoss child-readiness strike (exact 12-15 Verdict 3 boundary); STOP-on-first-strike honored, run C never started, no reroll - all four FinalityFaultNetwork scenario cases green in BOTH executed runs (graduated Option A held); sibling matrix 4/4 incl. cert-fallback first run on this generation; 12-14 blocker OPEN, next decision routed (D-25 repair vs gate-standard re-examination vs accept-and-close).
+- [v3.0 follow-up]: Registry batches carry member canonical slots durably — RegistryBatchSubject field 6 holds one canonical certificate slot per member (size == certificate_count, ComputeBatchRoot(slots) == batch_root, legacy hash-only subjects fail closed), members load from the replicated /cert/<slot> records with exact slot + base-registry binding checks, and a member db-miss Stalls for work-journal retry instead of Rejecting — the durable, replay-safe batch representation 10-CR-02 deferred (10-CR-02-FIX-SUMMARY.md), closing that follow-up with no new PutConvergentImmutable sites (CERT-02). Restores validator-registry advancement past genesis epoch 0.
+- [v3.0 follow-up]: FilterCertificate parks Stalled certificates (exactly key-bound, structurally validated, only registry-dependent quorum deferred) for work-journal retry instead of dropping them, and RecoverPendingCertificateWork retires re-validated Reject work via MarkDone — late joiners and catching-up nodes now converge on certificates that arrive before their referenced registry snapshots.
+- [v3.0 follow-up]: RegistryUpdate field 5 (batch_certificate_subject_hashes) is informational metadata only; field 6 (batch_certificate_slots) is the authoritative member list for VerifyUpdate — persisted develop-era hash-only batch updates fail closed as intended.
 
 ### Pending Todos
 
@@ -167,8 +170,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-03T18:26:41Z
-Stopped at: Completed 12-23 developer-directed apparatus removal (13->6 suite; 3 consecutive serial passes on reduced suite; zero crashes; sibling matrix green) — awaiting orchestrator verification
+Last session: 2026-09-04T13:55:00Z
+Stopped at: Completed registry-batch slot-representation restore (4 commits: slots in batch subjects, slot-authoritative evaluation/application/verification, FilterCertificate Stalled-park, decision record); unit suites green; acceptance suites (multi_account/full_node/fault) left to the orchestrator
 Resume file: None
 | debug_sessions | phase11-fallback-suite-abort | acknowledged at v3.0 close (2026-09-03; was: awaiting_human_verify) |
 | debug_sessions | phase12-mesh-readiness | acknowledged at v3.0 close (2026-09-03; was: investigating) |
