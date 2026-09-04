@@ -219,6 +219,16 @@ TEST( PrivateNetworkRegistryBinding, PrivateNodeWithoutBootstrapMembershipFailsC
         << static_cast<int>( node->GetState() ) << ")";
     EXPECT_EQ( GeniusNodeTestAccess::NetworkRegistry( node ), nullptr )
         << "fail-closed node must not retain a NetworkRegistry";
+
+    // CR-C2-01 (15-REVERIFICATION-2): the policy-stack failure path must not clear
+    // the membership filter on a still-live GlobalDB -- the stalled node remains
+    // parked in INITIALIZING_TRANSACTIONS with PubSub running and topics
+    // subscribed, so its gossip ingest must stay deny-all (ShutdownNodePolicyServices
+    // installs MakeBootstrapMembershipFilter({}) on a private node unless the
+    // GlobalDB shutdown immediately follows).
+    EXPECT_TRUE( GeniusNodeTestAccess::BroadcasterMembershipFilterInstalled( node ) )
+        << "CR-C2-01 regression: policy-stack teardown cleared the broadcaster membership filter "
+           "on a still-live GlobalDB (the stalled node's ingest must stay deny-all)";
 }
 
 // Teardown clears the broadcaster's membership filter: driven through the REAL
