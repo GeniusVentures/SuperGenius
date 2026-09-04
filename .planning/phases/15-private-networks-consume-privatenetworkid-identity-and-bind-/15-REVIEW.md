@@ -1,307 +1,384 @@
 ---
 phase: 15-private-networks-consume-privatenetworkid-identity-and-bind-
-reviewed: 2026-09-02T00:00:00Z
+reviewed: 2026-09-04T00:00:00Z
 depth: standard
-files_reviewed: 28
+files_reviewed: 71
 files_reviewed_list:
   - example/node_test/network_config.json
+  - src/CMakeLists.txt
+  - src/account/CMakeLists.txt
+  - src/account/EscrowTransaction.hpp
   - src/account/GeniusNode.cpp
   - src/account/GeniusNode.hpp
   - src/account/TransactionManager.cpp
   - src/account/TransactionManager.hpp
-  - src/account/EscrowTransaction.hpp
+  - src/base/CMakeLists.txt
+  - src/base/gossip_auth.hpp
+  - src/blockchain/Blockchain.hpp
   - src/blockchain/ValidatorRegistry.cpp
   - src/blockchain/ValidatorRegistry.hpp
   - src/blockchain/impl/Blockchain.cpp
+  - src/crdt/globaldb/CMakeLists.txt
+  - src/crdt/globaldb/GlobalDbNetworkComposition.cpp
+  - src/crdt/globaldb/pubsub_broadcaster_ext.cpp
+  - src/crdt/globaldb/pubsub_broadcaster_ext.hpp
+  - src/networkregistry/CMakeLists.txt
+  - src/networkregistry/NetworkMembershipFilter.hpp
   - src/networkregistry/NetworkRegistry.cpp
   - src/networkregistry/NetworkRegistry.hpp
+  - src/peerregistry/CMakeLists.txt
   - src/peerregistry/PeerRegistry.hpp
+  - src/processing/CMakeLists.txt
   - src/processing/impl/TaskKeys.hpp
   - src/processing/impl/TaskQueueImpl.cpp
+  - src/processing/impl/TaskQueueImpl.hpp
   - src/processing/impl/processing_core_impl.cpp
+  - src/processing/impl/processing_core_impl.hpp
   - src/processing/impl/processing_subtask_result_storage_impl.cpp
+  - src/processing/impl/processing_subtask_result_storage_impl.hpp
+  - src/processing/processing_node.cpp
+  - src/processing/processing_node.hpp
+  - src/processing/processing_service.cpp
+  - src/processing/processing_service.hpp
+  - src/processing/processing_subtask_queue_accessor_impl.cpp
+  - src/processing/processing_subtask_queue_accessor_impl.hpp
+  - src/processing/processing_subtask_queue_channel_pubsub.cpp
+  - src/processing/processing_subtask_queue_channel_pubsub.hpp
   - src/securecrdt/QuorumThresholdValidation.hpp
+  - src/securecrdt/SecureCrdt.cpp
+  - src/securecrdt/SecureCrdt.hpp
   - src/securecrdt/SecureCrdtRegistry.hpp
+  - src/trustedpeer/CMakeLists.txt
   - src/trustedpeer/TrustedPeerRegistry.cpp
   - src/trustedpeer/TrustedPeerRegistry.hpp
+  - test/src/CMakeLists.txt
+  - test/src/account/CMakeLists.txt
   - test/src/account/network_config_private_network_test.cpp
   - test/src/account/private_network_registry_binding_test.cpp
+  - test/src/account/transaction_manager_pending_lifecycle_test.cpp
+  - test/src/blockchain/CMakeLists.txt
   - test/src/blockchain/validator_registry_scope_test.cpp
+  - test/src/networkregistry/CMakeLists.txt
+  - test/src/networkregistry/network_membership_filter_test.cpp
   - test/src/networkregistry/network_registry_test.cpp
+  - test/src/peerregistry/CMakeLists.txt
   - test/src/peerregistry/peer_registry_test.cpp
+  - test/src/processing/CMakeLists.txt
   - test/src/processing/processing_core_gating_test.cpp
+  - test/src/processing/processing_service_test.cpp
+  - test/src/processing/processing_service_test.hpp
+  - test/src/processing/processing_service_test_base.cpp
+  - test/src/processing/processing_subtask_queue_channel_pubsub_test.cpp
   - test/src/processing/task_keys_scope_test.cpp
   - test/testutil/genius_node_test_access.hpp
 findings:
   critical: 1
-  warning: 5
-  info: 4
-  total: 10
+  warning: 8
+  info: 6
+  total: 15
 status: issues_found
 ---
 
 # Phase 15: Code Review Report
 
-**Reviewed:** 2026-09-02
+**Reviewed:** 2026-09-04
 **Depth:** standard
-**Files Reviewed:** 28 (plus supporting headers/CMakeLists listed in `<files_to_read>`)
+**Files Reviewed:** 71
 **Status:** issues_found
 
 ## Summary
 
-The phase's core scoping work is largely sound: `TaskKeys` scope helpers are byte-stable for
-the public scope and branch every processing key/topic under `/chain/<id>`; `ValidatorRegistry`
-scoping keeps public identifiers byte-identical and is verified three-way disjoint; the
-`NetworkMembershipPayload` codec parses defensively (count/size cross-checks prevent
-out-of-bounds reads); quorum floor math (`StrictMajorityQuorumFloor`) is correct; and the
-processing-host gating composition (Noise-only + gater + eager `PskValidationError`) matches
-the vendored injector contract. The descoped items (gater allow-list, membership enforcement)
-were treated as owner decisions and not flagged.
+Cycle-3 review of the current state of the private-network identity work, with focus requested on
+the two most recent fail-closed teardown changes (`GeniusNode::ShutdownNodePolicyServices` CR-C2-01
+and `SecureCrdt` element-filter reject-on-expiry). Both of those changes verify correct against
+their tests and their stated contracts:
 
-However, the review found one fail-open chain in the private-network provisioning path
-(CR-01), a permanent busy-spin thread in `NetworkRegistry`'s change-callback machinery, a
-registration-clobbering failure path in `NetworkRegistry::New`, and an ingest-filter gap that
-leaves `network-registry/<id>` elements unverified at CRDT ingest (unlike TPR/BurnConfig keys).
+- The CR-C2-01 deny-all teardown path installs `MakeBootstrapMembershipFilter({})` (empty set
+  provably denies everything) on a still-live GlobalDB, and `private_network_registry_binding_test`
+  pins the regression. The destruction route (`global_db_shutdown_follows=true`) clears the filter
+  exactly when `ShutdownNow()` follows, asserted on a pre-captured broadcaster handle.
+- `SecureCrdt::RegisterFilters` now drops elements when the owner `weak_ptr` expired, and
+  `network_registry_test` case (13) proves it end-to-end against a live attacker datastore.
+- The CR-G01 envelope (`gossip_auth.hpp`) is bounds-safe on all length arithmetic, binds the
+  embedded public key to the transport `from`-field before any membership consultation, and covers
+  `from` + payload in the signature. All eight gated publish sites (broadcaster, grid channel,
+  queue channel, results channel) fail closed on filter-set-without-key.
+- Quorum floor math (`StrictMajorityQuorumFloor` = ceil(0.51·N)) and the empty-set rejection are
+  correct; `NetworkRegistry::New` fails closed three ways (bootstrap floor, self-governance floor,
+  signer-satisfiability), and the duplicate-construction guard is atomic
+  (`RegisterIfAbsent` verified replace-proof).
+- The scoping helpers (`TaskKeys`, `ValidatorRegistry::ScopedIdentifier`, `ScopedChainId`) are
+  byte-stable on the public scope and verified disjoint across scopes; public-path routing
+  (`SelectInputValidator`) correctly treats `supergenius/<id>` as genius-branch.
 
-Per phase instructions: absence of libp2p allow-list enforcement (15-04 skip, 15-05/15-08
-descope) was NOT flagged, and the documented no-genesis READY stall was not re-reported.
+What remains are one genuine security gap on the validator-registry trust-on-load path (CR-01),
+an inconsistent application of this phase's own reject-on-expiry policy to the three non-SecureCrdt
+element filters (WR-01), and a set of robustness/quality defects listed below.
 
 ## Critical Issues
 
-### CR-01: WriteNetworkConfig emits invalid JSON for the documented swarm-key `network_key` format, silently downgrading the node to PUBLIC on reload
+### CR-01: ValidatorRegistry::InitializeCache trusts persisted registry bytes without signature re-verification (cache poisoning via the unfiltered teardown/re-registration window)
 
-**File:** `src/account/GeniusNode.cpp:225-247` (writer), `src/account/GeniusNode.hpp:160-163` (contract), `src/account/GeniusNode.cpp:1597-1603` (reload consequence)
-**Issue:** `GeniusNode::WriteNetworkConfig` documents `network_key` as *"swarm-key text, or
-base16/base64-encoded 32-byte PSK"*, and its escaping loop only escapes `\\` and `"`. The
-canonical go-ipfs swarm-key text (`/key/swarm/psk/1.0.0/\n/base16/<64 hex>\n`) contains
-**literal newline bytes** (the vendored `Psk::fromSwarmKeyText` this project links against
-explicitly parses and tolerates them — `thirdparty/libp2p/include/libp2p/security/pnet/psk.hpp:39-46`).
-Raw control characters are illegal inside JSON strings, so the helper writes a file that
-rapidjson cannot parse. On the next start, `LoadNetworkConfig` hits the parse-error branch
-(`GeniusNode.cpp:1599-1603`), logs an error, and **returns default settings with
-`settings.valid == true`** — no `network_key`, no `private_network_id`. A node the operator
-provisioned as private therefore boots as a fully public node: no PSK boundary on gossip or
-the per-subtask processing host, public validator-registry identifiers, public CRDT paths.
-This is a fail-open of exactly the D-01/D-08 misroute scenario the phase's validation was
-added to prevent (`network_key` without `private_network_id` "would run a PSK-isolated node
-writing private-intent data into PUBLIC CRDT paths"); a corrupt config bypasses all of it
-because the parse failure short-circuits before any identity validation runs. The current
-tests only round-trip the newline-free bare-base16 form, so the gap is untested.
-**Fix:** Escape (or reject) all JSON string-unsafe characters in the writer, and make the
-parse failure fail-closed:
+**File:** `src/blockchain/ValidatorRegistry.cpp:1990-2026` (window created by `src/blockchain/impl/Blockchain.cpp:1599-1628`)
+**Issue:** Every ingest path verifies a registry update before it is applied
+(`FilterRegistryUpdate` → `VerifyUpdate`, ValidatorRegistry.cpp:1221-1242), and the live callback
+`RegistryUpdateReceived` relies on that ingest filter having run. But the load path does not:
+`InitializeCache` does `db_->Get(registry_key_)` → `DeserializeRegistryUpdate` (parse only) →
+writes `cached_update_` / `cached_registry_` and sets `cache_initialized_ = true` without ever
+calling `VerifyUpdate`. The signature/quorum check is therefore only as strong as "the element
+filter was installed when the bytes landed".
+
+That assumption is breakable: `Blockchain::Stop()` (ValidatorRegistry.cpp:130-161,
+Blockchain.cpp:1599-1628) unregisters the `/?<registry-key>` element filter and new-element
+callback while the GlobalDB remains alive and subscribed. `GeniusNode::SelectAccount` drives
+exactly this sequence — `ShutdownAccountBoundServices(true)` resets `blockchain_` (→ `Stop()` →
+filters removed) while `tx_globaldb_` is deliberately kept running, and only later transitions
+back through `INITIALIZING_BLOCKCHAIN`, where `ValidatorRegistry::New` → `InitializeCache` reads
+whatever landed during the window. On a public network there is no broadcaster membership gate
+either, so any peer can push an unsigned `RegistryUpdate` element during the account-switch
+window; the unverified bytes then become the active validator registry that feeds
+`GetValidatorWeight`, `IsActiveValidator`, quorum thresholds, and certificate validation. A
+forged registry (e.g. attacker ids with `GENESIS` weight) poisons consensus weighting for the
+lifetime of the manager. On private networks the broadcaster membership filter narrows the
+attacker set to same-PSK peers, but the trust-on-load asymmetry remains.
+**Fix:** Re-run the same verification the ingest path performs before caching:
 
 ```cpp
-// GeniusNode.cpp, WriteNetworkConfig escaping loop — handle control chars:
-for ( char c : network_key )
+// ValidatorRegistry.cpp, InitializeCache(), after DeserializeRegistryUpdate succeeds:
+if ( !VerifyUpdate( decoded.value(), /*enforce_time_window=*/false ) )
 {
-    switch ( c )
-    {
-        case '\\': escaped += "\\\\"; break;
-        case '"':  escaped += "\\\""; break;
-        case '\n': escaped += "\\n";  break;
-        case '\r': escaped += "\\r";  break;
-        case '\t': escaped += "\\t";  break;
-        default:
-            if ( static_cast<unsigned char>( c ) < 0x20 )
-            {
-                escaped += fmt::format( "\\u{:04x}", static_cast<unsigned>( c ) );
-            }
-            else { escaped += c; }
-    }
+    logger_->error( "{}: stored registry update failed signature/quorum verification; "
+                    "refusing to activate", __func__ );
+    RetryInitializationIfNeeded(); // or fail closed without caching
+    return;
 }
 ```
 
-```cpp
-// GeniusNode.cpp, LoadNetworkConfig — treat unreadable/unparseable config as fatal
-// (mirrors the private_network_id fail-closed posture):
-std::stringstream buffer;
-buffer << config_file.rdbuf();
-rapidjson::Document config_json;
-config_json.Parse( buffer.str().c_str() );
-if ( config_json.HasParseError() || !config_json.IsObject() )
-{
-    GeniusNodeLogger()->error( "network_config.json is unreadable or invalid JSON - refusing to start" );
-    settings.valid = false;   // InitNetwork() then fails closed (GeniusNode.cpp:1920-1923)
-    return settings;
-}
-```
+(Mirror the same check in `RegistryUpdateReceived` for defense-in-depth — it currently trusts the
+ingest filter exclusively.)
 
 ## Warnings
 
-### WR-01: Unreadable or unparseable `network_config.json` loads public defaults instead of failing closed
+### WR-01: Reject-on-expiry policy applied to SecureCrdt filters only — Blockchain, ValidatorRegistry, and TransactionManager element filters PASS THROUGH when their owner expires
 
-**File:** `src/account/GeniusNode.cpp:1588-1603`
-**Issue:** Both the missing-file branch (`Could not read network config file`) and the
-parse-error branch return `settings` with `valid == true`, so `InitNetwork` proceeds with
-public-mode defaults. Independently of CR-01's writer bug, any hand-edited/truncated/corrupt
-config (or a missing file on a node that was provisioned private) silently boots public,
-defeating the malformed-`private_network_id` and half-provisioned-pair checks added this
-phase (they run only after a successful parse). The missing-file branch is a long-standing
-behavior, but the phase made identity misconfiguration fatal everywhere else; this is the one
-remaining fail-open path.
-**Fix:** Same `settings.valid = false` treatment as CR-01 for the parse-error branch. For the
-missing-file branch, at minimum fail closed when `private_network_id`/`network_key` were
-expected (or always — the file is a required provisioning artifact per D-01).
-
-### WR-02: `NetworkRegistry::RefreshLoop` busy-spins forever after the first change notification (`refresh_pending_` never cleared)
-
-**File:** `src/networkregistry/NetworkRegistry.cpp:437-470` (set at 417, predicate at 443-447)
-**Issue:** The datastore callback sets `refresh_pending_ = true` (line 417) and the refresh
-thread's wait predicate is `refresh_pending_ || refresh_stopping_` (lines 443-447), but no
-code ever stores `false` back into `refresh_pending_`. Once the first `network-registry/<id>`
-(or `sig/<addr>`) element arrives, `wait()` returns immediately on every iteration and the
-loop spins continuously calling `TryConfirm()` → `SecureCrdt::ReadIfQuorum` →
-`RetainAuthorizedLegacySignatures` (a `QueryKeyValues` scan of the datastore on every spin,
-plus `logger_->warn` spam whenever TryConfirm errors). That is a permanent 100%-CPU thread
-with continuous GlobalDB reads for as long as the registry lives. The production wiring
-currently passes `global_db = nullptr` (GeniusNode calls the 5-arg `New`), so the thread is
-not started in-node today, but the machinery is public library API and is exercised by
-`network_registry_test.cpp`'s `CacheRefreshViaCrdtChangeCallback`.
-**Fix:** Clear the flag once the notification has been consumed:
+**File:** `src/blockchain/impl/Blockchain.cpp:98-117`; `src/blockchain/ValidatorRegistry.cpp:1192-1203`; `src/account/TransactionManager.cpp:222-248`
+**Issue:** This phase fixed `SecureCrdt::RegisterFilters` so an expired owner `weak_ptr` causes
+elements to be DROPPED (`return std::vector<crdt::pb::Element>{};`, SecureCrdt.cpp:682-693, 704-709)
+and `network_registry_test` case (13) codifies that as the project policy ("the same
+reject-on-expiry policy as the candidate filter"). The three other element-filter families still
+`return std::nullopt` (ACCEPT) on expiry — Blockchain's genesis/account-creation filters, the
+ValidatorRegistry ingest filter, and TransactionManager's tx/proof filters. Today these branches
+appear unreachable because the owners deterministically unregister in `Stop()`/`Close()` before
+destruction, but that is exactly the invariant that failed for SecureCrdt (WR-C2-01) and the
+lambdas now encode a silently fail-open fallback for the consensus-authority paths. Note the
+deregistration in `TransactionManager::Stop()` exists precisely because a manager can be destroyed
+late across an account switch — a late-destroyed manager whose filters were re-registered by its
+successor leaves the old lambda alive with an expired `weak_ptr` and pass-through semantics.
+**Fix:** In each of the four expiry branches, mirror the SecureCrdt policy:
 
 ```cpp
-if ( refresh_stopping_.load( std::memory_order_acquire ) )
+if ( auto strong = weak_instance.lock() )
 {
-    return;
+    return strong->FilterGenesis( element );
 }
-refresh_pending_.store( false, std::memory_order_release ); // drain-once semantics
-lock.unlock();
-auto confirmed = TryConfirm();
+return std::vector<crdt::pb::Element>{}; // expired owner: reject (fail-closed), never pass through
 ```
 
-(Re-set it if `TryConfirm` returns `success(false)` and you want retry semantics, but then
-re-wait with a timeout instead of spinning.)
+### WR-02: fmt::formatter<GeniusNode::NodeState> is missing three enum values — trust states log as "UNKNOWN"
 
-### WR-03: `NetworkRegistry::New` failure path silently unregisters a live registry for the same network id
+**File:** `src/account/GeniusNode.cpp:4858-4891`
+**Issue:** The formatter handles only `CREATING`, `MIGRATING_DATABASE`, `INITIALIZING_DATABASE`,
+`INITIALIZING_PROCESSING`, `INITIALIZING_BLOCKCHAIN`, `INITIALIZING_TRANSACTIONS`, `READY`. The
+three trust-lifecycle states — `WAITING_FOR_TRUST_GENESIS`, `WAITING_FOR_BURN_GENESIS`,
+`FATAL_TRUST_MISMATCH` — fall through to `"UNKNOWN"`. These states are logged through fmt on the
+hottest diagnostic paths of this phase: `"Transitioning to state {}"` (GeniusNode.cpp:713),
+`"Ignoring transition to {}, shutdown in progress"` (line 699), `"Skipping blockchain retry,
+unexpected state: {}"` (line 2269), and `"Suppressing stale trust transition from {} to {}"`
+(lines 1023-1027). The free function `NodeStateToString` (lines 97-124) handles all ten states —
+the two mappings have drifted. For a phase whose fail-closed behavior parks nodes in exactly these
+three states, misleading logs directly hamper incident diagnosis.
+**Fix:** Add the three missing cases to the formatter (or delegate to `NodeStateToString`).
 
-**File:** `src/networkregistry/NetworkRegistry.cpp:364-367, 375-396, 579-602`
-**Issue:** `SecureCrdtRegistry::Register` **replaces** an existing entry for the same pattern
-and returns `false` to signal "replaced" (`src/securecrdt/SecureCrdtRegistry.hpp:121-137`).
-`RegisterSignerSetSource` forwards that `false`, `New` maps it to
-`outcome::failure(std::errc::file_exists)`, the `instance` shared_ptr is destroyed, and
-`~NetworkRegistry` → `Unregister()` → `UnregisterIf(pattern, &registry_token_)` removes the
-**newly inserted** entry (its token matches). Net effect of constructing a second
-`NetworkRegistry` for an already-registered network id: the first, still-live registry has
-its policy entry destroyed — every subsequent `ProposeValue`/`AddSignature`/`ReadIfQuorum`
-on that key fails with `UNREGISTERED_KEY`, bricking the existing registry with no error
-surfaced to its owner. Also, `std::errc::file_exists` is a misleading error code (the header
-documents `QUORUM_THRESHOLD_BELOW_FLOOR` for failures).
-**Fix:** Make the duplicate case non-destructive: resolve the existing entry first and fail
-without registering, or snapshot and restore the replaced entry on the failure path:
+### WR-03: Shipped example config re-enables blocking UPnP discovery that the WriteNetworkConfig contract exists to prevent
+
+**File:** `example/node_test/network_config.json:1-6`
+**Issue:** Commit 51df5fbf moved `example/node_test` from runtime `WriteNetworkConfig` to a shipped
+static `network_config.json`, and 33931f48 extended it with the placeholder private-network keys —
+but the file omits `"upnp_enabled": false`, which `WriteNetworkConfig` unconditionally writes
+precisely so that "tests and examples do not depend on the host LAN" (GeniusNode.cpp:218-225,
+including the documented multi-node crash this caused). With the key absent,
+`LoadNetworkConfig` defaults `upnp_enabled = true` (GeniusNode.hpp:1132), so every example/node_test
+run performs real, blocking SSDP/IGD discovery in `InitUPNP()` during construction and spawns the
+persistent UPnP refresh thread (`RefreshUPNP`) — non-deterministic, host-dependent behavior in the
+exact scenario the code comment warns about.
+**Fix:** Add `"upnp_enabled": false` to the shipped JSON (one line), matching what
+`WriteNetworkConfig` emits for every other test/example base path.
+
+### WR-04: TaskQueueImpl::GrabTask leaks the task lock on two error paths, stalling the task for LOCK_TIMEOUT
+
+**File:** `src/processing/impl/TaskQueueImpl.cpp:162-175`
+**Issue:** After `LockTask(taskKey)` succeeds, the loop can abandon the task without releasing or
+superseding the lock: (a) `BOOST_OUTCOME_TRY( auto task, GetTask( taskId ) )` returns failure on a
+DB read error, and (b) the `IsProcessingValid` failure path runs `MarkTaskBad( taskId ); continue;`
+— in both cases the just-written `/lock_<taskKey>` element stays. Every subsequent `GrabTask` on
+any node treats the task as locked and only the `lockedTasks` recovery pass (after the 10-second
+`LOCK_TIMEOUT`) can reclaim it via `MoveExpiredTaskLock`. A transient read failure therefore
+removes the task from availability for at least 10 seconds, and the `MarkTaskBad` path only
+blacklists the task locally, so peer nodes also stall on the orphaned lock.
+**Fix:** Verify before locking (fetch + validate the task first, then `LockTask`), or on either
+failure path remove the lock key (`db_->Remove(LockKey(taskKey), {processing_topic_})`) before
+continuing.
+
+### WR-05: GeniusNode::ProcessImage strands escrowed funds when task enqueue fails after the escrow hold is committed
+
+**File:** `src/account/GeniusNode.cpp:3111-3136`
+**Issue:** `ProcessImage` first executes `HoldEscrow` (which reserves/spends UTXOs into the escrow
+lock and enqueues the escrow-hold transaction), then writes the escrow info CRDT entry and calls
+`task_queue_->EnqueueTask(...)`. If `EnqueueTask` fails (returned as
+`Error::DATABASE_WRITE_ERROR`) — or the transaction it commits fails — the function returns an
+error, but the escrow hold is already propagating: funds are locked at the escrow address with no
+task queued and therefore no `ProcessingDone`/`PayEscrow` that could ever release them, and no
+timeout or compensating rollback exists on this path. Compare `MintFunds`
+(TransactionManager.cpp:740-763), which wraps the equivalent sequence in try/catch with an explicit
+`RollbackUTXOs`. The scoped-path changes in this phase (scoped escrow path + task-carried
+`escrow_path`) touched exactly this sequencing without adding the compensating action.
+**Fix:** On `EnqueueTask` failure, roll back the escrow hold (release the reserved UTXOs /
+consume the lock the way `MintFunds` does), or defer the escrow hold until after the task (and its
+CRDT transaction) is durably enqueued.
+
+### WR-06: Private-network seal/publish block copy-pasted eight times across three files — security-control drift risk
+
+**File:** `src/processing/processing_service.cpp:197-240, 572-616, 769-815`; `src/processing/processing_subtask_queue_channel_pubsub.cpp:76-114, 122-164`; `src/processing/processing_subtask_queue_accessor_impl.cpp:263-305, 583-626`
+**Issue:** The identical ~40-line block (snapshot filter+key under mutex → raw publish / fail-closed
+error / `DeriveGossipFromBytes` → `SealGossipPayload` → publish-or-log) is duplicated verbatim at
+eight publish sites, with only the channel pointer and log prefix varying. These are the CR-G01
+security controls; a future fix to any branch (e.g. adding a return-value check, changing the
+seal's canonical bytes, handling a new failure mode) must be replicated eight times, and the
+accessor's two copies additionally juggle lock ordering (`m_mutexResults` held across
+`m_mutexMembershipFilter`) that the other six do not — a proven recipe for the exact
+one-site-missed class of bug this phase's CR-G01/CR-G02a cycles were fixing.
+**Fix:** Extract one helper, e.g. in `base/gossip_auth.hpp` next to the seal primitives:
 
 ```cpp
-const auto pattern = EscapeRegex( base_key_.GetKey() );
-if ( secure_crdt_->Registry().Resolve( base_key_.GetKey() ) )
+// Returns true when the payload was published (raw on public path, sealed under a set filter).
+bool PublishSealedOrRaw( GossipPubSubTopic &channel, std::string_view payload,
+                         const sgns::networkregistry::MembershipFilter &filter,
+                         const libp2p::crypto::KeyPair &key, base::Logger logger );
+```
+
+and call it from all eight sites.
+
+### WR-07: TrustedPeerRegistry::New dereferences a null secure_crdt — no argument null check (asymmetric with NewProduction)
+
+**File:** `src/trustedpeer/TrustedPeerRegistry.cpp:154-178` (deref at line 603 via `RegisterSignerSetSource`)
+**Issue:** `NewProduction` validates `!secure_crdt` and fails with `INVALID_CANDIDATE`
+(line 191), but the plain `New` factory performs no null check before
+`instance->RegisterSignerSetSource()` runs `secure_crdt_->Registry()...` — a null argument is an
+immediate null-pointer dereference/UB in a public factory instead of a returned error. In-tree
+callers (GeniusNode, tests) always pass a live instance, so this is a latent API-robustness crash
+rather than a reachable production fault.
+**Fix:** Add the same guard at the top of `New`:
+
+```cpp
+if ( !secure_crdt )
 {
-    return outcome::failure( std::errc::address_in_use ); // already registered, entry untouched
+    return outcome::failure( Error::INVALID_CANDIDATE );
 }
 ```
 
-### WR-04: `network-registry/<id>` elements never receive a SecureCrdt ingest filter (RegisterFilters runs before NetworkRegistry::New in both wiring paths)
+### WR-08: LoadNetworkConfig accepts negative reconnect intervals — negative scheduler delays produce immediate-retry storms
 
-**File:** `src/account/GeniusNode.cpp:1037 vs 1059`; `src/securecrdt/SecureCrdt.cpp:653-693`; `src/crdt/impl/crdt_datastore.cpp:417`
-**Issue:** `SecureCrdt::RegisterFilters()` snapshots `AllEntries()` and installs a CRDT
-element filter per registered key pattern. In the non-controller path it runs at
-`GeniusNode.cpp:1037`, immediately after TPR/BurnConfig are registered, and the
-`NetworkRegistry` is constructed later at line 1059 — so its `network-registry/<id>` pattern
-gets **no** `FilterSecureCrdtUpdate` filter. The controller path has the same ordering
-(`TrustStartupController.cpp:160` calls `RegisterFilters` inside `New`; NetworkRegistry is
-constructed after the controller reports ready). Because `CRDTDataFilter` is constructed
-with `accept_by_default = true` (`crdt_datastore.cpp:417`), remote-originated membership
-payloads and `sig/<addr>` children are accepted into the local datastore **without** the
-canonical-signer/quorum ingest verification that every other SecureCrdt-registered key
-(trusted-peer-registry, burn-config) receives. `TryConfirm`'s `ReadIfQuorum` still gates
-application to the cache, so this is not an authorization bypass, but it is a
-defense-in-depth asymmetry: a same-transport peer can push unfiltered/unvalidated values
-into the branch that the phase calls "the authorization state for the private network"
-(e.g. overwriting the proposed record bytes — a griefing/reset vector for pending
-bootstrap confirmations).
-**Fix:** Re-run `secure_crdt_->RegisterFilters()` after a successful `NetworkRegistry::New`
-(it is idempotent per pattern), or give `NetworkRegistry::New` a hook that registers its own
-ingest filter the way BurnConfig's wiring ends up covered.
+**File:** `src/account/GeniusNode.cpp:1714-1719` (read_seconds), consumed at `1843-1848`
+**Issue:** `read_seconds` narrows `std::chrono::seconds` to `int` and the generic `read` helper
+accepts any `IsInt()` value — including negatives — with no bounds check. A config value such as
+`"bootstrap_reconnect_base_delay_sec": -1` yields a negative `base_delay`; `ConnectPeer` and
+`ScheduleBootstrapReconnect` then compute negative `delay_sec` values (the
+`delay_sec > max_delay` cap never triggers for negatives) and hand `std::chrono::seconds(-1)` to
+the scheduler, which fires immediately — turning every disconnect into an unthrottled reconnect
+storm. Same for a negative health-check interval. This is config-surface input validation on a
+file the node treats as trusted-but-user-editable.
+**Fix:** Clamp in `read_seconds` (and/or validate after the reads):
 
-### WR-05: `entry.peer_registry = shared_from_this()` creates an ownership cycle — an un-Unregistered `NetworkRegistry` can never be destroyed
-
-**File:** `src/networkregistry/NetworkRegistry.cpp:393`
-**Issue:** The `SecureCrdtRegistry` entry holds a strong `shared_ptr<PeerRegistry>` back to
-the registry, while the registry holds `secure_crdt_` (which owns the registry map). The
-refcount can therefore never reach zero until `Unregister()` explicitly removes the entry —
-meaning the destructor's `Unregister()` call (`~NetworkRegistry`, line 262) is unreachable
-for any instance whose owner simply drops the pointer. Every such instance leaks its whole
-closure: `SecureCrdt`, `TrustedPeerRegistry`, and (when enabled) the `GlobalDB` change
-callback plus the refresh thread — the callback then fires into a registry whose
-`weak_ptr` still locks, forever. `TrustedPeerRegistry.cpp:601` shares this convention (one
-global instance, explicitly unregistered in `ShutdownNodePolicyServices`), but
-`NetworkRegistry` is the new *per-network, app-constructible* type whose documented factory
-contract does not require `Unregister()`. GeniusNode's teardown handles it explicitly
-(`GeniusNode.cpp:2262-2277`), so this is a foot-gun for the future SuperGenius-side consumers
-rather than an in-node leak.
-**Fix:** Store a `weak_ptr` in the entry (`entry.peer_registry` is only used for identity
-comparison in tests — `peer_registry_test.cpp:95-98` compares `.get()` after resolving via
-`Resolve()`, which could lock-and-return instead), or document `Unregister()` as mandatory
-and make `New()`'s contract state that dropping the last pointer without `Unregister()`
-leaks the SecureCrdt graph.
+```cpp
+if ( seconds < 0 ) { node_logger_->warn( "network_config.json: {} is negative, keeping {}", key, out.count() ); }
+else { out = std::chrono::seconds( seconds ); }
+```
 
 ## Info
 
-### IN-01: `NetworkRegistry::Unregister()` is not safe for concurrent invocation (racy check-then-join)
+### IN-01: Accessor logs "Published SubTask results to Results Channel" even when the publish FAILED CLOSED
 
-**File:** `src/networkregistry/NetworkRegistry.cpp:579-602`
-**Issue:** `Unregister()` can run from both an explicit call and the destructor (GeniusNode
-calls it explicitly at `GeniusNode.cpp:2264` and then resets the pointer). The
-`if (refresh_thread_.joinable()) refresh_thread_.join();` pair is not atomic — two
-concurrent callers can both observe `joinable()` and double-`join()`, which is
-`std::terminate()`. Current call sites are sequential, so this is latent.
-**Fix:** Guard `Unregister()` with a `std::once_flag` or an atomic
-`unregister_started_.exchange(true)` early-return.
+**File:** `src/processing/processing_subtask_queue_accessor_impl.cpp:307` (also `:627` in `PublishExistingResults`)
+**Issue:** The success-path debug log sits outside the raw/sealed branches, so the
+filter-set-but-no-key case (which logs an error and publishes nothing) is immediately followed by
+"Published SubTask results to Results Channel" — contradicting the actual outcome and undermining
+the fail-closed diagnostics the branch was written to produce.
+**Fix:** Move the debug log into the successful publish branches only.
 
-### IN-02: `WriteNetworkConfig` performs no pairing/encoding validation, so it can emit configs its own loader refuses
+### IN-02: ProcessingServiceTest fixture implementation duplicated across two translation units
 
-**File:** `src/account/GeniusNode.cpp:203-270`
-**Issue:** The writer happily emits `network_key` without `private_network_id` (or a
-malformed id); `LoadNetworkConfig` then fails the node at startup (D-01). Tests/examples
-using the helper with a half-provisioned combination get a config that bricks the node with
-no write-time error. Cheap to reject at write time with the same rules the loader applies.
-**Fix:** Return `Error::INVALID_NODE_TYPE`-style failure from `WriteNetworkConfig` when
-`network_key.empty() != private_network_id.empty()`, or when a non-empty id fails the
-66-char 0x-hex shape check.
+**File:** `test/src/processing/processing_service_test.cpp:32-272`; `test/src/processing/processing_service_test_base.cpp:39-252`
+**Issue:** `SetUp`, `SetUp(name, config)`, `TearDown`, and `Initialize` are defined in full in both
+files. The split is deliberate and load-bearing (test/src/processing/CMakeLists.txt:21-28 documents
+that compiling both into one target would be duplicate symbols), but the two ~240-line copies are
+already drifting (comment text differs) and any fixture change must be made twice. Move the
+definitions into `processing_service_test_base.cpp` only, and have `processing_service_test.cpp`
+keep just its test cases.
 
-### IN-03: Private-network consensus traffic still uses public identifiers (topic and `/cert/` keys)
+### IN-03: EscapeRegex implemented three times, one copy load-bearing in tests
 
-**File:** `src/blockchain/impl/Blockchain.cpp:172-186` (`consensus_topic=""` → public full-node topic), `src/blockchain/ValidatorRegistry.cpp:955` (`/cert/<subject_hash>` unscoped)
-**Issue:** D-09 scoped the validator registry's key/topic/CID, but `ConsensusManager`
-publishes on the empty-default topic (resolved to `SuperGNUSNode.TestNet.FullNode`) and
-batch certificates are stored under unscoped `/cert/<hash>` keys shared with the public
-namespace. Cross-network contamination requires breaking the pnet transport boundary (or a
-256-bit subject-hash collision, which `BuildRegistryFromBatchCertificates` then rejects via
-`registry_cid`/`epoch` checks), so this is acceptable today — but the scoping story is
-incomplete and worth recording before private networks rely on consensus-batch features.
-**Fix:** Thread `network_scope_` into the consensus topic and the `/cert/` prefix in a
-follow-up, mirroring `ValidatorTopicValue()`.
+**File:** `src/securecrdt/SecureCrdt.cpp:54-68`; `src/networkregistry/NetworkRegistry.cpp:65-79`; `test/src/networkregistry/network_registry_test.cpp:83-97`
+**Issue:** Two production copies plus a test mirror whose comment says it "must be kept in sync
+with the production metacharacter set" — the test's byte-identical-pattern assertions silently
+break (wrong pattern → vacuous pass/fail) if either production set changes. Hoist one
+`sgns::base::EscapeRegex` (e.g. into `base/hexutil.hpp` or a small `base/regex_util.hpp`) and use
+it everywhere.
 
-### IN-04: `HasPeerIdMultihashPrefix` accepts only `Qm…` and `12D3KooW…` peer ids
+### IN-04: InitLoggers duplicates the ~50-logger list between debug and release blocks
 
-**File:** `src/networkregistry/NetworkRegistry.cpp:25-29, 244`
-**Issue:** `NetworkMembershipPayload::Verify` structurally rejects any peer id not starting
-with the identity-hash (`Qm`) or Ed25519 (`12D3KooW`) multihash prefixes. Other libp2p
-identity codecs (e.g. ECDSA keys, or future identity multihashes) would be rejected from
-membership records entirely — a silent fail-close for legitimate members. Documented as a
-heuristic; fine for the current signer population, but it couples record validity to a
-prefix allow-list that is not part of the wire format.
-**Fix:** Validate length/base58 charset instead of prefixes, or centralize the accepted
-multihash prefix set next to the PeerId codec so it evolves with it.
+**File:** `src/account/GeniusNode.cpp:1514-1624`
+**Issue:** The `SGNS_DEBUGLOGS` and release blocks enumerate the same logger set twice, differing
+only in the level argument. A logger added to one block is silently unconfigured (or mis-leveled)
+in the other. Build the tag list once and loop with the level as the only variable.
+
+### IN-05: Broadcast returns success without publishing when the peer has no addresses
+
+**File:** `src/crdt/globaldb/pubsub_broadcaster_ext.cpp:371-376`
+**Issue:** When `bpi->addrs_size() <= 0`, `Broadcast` warns and returns `outcome::success()` — the
+CRDT publish caller believes the delta was announced when nothing went on the wire. Pre-existing
+behavior, but it converts "no addresses yet" into a silent replication gap; returning a failure (or
+retrying once addresses are known) would make the gap observable.
+
+### IN-06: DHTInit uses unchecked .value() on outcome results
+
+**File:** `src/account/GeniusNode.cpp:2810-2813`
+**Issue:** `cidtest.value()` and `cidstring.value()` are called without checking the results
+(decode of a just-encoded CIDv0 realistically cannot fail, which is why this has never fired), and
+`pubsub_->GetDHT()` is dereferenced without a null check. Cheap to harden; pre-existing.
 
 ---
 
-Scope notes for the fixer: the `NetworkMembershipPayload` codec (`FromBytes`/`ParseCountLine`)
-was checked for bounds/count mismatches and is safe (line-count cross-check at
-`NetworkRegistry.cpp:223-224` prevents the `assign` iterators from going out of range;
-`stoull` inputs are digit-checked and length-capped). `StrictMajorityQuorumFloor` was
-verified for n = 0..200 against ceil(0.51·n). The `ValidatorRegistry` scoped identifiers were
-verified to remain disjoint under `std::regex_match` full-match semantics
-(`crdt_data_filter.cpp:108`, `crdt_callback_manager.cpp:169`) — the public pattern cannot
-match a scoped key.
+### Notes on verified-correct behavior (no action)
 
-_Reviewed: 2026-09-02_
+- CR-C2-01 deny-all teardown (`GeniusNode.cpp:2363-2423`) and the destruction-route clear are
+  correct and regression-pinned (`private_network_registry_binding_test.cpp:197-285`).
+- `SecureCrdt` reject-on-expiry (SecureCrdt.cpp:666-715) matches the codified policy and is proven
+  by `network_registry_test` case (13), including the pin-release ordering.
+- `gossip_auth.hpp` envelope parsing is bounds-safe (`ReadU32Be` underflow guard, all subspan
+  offsets derived from validated lengths) and the key↔from binding plus from+payload signature
+  coverage close the same-PSK forgery path; documented residuals (no topic binding) are accepted.
+- `NetworkRegistry::New`/`Unregister` lifecycle (pin-release re-entrancy, `RegisterIfAbsent`
+  atomicity, G-WR-02 fail-closed callback registration, WR-02 drain-once refresh loop) is sound and
+  each property has a dedicated test.
+- Interim bootstrap filter ordering in `INITIALIZING_DATABASE` (GeniusNode.cpp:757-785) holds:
+  `GlobalDB::Start()` subscribes nothing (topic set empty), and
+  `GeniusAccount::ConfigureDatabaseDependencies` registers handlers only — no subscription precedes
+  the filter install.
+- `CRDTDataFilter::RegisterElementFilter` replaces by pattern while
+  `CRDTCallbackManager::RegisterNewDataCallback` is first-wins — `NetworkRegistry::New`'s re-run of
+  `RegisterFilters` (element filters, replace-ok) and its fail-closed handling of a
+  pre-occupied callback pattern are consistent with those semantics.
+
+_Reviewed: 2026-09-04_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
