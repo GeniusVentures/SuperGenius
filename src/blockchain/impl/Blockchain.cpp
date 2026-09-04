@@ -7,6 +7,7 @@
 #include <chrono>
 #include <mutex>
 #include <system_error>
+#include <thread>
 #include <unordered_set>
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -149,9 +150,19 @@ namespace sgns
                         // Registry became ready after Start() deferred. Retry immediately
                         // instead of waiting for GeniusNode's ScheduleBlockchainRetry timer
                         // (default 5s), which would otherwise idle here until it fires.
+                        // Off-thread: this callback runs on the CRDT DAG worker, and
+                        // Start() -> db_->Put -> WaitForJob would self-deadlock it.
                         strong->logger_->info( "[{}] Validator registry ready — retrying deferred blockchain start",
                                                strong->account_->GetAddress().substr( 0, 8 ) );
-                        (void) strong->Start();
+                        std::thread(
+                            [weak_instance]
+                            {
+                                if ( auto retry = weak_instance.lock() )
+                                {
+                                    (void) retry->Start();
+                                }
+                            } )
+                            .detach();
                     }
                 }
             } );
@@ -348,17 +359,11 @@ namespace sgns
         return instance;
     }
 
-    outcome::result<void> Blockchain::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                   const std::shared_ptr<crdt::GlobalDB> &new_db )
+    outcome::result<void> Blockchain::MigrateCids( crdt::GlobalDB &old_db, crdt::GlobalDB &new_db )
     {
-        if ( !old_db || !new_db )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        auto new_crdt   = new_db->GetCRDTDataStore();
+        auto new_crdt   = new_db.GetCRDTDataStore();
         auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
-            old_db->GetBroadcaster()->GetDagSyncer() );
+            old_db.GetBroadcaster()->GetDagSyncer() );
         if ( !new_crdt )
         {
             blockchain_logger()->error( "Missing broadcaster while migrating blockchain CIDs" );
@@ -385,8 +390,8 @@ namespace sgns
             return outcome::success();
         };
 
-        auto old_store = old_db->GetDataStore();
-        auto new_store = new_db->GetDataStore();
+        auto old_store = old_db.GetDataStore();
+        auto new_store = new_db.GetDataStore();
 
         blockchain_logger()->debug( "{}: Getting the genesis CID from old database", __func__ );
 
@@ -477,16 +482,33 @@ namespace sgns
     {
         if ( !validator_registry_initialized_.load() )
         {
-            start_deferred_.store( true );
-            logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
-                           account_->GetAddress().substr( 0, 8 ) );
+            // Self-help pass: the authorized full node may have been registered only
+            // after this blockchain was constructed (EnsureValidatorRegistry() at
+            // construction time then skipped the genesis-registry write). Re-run it —
+            // it is a no-op for non-authorized nodes and skips when already written.
+            // Clear the deferred flag first: the write below fires the init callback,
+            // which would otherwise launch a second, concurrent Start().
+            start_deferred_.store( false );
+            if ( EnsureValidatorRegistry().has_error() )
+            {
+                logger_->error( "[{}] Failed to ensure validator registry while deferred",
+                                account_->GetAddress().substr( 0, 8 ) );
+            }
+            if ( !validator_registry_initialized_.load() )
+            {
+                start_deferred_.store( true );
+                logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
+                               account_->GetAddress().substr( 0, 8 ) );
 
-            // Passive pass: resolves immediately if a registry head already reached us.
-            validator_registry_->RetryInitializationIfNeeded();
-            // Active pass: the passive pass reads only our own head list, and nothing
-            // populates it until a full node volunteers a broadcast. Ask for one.
-            RequestValidatorRegistryWhileDeferred();
-            return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+                // Passive pass: resolves immediately if a registry head already reached us.
+                validator_registry_->RetryInitializationIfNeeded();
+                // Active pass: the passive pass reads only our own head list, and nothing
+                // populates it until a full node volunteers a broadcast. Ask for one.
+                RequestValidatorRegistryWhileDeferred();
+                return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
+            }
+            logger_->info( "[{}] Validator registry ready after ensure — continuing blockchain start",
+                           account_->GetAddress().substr( 0, 8 ) );
         }
         start_deferred_.store( false );
 
@@ -580,6 +602,33 @@ namespace sgns
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
+
+            // Genesis creator with a locally-present genesis block: it creates its
+            // own account-creation block, so issuing RequestAccountCreation would
+            // stall startup for the full PubSub timeout waiting for a response
+            // that never arrives (no peers). Trigger the same fallback the
+            // timeout would, immediately — same detached-thread pattern as the
+            // genesis-creation path: InformAccountCreationResponse's fallback
+            // writes to the DB, which self-deadlocks the single CRDT DAG worker
+            // if run synchronously here.
+            if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
+            {
+                logger_->info( "[{}] Genesis creator (local genesis) - creating account creation block directly",
+                               account_->GetAddress().substr( 0, 8 ) );
+                std::thread(
+                    [weakself = weak_from_this()]()
+                    {
+                        if ( auto s = weakself.lock() )
+                        {
+                            // Empty/error result => no peer supplied a CID => fall back
+                            // to creating the account-creation block locally.
+                            (void) s->InformAccountCreationResponse(
+                                outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
+                        }
+                    } )
+                    .detach();
+                return outcome::success();
+            }
 
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 

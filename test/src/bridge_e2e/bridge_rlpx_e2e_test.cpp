@@ -35,6 +35,7 @@
 #include "eth/eth_watch_service.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/outcome.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -338,7 +339,11 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
 
     // Create the full node FIRST — it creates the genesis block.
     GeniusNode::WriteNetworkConfig( gGeniusNodeConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( gGeniusNodeConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig( gGeniusNodeConfig.BaseWritePath,
+                                           /*node_type=*/"Full",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/true,
+                                           s_eth_private_key );
     node_main = GeniusNode::New( gGeniusNodeConfig, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Wait for node to leave CREATING state (polling, no thread sleep).
@@ -353,6 +358,8 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     spdlog::info( "rlpx_e2e: set authorized full node address to {}", node_main->GetAddress().substr( 0, 16 ) );
 
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_main ) );
+
     // Wait for the full node to reach READY state
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
     sgns::test::assertWaitForCondition( [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
@@ -363,16 +370,27 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
 
     // Create processor nodes
     GeniusNode::WriteNetworkConfig( gGeniusNodeConfig2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( gGeniusNodeConfig2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig( gGeniusNodeConfig2.BaseWritePath,
+                                           /*node_type=*/"Light",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/true,
+                                           s_eth_private_key );
     node_proc1 = GeniusNode::New( gGeniusNodeConfig2, sgns::FromPrivateKey{ s_eth_private_key } );
 
     GeniusNode::WriteNetworkConfig( gGeniusNodeConfig3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( gGeniusNodeConfig3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig( gGeniusNodeConfig3.BaseWritePath,
+                                           /*node_type=*/"Light",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/true,
+                                           s_eth_private_key );
     node_proc2 = GeniusNode::New( gGeniusNodeConfig3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub
     node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 ) );
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 ) );
 
     // Wait for processor nodes to sync and reach READY (polling only, no thread sleep)
     {

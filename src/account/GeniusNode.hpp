@@ -62,12 +62,14 @@ namespace sgns::securecrdt
 
 namespace sgns::trustedpeer
 {
+    class TrustStateStore;
     class TrustedPeerRegistry;
 }
 
 namespace sgns::account
 {
     class BurnConfig;
+    class TrustStartupController;
 }
 
 /**
@@ -186,6 +188,9 @@ namespace sgns
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            WAITING_FOR_TRUST_GENESIS, ///< Networking is live but no durable trust genesis exists.
+            WAITING_FOR_BURN_GENESIS,  ///< Trust genesis is durable but initial burn quorum is pending.
+            FATAL_TRUST_MISMATCH,      ///< Durable trust state cannot safely start for this network.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
@@ -782,6 +787,10 @@ namespace sgns
             return state_.load();
         }
 
+        [[nodiscard]] bool                     IsTrustEconomicallyReady() const;
+        [[nodiscard]] bool                     CanApproveTrustSuccessors() const;
+        [[nodiscard]] std::vector<std::string> GetCurrentTrustedPeers() const;
+
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
@@ -810,6 +819,34 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>
             logging_system_; ///< libp2p logging system; outlives everything that logs.
 
+        /**
+         * One published account generation.  The two owners and their generation
+         * are copied together while holding lifecycle_mutex_; callers must not
+         * reconstruct this tuple from the individual member shared_ptrs.
+         */
+        struct AccountServiceSnapshot
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            uint64_t                            generation = 0;
+            /// Catchup-callback owner generation sampled under the same lifecycle
+            /// lock as the rest of the tuple — always consistent with `generation`.
+            uint64_t                            catchup_generation = 0;
+        };
+
+        /** Immutable address/key binding used by node-scoped trust policy. Pins the
+         *  genesis account so trust signatures survive SelectAccount (CR-12). */
+        struct NodeTrustSigner
+        {
+            std::string                    address;
+            std::shared_ptr<GeniusAccount> authority;
+
+            std::vector<uint8_t> Sign( const std::vector<uint8_t> &bytes ) const
+            {
+                return authority ? authority->Sign( bytes ) : std::vector<uint8_t>{};
+            }
+        };
+
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
             io_work_guard_; ///< Keeps @ref io_ alive.
@@ -833,6 +870,22 @@ namespace sgns
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap; borrows the PubSub host and the bus.
 
         std::shared_ptr<crdt::GlobalDB>   tx_globaldb_;       ///< Transaction/global state CRDT DB.
+        /// Serializes lifecycle work while permitting the existing synchronous nested transitions.
+        mutable std::recursive_mutex lifecycle_mutex_;
+        /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
+        uint64_t account_service_generation_ = 0;
+        bool     account_service_switching_  = false;
+        /// State currently executing inside StateTransition; nested transitions temporarily replace it.
+        std::optional<NodeState> transition_in_progress_;
+        /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
+        uint64_t transition_epoch_ = 0;
+        /// Per-node diagnostics and callback ownership generation for TransactionManager lifetimes.
+        std::atomic<uint64_t> transaction_manager_construction_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_start_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_owner_generation_{ 0 };
+        std::atomic<uint64_t> account_transaction_callback_owner_generation_{ 0 };
+        std::atomic<uint64_t> blockchain_slot_hash_owner_generation_{ 0 };
+        std::atomic<uint64_t> catchup_callback_owner_generation_{ 0 };
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
 
@@ -885,11 +938,6 @@ namespace sgns
         mutable std::mutex catchup_mutex_;
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
-        /// Generation token for async bridge init. Incremented on account
-        /// switch; the posted Initialize() job captures the value at post time
-        /// and aborts if it is stale — so a reset transaction_manager_ /
-        /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t> bridge_init_generation_{ 0 };
         std::string           gnus_network_full_path_;       ///< Versioned network DB path.
         std::string           processing_channel_topic_;     ///< Processing task channel topic.
         std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
@@ -911,6 +959,12 @@ namespace sgns
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>
+            trust_state_store_; ///< Durable network-scoped trust authority.
+        std::shared_ptr<sgns::account::TrustStartupController>
+            trust_startup_controller_; ///< Restricted boot state machine.
+        /// Created once with the policy controller; SelectAccount never mutates it.
+        std::shared_ptr<const NodeTrustSigner> trust_signer_;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1118,6 +1172,13 @@ namespace sgns
          */
         void InitializeAndStartBridge();
 
+        /** Copy the one published account/manager generation, or an empty snapshot while switching. */
+        [[nodiscard]] AccountServiceSnapshot SnapshotAccountServices() const;
+
+        /** Recheck a captured generation under the lifecycle lock before an asynchronous side effect. */
+        bool ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
+                                            const std::function<void()>  &side_effect );
+
         /**
          * @brief IBridgeInitObserver callback — stores chain list for catch-up scan.
          * @param[in] chains  Chain/contract pairs discovered during initialization.
@@ -1131,6 +1192,14 @@ namespace sgns
         void ShutdownForDestruction();
 
         /**
+         * @brief Releases the runtime object graph after all node I/O threads have stopped.
+         *
+         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
+         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         */
+        void ReleaseRuntimeMembersAfterIoStopped();
+
+        /**
          * @brief Stops account-bound runtime services in dependency order.
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
          * @param[in] release_members Whether to release service owners immediately after stopping them.
@@ -1138,9 +1207,17 @@ namespace sgns
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
 
         /**
-         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         * @brief Stops and releases the current TransactionManager and every callback owner it installed.
+         *
+         * Must complete before TransactionManager::New registers replacement callbacks on the shared
+         * GlobalDB, account, or blockchain objects.
          */
-        void ResetQuorumMembers();
+        void ReleaseTransactionManagerOwnership();
+
+        /**
+         * @brief Unregisters and releases node-scoped policy services during full shutdown only.
+         */
+        void ShutdownNodePolicyServices();
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,

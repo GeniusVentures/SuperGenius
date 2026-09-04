@@ -1,6 +1,7 @@
 add_proto_library(crdt_globaldb_proto proto/broadcast.proto)
 
 add_library(crdt_globaldb
+    GlobalDbNetworkComposition.cpp
     globaldb.cpp
     pubsub_broadcaster_ext.cpp
     keypair_file_storage.cpp
@@ -16,6 +17,7 @@ target_link_libraries(crdt_globaldb
     crdt_datastore
     p2p::p2p_peer_address
     PRIVATE
+    rapidjson
     crdt_graphsync_dagsyncer
     crdt_globaldb_proto
     ipfs-lite-cpp::ipfs_datastore_rocksdb

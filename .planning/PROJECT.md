@@ -40,17 +40,16 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - ✓ `auto_dht` + `port_seed` (renamed from `base_port`) read from `network_config.json` in `InitNetwork()` — config-wins precedence, safe defaults, port-resolution Doxygen (CFG-01, CFG-04) — **Validated in Phase 1**
 - ✓ `node_type` read from `sgns_config.json` in `LoadSgnsConfig()` (case-insensitive `NodeTypeFromString`, default Light) → `NodeType` enum; `is_full_node_` derived (Full/Archive→true, Light→false) in the reordered ctor; canonical `New(dev_config, AccountSource)` variant factory with `FromPublicKey` public (CFG-02, CFG-03, INTF-01, INTF-02, INTF-03) — **Validated in Phase 2** *(old factories retained until Phase 3 deletion per D-01)*
 - ✓ All ~25 `NewFromPrivateKey` call sites migrated to `New(dev_config, FromPrivateKey{...})`; old factories + old private ctor deleted (INTF-04); shared `WriteNetworkConfig`/`WriteSgnsConfig` helpers; full build + CTest green (MIG-01, MIG-02, MIG-03, MIG-04) — **Validated in Phase 3**
+- ✓ Standalone `multisig` signature verification and runtime N-of-M quorum evaluation, exercised without a running node or network transport (MSIG-01, MSIG-02, MSIG-03) — **Validated in Phase 8; completion metadata reconciled from Phase 13 evidence**
+- ✓ `ISignedCRDTData` and the static policy registry reject unsigned/under-signed registered writes and transport proposals/approvals over existing CRDT puts and callbacks only (SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04) — **Validated in Phases 9 and 13**
+- ✓ `TrustedPeerRegistry` uses SecureCRDT, starts from an authenticated reviewed genesis manifest, and authorizes membership successors from the current confirmed policy (TPR-01, TPR-02, TPR-03) — **Validated in Phases 10 and 13**
+- ✓ `BURN_BASIS_POINTS` is durable quorum-signed state, published through a node-scoped confirmed provider and consumed by `PayEscrow` with the genesis value of 100 (BURN-01, BURN-02, BURN-03) — **Validated in Phases 11 and 13**
+- ✓ `ValidatorRegistry` genesis-path signature verification reuses `multisig::VerifyPayloadSignature` under the approved adjusted, signature-verification-only scope; the broader `ISignedCRDTData` storage/quorum migration remains retired (MIG-05, MIG-06) — **Validated in Phase 12; metadata reconciled in Phase 13**
+- ✓ Reviewed trusted-peer ceremony, canonical genesis identity, versioned quorum policy, durable restart authority, bounds validation, explicit approvals, and production first-boot/restart/tamper/economic/account-lifetime coverage (BOOT-01..04, POLICY-01, VALID-01, TEST-01) — **Validated in Phase 13**
 
 ### Active
 
-<!-- v1.1 milestone scope. Hypotheses until shipped. -->
-
-- [ ] `ISignedCRDTData`-style interface exists: per-type classes implement `Verify()`/`Apply()`, reusing `ConsensusAuth`'s signing-bytes/SHA-256/`VerifySignature` primitives
-- [ ] Static topic/regex → policy registry (signer-set source + quorum rule + payload codec) declared in code
-- [ ] Propose/sign/quorum flow transported entirely over CRDT (pending-value + signature entries, filter-callback pattern like `ValidatorRegistry`) — no new networking/RPC
-- [ ] New `TrustedPeerRegistry`: genesis-seeded initial set (hardcoded in genesis config), N-of-M configurable quorum from CURRENT members to add/remove/replace a member
-- [ ] `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value; `TransactionManager` caches it and refreshes via CRDT-change callback (no live CRDT read per `PayEscrow` call)
-- [ ] `ValidatorRegistry` migrated onto the new `ISignedCRDTData` interface
+No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat gate plus five additional consecutive policy-lifetime passes is the closure evidence for the production integration rows.
 
 ### Out of Scope
 
@@ -63,6 +62,7 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - Distinct runtime behavior between `Archive` and `Full` — deferred from v1.0; still out of scope
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
+- Detection of a restore that rolls back the whole disk and every local trust anchor together — accepted unsolved software-only boundary; deployments with this threat require TPM/OS-keystore monotonic state or authenticated off-host checkpoints
 
 ## Context
 
@@ -70,7 +70,7 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 **Note:** Between v1.0 and v1.1, a substantial body of bridge-relayer work (RPC endpoint wiring, burn detection, conflict/replay hardening, E2E integration, P2P burn-event gossip, deferred validation lifecycle — `.planning/phases/01` through `07`) was planned and executed directly without being tracked as a formal GSD milestone. `PROJECT.md`/`MILESTONES.md` were not reconciled against that work before starting v1.1; this is a known documentation gap, not a description of v1.1's own scope.
 
-**v1.1 Goal:** Add a decoupled multi-signature component and secure CRDT storage layer so specific CRDT-backed values require quorum signatures to create/update — first applied to a new `TrustedPeerRegistry` and to `BURN_BASIS_POINTS` (currently a hardcoded constant in `TransactionManager.hpp:52`, with a comment already anticipating this: "Eventually settable via multisig CRDT config; hardcoded default until then"). Existing precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives. Key design decision from milestone questioning: do NOT route through `ConsensusManager` (voter/weight source is hardwired to a single `ValidatorRegistry` instance, not pluggable per proposal kind) — instead use CRDT's own put/filter-callback mechanism as the transport for proposals and signatures, same pattern `ValidatorRegistry` already uses.
+**v1.1 Outcome:** The decoupled multi-signature and SecureCRDT layers now back authenticated `TrustedPeerRegistry` and live `BURN_BASIS_POINTS` policy in the production node path. Phase 13 closed the audited genesis, policy-authority, callback-lifetime, operator-ingress, restart, tamper, and economic E2E gaps. Durable verified state is authoritative on restart; software detects rollback/fork/corruption while at least one trusted local anchor remains intact, but restoration of the whole disk and all local anchors together remains an accepted unsolved boundary without external monotonic or off-host anchoring.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -95,11 +95,11 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| v1.1: Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle | `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance per manager, not pluggable per proposal kind — extending it is bigger scope than needed | — Pending |
-| v1.1: Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks), no new networking | `ValidatorRegistry` already proves this pattern works for signature+quorum-gated CRDT updates; avoids building new RPC/gossip machinery | — Pending |
-| v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | — Pending |
-| v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | — Pending |
-| v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | — Pending |
+| v1.1: Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle | `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance per manager, not pluggable per proposal kind — extending it is bigger scope than needed | Phase 8/12 ✓; MIG-05 remains signature-verification-only |
+| v1.1: Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks), no new networking | `ValidatorRegistry` already proves this pattern works for signature+quorum-gated CRDT updates; avoids building new RPC/gossip machinery | Phase 9/13 ✓ |
+| v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | Phase 9/10/11 ✓ |
+| v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | Phase 10/13 ✓ |
+| v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | Phase 11/13 ✓ |
 | v1.0: `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
 | v1.0: `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`) |
 | v1.0: Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
@@ -125,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-20 — milestone v1.1 (Multi-Signature Secure CRDT Storage) started*
+*Last updated: 2026-08-12 — milestone v1.1 evidence reconciled after Phase 13 closure gate*

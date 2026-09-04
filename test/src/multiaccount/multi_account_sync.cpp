@@ -21,6 +21,8 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <random>
 #include <ctime>
 #include <tuple>
@@ -34,15 +36,16 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/TransactionManager.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
-#include "storage/rocksdb/rocksdb.hpp"
 
 using namespace sgns;
 
@@ -51,6 +54,39 @@ namespace sgns
     class MultiAccountTestAccess
     {
     public:
+        struct AccountGenerationSnapshot
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            std::string                         account_address;
+            std::string                         manager_address;
+            uint64_t                            generation = 0;
+            uint64_t                            catchup_generation = 0;
+        };
+
+        static AccountGenerationSnapshot SnapshotAccountGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( !node ) return {};
+            auto snapshot = node->SnapshotAccountServices();
+            return { snapshot.account,
+                     snapshot.manager,
+                     snapshot.account ? snapshot.account->GetAddress() : std::string{},
+                     snapshot.manager && snapshot.manager->account_m ? snapshot.manager->account_m->GetAddress()
+                                                                     : std::string{},
+                     snapshot.generation,
+                     snapshot.catchup_generation };
+        }
+
+        static uint64_t InjectCatchupCallback( const std::shared_ptr<GeniusNode> &node,
+                                               const AccountGenerationSnapshot  &snapshot,
+                                               std::atomic_uint64_t              &side_effects )
+        {
+            if ( !node ) return 0;
+            GeniusNode::AccountServiceSnapshot captured{ snapshot.account, snapshot.manager, snapshot.generation };
+            node->ApplyIfCurrentAccountServices( captured, [&] { ++side_effects; } );
+            return node->catchup_callback_owner_generation_.load();
+        }
+
         static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )
         {
             return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
@@ -119,6 +155,59 @@ namespace sgns
             const base::Buffer block_key( std::move( registry_block_key ) );
             return datastore->remove( block_key ).has_value() && !datastore->contains( block_key );
         }
+
+        static std::shared_ptr<TransactionManager> GetTransactionManager( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_ : nullptr;
+        }
+
+        static uint64_t GetTransactionManagerConstructionCount( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_construction_count_.load() : 0;
+        }
+
+        static uint64_t GetTransactionManagerStartCount( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_start_count_.load() : 0;
+        }
+
+        static uint64_t GetTransactionManagerOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_owner_generation_.load() : 0;
+        }
+
+        static uint64_t GetAccountTransactionCallbackOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->account_transaction_callback_owner_generation_.load() : 0;
+        }
+
+        static uint64_t GetBlockchainSlotHashOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_slot_hash_owner_generation_.load() : 0;
+        }
+
+        static outcome::result<std::string> ResolveAccountTransactionCid( const std::shared_ptr<GeniusNode> &node,
+                                                                          const std::string                &tx_hash )
+        {
+            if ( !node || !node->transaction_manager_ )
+            {
+                return outcome::failure( std::errc::owner_dead );
+            }
+            return node->transaction_manager_->GetTransactionCID( tx_hash );
+        }
+
+        static std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> GetManagerBurnProvider(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->transaction_manager_ ? node->transaction_manager_->confirmed_burn_provider_ : nullptr;
+        }
+
+        static std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> GetNodeBurnProvider(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->burn_config_ ? node->burn_config_->GetConfirmedValueProvider() : nullptr;
+        }
+
     };
 
 } // namespace sgns
@@ -128,6 +217,20 @@ class MultiAccountTest : public ::testing::Test
 protected:
     static constexpr std::string_view FILE_PREFIX = "mat_";
 
+    static std::string DeterministicKey( const std::string &self_address )
+    {
+        std::hash<std::string>          hasher;
+        std::mt19937                    rng( static_cast<uint32_t>( hasher( self_address ) ) );
+        std::uniform_int_distribution<> dist( 0, 15 );
+        std::string                     key;
+        key.reserve( 64 );
+        std::generate_n( std::back_inserter( key ), 64, [&]() {
+            static constexpr std::string_view hexChars = "0123456789abcdef";
+            return hexChars[dist( rng )];
+        } );
+        return key;
+    }
+
     /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
     ///        Full/Light implied by @p isFullNode. Trailing and defaulted so the ~15 existing
     ///        call sites are untouched; used to spin up an "Archive" node.
@@ -136,6 +239,7 @@ protected:
                                                   bool                       isProcessor         = false,
                                                   bool                       isGenesisAuthorized = false,
                                                   std::string                existingBasePath    = {},
+                                                  bool                       rpcCatchup          = false,
                                                   std::optional<std::string> nodeTypeOverride    = std::nullopt )
     {
         static std::atomic<int> nodeCounter{ 0 };
@@ -165,32 +269,29 @@ protected:
             }
         }
 
-        // Generate deterministic key from self_address
-        std::string key;
-        key.reserve( 64 );
-
-        // Create a hash of the self_address to make it deterministic
-        std::hash<std::string> hasher;
-        size_t                 address_hash = hasher( self_address );
-
-        // Use the hash as seed for deterministic random generation
-        std::mt19937                    rng( static_cast<uint32_t>( address_hash ) );
-        std::uniform_int_distribution<> dist( 0, 15 );
-        std::generate_n( std::back_inserter( key ),
-                         64,
-                         [&]()
-                         {
-                             static constexpr std::string_view hexChars = "0123456789abcdef";
-                             return hexChars[dist( rng )];
-                         } );
+        const auto key = DeterministicKey( self_address );
 
         if ( !reuseStorage )
         {
             sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                               nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" ),
-                                               /*is_processor=*/isProcessor,
-                                               /*rpc_catchup=*/false );
+        }
+        auto authority = GeniusAccount::NewFromPrivateKey(
+            devConfig.TokenID, key.c_str(), devConfig.BaseWritePath );
+        if ( !authority )
+        {
+            return nullptr;
+        }
+        if ( !reuseStorage )
+        {
+            test::WriteTrustedSgnsConfig( devConfig.BaseWritePath,
+                                    nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" ),
+                                    isProcessor,
+                                    rpcCatchup,
+                                    { authority->GetAddress() },
+                                    authority->GetAddress(),
+                                    1,
+                                    1,
+                                    144 );
         }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
@@ -209,15 +310,16 @@ protected:
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
-        sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node not synced: " + node->GetAddress() );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node ) );
+        ASSERT_EQ( node->GetState(), GeniusNode::NodeState::READY )
+            << "final node state=" << static_cast<int>( node->GetState() );
     }
 
     void ConfigureConsensus( const std::shared_ptr<GeniusNode> &node,
                              size_t                             certificates_per_batch,
                              std::chrono::milliseconds          certificate_delay )
     {
+        WaitForReady( node );
         sgns::test::assertWaitForCondition(
             [&]()
             {
@@ -225,7 +327,9 @@ protected:
                        sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
             },
             std::chrono::milliseconds( 50000 ),
-            "node blockchain not ready for consensus configuration" );
+            "node blockchain not ready for consensus configuration: " + node->GetAddress() );
+        ASSERT_EQ( node->GetState(), GeniusNode::NodeState::READY )
+            << "consensus node final state=" << static_cast<int>( node->GetState() );
 
         ASSERT_TRUE(
             sgns::MultiAccountTestAccess::ConfigureConsensus( node, certificates_per_batch, certificate_delay ) );
@@ -297,35 +401,25 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
         "client did not receive the updated validator registry" );
 
     const auto registry_cid = full_registry->GetRegistryCid();
-    auto       parsed_cid   = CID::fromString( registry_cid );
-    ASSERT_TRUE( parsed_cid.has_value() );
-    auto cid_bytes = parsed_cid.value().toBytes();
-    ASSERT_TRUE( cid_bytes.has_value() );
-
-    const auto client_base_path     = GetBaseWritePath( node_client );
-    const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
+    const auto client_address = node_client->GetAddress();
 
     client_registry.reset();
     node_client.reset();
 
-    ASSERT_TRUE( sgns::MultiAccountTestAccess::RemoveRegistryPersistence( client_database_path,
-                                                                          std::move( cid_bytes.value() ) ) );
-
-    const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
-    {
-        std::ofstream network_config( client_base_path + "network_config.json" );
-        ASSERT_TRUE( network_config.good() );
-        network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
-                          "\"bootstrap_addresses\": [\""
-                       << full_address << "\"] }";
-    }
-
-    node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
+    node_client = CreateNode( "registry_cid_client" );
     ASSERT_TRUE( node_client );
-    WaitForReady( node_client );
-
+    sgns::test::assertWaitForCondition(
+        [&] { return static_cast<bool>( sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client ) ); },
+        std::chrono::milliseconds( 50000 ),
+        "recovery client did not construct its empty validator registry" );
     client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
     ASSERT_TRUE( client_registry );
+    EXPECT_EQ( node_client->GetAddress(), client_address );
+    EXPECT_NE( client_registry->GetRegistryCid(), registry_cid );
+    EXPECT_TRUE( client_registry->LoadRegistryByCid( registry_cid ).has_error() );
+
+    node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_client );
 
     sgns::test::assertWaitForCondition(
         [&]()
@@ -335,6 +429,203 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
         },
         std::chrono::milliseconds( 30000 ),
         "missing validator registry block was not fetched from the full node" );
+}
+
+TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSingleManagerOwnership )
+{
+    auto historical_node = CreateNode( "persisted_historical_restart", true, true, true );
+    ASSERT_TRUE( historical_node );
+    WaitForReady( historical_node );
+    ConfigureConsensus( historical_node, 1, std::chrono::milliseconds( 100 ) );
+
+    const std::string historical_address   = historical_node->GetAddress();
+    const std::string historical_base_path = GetBaseWritePath( historical_node );
+    const auto        historical_mint      = historical_node->MintTokens(
+        1000,
+        sgns::test::NextMintSourceHash(),
+        "test",
+        TokenID::FromBytes( { 0x00 } ),
+        "",
+        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( historical_mint.has_value() ) << historical_mint.error().message();
+    const std::string historical_tx_hash = historical_mint.value().first;
+
+    const auto historical_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( historical_node, historical_tx_hash );
+    ASSERT_TRUE( historical_cid.has_value() ) << historical_cid.error().message();
+    ASSERT_FALSE( historical_cid.value().empty() );
+    const auto historical_confirmed_count =
+        historical_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_GE( historical_confirmed_count, 1U );
+
+    historical_node.reset();
+
+    // This is deliberately the fixture's existing-base-path branch. Do not replace
+    // historical_base_path with a fresh client directory: trust and transaction
+    // databases from the first lifetime are the subject of this counterexample.
+    auto restarted_node = CreateNode( "persisted_historical_restart",
+                                      true,
+                                      true,
+                                      true,
+                                      historical_base_path );
+    ASSERT_TRUE( restarted_node );
+    ASSERT_EQ( GetBaseWritePath( restarted_node ), historical_base_path );
+    ASSERT_EQ( restarted_node->GetAddress(), historical_address );
+    WaitForReady( restarted_node );
+
+    const auto restarted_manager = sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node );
+    ASSERT_TRUE( restarted_manager );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerConstructionCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerStartCount( restarted_node ), 1U );
+
+    const auto owner_generation =
+        sgns::MultiAccountTestAccess::GetTransactionManagerOwnerGeneration( restarted_node );
+    ASSERT_EQ( owner_generation, 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetAccountTransactionCallbackOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetBlockchainSlotHashOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetManagerBurnProvider( restarted_node ).get(),
+               sgns::MultiAccountTestAccess::GetNodeBurnProvider( restarted_node ).get() );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            return restarted_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED ) >=
+                   historical_confirmed_count;
+        },
+        std::chrono::milliseconds( 50000 ),
+        "persisted transaction history did not reload from historical_base_path" );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node ).get(), restarted_manager.get() );
+    const auto reopened_historical_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( restarted_node, historical_tx_hash );
+    ASSERT_TRUE( reopened_historical_cid.has_value() ) << reopened_historical_cid.error().message();
+    EXPECT_EQ( reopened_historical_cid.value(), historical_cid.value() );
+
+    const auto new_mint = restarted_node->MintTokens( 2000,
+                                                       sgns::test::NextMintSourceHash(),
+                                                       "test",
+                                                       TokenID::FromBytes( { 0x00 } ),
+                                                       "",
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( new_mint.has_value() ) << new_mint.error().message();
+    const auto new_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( restarted_node, new_mint.value().first );
+    ASSERT_TRUE( new_cid.has_value() ) << new_cid.error().message();
+    ASSERT_FALSE( new_cid.value().empty() );
+    EXPECT_EQ( restarted_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED ),
+               historical_confirmed_count + 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node ).get(), restarted_manager.get() );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerConstructionCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerStartCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetAccountTransactionCallbackOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetBlockchainSlotHashOwnerGeneration( restarted_node ),
+               owner_generation );
+}
+
+TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksStayGenerationConsistent )
+{
+    auto node = CreateNode( "concurrent_account_generation", true, false, true, {}, true );
+    ASSERT_TRUE( node );
+    WaitForReady( node );
+
+    const auto original_address = node->GetAddress();
+    const auto replacement_key  = DeterministicKey( "concurrent_account_generation_replacement" );
+    ASSERT_TRUE( node->AddAccountWithKey( replacement_key.c_str() ).has_value() );
+    const auto accounts = node->GetAvailableAccounts();
+    const auto replacement = std::find_if( accounts.begin(), accounts.end(), [&]( const std::string &address )
+                                           { return address != original_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+
+    const auto stale_snapshot = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+    ASSERT_TRUE( stale_snapshot.account );
+    ASSERT_TRUE( stale_snapshot.manager );
+
+    std::mutex              selection_barrier_mutex;
+    std::condition_variable selection_barrier_condition;
+    size_t                  selection_barrier = 0;
+    bool                    selection_barrier_open = false;
+    auto arrive_at_selection_barrier = [&]
+    {
+        std::unique_lock<std::mutex> lock( selection_barrier_mutex );
+        if ( ++selection_barrier == 3 )
+        {
+            selection_barrier_open = true;
+            selection_barrier_condition.notify_all();
+        }
+        else
+        {
+            selection_barrier_condition.wait( lock, [&] { return selection_barrier_open; } );
+        }
+    };
+
+    std::mutex observed_mutex;
+    std::vector<sgns::MultiAccountTestAccess::AccountGenerationSnapshot> observed_generations;
+    std::atomic_bool selector_done{ false };
+    std::atomic_uint64_t stale_callback_side_effects{ 0 };
+
+    std::thread selector(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            for ( size_t iteration = 0; iteration < 3; ++iteration )
+            {
+                const auto &target = iteration % 2 == 0 ? *replacement : original_address;
+                ASSERT_TRUE( node->SelectAccount( target ).has_value() );
+                sgns::test::assertWaitForCondition(
+                    [&] { return node->GetState() == GeniusNode::NodeState::READY; },
+                    std::chrono::milliseconds( 50000 ),
+                    "replacement account did not return to READY" );
+            }
+            selector_done.store( true );
+        } );
+
+    std::thread reader(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            do
+            {
+                auto observed = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+                (void) node->GetAddress();
+                (void) node->GetTransactionManager();
+                (void) node->GetBalance();
+                std::lock_guard<std::mutex> lock( observed_mutex );
+                observed_generations.push_back( std::move( observed ) );
+                std::this_thread::yield();
+            } while ( !selector_done.load() );
+        } );
+
+    std::thread callback(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            sgns::test::assertWaitForCondition(
+                [&] { return node->GetAddress() != original_address; },
+                std::chrono::milliseconds( 50000 ),
+                "account selection did not publish a replacement" );
+            const auto callback_generation = sgns::MultiAccountTestAccess::InjectCatchupCallback(
+                node, stale_snapshot, stale_callback_side_effects );
+            auto observed = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+            observed.catchup_generation = callback_generation;
+            std::lock_guard<std::mutex> lock( observed_mutex );
+            observed_generations.push_back( std::move( observed ) );
+        } );
+
+    selector.join();
+    reader.join();
+    callback.join();
+
+    ASSERT_FALSE( observed_generations.empty() );
+    for ( const auto &observed : observed_generations )
+    {
+        if ( !observed.account || !observed.manager ) continue;
+        ASSERT_FALSE( observed.account_address.empty() );
+        ASSERT_EQ( observed.account_address, observed.manager_address ) << "CR-11 generation mismatch";
+        ASSERT_EQ( observed.generation, observed.catchup_generation ) << "CR-11 generation mismatch";
+    }
+    ASSERT_EQ( stale_callback_side_effects.load(), 0U ) << "CR-11 generation mismatch";
 }
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
@@ -911,6 +1202,7 @@ TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
                                     /*isProcessor=*/false,
                                     /*isGenesisAuthorized=*/false,
                                     /*existingBasePath=*/{},
+                                    /*rpcCatchup=*/false,
                                     /*nodeTypeOverride=*/std::string( "Archive" ) );
 
     const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_archive };

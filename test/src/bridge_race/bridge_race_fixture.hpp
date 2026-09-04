@@ -42,6 +42,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "../bridge_e2e/anvil_fixture.hpp"
@@ -326,30 +327,45 @@ protected:
             // and every bridge_race target derived the same 11 ports because DeriveNodeKey()
             // yields the same addresses. Same fix the catchup fixture already took.
             sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/0, /*auto_dht=*/true );
-            sgns::GeniusNode::WriteSgnsConfig( base_write_path, node_type, /*is_processor=*/false );
+            sgns::test::WriteLocalTrustSgnsConfig( base_write_path,
+                                                   node_type,
+                                                   /*is_processor=*/false,
+                                                   /*rpc_catchup=*/true,
+                                                   DeriveNodeKey( i ) );
             WriteBridgeChainsConfig( base_write_path );
         };
 
-        std::vector<std::string> light_addresses;
-        light_addresses.reserve( kNodeCount - 1u );
+        // Derive every node's address via the account KDF probe and register the
+        // genesis validator set BEFORE constructing any node: EnsureValidatorRegistry()
+        // runs at blockchain construction and only the already-authorized full node
+        // writes the genesis registry — registering afterwards races the async init
+        // and deadlocks the deferred blockchain start.
+        std::vector<std::string> node_addresses( kNodeCount );
+        for ( unsigned int i = 0u; i < kNodeCount; ++i )
+        {
+            const std::string base_write_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
+            node_addresses[i] = sgns::test::TrustAddressFromPrivateKey( base_write_path, DeriveNodeKey( i ) );
+            ASSERT_FALSE( node_addresses[i].empty() );
+        }
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_addresses[0] );
+        sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { node_addresses.begin() + 1,
+                                                                    node_addresses.end() } );
+        spdlog::info( "bridge_race: authorized full node = {}, +{} additional genesis validators",
+                      node_addresses[0].substr( 0, 16 ),
+                      kNodeCount - 1u );
+
         for ( unsigned int i = 1u; i < kNodeCount; ++i )
         {
             write_node_config( i, "Light" );
             s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ DeriveNodeKey( i ) } );
             ASSERT_NE( s_nodes[i], nullptr ) << "Failed to create node index " << i;
             s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
-            light_addresses.push_back( s_nodes[i]->GetAddress() );
         }
-
-        sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
-        spdlog::info( "bridge_race: registered {} additional genesis validators", light_addresses.size() );
 
         write_node_config( 0u, "Full" );
         s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ DeriveNodeKey( 0u ) } );
         ASSERT_NE( s_nodes[0], nullptr ) << "Failed to create Full node";
         s_nodes[0]->SetChainlistFetcher( chainlist_fetcher );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-        spdlog::info( "bridge_race: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
 
         // Star-topology PubSub mesh bootstrap: each Light node peers directly with the
         // Full node (sufficient for CRDT sync; a full 11x11 mesh is unnecessary).
@@ -362,17 +378,11 @@ protected:
         // All transaction managers must be READY before a TEST_F body attempts the
         // deliberately back-to-back ConfigureRpcEndpoint calls. The burn is still seeded
         // before endpoint configuration in each test, preserving the D-03 race trigger.
-        ASSERT_WAIT_FOR_CONDITION(
-            [&]()
-            {
-                return std::all_of( s_nodes.begin(),
-                                    s_nodes.end(),
-                                    []( const std::shared_ptr<GeniusNode> &node )
-                                    { return node && node->GetState() == GeniusNode::NodeState::READY; } );
-            },
-            kRaceNodeReadyTimeout,
-            "all 11 bridge-race nodes READY",
-            nullptr );
+        for ( auto &node : s_nodes )
+        {
+            ASSERT_NE( node, nullptr );
+            sgns::test::MakeNodeReadyWithLocalTrust( node, kRaceNodeReadyTimeout );
+        }
 
         spdlog::info( "bridge_race: all {} nodes READY (RPC endpoints not yet configured)", kNodeCount );
     }

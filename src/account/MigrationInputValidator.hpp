@@ -20,10 +20,10 @@ namespace sgns
                                      const std::string      &address,
                                      const UTXOManager      &utxo_manager ) const override;
 
-        bool ValidateWitness( const ConsensusSubject                   &subject,
-                              const std::shared_ptr<GeniusTransaction> &tx,
-                              const UTXOTxParameters                   &params,
-                              const std::shared_ptr<Blockchain>        &blockchain ) const override;
+        bool ValidateWitness( const ConsensusSubject  &subject,
+                              const GeniusTransaction &tx,
+                              const UTXOTxParameters  &params,
+                              const Blockchain        &blockchain ) const override;
 
         bool RequiresConsensusUTXOData() const override
         {

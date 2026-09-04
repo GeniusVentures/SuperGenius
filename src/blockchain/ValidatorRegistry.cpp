@@ -274,17 +274,11 @@ namespace sgns
         return instance;
     }
 
-    outcome::result<void> ValidatorRegistry::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                          const std::shared_ptr<crdt::GlobalDB> &new_db )
+    outcome::result<void> ValidatorRegistry::MigrateCids( crdt::GlobalDB &old_db, crdt::GlobalDB &new_db )
     {
-        if ( !old_db || !new_db )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
         auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
-            old_db->GetBroadcaster()->GetDagSyncer() );
-        auto new_crdt = new_db->GetCRDTDataStore();
+            old_db.GetBroadcaster()->GetDagSyncer() );
+        auto new_crdt = new_db.GetCRDTDataStore();
         if ( !new_crdt )
         {
             ValidatorRegistryLogger()->error( "{}: Missing broadcaster while migrating Validator CIDs", __func__ );
@@ -296,8 +290,8 @@ namespace sgns
             return outcome::failure( std::errc::no_such_device );
         }
 
-        auto old_store = old_db->GetDataStore();
-        auto new_store = new_db->GetDataStore();
+        auto old_store = old_db.GetDataStore();
+        auto new_store = new_db.GetDataStore();
 
         ValidatorRegistryLogger()->debug( "{}: Getting the registry CID from the datastore", __func__ );
 

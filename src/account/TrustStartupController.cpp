@@ -1,0 +1,788 @@
+#include "account/TrustStartupController.hpp"
+
+#include <algorithm>
+#include <array>
+#include <iterator>
+
+#include <boost/asio/post.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/system_executor.hpp>
+
+#include "account/BurnConfig.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+
+namespace sgns::account
+{
+    namespace
+    {
+        std::vector<std::string> ConflictingFields( const sgns::trustedpeer::GenesisManifest &configured,
+                                                    const sgns::trustedpeer::GenesisManifest &persisted )
+        {
+            std::vector<std::string> fields;
+            auto                     configured_peers = configured.peers;
+            std::sort( configured_peers.begin(), configured_peers.end() );
+            if ( configured_peers != persisted.peers )
+            {
+                fields.emplace_back( "trusted_peers" );
+            }
+            if ( configured.bootstrapper_public_key != persisted.bootstrapper_public_key )
+            {
+                fields.emplace_back( "bootstrapper_node" );
+            }
+            if ( configured.membership_threshold != persisted.membership_threshold )
+            {
+                fields.emplace_back( "trusted_peer_quorum_threshold" );
+            }
+            if ( configured.burn_threshold != persisted.burn_threshold )
+            {
+                fields.emplace_back( "burn_config_quorum_threshold" );
+            }
+            return fields;
+        }
+
+        constexpr std::array<std::chrono::milliseconds, 6> REFRESH_RETRY_DELAYS{
+            std::chrono::milliseconds( 100 ),
+            std::chrono::milliseconds( 200 ),
+            std::chrono::milliseconds( 400 ),
+            std::chrono::milliseconds( 800 ),
+            std::chrono::milliseconds( 1600 ),
+            std::chrono::milliseconds( 3200 ),
+        };
+
+        const char *RefreshStageName( TrustStartupController::RefreshStage stage )
+        {
+            using Stage = TrustStartupController::RefreshStage;
+            switch ( stage )
+            {
+                case Stage::DurableState: return "durable-state";
+                case Stage::GenesisDiscovery: return "genesis-discovery";
+                case Stage::PolicyDiscovery: return "policy-discovery";
+                case Stage::PolicyActivation: return "policy-activation";
+                case Stage::BurnDiscovery: return "burn-discovery";
+                case Stage::BurnActivation: return "burn-activation";
+                case Stage::Publication: return "publication";
+            }
+            return "unknown";
+        }
+    } // namespace
+
+    const char *TrustStartupController::EventCodeName( EventCode code ) noexcept
+    {
+        switch ( code )
+        {
+            case EventCode::TRUST_CONFIG_CONFLICT: return "TRUST_CONFIG_CONFLICT";
+            case EventCode::TRUST_NETWORK_MISMATCH: return "TRUST_NETWORK_MISMATCH";
+            case EventCode::TRUST_LOCAL_STATE_CORRUPT: return "TRUST_LOCAL_STATE_CORRUPT";
+            case EventCode::TRUST_CRDT_MISSING: return "TRUST_CRDT_MISSING";
+            case EventCode::TRUST_CRDT_ROLLBACK: return "TRUST_CRDT_ROLLBACK";
+            case EventCode::TRUST_CRDT_FORK: return "TRUST_CRDT_FORK";
+            case EventCode::TRUST_ACTIVATION_FAILED: return "TRUST_ACTIVATION_FAILED";
+            case EventCode::TRUST_REFRESH_RETRY_SCHEDULED: return "TRUST_REFRESH_RETRY_SCHEDULED";
+            case EventCode::TRUST_REFRESH_RETRY_EXHAUSTED: return "TRUST_REFRESH_RETRY_EXHAUSTED";
+        }
+        return "unknown";
+    }
+
+    struct TrustStartupController::RefreshDispatchState
+    {
+        std::mutex                                             mutex;
+        std::weak_ptr<TrustStartupController>                  controller;
+        boost::asio::strand<boost::asio::system_executor>      executor{
+            boost::asio::make_strand( boost::asio::system_executor{} ) };
+        std::shared_ptr<boost::asio::steady_timer>             retry_timer;
+        std::shared_ptr<RefreshTestHooks>                      test_hooks;
+        EventCallback                                          event_callback;
+        std::string                                            persisted_fingerprint;
+        bool                                                   stopped = false;
+        bool                                                   active = false;
+        bool                                                   retry_waiting = false;
+        bool                                                   coalesced_request = false;
+    };
+
+    outcome::result<std::shared_ptr<TrustStartupController>> TrustStartupController::New(
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>        secure_crdt,
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>  trust_store,
+        std::optional<sgns::trustedpeer::GenesisManifest>    diagnostic_manifest,
+        std::string                                          local_signer_address,
+        sgns::trustedpeer::TrustedPeerRegistry::SignCallback sign_callback,
+        EventCallback                                        event_callback,
+        StateCallback                                        state_callback,
+        std::shared_ptr<RefreshTestHooks>                     refresh_test_hooks )
+    {
+        if ( !secure_crdt || !trust_store )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto instance             = std::shared_ptr<TrustStartupController>( new TrustStartupController );
+        instance->secure_crdt_    = std::move( secure_crdt );
+        instance->trust_store_    = std::move( trust_store );
+        instance->local_signer_address_ = local_signer_address;
+        instance->event_callback_ = std::move( event_callback );
+        instance->state_callback_ = std::move( state_callback );
+        instance->refresh_test_hooks_ = std::move( refresh_test_hooks );
+
+        auto persisted = instance->trust_store_->LoadAndVerify();
+        if ( persisted.has_value() )
+        {
+            if ( diagnostic_manifest && diagnostic_manifest->network_id != persisted.value().genesis.network_id )
+            {
+                instance->manifest_ = persisted.value().genesis;
+                instance->SetState( State::FatalMismatch );
+                instance->Emit( EventCode::TRUST_NETWORK_MISMATCH );
+                return outcome::failure( sgns::trustedpeer::TrustStateStore::Error::NETWORK_MISMATCH );
+            }
+            if ( diagnostic_manifest )
+            {
+                auto fields = ConflictingFields( *diagnostic_manifest, persisted.value().genesis );
+                if ( !fields.empty() )
+                {
+                    instance->manifest_ = persisted.value().genesis;
+                    instance->Emit( EventCode::TRUST_CONFIG_CONFLICT, std::move( fields ) );
+                }
+            }
+            instance->manifest_ = persisted.value().genesis;
+        }
+        else if ( persisted.error() == sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND )
+        {
+            if ( !diagnostic_manifest || !diagnostic_manifest->Canonicalized() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            instance->manifest_ = diagnostic_manifest->Canonicalized().value();
+        }
+        else
+        {
+            instance->SetState( State::FatalMismatch );
+            instance->Emit( persisted.error() == sgns::trustedpeer::TrustStateStore::Error::NETWORK_MISMATCH
+                                ? EventCode::TRUST_NETWORK_MISMATCH
+                                : EventCode::TRUST_LOCAL_STATE_CORRUPT );
+            return persisted.error();
+        }
+
+        BOOST_OUTCOME_TRY( instance->registry_,
+                           sgns::trustedpeer::TrustedPeerRegistry::NewProduction( instance->secure_crdt_,
+                                                                                  instance->trust_store_,
+                                                                                  instance->manifest_,
+                                                                                  {},
+                                                                                  local_signer_address,
+                                                                                  sign_callback ) );
+        BOOST_OUTCOME_TRY( instance->burn_config_,
+                           BurnConfig::NewProduction( instance->secure_crdt_,
+                                                      instance->registry_,
+                                                      instance->trust_store_,
+                                                      std::move( local_signer_address ),
+                                                      std::move( sign_callback ) ) );
+        if ( !instance->secure_crdt_->RegisterFilters() )
+        {
+            return outcome::failure( std::errc::operation_not_permitted );
+        }
+
+        const std::weak_ptr<TrustStartupController> weak = instance;
+        const auto enqueue_candidate = [weak]( const auto &id )
+        {
+            if ( auto self = weak.lock() )
+            {
+                self->QueuePendingCandidate( id );
+                self->RequestRefresh();
+            }
+        };
+        if ( !instance->secure_crdt_->RegisterCandidateCallback(
+                 "trusted-peer-genesis",
+                 [weak]( const auto &id, const auto & )
+                 {
+                     if ( auto self = weak.lock() )
+                     {
+                         self->RequestRefresh();
+                     }
+                 },
+                 instance.get() ) ||
+             !instance->secure_crdt_->RegisterCandidateCallback(
+                 "trusted-peer",
+                 [weak, enqueue_candidate]( const auto &id, const auto &approval )
+                 {
+                     if ( auto self = weak.lock(); self && approval.signer != self->local_signer_address_ )
+                     {
+                         enqueue_candidate( id );
+                     }
+                 },
+                 instance.get() ) ||
+             !instance->secure_crdt_->RegisterCandidateCallback(
+                 "burn-config",
+                 [weak, enqueue_candidate]( const auto &id, const auto &approval )
+                 {
+                     if ( auto self = weak.lock(); self && approval.signer != self->local_signer_address_ )
+                     {
+                         enqueue_candidate( id );
+                     }
+                 },
+                 instance.get() ) )
+        {
+            return outcome::failure( std::errc::operation_not_permitted );
+        }
+
+        instance->refresh_dispatch_ = std::make_shared<RefreshDispatchState>();
+        instance->refresh_dispatch_->controller = instance;
+        instance->refresh_dispatch_->test_hooks = instance->refresh_test_hooks_;
+        instance->refresh_dispatch_->event_callback = instance->event_callback_;
+        instance->refresh_dispatch_->persisted_fingerprint = instance->manifest_.Fingerprint().value_or( "" );
+        if ( instance->refresh_test_hooks_ && instance->refresh_test_hooks_->bind_request_refresh )
+        {
+            const std::weak_ptr<RefreshDispatchState> weak_dispatch = instance->refresh_dispatch_;
+            instance->refresh_test_hooks_->bind_request_refresh( [weak_dispatch]
+            {
+                if ( auto dispatch = weak_dispatch.lock() )
+                {
+                    TrustStartupController::RequestDispatch( dispatch );
+                }
+            } );
+        }
+
+        BOOST_OUTCOME_TRY( instance->Refresh() );
+        return instance;
+    }
+
+    TrustStartupController::~TrustStartupController()
+    {
+        std::shared_ptr<boost::asio::steady_timer> timer;
+        std::shared_ptr<RefreshTestHooks> hooks;
+        {
+            const auto dispatch = refresh_dispatch_;
+            if ( dispatch )
+            {
+                std::lock_guard<std::mutex> lock( dispatch->mutex );
+                dispatch->stopped = true;
+                dispatch->active = false;
+                dispatch->retry_waiting = false;
+                dispatch->coalesced_request = false;
+                timer = std::move( dispatch->retry_timer );
+                hooks = dispatch->test_hooks;
+            }
+        }
+        if ( timer ) timer->cancel();
+        if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
+        if ( secure_crdt_ )
+        {
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", this );
+            secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", this );
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", this );
+        }
+    }
+
+    outcome::result<void> TrustStartupController::Refresh()
+    {
+        RefreshStage stage = RefreshStage::DurableState;
+        return RefreshClassified( stage );
+    }
+
+    outcome::result<void> TrustStartupController::RefreshClassified( RefreshStage &stage )
+    {
+        std::lock_guard<std::mutex> refresh_lock( refresh_execution_mutex_ );
+        stage = RefreshStage::DurableState;
+        auto snapshot = trust_store_->LoadAndVerify();
+        if ( snapshot.has_error() && snapshot.error() == sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND )
+        {
+            const auto fingerprint = manifest_.Fingerprint();
+            const auto payload     = manifest_.CanonicalBytes();
+            if ( !fingerprint || !payload )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto core      = sgns::trustedpeer::GenesisCandidateCore( manifest_, *payload, *fingerprint );
+            const auto candidate = sgns::securecrdt::CandidateId::FromCore( core );
+            if ( candidate && ( !failed_genesis_candidate_ || !( *failed_genesis_candidate_ == *candidate ) ) )
+            {
+                stage = RefreshStage::GenesisDiscovery;
+                auto approvals = secure_crdt_->ReadCandidateApprovals( *candidate );
+                if ( approvals.has_error() )
+                {
+                    return approvals.error();
+                }
+                if ( !approvals.value().empty() )
+                {
+                    auto activated = registry_->TryActivateReviewedGenesisCandidate( *candidate );
+                    if ( activated.has_error() )
+                    {
+                        failed_genesis_candidate_ = *candidate;
+                        EmitActivationFailed( candidate->domain,
+                                              std::to_string( candidate->version ),
+                                              candidate->content_hash,
+                                              activated.error() );
+                        return activated.error();
+                    }
+                }
+            }
+            snapshot = trust_store_->LoadAndVerify();
+        }
+        if ( snapshot.has_error() )
+        {
+            if ( snapshot.error() == sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND )
+            {
+                SetState( State::FreshWaitingForGenesis );
+                return outcome::success();
+            }
+            SetState( State::FatalMismatch );
+            Emit( EventCode::TRUST_LOCAL_STATE_CORRUPT );
+            return snapshot.error();
+        }
+
+        stage = RefreshStage::PolicyDiscovery;
+        auto discovered_policies = refresh_test_hooks_ && refresh_test_hooks_->list_policy_candidates
+                                     ? refresh_test_hooks_->list_policy_candidates( *registry_ )
+                                     : registry_->ListPendingPolicyCandidates();
+        if ( discovered_policies.has_error() )
+        {
+            return discovered_policies.error();
+        }
+        for ( const auto &candidate : discovered_policies.value() )
+        {
+            QueuePendingCandidate( candidate );
+        }
+        std::vector<sgns::securecrdt::CandidateId> policy_candidates;
+        {
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            policy_candidates = pending_policy_candidates_;
+        }
+        std::sort( policy_candidates.begin(),
+                   policy_candidates.end(),
+                   []( const auto &left, const auto &right )
+                   {
+                       return left.version == right.version ? left.content_hash < right.content_hash
+                                                            : left.version < right.version;
+                   } );
+        policy_candidates.erase( std::unique( policy_candidates.begin(), policy_candidates.end() ),
+                                 policy_candidates.end() );
+        for ( const auto &candidate : policy_candidates )
+        {
+            stage = RefreshStage::PolicyActivation;
+            auto activated = registry_->TryActivatePolicyCandidate( candidate );
+            if ( activated.has_error() )
+            {
+                MarkCandidateFailed( candidate );
+                EmitActivationFailed( candidate.domain,
+                                      std::to_string( candidate.version ),
+                                      candidate.content_hash,
+                                      activated.error() );
+                return activated.error();
+            }
+            if ( activated.value() )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_policy_candidates_.clear();
+                }
+                snapshot = trust_store_->LoadAndVerify();
+                if ( snapshot.has_error() )
+                {
+                    EmitActivationFailed( candidate.domain,
+                                          std::to_string( candidate.version ),
+                                          candidate.content_hash,
+                                          snapshot.error() );
+                    return snapshot.error();
+                }
+                // All candidates in this pass were authorized by the predecessor
+                // that just advanced. Rediscover against the new durable head on
+                // the next refresh rather than reporting ordinary stale losers.
+                break;
+            }
+        }
+
+        std::vector<sgns::securecrdt::CandidateId> pending;
+        if ( snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::BootstrapOnly &&
+             std::find( snapshot.value().policy.peers.begin(),
+                        snapshot.value().policy.peers.end(),
+                        local_signer_address_ ) != snapshot.value().policy.peers.end() )
+        {
+            stage = RefreshStage::Publication;
+            auto initiated = burn_config_->OnTrustedPeerGenesisConfirmed();
+            if ( initiated.has_error() )
+            {
+                auto core = BurnConfig::BurnCandidateCore( snapshot.value().burn );
+                auto id = core ? sgns::securecrdt::CandidateId::FromCore( *core ) : std::nullopt;
+                EmitActivationFailed( id ? id->domain : "burn-config",
+                                      id ? std::to_string( id->version )
+                                         : std::to_string( snapshot.value().burn.version ),
+                                      id ? id->content_hash : "",
+                                      initiated.error() );
+                return initiated.error();
+            }
+            QueuePendingCandidate( initiated.value() );
+        }
+        stage = RefreshStage::BurnDiscovery;
+        auto discovered = refresh_test_hooks_ && refresh_test_hooks_->list_burn_candidates
+                            ? refresh_test_hooks_->list_burn_candidates( *burn_config_ )
+                            : burn_config_->ListPendingBurnCandidates();
+        if ( discovered.has_error() )
+        {
+            return discovered.error();
+        }
+        for ( const auto &candidate : discovered.value() )
+        {
+            QueuePendingCandidate( candidate );
+        }
+        {
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            std::copy_if( pending_burn_candidates_.begin(),
+                          pending_burn_candidates_.end(),
+                          std::back_inserter( pending ),
+                          []( const auto &candidate ) { return candidate.domain == "burn-config"; } );
+        }
+        std::sort( pending.begin(), pending.end(), []( const auto &left, const auto &right ) {
+            if ( left.domain != right.domain ) return left.domain < right.domain;
+            return left.version == right.version ? left.content_hash < right.content_hash
+                                                 : left.version < right.version;
+        } );
+        pending.erase( std::unique( pending.begin(), pending.end() ), pending.end() );
+        for ( const auto &candidate : pending )
+        {
+            stage = RefreshStage::BurnActivation;
+            auto activated = burn_config_->TryActivateBurnCandidate( candidate );
+            if ( activated.has_error() )
+            {
+                MarkCandidateFailed( candidate );
+                EmitActivationFailed( candidate.domain,
+                                      std::to_string( candidate.version ),
+                                      candidate.content_hash,
+                                      activated.error() );
+                return activated.error();
+            }
+            if ( activated.value() )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_burn_candidates_.erase(
+                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
+                        pending_burn_candidates_.end() );
+                }
+                snapshot = trust_store_->LoadAndVerify();
+                if ( snapshot.has_error() )
+                {
+                    EmitActivationFailed( candidate.domain,
+                                          std::to_string( candidate.version ),
+                                          candidate.content_hash,
+                                          snapshot.error() );
+                    return snapshot.error();
+                }
+                // The durable predecessor changed. Any remaining IDs were eligible for
+                // the previous head, so discover again on the next refresh instead of
+                // treating them as actionable stale candidates.
+                break;
+            }
+        }
+        stage = RefreshStage::Publication;
+        SetState( burn_config_->IsEconomicallyReady() ? State::ConfirmedReady : State::WaitingForInitialBurn );
+        return outcome::success();
+    }
+
+    outcome::result<void> TrustStartupController::ObserveReplicatedSnapshot(
+        const std::optional<sgns::trustedpeer::ConfirmedTrustSnapshot> &replicated )
+    {
+        BOOST_OUTCOME_TRY( auto durable, trust_store_->LoadAndVerify() );
+        if ( !replicated )
+        {
+            Emit( EventCode::TRUST_CRDT_MISSING );
+            return outcome::success();
+        }
+        const auto durable_policy = durable.policy.Hash();
+        const auto remote_policy  = replicated->policy.Hash();
+        const auto durable_burn   = durable.burn.Hash();
+        const auto remote_burn    = replicated->burn.Hash();
+        if ( replicated->policy.version < durable.policy.version || replicated->burn.version < durable.burn.version )
+        {
+            Emit( EventCode::TRUST_CRDT_ROLLBACK );
+        }
+        else if ( replicated->policy.version == durable.policy.version &&
+                  replicated->burn.version == durable.burn.version &&
+                  ( remote_policy != durable_policy || remote_burn != durable_burn ) )
+        {
+            Emit( EventCode::TRUST_CRDT_FORK );
+        }
+        return outcome::success();
+    }
+
+    TrustStartupController::State TrustStartupController::GetState() const noexcept
+    {
+        return state_.load();
+    }
+
+    bool TrustStartupController::CanApproveSuccessors() const noexcept
+    {
+        return state_.load() == State::ConfirmedReady;
+    }
+
+    bool TrustStartupController::IsEconomicallyReady() const noexcept
+    {
+        return state_.load() == State::ConfirmedReady && burn_config_ && burn_config_->IsEconomicallyReady();
+    }
+
+    std::vector<std::string> TrustStartupController::GetCurrentPeers() const
+    {
+        return registry_ ? registry_->GetCurrentPeers() : std::vector<std::string>{};
+    }
+
+    std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> TrustStartupController::registry() const
+    {
+        return registry_;
+    }
+
+    std::shared_ptr<BurnConfig> TrustStartupController::burn_config() const
+    {
+        return burn_config_;
+    }
+
+    void TrustStartupController::SetState( State state )
+    {
+        const auto previous = state_.exchange( state );
+        if ( previous != state && state_callback_ )
+        {
+            state_callback_( state );
+        }
+    }
+
+    void TrustStartupController::Emit( EventCode code, std::vector<std::string> fields ) const
+    {
+        if ( !event_callback_ )
+        {
+            return;
+        }
+        const auto fingerprint = manifest_.Fingerprint();
+        event_callback_( Event{ code, std::move( fields ), fingerprint.value_or( "" ) } );
+    }
+
+    void TrustStartupController::EmitActivationFailed( const std::string     &domain,
+                                                        const std::string     &version,
+                                                        const std::string     &content_hash,
+                                                        const std::error_code &error ) const
+    {
+        Emit( EventCode::TRUST_ACTIVATION_FAILED, { domain, version, content_hash, error.message() } );
+    }
+
+    TrustStartupController::RetryDisposition TrustStartupController::ClassifyRefreshResult(
+        RefreshStage stage, const outcome::result<void> &result )
+    {
+        if ( result.has_value() ) return RetryDisposition::Success;
+        if ( stage == RefreshStage::PolicyDiscovery || stage == RefreshStage::BurnDiscovery )
+        {
+            return RetryDisposition::Transient;
+        }
+        if ( stage == RefreshStage::PolicyActivation || stage == RefreshStage::BurnActivation )
+        {
+            return RetryDisposition::Actionable;
+        }
+        return RetryDisposition::Fatal;
+    }
+
+    void TrustStartupController::RequestDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch )
+    {
+        std::shared_ptr<RefreshTestHooks> hooks;
+        bool                              coalesced = false;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            if ( dispatch->stopped ) return;
+            hooks = dispatch->test_hooks;
+            if ( dispatch->active || dispatch->retry_waiting )
+            {
+                dispatch->coalesced_request = true;
+                coalesced = true;
+            }
+            else
+            {
+                dispatch->active = true;
+                dispatch->coalesced_request = false;
+            }
+        }
+        if ( coalesced )
+        {
+            if ( hooks && hooks->observe_coalesced_request ) hooks->observe_coalesced_request();
+            return;
+        }
+        boost::asio::post( dispatch->executor, [dispatch] { RunDispatchAttempt( dispatch, 1 ); } );
+    }
+
+    void TrustStartupController::FinishDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch )
+    {
+        std::shared_ptr<boost::asio::steady_timer> timer;
+        std::shared_ptr<RefreshTestHooks>           hooks;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            dispatch->active = false;
+            dispatch->retry_waiting = false;
+            dispatch->coalesced_request = false;
+            timer = std::move( dispatch->retry_timer );
+            hooks = dispatch->test_hooks;
+        }
+        if ( timer ) timer->cancel();
+        if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
+    }
+
+    void TrustStartupController::RunDispatchAttempt( const std::shared_ptr<RefreshDispatchState> &dispatch,
+                                                     uint32_t                                     attempt )
+    {
+        std::shared_ptr<RefreshTestHooks> hooks;
+        bool                              stopped = false;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            if ( !stopped ) dispatch->retry_waiting = false;
+            hooks = dispatch->test_hooks;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( hooks && hooks->observe_attempt ) hooks->observe_attempt( attempt );
+
+        auto controller = dispatch->controller.lock();
+        if ( !controller )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        RefreshStage stage = RefreshStage::DurableState;
+        auto         result = controller->RefreshClassified( stage );
+        const std::error_code error = result.has_error() ? result.error() : std::error_code{};
+        const auto            state = controller->GetState();
+        controller.reset();
+
+        auto disposition = ClassifyRefreshResult( stage, result );
+        // A refresh that succeeds but leaves the controller waiting is not done: the
+        // genesis/burn approvals it needs may simply not have replicated yet (or their
+        // candidate callback was missed). Retry on the same bounded ladder so the node
+        // keeps re-checking instead of stalling forever.
+        if ( disposition == RetryDisposition::Success &&
+             ( state == State::FreshWaitingForGenesis || state == State::WaitingForInitialBurn ) )
+        {
+            disposition = RetryDisposition::Transient;
+        }
+        if ( disposition == RetryDisposition::Success )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( disposition != RetryDisposition::Transient )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        EventCallback event_callback;
+        std::string   fingerprint;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            event_callback = dispatch->event_callback;
+            fingerprint = dispatch->persisted_fingerprint;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( attempt >= 7 )
+        {
+            if ( event_callback )
+            {
+                event_callback( Event{ EventCode::TRUST_REFRESH_RETRY_EXHAUSTED,
+                                       { RefreshStageName( stage ),
+                                         error.category().name(),
+                                         error.message(),
+                                         "attempt=7",
+                                         "retry_count=6" },
+                                       fingerprint } );
+            }
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        const uint32_t next_attempt = attempt + 1;
+        const uint32_t retry = attempt;
+        const auto     delay = REFRESH_RETRY_DELAYS.at( retry - 1 );
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            if ( !stopped ) dispatch->retry_waiting = true;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( event_callback )
+        {
+            event_callback( Event{ EventCode::TRUST_REFRESH_RETRY_SCHEDULED,
+                                   { RefreshStageName( stage ),
+                                     error.category().name(),
+                                     error.message(),
+                                     "attempt=" + std::to_string( next_attempt ),
+                                     "retry=" + std::to_string( retry ),
+                                     "delay_ms=" + std::to_string( delay.count() ) },
+                                   fingerprint } );
+        }
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        const auto retry_callback = [dispatch, next_attempt]
+        {
+            boost::asio::post( dispatch->executor,
+                               [dispatch, next_attempt] { RunDispatchAttempt( dispatch, next_attempt ); } );
+        };
+        if ( hooks && hooks->schedule_retry )
+        {
+            hooks->schedule_retry( delay, retry_callback );
+            return;
+        }
+
+        auto timer = std::make_shared<boost::asio::steady_timer>( dispatch->executor, delay );
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            if ( dispatch->stopped ) return;
+            dispatch->retry_timer = timer;
+        }
+        timer->async_wait( [dispatch, next_attempt]( const boost::system::error_code &timer_error )
+        {
+            if ( timer_error == boost::asio::error::operation_aborted ) return;
+            RunDispatchAttempt( dispatch, next_attempt );
+        } );
+    }
+
+    void TrustStartupController::RequestRefresh()
+    {
+        const auto dispatch = refresh_dispatch_;
+        if ( dispatch ) RequestDispatch( dispatch );
+    }
+
+    void TrustStartupController::QueuePendingCandidate( const sgns::securecrdt::CandidateId &candidate )
+    {
+        std::lock_guard<std::mutex> lock( candidate_mutex_ );
+        const bool                  policy = candidate.domain == "trusted-peer";
+        auto                       &failed  = policy ? failed_policy_candidates_ : failed_burn_candidates_;
+        auto                       &pending = policy ? pending_policy_candidates_ : pending_burn_candidates_;
+        if ( std::find( failed.begin(), failed.end(), candidate ) == failed.end() &&
+             std::find( pending.begin(), pending.end(), candidate ) == pending.end() )
+        {
+            pending.push_back( candidate );
+        }
+    }
+
+    void TrustStartupController::MarkCandidateFailed( const sgns::securecrdt::CandidateId &candidate )
+    {
+        std::lock_guard<std::mutex> lock( candidate_mutex_ );
+        const bool                  policy = candidate.domain == "trusted-peer";
+        auto                       &pending = policy ? pending_policy_candidates_ : pending_burn_candidates_;
+        auto                       &failed  = policy ? failed_policy_candidates_ : failed_burn_candidates_;
+        pending.erase( std::remove( pending.begin(), pending.end(), candidate ), pending.end() );
+        if ( std::find( failed.begin(), failed.end(), candidate ) == failed.end() )
+        {
+            failed.push_back( candidate );
+        }
+    }
+}

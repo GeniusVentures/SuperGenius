@@ -30,6 +30,7 @@
 #include <TrustWalletCore/TWHash.h>
 #include <TrustWalletCore/TWCurve.h>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/remove_all.hpp"
@@ -310,12 +311,15 @@ void BridgeE2ETest::SetUpTestSuite()
     // Create the full node FIRST — it will create the genesis block.
     // Pattern from blockchain_genesis_test.cpp: WithAuthorizationCanSync
     GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig(
+        DEV_CONFIG.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/true, s_eth_private_key );
     node_main = GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     spdlog::info( "bridge_e2e: set authorized full node address to {}", node_main->GetAddress().substr( 0, 16 ) );
+
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_main ) );
 
     // Wait for the full node to reach READY state (creates genesis + account-creation blocks)
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
@@ -328,16 +332,21 @@ void BridgeE2ETest::SetUpTestSuite()
     // Create regular nodes — they will sync genesis from node_main via PubSub.
     // is_processor=false matches the blockchain_genesis_test.cpp pattern.
     GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig(
+        DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/true, s_eth_private_key );
     node_proc1 = GeniusNode::New( DEV_CONFIG2, sgns::FromPrivateKey{ s_eth_private_key } );
 
     GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig(
+        DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/true, s_eth_private_key );
     node_proc2 = GeniusNode::New( DEV_CONFIG3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub — match blockchain_genesis_test pattern
     node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 ) );
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 ) );
 
     // Wait for processor nodes to sync and reach READY
     sgns::test::assertWaitForCondition(

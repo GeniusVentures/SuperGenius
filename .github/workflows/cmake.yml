@@ -475,10 +475,25 @@ jobs:
           mkdir -p "$RUNNER_TEMP/macos-crash-reports"
           touch "$RUNNER_TEMP/macos-tests-started"
 
+      # max(8, cores). Split by OS because `shell: bash` on the self-hosted
+      # Windows runner resolves to WSL bash, which has no /bin/bash.
+      - name: Pick ctest parallelism
+        if: ${{ env.RUN_TESTS == 'true' && runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu)
+          echo "CTEST_JOBS=$(( CORES > 8 ? CORES : 8 ))" >> "$GITHUB_ENV"
+
+      - name: Pick ctest parallelism (Windows)
+        if: ${{ env.RUN_TESTS == 'true' && runner.os == 'Windows' }}
+        # Self-hosted Windows runner has Windows PowerShell but no pwsh.
+        shell: powershell
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CTEST_JOBS=$([Math]::Max(8, [Environment]::ProcessorCount))"
+
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
@@ -493,7 +508,20 @@ jobs:
             lock-on-idle=false
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure'
+            ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure'
+
+      # The consensus/registry loggers (soralog) write to per-node sgnslog.log files, not the
+      # console, so a flaky consensus failure leaves no trace in the job log. Capture them to
+      # diagnose which pipeline step stalled (certificate validation, batch subject voting,
+      # registry write).
+      - name: Upload node logs
+        if: ${{ failure() && env.RUN_TESTS == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-logs-${{ matrix.id }}-${{ matrix.build-type }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}/test_bin/**/sgnslog*.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics

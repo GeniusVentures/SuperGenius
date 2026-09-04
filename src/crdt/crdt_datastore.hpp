@@ -424,11 +424,21 @@ namespace sgns::crdt
         void StopWorkerLoops();
         bool IsCurrentThreadInternalWorker() const;
         void WaitForWorkersToExit();
+
+        /// Drains CRDT workers, then stops the DAG syncer's graphsync server.
+        /// Workers parked in DAGSyncer::getNode() unwind on the stop flag first;
+        /// graphsync_->stop() must run only after they exit or it races their
+        /// polling of graphsync request state.
+        void StopSyncerAfterWorkerDrain();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
         void CleanupFailedJob( const RootCIDJob &job );
+        void MarkJobFailedLocked( const CID &cid, bool schedule_retry );
+        void ScheduleFailedRootRetryLocked( const CID &cid );
+        void ClearFailedRootRetryLocked( const CID &cid );
+        void RetryDueFailedRoots();
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -486,8 +496,27 @@ namespace sgns::crdt
         CRDTCallbackManager crdt_cb_manager_;
 
         std::map<CID, JobStatus> pending_jobs_;
-        bool                     has_full_node_topic_;
-        std::atomic_bool         shutdown_started_{ false };
+
+        // Local retry of failed external root fetches. Waiting for the sender's next
+        // rebroadcast (60s default) to retry made one transient dial failure stall CRDT
+        // sync longer than most consumer timeouts.
+        struct FailedRootRetry
+        {
+            std::chrono::steady_clock::time_point next_attempt;
+            uint32_t                              attempts = 0;
+        };
+
+        // Exponential backoff (5s, 10s, 20s, 40s, capped at 60s): quick recovery from
+        // startup races without sustained request pressure on a struggling network.
+        static constexpr std::chrono::seconds FAILED_ROOT_RETRY_BASE_DELAY{ 5 };
+        static constexpr std::chrono::seconds FAILED_ROOT_RETRY_MAX_DELAY{ 60 };
+        static constexpr uint32_t             MAX_FAILED_ROOT_RETRIES = 8;
+        std::map<CID, FailedRootRetry>        failedRootRetries_; // guarded by dagWorkerMutex_
+        // Mirrors failedRootRetries_.size() so the worker loop can skip the mutex
+        // when there is nothing to retry (the common steady state).
+        std::atomic<size_t> failedRootRetryCount_{ 0 };
+        bool                has_full_node_topic_;
+        std::atomic_bool    shutdown_started_{ false };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );

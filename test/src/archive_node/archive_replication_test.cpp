@@ -31,6 +31,7 @@
 #include "account/GeniusNode.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
@@ -61,9 +62,17 @@ namespace sgns
                                                            TokenID::FromBytes( { 0x00 } ),
                                                            "" };
 
+        static inline const std::string FULL_KEY = "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780";
+        static inline const std::string ARCHIVE_KEY = "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395";
+        static inline const std::string SENDER_KEY = "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02";
+        static inline const std::string RECEIVER_KEY = "7b1e4a30f2c8d95b6a03e17c4d8f26b09a5c3e71d842f0b6c9e5a1387d406f2c";
+
         /// Writes the per-node config files. Distinct prefix from mat_/transaction_sync_ so parallel
         /// test binaries never share a data directory.
-        static void PrepareNode( GeniusNodeConfig &config, const std::string &dir, const char *node_type )
+        static void PrepareNode( GeniusNodeConfig &config,
+                                 const std::string &dir,
+                                 const char        *node_type,
+                                 const std::string &private_key )
         {
             config.BaseWritePath = boost::dll::program_location().parent_path().string() + "/archive_repl_" + dir + "/";
             try
@@ -75,10 +84,11 @@ namespace sgns
             }
             std::filesystem::create_directories( config.BaseWritePath );
             GeniusNode::WriteNetworkConfig( config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-            GeniusNode::WriteSgnsConfig( config.BaseWritePath,
-                                         node_type,
-                                         /*is_processor=*/false,
-                                         /*rpc_catchup=*/false );
+            // Each node is its own sole trusted peer and bootstrapper: MakeNodeReadyWithLocalTrust
+            // can then drive it to READY without a cross-node genesis ceremony, which this test
+            // does not exercise.
+            test::WriteLocalTrustSgnsConfig( config.BaseWritePath, node_type, /*is_processor=*/false,
+                                             /*rpc_catchup=*/false, private_key );
         }
 
         static void SetUpTestSuite()
@@ -88,28 +98,24 @@ namespace sgns
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-            PrepareNode( FULL_CONFIG, "full", "Full" );
-            PrepareNode( ARCHIVE_CONFIG, "archive", "Archive" );
-            PrepareNode( SENDER_CONFIG, "sender", "Light" );
-            PrepareNode( RECEIVER_CONFIG, "receiver", "Light" );
+            PrepareNode( FULL_CONFIG, "full", "Full", FULL_KEY );
+            PrepareNode( ARCHIVE_CONFIG, "archive", "Archive", ARCHIVE_KEY );
+            PrepareNode( SENDER_CONFIG, "sender", "Light", SENDER_KEY );
+            PrepareNode( RECEIVER_CONFIG, "receiver", "Light", RECEIVER_KEY );
 
             // The full node must exist and be registered as genesis authority before the others are
             // constructed, since Blockchain bakes GetAuthorizedFullNodeAddress() in at construction.
             full_node = GeniusNode::New(
-                FULL_CONFIG,
-                FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
+                FULL_CONFIG, FromPrivateKey{ FULL_KEY } );
             ASSERT_NE( full_node, nullptr );
             Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
 
             archive_node = GeniusNode::New(
-                ARCHIVE_CONFIG,
-                FromPrivateKey{ "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" } );
+                ARCHIVE_CONFIG, FromPrivateKey{ ARCHIVE_KEY } );
             sender = GeniusNode::New(
-                SENDER_CONFIG,
-                FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
+                SENDER_CONFIG, FromPrivateKey{ SENDER_KEY } );
             receiver = GeniusNode::New(
-                RECEIVER_CONFIG,
-                FromPrivateKey{ "7b1e4a30f2c8d95b6a03e17c4d8f26b09a5c3e71d842f0b6c9e5a1387d406f2c" } );
+                RECEIVER_CONFIG, FromPrivateKey{ RECEIVER_KEY } );
             ASSERT_NE( archive_node, nullptr );
             ASSERT_NE( sender, nullptr );
             ASSERT_NE( receiver, nullptr );
@@ -121,9 +127,7 @@ namespace sgns
 
             for ( const auto &node : { full_node, archive_node, sender, receiver } )
             {
-                test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                              std::chrono::milliseconds( 50000 ),
-                                              "node did not reach READY" );
+                ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
             }
         }
 
