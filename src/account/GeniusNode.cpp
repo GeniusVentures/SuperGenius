@@ -2360,20 +2360,40 @@ namespace sgns
         previous_manager.reset();
     }
 
-    void GeniusNode::ShutdownNodePolicyServices()
+    void GeniusNode::ShutdownNodePolicyServices( bool global_db_shutdown_follows )
     {
         // The controller owns candidate callbacks into SecureCrdt and retains both
         // policy services. Release it before unregistering those owners.
         trust_startup_controller_.reset();
 
-        // 15-12: clear the gossip-ingest membership filter BEFORE releasing the
-        // registry it consults. The weak_ptr-backed predicate would deny-all anyway
-        // (fail-closed) once the registry is gone, but the explicit clear keeps the
-        // post-teardown state clean and testable; it is a no-op when no filter was
-        // ever installed (public node).
+        // CR-C2-01 fail-closed teardown contract: a private node whose policy stack
+        // is going away must never fall back to public pass-through gossip ingest
+        // while its GlobalDB is still live. The three policy-stack failure paths
+        // (BurnConfig::New failure, SecureCrdt::RegisterFilters failure,
+        // NetworkRegistry::New failure in INITIALIZING_TRANSACTIONS) park the node
+        // with PubSub running and topics subscribed while tx_globaldb_ keeps
+        // running indefinitely -- clearing the filter there would restore
+        // unauthenticated ingest and contradict the "failing closed" logs those
+        // paths emit. Those routes (private node + live GlobalDB) instead install
+        // an explicit deny-all membership filter: with the policy stack gone, the
+        // membership authority is gone too. Only the destruction route (ShutdownNow
+        // three lines after the ShutdownForDestruction call site) clears the
+        // filter -- the raw state is restored exactly when the datastore stops.
+        // Public nodes never install a filter, so the clear stays a no-op there.
         if ( tx_globaldb_ && tx_globaldb_->GetBroadcaster() )
         {
-            tx_globaldb_->GetBroadcaster()->ClearMembershipFilter();
+            if ( !private_network_id_.empty() && !global_db_shutdown_follows )
+            {
+                tx_globaldb_->GetBroadcaster()->SetMembershipFilter(
+                    sgns::networkregistry::MakeBootstrapMembershipFilter( {} ) );
+                node_logger_->warn( "Policy-stack teardown on private network {} set gossip ingest to "
+                                    "deny-all: the GlobalDB remains live (CR-C2-01 fail-closed)",
+                                    private_network_id_ );
+            }
+            else
+            {
+                tx_globaldb_->GetBroadcaster()->ClearMembershipFilter();
+            }
         }
 
         // Unregister while the policy owners and their owner tokens are still alive.
@@ -2458,7 +2478,7 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
-        ShutdownNodePolicyServices();
+        ShutdownNodePolicyServices( /*global_db_shutdown_follows=*/ true );
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();

@@ -1317,8 +1317,14 @@ namespace sgns
 
         /**
          * @brief Unregisters and releases node-scoped policy services during full shutdown only.
+         * @param[in] global_db_shutdown_follows True only on the destruction route, where the
+         *            caller shuts the GlobalDB down immediately after this call: the broadcaster
+         *            membership filter is cleared back to the raw state. False (the
+         *            policy-stack failure paths) leaves the GlobalDB running indefinitely, so a
+         *            private node's gossip ingest is set to deny-all instead (CR-C2-01
+         *            fail-closed); public nodes never install a filter, so the clear is a no-op.
          */
-        void ShutdownNodePolicyServices();
+        void ShutdownNodePolicyServices( bool global_db_shutdown_follows = false );
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
