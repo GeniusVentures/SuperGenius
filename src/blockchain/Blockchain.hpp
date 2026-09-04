@@ -319,8 +319,7 @@ namespace sgns
          * @param[in] new_db Target GlobalDB.
          * @return outcome::success on success, otherwise an error.
          */
-        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+        static outcome::result<void> MigrateCids( crdt::GlobalDB &old_db, crdt::GlobalDB &new_db );
 
     private:
         /**

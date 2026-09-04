@@ -359,17 +359,11 @@ namespace sgns
         return instance;
     }
 
-    outcome::result<void> Blockchain::MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                   const std::shared_ptr<crdt::GlobalDB> &new_db )
+    outcome::result<void> Blockchain::MigrateCids( crdt::GlobalDB &old_db, crdt::GlobalDB &new_db )
     {
-        if ( !old_db || !new_db )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        auto new_crdt   = new_db->GetCRDTDataStore();
+        auto new_crdt   = new_db.GetCRDTDataStore();
         auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
-            old_db->GetBroadcaster()->GetDagSyncer() );
+            old_db.GetBroadcaster()->GetDagSyncer() );
         if ( !new_crdt )
         {
             blockchain_logger()->error( "Missing broadcaster while migrating blockchain CIDs" );
@@ -396,8 +390,8 @@ namespace sgns
             return outcome::success();
         };
 
-        auto old_store = old_db->GetDataStore();
-        auto new_store = new_db->GetDataStore();
+        auto old_store = old_db.GetDataStore();
+        auto new_store = new_db.GetDataStore();
 
         blockchain_logger()->debug( "{}: Getting the genesis CID from old database", __func__ );
 

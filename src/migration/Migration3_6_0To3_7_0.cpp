@@ -152,7 +152,7 @@ namespace sgns
         account_->ConfigureDatabaseDependencies( db_3_7_0_ );
         logger_->debug( "{}: Configured account database dependencies for {}", __func__, ToVersion() );
 
-        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_6_0_, db_3_7_0_ ) );
+        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( *db_3_6_0_, *db_3_7_0_ ) );
         logger_->debug( "{}: Migrated blockchain CIDs from {} to {}", __func__, FromVersion(), ToVersion() );
         db_3_7_0_->StartCICSync();
         logger_->debug( "{}: Started CID processing for target {}", __func__, ToVersion() );

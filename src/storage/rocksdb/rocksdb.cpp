@@ -25,27 +25,27 @@ namespace sgns::storage
         auto l = std::make_shared<rocksdb>();
 
         // Store a deep copy of options
-        l->options_ = std::make_shared<Options>( options );
+        l->options_ = options;
         l->logger_  = base::createLogger( "rocksdb" );
 
         // Set up bloom filter
         BlockBasedTableOptions table_options;
         table_options.filter_policy.reset( ::ROCKSDB_NAMESPACE::NewBloomFilterPolicy( 10, false ) );
         table_options.whole_key_filtering = true;
-        l->options_->table_factory.reset( NewBlockBasedTableFactory( table_options ) );
+        l->options_.table_factory.reset( NewBlockBasedTableFactory( table_options ) );
 
         // Define a prefix extractor
-        l->options_->prefix_extractor.reset( ::ROCKSDB_NAMESPACE::NewCappedPrefixTransform( 3 ) );
+        l->options_.prefix_extractor.reset( ::ROCKSDB_NAMESPACE::NewCappedPrefixTransform( 3 ) );
 
-        l->options_->info_log_level = ::ROCKSDB_NAMESPACE::InfoLogLevel::ERROR_LEVEL;
+        l->options_.info_log_level = ::ROCKSDB_NAMESPACE::InfoLogLevel::ERROR_LEVEL;
         // Configure threading environment
-        l->options_->env = ::rocksdb::Env::Default();
-        l->options_->env->SetBackgroundThreads( 4, ::rocksdb::Env::Priority::HIGH );
+        l->options_.env = ::rocksdb::Env::Default();
+        l->options_.env->SetBackgroundThreads( 4, ::rocksdb::Env::Priority::HIGH );
 
         // Open the RocksDB database
         DB *db      = nullptr;
         l->path_    = std::string( path );
-        auto status = DB::Open( *( l->options_ ), l->path_, &db );
+        auto status = DB::Open( l->options_, l->path_, &db );
 
         if ( status.ok() )
         {

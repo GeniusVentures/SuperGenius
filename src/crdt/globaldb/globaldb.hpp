@@ -22,7 +22,7 @@
 
 namespace sgns::crdt
 {
-    class GlobalDB : public std::enable_shared_from_this<GlobalDB>
+    class GlobalDB
     {
     public:
         struct BackupOptions

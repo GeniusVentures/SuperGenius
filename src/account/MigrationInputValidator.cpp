@@ -53,23 +53,23 @@ namespace sgns
         return HasValidMigrationShape( params );
     }
 
-    bool MigrationInputValidator::ValidateWitness( const ConsensusSubject                   &subject,
-                                                   const std::shared_ptr<GeniusTransaction> &tx,
-                                                   const UTXOTxParameters                   &params,
-                                                   const std::shared_ptr<Blockchain>        &blockchain ) const
+    bool MigrationInputValidator::ValidateWitness( const ConsensusSubject  &subject,
+                                                   const GeniusTransaction &tx,
+                                                   const UTXOTxParameters  &params,
+                                                   const Blockchain        &blockchain ) const
     {
         (void) blockchain;
-        auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx );
+        auto migration_tx = dynamic_cast<const MigrationTransaction *>( &tx );
         if ( !migration_tx || !HasValidMigrationShape( params ) )
         {
             return false;
         }
 
         const auto expected_source = MigrationTransaction::DeriveUniqueSourceKey( migration_tx->GetFromVersion(),
-                                                                                  tx->GetSrcAddress(),
+                                                                                  tx.GetSrcAddress(),
                                                                                   migration_tx->GetTokenID() );
         if ( params.first.front().txid_hash_.toReadableString() != expected_source ||
-             tx->GetUncleHash() != expected_source ||
+             tx.GetUncleHash() != expected_source ||
              params.second.front().encrypted_amount != migration_tx->GetAmount() ||
              params.second.front().token_id != migration_tx->GetTokenID() )
         {
@@ -90,7 +90,7 @@ namespace sgns
         }
 
         const auto &committed_output = commitment.produced_outputs( 0 );
-        const auto  tx_hash          = base::Hash256::fromReadableString( tx->GetHash() );
+        const auto  tx_hash          = base::Hash256::fromReadableString( tx.GetHash() );
         const auto &output           = params.second.front();
         const auto &token_bytes      = output.token_id.bytes();
         if ( tx_hash.has_error() || committed_output.tx_id_hash().size() != base::Hash256::size() ||

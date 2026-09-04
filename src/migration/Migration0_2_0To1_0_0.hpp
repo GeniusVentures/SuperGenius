@@ -101,8 +101,7 @@ namespace sgns
          * @param   newDb  Shared pointer to target GlobalDB.
          * @return  outcome::result<void> success on commit; failure otherwise.
          */
-        outcome::result<uint32_t> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                             const std::shared_ptr<crdt::GlobalDB> &newDb );
+        outcome::result<uint32_t> MigrateDb( crdt::GlobalDB &oldDb, crdt::GlobalDB &newDb );
 
         std::shared_ptr<crdt::GlobalDB>                                 db_1_0_0_;     ///< Target GlobalDB.
         std::shared_ptr<crdt::GlobalDB>                                 db_0_0_2_out_; ///< Target GlobalDB.

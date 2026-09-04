@@ -97,7 +97,7 @@ namespace sgns::storage
             return "rocksdb";
         }
 
-        [[nodiscard]] std::shared_ptr<DB> getDB() const
+        [[nodiscard]] const std::shared_ptr<DB> &getDB() const
         {
             return db_;
         }
@@ -112,7 +112,7 @@ namespace sgns::storage
         ReadOptions              ro_;
         WriteOptions             wo_;
         base::Logger             logger_;
-        std::shared_ptr<Options> options_;
+        Options                  options_;
         std::string              path_;
     };
 

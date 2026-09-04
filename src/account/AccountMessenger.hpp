@@ -32,7 +32,7 @@
 
 namespace sgns
 {
-    class AccountMessenger : public std::enable_shared_from_this<AccountMessenger>
+    class AccountMessenger
     {
     public:
         /**

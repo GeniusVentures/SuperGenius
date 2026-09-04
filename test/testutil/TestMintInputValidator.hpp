@@ -30,9 +30,9 @@ namespace sgns::test
         }
 
         bool ValidateWitness( const ConsensusSubject & /*subject*/,
-                              const std::shared_ptr<GeniusTransaction> & /*tx*/,
+                              const GeniusTransaction & /*tx*/,
                               const UTXOTxParameters & /*params*/,
-                              const std::shared_ptr<Blockchain> & /*blockchain*/ ) const override
+                              const Blockchain & /*blockchain*/ ) const override
         {
             return true;
         }
