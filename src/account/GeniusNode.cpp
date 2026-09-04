@@ -1729,8 +1729,8 @@ namespace sgns
 
     bool GeniusNode::InitUPNP()
     {
-        auto upnp = std::make_shared<upnp::UPNP>();
-        if ( !upnp->GetIGD() )
+        upnp::UPNP upnp;
+        if ( !upnp.GetIGD() )
         {
             return true;
         }
@@ -1738,8 +1738,8 @@ namespace sgns
         bool ret = false;
         do
         {
-            std::string wanip = upnp->GetWanIP();
-            std::string lanip = upnp->GetLocalIP();
+            std::string wanip = upnp.GetWanIP();
+            std::string lanip = upnp.GetLocalIP();
             node_logger_->info( "Wan IP: {}", wanip );
             node_logger_->info( "Lan IP: {}", lanip );
 
@@ -1749,12 +1749,12 @@ namespace sgns
             for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
             {
                 uint16_t candidate_port = pubsubport_ + i;
-                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                if ( upnp.CheckIfPortInUse( candidate_port, "TCP", owner ) )
                 {
                     if ( owner == lanip )
                     {
                         node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                        if ( upnp.OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
                             ret         = true;
                             pubsubport_ = candidate_port;
@@ -1770,7 +1770,7 @@ namespace sgns
                     continue;
                 }
 
-                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                if ( upnp.OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                 {
                     node_logger_->info( "Successfully opened port {}", candidate_port );
                     ret         = true;
@@ -2262,38 +2262,27 @@ namespace sgns
         upnp_thread = std::thread(
             [this, pubsubport]()
             {
-                auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
-                auto upnp_shared       = std::make_shared<upnp::UPNP>();
+                auto       next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+                upnp::UPNP upnp;
 
                 while ( !stop_upnp )
                 {
                     if ( std::chrono::steady_clock::now() >= next_refresh_time )
                     {
-                        std::weak_ptr<upnp::UPNP> upnp_weak = upnp_shared;
-
-                        if ( auto upnp = upnp_weak.lock() )
+                        if ( upnp.GetIGD() )
                         {
-                            if ( upnp->GetIGD() )
+                            if ( upnp.OpenPort( pubsubport, pubsubport, "TCP", 3600 ) )
                             {
-                                auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-                                if ( !openedPort )
-                                {
-                                    GeniusNodeLogger()->error( "Failed to open port" );
-                                }
-                                else
-                                {
-                                    GeniusNodeLogger()->info( "Open Ports Success pubsub: {} ", pubsubport );
-                                }
+                                GeniusNodeLogger()->info( "Open Ports Success pubsub: {} ", pubsubport );
                             }
                             else
                             {
-                                GeniusNodeLogger()->info( "No IGD" );
+                                GeniusNodeLogger()->error( "Failed to open port" );
                             }
                         }
                         else
                         {
-                            GeniusNodeLogger()->info( "UPNP weak_ptr expired" );
-                            stop_upnp = true; // Signal thread to stop gracefully
+                            GeniusNodeLogger()->info( "No IGD" );
                         }
 
                         next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );

@@ -188,8 +188,7 @@ namespace sgns
         return db;
     }
 
-    outcome::result<uint32_t> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                                                const std::shared_ptr<crdt::GlobalDB> &newDb )
+    outcome::result<uint32_t> Migration0_2_0To1_0_0::MigrateDb( crdt::GlobalDB &oldDb, crdt::GlobalDB &newDb )
     {
         // Outgoing transactions were /bc-963/[self address]/tx/[type]/[nonce]
         // Incoming transactions were /bc-963/[other address]/notify/tx/[tx hash]
@@ -197,7 +196,7 @@ namespace sgns
         // Incoming proofs were /bc-963/[other address]/notify/proof/[tx hash]
 
         const std::string BASE                 = "/bc-963/";
-        auto              maybeTransactionKeys = oldDb->QueryKeyValues( BASE, "*", "/tx" );
+        auto              maybeTransactionKeys = oldDb.QueryKeyValues( BASE, "*", "/tx" );
         if ( !maybeTransactionKeys.has_value() )
         {
             m_logger->error( "Failed to query transaction keys with base {}", BASE );
@@ -211,7 +210,7 @@ namespace sgns
 
         for ( const auto &entry : entries )
         {
-            auto keyOpt = oldDb->KeyToString( entry.first );
+            auto keyOpt = oldDb.KeyToString( entry.first );
             if ( !keyOpt.has_value() )
             {
                 m_logger->error( "Failed to convert key buffer to string" );
@@ -219,7 +218,7 @@ namespace sgns
             }
 
             std::string transaction_key   = keyOpt.value();
-            auto        maybe_transaction = TransactionManager::FetchTransaction( *oldDb, transaction_key );
+            auto        maybe_transaction = TransactionManager::FetchTransaction( oldDb, transaction_key );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->error( "Can't fetch transaction for key {}", transaction_key );
@@ -249,7 +248,7 @@ namespace sgns
                 proof_key = BASE + tx->GetSrcAddress() + "/proof/" + std::to_string( tx->dag_st.nonce() );
             }
 
-            auto maybe_proof_data = oldDb->Get( proof_key );
+            auto maybe_proof_data = oldDb.Get( proof_key );
             if ( !maybe_proof_data.has_value() )
             {
                 m_logger->error( "Can't find the proof data for {}", transaction_key );
@@ -368,7 +367,7 @@ namespace sgns
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
-        BOOST_OUTCOME_TRY( auto remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
+        BOOST_OUTCOME_TRY( auto remainder_outdb, MigrateDb( *db_0_0_2_out_, *db_1_0_0_ ) );
 
         if ( remainder_outdb > 0 )
         {
@@ -384,7 +383,7 @@ namespace sgns
         }
 
         m_logger->debug( "Migrating input DB into new DB" );
-        BOOST_OUTCOME_TRY( auto remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
+        BOOST_OUTCOME_TRY( auto remainder_indb, MigrateDb( *db_0_0_2_in_, *db_1_0_0_ ) );
 
         if ( remainder_indb > 0 )
         {

@@ -43,10 +43,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service used to resolve producer certificates.
          * @return True when the witness and transaction UTXO parameters are consistent.
          */
-        bool ValidateWitness( const ConsensusSubject                   &subject,
-                              const std::shared_ptr<GeniusTransaction> &tx,
-                              const UTXOTxParameters                   &params,
-                              const std::shared_ptr<Blockchain>        &blockchain ) const override;
+        bool ValidateWitness( const ConsensusSubject  &subject,
+                              const GeniusTransaction &tx,
+                              const UTXOTxParameters  &params,
+                              const Blockchain        &blockchain ) const override;
 
         /**
          * @brief Genius-native validation requires consensus UTXO context.

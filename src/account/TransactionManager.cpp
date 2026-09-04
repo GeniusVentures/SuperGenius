@@ -1402,20 +1402,17 @@ namespace sgns
     }
 
     TransactionManager::InputValidatorSelection TransactionManager::SelectInputValidator(
-        const std::shared_ptr<GeniusTransaction> &tx ) const
+        const GeniusTransaction &tx ) const
     {
         std::string chain_id( GENIUS_CHAIN_ID );
 
-        if ( tx )
+        if ( auto tx_chain_id = tx.GetChainId(); !tx_chain_id.empty() )
         {
-            if ( auto tx_chain_id = tx->GetChainId(); !tx_chain_id.empty() )
-            {
-                chain_id = std::move( tx_chain_id );
-            }
-            else if ( tx->GetType() == "mint-v2" )
-            {
-                chain_id = "public";
-            }
+            chain_id = std::move( tx_chain_id );
+        }
+        else if ( tx.GetType() == "mint-v2" )
+        {
+            chain_id = "public";
         }
 
         if ( const auto *registered_validator = IInputValidator::Get( chain_id ) )
@@ -1517,7 +1514,7 @@ namespace sgns
 
         for ( auto &transaction : transactions_sent )
         {
-            const auto &[_, validator]    = SelectInputValidator( transaction );
+            const auto &[_, validator]    = SelectInputValidator( *transaction );
             const bool utxo_data_required = validator.RequiresConsensusUTXOData();
 
             std::optional<UTXOTransitionCommitment> utxo_commitment;
@@ -1525,7 +1522,7 @@ namespace sgns
 
             if ( transaction->HasUTXOParameters() )
             {
-                utxo_commitment = BuildUTXOTransitionCommitment( transaction );
+                utxo_commitment = BuildUTXOTransitionCommitment( *transaction );
                 if ( !utxo_commitment.has_value() )
                 {
                     m_logger->error( "{}: Missing required UTXO commitment for tx={} type={}",
@@ -1537,7 +1534,7 @@ namespace sgns
 
                 if ( utxo_data_required )
                 {
-                    utxo_witness = BuildUTXOWitness( transaction );
+                    utxo_witness = BuildUTXOWitness( *transaction );
                     if ( !utxo_witness.has_value() )
                     {
                         m_logger->error( "{}: Missing required UTXO witness for tx={} type={}",
@@ -1636,8 +1633,8 @@ namespace sgns
         return GetBlockChainBase( version::GetNetworkID() );
     }
 
-    outcome::result<std::string> TransactionManager::GetExpectedProofKey( const std::string &tx_key,
-                                                                          const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<std::string> TransactionManager::GetExpectedProofKey( const std::string       &tx_key,
+                                                                          const GeniusTransaction *tx )
     {
         if ( tx )
         {
@@ -1761,9 +1758,9 @@ namespace sgns
         }
     }
 
-    outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::ParseTransaction( const GeniusTransaction &tx )
     {
-        auto it = transaction_parsers.find( tx->GetType() );
+        auto it = transaction_parsers.find( tx.GetType() );
         if ( it == transaction_parsers.end() )
         {
             m_logger->info( "No Parser Available" );
@@ -1775,9 +1772,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::RevertTransaction( const GeniusTransaction &tx )
     {
-        auto it = transaction_parsers.find( tx->GetType() );
+        auto it = transaction_parsers.find( tx.GetType() );
         if ( it == transaction_parsers.end() )
         {
             m_logger->info( "No Reverter Available" );
@@ -1792,10 +1789,9 @@ namespace sgns
         return outcome::success();
     }
 
-    void TransactionManager::UpdateAccountUTXOState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                     bool                                      increment_version )
+    void TransactionManager::UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version )
     {
-        if ( !tx || utxo_state_tracking_suppression_.load() != 0 )
+        if ( utxo_state_tracking_suppression_.load() != 0 )
         {
             return;
         }
@@ -1813,9 +1809,9 @@ namespace sgns
             }
         };
 
-        if ( tx->HasUTXOParameters() )
+        if ( tx.HasUTXOParameters() )
         {
-            auto params_opt = tx->GetUTXOParametersOpt();
+            auto params_opt = tx.GetUTXOParametersOpt();
             if ( !params_opt.has_value() )
             {
                 return;
@@ -1824,7 +1820,7 @@ namespace sgns
             const auto &[inputs, outputs] = params_opt.value();
             if ( !inputs.empty() )
             {
-                add_address( tx->GetSrcAddress() );
+                add_address( tx.GetSrcAddress() );
             }
             for ( const auto &output : outputs )
             {
@@ -1834,10 +1830,10 @@ namespace sgns
                 }
             }
         }
-        else if ( tx->GetType() == "mint" &&
-                  !tx->GetSrcAddress().empty() ) // Legacy mint transactions still create UTXOs for the source account.
+        else if ( tx.GetType() == "mint" &&
+                  !tx.GetSrcAddress().empty() ) // Legacy mint transactions still create UTXOs for the source account.
         {
-            add_address( tx->GetSrcAddress() );
+            add_address( tx.GetSrcAddress() );
         }
 
         if ( roots.empty() )
@@ -2004,9 +2000,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::ParseTransferTransaction( const GeniusTransaction &tx )
     {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto transfer_tx = dynamic_cast<const TransferTransaction *>( &tx );
         if ( !transfer_tx )
         {
             return std::errc::invalid_argument;
@@ -2057,9 +2053,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::ParseMintTransaction( const GeniusTransaction &tx )
     {
-        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        if ( auto migration_tx = dynamic_cast<const MigrationTransaction *>( &tx ) )
         {
             auto params = migration_tx->GetUTXOParameters();
             BOOST_OUTCOME_TRY( PutProducedUTXOs( *migration_tx ) );
@@ -2076,7 +2072,7 @@ namespace sgns
             return outcome::success();
         }
 
-        if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
+        if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
             auto params = mint_tx_v2->GetUTXOParameters();
             BOOST_OUTCOME_TRY( PutProducedUTXOs( *mint_tx_v2 ) );
@@ -2095,7 +2091,7 @@ namespace sgns
             return outcome::success();
         }
 
-        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+        auto mint_tx = dynamic_cast<const MintTransaction *>( &tx );
         if ( !mint_tx )
         {
             return std::errc::invalid_argument;
@@ -2112,9 +2108,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::ParseEscrowTransaction( const GeniusTransaction &tx )
     {
-        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
+        auto escrow_tx = dynamic_cast<const EscrowTransaction *>( &tx );
         if ( !escrow_tx )
         {
             return std::errc::invalid_argument;
@@ -2131,9 +2127,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::RevertTransferTransaction( const GeniusTransaction &tx )
     {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto transfer_tx = dynamic_cast<const TransferTransaction *>( &tx );
         if ( !transfer_tx )
         {
             return std::errc::invalid_argument;
@@ -2153,7 +2149,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::RevertMintTransaction( const GeniusTransaction &tx )
     {
         auto revert_utxo_mint = [this]( const auto &mint_tx, const char *label ) -> outcome::result<void>
         {
@@ -2173,19 +2169,19 @@ namespace sgns
             return outcome::success();
         };
 
-        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        if ( auto migration_tx = dynamic_cast<const MigrationTransaction *>( &tx ) )
         {
             BOOST_OUTCOME_TRY( revert_utxo_mint( migration_tx, "migration" ) );
             return outcome::success();
         }
 
-        if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
+        if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
             BOOST_OUTCOME_TRY( revert_utxo_mint( mint_tx_v2, "mint-v2" ) );
             return outcome::success();
         }
 
-        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
+        auto mint_tx = dynamic_cast<const MintTransaction *>( &tx );
         if ( !mint_tx )
         {
             return std::errc::invalid_argument;
@@ -2201,9 +2197,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    outcome::result<void> TransactionManager::RevertEscrowTransaction( const GeniusTransaction &tx )
     {
-        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
+        auto escrow_tx = dynamic_cast<const EscrowTransaction *>( &tx );
         if ( !escrow_tx )
         {
             return std::errc::invalid_argument;
@@ -3127,7 +3123,7 @@ namespace sgns
 
                 if ( it->second.tx )
                 {
-                    BOOST_OUTCOME_TRY( RevertTransaction( it->second.tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( *it->second.tx ) );
                     if ( delete_from_crdt )
                     {
                         auto topics = it->second.tx->GetTopics();
@@ -3410,14 +3406,14 @@ namespace sgns
         return conflicts;
     }
 
-    bool TransactionManager::HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const
+    bool TransactionManager::HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const
     {
-        if ( !candidate_tx || !candidate_tx->HasUTXOParameters() )
+        if ( !candidate_tx.HasUTXOParameters() )
         {
             return false;
         }
 
-        auto candidate_params = candidate_tx->GetUTXOParametersOpt();
+        auto candidate_params = candidate_tx.GetUTXOParametersOpt();
         if ( !candidate_params.has_value() )
         {
             return false;
@@ -3434,7 +3430,7 @@ namespace sgns
         for ( const auto &[_, tracked] : tx_processed_m )
         {
             if ( !tracked.tx || tracked.status != TransactionStatus::CONFIRMED ||
-                 tracked.tx->GetHash() == candidate_tx->GetHash() || !tracked.tx->HasUTXOParameters() )
+                 tracked.tx->GetHash() == candidate_tx.GetHash() || !tracked.tx->HasUTXOParameters() )
             {
                 continue;
             }
@@ -3687,7 +3683,7 @@ namespace sgns
                 return ConsensusManager::ValidationResult::Reject();
             }
 
-            auto reconstructed = BuildUTXOTransitionCommitment( tx );
+            auto reconstructed = BuildUTXOTransitionCommitment( *tx );
             if ( !reconstructed.has_value() ||
                  reconstructed->consumed_outpoints_root() !=
                      nonce_subject.value().utxo_commitment().consumed_outpoints_root() ||
@@ -3817,13 +3813,13 @@ namespace sgns
             return reject_and_maybe_fail_local( "transaction already failed" );
         }
 
-        if ( HasConfirmedInputConflict( tx ) )
+        if ( HasConfirmedInputConflict( *tx ) )
         {
             m_logger->error( "{}: Outpoint conflict against finalized transaction for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "input outpoint already finalized by another transaction" );
         }
 
-        const auto witness_validation = ValidateWitnessForConsensus( subject, tx );
+        const auto witness_validation = ValidateWitnessForConsensus( subject, *tx );
         if ( witness_validation == WitnessValidationResult::INVALID )
         {
             m_logger->error( "{}: Witness validation failed for hash {}", __func__, tx_hash );
@@ -3849,7 +3845,7 @@ namespace sgns
             }
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tx );
+        auto validate_result = ValidateTransactionForConsensus( *tx );
 
         if ( validate_result.check == ConsensusManager::Check::Pending )
         {
@@ -3886,44 +3882,38 @@ namespace sgns
     }
 
     ConsensusManager::ValidationResult TransactionManager::ValidateTransactionForConsensus(
-        const std::shared_ptr<GeniusTransaction> &tx ) const
+        const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Validating transaction", __func__ );
-        if ( !tx )
+        if ( !CheckTransactionWellFormed( tx ) )
         {
-            m_logger->error( "{}: Null transaction", __func__ );
+            m_logger->error( "{}: Well-formed check failed tx={}", __func__, tx.GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
-
-        if ( !CheckTransactionWellFormed( *tx ) )
+        if ( !CheckTransactionAuthorization( tx ) )
         {
-            m_logger->error( "{}: Well-formed check failed tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Authorization check failed tx={}", __func__, tx.GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
-        if ( !CheckTransactionAuthorization( *tx ) )
+        if ( !CheckTransactionTimestamp( tx ) )
         {
-            m_logger->error( "{}: Authorization check failed tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Timestamp check failed tx={}", __func__, tx.GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
-        if ( !CheckTransactionTimestamp( *tx ) )
-        {
-            m_logger->error( "{}: Timestamp check failed tx={}", __func__, tx->GetHash() );
-            return ConsensusManager::ValidationResult::Reject();
-        }
-        auto replay_result = EvaluateTransactionReplayProtection( *tx );
+        auto replay_result = EvaluateTransactionReplayProtection( tx );
         if ( replay_result.validation.check != ConsensusManager::Check::Approve )
         {
-            m_logger->error( "{}: Replay protection failed tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Replay protection failed tx={}", __func__, tx.GetHash() );
             return replay_result.validation;
         }
         //TODO - Deal with checking the Mint
         if ( !CheckTransactionTypeRules( tx ) )
         {
-            m_logger->error( "{}: Type rules failed tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Type rules failed tx={}", __func__, tx.GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
 
-        m_logger->debug( "{}: Transaction valid tx={}", __func__, tx->GetHash() );
+        m_logger->debug( "{}: Transaction valid tx={}", __func__, tx.GetHash() );
         return ConsensusManager::ValidationResult::Approve();
     }
 
@@ -4108,26 +4098,20 @@ namespace sgns
         return { ConsensusManager::ValidationResult::Approve() };
     }
 
-    bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const
+    bool TransactionManager::CheckTransactionTypeRules( const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Checking type rules", __func__ );
-        if ( !tx )
+        if ( tx.HasUTXOParameters() )
         {
-            m_logger->error( "{}: Null transaction", __func__ );
-            return false;
-        }
-
-        if ( tx->HasUTXOParameters() )
-        {
-            auto params_opt = tx->GetUTXOParametersOpt();
+            auto params_opt = tx.GetUTXOParametersOpt();
             if ( !params_opt.has_value() )
             {
-                m_logger->error( "{}: Missing UTXO parameters for tx={}", __func__, tx->GetHash() );
+                m_logger->error( "{}: Missing UTXO parameters for tx={}", __func__, tx.GetHash() );
                 return false;
             }
             const auto &[_, validator] = SelectInputValidator( tx );
             return validator.ValidateUTXOParameters( params_opt.value(),
-                                                     tx->GetSrcAddress(),
+                                                     tx.GetSrcAddress(),
                                                      account_m->GetUTXOManager() );
         }
 
@@ -4135,37 +4119,31 @@ namespace sgns
     }
 
     TransactionManager::WitnessValidationResult TransactionManager::ValidateWitnessForConsensus(
-        const ConsensusSubject                   &subject,
-        const std::shared_ptr<GeniusTransaction> &tx ) const
+        const ConsensusSubject  &subject,
+        const GeniusTransaction &tx ) const
     {
-        if ( !tx )
-        {
-            m_logger->error( "{}: Null transaction", __func__ );
-            return WitnessValidationResult::INVALID;
-        }
-
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         m_logger->debug( "{}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
                          "has_utxo_params={} has_commitment={} has_witness={}",
                          __func__,
-                         tx->GetHash(),
-                         tx->GetSrcAddress(),
-                         tx->GetNonce(),
+                         tx.GetHash(),
+                         tx.GetSrcAddress(),
+                         tx.GetNonce(),
                          nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
                          nonce_subject.has_value(),
-                         tx->HasUTXOParameters(),
+                         tx.HasUTXOParameters(),
                          nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
                          nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
 
         if ( nonce_subject.has_error() )
         {
-            m_logger->debug( "{}: Subject has no nonce payload, accepting tx={}", __func__, tx->GetHash() );
+            m_logger->debug( "{}: Subject has no nonce payload, accepting tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::VALID;
         }
 
         const auto [chain_id, validator] = SelectInputValidator( tx );
 
-        if ( !tx->HasUTXOParameters() )
+        if ( !tx.HasUTXOParameters() )
         {
             // BIND-01: Hardened early-return — if subject claims UTXO commitment
             // but tx lacks UTXO params, this is Pitfall 5 bypass → reject as INVALID
@@ -4174,16 +4152,16 @@ namespace sgns
                 m_logger->error( "{}: Subject has UTXO commitment "
                                  "but tx has no UTXO params — rejecting tx={}",
                                  __func__,
-                                 tx->GetHash() );
+                                 tx.GetHash() );
                 return WitnessValidationResult::INVALID;
             }
-            m_logger->debug( "{}: Tx has no UTXO params, accepting tx={}", __func__, tx->GetHash() );
+            m_logger->debug( "{}: Tx has no UTXO params, accepting tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::VALID;
         }
 
         if ( !nonce_subject.value().has_utxo_commitment() )
         {
-            m_logger->error( "{}: Missing UTXO commitment tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Missing UTXO commitment tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::INVALID;
         }
 
@@ -4194,7 +4172,7 @@ namespace sgns
             m_logger->error( "{}: Invalid commitment root sizes tx={} consumed_size={} "
                              "produced_size={} expected={}",
                              __func__,
-                             tx->GetHash(),
+                             tx.GetHash(),
                              commitment.consumed_outpoints_root().size(),
                              commitment.produced_outputs_root().size(),
                              base::Hash256::size() );
@@ -4205,7 +4183,7 @@ namespace sgns
                        commitment.consumed_outpoints_root().size() ) );
         if ( consumed_root_result.has_error() )
         {
-            m_logger->error( "{}: Failed to parse commitment consumed root tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Failed to parse commitment consumed root tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::INVALID;
         }
 
@@ -4213,40 +4191,36 @@ namespace sgns
         {
             m_logger->error( "{}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
                              __func__,
-                             tx->GetHash(),
+                             tx.GetHash(),
                              chain_id,
                              validator.RequiresConsensusUTXOData() );
             return WitnessValidationResult::INVALID;
         }
 
-        auto params_opt = tx->GetUTXOParametersOpt();
+        auto params_opt = tx.GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
-            m_logger->error( "{}: Missing UTXO params payload tx={}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Missing UTXO params payload tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::INVALID;
         }
         (void) consumed_root_result;
-        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), blockchain_ );
+        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), *blockchain_ );
         m_logger->debug( "{}: Validator witness result tx={} chain_id={} result={}",
                          __func__,
-                         tx->GetHash(),
+                         tx.GetHash(),
                          chain_id,
                          witness_ok );
         return witness_ok ? WitnessValidationResult::VALID : WitnessValidationResult::INVALID;
     }
 
     std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
-        const std::shared_ptr<GeniusTransaction> &tx ) const
+        const GeniusTransaction &tx ) const
     {
-        if ( !tx )
+        if ( !tx.HasUTXOParameters() )
         {
             return std::nullopt;
         }
-        if ( !tx->HasUTXOParameters() )
-        {
-            return std::nullopt;
-        }
-        auto params_opt = tx->GetUTXOParametersOpt();
+        auto params_opt = tx.GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
             return std::nullopt;
@@ -4275,9 +4249,9 @@ namespace sgns
             std::move( consumed_payloads ) );
 
         std::vector<GeniusUTXO> produced_outputs;
-        if ( !ExtractProducedUTXOs( *tx, produced_outputs ) )
+        if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
         {
-            m_logger->warn( "{}: Could not extract produced outputs for tx={}", __func__, tx->GetHash() );
+            m_logger->warn( "{}: Could not extract produced outputs for tx={}", __func__, tx.GetHash() );
             return std::nullopt;
         }
         for ( size_t i = 0; i < produced_outputs.size(); ++i )
@@ -4299,25 +4273,18 @@ namespace sgns
         return commitment;
     }
 
-    std::optional<UTXOWitness> TransactionManager::BuildUTXOWitness(
-        const std::shared_ptr<GeniusTransaction> &tx ) const
+    std::optional<UTXOWitness> TransactionManager::BuildUTXOWitness( const GeniusTransaction &tx ) const
     {
-        if ( !tx )
+        if ( !tx.HasUTXOParameters() )
         {
-            m_logger->error( "{}: Missing transaction", __func__ );
+            m_logger->error( "{}: No UTXO parameters for transaction {}", __func__, tx.GetHash() );
             return std::nullopt;
         }
 
-        if ( !tx->HasUTXOParameters() )
-        {
-            m_logger->error( "{}: No UTXO parameters for transaction {}", __func__, tx->GetHash() );
-            return std::nullopt;
-        }
-
-        auto params_opt = tx->GetUTXOParametersOpt();
+        auto params_opt = tx.GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
-            m_logger->error( "{}: Unexpected missing UTXO parameters for transaction {}", __func__, tx->GetHash() );
+            m_logger->error( "{}: Unexpected missing UTXO parameters for transaction {}", __func__, tx.GetHash() );
             return std::nullopt;
         }
         const auto &inputs = params_opt->first;
@@ -4337,7 +4304,7 @@ namespace sgns
             {
                 m_logger->error( "{}: Missing input UTXO for transaction {} and key {}",
                                  __func__,
-                                 tx->GetHash(),
+                                 tx.GetHash(),
                                  OutPointKey( input.txid_hash_, input.output_idx_ ) );
                 return std::nullopt;
             }
@@ -4366,7 +4333,7 @@ namespace sgns
             auto       it  = outpoint_to_index.find( key );
             if ( it == outpoint_to_index.end() )
             {
-                m_logger->error( "{}: Missing outpoint for transaction {} and key {}", __func__, tx->GetHash(), key );
+                m_logger->error( "{}: Missing outpoint for transaction {} and key {}", __func__, tx.GetHash(), key );
                 return std::nullopt;
             }
 
@@ -4444,7 +4411,7 @@ namespace sgns
             {
                 m_logger->error( "{}: Missing produced UTXO for transaction {} and key {}",
                                  __func__,
-                                 tx->GetHash(),
+                                 tx.GetHash(),
                                  key );
                 return std::nullopt;
             }
@@ -4452,7 +4419,7 @@ namespace sgns
             {
                 m_logger->error( "{}: Payload mismatch for produced UTXO for transaction {} and key {}",
                                  __func__,
-                                 tx->GetHash(),
+                                 tx.GetHash(),
                                  key );
                 return std::nullopt;
             }
@@ -4486,13 +4453,9 @@ namespace sgns
         return witness;
     }
 
-    bool TransactionManager::ApplyTransactionToUTXOSnapshot( const std::shared_ptr<GeniusTransaction> &tx,
-                                                             std::vector<GeniusUTXO>                  &snapshot ) const
+    bool TransactionManager::ApplyTransactionToUTXOSnapshot( const GeniusTransaction &tx,
+                                                             std::vector<GeniusUTXO> &snapshot ) const
     {
-        if ( !tx )
-        {
-            return false;
-        }
         const auto remove_inputs = [&]( const std::vector<InputUTXOInfo> &inputs )
         {
             for ( const auto &input : inputs )
@@ -4508,12 +4471,12 @@ namespace sgns
                 }
             }
         };
-        if ( !tx->HasUTXOParameters() )
+        if ( !tx.HasUTXOParameters() )
         {
             return false;
         }
 
-        auto params_opt = tx->GetUTXOParametersOpt();
+        auto params_opt = tx.GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
             return false;
@@ -4521,14 +4484,14 @@ namespace sgns
         const auto &inputs = params_opt->first;
 
         std::vector<GeniusUTXO> produced_outputs;
-        if ( !ExtractProducedUTXOs( *tx, produced_outputs ) )
+        if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
         {
             return false;
         }
         remove_inputs( inputs );
         for ( const auto &output : produced_outputs )
         {
-            if ( output.GetOwnerAddress() == tx->GetSrcAddress() )
+            if ( output.GetOwnerAddress() == tx.GetSrcAddress() )
             {
                 snapshot.push_back( output );
             }
@@ -4610,7 +4573,7 @@ namespace sgns
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
                     m_logger->warn( "{}: Unconfirming transaction {} and verifying it again", FUNC, tx->GetHash() );
-                    BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( *tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
 
@@ -4672,7 +4635,7 @@ namespace sgns
                 m_logger->info( "{}: Tracking entry confirmed tx={}", FUNC, tx->GetHash() );
 
                 m_logger->debug( "{}: Set status of CONFIRMED to transaction {}", FUNC, tx->GetHash() );
-                auto parse_result = ParseTransaction( tx );
+                auto parse_result = ParseTransaction( *tx );
                 if ( parse_result.has_error() )
                 {
                     // The tracked state was already promoted. Wake observers even when
@@ -4725,7 +4688,7 @@ namespace sgns
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
                     m_logger->debug( "{}: Unconfirming transaction {}", FUNC, tx->GetHash() );
-                    BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( *tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
 
