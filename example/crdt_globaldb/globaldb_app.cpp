@@ -120,16 +120,26 @@ int main( int argc, char **argv )
         sgns::crdt::KeyPairFileStorage( strDatabasePath + "/pubsub" ).GetKeyPair().value() );
     pubsub->Start( pubsubListeningPort, pubsubBootstrapPeers );
 
+    // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+    // single-threaded per host, so the scheduler runs on the host's io_context. `io`
+    // stays behind purely as the daemon-mode signal loop, and interactive mode never
+    // ran it at all.
+    auto pubsub_io = pubsub->GetAsioContext();
     auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub_io ),
         libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
     crdtOptions->logger   = logger;
 
-    auto globaldb_ret =
-        sgns::crdt::GlobalDB::New( io, strDatabasePath, pubsub, crdtOptions, graphsyncnetwork, scheduler, generator );
+    auto globaldb_ret = sgns::crdt::GlobalDB::New( pubsub_io,
+                                                   strDatabasePath,
+                                                   pubsub,
+                                                   crdtOptions,
+                                                   graphsyncnetwork,
+                                                   scheduler,
+                                                   generator );
 
     if ( globaldb_ret.has_error() )
     {

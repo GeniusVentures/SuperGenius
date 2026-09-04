@@ -65,6 +65,8 @@ namespace test
         keypair_path_ = ( base_path / "keypair" ).string();
         db_path_      = ( base_path / "db" ).string();
 
+        // Application-work pool, mirroring GeniusNode::io_. Tests drive it by hand
+        // (io_->restart()/poll()), so it must stay separate from the host's context.
         io_ = std::make_shared<io_context>();
 
         pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
@@ -75,7 +77,10 @@ namespace test
         BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
 
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
+        // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+        // single-threaded per host, so the scheduler has to run on the host's
+        // io_context. A private one here races yamux's WriteQueue.
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(pubs_->GetAsioContext()), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
                                                                                              scheduler );
@@ -91,6 +96,14 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        // GossipPubSub::Stop() releases the libp2p host and its io_context, and
+        // CRDT/GraphSync teardown still talks to both, so the DB has to be shut down
+        // first. Same order as globaldb_integration.cpp's TestNodeCollection.
+        if ( db_ )
+        {
+            db_->ShutdownNow();
+        }
+        db_.reset();
         try
         {
             if ( pubs_ )
@@ -102,7 +115,6 @@ namespace test
         {
             std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
         }
-        db_.reset();
         try
         {
             pubs_.reset();

@@ -167,9 +167,6 @@ namespace sgns::crdt
             return outcome::success();
         }
 
-        auto io         = std::make_shared<boost::asio::io_context>();
-        auto work_guard = std::make_unique<WorkGuard>( io->get_executor() );
-
         auto keypair_result = KeyPairFileStorage( config_.database_path + "/pubsub" ).GetKeyPair();
         if ( keypair_result.has_error() )
         {
@@ -212,7 +209,7 @@ namespace sgns::crdt
         auto crdt_options         = CrdtOptions::DefaultOptions();
         crdt_options->logger      = config_.logger;
 
-        auto db_result = GlobalDB::New( io,
+        auto db_result = GlobalDB::New( pubsub->GetAsioContext(),
                                         config_.database_path,
                                         pubsub,
                                         crdt_options,
@@ -241,39 +238,30 @@ namespace sgns::crdt
 
         global_db->Start();
 
-        io_                   = std::move( io );
-        work_guard_           = std::move( work_guard );
         pubsub_               = std::move( pubsub );
         scheduler_            = std::move( scheduler );
         graphsync_network_    = std::move( graphsync_network );
         request_id_generator_ = std::move( request_id_generator );
         db_                   = std::move( global_db );
-        io_thread_            = std::thread( [io_context = io_]() { io_context->run(); } );
         started_              = true;
         return outcome::success();
     }
 
     void GlobalDbNetworkComposition::Stop()
     {
-        std::shared_ptr<boost::asio::io_context>                        io;
-        std::unique_ptr<WorkGuard>                                      work_guard;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubsub;
         std::shared_ptr<libp2p::basic::Scheduler>                       scheduler;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_network;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> request_id_generator;
         std::shared_ptr<GlobalDB>                                       global_db;
-        std::thread                                                     io_thread;
 
         {
             std::lock_guard<std::mutex> lock( mutex_ );
             global_db            = std::move( db_ );
-            work_guard           = std::move( work_guard_ );
-            io                   = std::move( io_ );
             graphsync_network    = std::move( graphsync_network_ );
             request_id_generator = std::move( request_id_generator_ );
             scheduler            = std::move( scheduler_ );
             pubsub               = std::move( pubsub_ );
-            io_thread            = std::move( io_thread_ );
             started_             = false;
         }
 
@@ -282,19 +270,6 @@ namespace sgns::crdt
             global_db->ShutdownNow();
         }
         global_db.reset();
-
-        if ( work_guard )
-        {
-            work_guard->reset();
-        }
-        if ( io )
-        {
-            io->stop();
-        }
-        if ( io_thread.joinable() )
-        {
-            io_thread.join();
-        }
 
         graphsync_network.reset();
         request_id_generator.reset();
@@ -305,8 +280,6 @@ namespace sgns::crdt
             pubsub->Stop();
         }
         pubsub.reset();
-        work_guard.reset();
-        io.reset();
     }
 
     std::shared_ptr<GlobalDB> GlobalDbNetworkComposition::db() const
