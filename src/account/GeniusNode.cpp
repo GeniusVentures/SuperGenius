@@ -1661,7 +1661,11 @@ namespace sgns
     {
         // Initialize Bitswap for IPFS content-addressed data exchange
         bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+        // Same rule as GraphSync: Bitswap holds the libp2p host, so its callbacks and
+        // stream writes belong on the host's io_context, not the node's pool.
+        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(),
+                                                                  *bitswap_event_bus_,
+                                                                  pubsub_->GetAsioContext() );
         bitswap_->initialize();
         if ( !ipfs_cache_dir_.empty() )
         {
