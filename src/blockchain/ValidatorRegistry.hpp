@@ -475,7 +475,7 @@ namespace sgns
         void InitializeCache();
 
         /**
-         * @brief Builds map key for pending certificate subjects by base registry.
+         * @brief Builds map key for pending certificate slots by base registry.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
@@ -486,23 +486,32 @@ namespace sgns
         }
 
         /**
-         * @brief Computes deterministic batch root from subject hashes.
-         * @param[in] subject_hashes Subject hashes included in the batch.
+         * @brief Computes deterministic batch root from batch member identifiers.
+         * @param[in] members Member identifiers (canonical certificate slots) included in the batch.
          * @return Batch root hash or an error.
          */
-        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &subject_hashes ) const;
+        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &members ) const;
         /**
-         * @brief Selects subjects eligible for a registry batch proposal.
+         * @brief Selects canonical certificate slots eligible for a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @param[in] certificate_count Required number of certificates.
          * @param[in] expected_root Optional expected batch root constraint.
-         * @return Selected subject-hash list or an error.
+         * @return Selected canonical certificate slots or an error.
          */
         outcome::result<std::vector<std::string>> SelectBatchSubjects( const std::string         &base_registry_cid,
                                                                        uint64_t                   base_registry_epoch,
                                                                        uint32_t                   certificate_count,
                                                                        std::optional<std::string> expected_root ) const;
+        /**
+         * @brief Loads the authoritative member certificate from its canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return Certificate when the durable `/cert/<slot>` record parses and binds
+         *         to the exact slot, or an error. A datastore miss is reported as the
+         *         underlying lookup error so callers can distinguish a not-yet-synced
+         *         member (retry) from a corrupt or mismatched record (reject).
+         */
+        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Attempts to create and submit a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
@@ -543,7 +552,7 @@ namespace sgns
         size_t certificates_per_batch_ = DefaultCertificatesPerBatch; ///< Certificates required per batch subject.
         mutable std::mutex batch_mutex_;                              ///< Guards batch-tracking collections.
         std::unordered_map<std::string, std::set<std::string>>
-            pending_certificate_subjects_by_base_;                  ///< Pending subject hashes keyed by base registry.
+            pending_certificate_slots_by_base_;                  ///< Pending canonical certificate slots keyed by base registry.
         std::unordered_set<std::string> pending_batch_subject_ids_; ///< Batch subject ids pending finalization.
         std::unordered_set<std::string> finalized_batch_subject_ids_; ///< Batch subject ids already finalized.
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.

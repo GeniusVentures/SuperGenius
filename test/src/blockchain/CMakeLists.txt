@@ -45,6 +45,16 @@ target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
     base_crdt_test
 )
 
+addtest(validator_registry_batch_slot_test
+    validator_registry_batch_slot_test.cpp
+)
+target_link_libraries(validator_registry_batch_slot_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 addtest(multi_node_finality_fault_compatibility_smoke_test
     multi_node_finality_fault_compatibility_smoke_test.cpp
 )

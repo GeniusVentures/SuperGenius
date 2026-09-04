@@ -91,6 +91,9 @@ message RegistryBatchSubject {
   uint64 target_registry_epoch = 3;
   uint32 certificate_count = 4;
   bytes batch_root = 5;
+  // Canonical certificate slots of the batch members (sorted; size ==
+  // certificate_count; ComputeBatchRoot(slots) == batch_root).
+  repeated string member_certificate_slots = 6;
 }
 
 message ConsensusProposal {

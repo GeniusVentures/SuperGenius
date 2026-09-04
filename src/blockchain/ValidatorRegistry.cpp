@@ -692,22 +692,9 @@ namespace sgns
         submit_batch_subject_ = std::move( submitter );
     }
 
-    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot(
-        const std::vector<std::string> &subject_hashes ) const
+    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot( const std::vector<std::string> &members ) const
     {
-        if ( subject_hashes.empty() )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        std::string payload;
-        payload += subject_hashes[0];
-        for ( size_t i = 1; i < subject_hashes.size(); ++i )
-        {
-            payload.push_back( '\n' );
-            payload += subject_hashes[i];
-        }
-        auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
-        return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        return ConsensusManager::ComputeBatchRoot( members );
     }
 
     outcome::result<std::vector<std::string>> ValidatorRegistry::SelectBatchSubjects(
@@ -724,8 +711,8 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             const auto                  key = BuildBatchKey( base_registry_cid, base_registry_epoch );
-            auto                        it  = pending_certificate_subjects_by_base_.find( key );
-            if ( it == pending_certificate_subjects_by_base_.end() ||
+            auto                        it  = pending_certificate_slots_by_base_.find( key );
+            if ( it == pending_certificate_slots_by_base_.end() ||
                  it->second.size() < static_cast<size_t>( certificate_count ) )
             {
                 return outcome::failure( std::errc::resource_unavailable_try_again );
@@ -748,6 +735,36 @@ namespace sgns
         return selected;
     }
 
+    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySlot(
+        const std::string &slot_key ) const
+    {
+        logger_->trace( "{}: entry slot={}", __func__, slot_key.substr( 0, 8 ) );
+        if ( slot_key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto cert_key = std::string( "/cert/" ) + slot_key;
+        auto       cert_get = db_->Get( crdt::HierarchicalKey( cert_key ) );
+        if ( cert_get.has_error() )
+        {
+            return outcome::failure( cert_get.error() );
+        }
+
+        sgns::ConsensusCertificate certificate;
+        std::string                serialized = std::string( cert_get.value().toString() );
+        if ( !certificate.ParseFromString( serialized ) )
+        {
+            logger_->error( "{}: failed to parse certificate at canonical slot", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( ConsensusManager::GetSlotKey( certificate.proposal() ) != slot_key )
+        {
+            logger_->error( "{}: certificate slot binding mismatch", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return certificate;
+    }
+
     outcome::result<void> ValidatorRegistry::OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate )
     {
         if ( !certificate.has_proposal() )
@@ -755,12 +772,30 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        // Registry batches currently identify their members by subject hash, while
-        // certificate finality is authoritative only by canonical slot.  A durable,
-        // replay-safe subject-to-slot representation is intentionally deferred; do
-        // not derive it from this process-local notification.
-        logger_->debug( "{}: registry certificate batching deferred", __func__ );
-        return outcome::success();
+        // Registry batch certificates finalize their own member batch; batching them
+        // again would recurse.  This guard is also idempotent for retries.
+        if ( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
+        {
+            return outcome::success();
+        }
+
+        // Certificates are authoritative only at their canonical slot; carry that
+        // slot in the batch subject so every node resolves members from the
+        // durable, replicated /cert/<slot> records (10-CR-02 durable representation).
+        const auto slot_key = ConsensusManager::GetSlotKey( certificate.proposal() );
+        if ( slot_key.empty() )
+        {
+            logger_->error( "{}: certificate proposal has no canonical slot", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        const auto key = BuildBatchKey( certificate.registry_cid(), certificate.registry_epoch() );
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            pending_certificate_slots_by_base_[key].insert( slot_key );
+        }
+
+        return TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
     }
 
     outcome::result<void> ValidatorRegistry::TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid,
@@ -808,7 +843,8 @@ namespace sgns
                                                                             base_registry_epoch,
                                                                             base_registry_epoch + 1,
                                                                             static_cast<uint32_t>( threshold ),
-                                                                            root_result.value() );
+                                                                            root_result.value(),
+                                                                            selected_result.value() );
         if ( subject_result.has_error() )
         {
             return outcome::failure( subject_result.error() );
