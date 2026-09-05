@@ -184,6 +184,18 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          foreach ($p in @("C:\Program Files\Git\bin", "C:\Program Files\Git\usr\bin")) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          $bash = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          Write-Output $(if ($bash) { "Bash location: $bash" } else { "WARNING: bash.exe not found in PATH" })
+
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{runner.workspace}}
