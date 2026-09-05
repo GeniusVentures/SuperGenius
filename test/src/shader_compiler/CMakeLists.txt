@@ -2,17 +2,17 @@ addtest(shader_compiler_test
     shader_compiler_test.cpp
 )
 
-target_link_libraries(shader_compiler_test
-    SGShaderCompiler
-    Boost::filesystem
-)
-
+# Plain signature on purpose: addtest() (cmake/functions.cmake) already calls
+# the plain target_link_libraries signature for this target, and mixing plain
+# and keyword signatures on one target is a hard CMake error.
+#
 # boost/dll.hpp (program_location) references dlerror/dlopen; on glibc < 2.34
 # (e.g. the debian-bullseye CI container) those live in libdl. Nothing else
 # this test links pulls -ldl transitively, so link it explicitly.
 # CMAKE_DL_LIBS is empty on Windows/macOS, where the symbols resolve implicitly.
 target_link_libraries(shader_compiler_test
-    PRIVATE
+    SGShaderCompiler
+    Boost::filesystem
     ${CMAKE_DL_LIBS}
 )
 
