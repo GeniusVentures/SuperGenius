@@ -7,6 +7,15 @@ target_link_libraries(shader_compiler_test
     Boost::filesystem
 )
 
+# boost/dll.hpp (program_location) references dlerror/dlopen; on glibc < 2.34
+# (e.g. the debian-bullseye CI container) those live in libdl. Nothing else
+# this test links pulls -ldl transitively, so link it explicitly.
+# CMAKE_DL_LIBS is empty on Windows/macOS, where the symbols resolve implicitly.
+target_link_libraries(shader_compiler_test
+    PRIVATE
+    ${CMAKE_DL_LIBS}
+)
+
 add_custom_command(TARGET shader_compiler_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
     "$<TARGET_FILE_DIR:shader_compiler_test>/shader_compiler/"

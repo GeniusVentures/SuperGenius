@@ -308,6 +308,13 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
+
+          # Refresh apt indices first: GitHub-hosted runners use
+          # mirror+file:/etc/apt/apt-mirrors.txt (Azure mirrors) whose cached
+          # lists can reference superseded package versions (e.g.
+          # libgcrypt20-dev 1.10.3-2ubuntu0.1, a dep of libsecret-1-dev)
+          # that 404 on the mirror until the index is refreshed.
+          sudo apt-get update
           sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
