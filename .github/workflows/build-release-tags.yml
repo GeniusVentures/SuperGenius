@@ -193,24 +193,30 @@ jobs:
           echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{github.workspace}}"
 
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
+          fi
+
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
           
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
           if [ -d "thirdparty" ]; then
             echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+            $SUDO rm -rf thirdparty
           fi
           if [ -d "zkLLVM" ]; then
             echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+            $SUDO rm -rf zkLLVM
           fi
 
           echo "=== POST-CLEANUP DEBUG ==="
@@ -374,7 +380,37 @@ jobs:
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows'}}
         run: |
-          choco install ccache -A
+          choco install ccache ninja -A
+
+          # ccache only works with the Ninja generator: CMake honours
+          # CMAKE_<LANG>_COMPILER_LAUNCHER for Ninja and Makefiles, and silently
+          # drops it for Visual Studio. Ninja in turn does not discover the MSVC
+          # environment on its own the way the Visual Studio generator does, so
+          # export what vcvars64 sets up.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
+
+          cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -notmatch '^([^=]+)=(.*)$') { return }
+            $name, $value = $matches[1], $matches[2]
+            if ($name -eq 'PATH') {
+              # Take vcvars' PATH verbatim and in its own order, so the MSVC bin
+              # directory keeps precedence over the clang directories vcvars also
+              # adds. Skipping entries already on PATH looked tidier but dropped
+              # cl.exe's own directory, which vcvars emits as both HostX64 and
+              # Hostx64; duplicate entries here are harmless.
+              $value -split ';' | Where-Object { $_ } | Add-Content -Path $env:GITHUB_PATH
+            } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
+              "$name=$value" | Add-Content -Path $env:GITHUB_ENV
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}

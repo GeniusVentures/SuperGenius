@@ -271,9 +271,11 @@ set_target_properties(Vulkan::Vulkan PROPERTIES
 )
 
 # On macOS, libMoltenVK.a contains Objective-C code that calls Metal.
-# The ObjC runtime (-lobjc) and Metal/AppKit frameworks must be linked by
+# The ObjC runtime (-lobjc) and Metal frameworks must be linked by
 # every consumer of Vulkan::Vulkan or the linker fails with undefined
 # _objc_msgSend / _objc_retain / _objc_release etc.
+# AppKit does not exist on iOS (ld: framework 'AppKit' not found); MoltenVK
+# uses UIKit there, mirroring the gating in SGProcessors.
 if(APPLE)
     target_link_libraries(Vulkan::Vulkan INTERFACE
         "-framework Metal"
@@ -283,8 +285,12 @@ if(APPLE)
         "-framework CoreFoundation"
         "-framework CoreGraphics"
         "-framework IOKit"
-        "-framework AppKit"
     )
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework AppKit")
+    else()
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework UIKit")
+    endif()
 endif()
 
 # vk-bootstrap
