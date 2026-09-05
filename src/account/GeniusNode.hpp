@@ -487,6 +487,30 @@ namespace sgns
         uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         /**
+         * @brief Returns a child wallet's balance for a specific token, read from
+         *        the locally-synced CRDT UTXO view. Thin alias over GetBalance
+         *        targeting @p child_address — no registration check is performed.
+         * @param[in] child_address Address of the child wallet to query.
+         * @param[in] token_id Token identifier to filter by (the child's own DevConfig
+         *            token, not necessarily this node's dev_config_.TokenID).
+         * @return Local UTXO balance for @p child_address and @p token_id.
+         * @note A return value of 0 is ambiguous — it may mean the address genuinely
+         *       has no balance, or that CRDT sync has not yet propagated the child's
+         *       UTXOs to this node. No sync-status distinction is provided.
+         */
+        uint64_t GetChildBalance( const std::string &child_address, TokenID token_id );
+
+        /**
+         * @brief Returns a child wallet's total balance across all tokens, read from
+         *        the locally-synced CRDT UTXO view.
+         * @param[in] child_address Address of the child wallet to query.
+         * @return Total local UTXO balance (GNUS base units) for @p child_address,
+         *         summed across all tokens.
+         * @note Same 0-ambiguity caveat as the token-filtered overload applies.
+         */
+        uint64_t GetChildBalance( const std::string &child_address );
+
+        /**
          * @brief Returns serialized incoming transactions known to the transaction manager.
          * @return Incoming transaction byte vectors, or an empty vector when transactions are not ready.
          */
@@ -568,6 +592,124 @@ namespace sgns
          * @return Transfer transaction hash on success, or a readiness, balance, or submission error.
          */
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
+
+        /**
+         * @brief Registers a child wallet under a main wallet address.
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @param[in] sequence      Registration sequence number.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata,
+                                                    uint64_t                             sequence );
+
+        /**
+         * @brief Registers this node as a child of main_address with auto-derived sequence.
+         *
+         * Reads the existing reg/ CRDT record for this node and increments the
+         * sequence automatically. Caller-supplied sequence variant is available
+         * for tests and replay scenarios.
+         *
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address and
+         *        waits for the transaction to finalize (D-60/D-62/CONS-02).
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RecoverFromChild( const std::string        &child_address,
+                                                                            uint64_t                  amount,
+                                                                            TokenID                   token_id,
+                                                                            std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address,
+         *        without waiting for finalization.
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @return Transfer transaction hash on success, or a readiness, balance, or submission error.
+         */
+        outcome::result<std::string> RecoverFromChild( const std::string &child_address,
+                                                       uint64_t           amount,
+                                                       TokenID            token_id );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
+         * @param[in] new_main_address    New main wallet public address (128-hex).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata,
+                                                  uint64_t                             sequence,
+                                                  uint64_t                             supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         * @param[in] new_main_address New main wallet public address (128-hex).
+         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Revokes a registered child wallet and waits for the transaction to finalize (D-36).
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RevokeChild( const std::string        &child_address,
+                                                                       std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Revokes a registered child wallet, without waiting for finalization.
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RevokeChild( const std::string &child_address );
+
+        /**
+         * @brief Enumerates child registrations naming a specific main wallet.
+         *
+         * Scans the reg/ CRDT namespace and returns entries whose main_address matches.
+         *
+         * @param[in] main_address Main wallet public address (128-hex) to query for.
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
 
         /**
          * @brief Transfers funds to the configured developer address.
@@ -785,6 +927,7 @@ namespace sgns
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
+        friend class ChildRegTestAccess;
         friend class GeniusNodeTestAccess;
 
         /**

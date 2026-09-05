@@ -354,11 +354,21 @@ namespace sgns
 
         for ( const auto &input : inputs )
         {
-            if ( !GeniusAccount::VerifySignature(
-                     tx->GetSrcAddress(),
-                     std::string_view( reinterpret_cast<const char *>( input.signature_.data() ),
-                                       input.signature_.size() ),
-                     input.SerializeForSigning() ) )
+            const std::string_view sig_view( reinterpret_cast<const char *>( input.signature_.data() ),
+                                              input.signature_.size() );
+            const bool sig_ok = GeniusAccount::VerifySignature( tx->GetSrcAddress(), sig_view,
+                                                                 input.SerializeForSigning() );
+            bool delegated_sig_ok = false;
+            if ( !sig_ok && tx->GetType() == TRANSFER_TX_TYPE )
+            {
+                auto certified_main = blockchain->CheckCertifiedParent( tx->GetSrcAddress() );
+                if ( certified_main.has_value() )
+                {
+                    delegated_sig_ok = GeniusAccount::VerifySignature( *certified_main, sig_view,
+                                                                        input.SerializeForSigning() );
+                }
+            }
+            if ( !sig_ok && !delegated_sig_ok )
             {
                 logger->debug( "ValidateWitness(Genius) signature verification failed for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ), input.output_idx_ );

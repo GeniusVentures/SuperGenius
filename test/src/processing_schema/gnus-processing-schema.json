@@ -116,7 +116,7 @@
         "format": {
           "type": "string",
           "description": "Data format (e.g., RGBA8, FLOAT32)",
-          "enum": ["RGBA8", "RGB8", "FLOAT32", "FLOAT16", "INT32", "INT16", "INT8"]
+          "enum": ["RGBA8", "RGB8", "FLOAT32", "FLOAT16", "INT32", "INT16", "INT8", "FP4_ULTRA"]
         }
       }
     },
@@ -178,7 +178,34 @@
         },
         "shader": {
           "$ref": "#/definitions/shader_config",
-          "description": "Shader configuration for compute/render passes"
+          "description": "Shader configuration for compute passes"
+        },
+        "render_shader": {
+          "$ref": "#/definitions/render_shader_config",
+          "description": "Multi-stage (vertex+fragment) shader configuration for render passes"
+        },
+        "render_target": {
+          "$ref": "#/definitions/render_target",
+          "description": "Offscreen framebuffer (color+depth) config for render passes"
+        },
+        "vertex_layout": {
+          "type": "array",
+          "description": "Vertex attribute layout for render passes",
+          "items": {
+            "$ref": "#/definitions/vertex_layout_entry"
+          }
+        },
+        "vertex_buffer": {
+          "$ref": "#/definitions/vertex_buffer",
+          "description": "Buffer binding supplying vertex attribute data referenced by vertex_layout (D-16 Amendment)"
+        },
+        "index_buffer": {
+          "$ref": "#/definitions/index_buffer",
+          "description": "Index buffer binding + index type for render passes"
+        },
+        "pipeline_state": {
+          "$ref": "#/definitions/pipeline_state",
+          "description": "Fixed-function pipeline state for render passes"
         },
         "data_transforms": {
           "type": "array",
@@ -213,10 +240,18 @@
         },
         {
           "if": {
-            "properties": { "type": { "enum": ["compute", "render"] } }
+            "properties": { "type": { "const": "compute" } }
           },
           "then": {
             "required": ["shader"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "render" } }
+          },
+          "then": {
+            "required": ["render_shader", "render_target", "vertex_buffer"]
           }
         }
       ]
@@ -323,6 +358,11 @@
 		}
 	  ]
 	},
+    "shader_source_type": {
+      "type": "string",
+      "description": "Shader source language, validated before it ever reaches the driver",
+      "enum": ["glsl", "spirv"]
+    },
     "shader_config": {
       "type": "object",
       "required": ["source"],
@@ -332,8 +372,7 @@
           "description": "Shader source path or URI parameter"
         },
         "type": {
-          "type": "string",
-          "enum": ["glsl", "hlsl", "metal", "spirv"],
+          "$ref": "#/definitions/shader_source_type",
           "default": "glsl"
         },
         "entry_point": {
@@ -351,6 +390,167 @@
               "source": { "type": "string" }
             }
           }
+        }
+      }
+    },
+    "render_shader_config": {
+      "type": "object",
+      "description": "Multi-stage (vertex+fragment) shader configuration for render passes",
+      "required": ["stages"],
+      "properties": {
+        "stages": {
+          "type": "array",
+          "description": "Ordered shader stages (vertex, fragment) making up this render pass's pipeline",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/shader_stage"
+          }
+        },
+        "uniforms": {
+          "type": "object",
+          "description": "Uniform variable declarations, shared across all stages",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": { "$ref": "#/definitions/data_type" },
+              "value": {},
+              "source": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "shader_stage": {
+      "type": "object",
+      "required": ["stage", "type", "source"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "description": "Which pipeline stage this shader source targets",
+          "enum": ["vertex", "fragment"]
+        },
+        "type": {
+          "$ref": "#/definitions/shader_source_type",
+          "default": "glsl"
+        },
+        "source": {
+          "type": "string",
+          "description": "Shader source path or URI parameter for this stage"
+        },
+        "entry_point": {
+          "type": "string",
+          "default": "main"
+        }
+      }
+    },
+    "render_target": {
+      "type": "object",
+      "description": "Offscreen render-target/framebuffer config - all fields required, no schema defaults",
+      "required": ["color_format", "depth_format", "width", "height", "clear_color", "clear_depth"],
+      "properties": {
+        "color_format": {
+          "type": "string",
+          "description": "Color attachment format",
+          "enum": ["RGBA8", "RGB8"]
+        },
+        "depth_format": {
+          "type": "string",
+          "description": "Depth attachment format",
+          "enum": ["D32_SFLOAT", "D24_UNORM_S8_UINT"]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "clear_color": {
+          "type": "array",
+          "description": "RGBA clear color",
+          "items": { "type": "number" },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "clear_depth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "vertex_layout_entry": {
+      "type": "object",
+      "required": ["name", "format", "offset"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Vertex attribute name"
+        },
+        "format": {
+          "type": "string",
+          "description": "Vertex attribute component format",
+          "enum": ["FLOAT32", "FLOAT16", "INT32"]
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Byte offset within the vertex; stride is auto-computed from the tightly-packed sum of attribute sizes, not schema-configurable",
+          "minimum": 0
+        }
+      }
+    },
+    "vertex_buffer": {
+      "type": "object",
+      "description": "Buffer binding that supplies vertex attribute data for vertex_layout entries, using the same prefix-notation convention as pass_io_binding",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Data source using prefix notation",
+          "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
+        }
+      }
+    },
+    "index_buffer": {
+      "type": "object",
+      "description": "Index buffer binding for render passes; index_type is schema-configurable per D-17",
+      "properties": {
+        "index_type": {
+          "type": "string",
+          "enum": ["uint16", "uint32"],
+          "default": "uint32"
+        },
+        "source": {
+          "type": "string",
+          "description": "Data source using prefix notation",
+          "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
+        }
+      }
+    },
+    "pipeline_state": {
+      "type": "object",
+      "description": "Curated, minimal v1 fixed-function pipeline state subset (D-13); depth compare op is fixed at 'less', not schema-configurable (D-14)",
+      "properties": {
+        "topology": {
+          "type": "string",
+          "enum": ["triangle_list", "line_list", "point_list"],
+          "default": "triangle_list"
+        },
+        "cull_mode": {
+          "type": "string",
+          "enum": ["none", "front", "back"],
+          "default": "back"
+        },
+        "front_face": {
+          "type": "string",
+          "enum": ["cw", "ccw"],
+          "default": "ccw"
+        },
+        "depth_test": {
+          "type": "string",
+          "enum": ["enabled", "disabled"],
+          "default": "enabled"
         }
       }
     },

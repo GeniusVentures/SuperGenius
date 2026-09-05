@@ -109,6 +109,16 @@ namespace sgns::crdt
         outcome::result<CID> Put( const std::vector<DataPair>           &data_vector,
                                   const std::unordered_set<std::string> &topics );
 
+        /**
+         * @brief       Puts a key-value pair directly into local storage, bypassing DAG broadcast.
+         *              See CrdtDatastore::PutKeyLocal for the full rationale/contract.
+         * @param[in]   key The hierarchical key where the value should be stored.
+         * @param[in]   value The value to store.
+         * @param[in]   id Provenance/tie-break identifier for the local write.
+         * @return      outcome::success on success, or outcome::failure otherwise.
+         */
+        outcome::result<void> PutLocal( const HierarchicalKey &key, const Buffer &value, const std::string &id );
+
         /** Gets a value that corresponds to specified key.
         * @param key - value key
         * @return value as a Buffer

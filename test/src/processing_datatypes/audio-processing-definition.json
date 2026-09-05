@@ -1,0 +1,76 @@
+{
+  "name": "audio-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for audio input using a tiny 1D conv model",
+  "tags": ["audio", "float32", "test"],
+
+  "inputs": [
+    {
+      "name": "inputAudio",
+      "source_uri_param": "file://processing_datatypes/audio_input.raw",
+      "type": "audio",
+      "description": "Input float32 audio samples",
+      "dimensions": {
+        "width": 256,
+        "block_len": 256,
+        "chunk_stride": 256
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "audioOutput",
+      "source_uri_param": "file://processing_datatypes/audio_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from audio model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/audio_tiny.mnn",
+      "description": "URI to the audio MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "audio_inference",
+      "type": "inference",
+      "description": "Audio model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/audio_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputAudio",
+            "shape": [1, 1, 256]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:audioOutput",
+            "shape": [1, 1, 256]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-08-05",
+    "framework": "MNN",
+    "test_case": "audio_datatype"
+  }
+}

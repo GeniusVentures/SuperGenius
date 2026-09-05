@@ -247,15 +247,73 @@ endif()
 
 include_directories(${c-ares_INCLUDE_DIR})
 
+# VulkanHeaders
+set(VulkanHeaders_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/share/cmake/VulkanHeaders" CACHE PATH "Path to Vulkan-Headers install folder")
+find_package(VulkanHeaders CONFIG REQUIRED)
 # Vulkan
 find_package(Vulkan)
 
 if(NOT TARGET Vulkan::Vulkan)
+    set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include")
     if(NOT DEFINED $ENV{VULKAN_SDK})
         set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
     endif()
 
     find_package(Vulkan REQUIRED)
+endif()
+
+# Override Vulkan::Vulkan to use our vendored Vulkan-Headers on all platforms.
+# vk-bootstrap was built against our headers (v1.4); mixing with system/NDK
+# headers (v1.3 or other versions) causes unknown-type errors in
+# VkBootstrapDispatch.h and VkBootstrapFeatureChain.h.
+set_target_properties(Vulkan::Vulkan PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
+)
+
+# On macOS, libMoltenVK.a contains Objective-C code that calls Metal.
+# The ObjC runtime (-lobjc) and Metal frameworks must be linked by
+# every consumer of Vulkan::Vulkan or the linker fails with undefined
+# _objc_msgSend / _objc_retain / _objc_release etc.
+# AppKit does not exist on iOS (ld: framework 'AppKit' not found); MoltenVK
+# uses UIKit there, mirroring the gating in SGProcessors.
+if(APPLE)
+    target_link_libraries(Vulkan::Vulkan INTERFACE
+        "-framework Metal"
+        "-framework IOSurface"
+        "-framework QuartzCore"
+        "-framework Foundation"
+        "-framework CoreFoundation"
+        "-framework CoreGraphics"
+        "-framework IOKit"
+    )
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework AppKit")
+    else()
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework UIKit")
+    endif()
+endif()
+
+# vk-bootstrap
+set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
+find_package(vk-bootstrap CONFIG REQUIRED)
+
+# SPIRV-Tools — no longer a standalone build.  libshaderc_combined (linked via
+# shaderc::shaderc below) statically bundles the exact same SPIRV-Tools code at the
+# exact same pinned commit (v2024.3 DEPS).  The spirv-tools include path is folded into
+# shaderc::shaderc's INTERFACE_INCLUDE_DIRECTORIES so <spirv-tools/libspirv.hpp> resolves.
+
+# shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
+# github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
+# IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
+# libshaderc_combined statically bundles glslang+SPIRV-Tools and installs spirv-tools
+# headers into <prefix>/include/spirv-tools/, so <spirv-tools/libspirv.hpp> resolves
+# for consumers that call spvtools::SpirvTools::Validate() directly (SHADER-02).
+if(NOT TARGET shaderc::shaderc)
+    add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
+    set_target_properties(shaderc::shaderc PROPERTIES
+        IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
+    )
 endif()
 
 # ipfs-lite-cpp
@@ -466,6 +524,16 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+# enable_testing() must run before any add_subdirectory() below so that CTest's
+# per-directory CTestTestfile.cmake chain (root -> SGProcessingManager -> test ->
+# capability/artifacts/capture) is actually generated; calling it only inside the
+# later if(BUILD_TESTING) block (after these subdirectories are already configured)
+# left ctest silently unable to discover any test registered under them, even
+# though the leaf CMakeLists.txt files call enable_testing()/add_test() themselves.
+if(BUILD_TESTING)
+    enable_testing()
+endif()
+
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
@@ -474,7 +542,6 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 if(BUILD_TESTING)
-    enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
 

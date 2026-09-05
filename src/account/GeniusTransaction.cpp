@@ -71,13 +71,18 @@ namespace sgns
 
     bool GeniusTransaction::CheckSignature() const
     {
+        return CheckSignatureAgainst( dag_st.source_addr() );
+    }
+
+    bool GeniusTransaction::CheckSignatureAgainst( const std::string &address ) const
+    {
         auto       str_signature = dag_st.signature();
 
         SGTransaction::DAGStruct dag_copy = dag_st;
         dag_copy.clear_signature();
         auto serialized = SerializeByteVector(dag_copy);
 
-        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
+        return GeniusAccount::VerifySignature( address, str_signature, serialized );
     }
 
     bool GeniusTransaction::CheckDAGSignatureLegacy() const
