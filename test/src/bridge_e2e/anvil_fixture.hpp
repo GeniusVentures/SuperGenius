@@ -300,21 +300,35 @@ namespace sgns::test::anvil
                 return { "", false };
             }
         }
+        // GetAddress() renders X||Y big-endian. The v2 bridge event carries the
+        // X-only key in CONTRACT byte order (little-endian — the reverse of
+        // big-endian), which is what eth::DecompressXOnlyPubkey expects: it
+        // reverses the event bytes back to big-endian before parsing the point.
+        // Sending big-endian bytes here made the relayer decompress a different
+        // point, so the reconstructed destination never matched the account.
         const std::string x_half         = sgns_address_128.substr( 0, kHalfLen );
         const std::string y_half         = sgns_address_128.substr( kHalfLen, kHalfLen );
-        const std::string y_first_byte_hex = y_half.substr( 0, kByteHexChars );
 
-        unsigned int y_first_byte = 0u;
+        std::string x_contract_order;
+        x_contract_order.reserve( kHalfLen );
+        for ( unsigned int i = kHalfLen; i >= kByteHexChars; i -= kByteHexChars )
+        {
+            x_contract_order += x_half.substr( i - kByteHexChars, kByteHexChars );
+        }
+
+        // Integer parity of Y: the low byte of the big-endian rendering.
+        const std::string y_low_byte_hex = y_half.substr( kHalfLen - kByteHexChars, kByteHexChars );
+        unsigned int      y_low_byte     = 0u;
         try
         {
-            y_first_byte = static_cast<unsigned int>( std::stoul( y_first_byte_hex, nullptr, 16 ) );
+            y_low_byte = static_cast<unsigned int>( std::stoul( y_low_byte_hex, nullptr, 16 ) );
         }
         catch ( ... )
         {
             return { "", false };
         }
-        const bool destination_y_odd = ( y_first_byte & 1u ) != 0u;
-        return { "0x" + x_half, destination_y_odd };
+        const bool destination_y_odd = ( y_low_byte & 1u ) != 0u;
+        return { "0x" + x_contract_order, destination_y_odd };
     }
 
     /**

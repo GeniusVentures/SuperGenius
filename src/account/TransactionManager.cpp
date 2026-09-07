@@ -1493,9 +1493,23 @@ namespace sgns
             return *validator;
         }
 
-        static GeniusInputValidator fallback;
-        TransactionManagerLogger()->error( "{}: no input validator registered for chain_id={}", __func__, chain_id );
-        return fallback;
+        if ( chain_id == GENIUS_CHAIN_ID || chain_id == "supergenius_chain" )
+        {
+            static GeniusInputValidator fallback;
+            TransactionManagerLogger()->debug( "{}: using local Genius validator for chain_id={}",
+                                               __func__,
+                                               chain_id );
+            return fallback;
+        }
+
+        // Develop selection semantics (SelectInputValidator): every non-genius
+        // chain routes to the PublicChainInputValidator. Its RPC verification is
+        // what records the per-claim evidence the slot-hash populator consumes
+        // when votes are created — falling back to the permissive local validator
+        // here silently skipped RPC verification and left votes abstaining from
+        // every slot, which deadlocked bridge-mint quorum (D-06).
+        TransactionManagerLogger()->debug( "{}: using PublicChain validator for chain_id={}", __func__, chain_id );
+        return public_chain_input_validator_;
     }
 
     outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )
