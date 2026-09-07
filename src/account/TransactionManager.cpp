@@ -691,8 +691,13 @@ namespace sgns
 
         // UTXO reservation check — prevent duplicate mint creation for the same burn
         // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
+        std::string   bare_burn_ref = transaction_hash;
+        if ( bare_burn_ref.rfind( "0x", 0 ) == 0 || bare_burn_ref.rfind( "0X", 0 ) == 0 )
+        {
+            bare_burn_ref = bare_burn_ref.substr( 2 );
+        }
         base::Hash256 burn_tx_hash;
-        if ( auto parsed = base::Hash256::fromReadableString( transaction_hash ); parsed.has_value() )
+        if ( auto parsed = base::Hash256::fromReadableString( bare_burn_ref ); parsed.has_value() )
         {
             burn_tx_hash   = parsed.value();
             auto &utxo_mgr = account_m->GetUTXOManager();
@@ -732,7 +737,18 @@ namespace sgns
             }
         }
 
-        auto          source_hash = base::Hash256::fromReadableString( transaction_hash );
+        // The relayer hands the burn tx hash in 0x-prefixed form; the account's
+        // hash parser wants bare hex. Strip an optional prefix so each burn
+        // derives its true outpoint — the previous empty-hash fallback mapped
+        // EVERY burn onto the all-zero outpoint, and after the first burn's
+        // mint finalized that outpoint, HasConfirmedInputConflict rejected all
+        // later burns in the same batch as double-spends of nothing.
+        std::string bare_transaction_hash = transaction_hash;
+        if ( bare_transaction_hash.rfind( "0x", 0 ) == 0 || bare_transaction_hash.rfind( "0X", 0 ) == 0 )
+        {
+            bare_transaction_hash = bare_transaction_hash.substr( 2 );
+        }
+        auto          source_hash = base::Hash256::fromReadableString( bare_transaction_hash );
         base::Hash256 source_input_hash;
         if ( source_hash.has_error() )
         {
