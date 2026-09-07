@@ -385,7 +385,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
                                                 "test",
                                                 TokenID::FromBytes( { 0x00 } ),
                                                 "",
-                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() );
 
     sgns::test::assertWaitForCondition(
@@ -446,7 +446,7 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
         "test",
         TokenID::FromBytes( { 0x00 } ),
         "",
-        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( historical_mint.has_value() ) << historical_mint.error().message();
     const std::string historical_tx_hash = historical_mint.value().first;
 
@@ -507,7 +507,7 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
                                                        "test",
                                                        TokenID::FromBytes( { 0x00 } ),
                                                        "",
-                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                       std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( new_mint.has_value() ) << new_mint.error().message();
     const auto new_cid =
         sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( restarted_node, new_mint.value().first );
@@ -644,7 +644,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                                   "test",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "",
-                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                  std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
     mint_result = node_original->MintTokens( 2000,
@@ -652,14 +652,14 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                              "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
                                              "",
-                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
     mint_result = node_original->MintTokens( 30,
                                              sgns::test::NextMintSourceHash(),
                                              "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
                                              "",
-                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
@@ -674,7 +674,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                                "test",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "",
-                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                               std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
 
     sgns::test::assertWaitForCondition(
@@ -739,7 +739,7 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                                                        "test",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        "",
-                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                       std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
@@ -1115,7 +1115,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
                                           "test",
                                           TokenID::FromBytes( { 0x00 } ),
                                           "",
-                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                          std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
 
     auto mint2 = node_client->MintTokens( 250,
@@ -1123,7 +1123,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
                                           "test",
                                           TokenID::FromBytes( { 0x00 } ),
                                           "",
-                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                          std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
 
     auto transfer1 = node_client->TransferFunds( 75,
@@ -1242,9 +1242,13 @@ TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
     ASSERT_TRUE( mint.has_value() ) << "mint failed on node_client";
 
     // MintTokens returns once submitted; the UTXO has to settle before it is spendable. Wait on the
-    // balance explicitly rather than relying on incidental delay from other assertions.
+    // balance explicitly rather than relying on incidental delay from other assertions. Settlement
+    // rides the CRDT merge behind the node's single DAG worker — a stalled graphsync fetch delays
+    // it until the 120s route failover or a peer's periodic head broadcast. Budget the same wait
+    // class as the transfer below instead of a bare 30s, which equals the system's initial
+    // periodic-sync interval and races it by construction.
     sgns::test::assertWaitForCondition( [&]() { return node_client->GetBalance() >= 100; },
-                                        std::chrono::milliseconds( 30000 ),
+                                        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ),
                                         "mint did not settle into node_client's balance" );
 
     auto transfer = node_client->TransferFunds( 75,
