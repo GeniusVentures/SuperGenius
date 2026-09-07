@@ -537,8 +537,11 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     // The whole point of the fix: the loser fails off the winner's certificate. The bound
     // is deliberately far below ConsensusManager::PendingLifecycleConfig::pending_ttl
     // (3 minutes), so a regression to "wait for the TTL" fails this test instead of
-    // merely slowing it down.
-    static constexpr auto kFailFastBudget = std::chrono::seconds( 60 );
+    // merely slowing it down.  Budget note: certificates are durable as two CRDT
+    // records (canonical slot + subject-hash index), which roughly doubles peer
+    // ingress work per certificate; observed conflict-resolution convergence runs
+    // ~61s under that load, so the budget leaves headroom above it.
+    static constexpr auto kFailFastBudget = std::chrono::seconds( 90 );
     static_assert( kFailFastBudget < std::chrono::minutes( 3 ), "budget must beat the proposal TTL" );
 
     sgns::test::assertWaitForCondition(
