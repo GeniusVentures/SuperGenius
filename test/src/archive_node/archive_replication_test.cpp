@@ -159,8 +159,13 @@ namespace sgns
         ASSERT_TRUE( mint.has_value() ) << "mint failed on sender";
 
         // MintTokens returns once submitted; the UTXO must settle before it is spendable.
+        // Settlement rides the CRDT merge of the mint's DAG root, which the single DAG worker
+        // can only process between external fetches — a stalled graphsync request holds the
+        // worker until the 120s route failover or a peer's periodic head broadcast unsticks
+        // it. Budget the same wait class as the incoming-transaction waits below rather than
+        // a bare 30s, which equals INITIAL_PERIODIC_SYNC_INTERVAL and races it by construction.
         test::assertWaitForCondition( [&]() { return sender->GetBalance() >= kMintAmount; },
-                                      std::chrono::milliseconds( 30000 ),
+                                      std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ),
                                       "mint did not settle into sender's balance" );
 
         auto transfer = sender->TransferFunds( kTransferAmount,
