@@ -2348,6 +2348,53 @@ namespace sgns
             std::lock_guard lock( fault_test_mutex_ );
             ++fault_test_counters_.certificate_write_successes;
         }
+
+        // Secondary subject-hash index (develop consumer contract): identical
+        // bytes at /cert/<subject_hash> so consumers can look a certificate up
+        // by its subject hash (e.g. the transaction hash) without knowing the
+        // canonical slot. The slot record above remains the authority for every
+        // consensus-internal read (GetCertificateBySlot, registry batch member
+        // loading, accepted-slot scans). Best-effort: a failure here does not
+        // invalidate the authoritative slot record.
+        const auto secondary_subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( secondary_subject_hash.has_value() && !secondary_subject_hash.value().empty() &&
+             secondary_subject_hash.value() != key.substr( CERTIFICATE_BASE_PATH_KEY.size() ) )
+        {
+            const auto subject_key = std::string{ CERTIFICATE_BASE_PATH_KEY } + secondary_subject_hash.value();
+
+            bool subject_record_ok = true;
+            auto existing_subject  = db_->Get( { subject_key } );
+            if ( existing_subject.has_value() )
+            {
+                Certificate existing_certificate;
+                if ( existing_certificate.ParseFromArray( existing_subject.value().data(),
+                                                          existing_subject.value().size() ) &&
+                     ValidateCertificateKey( existing_certificate, subject_key ) &&
+                     ValidateCertificate( existing_certificate ) == Check::Approve &&
+                     SerializedCertificateHash( existing_subject.value().toString() ) >=
+                         SerializedCertificateHash( serialized ) )
+                {
+                    // Equal-or-newer valid record already present; keep it.
+                    subject_record_ok = false;
+                }
+            }
+            if ( subject_record_ok )
+            {
+                crdt::HierarchicalKey  subject_cert_key( subject_key );
+                crdt::GlobalDB::Buffer subject_cert_value;
+                subject_cert_value.put( serialized );
+                auto subject_put =
+                    db_->PutConvergentImmutable( subject_cert_key, subject_cert_value, { consensus_datastore_topic_ } );
+                if ( subject_put.has_error() )
+                {
+                    ConsensusManagerLogger()->warn(
+                        "{}: subject-hash index write failed for hash {} error={}",
+                        __func__,
+                        GetPrintableSubjectHash( certificate.proposal().subject() ),
+                        subject_put.error().message() );
+                }
+            }
+        }
         if ( !EnterFinalityFaultBarrier( certificate_persisted_barrier_ ) )
         {
             return outcome::failure( std::errc::operation_canceled );
@@ -3055,7 +3102,17 @@ namespace sgns
         {
             return false;
         }
-        return key == GetExpectedCertificateSlotKey( certificate );
+        if ( key == GetExpectedCertificateSlotKey( certificate ) )
+        {
+            return true;
+        }
+        // Secondary subject-hash index record (develop consumer contract): the
+        // canonical slot record above stays authoritative for consensus
+        // internals; this record only makes the certificate retrievable by its
+        // subject hash (e.g. a transaction hash).
+        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
+        return subject_hash.has_value() &&
+               key == std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash.value();
     }
 
     std::string ConsensusManager::GetExpectedCertificateSlotKey( const Certificate &certificate )
@@ -4169,14 +4226,42 @@ namespace sgns
     }
 
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
-        const std::string &slot_key ) const
+        const std::string &subject_hash ) const
     {
-        return GetCertificateBySlot( slot_key );
+        if ( subject_hash.empty() || !db_ )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
+
+        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
+
+        Certificate certificate;
+        if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
+        {
+            ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto current_hash = GetSubjectHash( certificate.proposal().subject() );
+        if ( current_hash.has_error() || current_hash.value() != subject_hash )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}",
+                                             __func__,
+                                             subject_hash,
+                                             current_hash.has_value() ? current_hash.value() : std::string( "?" ) );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( ValidateCertificate( certificate ) != Check::Approve )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return certificate;
     }
 
-    bool ConsensusManager::CheckCertificateForSubject( const std::string &slot_key ) const
+    bool ConsensusManager::CheckCertificateForSubject( const std::string &subject_hash ) const
     {
-        return CheckCertificateForSlot( slot_key );
+        return GetCertificateBySubjectHash( subject_hash ).has_value();
     }
 
     bool ConsensusManager::CheckCertificateForSubject( const ConsensusManager::Subject &subject ) const

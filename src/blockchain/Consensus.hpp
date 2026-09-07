@@ -623,13 +623,22 @@ namespace sgns
          */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
         /**
-         * @deprecated Transaction consumers must derive a slot before lookup.
-         * This compatibility wrapper treats its argument as a slot and never
-         * reads a subject-hash certificate key.
+         * @brief Retrieves a certificate by its subject hash (secondary index).
+         *
+         * SubmitCertificate persists each certificate twice: at the authoritative
+         * canonical-slot key (`/cert/<slot>`, consensus internals) and at the
+         * subject-hash key (`/cert/<subject_hash>`, consumer contract). This read
+         * serves the subject-hash record and verifies the hash binding plus full
+         * certificate validity. Consensus-internal lookups must use
+         * @ref GetCertificateBySlot with a derived slot.
          */
-        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &slot_key ) const;
-        /** @deprecated Use CheckCertificateForSlot with a derived slot. */
-        bool CheckCertificateForSubject( const std::string &slot_key ) const;
+        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+        /**
+         * @brief Checks for an approved certificate via the subject-hash index.
+         * @param[in] subject_hash Subject hash key, without the `/cert/` prefix.
+         * @return `true` when the subject-hash record is present and approved.
+         */
+        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
         /**
          * @brief Checks whether a certificate exists for the exact supplied subject.
          * @param[in] subject Subject instance used to derive a canonical slot.
