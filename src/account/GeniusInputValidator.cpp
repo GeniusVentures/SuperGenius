@@ -469,7 +469,7 @@ namespace sgns
 
             const auto producer_hash               = input.txid_hash_.toReadableString();
             auto       producer_transaction_result = TransactionManager::FetchTransaction(
-                blockchain->GetGlobalDB(),
+                *blockchain->GetGlobalDB(),
                 TransactionManager::GetTransactionPath( producer_hash ) );
             if ( producer_transaction_result.has_error() || !producer_transaction_result.value() ||
                  producer_transaction_result.value()->GetHash() != producer_hash )
