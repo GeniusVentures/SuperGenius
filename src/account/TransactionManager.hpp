@@ -133,7 +133,7 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context> ctx,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<Blockchain>              blockchain,
-            bool                                     full_node,
+            bool                                     full_node            = true,
             uint16_t                                 subnet_id           = 0,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
@@ -369,6 +369,7 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiNodeFinalityFaultTestAccess;
+        friend class PayoutOutputsTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
