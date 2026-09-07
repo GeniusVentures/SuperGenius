@@ -3871,7 +3871,8 @@ namespace sgns
         {
             return false;
         }
-        if ( !subject.has_subject_type_hash() || subject.subject_type_hash().hash().empty() )
+        if ( !subject.has_subject_type_hash() ||
+             subject.subject_type_hash().hash().size() != base::Hash256::size() )
         {
             return false;
         }
@@ -3965,9 +3966,12 @@ namespace sgns
             return false;
         }
 
-        if ( !subject.has_subject_type_hash() || subject.subject_type_hash().hash().empty() )
+        if ( !subject.has_subject_type_hash() ||
+             subject.subject_type_hash().hash().size() != base::Hash256::size() )
         {
-            ConsensusManagerLogger()->error( "{}: subject subject_type_hash is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: subject subject_type_hash is empty or not exactly {} bytes",
+                                             __func__,
+                                             base::Hash256::size() );
             return false;
         }
         if ( subject.payload().empty() )
