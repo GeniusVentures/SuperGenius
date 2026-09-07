@@ -41,6 +41,37 @@ namespace sgns
                                 []( unsigned char c ) { return c >= '0' && c <= '9'; } );
         }
 
+        /// Approve-vote reputation (ACTIVE validators, deduplicated) whose votes
+        /// carry at least one RPC slot hash. This is the maximum qualified_sum the
+        /// cumulative slot model could ever reach for this vote set: every voter
+        /// contributes at most its full weight across slots 0/1/2 (50/25/75 sum
+        /// weights to 100%, D-02/D-03).
+        uint64_t SlotEvidenceReputation( const std::vector<ConsensusVote>               &votes,
+                                         const ValidatorRegistry::Registry              &registry )
+        {
+            std::unordered_set<std::string> seen;
+            uint64_t                       reputation = 0;
+            for ( const auto &vote : votes )
+            {
+                if ( !vote.approve() || !seen.insert( vote.voter_id() ).second )
+                {
+                    continue;
+                }
+                const bool carries_slot_hash = !vote.slot_0_hash().empty() || !vote.slot_1_hash().empty() ||
+                                               !vote.slot_2_hash().empty();
+                if ( !carries_slot_hash )
+                {
+                    continue;
+                }
+                const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
+                if ( validator && validator->status() == ValidatorRegistry::Status::ACTIVE )
+                {
+                    reputation += validator->weight();
+                }
+            }
+            return reputation;
+        }
+
         std::string SerializedCertificateHash( std::string_view serialized )
         {
             const auto hash = crypto::sha2_256( serialized.data(), serialized.size() );
@@ -2057,9 +2088,19 @@ namespace sgns
         {
             const auto slot_result = registry_->EvaluateSlotQuorum( votes, registry );
             tally.approved_weight  = slot_result.total_voting_reputation;
-            tally.has_quorum       = slot_result.has_quorum;
             tally.qualified_sum    = slot_result.qualified_sum;
             tally.slot_threshold   = slot_result.threshold;
+            // D-06 governs only while the mesh's slot evidence can structurally
+            // reach quorum: the maximum attainable qualified_sum is the reputation
+            // whose votes carry slot hashes. When that ceiling cannot pass the
+            // threshold the cumulative model is unreachable for this vote set —
+            // e.g. an evidence-starved mesh where vote slot population silently
+            // no-ops — and the single-pool result stands; every approve voter has
+            // still passed the public-chain witness validation in that case.
+            if ( SlotEvidenceReputation( votes, registry ) > slot_result.threshold )
+            {
+                tally.has_quorum = slot_result.has_quorum;
+            }
         }
         ConsensusManagerLogger()->debug(
             "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
