@@ -190,3 +190,7 @@ Resume file: None
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
+
+### Concurrent track note
+
+Rebased 2026-09-07 onto develop (e25a7f9ea): develop's v1.1/ELM bridge track (MILESTONES.md, ROADMAP Track A) coexists with v3.0 records. STATE reflects the v3.0 branch position.
