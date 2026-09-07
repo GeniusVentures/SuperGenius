@@ -4132,10 +4132,30 @@ namespace sgns
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransaction(
         const GeniusTransaction &element ) const
     {
-        auto tx = GetTransactionByNonceAndAddress( element.GetNonce(), element.GetSrcAddress() );
-        if ( tx && tx->GetHash() != element.GetHash() )
+        // Scan the tracked set directly instead of GetTransactionByNonceAndAddress:
+        // when several records share the address+nonce (a contested slot after the
+        // winner's certificate arrives, with both the winner and the loser tracked
+        // locally), the single-result lookup can return the element itself and the
+        // hash inequality below then reports "no conflict" — iteration order of the
+        // tracked map decided node-by-node whether the loser ever failed. Every
+        // entry that is not the element itself is a conflict.
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
         {
-            return tx;
+            if ( !tracked.tx )
+            {
+                continue;
+            }
+            if ( tracked.tx->GetNonce() != element.GetNonce() ||
+                 tracked.tx->GetSrcAddress() != element.GetSrcAddress() )
+            {
+                continue;
+            }
+            if ( tracked.tx->GetHash() == element.GetHash() )
+            {
+                continue;
+            }
+            return tracked.tx;
         }
 
         return outcome::failure( std::errc::no_such_file_or_directory );
