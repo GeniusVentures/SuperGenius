@@ -308,6 +308,25 @@ namespace sgns
          */
         outcome::result<void> StoreRegistryUpdate( const RegistryUpdate &update );
         /**
+         * @brief Begins a CRDT atomic transaction for multi-key registry writes.
+         * @param[in] update Registry update whose payload seeds the transaction.
+         * @return Transaction handle or an error.
+         */
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
+            const RegistryUpdate &update );
+        /**
+         * @brief Serializes a registry snapshot protobuf.
+         * @param[in] registry Registry snapshot to serialize.
+         * @return Serialized bytes or an error.
+         */
+        outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
+        /**
+         * @brief Deserializes a registry snapshot protobuf.
+         * @param[in] buffer Serialized registry bytes.
+         * @return Parsed registry or an error.
+         */
+        outcome::result<Registry> DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
+        /**
          * @brief Serializes a registry update protobuf.
          * @param[in] update Registry update to serialize.
          * @return Serialized bytes or an error.
@@ -334,6 +353,11 @@ namespace sgns
          * @param[in] batch_size Number of certificates per batch.
          */
         void SetCertificatesPerBatch( size_t batch_size );
+        /**
+         * @brief Sets the cap on newly admitted validators per registry update.
+         * @param[in] max_new Maximum new validators admitted per update.
+         */
+        void SetMaxNewValidatorsPerUpdate( size_t max_new );
         /**
          * @brief Sets callback used to submit generated batch subjects.
          * @param[in] submitter Subject submitter callback.
@@ -451,6 +475,8 @@ namespace sgns
         {
             std::unordered_map<std::string, bool> registered_votes;   ///< Vote decisions by registered validators.
             std::unordered_map<std::string, bool> unregistered_votes; ///< Vote decisions by unregistered validators.
+            std::unordered_set<std::string>       unregistered;       ///< Unregistered voter ids (observability).
+            std::unordered_set<std::string>       approved;           ///< Approving active validator ids (observability).
         };
 
         /**
@@ -514,7 +540,7 @@ namespace sgns
          */
         bool ValidateCertificate( const sgns::ConsensusCertificate &certificate,
                                   const Registry                   &current_registry,
-                                  std::string_view                  expected_registry_cid ) const;
+                                  std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Validates certificate suitability for generating a registry update.
          * @param[in] certificate Certificate to validate.
@@ -523,36 +549,38 @@ namespace sgns
          */
         bool ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
                                            const Registry                   &current_registry,
-                                           std::string_view                  expected_registry_cid ) const;
+                                           std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
          * @param[in] current_registry Current registry snapshot.
-         * @return Partitioned votes, or an error when the certificate has no quorum.
+         * @return Partitioned votes.
          */
-        outcome::result<CertificateVotes> ExtractCertificateVotes(
-            const sgns::ConsensusCertificate &certificate,
-            const Registry                   &current_registry ) const;
+        CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
+                                                  const Registry                   &current_registry ) const;
+        /**
+         * @brief Builds next registry snapshot using a certificate-derived vote set.
+         * @param[in] current_registry Current registry snapshot.
+         * @param[in] certificate Certificate whose votes drive the update.
+         * @param[in] registered_votes Vote decisions from registered validators.
+         * @param[in] unregistered_votes Vote decisions from unregistered validators.
+         * @return Derived registry snapshot.
+         */
+        Registry BuildRegistryFromCertificate( const Registry                              &current_registry,
+                                               const sgns::ConsensusCertificate            &certificate,
+                                               const std::unordered_map<std::string, bool> &registered_votes,
+                                               const std::unordered_map<std::string, bool> &unregistered_votes ) const;
         /**
          * @brief Builds next registry snapshot from aggregated vote maps.
          * @param[in] current_registry Current registry snapshot.
-         * @param[in] votes Partitioned vote decisions.
+         * @param[in] registered_votes Vote decisions from registered validators.
+         * @param[in] unregistered_votes Vote decisions from unregistered validators.
          * @return Derived registry snapshot.
          */
         Registry BuildRegistryFromAggregatedVotes(
-            const Registry         &current_registry,
-            const CertificateVotes &votes ) const;
-        /**
-         * @brief Builds the next registry by aggregating a batch of finalized certificates.
-         * @param[in] current_registry Registry against which votes are evaluated.
-         * @param[in] payload Batch metadata constraining the certificates.
-         * @param[in] subject_hashes Subject hashes of the certificates to aggregate.
-         * @return Derived registry snapshot or an error.
-         */
-        outcome::result<Registry> BuildRegistryFromBatchCertificates(
-            const Registry                 &current_registry,
-            const RegistryBatchSubject     &payload,
-            const std::vector<std::string> &subject_hashes ) const;
+            const Registry                              &current_registry,
+            const std::unordered_map<std::string, bool> &registered_votes,
+            const std::unordered_map<std::string, bool> &unregistered_votes ) const;
         /**
          * @brief Inserts eligible unregistered validators into registry.
          * @param[in,out] registry Registry being updated.
@@ -585,6 +613,11 @@ namespace sgns
          * @param[in,out] entries Validator entries to normalize.
          */
         void ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
+        /**
+         * @brief Normalizes a registry snapshot for deterministic comparison.
+         * @param[in,out] registry Registry to normalize in place.
+         */
+        static void NormalizeRegistry( Registry &registry );
         /**
          * @brief Initializes local cache from persistent storage.
          */
