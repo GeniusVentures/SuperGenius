@@ -194,3 +194,5 @@ Resume file: None
 ### Concurrent track note
 
 Rebased 2026-09-07 onto develop (e25a7f9ea): develop's v1.1/ELM bridge track (MILESTONES.md, ROADMAP Track A) coexists with v3.0 records. STATE reflects the v3.0 branch position.
+| bridge-e2e | bridge_race_fault_rpc_test: fixture swaps endpoints for mock:// URLs the catchup scanner cannot query (transport-factory bridge or fixture reorder needed) — CI-skipped (anvil-gated), fails only locally with Foundry installed | follow-up |
+| bridge-e2e | bridge_race_fault_partition_test: post-partition-heal, frozen-slot arbitration drops cross-group votes — needs re-arbitration design in the candidate-window flow; genuine liveness question, untested on develop CI (anvil-gated) | follow-up |
