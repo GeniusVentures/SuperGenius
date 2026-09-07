@@ -1854,9 +1854,13 @@ namespace sgns
         return consensus_manager_->CheckCertificateForSlot( slot_key );
     }
 
-    bool Blockchain::CheckCertificate( const std::string &slot_key ) const
+    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
     {
-        return CheckCertificateForSlot( slot_key );
+        // By-hash lookups serve the subject-hash index record (develop consumer
+        // contract): SubmitCertificate dual-writes /cert/<subject_hash> and this
+        // call hash-verifies that record. Slot-authoritative internal callers
+        // use CheckCertificateForSlot with a derived slot.
+        return consensus_manager_->CheckCertificateForSubject( subject_hash );
     }
 
     bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
@@ -1870,9 +1874,9 @@ namespace sgns
     }
 
     outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
-        const std::string &slot_key ) const
+        const std::string &subject_hash ) const
     {
-        return GetCertificateBySlot( slot_key );
+        return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
     }
 
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )
