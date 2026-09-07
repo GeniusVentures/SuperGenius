@@ -27,7 +27,6 @@
 #include "account/NodeType.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
-#include "base/blob.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
@@ -57,6 +56,7 @@ namespace sgns
     public:
         using Proposal    = ConsensusProposal;    ///< Alias for Consensus Proposal protobuf type
         using Vote        = ConsensusVote;        ///< Alias for Consensus Vote protobuf type
+        using VoteBundle  = ConsensusVoteBundle;  ///< Alias for Consensus Vote Bundle protobuf type
         using Certificate = ConsensusCertificate; ///< Alias for Consensus Certificate protobuf type
         using Subject     = ConsensusSubject;     ///< Alias for Consensus Subject protobuf type
 
@@ -280,6 +280,12 @@ namespace sgns
          */
         void UnregisterProposalCleanupHandler( std::string_view subject_type );
 
+        /**
+         * @brief Overrides local pending lifecycle limits for deterministic tests/configuration.
+         * @param[in] config Pending lifecycle configuration.
+         */
+        void SetPendingLifecycleConfig( PendingLifecycleConfig config );
+
         /** RegisterSlotKeyHandler also changed to match subject type pattern: */
         /**
          * @brief Registers a slot key handler for a canonical subject type.
@@ -344,6 +350,19 @@ namespace sgns
                                           bool               approve,
                                           Signer             sign,
                                           const Subject     *subject = nullptr );
+
+        /**
+         * @brief Builds and signs an aggregated vote bundle.
+         * @param[in] proposal_id Proposal identifier associated with the votes.
+         * @param[in] aggregator_id Validator identifier of the aggregator.
+         * @param[in] votes Votes to aggregate in the bundle.
+         * @param[in] sign Signing callback.
+         * @return Signed vote bundle on success, otherwise an error.
+         */
+        outcome::result<VoteBundle> CreateVoteBundle( const std::string       &proposal_id,
+                                                      const std::string       &aggregator_id,
+                                                      const std::vector<Vote> &votes,
+                                                      Signer                   sign );
 
         /**
          * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
@@ -421,6 +440,24 @@ namespace sgns
                                                      const ValidatorRegistry::Registry &registry ) const;
 
         /**
+         * @brief Computes canonical bytes to sign a proposal.
+         * @param[in] proposal Proposal to encode.
+         * @return Signing bytes on success, otherwise an error.
+         */
+        static outcome::result<std::vector<uint8_t>> ProposalSigningBytes( const Proposal &proposal );
+        /**
+         * @brief Computes canonical bytes to sign a vote.
+         * @param[in] vote Vote to encode.
+         * @return Signing bytes on success, otherwise an error.
+         */
+        static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
+        /**
+         * @brief Computes canonical bytes to sign a vote bundle.
+         * @param[in] bundle Vote bundle to encode.
+         * @return Signing bytes on success, otherwise an error.
+         */
+        static outcome::result<std::vector<uint8_t>> VoteBundleSigningBytes( const VoteBundle &bundle );
+        /**
          * @brief Computes deterministic subject id/hash.
          * @param[in] subject Subject to hash.
          * @return Subject identifier on success, otherwise an error.
@@ -429,12 +466,13 @@ namespace sgns
         /**
          * @brief Computes deterministic bytes for a canonical subject type string.
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
-         * @return Fixed-size SHA-256 subject type hash on success, otherwise an error.
+         * @return 32-byte subject type hash on success, otherwise an error.
          */
-        static outcome::result<base::Hash256>        ComputeSubjectTypeHash( std::string_view subject_type );
+        static outcome::result<std::string>          ComputeSubjectTypeHash( std::string_view subject_type );
         static outcome::result<NonceSubject>         DecodeNonceSubject( const Subject &subject );
         static outcome::result<TaskResultSubject>    DecodeTaskResultSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
+        static bool SubjectTypeMatches( const Subject &subject, std::string_view subject_type );
         /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.
@@ -555,10 +593,6 @@ namespace sgns
         }
 
         /**
-         * @brief Retrieves a certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Certificate when present, or an error.
-
          * @brief Computes the proposal slot key used for conflict resolution.
          * @param[in] proposal Proposal to map to a slot.
          * @return Slot key.
@@ -602,6 +636,23 @@ namespace sgns
          * @return `true` if a certificate exists, otherwise `false`.
          */
         bool CheckCertificateForSubject( const Subject &subject ) const;
+
+    protected:
+        /**
+         * @brief Sets timestamp validation window for received objects.
+         * @param[in] window Allowed timestamp drift window.
+         */
+        void ConfigureTimestampWindow( std::chrono::milliseconds window );
+        /**
+         * @brief Sets consensus round duration.
+         * @param[in] duration Round duration.
+         */
+        void ConfigureRoundDuration( std::chrono::milliseconds duration );
+        /**
+         * @brief Sets allowable round skew tolerance.
+         * @param[in] skew Allowed round skew.
+         */
+        void ConfigureRoundSkew( std::chrono::milliseconds skew );
 
     private:
         friend class ConsensusManagerTestAccess;
@@ -656,6 +707,8 @@ namespace sgns
             Proposal                        proposal;                        ///< Proposal currently tracked.
             std::vector<Vote>               votes;                           ///< Votes accepted for the proposal.
             std::string                     slot_key;                        ///< Slot key grouping competing proposals.
+            uint64_t                        total_weight    = 0;             ///< Total eligible weight for tally.
+            uint64_t                        approved_weight = 0;             ///< Approved weight accumulated so far.
             std::unordered_set<std::string> seen_voters;                     ///< Voter ids already counted.
             bool                            quorum_reached       = false;    ///< Whether quorum has been reached.
             uint64_t                        quorum_reached_ts_ms = 0;        ///< Timestamp when quorum was reached.
@@ -674,6 +727,7 @@ namespace sgns
         struct SlotState
         {
             std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
+            std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
             std::vector<Proposal>           eligible_candidates; ///< Approved proposals admitted before freeze.
             std::vector<ScanPendingCandidate> scan_pending_candidates; ///< Validated contenders retained while finalized-slot scanning is indeterminate.
@@ -740,6 +794,11 @@ namespace sgns
          */
         void HandleVote( const Vote &vote );
         /**
+         * @brief Handles an incoming vote bundle.
+         * @param[in] bundle Vote bundle to process.
+         */
+        void HandleVoteBundle( const VoteBundle &bundle );
+        /**
          * @brief Handles an incoming certificate.
          * @param[in] certificate Certificate to process.
          */
@@ -781,6 +840,12 @@ namespace sgns
          */
         AggregatorRole GetAggregatorRole( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
         /**
+         * @brief Returns active validators in deterministic ordering.
+         * @param[in] registry Validator registry snapshot.
+         * @return Ordered list of validator identifiers.
+         */
+        std::vector<std::string> GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
+        /**
          * @brief Computes current round number relative to proposal timestamp.
          * @param[in] proposal_ts_ms Proposal timestamp in Unix milliseconds.
          * @return Round number.
@@ -805,6 +870,12 @@ namespace sgns
          * @return `true` when certificate references the best proposal.
          */
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
+        /**
+         * @brief Extracts certificate votes into normalized vote objects.
+         * @param[in] certificate Certificate to inspect.
+         * @return Vote list collected from certificate.
+         */
+        std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
         /**
          * @brief Clears local slot bookkeeping for a proposal.
          * @param[in] proposal Proposal whose slot state should be cleared.
@@ -914,7 +985,7 @@ namespace sgns
          * @param[in] new_data New key-value pair.
          * @param[in] cid CID associated with the CRDT update.
          */
-        void CertificateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
+        void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
         /**
          * @brief Recovers unfinished certificate-processing work from journal.
          */
@@ -945,6 +1016,12 @@ namespace sgns
          */
         static std::string CreateProposalId( const Proposal &proposal );
         /**
+         * @brief Checks if a subject has a valid type hash.
+         * @param[in,out] subject Subject to check
+         * @return `true` if the subject has a valid type hash, otherwise `false`.
+         */
+        static bool SubjectHasValidTypeHash( Subject *subject );
+        /**
          * @brief Performs basic subject sanity validation.
          * @param[in] subject Subject to validate.
          * @return `true` when subject structure is valid.
@@ -956,6 +1033,10 @@ namespace sgns
          * @param[in] message Incoming pubsub message.
          */
         void OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        /**
+         * @brief Recomputes local pending-certificate flag.
+         */
+        void UpdateCertificatesPending();
         /**
          * @brief Performs lightweight subject checks.
          * @param[in] subject Subject to validate.
@@ -987,12 +1068,12 @@ namespace sgns
         std::unordered_map<std::string, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
-        std::unordered_map<base::Hash256, CertificateSubjectHandler>
+        std::unordered_map<std::string, CertificateSubjectHandler>
                                   certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
-        std::unordered_map<base::Hash256, std::vector<ProposalCleanupHandler>>
+        std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
-        static inline std::unordered_map<base::Hash256, SlotKeyHandler>
+        static inline std::unordered_map<std::string, SlotKeyHandler>
                                         slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
         static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
         mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
@@ -1000,7 +1081,7 @@ namespace sgns
         SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
         std::string                     account_address_;            ///< Local validator/account id.
-        const bool                      participates_in_consensus_ = true;
+        const bool                      participates_in_consensus_ = true; ///< False for Archive nodes (passive replicas).
         std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, ActiveVoteState> active_votes_; ///< Valid durable local votes keyed by slot.
