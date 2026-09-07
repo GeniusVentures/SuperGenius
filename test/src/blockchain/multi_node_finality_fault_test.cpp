@@ -37,6 +37,7 @@
 #include <iostream>
 #include <mutex>
 #include <optional>
+#include <regex>
 #include <sstream>
 #include <thread>
 #include <unistd.h>
@@ -151,8 +152,11 @@ namespace sgns
 
         static bool HasUnfinishedCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
         {
+            // CRDTWorkJournal patterns are compiled std::regex (optional<regex> parameter).
+            static const std::regex cert_pattern{ manager->CERT_KEY_PATTERN.data(),
+                                                  manager->CERT_KEY_PATTERN.size() };
             return manager && manager->certificate_work_journal_ &&
-                   !manager->certificate_work_journal_->ListUnfinished( manager->CERT_KEY_PATTERN ).empty();
+                   !manager->certificate_work_journal_->ListUnfinished( cert_pattern ).empty();
         }
 
         static int TrackedTransactionState( const TransactionManager &transactions, const std::string &transaction_id )

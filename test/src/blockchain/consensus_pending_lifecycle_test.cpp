@@ -582,7 +582,7 @@ namespace
         std::shared_ptr<sgns::GeniusAccount> MakeSigningAccount()
         {
             auto account = sgns::GeniusAccount::NewFromPrivateKey(
-                sgns::TokenID::FromBytes( { 0x00 } ), kBindingPrivateKey, getPathString(), false );
+                sgns::TokenID::FromBytes( { 0x00 } ), kBindingPrivateKey, getPathString() );
             EXPECT_TRUE( account );
             return account;
         }
@@ -595,13 +595,13 @@ namespace
                 1,
                 1,
                 sgns::ValidatorRegistry::WeightConfig{},
-                account->GetAddress(),
+                { account->GetAddress() },
                 []( const std::string &, std::function<void( outcome::result<std::string> )> cb )
                 { cb( outcome::failure( std::errc::not_supported ) ); } );
             EXPECT_TRUE( registry );
 
             auto store_result = registry->StoreGenesisRegistry(
-                account->GetAddress(),
+                { account->GetAddress() },
                 [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
             EXPECT_FALSE( store_result.has_error() );
 
@@ -648,7 +648,7 @@ namespace
                     .count() );
 
             auto subject = sgns::ConsensusManager::CreateNonceSubject(
-                account->GetAddress(), nonce, tx_hash, sgns::EmbeddedTransaction{}, std::nullopt, std::nullopt );
+                { account->GetAddress() }, nonce, tx_hash, sgns::EmbeddedTransaction{}, std::nullopt, std::nullopt );
             EXPECT_TRUE( subject.has_value() );
             if ( tamper_subject )
             {
@@ -758,7 +758,7 @@ namespace
             node.db->Start();
 
             node.account = sgns::GeniusAccount::NewFromPrivateKey(
-                sgns::TokenID::FromBytes( { 0x00 } ), private_key.c_str(), path + "/account", false );
+                sgns::TokenID::FromBytes( { 0x00 } ), private_key.c_str(), path + "/account" );
             if ( !node.account )
             {
                 ADD_FAILURE() << "failed to create multi-validator signing account";
@@ -903,7 +903,7 @@ namespace
             uint64_t                                        nonce,
             const std::string                              &tx_hash )
         {
-            auto subject_result = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+            auto subject_result = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                               nonce,
                                                                               tx_hash,
                                                                               sgns::EmbeddedTransaction{},
@@ -912,7 +912,7 @@ namespace
             EXPECT_TRUE( subject_result.has_value() );
 
             auto proposal_result = manager->CreateProposal( subject_result.value(),
-                                                            account->GetAddress(),
+                                                            { account->GetAddress() },
                                                             registry->GetRegistryCid(),
                                                             registry->GetRegistryEpoch() );
             EXPECT_TRUE( proposal_result.has_value() );
@@ -1130,14 +1130,14 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
 
     const std::string tx_hash = "0xcertificate-binding";
     auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        account->GetAddress(), 71, tx_hash, sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
+        { account->GetAddress() }, 71, tx_hash, sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
     ASSERT_TRUE( subject_result.has_value() );
     auto proposal_result = manager->CreateProposal(
-        subject_result.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        subject_result.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal_result.has_value() );
     auto vote_result = manager->CreateVote(
         proposal_result.value().proposal_id(),
-        account->GetAddress(),
+        { account->GetAddress() },
         true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote_result.has_value() );
@@ -1215,7 +1215,7 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
 
     auto proposal = MakeSigningProposal( manager, registry, account, 90, "0xoccupied-slot-ordering" );
     auto vote = manager->CreateVote( proposal.proposal_id(),
-                                     account->GetAddress(),
+                                     { account->GetAddress() },
                                      true,
                                      [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
@@ -1312,7 +1312,7 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
                                 const std::shared_ptr<sgns::GeniusAccount> &account )
     {
         return nodes.front().manager->CreateVote(
-            proposal.proposal_id(), account->GetAddress(), true,
+            proposal.proposal_id(), { account->GetAddress() }, true,
             [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     };
 
@@ -1505,7 +1505,7 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnAppro
 
     auto proposal = MakeSigningProposal( manager, registry, account, 91, "0xslot-lookup-approved" );
     auto vote = manager->CreateVote(
-        proposal.proposal_id(), account->GetAddress(), true,
+        proposal.proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
@@ -1532,7 +1532,7 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupRejectsLegacyMalfo
 
     auto proposal = MakeSigningProposal( manager, registry, account, 92, "0xslot-lookup-negative" );
     auto vote = manager->CreateVote(
-        proposal.proposal_id(), account->GetAddress(), true,
+        proposal.proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
@@ -1574,14 +1574,14 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
     ASSERT_TRUE( manager );
 
     auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        account->GetAddress(), 72, "0xunavailable-registry", sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
+        { account->GetAddress() }, 72, "0xunavailable-registry", sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
     ASSERT_TRUE( subject_result.has_value() );
     auto proposal_result = manager->CreateProposal(
-        subject_result.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        subject_result.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal_result.has_value() );
     auto vote_result = manager->CreateVote(
         proposal_result.value().proposal_id(),
-        account->GetAddress(),
+        { account->GetAddress() },
         true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote_result.has_value() );
@@ -2391,7 +2391,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
         []( const std::string &, const sgns::ConsensusManager::Certificate & )
         { return outcome::success( sgns::ConsensusManager::Check::Approve ); } ) );
 
-    auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                 86,
                                                                 "0xdurable-certificate-release",
                                                                 sgns::EmbeddedTransaction{},
@@ -2399,7 +2399,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
                                                                 MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
     auto voted_proposal_result = manager->CreateProposal(
-        subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( voted_proposal_result.has_value() );
     auto voted_proposal = voted_proposal_result.value();
     const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
@@ -2411,7 +2411,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
     ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
     auto certified_vote = manager->CreateVote(
-        certified_proposal.proposal_id(), account->GetAddress(), true,
+        certified_proposal.proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( certified_vote.has_value() );
     auto certificate = manager->CreateCertificate( certified_proposal, { certified_vote.value() } );
@@ -2436,7 +2436,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
     // A durable, accepted certificate for another canonical slot cannot release this lock.
-    auto other_subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+    auto other_subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                       87,
                                                                       "0xdurable-certificate-other-slot",
                                                                       sgns::EmbeddedTransaction{},
@@ -2444,10 +2444,10 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
                                                                       MakeTestWitness() );
     ASSERT_TRUE( other_subject.has_value() );
     auto other_proposal = manager->CreateProposal(
-        other_subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        other_subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( other_proposal.has_value() );
     auto other_vote = manager->CreateVote(
-        other_proposal.value().proposal_id(), account->GetAddress(), true,
+        other_proposal.value().proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( other_vote.has_value() );
     auto other_certificate = manager->CreateCertificate( other_proposal.value(), { other_vote.value() } );
@@ -2519,7 +2519,7 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                 88,
                                                                 "0xdurable-before-handler",
                                                                 sgns::EmbeddedTransaction{},
@@ -2527,7 +2527,7 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
                                                                 MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
     auto voted_proposal_result = manager->CreateProposal(
-        subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( voted_proposal_result.has_value() );
     auto voted_proposal = voted_proposal_result.value();
     const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
@@ -2539,7 +2539,7 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
     ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
     auto certified_vote = manager->CreateVote(
-        certified_proposal.proposal_id(), account->GetAddress(), true,
+        certified_proposal.proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( certified_vote.has_value() );
     auto certificate = manager->CreateCertificate( certified_proposal, { certified_vote.value() } );
@@ -2587,7 +2587,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegis
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                 89,
                                                                 "0xconcurrent-certificate-recovery",
                                                                 sgns::EmbeddedTransaction{},
@@ -2595,10 +2595,10 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegis
                                                                 MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
     auto proposal = manager->CreateProposal(
-        subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal.has_value() );
     auto vote = manager->CreateVote(
-        proposal.value().proposal_id(), account->GetAddress(), true,
+        proposal.value().proposal_id(), { account->GetAddress() }, true,
         [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal.value(), { vote.value() } );

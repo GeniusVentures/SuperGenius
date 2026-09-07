@@ -45,7 +45,7 @@ namespace sgns::crdt
     // Default-initialized to 0 so an unconfigured process keeps production durations.
     std::atomic<uint64_t> GraphsyncDAGSyncer::blacklist_backoff_override_ms_for_test_{ 0 };
 
-    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_(

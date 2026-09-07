@@ -67,7 +67,7 @@ namespace sgns
         std::shared_ptr<GeniusAccount> MakeAccount()
         {
             auto account = GeniusAccount::NewFromPrivateKey(
-                TokenID::FromBytes( { 0x00 } ), kPrivateKey, getPathString(), false );
+                TokenID::FromBytes( { 0x00 } ), kPrivateKey, getPathString() );
             EXPECT_TRUE( account );
             return account;
         }
@@ -89,7 +89,7 @@ namespace sgns
             }
 
             auto stored = registry->StoreGenesisRegistry(
-                account->GetAddress(), [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+                { account->GetAddress() }, [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
             EXPECT_TRUE( stored.has_value() );
             ASSERT_WAIT_FOR_CONDITION(
                 [&registry]()
@@ -340,23 +340,20 @@ namespace
         ASSERT_TRUE( subject.has_value() );
 
         auto empty_pending = registry->EvaluateBatchSubject( subject.value() );
-        ASSERT_TRUE( empty_pending.has_value() );
-        EXPECT_EQ( empty_pending.value(), ValidatorRegistry::BatchSubjectDecision::Pending );
+        EXPECT_EQ( empty_pending, ValidatorRegistry::BatchSubjectDecision::Pending );
 
         auto first_finalize = registry->OnFinalizedCertificate( member_a.value() );
         ASSERT_TRUE( first_finalize.has_error() );
         EXPECT_EQ( first_finalize.error(), std::errc::resource_unavailable_try_again );
 
         auto partial = registry->EvaluateBatchSubject( subject.value() );
-        ASSERT_TRUE( partial.has_value() );
-        EXPECT_EQ( partial.value(), ValidatorRegistry::BatchSubjectDecision::Pending );
+        EXPECT_EQ( partial, ValidatorRegistry::BatchSubjectDecision::Pending );
 
         ASSERT_TRUE( registry->OnFinalizedCertificate( member_b.value() ).has_value() );
         ASSERT_EQ( submitted_subjects_.size(), 1U );
 
         auto complete = registry->EvaluateBatchSubject( subject.value() );
-        ASSERT_TRUE( complete.has_value() );
-        EXPECT_EQ( complete.value(), ValidatorRegistry::BatchSubjectDecision::Approve );
+        EXPECT_EQ( complete, ValidatorRegistry::BatchSubjectDecision::Approve );
 
         const std::vector<std::string> tampered_slots = { SlotFor( tx_hash_a ), SlotFor( "0xtampered-member" ) };
         auto tampered_root = ConsensusManager::ComputeBatchRoot( tampered_slots );
@@ -370,8 +367,7 @@ namespace
                                                                       tampered_slots );
         ASSERT_TRUE( tampered.has_value() );
         auto tampered_decision = registry->EvaluateBatchSubject( tampered.value() );
-        ASSERT_TRUE( tampered_decision.has_value() );
-        EXPECT_EQ( tampered_decision.value(), ValidatorRegistry::BatchSubjectDecision::Reject );
+        EXPECT_EQ( tampered_decision, ValidatorRegistry::BatchSubjectDecision::Reject );
 
         manager->Close();
     }
@@ -405,15 +401,13 @@ namespace
         ASSERT_FALSE( subject_hash.empty() );
 
         auto missing = registry->HandleBatchCertificate( subject_hash, batch_certificate.value() );
-        ASSERT_TRUE( missing.has_value() );
-        EXPECT_EQ( missing.value(), ValidatorRegistry::BatchCertificateDecision::Stalled );
+        EXPECT_EQ( missing, ValidatorRegistry::BatchCertificateDecision::Stalled );
         EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
 
         // A legacy subject-hash (/cert/<tx_hash>) record never becomes authority.
         WriteCertificateAtKey( "/cert/" + tx_hash, member.value() );
         auto legacy = registry->HandleBatchCertificate( subject_hash, batch_certificate.value() );
-        ASSERT_TRUE( legacy.has_value() );
-        EXPECT_EQ( legacy.value(), ValidatorRegistry::BatchCertificateDecision::Stalled );
+        EXPECT_EQ( legacy, ValidatorRegistry::BatchCertificateDecision::Stalled );
         EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
 
         manager->Close();
@@ -447,8 +441,7 @@ namespace
 
         auto decision = registry->HandleBatchCertificate( BatchSubjectHash( submitted_subjects_.front() ),
                                                           batch_certificate.value() );
-        ASSERT_TRUE( decision.has_value() );
-        EXPECT_EQ( decision.value(), ValidatorRegistry::BatchCertificateDecision::Reject );
+        EXPECT_EQ( decision, ValidatorRegistry::BatchCertificateDecision::Reject );
         EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
 
         manager->Close();
@@ -492,8 +485,7 @@ namespace
 
         auto decision = registry->HandleBatchCertificate( BatchSubjectHash( submitted_subjects_.front() ),
                                                           batch_certificate.value() );
-        ASSERT_TRUE( decision.has_value() );
-        EXPECT_EQ( decision.value(), ValidatorRegistry::BatchCertificateDecision::Reject );
+        EXPECT_EQ( decision, ValidatorRegistry::BatchCertificateDecision::Reject );
         EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
 
         manager->Close();
@@ -529,8 +521,7 @@ namespace
 
         auto decision = registry->HandleBatchCertificate( BatchSubjectHash( submitted_subjects_.front() ),
                                                           batch_certificate.value() );
-        ASSERT_TRUE( decision.has_value() );
-        EXPECT_EQ( decision.value(), ValidatorRegistry::BatchCertificateDecision::Approve );
+        EXPECT_EQ( decision, ValidatorRegistry::BatchCertificateDecision::Approve );
 
         ASSERT_WAIT_FOR_CONDITION(
             [&registry]() { return registry->GetRegistryEpoch() == 1; },
