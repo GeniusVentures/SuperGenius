@@ -21,6 +21,10 @@ This milestone rebuilds bridge-mint finality from the `develop` baseline. Compet
 - Generic slot-keyed certificate storage, persistence-before-advertisement, and safe publication recovery
 - Multi-node regression coverage for contention, delayed CRDT delivery, publisher loss, restart, and exactly-once minting
 
+## Concurrent Track (from develop)
+
+Develop carries an active parallel milestone this branch does not touch: **v1.1 Multi-Signature Secure CRDT Storage** (extended with ELM Bridging phases 13-14 as a product-v1.0 pre-ship requirement — see `.planning/MILESTONES.md` and ROADMAP "Track A: EVM Bridge Integration"). This branch (v3.0 canonical burn finality) is independent of that track; both ship together on develop.
+
 ## Requirements
 
 ### Validated
