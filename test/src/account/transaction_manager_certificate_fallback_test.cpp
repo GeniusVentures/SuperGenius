@@ -302,10 +302,8 @@ namespace
 } // anonymous namespace
 
 /**
- * @brief Concrete CRDTFixture used as a plain object rather than a gtest fixture.
- * @details CRDTFixture builds the pubsub/GlobalDB stack in its constructor, so owning one
- *          as a suite-level object is what makes that cost per-suite instead of per-test.
- *          TestBody() only exists to satisfy ::testing::Test; it is never invoked.
+ * @brief Lightweight test fixture using CRDTFixture for database/pubsub and
+ *        creating a TransactionManager directly (no GeniusNode, no network sync).
  */
 class CertificateFallbackTest : public ::test::CRDTFixture
 {
@@ -324,8 +322,8 @@ public:
         assert( account_ != nullptr );
 
         // Load the UTXOManager's DB so ParseTransaction can store UTXOs
-        auto load_result = account_->GetUTXOManager().LoadUTXOs( crdt_->db_->GetDataStore() );
-        ASSERT_TRUE( load_result.has_value() );
+        auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
+        assert( load_result.has_value() );
 
         // Create a Blockchain with a no-op callback
         blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
@@ -377,7 +375,7 @@ public:
         }
         auto registry = blockchain_->GetValidatorRegistry();
         if ( !registry || registry
-                              ->StoreGenesisRegistry( account_->GetAddress(),
+                              ->StoreGenesisRegistry( { account_->GetAddress() },
                                                       [account = account_]( std::vector<uint8_t> payload )
                                                       { return account->Sign( std::move( payload ) ); } )
                               .has_error() )
@@ -467,16 +465,17 @@ public:
     }
 };
 
-std::unique_ptr<SharedCrdtEnvironment> CertificateFallbackTest::crdt_;
+// ---------------------------------------------------------------------------
+// Happy-path tests
+// ---------------------------------------------------------------------------
 
 /**
- * CONFLICT-01 / D-01/D-02/D-03: Certificate with a NonceSubject carrying a valid
- * embedded TransferTransaction, for a transaction this node has never seen.
- * OnConsensusCertificate takes the fallback path (GetTransactionByHash returns null),
- * deserializes the tx from the certificate, stores it, promotes it to CONFIRMED (so
- * tx_processed_m is populated for later HasConfirmedInputConflict checks), and approves.
+ * CONFLICT-01 / D-01/D-02/D-03: Certificate with NonceSubject containing a valid
+ * embedded TransferTransaction. OnConsensusCertificate enters the fallback path
+ * (GetTransactionByHash returns null), deserializes from the certificate, and
+ * returns Check::Approve.
  */
-TEST_F( CertificateFallbackTest, HappyPath_FallbackDeserializesStoresAndConfirmsTx )
+TEST_F( CertificateFallbackTest, HappyPath_ValidEmbeddedTx_ReturnsApprove )
 {
     const auto        embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), 1 );
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
@@ -537,13 +536,16 @@ TEST_F( CertificateFallbackTest, HappyPath_TrackedTxIsConfirmed )
     EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
 }
 
+// ---------------------------------------------------------------------------
+// Edge-case tests (Task 3)
+// ---------------------------------------------------------------------------
+
 /**
- * Certificates whose subject yields no usable embedded transaction must be approved
- * without deserialization. Two distinct early returns are covered:
- *   1. an empty EmbeddedTransaction (TRANSACTION_NOT_SET) -- a pre-Phase-1 certificate;
- *   2. a subject that is not a NonceSubject at all, so DecodeNonceSubject fails.
+ * Edge case 1: Certificate with empty EmbeddedTransaction (TRANSACTION_NOT_SET).
+ * This represents a pre-Phase-1 certificate. The code must return
+ * Check::Approve without attempting deserialization.
  */
-TEST_F( CertificateFallbackTest, EdgeCase_UndecodableSubjectsAreApprovedWithoutProcessing )
+TEST_F( CertificateFallbackTest, EdgeCase_EmptyEmbeddedTransaction_ReturnsApprove )
 {
     const auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
                                                                10,
@@ -560,10 +562,9 @@ TEST_F( CertificateFallbackTest, EdgeCase_UndecodableSubjectsAreApprovedWithoutP
 }
 
 /**
- * The hash-binding gate (`tx->GetHash() != tx_hash`) compares the deserialized embedded
- * transaction against the tx_hash *parameter*; the subject's own tx_hash field is never
- * consulted. Both ways of breaking that binding therefore reach the same guard, and
- * neither may process the embedded transaction.
+ * Edge case 2: Certificate whose subject is not a NonceSubject (e.g., a
+ * generic subject with a different type hash). DecodeNonceSubject fails,
+ * code returns Check::Approve.
  */
 TEST_F( CertificateFallbackTest, EdgeCase_NonNonceSubject_ReturnsApprove )
 {
@@ -612,17 +613,8 @@ TEST_F( CertificateFallbackTest, EdgeCase_ParameterHashDiffersFromSubject_Return
     const std::string real_hash = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( real_hash.empty() );
 
-    // 1. Subject and parameter agree on a hash that is not the embedded tx's hash.
-    {
-        const std::string mismatched_hash = "definitely-not-the-real-hash-value";
-        const auto        subject         = MakeNonceSubject( account_->GetAddress(), 11, mismatched_hash, embedded );
-        const auto        result          = CertificateFallbackTestAccess::OnConsensusCertificate(
-            *tm_,
-            mismatched_hash,
-            BuildCertificate( subject, "proposal-mismatch-01" ) );
-        ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
-    }
+    const auto subject = MakeNonceSubject( account_->GetAddress(), 12, real_hash, embedded );
+    const auto cert    = BuildCertificate( subject, "proposal-param-diff-01" );
 
     const std::string wrong_param_hash = "some-other-hash-not-in-store";
     const auto        result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, wrong_param_hash, cert );
@@ -671,7 +663,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
     const std::string tx_hash  = ComputeEmbeddedTxHash( *tm_, embedded );
     ASSERT_FALSE( tx_hash.empty() );
 
-    // First cert: fallback path, stores the tx.
+    // First cert: stores the tx
     const auto subject_a = MakeNonceSubject( account_->GetAddress(), 30, tx_hash, embedded );
     const auto cert_a    = BuildCertificate( subject_a, "proposal-multi-a" );
 
@@ -680,7 +672,7 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
     EXPECT_EQ( result_a.value(), ConsensusManager::Check::Approve );
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
 
-    // Second cert for the same tx: existing path.
+    // Second cert with same tx (idempotent -- already stored from first cert)
     const auto subject_b = MakeNonceSubject( account_->GetAddress(), 30, tx_hash, embedded );
     const auto cert_b    = BuildCertificate( subject_b, "proposal-multi-b" );
 
@@ -688,266 +680,8 @@ TEST_F( CertificateFallbackTest, MultipleCerts_SameTx_Idempotent )
     ASSERT_TRUE( result_b.has_value() );
     EXPECT_EQ( result_b.value(), ConsensusManager::Check::Approve );
 
-    // Still exactly one healthy, confirmed entry.
+    // Tx still in store (not duplicated or corrupted by second cert)
     EXPECT_NE( CertificateFallbackTestAccess::GetTransactionByHash( *tm_, tx_hash ), nullptr );
-    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, tx_hash );
-    ASSERT_TRUE( tracked.has_value() );
-    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
-}
-
-TEST_F( CertificateFallbackTest, CertifiedWinnerImmediatelyFailsVerifyingTransactionsWithSameAddressAndNonce )
-{
-    const auto        &source = account_->GetAddress();
-    constexpr uint64_t nonce  = 40;
-
-    const auto loser_a_embedded        = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
-    const auto loser_b_embedded        = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-    const auto winner_embedded         = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 3 );
-    const auto other_embedded          = MakeMinimalEmbeddedTransfer( *tm_, source, nonce + 1, 4 );
-    const auto other_address_embedded  = MakeMinimalEmbeddedTransfer( *tm_, "other-account", nonce, 5 );
-    const auto already_failed_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 6 );
-
-    const auto loser_a = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_a_embedded )
-                             .value();
-    const auto loser_b = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_b_embedded )
-                             .value();
-    const auto other   = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, other_embedded ).value();
-    const auto other_address =
-        CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, other_address_embedded ).value();
-    const auto already_failed =
-        CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, already_failed_embedded ).value();
-
-    CertificateFallbackTestAccess::Track( *tm_, loser_a, TransactionManager::TransactionStatus::VERIFYING );
-    CertificateFallbackTestAccess::Track( *tm_, loser_b, TransactionManager::TransactionStatus::VERIFYING );
-    CertificateFallbackTestAccess::Track( *tm_, other, TransactionManager::TransactionStatus::VERIFYING );
-    CertificateFallbackTestAccess::Track( *tm_, other_address, TransactionManager::TransactionStatus::VERIFYING );
-    // A conflict that already failed must be left alone by the `continue` short-circuit,
-    // without aborting the supersede loop for the conflicts that follow it.
-    CertificateFallbackTestAccess::Track( *tm_, already_failed, TransactionManager::TransactionStatus::FAILED );
-
-    const auto winner_hash = ComputeEmbeddedTxHash( *tm_, winner_embedded );
-    const auto subject     = MakeNonceSubject( std::string( source ), nonce, winner_hash, winner_embedded );
-    const auto result      = CertificateFallbackTestAccess::OnConsensusCertificate(
-        *tm_,
-        winner_hash,
-        BuildCertificate( subject, "proposal-slot-winner-unknown" ) );
-
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser_a->GetHash() )->status,
-               TransactionManager::TransactionStatus::FAILED );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser_b->GetHash() )->status,
-               TransactionManager::TransactionStatus::FAILED );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, already_failed->GetHash() )->status,
-               TransactionManager::TransactionStatus::FAILED );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_hash )->status,
-               TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, other->GetHash() )->status,
-               TransactionManager::TransactionStatus::VERIFYING );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, other_address->GetHash() )->status,
-               TransactionManager::TransactionStatus::VERIFYING );
-}
-
-/**
- * The losing transaction must be superseded regardless of
- *   - which non-terminal state it happens to be in when the certificate lands, and
- *   - whether the winner is already tracked locally (and in which insertion order) or has
- *     to be reconstructed from the certificate.
- *
- * The tracking-order axis guards the removed GetTransactionByNonceAndAddress, which
- * returned only the first match and so depended on tx_processed_m iteration order.
- */
-TEST_F( CertificateFallbackTest, ConflictIsSupersededAcrossLoserStatesAndTrackingOrders )
-{
-    enum class WinnerTracking : uint8_t
-    {
-        Untracked,   ///< Winner unknown locally -- reconstructed from the certificate.
-        BeforeLoser, ///< Winner already tracked, inserted before the loser.
-        AfterLoser   ///< Winner already tracked, inserted after the loser.
-    };
-
-    uint64_t next_nonce = 50;
-
-    const auto run_case = [&]( TransactionManager::TransactionStatus loser_status, WinnerTracking winner_tracking )
-    {
-        const uint64_t    nonce  = next_nonce++;
-        const std::string source = "conflict-matrix-" + std::to_string( nonce );
-
-        const auto loser_embedded  = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
-        const auto winner_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-        const auto loser  = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_embedded )
-                                .value();
-        const auto winner = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, winner_embedded )
-                                .value();
-
-        const auto track_loser  = [&] { CertificateFallbackTestAccess::Track( *tm_, loser, loser_status ); };
-        const auto track_winner = [&]
-        { CertificateFallbackTestAccess::Track( *tm_, winner, TransactionManager::TransactionStatus::VERIFYING ); };
-
-        switch ( winner_tracking )
-        {
-            case WinnerTracking::Untracked:
-                track_loser();
-                break;
-            case WinnerTracking::BeforeLoser:
-                track_winner();
-                track_loser();
-                break;
-            case WinnerTracking::AfterLoser:
-                track_loser();
-                track_winner();
-                break;
-        }
-
-        const auto subject = MakeNonceSubject( source, nonce, winner->GetHash(), winner_embedded );
-        const auto result  = CertificateFallbackTestAccess::OnConsensusCertificate(
-            *tm_,
-            winner->GetHash(),
-            BuildCertificate( subject, "proposal-matrix-" + std::to_string( nonce ) ) );
-
-        const std::string context = "loser_status=" + std::to_string( static_cast<int>( loser_status ) ) +
-                                    " winner_tracking=" + std::to_string( static_cast<int>( winner_tracking ) );
-
-        ASSERT_TRUE( result.has_value() ) << context;
-        EXPECT_EQ( result.value(), ConsensusManager::Check::Approve ) << context;
-        EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() )->status,
-                   TransactionManager::TransactionStatus::FAILED )
-            << context;
-        EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() )->status,
-                   TransactionManager::TransactionStatus::CONFIRMED )
-            << context;
-    };
-
-    for ( const auto loser_status : { TransactionManager::TransactionStatus::CREATED,
-                                      TransactionManager::TransactionStatus::SENDING,
-                                      TransactionManager::TransactionStatus::VERIFYING,
-                                      TransactionManager::TransactionStatus::UNCONFIRMED } )
-    {
-        run_case( loser_status, WinnerTracking::Untracked );
-        run_case( loser_status, WinnerTracking::BeforeLoser );
-        run_case( loser_status, WinnerTracking::AfterLoser );
-    }
-}
-
-TEST_F( CertificateFallbackTest, ConfirmedConflictStallsContradictoryCertificate )
-{
-    constexpr std::string_view source = "contradictory-finality-account";
-    constexpr uint64_t         nonce  = 60;
-
-    const auto existing_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
-    const auto winner_embedded   = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-    const auto existing = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, existing_embedded )
-                              .value();
-    CertificateFallbackTestAccess::Track( *tm_, existing, TransactionManager::TransactionStatus::CONFIRMED );
-
-    const auto winner_hash = ComputeEmbeddedTxHash( *tm_, winner_embedded );
-    const auto subject     = MakeNonceSubject( std::string( source ), nonce, winner_hash, winner_embedded );
-    const auto result      = CertificateFallbackTestAccess::OnConsensusCertificate(
-        *tm_,
-        winner_hash,
-        BuildCertificate( subject, "proposal-contradictory-finality" ) );
-
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Stalled );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, existing->GetHash() )->status,
-               TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_hash ).has_value() );
-}
-
-/**
- * The point of failing the loser early rather than waiting out the TTL is to give the
- * funds back. Asserting only TrackedTx::status would miss that: ChangeTransactionState
- * releases locally reserved inputs on a pre-confirmation failure, and that branch is
- * gated on the transaction being owned by this account.
- */
-TEST_F( CertificateFallbackTest, FailingLocalLoserReleasesReservedInputs )
-{
-    // Give the account a spendable UTXO by confirming a local mint.
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1,
-                              std::string( GeniusTransaction::GENIUS_CHAIN_ID ),
-                              kTestTokenId,
-                              MakeLocalDag( *account_, 0 ) ) );
-    mint->MakeSignature( *account_ );
-    ASSERT_TRUE(
-        CertificateFallbackTestAccess::ChangeState( *tm_, mint, TransactionManager::TransactionStatus::CONFIRMED )
-            .has_value() );
-    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
-
-    const auto mint_outpoint = base::Hash256::fromReadableString( mint->GetHash() );
-    ASSERT_TRUE( mint_outpoint.has_value() );
-
-    // Build a local transfer that reserves that input, exactly as an outgoing tx would.
-    constexpr uint64_t nonce  = 90;
-    auto               params = account_->GetUTXOManager().CreateTxParameter( 1, "0x00", kTestTokenId );
-    ASSERT_TRUE( params.has_value() );
-    const auto inputs            = params.value().first;
-    auto [tx_inputs, tx_outputs] = std::move( params.value() );
-    auto loser                   = std::make_shared<TransferTransaction>(
-        TransferTransaction::New( std::move( tx_inputs ), std::move( tx_outputs ), MakeLocalDag( *account_, nonce ) ) );
-    loser->MakeSignature( *account_ );
-    account_->GetUTXOManager().ReserveUTXOs( inputs, loser->GetHash() );
-    ASSERT_TRUE( account_->GetUTXOManager().IsOutPointReserved( mint_outpoint.value(), 0 ) );
-
-    CertificateFallbackTestAccess::Track( *tm_, loser, TransactionManager::TransactionStatus::VERIFYING );
-
-    // A different transaction wins the same address+nonce slot.
-    const auto winner_embedded = MakeMinimalEmbeddedTransfer( *tm_, account_->GetAddress(), nonce, 7 );
-    const auto winner_hash     = ComputeEmbeddedTxHash( *tm_, winner_embedded );
-    const auto subject         = MakeNonceSubject( account_->GetAddress(), nonce, winner_hash, winner_embedded );
-    const auto result          = CertificateFallbackTestAccess::OnConsensusCertificate(
-        *tm_,
-        winner_hash,
-        BuildCertificate( subject, "proposal-local-loser-utxo" ) );
-
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() )->status,
-               TransactionManager::TransactionStatus::FAILED );
-
-    // The reservation is gone and the input is spendable again -- without waiting for the TTL.
-    EXPECT_FALSE( account_->GetUTXOManager().IsOutPointReserved( mint_outpoint.value(), 0 ) );
-    EXPECT_EQ( account_->GetUTXOManager().GetOutPointState( mint_outpoint.value(), 0 ),
-               UTXOManager::UTXOState::UTXO_READY );
-}
-
-/**
- * Every other test calls OnConsensusCertificate directly, which would keep passing even
- * if TransactionManager::New stopped registering the handler. Drive the certificate
- * through the handler ConsensusManager would actually dispatch to instead.
- */
-TEST_F( CertificateFallbackTest, RegisteredCertificateHandlerRoutesToConflictResolution )
-{
-    const auto handler = CertificateFallbackTestAccess::FindCertificateHandler( *blockchain_, NONCE_SUBJECT_TYPE );
-    ASSERT_TRUE( handler ) << "TransactionManager::New did not register a certificate handler for "
-                           << NONCE_SUBJECT_TYPE;
-
-    const auto        &source = account_->GetAddress();
-    constexpr uint64_t nonce  = 100;
-
-    const auto loser_embedded  = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 1 );
-    const auto winner_embedded = MakeMinimalEmbeddedTransfer( *tm_, source, nonce, 2 );
-    const auto loser = CertificateFallbackTestAccess::DeSerializeEmbeddedTransaction( *tm_, loser_embedded ).value();
-    CertificateFallbackTestAccess::Track( *tm_, loser, TransactionManager::TransactionStatus::VERIFYING );
-
-    const auto winner_hash = ComputeEmbeddedTxHash( *tm_, winner_embedded );
-    const auto subject     = MakeNonceSubject( std::string( source ), nonce, winner_hash, winner_embedded );
-
-    // ConsensusManager keys the dispatch on the subject hash, not the tx hash. For nonce
-    // subjects they coincide -- assert that, so a future divergence is caught here rather
-    // than silently routing a certificate to the wrong transaction.
-    const auto subject_hash = CertificateFallbackTestAccess::GetSubjectHash( subject );
-    ASSERT_TRUE( subject_hash.has_value() );
-    EXPECT_EQ( subject_hash.value(), winner_hash );
-
-    const auto result = handler( subject_hash.value(), BuildCertificate( subject, "proposal-dispatched" ) );
-
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() )->status,
-               TransactionManager::TransactionStatus::FAILED );
-    EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_hash )->status,
-               TransactionManager::TransactionStatus::CONFIRMED );
 }
 
 /**

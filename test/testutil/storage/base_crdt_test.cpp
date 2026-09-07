@@ -63,15 +63,13 @@ namespace test
 
     CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( UniqueFixturePath( path ) )
     {
-        const auto fixture_id = fixture_counter_.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        const auto suffix     = std::to_string( ::getpid() ) + "_" + std::to_string( fixture_id );
-        keypair_path_         = basePath + "/unit_test_" + suffix;
-        db_path_              = basePath + ".unit_" + suffix;
+        keypair_path_ = ( base_path / "keypair" ).string();
+        db_path_      = ( base_path / "db" ).string();
 
         // Reap exactly the derived paths before any consumer opens them: a leftover
         // database from a killed/crashed run (or pid reuse) would otherwise be
         // silently reopened by GlobalDB::New and poison the run with stale state.
-        // Never sweep more broadly - basePath also holds other live fixtures.
+        // Never sweep more broadly - base_path also holds other live fixtures.
         for ( const auto *stale_path : { &keypair_path_, &db_path_ } )
         {
             try
@@ -116,19 +114,18 @@ namespace test
     {
         /*
          * Teardown invariant (asio), mirroring Peer::Stop in
-         * multi_node_finality_fault_test.cpp:389-405: the io_context owned by
+         * multi_node_finality_fault_test.cpp: the io_context owned by
          * GossipPubSub must outlive every I/O object that touches it. This
          * fixture wires graphsync::Network from pubs_->GetHost() into
          * GlobalDB::New, and Start(40001, {GetLocalAddress()}) creates a
          * self-connection, so db_ (whose ~GlobalDB -> ~BasicHost deregisters
          * leftover TcpConnections) must be reset BEFORE pubs_->Stop().
          * Otherwise StopImpl frees m_context first and the later ~BasicHost
-         * deregisters from the freed kqueue reactor — the teardown SIGSEGV
-         * closed by 12-14. With db_ released first, pubs_->Stop() is the
-         * FINAL host release.
+         * deregisters from the freed kqueue reactor. With db_ released first,
+         * pubs_->Stop() is the FINAL host release.
          */
         db_.reset();
-        if ( pubs_ )
+        try
         {
             if ( pubs_ )
             {
