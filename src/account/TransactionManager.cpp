@@ -5098,6 +5098,28 @@ namespace sgns
             if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
                  previous_transaction_result.value()->GetHash() != previous_hash )
             {
+                // Invalid is not missing: when this node already holds the finalized
+                // predecessor of the sender's chain for this nonce and it is not the
+                // claimed previous hash, the reference can never resolve — reject
+                // instead of parking the proposal behind a dependency that will never
+                // fire (develop's local-account-head check). A node that does not know
+                // the sender's head yet still pends so a late CRDT sync can satisfy it.
+                if ( tx.GetSrcAddress() == account_m->GetAddress() )
+                {
+                    auto expected_previous = account_m->GetLocalConfirmedTxHash( tx.GetNonce() - 1 );
+                    if ( expected_previous.has_value() && expected_previous.value() != previous_hash )
+                    {
+                        TransactionManagerLogger()->error(
+                            "[{} - full: {}] {}: Previous hash mismatch tx={} claimed={} expected={}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            tx.GetHash(),
+                            previous_hash.substr( 0, 8 ),
+                            expected_previous.value().substr( 0, 8 ) );
+                        return { ConsensusManager::ValidationResult::Reject() };
+                    }
+                }
                 TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous transaction for hash {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
