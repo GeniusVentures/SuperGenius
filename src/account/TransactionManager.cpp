@@ -5860,7 +5860,7 @@ namespace sgns
             {
                 if ( auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
                 {
-                    bool effects_applied = false;
+                    bool apply_effects = false;
                     {
                         std::unique_lock tx_lock( tx_mutex_m );
                         auto             it = tx_processed_m.find( key );
@@ -5874,27 +5874,34 @@ namespace sgns
                             // A prior attempt already applied the parse effects and is
                             // retrying only the marker write; re-parsing would re-apply
                             // the mint effects (double-count and UTXO metadata clobber).
-                            effects_applied = it->second.effects_applied;
+                            apply_effects = !it->second.effects_applied;
+                        }
+                        else
+                        {
+                            apply_effects = true;
                         }
                         // Keep failed certificate work explicitly retryable until every local
-                        // persistence boundary has succeeded.
+                        // persistence boundary has succeeded. The effects_applied flag is
+                        // reserved for THIS invocation up front: a certificate is durable
+                        // as two CRDT records (canonical slot + subject-hash index) and a
+                        // concurrent redelivery of the sibling record must observe the
+                        // reservation and skip straight to the idempotent marker write
+                        // instead of racing a second ParseTransaction.
                         tx_processed_m[key] =
-                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), effects_applied };
+                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
                     }
 
-                    if ( !effects_applied )
+                    if ( apply_effects )
                     {
-                        BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                        auto parse_result = ParseTransaction( tx );
+                        if ( parse_result.has_error() )
                         {
-                            std::lock_guard lock( fault_test_mutex_ );
-                            ++mint_effects_for_test_;
-                        }
-                        // Record the applied-effects boundary separately from the tracking
-                        // status so a marker-write retry skips re-parsing.
-                        {
+                            // Release the reservation so a certificate-work retry re-applies
+                            // the effects; nothing was durably changed for this entry yet.
                             std::unique_lock tx_lock( tx_mutex_m );
                             tx_processed_m[key] =
-                                TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                                TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                            return parse_result;
                         }
                     }
                     if ( !EnterFinalityFaultBarrier() )
@@ -5902,6 +5909,15 @@ namespace sgns
                         return outcome::failure( std::errc::operation_canceled );
                     }
                     BOOST_OUTCOME_TRY( PersistBridgeExecutedMarker( *mint_tx ) );
+                    if ( apply_effects )
+                    {
+                        // Counted only after the effects AND the bridge marker are durable:
+                        // observers gating on this counter (e.g. the finality-fault harness
+                        // "Mint consumers" wait) may assert marker presence immediately
+                        // after the gate passes.
+                        std::lock_guard lock( fault_test_mutex_ );
+                        ++mint_effects_for_test_;
+                    }
 
                     {
                         std::unique_lock tx_lock( tx_mutex_m );
