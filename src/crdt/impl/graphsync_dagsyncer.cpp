@@ -498,7 +498,11 @@ namespace sgns::crdt
             }
         };
 
-        graphsync_->start( shared_from_this(), blockCallback );
+        // Not shared_from_this(): graphsync serves incoming requests off this service on the
+        // libp2p host's io_context, and GraphsyncDAGSyncer::getNode fetches a block it does not
+        // have from the network, polling for up to two minutes. That pins the host's only
+        // thread and freezes the whole node. Responders serve what they already hold.
+        graphsync_->start( dagService_, blockCallback );
 
         if ( host_ == nullptr )
         {
