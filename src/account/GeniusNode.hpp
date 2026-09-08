@@ -28,7 +28,7 @@
 #include "account/NodeType.hpp"
 #include "base/buffer.hpp"
 #include "account/PublicChainInputValidator.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"

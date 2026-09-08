@@ -10,7 +10,7 @@
 #include "account/BurnConfig.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusSigner.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"

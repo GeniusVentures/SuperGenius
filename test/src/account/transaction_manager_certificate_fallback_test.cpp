@@ -18,8 +18,8 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "account/TransactionManager.hpp"
-#include "account/TransactionConsensusHandler.hpp"
+#include "transaction/TransactionManager.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/GeniusAccount.hpp"
