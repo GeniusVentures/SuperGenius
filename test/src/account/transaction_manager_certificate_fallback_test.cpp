@@ -20,6 +20,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "account/TransactionManager.hpp"
+#include "account/TransactionConsensusHandler.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/GeniusAccount.hpp"
@@ -55,7 +56,7 @@ namespace sgns
                                                                                 const std::string          &tx_hash,
                                                                                 const ConsensusCertificate &cert )
         {
-            return tm.OnConsensusCertificate( tx_hash, cert );
+            return tm.consensus_m_->OnConsensusCertificate( tx_hash, cert );
         }
 
         static std::shared_ptr<GeniusTransaction> GetTransactionByHash( TransactionManager &tm,

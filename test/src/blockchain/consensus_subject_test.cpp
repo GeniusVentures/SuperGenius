@@ -938,7 +938,7 @@ namespace
 /**
  * CLEAN-01 / D-09: A ProposalCleanupHandler that transitions a VERIFYING entry
  * to FAILED when invoked.  This is the minimal simulation of what
- * TransactionManager::OnProposalTimeoutCleanup will do.
+ * TransactionConsensusHandler::OnProposalTimeoutCleanup will do.
  *
  * Given: A tracking map with a VERIFYING entry for tx_hash.
  * When: The cleanup handler fires for that tx_hash.
