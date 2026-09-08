@@ -40,6 +40,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
@@ -199,6 +200,7 @@ protected:
         }
 
         node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
+        nodes_.push_back( node );
         return node;
     }
 
@@ -249,7 +251,40 @@ protected:
         }
     }
 
+    void TearDown() override
+    {
+        // Nodes are created with port_seed=0, so every test reuses the SAME
+        // deterministic ports. Default destruction of the node shared_ptrs at
+        // end-of-test lets a node whose last reference is released by a
+        // background dispatch stay alive (listening port open, consensus
+        // round timer running) into the next test's node creation — the
+        // cross-test zombie-mesh registry poisoning child_tokens_test hit on
+        // CI. Stop every node still alive at end-of-test BEFORE the members
+        // are destroyed, so no node from test N outlives the test N+1
+        // boundary. See GeniusNodeTestAccess::StopNode for the teardown
+        // invariant.
+        //
+        // Tracking is via weak_ptr on purpose: some tests (e.g.
+        // MissingRegistryBlockIsFetchedFromPeerByCid) reset() a node
+        // mid-test and then reopen its database directory directly, which
+        // requires ~GeniusNode to have run synchronously at that reset().
+        // A weak registry stops only the survivors — nodes whose destruction
+        // was delayed past the test boundary — without changing when
+        // explicitly-reset nodes die.
+        for ( const auto &weak_node : nodes_ )
+        {
+            if ( auto node = weak_node.lock() )
+            {
+                GeniusNodeTestAccess::StopNode( node );
+            }
+        }
+        nodes_.clear();
+        node_base_paths_.clear();
+    }
+
     std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
+
+    std::vector<std::weak_ptr<GeniusNode>> nodes_;
 };
 
 class ValidatorRegistryTest : public MultiAccountTest

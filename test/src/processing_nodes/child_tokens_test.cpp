@@ -52,11 +52,55 @@ namespace sgns
 
 namespace
 {
+    void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
+    {
+        test::assertWaitForCondition(
+            [&]()
+            {
+                auto blockchain = MultiAccountTestAccess::GetBlockchain( node );
+                return node->GetState() == GeniusNode::NodeState::READY && blockchain &&
+                       MultiAccountTestAccess::GetConsensusManager( blockchain );
+            },
+            std::chrono::milliseconds( 50000 ),
+            description + " not synced" );
+
+        MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
+            ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
+    }
+
+} // namespace
+
+/**
+ * @brief Fixture backing every suite in this binary.
+ *
+ * Nodes are created with port_seed=0, so every test reuses the SAME
+ * deterministic ports. Default destruction of the node shared_ptrs at
+ * end-of-test lets a node whose last reference is released by a background
+ * dispatch stay alive (listening port open, consensus round timer running)
+ * into the next test's node creation — the cross-test zombie-mesh registry
+ * poisoning seen on CI (test 3's node destructing while test 4 dials the
+ * same ports). TearDown therefore stops every node created by the test
+ * BEFORE the members are destroyed, so no node from test N can still hold a
+ * port or a round timer once test N+1 begins. See
+ * GeniusNodeTestAccess::StopNode for the teardown invariant.
+ */
+class ChildTokensNodeFixture : public ::testing::Test
+{
+protected:
+    void TearDown() override
+    {
+        for ( const auto &node : nodes_ )
+        {
+            sgns::GeniusNodeTestAccess::StopNode( node );
+        }
+        nodes_.clear();
+    }
+
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize GeniusGeniusNodeConfig.
      * @param tokenId TokenID to initialize GeniusGeniusNodeConfig.
-     * @return shared_ptr to the initialized GeniusNode.
+     * @return shared_ptr to the initialized GeniusNode, registered for teardown.
      */
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &tokenValue,
@@ -102,29 +146,27 @@ namespace
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
+        nodes_.push_back( node );
         return node;
     }
 
-    void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
-    {
-        test::assertWaitForCondition(
-            [&]()
-            {
-                auto blockchain = MultiAccountTestAccess::GetBlockchain( node );
-                return node->GetState() == GeniusNode::NodeState::READY && blockchain &&
-                       MultiAccountTestAccess::GetConsensusManager( blockchain );
-            },
-            std::chrono::milliseconds( 50000 ),
-            description + " not synced" );
+private:
+    std::vector<std::shared_ptr<sgns::GeniusNode>> nodes_;
+};
 
-        MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
-            ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
-    }
-
-} // namespace
+// Suite-name-preserving wrappers so TEST_F can back the original TEST suites.
+class TransferTokenValue : public ChildTokensNodeFixture
+{
+};
+class GeniusNodeChildTokenMintTest : public ChildTokensNodeFixture
+{
+};
+class GeniusNodeMultiTokenMintTest : public ChildTokensNodeFixture
+{
+};
 
 // Suite: Enhanced Three-Node Transfers with Grouped Minting and Change
-TEST( TransferTokenValue, ThreeNodeTransferTest )
+TEST_F( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
     auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, true );
@@ -244,7 +286,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 }
 
 // Suite: one live node check that child-token conversion is wired into minting.
-TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
+TEST_F( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 {
     auto tokenId  = sgns::TokenID::FromBytes( { 0x05 } );
     auto nodefull = CreateNode( "0xaffb", "0.5", tokenId, true, true );
@@ -277,7 +319,7 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 }
 
 // Suite 3: Mint multiple token IDs on same node
-TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
+TEST_F( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
@@ -343,16 +385,8 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
 // ------------------ Suite 4: Processing Nodes test with child tokens ------------------
 
-class ProcessingNodesModuleTest : public ::testing::Test
+class ProcessingNodesModuleTest : public ChildTokensNodeFixture
 {
-protected:
-    void SetUp() override
-    {
-    }
-
-    void TearDown() override
-    {
-    }
 };
 
 /// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
