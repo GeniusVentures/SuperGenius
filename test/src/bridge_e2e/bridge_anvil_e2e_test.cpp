@@ -202,7 +202,8 @@ protected:
     static inline constexpr std::chrono::milliseconds kNodeReadyTimeout{ 10000 };
 
     /** @brief Replay-dedup assertion timeout (D-18). */
-    static inline constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
+    // The finalize cadence is ~5s; the wait must outlive it, not race it.
+    static inline constexpr std::chrono::milliseconds kReplayTimeout{ 15000 };
 
     /** @brief Anvil deterministic account private keys (hex, no 0x prefix) — public test values.
      *         Each index gets a distinct key so every node occupies a separate validator slot. */

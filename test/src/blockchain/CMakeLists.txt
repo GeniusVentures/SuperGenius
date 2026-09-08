@@ -108,7 +108,7 @@ if(APPLE AND NOT WIN32 AND NOT CMAKE_VERSION VERSION_LESS 3.29)
         rapidjson
         base_crdt_test
     )
-    set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    set_tests_properties(multi_node_finality_fault_compatibility_smoke_test PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE RESOURCE_LOCK phase12_real_socket_ports)
 
     # Phase 12 owns fixed real-socket ports.  Its launcher is deliberately scoped
     # to this target because addtest() expands the executable path and therefore
