@@ -4127,54 +4127,76 @@ namespace sgns
         }
 
         auto unfinished = certificate_work_journal_->ListUnfinished( PATTERN );
-        const auto now_ms     = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
 
         for ( const auto &entry : unfinished )
         {
-            if ( entry.key.empty() )
-            {
-                continue;
-            }
-            if ( entry.state != crdt::CRDTWorkJournal::State::Stalled )
-            {
-                continue;
-            }
-            if ( entry.lease_until_ms != 0 && entry.lease_until_ms > now_ms )
-            {
-                continue;
-            }
-            auto value = db_->Get( { entry.key } );
-            if ( value.has_error() )
-            {
-                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
-                continue;
-            }
-            Certificate certificate;
-            if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
-                 !ValidateCertificateKey( certificate, entry.key ) )
-            {
-                // The durable record is permanently invalid; retire the work instead
-                // of spinning on it every tick.
-                certificate_work_journal_->MarkDone( entry.key );
-                continue;
-            }
-            const auto validation = ValidateCertificate( certificate );
-            if ( validation == Check::Stalled )
-            {
-                // Registry-dependent quorum still deferred; keep the retry loop alive.
-                certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
-                continue;
-            }
-            if ( validation != Check::Approve )
-            {
-                certificate_work_journal_->MarkDone( entry.key );
-                continue;
-            }
-
-            ProcessCommittedCertificate( entry.key, certificate );
+            DispatchStalledCertificateEntryLocked( entry );
         }
+    }
+
+    void ConsensusManager::DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry )
+    {
+        if ( entry.key.empty() )
+        {
+            return;
+        }
+        if ( entry.state != crdt::CRDTWorkJournal::State::Stalled )
+        {
+            return;
+        }
+        const auto now_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+        if ( entry.lease_until_ms != 0 && entry.lease_until_ms > now_ms )
+        {
+            return;
+        }
+        auto value = db_->Get( { entry.key } );
+        if ( value.has_error() )
+        {
+            certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
+        Certificate certificate;
+        if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
+             !ValidateCertificateKey( certificate, entry.key ) )
+        {
+            // The durable record is permanently invalid; retire the work instead
+            // of spinning on it every tick.
+            certificate_work_journal_->MarkDone( entry.key );
+            return;
+        }
+        const auto validation = ValidateCertificate( certificate );
+        if ( validation == Check::Stalled )
+        {
+            // Registry-dependent quorum still deferred; keep the retry loop alive.
+            certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
+            return;
+        }
+        if ( validation != Check::Approve )
+        {
+            certificate_work_journal_->MarkDone( entry.key );
+            return;
+        }
+
+        ProcessCommittedCertificate( entry.key, certificate );
+    }
+
+    void ConsensusManager::DispatchCertificateWorkForSubject( const std::string &subject_hash )
+    {
+        if ( subject_hash.empty() )
+        {
+            return;
+        }
+        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
+
+        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+        auto entry = certificate_work_journal_->GetEntry( key );
+        if ( !entry.has_value() )
+        {
+            return;
+        }
+        DispatchStalledCertificateEntryLocked( entry.value() );
     }
 
     void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )

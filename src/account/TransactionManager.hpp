@@ -362,6 +362,24 @@ namespace sgns
          */
         static bool CertificateMatchesTransaction( const ConsensusCertificate &certificate,
                                                    const GeniusTransaction    &transaction );
+        /**
+         * @brief Verifies the quorum-signed nonce subject names an exact account/nonce/hash.
+         *
+         * Used when only the certificate and the confirmed head hash are available
+         * (the transaction itself was never retained locally).
+         */
+        static bool CertificateBindsSubjectTo( const ConsensusCertificate &certificate,
+                                               std::string_view            account,
+                                               uint64_t                    nonce,
+                                               std::string_view            tx_hash );
+        /**
+         * @brief Loads the transaction's validated certificate from either durable index.
+         *
+         * Prefers the authoritative canonical-slot record and falls back to the
+         * subject-hash index record (develop consumer contract). Callers must still
+         * pass the result through CertificateMatchesTransaction.
+         */
+        outcome::result<ConsensusCertificate> GetTransactionCertificate( const GeniusTransaction &transaction ) const;
 
     protected:
         friend class GeniusNode;

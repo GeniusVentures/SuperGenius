@@ -297,11 +297,16 @@ namespace sgns
          */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
         /**
-         * @deprecated Transaction consumers must derive a slot before lookup.
-         * This compatibility wrapper treats its argument as a slot and never
-         * reads a subject-hash certificate key.
+         * @brief Checks the subject-hash certificate index and consumes pending work.
+         * @param[in] subject_hash Subject hash (nonce subjects: the transaction hash),
+         *                         without the `/cert/` prefix.
+         * @return `true` when the hash-verifying subject-hash record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the subject to its
+         * registered handler before returning.
          */
-        bool CheckCertificate( const std::string &slot_key ) const;
+        bool CheckCertificate( const std::string &subject_hash );
         /**
          * @brief Performs strict certificate check for a specific subject object.
          * @param[in] subject Subject to evaluate.

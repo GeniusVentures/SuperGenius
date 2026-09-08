@@ -1854,13 +1854,23 @@ namespace sgns
         return consensus_manager_->CheckCertificateForSlot( slot_key );
     }
 
-    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
+    bool Blockchain::CheckCertificate( const std::string &subject_hash )
     {
         // By-hash lookups serve the subject-hash index record (develop consumer
         // contract): SubmitCertificate dual-writes /cert/<subject_hash> and this
         // call hash-verifies that record. Slot-authoritative internal callers
         // use CheckCertificateForSlot with a derived slot.
-        return consensus_manager_->CheckCertificateForSubject( subject_hash );
+        if ( !consensus_manager_->CheckCertificateForSubject( subject_hash ) )
+        {
+            return false;
+        }
+        // The by-hash readback above proves the record is durable and final.
+        // Deliver any not-yet-consumed acceptance work for this subject to its
+        // registered handler so certificate effects land before the caller
+        // observes the record (the CRDT arrival callback only journals; the
+        // round timer would otherwise defer the dispatch by up to half a round).
+        consensus_manager_->DispatchCertificateWorkForSubject( subject_hash );
+        return true;
     }
 
     bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
