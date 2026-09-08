@@ -110,6 +110,34 @@ namespace sgns
         return dag_st.uncle_hash();
     }
 
+    std::optional<std::vector<GeniusUTXO>> GeniusTransaction::GetProducedUTXOs() const
+    {
+        auto tx_hash = base::Hash256::fromReadableString( GetHash() );
+        if ( tx_hash.has_error() || !HasUTXOParameters() )
+        {
+            return std::nullopt;
+        }
+
+        auto params_opt = GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
+        {
+            return std::nullopt;
+        }
+
+        const auto             &dst_infos = params_opt->second;
+        std::vector<GeniusUTXO> outputs;
+        outputs.reserve( dst_infos.size() );
+        for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+        {
+            outputs.emplace_back( tx_hash.value(),
+                                  i,
+                                  dst_infos[i].encrypted_amount,
+                                  dst_infos[i].token_id,
+                                  dst_infos[i].dest_address );
+        }
+        return outputs;
+    }
+
     std::unordered_set<std::string> GeniusTransaction::GetTopics() const
     {
         return { GetSrcAddress() };
