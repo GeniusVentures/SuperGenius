@@ -208,6 +208,41 @@ namespace sgns::utxo_merkle
     }
 
     /**
+     * @brief       Emits the Merkle branch proving a leaf against its level-hash vector.
+     *
+     * Odd levels duplicate their last hash, matching ComputeMerkleRootFromLeafHashes, so a branch
+     * emitted here folds back to the root that function produces.
+     *
+     * @param[in]   level The leaf hashes, in canonical (sorted-payload) order
+     * @param[in]   leaf_index Index of the leaf being proven
+     * @param[in]   add_step Invoked once per level with (sibling hash, whether the sibling is on the left)
+     */
+    template <typename AddStep>
+    inline void AppendMerkleBranch( std::vector<base::Hash256> level, size_t leaf_index, AddStep add_step )
+    {
+        while ( level.size() > 1 )
+        {
+            if ( ( level.size() % 2 ) != 0 )
+            {
+                level.push_back( level.back() );
+            }
+
+            const size_t sibling_index = leaf_index ^ 1U;
+            add_step( level[sibling_index], sibling_index < leaf_index );
+
+            std::vector<base::Hash256> next_level;
+            next_level.reserve( level.size() / 2 );
+            for ( size_t i = 0; i < level.size(); i += 2 )
+            {
+                next_level.push_back( HashNode( level[i], level[i + 1] ) );
+            }
+
+            leaf_index = leaf_index / 2;
+            level      = std::move( next_level );
+        }
+    }
+
+    /**
      * @brief       Computes the Merkle root for a given set of UTXOs by serializing them into canonical payloads and hashing them.
      * @param[in]   utxos The list of UTXOs to include in the Merkle tree
      * @return      The computed Merkle root of the UTXOs

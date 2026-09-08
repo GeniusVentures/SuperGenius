@@ -18,6 +18,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/UTXOStructs.hpp"
+#include "account/GeniusUTXO.hpp"
 #include "GeniusAccount.hpp"
 
 #include <gsl/span>
@@ -141,6 +142,12 @@ namespace sgns
         {
             return std::nullopt;
         }
+
+        /**
+         * @brief       Materializes the UTXOs this transaction produces, one per output destination.
+         * @return      nullopt when the hash is malformed or the transaction carries no UTXO parameters
+         */
+        std::optional<std::vector<GeniusUTXO>> GetProducedUTXOs() const;
 
         /**
          * @brief       Returns the source chain id for input validation routing
