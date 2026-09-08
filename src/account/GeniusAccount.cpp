@@ -527,14 +527,17 @@ namespace sgns
     {
         genius_account_logger()->trace( "Key seed from TW private key" );
 
-        // Account identity = the SOURCE key itself (develop contract): bridge burns
-        // address the recipient by the Ethereum key's raw uncompressed public key
-        // (X||Y, cf. GeniusSigner::GetAddress == crypto3_key.GetEntirePubValue in
-        // account_signature_test), so the account generated from a key must own
-        // UTXOs paid to that key's public point. KeySeedToPrivateKey reduces the
-        // seed modulo the curve order — the identity for any valid private key —
-        // so seeding with the raw key keeps the stored-key roundtrip intact.
-        uint256_t key_seed = KeySeedFromBytes( private_key.bytes );
+        auto signed_secret = private_key.sign(
+            TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
+            TWCurveSECP256k1 );
+
+        if ( signed_secret.empty() )
+        {
+            genius_account_logger()->error( "Cannot sign secret" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto key_seed = KeySeedFromBytes( TW::Hash::sha256( signed_secret ) );
 
         // Create storage and keys
         auto sgns_private_key = KeySeedToPrivateKey( key_seed );
