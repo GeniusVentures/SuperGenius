@@ -53,7 +53,9 @@ namespace
     [[nodiscard]] int Socket() { return ::socket( AF_INET, SOCK_STREAM, 0 ); }
     [[nodiscard]] bool RuntimePreflight( std::string &reason )
     {
-        if ( ::getpid() <= 1 || ::getpgrp() <= 1 || ::getsid( 0 ) <= 1 ) { reason = "identity-unavailable"; return false; }
+        // Identity values of 1 are legitimate under CI (launchd's process group /
+        // session on macOS runners, PID 1 in containers); only call failure is fatal.
+        if ( ::getpid() == -1 || ::getpgrp() == -1 || ::getsid( 0 ) == -1 ) { reason = "identity-unavailable"; return false; }
         int pipefd[2]{};
         if ( ::pipe( pipefd ) != 0 ) { reason = "pipe-unavailable"; return false; }
         const bool pipe_ok = CloseOnExec( pipefd[0] ) && CloseOnExec( pipefd[1] ); ::close( pipefd[0] ); ::close( pipefd[1] );
