@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 
 namespace sgns
 {

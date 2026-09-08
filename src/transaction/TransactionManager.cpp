@@ -4,8 +4,8 @@
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include "account/TransactionManager.hpp"
-#include "account/TransactionConsensusHandler.hpp"
+#include "transaction/TransactionManager.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 
 #include <algorithm>
 #include <map>
@@ -20,12 +20,12 @@
 #include <openssl/err.h>
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
-#include "TransferTransaction.hpp"
-#include "MintTransaction.hpp"
-#include "MintTransactionV2.hpp"
-#include "MigrationTransaction.hpp"
-#include "EscrowTransaction.hpp"
-#include "UTXOMerkle.hpp"
+#include "account/TransferTransaction.hpp"
+#include "account/MintTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
+#include "account/MigrationTransaction.hpp"
+#include "account/EscrowTransaction.hpp"
+#include "account/UTXOMerkle.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
