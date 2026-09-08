@@ -380,12 +380,18 @@ jobs:
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
 
-          # Refresh apt indices first: GitHub-hosted runners use
-          # mirror+file:/etc/apt/apt-mirrors.txt (Azure mirrors) whose cached
-          # lists can reference superseded package versions (e.g.
-          # libgcrypt20-dev 1.10.3-2ubuntu0.1, a dep of libsecret-1-dev)
-          # that 404 on the mirror until the index is refreshed.
-          sudo apt-get update
+          # Refresh apt indices first, for two reasons:
+          #  1. GitHub-hosted runners use mirror+file:/etc/apt/apt-mirrors.txt
+          #     (Azure mirrors) whose cached lists can reference superseded
+          #     package versions (e.g. libgcrypt20-dev 1.10.3-2ubuntu0.1, a
+          #     dep of libsecret-1-dev) that 404 until the index is refreshed.
+          #  2. Debian 11 (bullseye) LTS ended 2026-08-31 and debian-security
+          #     stopped refreshing, so that suite's Release file is permanently
+          #     expired and a plain `apt-get update` exits 100 inside the
+          #     bullseye build container. Check-Valid-Until=false keeps the
+          #     frozen repos usable; it is a no-op where indices are fresh
+          #     (e.g. the Android jobs on Ubuntu hosts).
+          sudo apt-get -o Acquire::Check-Valid-Until=false update
           sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
