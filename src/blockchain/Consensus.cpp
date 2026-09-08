@@ -2893,18 +2893,14 @@ namespace sgns
     {
         const std::string pattern = std::string( CERT_KEY_PATTERN );
 
-        auto weak_self                 = weak_from_this();
-        certificate_filter_registered_ = db_->RegisterElementFilter(
-            pattern,
-            [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                if ( auto strong = weak_self.lock() )
-                {
-                    return strong->FilterCertificate( element );
-                }
-                return std::nullopt;
-            } );
+        auto weak_self = weak_from_this();
 
+        // Register the unique-keyed callback first: CRDTCallbackManager rejects
+        // duplicate patterns, while CRDTDataFilter::RegisterElementFilter silently
+        // REPLACES an existing entry. Registering the filter first would clobber
+        // the pattern entry owned by a still-live manager on the same GlobalDB
+        // (e.g. the certificate-signing manager a test or account switch creates),
+        // and this manager's Close() would then unregister the survivor's filter.
         certificate_callback_registered_ = db_->RegisterNewElementCallback(
             pattern,
             [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
@@ -2914,6 +2910,19 @@ namespace sgns
                     strong->CertificateReceived( std::move( new_data ), cid );
                 }
             } );
+
+        certificate_filter_registered_ = certificate_callback_registered_
+                                             && db_->RegisterElementFilter(
+                                                 pattern,
+                                                 [weak_self]( const crdt::pb::Element &element )
+                                                     -> std::optional<std::vector<crdt::pb::Element>>
+                                                 {
+                                                     if ( auto strong = weak_self.lock() )
+                                                     {
+                                                         return strong->FilterCertificate( element );
+                                                     }
+                                                     return std::nullopt;
+                                                 } );
 
         db_->AddListenTopic( consensus_datastore_topic_ );
 

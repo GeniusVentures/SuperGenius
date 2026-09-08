@@ -344,7 +344,35 @@ public:
         assert( tm_ != nullptr );
     }
 
-    ~CertificateFallbackTest() override = default;
+    ~CertificateFallbackTest() override
+    {
+        /*
+         * Teardown invariant (asio), mirroring Peer::Stop in
+         * multi_node_finality_fault_test.cpp: the ConsensusManager round-timer
+         * thread created by Blockchain::New reprocesses pending certificate work
+         * every >=500ms through this fixture's TransactionManager. A dispatch
+         * that is in flight while the fixture is destroyed keeps the
+         * TransactionManager (and, through its members, the Blockchain,
+         * ValidatorRegistry and GlobalDB) alive past this destructor, so the
+         * base ~CRDTFixture would then run pubs_->Stop() and free the libp2p
+         * host/io_context underneath the still-running timer — the delayed
+         * ~TransactionManager finally fires on the timer thread after gtest has
+         * finished and segfaults (epoll reactor deref after free; Linux CI
+         * crash in transaction_manager_certificate_fallback_test). Stop the
+         * blockchain first: Blockchain::Stop -> ConsensusManager::Close joins
+         * the round timer, releasing any in-flight strong reference while
+         * db_/pubs_ are still intact. Only then release the db-backed handles;
+         * the base destructor's db_.reset() -> pubs_->Stop() stays the FINAL
+         * host release.
+         */
+        if ( blockchain_ )
+        {
+            (void) blockchain_->Stop();
+        }
+        tm_.reset();
+        blockchain_.reset();
+        account_.reset();
+    }
 
     std::shared_ptr<GeniusAccount>      account_;
     std::shared_ptr<Blockchain>         blockchain_;
