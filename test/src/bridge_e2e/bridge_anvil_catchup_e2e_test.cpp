@@ -177,6 +177,17 @@ protected:
     /** @brief Pre-node burn tx hashes seeded on the local Anvil fork before any node starts. */
     static std::vector<std::string> s_pre_node_burn_hashes;
 
+    /**
+     * @brief Address of node_main's account — the EXACT burn recipient.
+     *
+     * The pre-node burns pay EthereumKeyGenerator(kAnvilAccountHexKeys[0]).
+     * GetEntirePubValue(), the source key's own public point. node_main is created
+     * FromPrivateKey-from-storage with that EXACT key (seeded via
+     * SeedAccountWithExactKey), because NewFromPrivateKey's legacy derivation yields a
+     * DIFFERENT address that would never receive the mints.
+     */
+    static std::string s_receiving_address;
+
     /** @brief Anvil fork block (eth_blockNumber captured BEFORE pre-node burns per D-22). */
     static uint64_t s_fork_block;
 
@@ -255,6 +266,7 @@ std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc1 = nullptr;
 std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc2 = nullptr;
 sgns::test::anvil::AnvilProcess BridgeAnvilCatchupE2ETest::s_anvil;
 std::vector<std::string>        BridgeAnvilCatchupE2ETest::s_pre_node_burn_hashes;
+std::string                     BridgeAnvilCatchupE2ETest::s_receiving_address;
 uint64_t                        BridgeAnvilCatchupE2ETest::s_fork_block = 0ull;
 
 std::array<GeniusNodeConfig, BridgeAnvilCatchupE2ETest::kNodeCount> BridgeAnvilCatchupE2ETest::s_configs = { {
@@ -356,6 +368,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         const std::string              sgns_dest = key_gen.GetEntirePubValue();
         spdlog::info( "catchup_e2e: derived SGNS destination {} from private key", sgns_dest.substr( 0, 16 ) );
 
+        // The burns above pay the source key's OWN public point. Seed the receiving
+        // account with that exact key so node_main (created FromPrivateKey-from-storage
+        // below) owns the burn recipient and the minted funds are spendable by it.
+        // NewFromPrivateKey's legacy derivation produces a different address and
+        // would never see these mints.
+        s_receiving_address = sgns::test::anvil::SeedAccountWithExactKey( kAnvilAccountHexKeys[0] );
+        ASSERT_FALSE( s_receiving_address.empty() )
+            << "Could not seed the receiving account with the exact burn-recipient key";
+        ASSERT_EQ( s_receiving_address, sgns_dest )
+            << "Seeded receiving account must own the burn destination";
+
         spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
         for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
         {
@@ -402,7 +425,10 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
+    // Load node_main from the pre-seeded storage so it carries the EXACT
+    // burn-recipient key (see SeedAccountWithExactKey above) — its address IS the
+    // destination the pre-node burns pay, so the auto-minted funds are its own.
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
     node_main->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
