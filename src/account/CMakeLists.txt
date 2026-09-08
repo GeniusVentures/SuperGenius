@@ -82,6 +82,7 @@ set(GENIUS_NODE_SOURCES
     InputValidators.cpp
     PublicChainInputValidator.cpp
     TransactionManager.cpp
+    TransactionConsensusHandler.cpp
     TokenAmount.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
