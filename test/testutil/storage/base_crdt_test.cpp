@@ -6,7 +6,6 @@
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
-#include <unistd.h>
 
 #include <boost/asio/io_context.hpp>
 #include "crdt/globaldb/keypair_file_storage.hpp"
