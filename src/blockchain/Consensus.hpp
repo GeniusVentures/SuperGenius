@@ -645,6 +645,18 @@ namespace sgns
          * @return `true` if a certificate exists, otherwise `false`.
          */
         bool CheckCertificateForSubject( const Subject &subject ) const;
+        /**
+         * @brief Dispatches pending certificate work for one subject-hash index record.
+         * @param[in] subject_hash Subject hash (nonce subjects: the transaction hash) whose
+         *                         `/cert/<subject_hash>` work should be consumed.
+         *
+         * A successful by-hash durable readback proves certificate finality, so a consumer
+         * that just verified the record through `Blockchain::CheckCertificate` may also
+         * deliver its not-yet-consumed acceptance work synchronously. Serializes with the
+         * timer/registration recovery through `certificate_recovery_mutex_`; a handler
+         * must never call back into this method (it would self-deadlock).
+         */
+        void DispatchCertificateWorkForSubject( const std::string &subject_hash );
 
     protected:
         /**
@@ -966,6 +978,14 @@ namespace sgns
          * @brief Processes a certificate only after its authoritative slot value has been read back.
          */
         void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
+        /**
+         * @brief Runs the durable readback-to-dispatch sequence for one journal entry.
+         * @param[in] entry Work-journal entry to process.
+         *
+         * Caller must hold `certificate_recovery_mutex_`. Shared by the full-journal
+         * recovery scan and the single-subject `DispatchCertificateWorkForSubject` path.
+         */
+        void DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry );
         void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.

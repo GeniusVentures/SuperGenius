@@ -52,6 +52,12 @@ namespace sgns
         using utxo_merkle::ReadUInt64BE;
         using utxo_merkle::SerializeUTXOLeafPayload;
 
+        std::string TransferInputOwner( const TransferTransaction &transaction )
+        {
+            return utxo_address::IsEscrowLockAddress( transaction.GetUncleHash() ) ? transaction.GetUncleHash()
+                                                                                  : transaction.GetSrcAddress();
+        }
+
         bool ExtractProducedUTXOs( const GeniusTransaction &tx, std::vector<GeniusUTXO> &outputs )
         {
             auto tx_hash = base::Hash256::fromReadableString( tx.GetHash() );
@@ -1396,16 +1402,34 @@ namespace sgns
         }
 
         auto persisted_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( persisted_hash ) );
-        if ( persisted_transaction_result.has_error() || !persisted_transaction_result.value() ||
-             persisted_transaction_result.value()->GetHash() != persisted_hash )
+        if ( persisted_transaction_result.has_value() && persisted_transaction_result.value() &&
+             persisted_transaction_result.value()->GetHash() == persisted_hash )
         {
-            return "";
+            const auto &persisted_transaction = *persisted_transaction_result.value();
+            auto        certificate_result    = GetTransactionCertificate( persisted_transaction );
+            if ( certificate_result.has_value() &&
+                 CertificateMatchesTransaction( certificate_result.value(), persisted_transaction ) )
+            {
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted head",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    persisted_hash,
+                    nonce );
+                return persisted_hash;
+            }
         }
 
-        const auto &persisted_transaction = *persisted_transaction_result.value();
-        auto        certificate_result    = blockchain_->GetCertificateBySlot( persisted_transaction.GetSlotID() );
-        if ( certificate_result.has_error() ||
-             !CertificateMatchesTransaction( certificate_result.value(), persisted_transaction ) )
+        // The confirmed head may reference a transaction this node never retained
+        // (certificate-only delivery). The head hash plus a quorum-valid certificate
+        // whose signed subject names that exact account/nonce/hash still proves the
+        // chain link.
+        auto head_certificate_result = blockchain_->GetCertificateBySubjectHash( persisted_hash );
+        if ( head_certificate_result.has_error() ||
+             !CertificateBindsSubjectTo( head_certificate_result.value(),
+                                         account_m->GetAddress(),
+                                         nonce - 1,
+                                         persisted_hash ) )
         {
             return "";
         }
@@ -1453,7 +1477,7 @@ namespace sgns
                     continue;
                 }
 
-                auto certificate_result = blockchain_->GetCertificateBySlot( candidate->GetSlotID() );
+                auto certificate_result = GetTransactionCertificate( *candidate );
                 if ( certificate_result.has_error() ||
                      !CertificateMatchesTransaction( certificate_result.value(), *candidate ) )
                 {
@@ -1948,6 +1972,24 @@ namespace sgns
         }
     }
 
+    bool TransactionManager::CertificateBindsSubjectTo( const ConsensusCertificate &certificate,
+                                                        std::string_view            account,
+                                                        uint64_t                    nonce,
+                                                        std::string_view            tx_hash )
+    {
+        const auto &subject       = certificate.proposal().subject();
+        auto        nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() )
+        {
+            return false;
+        }
+
+        // The quorum-signed nonce payload names the exact account, nonce, and
+        // transaction hash this certificate finalizes.
+        return subject.account_id() == account && nonce_subject.value().nonce() == nonce &&
+               nonce_subject.value().tx_hash() == tx_hash;
+    }
+
     bool TransactionManager::CertificateMatchesTransaction( const ConsensusCertificate &certificate,
                                                             const GeniusTransaction    &transaction )
     {
@@ -1974,6 +2016,22 @@ namespace sgns
                embedded_transaction.value()->CheckHash() &&
                embedded_transaction.value()->GetHash() == transaction.GetHash() &&
                embedded_transaction.value()->GetSlotID() == transaction.GetSlotID();
+    }
+
+    outcome::result<ConsensusCertificate> TransactionManager::GetTransactionCertificate(
+        const GeniusTransaction &transaction ) const
+    {
+        auto slot_certificate = blockchain_->GetCertificateBySlot( transaction.GetSlotID() );
+        if ( slot_certificate.has_value() )
+        {
+            return slot_certificate;
+        }
+        // Dual-index consumer contract: SubmitCertificate also persists the
+        // certificate at /cert/<subject_hash> (for nonce subjects the transaction
+        // hash) and develop-era records may only carry that index. Either durable
+        // record is acceptable; the exact-transaction binding is still enforced by
+        // CertificateMatchesTransaction at the call site.
+        return blockchain_->GetCertificateBySubjectHash( transaction.GetHash() );
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
@@ -2315,7 +2373,7 @@ namespace sgns
             tx_key );
 
         auto next_tx_state      = TransactionStatus::VERIFYING;
-        auto certificate_result = blockchain_->GetCertificateBySlot( transaction->GetSlotID() );
+        auto certificate_result = GetTransactionCertificate( *transaction );
 
         if ( certificate_result.has_value() &&
              CertificateMatchesTransaction( certificate_result.value(), *transaction ) )
@@ -2365,12 +2423,8 @@ namespace sgns
                                                full_node_m,
                                                input.output_idx_ );
         }
-        auto input_owner = transfer_tx->GetSrcAddress();
-        if ( utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
-        {
-            input_owner = transfer_tx->GetUncleHash();
-        }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(),
+                                                                     TransferInputOwner( *transfer_tx ) ) );
         return outcome::success();
     }
 
@@ -2553,26 +2607,14 @@ namespace sgns
                                            full_node_m,
                                            transfer_tx->GetSrcAddress() );
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing inputs to be added as UTXOs",
+        TransactionManagerLogger()->debug( "[{} - full: {}] Restoring the transfer's consumed input UTXOs",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m );
-        for ( const auto &input : transfer_tx->GetInputInfos() )
-        {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Fetching transaction {} ",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.txid_hash_.toReadableString() );
-            auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-            if ( tx )
-            {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx->GetType() );
-                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-            }
-        }
-        account_m->GetUTXOManager().RollbackUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetHash() );
+        // Consumed inputs are restored directly: re-parsing the input transaction
+        // cannot re-create them (PutUTXO is idempotent against the consumed
+        // outpoint entry) and RollbackUTXOs only clears reservations.
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().RestoreConsumedUTXOs( transfer_tx->GetInputInfos(),
+                                                                             TransferInputOwner( *transfer_tx ) ) );
 
         return outcome::success();
     }
@@ -2662,19 +2704,9 @@ namespace sgns
             {
                 BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, outputs[i].dest_address ) );
             }
-            for ( auto &input : inputs )
-            {
-                auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-                if ( tx )
-                {
-                    TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       tx->GetType() );
-                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-                }
-            }
-            account_m->GetUTXOManager().RollbackUTXOs( inputs, escrow_tx->GetHash() );
+            // Restore the escrow's consumed inputs directly (see RevertTransferTransaction).
+            BOOST_OUTCOME_TRY(
+                account_m->GetUTXOManager().RestoreConsumedUTXOs( inputs, escrow_tx->GetSrcAddress() ) );
         }
 
         return outcome::success();
@@ -3907,7 +3939,7 @@ namespace sgns
             key );
 
         auto next_tx_state      = TransactionStatus::VERIFYING;
-        auto certificate_result = blockchain_->GetCertificateBySlot( new_tx->GetSlotID() );
+        auto certificate_result = GetTransactionCertificate( *new_tx );
         auto has_cert           = certificate_result.has_value() &&
                         CertificateMatchesTransaction( certificate_result.value(), *new_tx );
 
