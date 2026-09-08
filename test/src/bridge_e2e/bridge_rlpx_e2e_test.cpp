@@ -29,7 +29,7 @@
 #include "account/ChainContractPair.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "eth/eth_watch_service.hpp"

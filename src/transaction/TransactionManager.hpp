@@ -45,6 +45,8 @@ namespace sgns::account
 
 namespace sgns
 {
+    class TransactionConsensusHandler;
+
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -339,6 +341,7 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiAccountTestAccess;
+        friend class TransactionConsensusHandler;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -407,11 +410,6 @@ namespace sgns
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
-        struct ReplayProtectionResult
-        {
-            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
-        };
-
         struct AccountUTXOState
         {
             uint64_t      version{ 0 };
@@ -470,18 +468,6 @@ namespace sgns
          *        On DEV_NET (144), also includes TEST_NET (963) and MAIN_NET (369).
          */
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
-
-        /**
-         * @brief Derives the proof key that corresponds to a transaction key by
-         *        replacing "/tx/" with "/proof/".
-         */
-        static outcome::result<std::string> GetExpectedProofKey( const std::string       &tx_key,
-                                                                 const GeniusTransaction *tx );
-
-        /**
-         * @brief Inverse of GetExpectedProofKey — derives the tx key from a proof key.
-         */
-        static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
         /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.
@@ -555,6 +541,15 @@ namespace sgns
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
+        /// @brief Verifies a transaction's signature, accepting the legacy DAG form.
+        bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+
+        /**
+         * @brief Erases the tracking entry for @p tx_hash iff it is still VERIFYING.
+         * @return true when an entry was erased.
+         */
+        bool RemoveTrackedIfVerifying( const std::string &tx_hash );
+
         TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
         bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
         static bool       IsTerminalTransactionStatus( TransactionStatus status );
@@ -573,17 +568,6 @@ namespace sgns
          * Runs ConfirmTransactions and periodic sync regardless of state.
          */
         void TickOnce();
-
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
-                                                                         const ConsensusCertificate &certificate );
-        /**
-         * @brief Handles proposal timeout cleanup for VERIFYING tracking entries.
-         *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
-         *        up due to timeout. Local outgoing entries become UNCONFIRMED; remote temporary entries are
-         *        removed. CONFIRMED entries are left untouched. Missing entries are skipped silently.
-         * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
-         */
-        void OnProposalTimeoutCleanup( const std::string &tx_hash );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -625,15 +609,10 @@ namespace sgns
         std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> transaction_waits_;
         std::chrono::milliseconds                                                             timestamp_tolerance_m;
         std::chrono::milliseconds                                                             mutability_window_m;
-        uint64_t nonce_window_m = DEFAULT_NONCE_WINDOW;
 
         // METRICS-01: Operational metrics counters
         // Atomic counters tracking vote rates, validation breakdown, and transaction lifecycle.
         // Flushed to log on TransactionManager destruction (per D-12/D-13/D-14).
-        std::atomic<uint64_t> metrics_cert_fallback_success_{ 0 };
-        std::atomic<uint64_t> metrics_cert_fallback_failure_{ 0 };
-        std::atomic<uint64_t> metrics_validation_approve_{ 0 };
-        std::atomic<uint64_t> metrics_validation_reject_{ 0 };
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
@@ -645,7 +624,6 @@ namespace sgns
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
-        static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -764,35 +742,11 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
-        enum class WitnessValidationResult : uint8_t
-        {
-            VALID,
-            DRIFT,
-            INVALID
-        };
-
         /**
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
-            const ConsensusManager::Subject &subject );
-        ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
-        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
-        std::optional<UTXOWitness> BuildUTXOWitness( const GeniusTransaction &tx ) const;
-        bool                       ApplyTransactionToUTXOSnapshot( const GeniusTransaction &tx,
-                                                                   std::vector<GeniusUTXO> &snapshot ) const;
-        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject  &subject,
-                                                                const GeniusTransaction &tx ) const;
-        bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
-        void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
@@ -830,6 +784,9 @@ namespace sgns
 
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
+
+        /// @brief Consensus-facing half of this manager; see TransactionConsensusHandler.
+        std::unique_ptr<TransactionConsensusHandler> consensus_m_;
     };
 }
 

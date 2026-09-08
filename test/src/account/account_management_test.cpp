@@ -9,7 +9,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"

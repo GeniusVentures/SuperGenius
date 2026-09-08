@@ -79,50 +79,10 @@ set(GENIUS_NODE_SOURCES
     MigrationInputValidator.cpp
     InputValidators.cpp
     PublicChainInputValidator.cpp
-    TransactionManager.cpp
     TokenAmount.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
 )
-
-set(GENIUS_NODE_LIBS
-    PRIVATE
-    component_factory
-    crdt_graphsync_dagsyncer
-    ipfs-bitswap-proto
-    ipfs-unixfs-proto
-    ipfs-bitswap-cpp
-    AsyncIOManager
-    Boost::Boost.DI
-    ScaledInteger
-    sgns_version
-    ${WIN_API_LIBRARY}
-    ${USER_ENV_LIBRARY}
-    protobuf::libprotobuf
-    rapidjson
-    coinprices
-    ${WIN_CRYPT_LIBRARY}
-    transfer_proof
-    processing_proof
-    PUBLIC
-    Boost::headers
-    ProofSystem
-    outcome
-    logger
-    crdt_globaldb
-    SGTransactionProto
-    processing_service
-    gnus_upnp
-    blockchain_genesis
-    ProcessingBase
-    evmrelay
-    migration
-    evm_watcher_service
-    sgns_genius_account
-    trustedpeer
-    burnconfig
-)
-
 
 # Only GeniusNode.cpp differs between the production and test libraries
 # (SGNS_CONSOLE_LOG_TESTS below), so everything else is compiled once here.
@@ -131,7 +91,7 @@ target_link_libraries(genius_node_objs ${GENIUS_NODE_LIBS})
 target_include_directories(genius_node_objs PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 # Production library — uses OS keychain (Apple/Windows/Linux secure storage)
-add_library(genius_node GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs>)
+add_library(genius_node GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs> $<TARGET_OBJECTS:genius_transaction_objs>)
 target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
 target_include_directories(
     genius_node
@@ -139,7 +99,7 @@ target_include_directories(
     ${AsyncIOManager_INCLUDE_DIR}
 )
 # Test library — uses in-memory secure storage via DI factory (no keychain prompts)
-add_library(genius_node_test GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs>)
+add_library(genius_node_test GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs> $<TARGET_OBJECTS:genius_transaction_objs>)
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 target_include_directories(genius_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 # SGNS_CONSOLE_LOG_TESTS is consumed by GeniusNode.cpp (InitLoggers), which
