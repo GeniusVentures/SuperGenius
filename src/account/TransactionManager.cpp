@@ -287,6 +287,10 @@ namespace sgns
         {
             return nullptr;
         }
+        // Archive runs the light wiring above but still replicates network-wide
+        // data: its local ledger is complete, so init must not block on a network
+        // nonce answer (see CheckNonce) the way a Light node's does.
+        instance->replicates_all_accounts_m_ = ReplicatesAllAccounts( node_type );
         instance->burn_basis_points_.store( initial_burn_basis_points, std::memory_order_relaxed );
 
         if ( burn_config )
@@ -317,6 +321,7 @@ namespace sgns
         account_m( std::move( account ) ),
         blockchain_( std::move( blockchain ) ),
         full_node_m( full_node ),
+        replicates_all_accounts_m_( full_node ),
         subnet_id_( subnet_id ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
@@ -3185,10 +3190,10 @@ namespace sgns
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                nonce_from_network_result.error().message() );
-            if ( full_node_m )
+            if ( full_node_m || replicates_all_accounts_m_ )
             {
                 TransactionManagerLogger()->debug(
-                    "[{} - full: {}] Network nonce fetch failed, but we have a full node configured. Allowing for it to boot",
+                    "[{} - full: {}] Network nonce fetch failed, but this role replicates the full ledger. Allowing for it to boot",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m );
                 return true;
