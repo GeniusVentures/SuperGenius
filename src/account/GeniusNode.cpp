@@ -217,9 +217,6 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
-        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
-            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
-            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         autodht_( true ),
         isprocessor_( true ),
@@ -1417,6 +1414,12 @@ namespace sgns
         }
         node_logger_->info( "PubSub started at address: {}", interface_address );
 
+        // GraphSync writes to libp2p streams from its scheduler thread; libp2p is
+        // single-threaded per host, so the scheduler must run on PubSub's io_context.
+        scheduler_ = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub_->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+
         pubsub_->GetHost()->getConnectionManagerConfig().high_water = settings.high_water;
         pubsub_->GetHost()->getConnectionManagerConfig().low_water  = settings.low_water;
         return true;
@@ -1426,7 +1429,11 @@ namespace sgns
     {
         // Initialize Bitswap for IPFS content-addressed data exchange
         bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+        // Same rule as GraphSync: Bitswap holds the libp2p host, so its callbacks and
+        // stream writes belong on the host's io_context, not the node's pool.
+        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(),
+                                                                  *bitswap_event_bus_,
+                                                                  pubsub_->GetAsioContext() );
         bitswap_->initialize();
         if ( !ipfs_cache_dir_.empty() )
         {
