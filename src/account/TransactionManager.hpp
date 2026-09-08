@@ -651,6 +651,7 @@ namespace sgns
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
+        bool                                     replicates_all_accounts_m_; ///< Role keeps a complete local ledger (Full/Archive); may finish init without a network nonce answer.
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
