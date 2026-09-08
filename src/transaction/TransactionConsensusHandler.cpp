@@ -4,14 +4,14 @@
  * @date       2026-09-08
  * @author     Eduardo Menges Mattje (emenges@gnus.ai)
  */
-#include "account/TransactionConsensusHandler.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 
 #include <algorithm>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/InputValidators.hpp"
 #include "account/MigrationAllowList.hpp"
 #include "account/MigrationTransaction.hpp"

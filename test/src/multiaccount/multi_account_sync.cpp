@@ -36,7 +36,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
