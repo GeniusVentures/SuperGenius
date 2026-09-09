@@ -25,6 +25,8 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <chrono>
@@ -879,8 +881,14 @@ namespace
             EXPECT_TRUE( peer.pubsub );
             if ( !peer.pubsub ) return peer;
             EXPECT_FALSE( peer.pubsub->Start( port, { peer.pubsub->GetLocalAddress() } ).get() );
+            // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+            // single-threaded per host, so the scheduler has to run on the host's
+            // io_context. A private one here races yamux's WriteQueue — the same split
+            // GeniusNode (405513df5) and MakeSecureCrdtTestNode (6b5ee4aa3) use; this
+            // fixture was the remaining unfixed instance. `peer.io` stays the
+            // application pool (TransactionManager).
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-                std::make_shared<libp2p::basic::AsioSchedulerBackend>( peer.io ),
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( peer.pubsub->GetAsioContext() ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
             auto graphsync = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( peer.pubsub->GetHost(), scheduler );
             auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -892,7 +900,14 @@ namespace
             peer.db->Start();
             peer.after_same_root_globaldb_reopen_before_manager =
                 Peer::Snapshot( peer.db, peer.active_vote_diagnostic_key );
-            peer.io_thread = std::thread( [io = peer.io] { io->run(); } );
+            // The scheduler no longer keeps `peer.io` busy, so without a work guard
+            // run() would return before any application work is posted to it.
+            peer.io_thread = std::thread(
+                [io = peer.io]
+                {
+                    auto guard = boost::asio::make_work_guard( *io );
+                    io->run();
+                } );
             peer.account = sgns::GeniusAccount::New( kToken, peer.root + "/account" );
             EXPECT_TRUE( peer.account );
             if ( !peer.account ) return peer;
@@ -1002,9 +1017,27 @@ namespace
         template <size_t Count>
         static void ConnectAndWaitForPeers( const std::array<Peer *, Count> &peers )
         {
+            // Join one source per round, spaced past the 100ms gossip heartbeat.
+            // Every outbound dial in this stack binds the node's own LISTEN port as
+            // its source port (libp2p RouteHelper::getBestSourceAddresses carries the
+            // listener's port into the dial's bind endpoint, and this suite gives
+            // every peer a fixed port). When two peers dial each other inside the
+            // same heartbeat the crossed SYNs collide on the one shared tuple: the
+            // merged connection runs the Noise initiator role on both ends
+            // ("Noise handshake failed, Message is too short", CI 2026-09-09), and
+            // while that dying socket still owns the tuple any redial of the same
+            // pair gets EADDRINUSE -> graphsync CANNOT_CONNECT -> blacklist + route
+            // erasure -> "No usable route candidates left" — the exact CI failure
+            // signature of SameBurnContention and RestartAtVote. Joining sources
+            // sequentially makes every reverse dial find an already-established
+            // connection to reuse (DialerImpl reuses connections per peer id), so
+            // the colliding simultaneous open never forms.
             for ( auto *source : peers )
+            {
                 for ( auto *target : peers )
                     if ( source != target ) source->pubsub->AddPeers( { target->pubsub->GetInterfaceAddress() } );
+                std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
+            }
             ASSERT_WAIT_FOR_CONDITION( [&] { return PeersFormConnectedTopology( peers ); },
                                        std::chrono::seconds( 5 ),
                                        "every peer is started in one public libp2p topology with a consensus-topic neighbor",
