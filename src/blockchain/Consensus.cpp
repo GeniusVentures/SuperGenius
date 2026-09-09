@@ -2832,6 +2832,17 @@ namespace sgns
                     it->second.last_attempt_round = round;
                 }
             }
+            // Snapshot the aggregator-decision round for the fault-test barrier:
+            // GetAggregatorRole just evaluated GetCurrentRound(proposal.timestamp())
+            // to select this publisher; observers reading the round after the
+            // persist pause may have crossed into the next round.
+            {
+                std::lock_guard lock( fault_test_mutex_ );
+                if ( certificate_persisted_barrier_.armed )
+                {
+                    certificate_persisted_barrier_.entered_round = GetCurrentRound( state.proposal.timestamp() );
+                }
+            }
             ConsensusManagerLogger()->debug( "{}: Attempting to create certificate for hash {} proposal_id={} round={}",
                                              __func__,
                                              GetPrintableSubjectHash( state.proposal.subject() ),
