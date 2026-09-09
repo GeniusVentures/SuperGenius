@@ -191,9 +191,36 @@ namespace sgns
 
         static bool IsCurrentAggregator( const std::shared_ptr<ConsensusManager> &manager,
                                          const ConsensusManager::Proposal &proposal,
-                                         const ValidatorRegistry::Registry &registry )
+                                         const ValidatorRegistry::Registry &registry,
+                                         uint64_t decision_round = 0 )
         {
-            return manager->GetAggregatorRole( proposal, registry ) == ConsensusManager::AggregatorRole::CurrentAggregator;
+            if ( decision_round == 0 )
+            {
+                return manager->GetAggregatorRole( proposal, registry ) ==
+                       ConsensusManager::AggregatorRole::CurrentAggregator;
+            }
+            // Decision-round variant: same formula GetAggregatorRole applies, but
+            // with the snapshot taken at the decision so a post-pause round
+            // boundary cannot flip the verdict.
+            auto ordered = manager->GetOrderedActiveValidators( registry );
+            if ( ordered.empty() )
+            {
+                return false;
+            }
+            const auto &address = manager->account_address_;
+            if ( std::find( ordered.begin(), ordered.end(), address ) == ordered.end() )
+            {
+                return false;
+            }
+            auto       hash = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
+            uint64_t   base_index = 0;
+            for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
+            {
+                base_index = ( base_index << 8 ) | hash[i];
+            }
+            base_index            = base_index % ordered.size();
+            const auto index      = ( base_index + decision_round ) % ordered.size();
+            return ordered[index] == address;
         }
 
         static void ArmActiveVoteBarrier( const std::shared_ptr<ConsensusManager> &manager )
@@ -211,7 +238,7 @@ namespace sgns
         static void ArmCertificatePersistedBarrier( const std::shared_ptr<ConsensusManager> &manager )
         {
             std::lock_guard lock( manager->fault_test_mutex_ );
-            manager->certificate_persisted_barrier_ = { true, false, false };
+            manager->certificate_persisted_barrier_ = { true, false, false, /*entered_round=*/0 };
         }
 
         static bool ActiveVoteBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
@@ -224,6 +251,12 @@ namespace sgns
         {
             std::lock_guard lock( manager->fault_test_mutex_ );
             return manager->accepted_certificate_barrier_.entered;
+        }
+
+        static uint64_t CertificatePersistedBarrierDecisionRound( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->certificate_persisted_barrier_.entered_round;
         }
 
         static bool CertificatePersistedBarrierEntered( const std::shared_ptr<ConsensusManager> &manager )
@@ -1855,11 +1888,15 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     for ( auto *peer : { &network.first, &network.second, &network.third } )
         if ( sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierEntered( peer->consensus ) ) publisher = peer;
     ASSERT_NE( publisher, nullptr );
-    const auto persisted_round = sgns::MultiNodeFinalityFaultTestAccess::CurrentRound(
-        publisher->consensus, proposal.value().timestamp() );
+    // Decision-round snapshot taken at aggregator-role evaluation — reading the
+    // wall-clock round here (post-pause) races round boundaries during the
+    // persist->observe window and intermittently predicted the wrong publisher.
+    const auto persisted_round = sgns::MultiNodeFinalityFaultTestAccess::CertificatePersistedBarrierDecisionRound(
+        publisher->consensus );
+    ASSERT_NE( persisted_round, 0u ) << "decision-round snapshot missing (barrier not armed at decision?)";
     ASSERT_EQ( publisher->account->GetAddress(), active_validators[( base_index + persisted_round ) % active_validators.size()] );
     ASSERT_TRUE( sgns::MultiNodeFinalityFaultTestAccess::IsCurrentAggregator(
-        publisher->consensus, proposal.value(), proposal_registry.value() ) );
+        publisher->consensus, proposal.value(), proposal_registry.value(), persisted_round ) );
     ASSERT_TRUE( publisher->consensus->CheckCertificateForSlot( slot ) );
     const auto durable_certificate = publisher->consensus->GetCertificateBySlot( slot );
     ASSERT_TRUE( durable_certificate.has_value() );

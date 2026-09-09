@@ -785,6 +785,11 @@ namespace sgns
             bool armed    = false;
             bool entered  = false;
             bool released = false;
+            // Round snapshot taken at the DECISION point (aggregator-role
+            // evaluation), before persistence — the test must not recompute
+            // the wall-clock round after the pause, which can cross a round
+            // boundary during the persist->observe window.
+            uint64_t entered_round = 0;
         };
 
         /**
