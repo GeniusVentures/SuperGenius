@@ -112,8 +112,12 @@ public:
             ASSERT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
 
             auto io        = std::make_shared<boost::asio::io_context>();
+            // Scheduler backend must share the pubsub host's io_context: graphsync
+            // writes yamux streams, and a scheduler on the private io (run on its own
+            // thread below) races WriteQueue cross-thread — the Debug-only
+            // `item.unsent > 0` assertion. Same fix as 405513df5/ce91566ed.
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-                std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
                                                                                                  scheduler );

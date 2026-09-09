@@ -1227,7 +1227,11 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
     ASSERT_TRUE( existing.SerializeToString( &existing_serialized ) );
     sgns::ConsensusManager::Certificate candidate;
     std::string candidate_serialized;
-    for ( uint64_t offset = 1; offset < 128; ++offset )
+    // Search width: the serialized existing hash is uniform, so the chance that
+    // NO offset produces a larger hash is ~1/(N+1) — 127 left a ~0.8% flake per
+    // run whenever the existing hash landed near the top (seen on Debug CI);
+    // 16383 pushes it below 1/16000.
+    for ( uint64_t offset = 1; offset < 128 * 128; ++offset )
     {
         candidate = certificate.value();
         candidate.set_timestamp( certificate.value().timestamp() + offset );
