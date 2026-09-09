@@ -1115,6 +1115,13 @@ namespace sgns
         SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
         std::string                     account_address_;            ///< Local validator/account id.
+        /// Component logger, named "ConsensusManager:<address prefix>".
+        ///
+        /// Carrying the node id on the logger keeps it out of every format string: several
+        /// nodes share one process in tests, and the plain "ConsensusManager" logger they all
+        /// used could not say which node aggregated a proposal and which cleared it
+        /// (child_tokens_test, Linux CI 2026-09-09).
+        base::Logger                    logger_;
         const bool                      participates_in_consensus_ = true; ///< False for Archive nodes (passive replicas).
         std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
