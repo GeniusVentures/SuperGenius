@@ -87,7 +87,7 @@ namespace sgns::crdt
                                    tombstone_registry_.end() );
     }
 
-    void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
+    bool CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
     {
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
@@ -109,15 +109,24 @@ namespace sgns::crdt
                 {
                     auto result = entry->filter( element );
 
-                    if ( result.has_value() )
+                    if ( result.decision == ElementFilterResult::Decision::kStall )
                     {
-                        // Always delete the matching element when result has value
+                        // Dependency stall: abort before mutating the delta or
+                        // journaling the key as seen — the caller fails the job
+                        // and the failed-root retry/rebroadcast machinery
+                        // reprocesses it once the dependency syncs.
+                        return true;
+                    }
+
+                    if ( result.decision == ElementFilterResult::Decision::kReject )
+                    {
+                        // Always delete the matching element when rejecting
                         elements_to_delete_indices.insert( i );
 
-                        if ( !result->empty() )
+                        if ( !result.additional_elements_to_remove.empty() )
                         {
                             // Also delete additional elements from the vector
-                            for ( const auto &additional_element : *result )
+                            for ( const auto &additional_element : result.additional_elements_to_remove )
                             {
                                 additional_elements_to_delete.push_back( additional_element.key() );
                             }
@@ -157,6 +166,7 @@ namespace sgns::crdt
         {
             delta.mutable_elements()->DeleteSubrange( index, 1 );
         }
+        return false;
     }
 
     void CRDTDataFilter::FilterTombstonesOnDelta( pb::Delta &delta )

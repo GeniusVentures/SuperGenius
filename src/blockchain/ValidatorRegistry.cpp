@@ -1380,13 +1380,13 @@ namespace sgns
         auto              weak_self         = weak_from_this();
         const bool        filter_registered = db_->RegisterElementFilter(
             pattern,
-            [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            [weak_self]( const crdt::pb::Element &element )
             {
                 if ( auto strong = weak_self.lock() )
                 {
                     return strong->FilterRegistryUpdate( element );
                 }
-                return std::nullopt;
+                return crdt::CRDTDataFilter::ElementFilterResult::Accept();
             } );
         const bool callback_registered = db_->RegisterNewElementCallback(
             pattern,
@@ -1405,7 +1405,7 @@ namespace sgns
         return result;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> ValidatorRegistry::FilterRegistryUpdate(
+    crdt::CRDTDataFilter::ElementFilterResult ValidatorRegistry::FilterRegistryUpdate(
         const crdt::pb::Element &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
@@ -1414,18 +1414,30 @@ namespace sgns
         if ( decoded_update.has_error() )
         {
             logger_->error( "{}: parse failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         RegistryUpdate update = decoded_update.value();
-        if ( !VerifyUpdate( update, false ) )
+        switch ( VerifyUpdateClassified( update, false ) )
         {
+        case UpdateVerification::kValid:
+            logger_->debug( "{}: update accepted", __func__ );
+            return crdt::CRDTDataFilter::ElementFilterResult::Accept();
+        case UpdateVerification::kMissingDependency:
+            // The update legitimately arrived before the data it was derived
+            // from (cross-delta arrival order is unordered). Stall the whole
+            // delta job instead of permanently dropping the element: the
+            // failed-root retry machinery reprocesses it once the dependency
+            // syncs, and no head is recorded meanwhile.
+            logger_->info( "{}: update dependencies not synced yet, stalling for retry: {}",
+                           __func__,
+                           element.key() );
+            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
+        case UpdateVerification::kInvalid:
+        default:
             logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
-
-        logger_->debug( "{}: update accepted", __func__ );
-        return std::nullopt;
     }
 
     void ValidatorRegistry::RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data,
@@ -1490,20 +1502,21 @@ namespace sgns
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const
+    ValidatorRegistry::UpdateVerification ValidatorRegistry::VerifyUpdateClassified(
+        const RegistryUpdate &update, bool enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
         {
             logger_->error( "{}: empty registry update", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         auto signing_bytes = ComputeUpdateSigningBytes( update );
         if ( signing_bytes.has_error() )
         {
             logger_->error( "{}: signing bytes computation failed", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         const std::string prev_registry_cid = update.prev_registry_hash();
@@ -1522,8 +1535,8 @@ namespace sgns
             auto base_registry_result = LoadRegistryByCid( prev_registry_cid );
             if ( base_registry_result.has_error() )
             {
-                logger_->error( "{}: base registry unavailable cid={}", __func__, prev_registry_cid );
-                return false;
+                logger_->warn( "{}: base registry not synced yet cid={}", __func__, prev_registry_cid );
+                return UpdateVerification::kMissingDependency;
             }
             base_registry_snapshot = base_registry_result.value();
             base_registry          = &base_registry_snapshot.value();
@@ -1543,17 +1556,17 @@ namespace sgns
                                                      signing_bytes.value() ) )
                 {
                     logger_->info( "{}: genesis update verified", __func__ );
-                    return true;
+                    return UpdateVerification::kValid;
                 }
             }
             logger_->error( "{}: genesis update verification failed", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         if ( !base_registry || prev_registry_cid.empty() )
         {
             logger_->error( "{}: missing base registry for update", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         if ( !update.certificate().empty() )
@@ -1562,7 +1575,7 @@ namespace sgns
             if ( !certificate.ParseFromString( update.certificate() ) )
             {
                 logger_->error( "{}: invalid certificate payload", __func__ );
-                return false;
+                return UpdateVerification::kInvalid;
             }
 
             if ( enforce_time_window )
@@ -1570,7 +1583,7 @@ namespace sgns
                 if ( !ValidateCertificateForUpdate( certificate, *base_registry, prev_registry_cid ) )
                 {
                     logger_->error( "{}: certificate verification failed", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
             }
             else
@@ -1578,7 +1591,7 @@ namespace sgns
                 if ( !ValidateCertificate( certificate, *base_registry, prev_registry_cid ) )
                 {
                     logger_->error( "{}: certificate verification failed", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
             }
 
@@ -1594,17 +1607,17 @@ namespace sgns
                      payload.target_registry_epoch() != base_registry->epoch() + 1 )
                 {
                     logger_->error( "{}: batch subject metadata mismatch", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 if ( payload.member_certificate_slots_size() != static_cast<int>( payload.certificate_count() ) )
                 {
                     logger_->error( "{}: batch subject member slot count mismatch", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 if ( update.batch_certificate_slots_size() != static_cast<int>( payload.certificate_count() ) )
                 {
                     logger_->error( "{}: batch update member slot count mismatch", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 std::vector<std::string> slots;
                 slots.reserve( static_cast<size_t>( update.batch_certificate_slots_size() ) );
@@ -1614,7 +1627,7 @@ namespace sgns
                     {
                         // Legacy subject-hash batch updates carry no slots and fail closed.
                         logger_->error( "{}: batch update carries an empty member slot", __func__ );
-                        return false;
+                        return UpdateVerification::kInvalid;
                     }
                     slots.push_back( slot );
                 }
@@ -1623,13 +1636,13 @@ namespace sgns
                 if ( root_result.has_error() )
                 {
                     logger_->error( "{}: batch root computation failed", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 const auto payload_root = std::string( payload.batch_root() );
                 if ( payload_root != root_result.value() )
                 {
                     logger_->error( "{}: batch root mismatch", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 std::vector<std::string> payload_slots( payload.member_certificate_slots().begin(),
                                                         payload.member_certificate_slots().end() );
@@ -1637,7 +1650,7 @@ namespace sgns
                 if ( payload_slots != slots )
                 {
                     logger_->error( "{}: batch member slots differ from certificate payload", __func__ );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
 
                 std::unordered_map<std::string, int64_t> registered_scores;
@@ -1647,17 +1660,28 @@ namespace sgns
                     auto certificate_result = LoadCertificateBySlot( member_slot );
                     if ( certificate_result.has_error() )
                     {
-                        logger_->error( "{}: missing certificate for batch slot={}",
-                                        __func__,
-                                        member_slot.substr( 0, 8 ) );
-                        return false;
+                        if ( certificate_result.error() == std::errc::invalid_argument )
+                        {
+                            // Corrupt or slot-mismatched durable record: permanently invalid.
+                            logger_->error( "{}: corrupt member record for batch slot={}",
+                                            __func__,
+                                            member_slot.substr( 0, 8 ) );
+                            return UpdateVerification::kInvalid;
+                        }
+                        // The member durable record has not synced yet: stall so the
+                        // delta retries once it arrives (arrival order across deltas
+                        // is unordered).
+                        logger_->warn( "{}: member certificate not yet synced for batch slot={}",
+                                       __func__,
+                                       member_slot.substr( 0, 8 ) );
+                        return UpdateVerification::kMissingDependency;
                     }
                     const auto &tx_cert = certificate_result.value();
                     if ( tx_cert.registry_cid() != payload.base_registry_cid() ||
                          tx_cert.registry_epoch() != payload.base_registry_epoch() )
                     {
                         logger_->error( "{}: batch certificate registry mismatch", __func__ );
-                        return false;
+                        return UpdateVerification::kInvalid;
                     }
                     auto votes = ExtractCertificateVotes( tx_cert, *base_registry );
                     if ( votes.has_error() )
@@ -1665,7 +1689,7 @@ namespace sgns
                         logger_->error( "{}: member certificate quorum not reached for batch slot={}",
                                         __func__,
                                         member_slot.substr( 0, 8 ) );
-                        return false;
+                        return UpdateVerification::kInvalid;
                     }
                     for ( const auto &[validator_id, approve] : votes.value().registered_votes )
                     {
@@ -1698,7 +1722,7 @@ namespace sgns
                     // the recomputed "expected" would otherwise deterministically
                     // match an attacker-crafted update and merge it.
                     logger_->error( "{}: certificate quorum not reached: {}", __func__, votes.error().message() );
-                    return false;
+                    return UpdateVerification::kInvalid;
                 }
                 expected   = BuildRegistryFromCertificate( *base_registry, certificate,
                                                           votes.value().registered_votes,
@@ -1711,23 +1735,23 @@ namespace sgns
             if ( provided.epoch() != base_registry->epoch() + 1 )
             {
                 logger_->error( "{}: epoch not next expected", __func__ );
-                return false;
+                return UpdateVerification::kInvalid;
             }
 
             if ( provided.SerializeAsString() != expected.SerializeAsString() )
             {
                 logger_->error( "{}: registry mismatch against certificate", __func__ );
-                return false;
+                return UpdateVerification::kInvalid;
             }
 
             logger_->info( "{}: certificate-based update verified", __func__ );
-            return true;
+            return UpdateVerification::kValid;
         }
 
         if ( update.registry().epoch() != base_registry->epoch() + 1 )
         {
             logger_->error( "{}: epoch not next expected", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         uint64_t              total_weight       = TotalWeight( *base_registry );
@@ -1758,12 +1782,17 @@ namespace sgns
             if ( IsQuorum( accumulated_weight, total_weight ) )
             {
                 logger_->info( "{}: quorum reached", __func__ );
-                return true;
+                return UpdateVerification::kValid;
             }
         }
 
         logger_->error( "{}: quorum not reached", __func__ );
-        return false;
+        return UpdateVerification::kInvalid;
+    }
+
+    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const
+    {
+        return VerifyUpdateClassified( update, enforce_time_window ) == UpdateVerification::kValid;
     }
 
     bool ValidatorRegistry::ValidateCertificate( const sgns::ConsensusCertificate &certificate,

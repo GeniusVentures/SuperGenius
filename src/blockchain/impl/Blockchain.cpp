@@ -95,23 +95,25 @@ namespace sgns
 
         if ( !instance->db_->RegisterElementFilter(
                  genesis_pattern,
-                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 [weak_instance]( const crdt::pb::Element &element )
                  {
                      if ( auto strong = weak_instance.lock() )
                      {
-                         return strong->FilterGenesis( element );
+                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                             strong->FilterGenesis( element ) );
                      }
-                     return std::nullopt;
+                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                  } ) ||
              !instance->db_->RegisterElementFilter(
                  account_creation_pattern,
-                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 [weak_instance]( const crdt::pb::Element &element )
                  {
                      if ( auto strong = weak_instance.lock() )
                      {
-                         return strong->FilterAccountCreation( element );
+                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                             strong->FilterAccountCreation( element ) );
                      }
-                     return std::nullopt;
+                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                  } ) )
         {
             instance->logger_->error( "[{}] Failed to register blockchain filters",

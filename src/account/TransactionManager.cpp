@@ -199,28 +199,28 @@ namespace sgns
         for ( auto network_id : monitored_networks )
         {
             std::string blockchain_base            = GetBlockChainBase( network_id );
-            bool        crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+            bool crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
                 "^/?" + blockchain_base + "tx/[^/]+",
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return strong->FilterTransaction( element );
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterTransaction( element ) );
                     }
-                    return std::nullopt;
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
 
             bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
                 "^/?" + blockchain_base + "proof/[^/]+",
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return strong->FilterProof( element );
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterProof( element ) );
                     }
-                    return std::nullopt;
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
 
             (void) instance->globaldb_m->RegisterNewElementCallback(
