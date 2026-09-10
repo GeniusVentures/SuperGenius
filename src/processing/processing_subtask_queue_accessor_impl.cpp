@@ -357,6 +357,25 @@ namespace sgns::processing
                     {
                         auto json = nlohmann::json::parse( taskResult.value().json_data() );
                         sgns::from_json( json, parsedProcessing );
+                        // Phase 01-03 (D-12): re-read the ELM validation mode from the
+                        // parsed Task.json_data. Defense-in-depth on top of the plan 01-01
+                        // parse-level gate: a hand-crafted queue publish cannot finalize
+                        // with an unimplemented mode. Inside the T-15-08 try/catch --
+                        // ElmValidationModeOk never throws and adversarial json still
+                        // lands in the catch below.
+                        std::string elmModeRejection;
+                        if ( !ElmValidationModeOk( parsedProcessing, elmModeRejection ) )
+                        {
+                            m_logger->error( "FinalizeQueueProcessing: ELM job arrived with unimplemented "
+                                             "validation mode: {}",
+                                             elmModeRejection );
+                            // Follow the existing invalid path: the subtasks finalize as
+                            // invalid without crashing the node.
+                            for ( int idx = 0; idx < subTasks.items_size(); ++idx )
+                            {
+                                invalidSubTaskIds.insert( subTasks.items( idx ).subtaskid() );
+                            }
+                        }
                         auto params = parsedProcessing.get_parameters();
                         if ( params )
                         {
@@ -673,5 +692,35 @@ namespace sgns::processing
         }
 
         return true;
+    }
+
+    bool SubTaskQueueAccessorImpl::ElmValidationModeOk( const sgns::SgnsProcessing &parsedProcessing,
+                                                        std::string                &rejectionReason )
+    {
+        // Scoped to ELM jobs only (SC-5): non-ELM validation semantics untouched.
+        // Materialize the by-value optional (quicktype getters return
+        // boost::optional<T> by value -- see plan 01-01 SUMMARY lifetime note).
+        const auto jobTypeOpt = parsedProcessing.get_job_type();
+        if ( !jobTypeOpt || jobTypeOpt.value() != sgns::JobType::ELM_PROCESSING )
+        {
+            return true;
+        }
+
+        // D-04 default: absent validation == none == implementable.
+        const auto validationOpt = parsedProcessing.get_validation();
+        if ( !validationOpt )
+        {
+            return true;
+        }
+        if ( validationOpt.value() == sgns::Validation::NONE )
+        {
+            return true;
+        }
+
+        // D-13: exact/redundant parse but are refused here as unimplemented.
+        rejectionReason = validationOpt.value() == sgns::Validation::EXACT
+                              ? std::string( "exact" )
+                              : std::string( "redundant" );
+        return false;
     }
 }

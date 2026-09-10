@@ -18,7 +18,8 @@ namespace sgns::processing
         const std::string                                      &processingQueueChannelId,
         std::list<SGProcessing::SubTask>                        subTasks,
         std::chrono::milliseconds                               msSubscriptionWaitingDuration,
-        std::chrono::seconds                                    ttl )
+        std::chrono::seconds                                    ttl,
+        std::chrono::system_clock::duration                     processingTimeout )
     {
         // Create the shared_ptr using the protected constructor
         auto node = std::shared_ptr<ProcessingNode>( new ProcessingNode( std::move( gossipPubSub ),
@@ -32,6 +33,15 @@ namespace sgns::processing
 
         node->Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
         node->InitTTL();
+        // Phase 01-03 (FUND-02, D-08/D-09): thread the derived lock timeout
+        // BEFORE CreateSubTaskQueue -- SetProcessingTimeout after CreateQueue is a
+        // silent no-op for peers because the timeout is baked into the published
+        // queue proto at creation (processing_subtask_queue_manager.cpp:76).
+        // Zero duration means "not derived": no call, 15s default stands (SC-5).
+        if ( processingTimeout.count() > 0 )
+        {
+            node->m_subtaskQueueManager->SetProcessingTimeout( processingTimeout );
+        }
         if ( !node->AttachTo( processingQueueChannelId ) )
         {
             node = nullptr;

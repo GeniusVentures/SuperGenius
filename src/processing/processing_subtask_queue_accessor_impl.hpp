@@ -12,6 +12,8 @@
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processing_validation_core.hpp"
 
+#include <SgnsProcessing.hpp>
+
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <list>
 #include <optional>
@@ -85,6 +87,25 @@ namespace sgns::processing
         void               UpdateResultsFromStorage( const std::set<std::string> &subTaskIds );
         FinalizationRetVal FinalizeQueueProcessing( const SGProcessing::SubTaskCollection &subTasks,
                                                     std::set<std::string>                 &invalidSubTaskIds );
+
+        /**
+         * @brief D-12/D-13 defensive assertion: an ELM job arriving at the
+         *        validating node must carry validation mode none (or none at all).
+         *
+         * Defense-in-depth only: the ProcessingManager parse-level gate (plan 01-01,
+         * Error::ELM_VALIDATION_UNIMPLEMENTED) already rejects exact/redundant at
+         * Create. This re-reads the re-parsed Task.json_data at FinalizeQueueProcessing
+         * so a job that bypassed the submit path (hand-crafted queue publish) still
+         * cannot finalize with an unimplemented mode. Returns true for non-ELM jobs
+         * (assertion scoped to ELM; non-ELM validation semantics untouched, SC-5).
+         * Never throws -- called inside the existing T-15-08 try/catch.
+         *
+         * @param parsedProcessing re-parsed job payload.
+         * @param rejectionReason human-readable mode description when returning false.
+         * @return true when the job may finalize; false names the offending mode.
+         */
+        static bool ElmValidationModeOk( const sgns::SgnsProcessing &parsedProcessing,
+                                         std::string                &rejectionReason );
 
         static void OnResultChannelMessage( std::weak_ptr<SubTaskQueueAccessorImpl>                     weakThis,
                                             boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );

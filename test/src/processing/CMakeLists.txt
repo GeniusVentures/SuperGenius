@@ -38,6 +38,33 @@ target_link_libraries(processing_validation_core_test
     sgproccapture
 )
 
+# Phase 01-03 (elmbridge, FUND-02): derived ELM lock-timeout wiring tests.
+# Queue-level cases use ProcessingSubTaskQueue directly; queue-manager cases
+# use the processing_mock.hpp channel (same pattern as
+# processing_subtask_queue_manager_test). One case per process at verification
+# time (isolated --gtest_filter runs) per libp2p teardown guidance.
+addtest(elm_lock_timeout_test
+    elm_lock_timeout_test.cpp
+)
+
+target_link_libraries(elm_lock_timeout_test
+    processing_service
+    SGProcessingProto
+    ipfs-pubsub
+)
+
+# Phase 01-03 (elmbridge, JOB-03/D-12): validation-mode defensive-assertion
+# matrix. Pure parse-level cases (no queue, no harness).
+addtest(elm_validation_mode_test
+    elm_validation_mode_test.cpp
+)
+
+target_link_libraries(elm_validation_mode_test
+    processing_service
+    SGProcessingProto
+    ipfs-pubsub
+)
+
 # Phase 19 (VALD-02): points the new Vald02* TEST cases at this phase's fresh, real, already
 # checked-in cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not
 # copied or duplicated into SuperGenius (D-01-REVISED). Four "../" levels walk from this directory

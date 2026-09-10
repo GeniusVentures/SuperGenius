@@ -44,6 +44,9 @@ namespace sgns::processing
          * @param subTasks Optional initial subtask list.
          * @param msSubscriptionWaitingDuration Wait duration for queue subscription.
          * @param ttl Time-to-live for node ownership.
+         * @param processingTimeout Derived ELM lock timeout (deadline + grace, plan 01-02
+         *        DeriveElmClocks). Zero (default) means "not derived": no SetProcessingTimeout
+         *        call is made and the queue manager keeps its 15s constructor default (SC-5).
          */
         static std::shared_ptr<ProcessingNode> New(
             std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
@@ -56,7 +59,8 @@ namespace sgns::processing
             const std::string                                      &processingQueueChannelId,
             std::list<SGProcessing::SubTask>                        subTasks = {},
             std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
-            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
+            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ),
+            std::chrono::system_clock::duration processingTimeout              = std::chrono::seconds( 0 ) );
 
         ~ProcessingNode();
 

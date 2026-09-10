@@ -1,5 +1,9 @@
 #include "processing_service.hpp"
 #include "base/sgns_version.hpp"
+#include "processing/processing_clocks_elm.hpp"
+#include <nlohmann/json.hpp>
+#include <SgnsProcessing.hpp>
+#include <Generators.hpp>
 #include <utility>
 #include <thread>
 
@@ -731,6 +735,48 @@ namespace sgns::processing
         // Create the ProcessingNode
         auto weakSelf = weak_from_this();
 
+        // Phase 01-03 (FUND-02): derive the ELM lock timeout from the pending
+        // task's json_data. ELM jobs carry hours in the funding block; the
+        // derived timeout (deadline + 60s grace) must reach SetProcessingTimeout
+        // BEFORE CreateSubTaskQueue. Non-ELM / malformed json => zero duration
+        // ("not derived") => no SetProcessingTimeout call => 15s default (SC-5).
+        std::chrono::system_clock::duration derivedTimeout( std::chrono::seconds( 0 ) );
+        if ( m_pendingTask.has_value() && !m_pendingTask.value().json_data().empty() )
+        {
+            try
+            {
+                auto taskJson = nlohmann::json::parse( m_pendingTask.value().json_data() );
+                sgns::SgnsProcessing parsed;
+                sgns::from_json( taskJson, parsed );
+                const auto jobTypeOpt = parsed.get_job_type();
+                if ( jobTypeOpt && jobTypeOpt.value() == sgns::JobType::ELM_PROCESSING )
+                {
+                    double hours = 1.0; // D-04 default
+                    if ( parsed.get_funding() )
+                    {
+                        hours = parsed.get_funding()->get_maximum_processing_hours().value_or( 1.0 );
+                    }
+                    // Belt-and-braces: schema gates guarantee (0, 24]; clamp
+                    // defensively so a bad value can never poison the lock.
+                    if ( hours <= 0.0 || hours > sgns::processing::kMaxProcessingHoursCap )
+                    {
+                        hours = 1.0;
+                    }
+                    derivedTimeout = sgns::processing::DeriveElmClocks( hours ).lockTimeout;
+                    m_logger->debug( "[{}] ELM job: derived lock timeout {} ms from {}h",
+                                     node_address_,
+                                     std::chrono::duration_cast<std::chrono::milliseconds>( derivedTimeout ).count(),
+                                     hours );
+                }
+            }
+            catch ( const std::exception & )
+            {
+                // Malformed pending-task json: not an ELM derivation source.
+                // FinalizeQueueProcessing's parse owns the hard rejection.
+            }
+        }
+        m_pendingTask.reset();
+
         auto node = ProcessingNode::New(
             m_gossipPubSub,
             m_subTaskResultStorage,
@@ -758,7 +804,10 @@ namespace sgns::processing
             },
             node_address_,
             subTaskQueueId,
-            subTasks );
+            subTasks,
+            std::chrono::milliseconds( 2000 ),
+            std::chrono::minutes( 2 ),
+            derivedTimeout );
 
         if ( node != nullptr )
         {
