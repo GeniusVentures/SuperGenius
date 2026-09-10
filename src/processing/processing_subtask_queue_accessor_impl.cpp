@@ -11,6 +11,12 @@
 #include <SgnsProcessing.hpp>
 #include <Generators.hpp>
 #include "FileManager.hpp"
+// Phase 01-02 (Rule 1 unity-build fix): processing_core.hpp only forward-declares
+// ProcessingTaskQueue, so calling GetTask() on the returned shared_ptr requires
+// the full definition. Previously masked by unity-build include ordering; the
+// new processing_clocks_elm.cpp translation unit reshuffled the unity chunks
+// and exposed it.
+#include "processing_task_queue.hpp"
 
 namespace sgns::processing
 {

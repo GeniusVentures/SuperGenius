@@ -1,6 +1,7 @@
 add_library(processing_service
     impl/processing_core_impl.cpp
     processing_tasksplit.cpp
+    processing_clocks_elm.cpp
     processing_engine.cpp
     processing_node.cpp
     processing_service.cpp
