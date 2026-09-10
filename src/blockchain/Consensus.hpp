@@ -452,6 +452,21 @@ namespace sgns
          */
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
         /**
+         * @brief Filters a vote vector down to proposal-bound, deduplicated,
+         *        signature-verified entries.
+         * @details Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation)
+         *          resolve registry membership and weight but never verify vote
+         *          signatures, so any remotely-received vote vector fed to them
+         *          must pass through this filter first — otherwise fabricated
+         *          votes attributed to real ACTIVE validators reach bridge-mint
+         *          quorum with zero valid signatures.
+         * @param[in] proposal Proposal the votes must be bound to.
+         * @param[in] votes    Raw vote vector; may contain fabricated entries.
+         * @return Signature-verified votes (possibly empty).
+         */
+        static std::vector<Vote> SignatureVerifiedVotes( const Proposal          &proposal,
+                                                         const std::vector<Vote> &votes );
+        /**
          * @brief Computes canonical bytes to sign a vote bundle.
          * @param[in] bundle Vote bundle to encode.
          * @return Signing bytes on success, otherwise an error.
