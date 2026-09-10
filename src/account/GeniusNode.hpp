@@ -211,6 +211,7 @@ namespace sgns
             TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction did not finalize within the timeout.
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
             INVALID_NODE_TYPE         = 16, ///< sgns_config.json node_type string was not Full/Light/Archive.
+            ELM_SUBMIT_UNAVAILABLE    = 17, ///< ELM submission is not yet wired to a splitter; reserved UTXOs are protected by rejecting before escrow hold.
         };
 
         /**
@@ -365,6 +366,21 @@ namespace sgns
          * @return Estimated cost in minions, or 0 when the request size, price, or cost calculation fails.
          */
         uint64_t GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
+
+        /**
+         * @brief Deterministic GNUS cost of an ELM (elm_processing) job (FUND-01).
+         *
+         * Cost is maximum_processing_hours x kUsdPerHourElm converted at the
+         * named rate kUsdPerGnusRate via the shared integer path
+         * sgns::processing::ElmEscrowMinions -- no GetGNUSPrice/CoinGecko call
+         * anywhere on this branch, and no TokenAmount::CalculateCostMinions
+         * (that is the byte-based non-ELM path).
+         *
+         * @param[in] procmgr Processing manager holding a parsed elm_processing job.
+         * @return Cost in minions, or 0 when procmgr is not an elm_processing job
+         *         (call-site contract: only invoke when the job_type sniff says ELM).
+         */
+        uint64_t GetElmProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
 
         /**
          * @brief Basis points of an escrow payout burned to the zero address during release.
@@ -1288,6 +1304,23 @@ namespace sgns
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
             sgns::base::Buffer value );
+
+        /**
+         * @brief Records the USD->GNUS rate actually used at hold time into the
+         *        escrow CRDT sibling key "<escrow_path>/elm_rate" (OD-2).
+         *
+         * Puts {"usd_per_hour": kUsdPerHourElm, "usd_per_gnus": kUsdPerGnusRate,
+         * "minions": ElmEscrowMinions(hours), "maximum_processing_hours": hours}
+         * so settlement disputes are resolved against the recorded rate, never a
+         * live price. The escrow record itself stays at the plain escrow_path key.
+         *
+         * @param[in] escrow_path Escrow key the rate record is a sibling of.
+         * @param[in] maximum_processing_hours Declared hours for this job.
+         * @return The CRDT transaction with the Put staged (caller commits), or error.
+         */
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateElmRateRecordCRDTTransaction(
+            const std::string &escrow_path,
+            double             maximum_processing_hours );
 
         /**
          * @brief Starts DHT provider discovery for the processing grid topic.

@@ -53,6 +53,7 @@
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
+#include "processing/processing_clocks_elm.hpp"
 #include <eth/abi_decoder.hpp>
 #include <base/parse_utility.hpp>
 #include <eth/rpc_http_transport.hpp>
@@ -2262,6 +2263,27 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
+        // ELM branch (Phase 1 interim, OD-1): elm_processing jobs parse+validate
+        // through the schema gates, price deterministically via GetElmProcessCost,
+        // then reject with a structured error BEFORE the UTXO balance check, the
+        // task/splitter block, and HoldEscrow -- no UTXOs can be stranded by a hold
+        // no splitter can ever consume. Phase 4 replaces this early return with the
+        // ELM splitter. SC-5: this is the ONLY conditional added to the non-ELM path.
+        {
+            // Materialize the by-value optional (quicktype getters return
+            // boost::optional<T> by value -- see plan 01-01 SUMMARY lifetime note).
+            const auto jobTypeOpt = procmgr->GetProcessingData().get_job_type();
+            if ( jobTypeOpt && jobTypeOpt.value() == sgns::JobType::ELM_PROCESSING )
+            {
+                auto elmFunds = GetElmProcessCost( *procmgr );
+                if ( elmFunds <= 0 )
+                {
+                    return outcome::failure( Error::PROCESS_COST_ERROR );
+                }
+                return outcome::failure( Error::ELM_SUBMIT_UNAVAILABLE );
+            }
+        }
+
         auto funds = GetProcessCost( *procmgr );
         if ( funds <= 0 )
         {
@@ -2290,7 +2312,10 @@ namespace sgns
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
         //Make Copies, trying to use references for passes/input nodes may cause problems.
-        auto passes = procdata.get_passes();
+        // Phase 01-01 (D-04) compile shim: passes is schema-optional now; the ELM
+        // branch above already returned for elm_processing jobs, and the non-ELM
+        // parity gate guarantees passes exist for every job that reaches here.
+        auto passes = procdata.get_passes().value_or( std::vector<sgns::Pass>{} );
         for ( const auto &pass : passes )
         {
             auto input_nodes = pass.get_model().value().get_input_nodes();
@@ -2299,8 +2324,12 @@ namespace sgns
                 json modeljson;
                 sgns::to_json( modeljson, model );
                 auto   index = procmgr->GetInputIndex( model.get_source().value() );
-                size_t nChunks =
-                    procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
+                size_t nChunks = procdata.get_inputs()
+                                     .value_or( std::vector<sgns::IoDeclaration>{} )[index.value()]
+                                     .get_dimensions()
+                                     .value()
+                                     .get_chunk_count()
+                                     .value();
                 rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
@@ -2407,6 +2436,22 @@ namespace sgns
         node_logger_->trace( "Raw cost in minions: {}", rawMinions );
 
         return rawMinions;
+    }
+
+    uint64_t GeniusNode::GetElmProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr )
+    {
+        // FUND-01 deterministic branch: hours x named rate via the shared integer
+        // path. No GetGNUSPrice / CoinGecko / TokenAmount::CalculateCostMinions
+        // anywhere on this function (those belong to the byte-based non-ELM path).
+        const double hours = procmgr.GetElmMaximumProcessingHours();
+        if ( hours <= 0.0 )
+        {
+            node_logger_->error( "GetElmProcessCost called for a non-ELM job (hours == 0)" );
+            return 0;
+        }
+        const uint64_t minions = sgns::processing::ElmEscrowMinions( hours );
+        node_logger_->trace( "ELM cost: {}h -> {} minions", hours, minions );
+        return minions;
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
@@ -3219,14 +3264,34 @@ namespace sgns
         return crdt_transaction;
     }
 
-    TransactionManager::State GeniusNode::GetTransactionManagerState() const
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateElmRateRecordCRDTTransaction(
+        const std::string &escrow_path,
+        double             maximum_processing_hours )
     {
-        auto manager_result = GetTransactionManager();
-        if ( !manager_result.has_value() )
-        {
-            return TransactionManager::State::CREATING;
-        }
-        return manager_result.value()->GetState();
+        // OD-2: record the rate actually used at hold time as a SIBLING key of
+        // the escrow record (the escrow itself stays at the plain escrow_path).
+        auto crdt_transaction = tx_globaldb_->BeginTransaction();
+
+        const json rateRecord = {
+            { "usd_per_hour", sgns::processing::kUsdPerHourElm },
+            { "usd_per_gnus", sgns::processing::kUsdPerGnusRate },
+            { "minions", sgns::processing::ElmEscrowMinions( maximum_processing_hours ) },
+            { "maximum_processing_hours", maximum_processing_hours },
+        };
+
+        sgns::crdt::HierarchicalKey key( escrow_path + "/elm_rate" );
+
+        BOOST_OUTCOME_TRY( crdt_transaction->Put(
+            std::move( key ),
+            sgns::base::Buffer( std::vector<uint8_t>( rateRecord.dump().begin(), rateRecord.dump().end() ) ) ) );
+
+        // Phase 4: the production caller wires this into ProcessImage inside the
+        // same CRDT transaction as CreateEscrowInfoCRDTTransaction (multi-Put
+        // atomic transaction precedent: impl/TaskQueueImpl.cpp:32-67). In Phase 1
+        // the interim ELM_SUBMIT_UNAVAILABLE rejection returns before any escrow
+        // hold, so there is no production caller yet -- this helper is the
+        // unit-tested building block Phase 4 composes.
+        return crdt_transaction;
     }
 
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
