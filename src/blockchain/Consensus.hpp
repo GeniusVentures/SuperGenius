@@ -765,12 +765,21 @@ namespace sgns
             std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
             std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
-            std::vector<Proposal>           eligible_candidates; ///< Approved proposals admitted before freeze.
+            std::vector<Proposal>           eligible_candidates; ///< Approved contenders for the slot; late arrivals are retained for the next attempt.
             std::vector<ScanPendingCandidate> scan_pending_candidates; ///< Validated contenders retained while finalized-slot scanning is indeterminate.
             std::chrono::steady_clock::time_point candidate_deadline{}; ///< Fixed local contention deadline.
             bool candidates_frozen = false; ///< Prevents admission after the deadline has passed.
             bool active_vote_locked = false; ///< Prevents creation of a replacement local vote.
             bool certificate_scan_pending = false; ///< A failed finalized-slot scan blocks vote work until it succeeds.
+            bool slot_decided = false; ///< A certificate for the slot is already accepted; no attempt can follow.
+            /// Voter id -> that voter's latest signature-verified vote in this slot, across
+            /// attempts. Under the one-vote-per-slot rule a voter committed to another
+            /// proposal is weight the local winner can never gain, which is what makes
+            /// unwinnability provable; keeping the whole vote lets a re-arbitrated winner
+            /// be re-tallied from here instead of a second per-proposal queue.
+            std::unordered_map<std::string, Vote> observed_votes;
+            uint64_t dissent_seen = 0; ///< Bumped when a vote disagrees with the local winner.
+            uint64_t dissent_evaluated = 0; ///< dissent_seen at the last unwinnability evaluation.
         };
 
         struct ActiveVoteState
@@ -994,6 +1003,55 @@ namespace sgns
          *         certificate processing after durable certificate validation.
          */
         outcome::result<bool> ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key );
+        /**
+         * @brief Erases the durable local active-vote record for a slot from the datastore.
+         *
+         * Split out so slot release can also run from the split-freeze recovery pass,
+         * which must drop the record before the next attempt's vote can be persisted
+         * (PersistOrLoadExactActiveVote refuses a differing record).
+         *
+         * @return `true` when a record was removed, `false` when none existed.
+         * @note Must NOT be called under `proposals_mutex_`: the datastore write can wait
+         *       on a CRDT worker whose callbacks take that same mutex. Callers erase the
+         *       in-memory `active_votes_` entry separately, under the lock.
+         */
+        outcome::result<bool> EraseDurableActiveVoteRecord( const std::string &slot_key );
+        /**
+         * @brief Reports whether the slot's frozen winner can still be certified.
+         *
+         * Sums the weight of validators that have committed to a different proposal in
+         * the slot; the winner's ceiling is the registry total minus that. Uses the
+         * single-pool quorum rule, whose threshold is never above the bridge-mint slot
+         * model's, so "unreachable here" implies unreachable under either model.
+         *
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        bool SlotWinnerUnwinnableLocked( const SlotState &slot_state, const std::string &registry_cid ) const;
+        /**
+         * @brief Re-opens arbitration for a slot whose frozen winner cannot be certified.
+         *
+         * Clears the freeze so the next ProcessDueVoteWork pass re-arbitrates over every
+         * candidate retained since and votes for the new winner. Only ever called once the
+         * previous winner is provably unwinnable, so the released vote cannot help certify
+         * it.
+         *
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        void ReopenSlotArbitrationLocked( SlotState &slot_state, const std::string &slot_key );
+        /**
+         * @brief Collects frozen slots whose winner the retained votes prove unwinnable.
+         *
+         * @param[out] slot_keys Canonical slot keys to release.
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        void CollectUnwinnableSlotsLocked( std::vector<std::string> &slot_keys );
+        /**
+         * @brief Releases the collected slots and re-opens their arbitration.
+         *
+         * @note Must NOT be called under `proposals_mutex_` — it takes the lock itself
+         *       around the in-memory mutations, keeping the datastore write outside it.
+         */
+        void ReleaseUnwinnableSlots( const std::vector<std::string> &slot_keys );
         /**
          * @brief Processes a certificate only after its authoritative slot value has been read back.
          */

@@ -409,6 +409,26 @@ namespace sgns
             manager->active_vote_announcements_for_test_.clear();
         }
 
+        static void HandleVote( const std::shared_ptr<ConsensusManager> &manager, const ConsensusManager::Vote &vote )
+        {
+            manager->HandleVote( vote );
+        }
+
+        /// One projection instead of a wrapper per field: callers read whichever
+        /// SlotState members the assertion needs.
+        static std::optional<ConsensusManager::SlotState> SlotSnapshot(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const std::string                       &slot_key )
+        {
+            std::lock_guard lock( manager->proposals_mutex_ );
+            auto            it = manager->slot_states_.find( slot_key );
+            if ( it == manager->slot_states_.end() )
+            {
+                return std::nullopt;
+            }
+            return it->second;
+        }
+
         static bool HasActiveVoteLock( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot_key )
         {
             auto it = manager->slot_states_.find( slot_key );
@@ -831,6 +851,28 @@ namespace
                 node.account->GetAddress() );
             EXPECT_TRUE( manager );
             return manager;
+        }
+
+        /// Slot keys for mint-v2 subjects come from the embedded transaction's slot id, so
+        /// distinct mints of one burn share a slot. Registered by every test that needs
+        /// same-slot contention; UnregisterSlotKeyHandler on the way out.
+        static void RegisterMintV2SlotKeyHandler()
+        {
+            sgns::ConsensusManager::RegisterSlotKeyHandler(
+                sgns::NONCE_SUBJECT_TYPE,
+                []( const sgns::ConsensusManager::Subject &subject )
+                {
+                    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+                    if ( nonce.has_error() ||
+                         nonce.value().transaction().transaction_case() != sgns::EmbeddedTransaction::kMintV2 )
+                    {
+                        return std::string{};
+                    }
+                    const auto bytes = nonce.value().transaction().mint_v2().SerializeAsString();
+                    const auto mint  = sgns::MintTransactionV2::DeSerializeByteVector(
+                        std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                    return mint ? mint->GetSlotID() : std::string{};
+                } );
         }
 
         static std::shared_ptr<sgns::MintTransactionV2> MakeMultiValidatorMint( uint64_t nonce )
@@ -1275,20 +1317,7 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
         node.manager = MakeMultiValidatorManager( node, node.registry );
         ASSERT_TRUE( node.manager );
     }
-    sgns::ConsensusManager::RegisterSlotKeyHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        []( const sgns::ConsensusManager::Subject &subject )
-        {
-            const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
-            if ( nonce.has_error() || nonce.value().transaction().transaction_case() != sgns::EmbeddedTransaction::kMintV2 )
-            {
-                return std::string{};
-            }
-            const auto bytes = nonce.value().transaction().mint_v2().SerializeAsString();
-            const auto mint = sgns::MintTransactionV2::DeSerializeByteVector(
-                std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            return mint ? mint->GetSlotID() : std::string{};
-        } );
+    RegisterMintV2SlotKeyHandler();
 
     const auto first_mint  = MakeMultiValidatorMint( 201 );
     const auto second_mint = MakeMultiValidatorMint( 202 );
@@ -2087,20 +2116,7 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     ASSERT_TRUE( second_mint );
     ASSERT_NE( first_mint->GetHash(), second_mint->GetHash() );
     ASSERT_EQ( first_mint->GetSlotID(), second_mint->GetSlotID() );
-    sgns::ConsensusManager::RegisterSlotKeyHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        []( const sgns::ConsensusManager::Subject &subject )
-        {
-            const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
-            if ( nonce.has_error() || nonce.value().transaction().transaction_case() != sgns::EmbeddedTransaction::kMintV2 )
-            {
-                return std::string{};
-            }
-            const auto bytes = nonce.value().transaction().mint_v2().SerializeAsString();
-            const auto mint = sgns::MintTransactionV2::DeSerializeByteVector(
-                std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            return mint ? mint->GetSlotID() : std::string{};
-        } );
+    RegisterMintV2SlotKeyHandler();
 
     const auto first_subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
                                                                             first_mint->GetNonce(),
@@ -2194,6 +2210,185 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
         // so StopImpl is the final libp2p host release, not the earlier one.
         node.manager.reset();
         node.registry.reset(); // registry co-owns GlobalDB (ValidatorRegistry.hpp:530)
+        node.db.reset();
+        node.account.reset();
+        node.pubsub->Stop();
+    }
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinnerIsProvablyUnwinnable )
+{
+    // Regression: the candidate window is local wall-clock, so three validators that
+    // each see only their own contender first freeze three different winners for one
+    // slot and then discard every cross vote. Nothing re-arbitrated, so the slot — and
+    // every later transaction of that account's nonce chain — stalled forever
+    // (observed as a 0-of-3 mint in bridge_anvil_catchup_e2e_test, with
+    // "HandleVote: ignored: proposal has not won frozen slot arbitration" on repeat).
+    constexpr std::array<const char *, 3> private_keys = {
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" };
+
+    std::array<MultiValidatorNode, 3> nodes;
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        nodes[index] = MakeMultiValidatorNode( index, private_keys[index] );
+    }
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
+        nodes[0].account, nodes[1].account, nodes[2].account };
+    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+
+    std::string shared_registry_cid;
+    for ( auto &node : nodes )
+    {
+        node.registry = MakeMultiValidatorRegistry( node, update, accounts.front()->GetAddress() );
+        ASSERT_TRUE( node.registry );
+        if ( shared_registry_cid.empty() )
+        {
+            shared_registry_cid = node.registry->GetRegistryCid();
+        }
+        node.manager = MakeMultiValidatorManager( node, node.registry );
+        ASSERT_TRUE( node.manager );
+    }
+
+    RegisterMintV2SlotKeyHandler();
+
+    // One mint per validator: distinct transactions, one shared slot id — exactly the
+    // shape the catch-up watchers produce when each node discovers the same burn.
+    std::array<sgns::ConsensusManager::Proposal, 3> proposals;
+    for ( size_t index = 0; index < proposals.size(); ++index )
+    {
+        const auto mint = MakeMultiValidatorMint( 201 + index );
+        ASSERT_TRUE( mint );
+        const auto subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                        mint->GetNonce(),
+                                                                        mint->GetHash(),
+                                                                        mint->SerializeToEmbeddedTransaction(),
+                                                                        std::nullopt,
+                                                                        std::nullopt );
+        ASSERT_TRUE( subject.has_value() );
+        auto proposal = nodes[index].manager->CreateProposal( subject.value(),
+                                                              accounts[index]->GetAddress(),
+                                                              shared_registry_cid,
+                                                              1 );
+        ASSERT_TRUE( proposal.has_value() );
+        proposals[index] = proposal.value();
+    }
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposals[0] );
+    for ( const auto &proposal : proposals )
+    {
+        ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ), slot );
+    }
+
+    // Attempt 1: each node arbitrates over its own contender alone and freezes it.
+    std::array<sgns::ConsensusManager::Vote, 3> first_votes;
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( nodes[index].manager,
+                                                                                 proposals[index] );
+        sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( nodes[index].manager, slot );
+        sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( nodes[index].manager );
+        const auto announcements =
+            sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( nodes[index].manager );
+        ASSERT_EQ( announcements.size(), 1U );
+        ASSERT_TRUE( first_votes[index].ParseFromString( announcements.front() ) );
+        EXPECT_EQ( first_votes[index].proposal_id(), proposals[index].proposal_id() );
+        const auto frozen = sgns::ConsensusPendingLifecycleTestAccess::SlotSnapshot( nodes[index].manager, slot );
+        ASSERT_TRUE( frozen.has_value() );
+        EXPECT_EQ( frozen->best_proposal_id, proposals[index].proposal_id() );
+    }
+    // The split is real: no two nodes froze the same winner.
+    EXPECT_NE( first_votes[0].proposal_id(), first_votes[1].proposal_id() );
+    EXPECT_NE( first_votes[1].proposal_id(), first_votes[2].proposal_id() );
+
+    // Gossip catches up: every node now learns the peers' contenders and their votes.
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( nodes[index].manager );
+        for ( size_t peer = 0; peer < nodes.size(); ++peer )
+        {
+            if ( peer == index )
+            {
+                continue;
+            }
+            sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( nodes[index].manager,
+                                                                                     proposals[peer] );
+        }
+        // Late arrivals must be retained for the next attempt without disturbing this one.
+        const auto retained = sgns::ConsensusPendingLifecycleTestAccess::SlotSnapshot( nodes[index].manager, slot );
+        ASSERT_TRUE( retained.has_value() );
+        EXPECT_EQ( retained->eligible_candidates.size(), proposals.size() );
+        EXPECT_EQ( retained->best_proposal_id, proposals[index].proposal_id() );
+
+        for ( size_t peer = 0; peer < nodes.size(); ++peer )
+        {
+            if ( peer == index )
+            {
+                continue;
+            }
+            sgns::ConsensusPendingLifecycleTestAccess::HandleVote( nodes[index].manager, first_votes[peer] );
+        }
+        // Votes only record evidence; the timer pass owns the release. Both peers
+        // committed elsewhere, so the local winner's ceiling is 1 of 3 — below the
+        // 2-of-3 quorum — and the slot re-opens instead of staying frozen forever.
+        EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( nodes[index].manager, slot ) );
+        sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( nodes[index].manager );
+        EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( nodes[index].manager, slot ) );
+        const auto reopened = sgns::ConsensusPendingLifecycleTestAccess::SlotSnapshot( nodes[index].manager, slot );
+        ASSERT_TRUE( reopened.has_value() );
+        EXPECT_TRUE( reopened->best_proposal_id.empty() ) << "re-opened slot must hold no frozen winner";
+    }
+
+    // Attempt 2: identical candidate sets and a total-order comparator, so every node
+    // must vote for the same winner.
+    std::array<sgns::ConsensusManager::Vote, 3> second_votes;
+    for ( size_t index = 0; index < nodes.size(); ++index )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( nodes[index].manager, slot );
+        sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( nodes[index].manager );
+        const auto announcements =
+            sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( nodes[index].manager );
+        ASSERT_EQ( announcements.size(), 1U );
+        ASSERT_TRUE( second_votes[index].ParseFromString( announcements.back() ) );
+    }
+    EXPECT_EQ( second_votes[0].proposal_id(), second_votes[1].proposal_id() );
+    EXPECT_EQ( second_votes[1].proposal_id(), second_votes[2].proposal_id() );
+
+    const auto agreed_id = second_votes[0].proposal_id();
+    const auto agreed    = std::find_if( proposals.begin(),
+                                         proposals.end(),
+                                         [&agreed_id]( const sgns::ConsensusManager::Proposal &proposal )
+                                         { return proposal.proposal_id() == agreed_id; } );
+    ASSERT_NE( agreed, proposals.end() );
+
+    const std::vector<sgns::ConsensusManager::Vote> agreed_votes( second_votes.begin(), second_votes.end() );
+    const auto tally = nodes.front().manager->TallyVotes( *agreed, agreed_votes );
+    ASSERT_TRUE( tally.has_value() );
+    EXPECT_TRUE( tally.value().has_quorum ) << "converged attempt must reach quorum";
+    EXPECT_EQ( tally.value().approved_weight, 3U );
+
+    // The abandoned contenders keep only their single attempt-1 vote, so no second
+    // quorum can form for the same slot.
+    std::vector<sgns::ConsensusManager::Vote> all_votes( first_votes.begin(), first_votes.end() );
+    all_votes.insert( all_votes.end(), second_votes.begin(), second_votes.end() );
+    for ( const auto &proposal : proposals )
+    {
+        if ( proposal.proposal_id() == agreed_id )
+        {
+            continue;
+        }
+        const auto loser_tally = nodes.front().manager->TallyVotes( proposal, all_votes );
+        ASSERT_TRUE( loser_tally.has_value() );
+        EXPECT_FALSE( loser_tally.value().has_quorum )
+            << "an abandoned contender must never reach a competing quorum";
+    }
+
+    for ( auto &node : nodes )
+    {
+        sgns::ConsensusPendingLifecycleTestAccess::Close( node.manager );
+        node.manager.reset();
+        node.registry.reset();
         node.db.reset();
         node.account.reset();
         node.pubsub->Stop();
