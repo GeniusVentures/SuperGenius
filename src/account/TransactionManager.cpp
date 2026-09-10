@@ -658,7 +658,9 @@ namespace sgns
                                                                     std::string destination,
                                                                     TokenID     token_id )
     {
-        if ( GetState() != State::READY )
+        // stopped_ is checked separately from the state: Stop() detaches from GlobalDB,
+        // Blockchain and the account without moving state_m out of READY.
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -686,7 +688,8 @@ namespace sgns
                                                                 TokenID     tokenid,
                                                                 std::string destination )
     {
-        if ( GetState() != State::READY )
+        // See TransferFunds: Stop() detaches without leaving READY.
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -834,7 +837,8 @@ namespace sgns
                                                                      TokenID     tokenid,
                                                                      std::string destination )
     {
-        if ( GetState() != State::READY )
+        // See TransferFunds: Stop() detaches without leaving READY.
+        if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
