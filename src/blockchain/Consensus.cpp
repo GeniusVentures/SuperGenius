@@ -2452,52 +2452,14 @@ namespace sgns
             ++fault_test_counters_.certificate_write_successes;
         }
 
-        // Secondary subject-hash index (develop consumer contract): identical
-        // bytes at /cert/<subject_hash> so consumers can look a certificate up
-        // by its subject hash (e.g. the transaction hash) without knowing the
-        // canonical slot. The slot record above remains the authority for every
-        // consensus-internal read (GetCertificateBySlot, registry batch member
-        // loading, accepted-slot scans). Best-effort: a failure here does not
-        // invalidate the authoritative slot record.
-        const auto secondary_subject_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( secondary_subject_hash.has_value() && !secondary_subject_hash.value().empty() &&
-             secondary_subject_hash.value() != key.substr( CERTIFICATE_BASE_PATH_KEY.size() ) )
-        {
-            const auto subject_key = std::string{ CERTIFICATE_BASE_PATH_KEY } + secondary_subject_hash.value();
-
-            bool subject_record_ok = true;
-            auto existing_subject  = db_->Get( { subject_key } );
-            if ( existing_subject.has_value() )
-            {
-                Certificate existing_certificate;
-                if ( existing_certificate.ParseFromArray( existing_subject.value().data(),
-                                                          existing_subject.value().size() ) &&
-                     ValidateCertificateKey( existing_certificate, subject_key ) &&
-                     ValidateCertificate( existing_certificate ) == Check::Approve &&
-                     SerializedCertificateHash( existing_subject.value().toString() ) >=
-                         SerializedCertificateHash( serialized ) )
-                {
-                    // Equal-or-newer valid record already present; keep it.
-                    subject_record_ok = false;
-                }
-            }
-            if ( subject_record_ok )
-            {
-                crdt::HierarchicalKey  subject_cert_key( subject_key );
-                crdt::GlobalDB::Buffer subject_cert_value;
-                subject_cert_value.put( serialized );
-                auto subject_put =
-                    db_->PutConvergentImmutable( subject_cert_key, subject_cert_value, { consensus_datastore_topic_ } );
-                if ( subject_put.has_error() )
-                {
-                    logger_->warn(
-                        "{}: subject-hash index write failed for hash {} error={}",
-                        __func__,
-                        GetPrintableSubjectHash( certificate.proposal().subject() ),
-                        subject_put.error().message() );
-                }
-            }
-        }
+        // The canonical slot record is the ONLY durable record v3.0 writes.
+        // A secondary /cert/<subject_hash> copy was considered and rejected:
+        // it is only readable by develop peers that already fail closed on
+        // v3.0 registry semantics, and it would give a losing transaction of
+        // a contended slot a durable, quorum-valid record nothing arbitrates
+        // against (the slot key converges by lowest hash; distinct subjects
+        // get distinct hash keys with no mutual ordering). Consumers needing
+        // legacy records resolve them read-only via GetCertificateBySubjectHash.
         if ( !EnterFinalityFaultBarrier( certificate_persisted_barrier_ ) )
         {
             return outcome::failure( std::errc::operation_canceled );

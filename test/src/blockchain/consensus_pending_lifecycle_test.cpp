@@ -2816,3 +2816,53 @@ TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVote
     sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
+
+TEST_F( ConsensusPendingLifecycleTest, SubmitCertificateWritesOnlyTheCanonicalSlotRecord )
+{
+    /**
+     * The canonical slot record is the only durable record v3.0 certificates
+     * get. A secondary /cert/<subject_hash> copy would hand a losing
+     * transaction of a contended slot a durable, quorum-valid record that
+     * nothing arbitrates against (distinct subjects hash to distinct keys
+     * with no mutual ordering), letting both transactions of one burn read
+     * back as final through the by-hash lookup. The subject-hash lookup
+     * remains reserved for read-only develop-era records.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    const auto proposal = MakeSigningProposal( manager, registry, account, 94, "0xslot-only-write" );
+    const auto vote = manager->CreateVote( proposal.proposal_id(),
+                                           { account->GetAddress() },
+                                           true,
+                                           [account]( std::vector<uint8_t> payload )
+                                           { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote.has_value() );
+    const auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+
+    ASSERT_FALSE( manager->SubmitCertificate( certificate.value() ).has_error() );
+
+    // The slot record exists and resolves the certificate...
+    const auto slot_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        certificate.value() );
+    ASSERT_FALSE( slot_key.empty() );
+    auto stored = manager->GetCertificateBySlot(
+        sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ) );
+    ASSERT_TRUE( stored.has_value() );
+
+    // ...while no subject-hash record was created for the v3.0 certificate.
+    const auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( proposal.subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+    ASSERT_NE( subject_hash.value(), slot_key.substr( slot_key.find( "/cert/" ) + strlen( "/cert/" ) ) );
+    const auto by_hash = manager->GetCertificateBySubjectHash( subject_hash.value() );
+    EXPECT_TRUE( by_hash.has_error() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}

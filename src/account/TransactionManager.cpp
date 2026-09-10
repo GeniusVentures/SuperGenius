@@ -2031,11 +2031,10 @@ namespace sgns
         {
             return slot_certificate;
         }
-        // Dual-index consumer contract: SubmitCertificate also persists the
-        // certificate at /cert/<subject_hash> (for nonce subjects the transaction
-        // hash) and develop-era records may only carry that index. Either durable
-        // record is acceptable; the exact-transaction binding is still enforced by
-        // CertificateMatchesTransaction at the call site.
+        // The canonical slot record is the only record v3.0 writes; this
+        // subject-hash lookup resolves develop-era records, which predate slot
+        // keys and may only carry that index. The exact-transaction binding is
+        // still enforced by CertificateMatchesTransaction at the call site.
         return blockchain_->GetCertificateBySubjectHash( transaction.GetHash() );
     }
 
