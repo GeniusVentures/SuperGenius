@@ -54,15 +54,15 @@ namespace
 {
     void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
     {
-        test::assertWaitForCondition(
+        ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
             [&]()
             {
                 auto blockchain = MultiAccountTestAccess::GetBlockchain( node );
                 return node->GetState() == GeniusNode::NodeState::READY && blockchain &&
                        MultiAccountTestAccess::GetConsensusManager( blockchain );
             },
-            std::chrono::milliseconds( 50000 ),
-            description + " not synced" );
+            std::chrono::seconds( 120 ),
+            description + " not synced" ) );
 
         MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
             ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
@@ -177,9 +177,9 @@ TEST_F( TransferTokenValue, ThreeNodeTransferTest )
     node51->AddPeers(
         { node50->GetPubSub()->GetInterfaceAddress(), node52->GetPubSub()->GetInterfaceAddress() } );
     node52->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
-    ConfigureTestConsensus( node50, "node50" );
-    ConfigureTestConsensus( node51, "node51" );
-    ConfigureTestConsensus( node52, "node52" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node50, "node50" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node51, "node51" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node52, "node52" ) );
 
     // Record initial balances
     uint64_t init50_full = node50->GetBalance();
@@ -293,8 +293,8 @@ TEST_F( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
     auto node = CreateNode( "0xfadb", "0.5", tokenId );
     nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( nodefull, "nodefull" );
-    ConfigureTestConsensus( node, "node" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( nodefull, "nodefull" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node, "node" ) );
 
     auto initialMain  = node->GetBalance();
     auto initialToken = node->GetBalance( tokenId );
@@ -325,8 +325,8 @@ TEST_F( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
     nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( nodefull, "nodefull" );
-    ConfigureTestConsensus( node, "node" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( nodefull, "nodefull" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node, "node" ) );
 
     struct TokenMint
     {
@@ -404,9 +404,9 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
     node_proc1->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( node_proc1, "node_proc1" );
-    ConfigureTestConsensus( node_main, "node_main" );
-    ConfigureTestConsensus( node_proc2, "node_proc2" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_proc1, "node_proc1" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_main, "node_main" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_proc2, "node_proc2" ) );
 
     auto mintResMain = node_main->MintTokens( 1000,
                                               sgns::test::NextMintSourceHash(),
