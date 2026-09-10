@@ -3011,11 +3011,7 @@ namespace sgns
                                                  {
                                                      if ( auto strong = weak_self.lock() )
                                                      {
-                                                         // Stalled certificates stay accepted-and-journaled
-                                                         // (their durable record is the authority); only
-                                                         // registry updates stall via the filter contract.
-                                                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
-                                                             strong->FilterCertificate( element ) );
+                                                         return strong->FilterCertificate( element );
                                                      }
                                                      return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                                                  } );
@@ -3025,7 +3021,7 @@ namespace sgns
         return certificate_filter_registered_ && certificate_callback_registered_;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(
+    crdt::CRDTDataFilter::ElementFilterResult ConsensusManager::FilterCertificate(
         const crdt::pb::Element &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
@@ -3033,36 +3029,41 @@ namespace sgns
         if ( !certificate.ParseFromString( element.value() ) )
         {
             logger_->error( "{}: parse failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         if ( certificate.proposal_id().empty() )
         {
             logger_->error( "{}: missing proposal_id, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         if ( !ValidateCertificateKey( certificate, element.key() ) )
         {
             logger_->error( "{}: slot key binding failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         const auto validation = ValidateCertificate( certificate );
         if ( validation == Check::Reject )
         {
             logger_->error( "{}: validation rejected, dropping: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
         if ( validation == Check::Stalled )
         {
             // The certificate is exactly key-bound and structurally validated; only
-            // its registry-dependent quorum is deferred.  Park it (CertificateReceived
-            // journals it) so the round-timer recovery re-validates from durable
-            // readback until the referenced registry snapshot syncs.
-            logger_->info( "{}: validation stalled, parking certificate for registry-sync retry: {}",
-                                            __func__,
-                                            element.key() );
+            // its registry-dependent quorum is deferred behind a registry snapshot
+            // this node cannot load yet. Storing it anyway would durably occupy the
+            // canonical slot with a record that may never validate (an attacker
+            // needs only a self-signed proposal referencing a nonexistent registry
+            // CID), permanently blocking overwrites and local voting. Stall the
+            // whole delta instead: no head is recorded and the failed-root retry
+            // machinery re-evaluates once the referenced registry snapshot syncs.
+            logger_->info( "{}: validation stalled, retrying certificate after registry sync: {}",
+                           __func__,
+                           element.key() );
+            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
         }
 
         auto existing = db_->Get( { element.key() } );
@@ -3071,10 +3072,10 @@ namespace sgns
             if ( existing.error() != storage::DatabaseError::NOT_FOUND )
             {
                 logger_->error( "{}: existing certificate read failed, rejecting: {}", __func__, element.key() );
-                return std::vector<crdt::pb::Element>{};
+                return crdt::CRDTDataFilter::ElementFilterResult::Reject();
             }
             logger_->debug( "{}: certificate accepted key={}", __func__, element.key() );
-            return std::nullopt;
+            return crdt::CRDTDataFilter::ElementFilterResult::Accept();
         }
 
         Certificate existing_certificate;
@@ -3083,7 +3084,7 @@ namespace sgns
              !ValidateCertificateKey( existing_certificate, element.key() ) )
         {
             logger_->error( "{}: invalid existing certificate, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
         const auto existing_validation = ValidateCertificate( existing_certificate );
         if ( existing_validation == Check::Reject )
@@ -3091,7 +3092,7 @@ namespace sgns
             logger_->error( "{}: existing certificate rejected validation, rejecting: {}",
                                              __func__,
                                              element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
         // A stored Approve-or-Stalled value falls through to the unchanged
         // lower-hash ordering below.
@@ -3111,11 +3112,11 @@ namespace sgns
         if ( SerializedCertificateHash( existing_serialized ) < SerializedCertificateHash( element.value() ) )
         {
             logger_->error( "{}: higher serialized certificate hash rejected key={}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         logger_->debug( "{}: certificate accepted key={}", __func__, element.key() );
-        return std::nullopt;
+        return crdt::CRDTDataFilter::ElementFilterResult::Accept();
     }
 
     void ConsensusManager::CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,

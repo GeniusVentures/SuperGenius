@@ -1026,9 +1026,12 @@ namespace sgns
         /**
          * @brief Filters CRDT entries to certificate payloads.
          * @param[in] element CRDT element candidate.
-         * @return Filtered element vector, or `std::nullopt` when rejected.
+         * @return Accept to store, Reject to strip permanently, or Stall when the
+         *         certificate's registry snapshot is not loadable locally yet —
+         *         the delta retries via the failed-root machinery instead of
+         *         parking an unvalidatable record in the canonical slot.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterCertificate( const crdt::pb::Element &element );
         /**
          * @brief Callback for new certificate data received from CRDT.
          * @param[in] new_data New key-value pair.
