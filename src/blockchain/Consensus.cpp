@@ -26,6 +26,34 @@ namespace sgns
 {
     namespace
     {
+        /// Slot candidacy is identified by proposal id alone.
+        /// @return True when @p candidate was appended, false when already present.
+        bool AddCandidateIfAbsent( std::vector<ConsensusManager::Proposal> &candidates,
+                                   const ConsensusManager::Proposal        &candidate )
+        {
+            if ( std::any_of( candidates.begin(),
+                              candidates.end(),
+                              [&candidate]( const ConsensusManager::Proposal &known )
+                              { return known.proposal_id() == candidate.proposal_id(); } ) )
+            {
+                return false;
+            }
+            candidates.push_back( candidate );
+            return true;
+        }
+
+        /// Weight a voter contributes to a quorum drawn from @p registry, 0 when the voter
+        /// is absent or not ACTIVE.
+        uint64_t ActiveVoterWeight( const ValidatorRegistry::Registry &registry, const std::string &voter_id )
+        {
+            const auto *validator = ValidatorRegistry::FindValidator( registry, voter_id );
+            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
+            {
+                return 0;
+            }
+            return validator->weight();
+        }
+
         bool IsPublicChainMintChainId( std::string_view chain_id )
         {
             if ( chain_id.empty() )
@@ -798,6 +826,16 @@ namespace sgns
             }
 
             auto &slot_state = slot_states_[slot_key];
+            if ( slot_state.candidates_frozen && !slot_state.slot_decided )
+            {
+                // Retained for a future attempt, not this one: peers close their local
+                // candidate windows at different instants, so a contender that is late
+                // here was in time elsewhere. Dropping it is what let nodes freeze
+                // different winners for one slot and deadlock it. A decided slot is
+                // excluded — nothing will re-arbitrate it, so retaining would only copy
+                // proposals until slot cleanup.
+                AddCandidateIfAbsent( slot_state.eligible_candidates, proposal );
+            }
             if ( slot_state.active_vote_locked )
             {
                 return;
@@ -825,6 +863,7 @@ namespace sgns
                 // Existing accepted legacy data is only a local no-revote fence in Phase 9.
                 slot_state.active_vote_locked = true;
                 slot_state.candidates_frozen  = true;
+                slot_state.slot_decided       = true;
                 return;
             }
             if ( slot_state.candidate_deadline == std::chrono::steady_clock::time_point{} )
@@ -835,13 +874,9 @@ namespace sgns
             {
                 for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
                 {
-                    if ( pending_candidate.admitted_at < slot_state.candidate_deadline &&
-                         std::none_of( slot_state.eligible_candidates.begin(),
-                                       slot_state.eligible_candidates.end(),
-                                       [&pending_candidate]( const Proposal &candidate )
-                                       { return candidate.proposal_id() == pending_candidate.proposal.proposal_id(); } ) )
+                    if ( pending_candidate.admitted_at < slot_state.candidate_deadline )
                     {
-                        slot_state.eligible_candidates.push_back( pending_candidate.proposal );
+                        AddCandidateIfAbsent( slot_state.eligible_candidates, pending_candidate.proposal );
                     }
                 }
             }
@@ -850,14 +885,9 @@ namespace sgns
             {
                 process_due_work = true;
             }
-            else if ( !slot_state.candidates_frozen &&
-                      std::none_of( slot_state.eligible_candidates.begin(),
-                                    slot_state.eligible_candidates.end(),
-                                    [&proposal]( const Proposal &candidate )
-                                    { return candidate.proposal_id() == proposal.proposal_id(); } ) )
+            else if ( !slot_state.candidates_frozen )
             {
-                slot_state.eligible_candidates.push_back( proposal );
-                candidate_admitted = true;
+                candidate_admitted = AddCandidateIfAbsent( slot_state.eligible_candidates, proposal );
             }
             if ( candidate_admitted && slot_state.best_proposal_id.empty() )
             {
@@ -1313,6 +1343,24 @@ namespace sgns
             std::lock_guard lock( fault_test_mutex_ );
             ++fault_test_counters_.active_vote_release_attempts;
         }
+        auto removed = EraseDurableActiveVoteRecord( slot_key );
+        if ( removed.has_error() || !removed.value() )
+        {
+            return removed;
+        }
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            active_votes_.erase( slot_key );
+        }
+        {
+            std::lock_guard fault_lock( fault_test_mutex_ );
+            ++fault_test_counters_.active_vote_release_successes;
+        }
+        return true;
+    }
+
+    outcome::result<bool> ConsensusManager::EraseDurableActiveVoteRecord( const std::string &slot_key )
+    {
         if ( slot_key.empty() )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -1347,13 +1395,117 @@ namespace sgns
         {
             return outcome::failure( removed.error() );
         }
-        std::lock_guard lock( proposals_mutex_ );
-        active_votes_.erase( slot_key );
-        {
-            std::lock_guard fault_lock( fault_test_mutex_ );
-            ++fault_test_counters_.active_vote_release_successes;
-        }
         return true;
+    }
+
+    bool ConsensusManager::SlotWinnerUnwinnableLocked( const SlotState   &slot_state,
+                                                       const std::string &registry_cid ) const
+    {
+        const auto &winner_id = slot_state.best_proposal_id;
+        if ( winner_id.empty() )
+        {
+            return false;
+        }
+        // Cheap first: the healthy case is every voter behind the local winner, and it
+        // must not pay for a registry load on every timer pass.
+        if ( std::none_of( slot_state.observed_votes.begin(),
+                           slot_state.observed_votes.end(),
+                           [&winner_id]( const auto &observed )
+                           { return observed.second.proposal_id() != winner_id; } ) )
+        {
+            return false;
+        }
+        auto registry_result = registry_->LoadRegistryByCid( registry_cid );
+        if ( registry_result.has_error() )
+        {
+            return false;
+        }
+        const auto    &registry     = registry_result.value();
+        const uint64_t total_weight = ValidatorRegistry::TotalWeight( registry );
+        uint64_t       lost_weight  = 0;
+        for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
+        {
+            if ( observed_vote.proposal_id() != winner_id )
+            {
+                lost_weight += ActiveVoterWeight( registry, voter_id );
+            }
+        }
+        if ( lost_weight > total_weight )
+        {
+            return false;
+        }
+        return !registry_->IsQuorum( total_weight - lost_weight, total_weight );
+    }
+
+    void ConsensusManager::ReopenSlotArbitrationLocked( SlotState &slot_state, const std::string &slot_key )
+    {
+        const auto stale_winner_prefix = slot_state.best_proposal_id.substr( 0, 8 );
+        slot_state.active_vote_locked  = false;
+        slot_state.candidates_frozen   = false;
+        slot_state.best_proposal_id.clear();
+        slot_state.best_tx_hash.clear();
+        // eligible_candidates is deliberately kept: IsBetterProposal is a total order on
+        // proposal content, so arbitrating the full union agrees across nodes.
+        slot_state.candidate_deadline = std::chrono::steady_clock::now() + candidate_window_;
+        logger_->info( "{}: re-opened slot arbitration slot={} candidates={} unwinnable_winner={}",
+                       __func__,
+                       slot_key,
+                       slot_state.eligible_candidates.size(),
+                       stale_winner_prefix );
+    }
+
+    void ConsensusManager::CollectUnwinnableSlotsLocked( std::vector<std::string> &slot_keys )
+    {
+        // Split-freeze recovery. Peers close their local candidate windows at different
+        // instants, so they can freeze different winners for one slot and then discard
+        // each other's votes forever, stranding the slot and every later transaction in
+        // that account's nonce chain. A winner the votes prove unwinnable cannot be
+        // certified, so releasing it is safe — unlike release on deadline expiry, which
+        // must never authorize a replacement
+        // (CorruptOrExpiredActiveVoteCannotAuthorizeAReplacement).
+        for ( auto &[slot_key, active_vote] : active_votes_ )
+        {
+            auto slot_state_it = slot_states_.find( slot_key );
+            if ( slot_state_it == slot_states_.end() || slot_state_it->second.slot_decided )
+            {
+                continue;
+            }
+            auto &slot_state = slot_state_it->second;
+            // Evidence only changes when a vote disagrees with the local winner, so a
+            // quiet slot never pays for the registry load SlotWinnerUnwinnableLocked needs.
+            if ( slot_state.dissent_seen == slot_state.dissent_evaluated )
+            {
+                continue;
+            }
+            slot_state.dissent_evaluated = slot_state.dissent_seen;
+            if ( SlotWinnerUnwinnableLocked( slot_state, active_vote.proposal.registry_cid() ) )
+            {
+                slot_keys.push_back( slot_key );
+            }
+        }
+    }
+
+    void ConsensusManager::ReleaseUnwinnableSlots( const std::vector<std::string> &slot_keys )
+    {
+        for ( const auto &slot_key : slot_keys )
+        {
+            auto released = EraseDurableActiveVoteRecord( slot_key );
+            if ( released.has_error() )
+            {
+                logger_->error( "{}: cannot release unwinnable slot={}: {}",
+                                __func__,
+                                slot_key,
+                                released.error().message() );
+                continue;
+            }
+            std::lock_guard lock( proposals_mutex_ );
+            active_votes_.erase( slot_key );
+            auto slot_state_it = slot_states_.find( slot_key );
+            if ( slot_state_it != slot_states_.end() )
+            {
+                ReopenSlotArbitrationLocked( slot_state_it->second, slot_key );
+            }
+        }
     }
 
     outcome::result<ActiveVoteRecord> ConsensusManager::BuildActiveVoteRecord( const std::string &slot_key,
@@ -1553,6 +1705,8 @@ namespace sgns
         }
 
         std::vector<ActiveVoteState> publish;
+        std::vector<Vote>            replay_votes;
+        std::vector<std::string>     unwinnable_slots;
         const auto now_steady = std::chrono::steady_clock::now();
         const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
                                                          std::chrono::system_clock::now().time_since_epoch() )
@@ -1589,13 +1743,10 @@ namespace sgns
                     {
                         for ( const auto &pending_candidate : slot_state.scan_pending_candidates )
                         {
-                            if ( pending_candidate.admitted_at < slot_state.candidate_deadline &&
-                                 std::none_of( slot_state.eligible_candidates.begin(),
-                                               slot_state.eligible_candidates.end(),
-                                               [&pending_candidate]( const Proposal &candidate )
-                                               { return candidate.proposal_id() == pending_candidate.proposal.proposal_id(); } ) )
+                            if ( pending_candidate.admitted_at < slot_state.candidate_deadline )
                             {
-                                slot_state.eligible_candidates.push_back( pending_candidate.proposal );
+                                AddCandidateIfAbsent( slot_state.eligible_candidates,
+                                                      pending_candidate.proposal );
                             }
                         }
                     }
@@ -1619,6 +1770,7 @@ namespace sgns
                 {
                     slot_state.active_vote_locked = true;
                     slot_state.candidates_frozen  = true;
+                    slot_state.slot_decided       = true;
                     continue;
                 }
                 slot_state.candidates_frozen = true;
@@ -1657,6 +1809,16 @@ namespace sgns
                 active_vote.value().next_retry_at = now_steady + active_vote_retry_interval_;
                 publish.push_back( active_vote.value() );
                 active_votes_[slot_key] = std::move( active_vote.value() );
+                // Peers that voted for this winner while it was not the local winner (a
+                // previous attempt, or a peer that froze first) were recorded but never
+                // tallied; re-tally them now so the weight already gathered counts.
+                for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
+                {
+                    if ( observed_vote.proposal_id() == slot_state.best_proposal_id )
+                    {
+                        replay_votes.push_back( observed_vote );
+                    }
+                }
             }
 
             for ( auto &[slot_key, active_vote] : active_votes_ )
@@ -1681,12 +1843,19 @@ namespace sgns
                 }
                 if ( now_ms >= active_vote.acceptance_deadline_ms || now_steady < active_vote.next_retry_at )
                 {
+                    // An expired deadline deliberately does NOT release the vote; recovery
+                    // from a split freeze runs in CollectUnwinnableSlotsLocked instead.
                     continue;
                 }
                 active_vote.next_retry_at = now_steady + active_vote_retry_interval_;
                 publish.push_back( active_vote );
             }
+
+            CollectUnwinnableSlotsLocked( unwinnable_slots );
         }
+
+        ReleaseUnwinnableSlots( unwinnable_slots );
+
         for ( const auto &active_vote : publish )
         {
             if ( stop_timer_.load() )
@@ -1717,6 +1886,15 @@ namespace sgns
                 std::lock_guard lock( fault_test_mutex_ );
                 ++fault_test_counters_.vote_publications;
             }
+        }
+
+        for ( const auto &vote : replay_votes )
+        {
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
+            HandleVote( vote );
         }
     }
 
@@ -3296,13 +3474,29 @@ namespace sgns
                 return;
             }
             auto slot_it = slot_states_.find( proposal_state.slot_key );
-            if ( slot_it != slot_states_.end() &&
-                 ( !slot_it->second.candidates_frozen || slot_it->second.best_proposal_id != vote.proposal_id() ) )
+            if ( slot_it != slot_states_.end() )
             {
-                logger_->error( "{}: ignored: proposal has not won frozen slot arbitration proposal_id={}",
-                                                 __func__,
-                                                 vote.proposal_id().substr( 0, 8 ) );
-                return;
+                auto &slot_state = slot_it->second;
+                // Retained, not dropped: a later attempt may crown this proposal, and the
+                // peer stops re-sending once its own acceptance deadline passes, so a drop
+                // is permanent. This is also the evidence ReleaseUnwinnableSlotsLocked
+                // reasons over — under the one-vote-per-slot rule, a voter committed
+                // elsewhere is weight the local winner can never gain.
+                slot_state.observed_votes[vote.voter_id()] = vote;
+                if ( vote.proposal_id() != slot_state.best_proposal_id )
+                {
+                    ++slot_state.dissent_seen;
+                }
+
+                if ( !slot_state.candidates_frozen || slot_state.best_proposal_id != vote.proposal_id() )
+                {
+                    logger_->debug( "{}: retained vote for proposal that has not won local slot arbitration "
+                                    "proposal_id={} voter_id={}",
+                                    __func__,
+                                    vote.proposal_id().substr( 0, 8 ),
+                                    vote.voter_id().substr( 0, 8 ) );
+                    return;
+                }
             }
 
             if ( proposal_state.seen_voters.find( vote.voter_id() ) != proposal_state.seen_voters.end() )
