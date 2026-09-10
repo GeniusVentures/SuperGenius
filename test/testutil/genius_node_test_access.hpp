@@ -4,7 +4,11 @@
 #include <chrono>
 #include <memory>
 
+#include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/TrustStartupController.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/GenesisManifest.hpp"
 
 namespace sgns
 {
@@ -42,6 +46,68 @@ namespace sgns
         static unsigned int BlockchainRetryCount( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->blockchain_retry_count_.load() : 0;
+        }
+
+        static outcome::result<void> ApproveConfiguredTrustGenesis( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( !node || !node->secure_crdt_ || !node->account_ )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+
+            trustedpeer::GenesisManifest manifest;
+            manifest.network_id              = node->subnet_id_;
+            manifest.bootstrapper_public_key = node->bootstrapper_node_address_;
+            manifest.peers                   = node->trusted_peers_genesis_;
+            manifest.membership_threshold    = node->trusted_peer_quorum_threshold_;
+            manifest.burn_threshold          = node->burn_config_quorum_threshold_;
+            const auto canonical = manifest.Canonicalized();
+            if ( !canonical )
+            {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: Canonicalized failed\n" );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto fingerprint = canonical->Fingerprint();
+            const auto payload     = canonical->CanonicalBytes();
+            if ( !fingerprint || !payload )
+            {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: Fingerprint/CanonicalBytes failed\n" );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+
+            securecrdt::CandidateCore core = trustedpeer::GenesisCandidateCore(
+                *canonical, *payload, *fingerprint );
+            const auto bytes = core.CanonicalBytes();
+            if ( !bytes )
+            {
+                fprintf( stderr, "ApproveConfiguredTrustGenesis: core bytes failed\n" );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            auto submitted = node->secure_crdt_->SubmitCandidateApproval(
+                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                  std::move( core ),
+                  node->account_->GetAddress(),
+                  node->account_->Sign( *bytes ) } );
+            if ( submitted.has_error() )
+            {
+                fprintf( stderr,
+                         "ApproveConfiguredTrustGenesis: submit failed: %s\n",
+                         submitted.error().message().c_str() );
+                return submitted.error();
+            }
+            return outcome::success();
+        }
+
+        /// Drives the node's trust startup controller through one refresh pass. A local
+        /// genesis approval submitted via ApproveConfiguredTrustGenesis does not fire the
+        /// (remote-delta) candidate callback, so tests nudge the controller explicitly.
+        /// No-op while the controller has not been created yet.
+        static void RefreshTrust( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( node && node->trust_startup_controller_ )
+            {
+                (void)node->trust_startup_controller_->Refresh();
+            }
         }
     };
 } // namespace sgns

@@ -29,9 +29,9 @@ using sgns::WeightedRpcEndpoint;
 class PublicChainInputValidatorTestAccess
 {
 public:
-    static RpcVerificationEvidence Gather( const PublicChainInputValidator          &validator,
-                                           const std::shared_ptr<sgns::GeniusTransaction> &tx,
-                                           const std::string                        &source_reference )
+    static RpcVerificationEvidence Gather( const PublicChainInputValidator &validator,
+                                           const sgns::GeniusTransaction   &tx,
+                                           const std::string               &source_reference )
     {
         return validator.GatherVerificationEvidence( tx, source_reference );
     }
@@ -195,7 +195,7 @@ namespace
                                           { kPublicUrlB, GoodReceipt() },
                                           { kPublicUrlC, GoodReceipt() } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_TRUE( evidence.valid ) << "Three public endpoints reach the 75 weight quorum";
         EXPECT_EQ( evidence.successful_weight, 75 );
@@ -211,7 +211,7 @@ namespace
                                           { kPublicUrlB, std::nullopt },
                                           { kPublicUrlC, std::nullopt } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_FALSE( evidence.valid ) << "50 weight alone is below the 75 quorum";
         EXPECT_EQ( evidence.SlotHash( 0 ), HashUrl( kDirectUrl ) );
@@ -227,7 +227,7 @@ namespace
                                           { kPublicUrlB, GoodReceipt() },
                                           { kPublicUrlC, GoodReceipt() } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_TRUE( evidence.valid );
         EXPECT_EQ( evidence.SlotHash( 0 ), HashUrl( kDirectUrl ) );
@@ -244,7 +244,7 @@ namespace
                                                          { kPublicUrlB, GoodReceipt() },
                                                          { kPublicUrlC, GoodReceipt() } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_TRUE( evidence.SlotHash( 0 ).empty() ) << "No matching bridge event → no slot";
         EXPECT_EQ( evidence.successful_weight, 75 );
@@ -258,7 +258,7 @@ namespace
                                                             { kPublicUrlB, GoodReceipt() },
                                                             { kPublicUrlC, GoodReceipt() } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_TRUE( evidence.SlotHash( 0 ).empty() )
             << "A matching topic0 from a different bridge contract must not confirm";
@@ -271,7 +271,7 @@ namespace
                                           { kPublicUrlB, GoodReceipt() },
                                           { kPublicUrlC, GoodReceipt() } } );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_FALSE( evidence.valid );
         EXPECT_EQ( evidence.successful_weight, 0 );
@@ -284,7 +284,7 @@ namespace
     {
         auto validator = MakeValidator( {} );
 
-        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, MakeMint(), kSourceRef );
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *MakeMint(), kSourceRef );
 
         EXPECT_FALSE( evidence.valid );
         EXPECT_TRUE( evidence.SlotHash( 0 ).empty() );

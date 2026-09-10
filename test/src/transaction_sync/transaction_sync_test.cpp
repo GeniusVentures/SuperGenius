@@ -18,6 +18,7 @@
 #include <boost/asio.hpp>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include "account/TransferTransaction.hpp"
@@ -81,22 +82,25 @@ namespace sgns
             // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
             std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath,
-                                               /*node_type=*/"Full",
-                                               /*is_processor=*/false,
-                                               /*rpc_catchup=*/false );
+            sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG3.BaseWritePath,
+                                                   /*node_type=*/"Full",
+                                                   /*is_processor=*/false,
+                                                   /*rpc_catchup=*/false,
+                                                   "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" );
             std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
-                                               /*node_type=*/"Light",
-                                               /*is_processor=*/false,
-                                               /*rpc_catchup=*/false );
+            sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                                   /*node_type=*/"Light",
+                                                   /*is_processor=*/false,
+                                                   /*rpc_catchup=*/false,
+                                                   "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" );
             std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath,
-                                               /*node_type=*/"Light",
-                                               /*is_processor=*/false,
-                                               /*rpc_catchup=*/false );
+            sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG2.BaseWritePath,
+                                                   /*node_type=*/"Light",
+                                                   /*is_processor=*/false,
+                                                   /*rpc_catchup=*/false,
+                                                   "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" );
 
             full_node = sgns::GeniusNode::New(
                 DEV_CONFIG3,
@@ -113,15 +117,9 @@ namespace sgns
                 { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
             node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-            test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
-                                          "full_node not ready" );
-            test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
-                                          "node_proc1 not ready" );
-            test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
-                                          "node_proc2 not ready" );
+            sgns::test::MakeNodeReadyWithLocalTrust( full_node );
+            sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 );
+            sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 );
         }
 
         static void TearDownTestSuite()
@@ -552,9 +550,7 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
     ASSERT_TRUE( node_proc2 );
     node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "reconnected node did not finish recovery" );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 );
 
     EXPECT_EQ( node_proc2->WaitForTransactionIncoming( transaction_id,
                                                        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),

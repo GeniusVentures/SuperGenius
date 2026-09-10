@@ -63,19 +63,22 @@ namespace sgns
         return valid;
     }
 
-    bool PublicChainInputValidator::ValidateWitness( const ConsensusSubject                     &subject,
-                                                     const std::shared_ptr<GeniusTransaction> &tx,
-                                                     const UTXOTxParameters                     &params,
-                                                     const std::shared_ptr<Blockchain>          &blockchain ) const
+    bool PublicChainInputValidator::ValidateWitness( const ConsensusSubject  &subject,
+                                                     const GeniusTransaction &tx,
+                                                     const UTXOTxParameters  &params,
+                                                     const Blockchain        &blockchain ) const
     {
         auto logger = InputValidatorLogger();
         (void)blockchain;
         logger->trace( "ValidateWitness(PublicChain): tx={} inputs={} outputs={}",
-                       tx ? PreviewValue( tx->GetHash() ) : "<null>", params.first.size(), params.second.size() );
-        if ( !tx || params.first.empty() || params.second.empty() )
+                       PreviewValue( tx.GetHash() ),
+                       params.first.size(),
+                       params.second.size() );
+        if ( params.first.empty() || params.second.empty() )
         {
-            logger->error( "ValidateWitness(PublicChain) invalid inputs: tx_present={} inputs={} outputs={}",
-                           tx != nullptr, params.first.size(), params.second.size() );
+            logger->error( "ValidateWitness(PublicChain) invalid inputs: inputs={} outputs={}",
+                           params.first.size(),
+                           params.second.size() );
             return false;
         }
 
@@ -83,14 +86,14 @@ namespace sgns
         if ( nonce_subject.has_error() )
         {
             logger->error( "ValidateWitness(PublicChain) failed to decode nonce subject for tx={}",
-                           PreviewValue( tx->GetHash() ) );
+                           PreviewValue( tx.GetHash() ) );
             return false;
         }
 
         if ( !nonce_subject.value().has_utxo_commitment() )
         {
             logger->error( "ValidateWitness(PublicChain) missing UTXO commitment for tx={}",
-                           PreviewValue( tx->GetHash() ) );
+                           PreviewValue( tx.GetHash() ) );
             return false;
         }
 
@@ -99,7 +102,7 @@ namespace sgns
              commitment.produced_outputs_size() != static_cast<int>( params.second.size() ) )
         {
             logger->debug( "ValidateWitness(PublicChain) commitment size mismatch for tx={}",
-                           PreviewValue( tx->GetHash() ) );
+                           PreviewValue( tx.GetHash() ) );
             return false;
         }
 
@@ -113,7 +116,7 @@ namespace sgns
         }
         else
         {
-            source_reference = tx->GetUncleHash();
+            source_reference = tx.GetUncleHash();
         }
 
         const auto evidence = GatherVerificationEvidence( tx, source_reference );
@@ -131,15 +134,15 @@ namespace sgns
             {
                 logger->warn( "ValidateWitness(PublicChain) could not derive claim key for tx={}; "
                               "vote will abstain from all RPC slots",
-                              PreviewValue( tx->GetHash() ) );
+                              PreviewValue( tx.GetHash() ) );
             }
             logger->info( "ValidateWitness(PublicChain) succeeded for tx={} source={}",
-                          PreviewValue( tx->GetHash() ), PreviewValue( source_reference ) );
+                          PreviewValue( tx.GetHash() ), PreviewValue( source_reference ) );
         }
         else
         {
             logger->error( "ValidateWitness(PublicChain) failed for tx={} source={}",
-                           PreviewValue( tx->GetHash() ), PreviewValue( source_reference ) );
+                           PreviewValue( tx.GetHash() ), PreviewValue( source_reference ) );
         }
         return verified;
     }
@@ -295,22 +298,22 @@ namespace sgns
         return evidence;
     }
 
-    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                    const std::string                        &source_reference ) const
+    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const GeniusTransaction &tx,
+                                                                    const std::string       &source_reference ) const
     {
         return GatherVerificationEvidence( tx, source_reference ).valid;
     }
 
     RpcVerificationEvidence
-        PublicChainInputValidator::GatherVerificationEvidence( const std::shared_ptr<GeniusTransaction> &tx,
-                                                               const std::string &source_reference ) const
+        PublicChainInputValidator::GatherVerificationEvidence( const GeniusTransaction &tx,
+                                                               const std::string       &source_reference ) const
     {
         auto                    logger = InputValidatorLogger();
         RpcVerificationEvidence evidence;
 
         logger->trace( "GatherVerificationEvidence: tx={} chain_id={} source={}",
-                       tx ? PreviewValue( tx->GetHash() ) : "<null>",
-                       tx ? tx->GetChainId() : "<null>",
+                       PreviewValue( tx.GetHash() ),
+                       tx.GetChainId(),
                        PreviewValue( source_reference ) );
 
         if ( source_reference.empty() )
@@ -322,7 +325,7 @@ namespace sgns
             return evidence;
         }
 
-        const auto chain_id = tx->GetChainId();
+        const auto chain_id = tx.GetChainId();
         if ( chain_id.empty() || chain_id == "supergenius" )
         {
             logger->debug( "GatherVerificationEvidence bypassed for local chain_id={}", chain_id );

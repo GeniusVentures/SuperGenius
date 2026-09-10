@@ -1,6 +1,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <fstream>
 
@@ -10,6 +11,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
@@ -21,41 +23,63 @@ using namespace sgns;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
+namespace
+{
+    std::shared_ptr<GeniusAccount> WriteTrustedNodeConfig( const boost::filesystem::path &path,
+                                                            const char                    *private_key,
+                                                            const char                    *node_type,
+                                                            bool                           is_processor )
+    {
+        auto account = GeniusAccount::NewFromPrivateKey( TOKEN_ID, private_key, path );
+        if ( !account )
+        {
+            return nullptr;
+        }
+        const auto address = account->GetAddress();
+        WriteTrustedSgnsConfig( path, node_type, is_processor, false, { address }, address, 1, 1, 144 );
+        return account;
+    }
+
+    void ConfirmConfiguredTrust( const std::shared_ptr<GeniusNode> &node )
+    {
+        ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
+    }
+} // namespace
+
 class AccountManagement : public ::testing::Test
 {
 public:
-    static inline boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    // Each test gets its own directory. The previous test's node can finish
+    // its async destruction (RocksDB close on a detached io thread) after this
+    // constructor runs; reusing one path made the new node's DB open race the
+    // old instance's lock and a directory wiped under still-open files, which
+    // surfaced as spurious "lock hold by current process" then MANIFEST/.sst
+    // corruption. No state is shared between tests — the old fixture wiped the
+    // directory here anyway.
+    static inline std::atomic<uint64_t> next_test_index{ 0 };
+    boost::filesystem::path             path = boost::dll::program_location().parent_path() /
+                   ( "am_full_node_" + std::to_string( next_test_index.fetch_add( 1 ) ) );
 
     AccountManagement()
     {
-        try
-        {
-            test::removeAllWithRetry( path.string() );
-        }
-        catch ( ... ) //NOLINT(bugprone-empty-catch)
-        {
-        }
-
+        test::removeAllWithRetry( path.string() );
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
-                                           /*node_type=*/"Full",
-                                           /*is_processor=*/true,
-                                           /*rpc_catchup=*/false );
-
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
+        const auto bootstrapper = WriteTrustedNodeConfig(
+            path, "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa", "Full", true );
+        assert( bootstrapper );
+        Blockchain::SetAuthorizedFullNodeAddress( bootstrapper->GetAddress() );
 
         node_ = sgns::GeniusNode::New(
             { "0xcafe", "0.35", "1.0", TOKEN_ID, path.generic_string() + '/' },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
         node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
-        test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 4000000 ),
-                                      "node not synced" );
+        ConfirmConfiguredTrust( node_ );
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
@@ -129,18 +153,16 @@ TEST_F( AccountManagement, SetPayoutAddress )
     sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( path_receiver.generic_string() + '/',
-                                       /*node_type=*/"Light",
-                                       /*is_processor=*/false,
-                                       /*rpc_catchup=*/false );
+    auto receiver_authority = WriteTrustedNodeConfig(
+        path_receiver, "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f", "Light", false );
+    ASSERT_TRUE( receiver_authority );
     boost::filesystem::create_directories( path_requester );
     sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( path_requester.generic_string() + '/',
-                                       /*node_type=*/"Light",
-                                       /*is_processor=*/false,
-                                       /*rpc_catchup=*/false );
+    auto requester_authority = WriteTrustedNodeConfig(
+        path_requester, "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0", "Light", false );
+    ASSERT_TRUE( requester_authority );
 
     auto node_receiver = sgns::GeniusNode::New(
         { "0xcafe", "0.35", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
@@ -154,6 +176,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
     node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
     node_receiver->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
+
+    ConfirmConfiguredTrust( node_receiver );
+    ConfirmConfiguredTrust( node_requester );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

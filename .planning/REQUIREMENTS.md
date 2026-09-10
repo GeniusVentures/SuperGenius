@@ -5,29 +5,40 @@
 ### Active
 
 **MultiSig — decoupled multi-signature primitive**
-- [ ] **MSIG-01:** A component computes canonical signing-bytes for an arbitrary payload and verifies signatures against it, reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives
-- [ ] **MSIG-02:** The component supports N-of-M quorum evaluation given a signer set and a required threshold (no hardcoded N)
-- [ ] **MSIG-03:** The component is usable independently of CRDT (importable/testable without a running node)
+- [x] **MSIG-01:** A component computes canonical signing-bytes for an arbitrary payload and verifies signatures against it, reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives
+- [x] **MSIG-02:** The component supports N-of-M quorum evaluation given a signer set and a required threshold (no hardcoded N)
+- [x] **MSIG-03:** The component is usable independently of CRDT (importable/testable without a running node)
 
 **SecureCRDT — secure CRDT storage layer**
-- [ ] **SCRDT-01:** An `ISignedCRDTData` interface exists: implementers provide payload codec, `Verify()`, `Apply()`
-- [ ] **SCRDT-02:** A static registry maps a topic/key pattern to {signer-set source, quorum rule, `ISignedCRDTData` type}, declared in code at startup
-- [ ] **SCRDT-03:** Writing/updating a registered CRDT key requires quorum-verified signatures; unsigned or under-signed writes are rejected locally before being applied
-- [ ] **SCRDT-04:** Propose/sign/quorum flow works entirely via CRDT puts + filter callbacks (pending-value + signature entries) — no new networking/RPC
+- [x] **SCRDT-01:** An `ISignedCRDTData` interface exists: implementers provide payload codec, `Verify()`, `Apply()`
+- [x] **SCRDT-02:** A static registry maps a topic/key pattern to {signer-set source, quorum rule, `ISignedCRDTData` type}, declared in code at startup
+- [x] **SCRDT-03:** Writing/updating a registered CRDT key requires quorum-verified signatures; unsigned or under-signed writes are rejected locally before being applied
+- [x] **SCRDT-04:** Propose/sign/quorum flow works entirely via CRDT puts + filter callbacks (pending-value + signature entries) — no new networking/RPC
 
 **TrustedPeerRegistry — new component**
-- [ ] **TPR-01:** Genesis node seeds an initial trusted-peer set from a hardcoded genesis config entry
-- [ ] **TPR-02:** Adding/removing/replacing a member requires a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set
-- [ ] **TPR-03:** `TrustedPeerRegistry` is implemented via `ISignedCRDTData`/SecureCRDT (SCRDT-01..04), not bespoke logic
+- [x] **TPR-01:** Genesis node seeds an initial trusted-peer set from a reviewed canonical authenticated genesis manifest
+- [x] **TPR-02:** Adding/removing/replacing a member requires a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set
+- [x] **TPR-03:** `TrustedPeerRegistry` is implemented via `ISignedCRDTData`/SecureCRDT (SCRDT-01..04), not bespoke logic
 
 **BurnConfig — applying it to BURN_BASIS_POINTS**
-- [ ] **BURN-01:** `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value instead of a compile-time constant
-- [ ] **BURN-02:** `TransactionManager` caches the current value and refreshes it via a CRDT-change callback (no CRDT read per `PayEscrow` call)
-- [ ] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
+- [x] **BURN-01:** `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value instead of a compile-time constant
+- [x] **BURN-02:** `TransactionManager` caches the current value and refreshes it via a node-scoped confirmed provider (no CRDT read per `PayEscrow` call), including after account selection
+- [x] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
 
 **Migration**
-- [ ] **MIG-05:** `ValidatorRegistry` is migrated onto the `ISignedCRDTData` interface (reusing SecureCRDT, not just `BURN_BASIS_POINTS`)
-- [ ] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
+- [x] **MIG-05 (approved adjusted scope):** `ValidatorRegistry` genesis-path signature verification reuses `multisig::VerifyPayloadSignature`; the broader `ISignedCRDTData` storage/quorum migration is retired by the locked Phase 12 scope decision
+- [x] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
+
+**Phase 13 closure — trusted-peer genesis, policy authority, and production integration**
+- [x] **BOOT-01:** Document the manual trusted-channel peer collection, validation, canonicalization, fingerprint review, ephemeral-key handling, and non-production status of example identities
+- [x] **BOOT-02:** Define a canonical authenticated genesis manifest binding network ID, bootstrapper public key, ordered peers, policy version, both quorum thresholds, initial burn value, and fingerprint
+- [x] **BOOT-03:** Confirm TPR genesis through production SecureCrdt and persist the confirmed identity before enabling policy or economic behavior
+- [x] **BOOT-04:** On restart, use verified persisted state as authority and reject software-visible rollback, fork, corruption, or network mismatch without erasing last-known-good state
+- [x] **POLICY-01:** Store membership and BurnConfig thresholds in versioned quorum-signed policy state whose successor is authorized exclusively by the current confirmed policy
+- [x] **VALID-01:** Enforce bounded non-empty unique valid peers, complete threshold bounds, strict-majority membership floor, and two-thirds BurnConfig floor
+- [x] **TEST-01:** Prove first boot, restart, altered JSON/bootstrapper/thresholds, manifest tamper, rollback/fork, candidate race, explicit approval, live `PayEscrow`, and account-switch lifetime behavior
+
+Phase 13 closure evidence: Plan 13-08 recorded the exact HIGH-threat CTest command at exit status 0, 25/25 selected tests green (including `trust_first_boot_e2e_test`), and five additional consecutive green `policy_lifetime_multi_account_test` executions. BOOT-04 remains software-only: restoring the whole disk and all local anchors together is an accepted unsolved boundary unless an operator deploys TPM/OS-keystore monotonic state or authenticated off-host checkpoints.
 
 ### Out of Scope
 
@@ -39,23 +50,30 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MSIG-01 | Phase 8 | Pending |
-| MSIG-02 | Phase 8 | Pending |
-| MSIG-03 | Phase 8 | Pending |
-| SCRDT-01 | Phase 9 | Pending |
-| SCRDT-02 | Phase 9 | Pending |
-| SCRDT-03 | Phase 9 | Pending |
-| SCRDT-04 | Phase 9 | Pending |
-| TPR-01 | Phase 10 | Pending |
-| TPR-02 | Phase 10 | Pending |
-| TPR-03 | Phase 10 | Pending |
-| BURN-01 | Phase 11 | Pending |
-| BURN-02 | Phase 11 | Pending |
-| BURN-03 | Phase 11 | Pending |
-| MIG-05 | Phase 12 | Pending |
-| MIG-06 | Phase 12 | Pending |
+| MSIG-01 | Phase 8 | Complete — Phase 8 verification; metadata reconciled by Phase 13 |
+| MSIG-02 | Phase 8 | Complete — Phase 8 verification; metadata reconciled by Phase 13 |
+| MSIG-03 | Phase 8 | Complete — functional independence; transitive link-graph warning preserved |
+| SCRDT-01 | Phase 9 | Complete — Phase 9 verification |
+| SCRDT-02 | Phase 9 | Complete — Phase 9 verification |
+| SCRDT-03 | Phase 9 | Complete — Phase 9 verification |
+| SCRDT-04 | Phase 9 + Phase 13 | Complete — Phase 13 production closure evidence |
+| TPR-01 | Phase 10 + Phase 13 | Complete — Phase 13 authenticated production genesis evidence |
+| TPR-02 | Phase 10 + Phase 13 | Complete — Phase 13 current-policy approval evidence |
+| TPR-03 | Phase 10 | Complete — Phase 10 verification |
+| BURN-01 | Phase 11 + Phase 13 | Complete — Phase 13 durable policy/economic evidence |
+| BURN-02 | Phase 11 + Phase 13 | Complete — Phase 13 account-lifetime/provider evidence |
+| BURN-03 | Phase 11 + Phase 13 | Complete — Phase 13 real `PayEscrow` evidence |
+| MIG-05 | Phase 12 | Complete — approved adjusted scope (signature verification only) |
+| MIG-06 | Phase 12 | Complete — positive behavior green; reject-path coverage warning preserved |
+| BOOT-01 | Phase 13 | Complete — operator runbook and closure evidence |
+| BOOT-02 | Phase 13 | Complete — canonical manifest evidence |
+| BOOT-03 | Phase 13 | Complete — production first-boot evidence |
+| BOOT-04 | Phase 13 | Complete — software-visible restart/tamper evidence; whole-disk/all-anchor boundary accepted |
+| POLICY-01 | Phase 13 | Complete — current-policy successor evidence |
+| VALID-01 | Phase 13 | Complete — boundary-vector evidence |
+| TEST-01 | Phase 13 | Complete — exact 25/25 gate plus five lifetime repetitions |
 
-Coverage: 15/15 v1.1 requirements mapped.
+Coverage: 22/22 v1.1 requirements mapped.
 
 ### ELM Bridging (added 2026-08-26 — product-v1.0 requirement, pre-ship; extends v1.1)
 
@@ -140,4 +158,3 @@ Coverage: 8/8 ELM requirements mapped (Phase 14 executes in the SGProcessingMana
 - Signed Reject votes, rejection certificates, or negative-quorum rules.
 - Validator reputation rewards or penalties based on negative votes.
 - Penalizing validators when a proposal merely expires without a conclusive outcome.
-
