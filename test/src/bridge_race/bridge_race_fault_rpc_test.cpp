@@ -7,8 +7,10 @@
  * Extends the Phase 5 Mock RPC Transport (via BuildDivergentSlotConfigs(), additive-only)
  * to prove the existing >75% weighted RPC quorum still reaches the correct mint decision
  * when the 3 configured quorum slots (1 DIRECT + 2 PUBLIC) genuinely disagree — one
- * returns wrong logs, one times out, one succeeds — rather than all 3 silently resolving
- * to the same real Anvil URL as every other test in this suite does.
+ * returns wrong logs, one times out, one succeeds — rather than all 3 resolving to the
+ * same real Anvil transport as every other test in this suite does. Every slot is served
+ * by a MockRpcTransport here; only the DIRECT slot's URL string stays the real Anvil one,
+ * for the reason documented on ConfigureDivergentQuorum().
  *
  * Two disagreement configurations are exercised:
  *  1. DIRECT succeeds alone (weight=100) while both PUBLIC slots disagree with each other
@@ -28,24 +30,49 @@ namespace
     /// @brief Mock-default bridge contract address/topic0 (mirrors the private
     ///        kBridgeContractAddress/kBridgeEventTopic0 constants baked into
     ///        MockRpcTransport's default success/wrong-logs receipt builders in
-    ///        mock_rpc_transport.cpp). The mock:// slots never touch the real Anvil
-    ///        chain, so the WeightedRpcEndpoint's expected contract/topic0 must match
-    ///        what MockRpcTransport actually returns, not the real Sepolia bridge
+    ///        mock_rpc_transport.cpp). No quorum slot's verification traffic reaches the
+    ///        real Anvil chain, so the WeightedRpcEndpoint's expected contract/topic0 must
+    ///        match what MockRpcTransport actually returns, not the real Sepolia bridge
     ///        contract address.
     constexpr const char *kMockBridgeContractAddress = "0x1234567890123456789012345678901234567890";
     constexpr const char *kMockBridgeEventTopic0 =
         "0x1234567890123456789012345678901234567890123456789012345678901234";
 
+    /// @brief Per-PUBLIC-slot consensus weight.
+    ///
+    /// Must sit below PublicChainInputValidator's kDirectApiWeightThreshold (50) so both
+    /// slots stay PUBLIC, yet high enough that an agreeing pair alone clears
+    /// kRequiredConsensusWeight (75) — 40+40=80. GatherVerificationEvidence decides
+    /// `valid` purely from summed weight of the endpoints that confirmed the claim
+    /// (successful_public only populates evidence slots, it never adds weight), so the
+    /// weight-0 PUBLIC slots this replaced made the PUBLIC-pair scenario below
+    /// unreachable by construction: with DIRECT disagreeing, quorum was always 0/100.
+    constexpr uint8_t kPublicSlotWeight = 40;
+
     /// @brief Install the 3-slot divergent TransportFactory on one node's
     ///        PublicChainInputValidator and configure the matching WeightedRpcEndpoint
     ///        vector (URLs must match BuildDivergentSlotConfigs()'s literal URLs).
+    ///
+    /// The DIRECT slot keeps the real Anvil URL instead of "mock://direct" because
+    /// ConfigureRpcEndpoint wholesale-replaces the chain's endpoint list, and the
+    /// node-owned BridgeCatchupWatcher resolves its discovery URL from that same list
+    /// (GeniusNode's rpc_resolver -> PublicChainInputValidator::GetFirstRpcUrl ->
+    /// front().url) using a real RpcHttpTransport, not this validator-only factory. An
+    /// all-"mock://" list left every poll dying at "failed to query block number", so
+    /// the seeded burn was never discovered and no mint ever started. The slot behavior
+    /// is unaffected: the factory still serves this URL from MockRpcTransport, so
+    /// verification never touches the real chain, and slot classification is weight-based
+    /// (consensus_weight >= 50 == DIRECT), not URL-based.
     void ConfigureDivergentQuorum( const std::shared_ptr<GeniusNode>   &node,
+                                   const std::string                   &direct_url,
                                    sgns::test::MockBehavior            direct_behavior,
                                    sgns::test::MockBehavior            public1_behavior,
                                    sgns::test::MockBehavior            public2_behavior )
     {
-        const auto configs =
-            sgns::test::BuildDivergentSlotConfigs( direct_behavior, public1_behavior, public2_behavior );
+        const auto configs = sgns::test::BuildDivergentSlotConfigs( direct_behavior,
+                                                                     public1_behavior,
+                                                                     public2_behavior,
+                                                                     direct_url );
 
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
@@ -66,24 +93,24 @@ namespace
                 return std::make_unique<sgns::test::MockRpcTransport>( configs.back() );
             } );
 
-        // Literal URLs match BuildDivergentSlotConfigs()'s 3 distinct "mock://" configs
-        // (asserted below) — used directly rather than via configs[i].url so the
-        // 3-way divergence is visible as literal strings at this call site.
         sgns::WeightedRpcEndpoint ep_direct;
-        ep_direct.url                     = "mock://direct";
+        ep_direct.url                     = configs[0].url;
         ep_direct.consensus_weight        = 100;
         ep_direct.bridge_contract_address = kMockBridgeContractAddress;
         ep_direct.accepted_topic0_hashes  = { kMockBridgeEventTopic0 };
-        ASSERT_EQ( ep_direct.url, configs[0].url );
+
+        // The PUBLIC URLs are spelled as literals rather than read from configs[i].url so
+        // the 3-way divergence is visible at this call site (asserted against the builder
+        // below). The DIRECT slot's URL is the caller's, for the reason documented above.
 
         sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
         ep_public1.url              = "mock://public1";
-        ep_public1.consensus_weight = 0;
+        ep_public1.consensus_weight = kPublicSlotWeight;
         ASSERT_EQ( ep_public1.url, configs[1].url );
 
         sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
         ep_public2.url              = "mock://public2";
-        ep_public2.consensus_weight = 0;
+        ep_public2.consensus_weight = kPublicSlotWeight;
         ASSERT_EQ( ep_public2.url, configs[2].url );
 
         ASSERT_TRUE( node->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId,
@@ -112,6 +139,7 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementStillReachesCorrectQuorum )
     for ( const auto &node : s_nodes )
     {
         ConfigureDivergentQuorum( node,
+                                  s_anvil.RpcUrl(),
                                   sgns::test::MockBehavior::kSuccess,
                                   sgns::test::MockBehavior::kWrongLogs,
                                   sgns::test::MockBehavior::kTimeout );
@@ -148,6 +176,7 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementPublicPairQuorumStillCorrect )
     for ( const auto &node : s_nodes )
     {
         ConfigureDivergentQuorum( node,
+                                  s_anvil.RpcUrl(),
                                   sgns::test::MockBehavior::kWrongLogs,
                                   sgns::test::MockBehavior::kSuccess,
                                   sgns::test::MockBehavior::kSuccess );

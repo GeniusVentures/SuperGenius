@@ -221,6 +221,18 @@ protected:
     /** @brief Timeout for the auto-mint path after node READY (scan runs after CRDT sync). */
     static inline constexpr std::chrono::milliseconds kCatchupMintTimeout{ 30000 };
 
+    /**
+     * @brief Budget for Test A's full auto-mint sequence: the watcher's first poll plus
+     *        ONE consensus round per seeded burn.
+     *
+     * Mint proposals for the backfilled burns serialize through consensus (~6s per round
+     * measured on Linux Debug), so the budget must scale with kNumCatchupBurns. The flat
+     * kCatchupMintTimeout it replaced expired ~300ms before the third mint's certificate
+     * landed, failing at balance 2 of 3.
+     */
+    static inline constexpr std::chrono::milliseconds kCatchupAllMintsTimeout{
+        kCatchupMintTimeout + std::chrono::milliseconds{ kNumCatchupBurns * 20000 } };
+
     /** @brief > production 15s poll_interval; gates on node READY liveness for Test C (D-26). */
     static inline constexpr std::chrono::milliseconds kCatchupPollIntervalGate{ 16000 };
 
@@ -546,7 +558,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
     // a scan) and provides zero coverage (WR-01).
     EXPECT_WAIT_FOR_CONDITION(
         [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
-        kCatchupMintTimeout,
+        kCatchupAllMintsTimeout,
         "Catch-up scan must mint all pre-node burns",
         nullptr );
 

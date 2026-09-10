@@ -521,18 +521,23 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
-    // First mint should succeed — capture balance BEFORE the mint so the
-    // delta check compares against the pre-mint value (not the post-mint
-    // value, which has already increased).
+    // Capture balance BEFORE the mint so the delta check compares against the pre-mint
+    // value (not the post-mint value, which has already increased).
     const uint64_t balance_before_first = s_nodes[0]->GetBalance( dest_addr );
-    EXPECT_OUTCOME_TRUE( first_result,
-                         s_nodes[0]->MintTokens( kMintAmount,
-                                                 tx_hash,
-                                                 sgns::test::anvil::kSepoliaChainId,
-                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                 dest_addr,
-                                                 kReplayTimeout ) );
-    spdlog::info( "bridge_anvil: replay-test first mint submitted" );
+    // The node's own catch-up watcher discovers this burn within ~1s of the cast send and
+    // proposes the same mint itself, so the manual submission and the watcher race for the
+    // mint-v2 slot key. Whichever loses never finalizes, and the manual call then reports
+    // "not finalized within timeout" even though the burn was minted exactly once.
+    // Gate on the burn actually being minted (balance delta below), not on which path
+    // minted it — the replay assertion that follows only needs the burn CONSUMED.
+    auto first_result = s_nodes[0]->MintTokens( kMintAmount,
+                                                tx_hash,
+                                                sgns::test::anvil::kSepoliaChainId,
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kReplayTimeout );
+    spdlog::info( "bridge_anvil: replay-test first mint submitted, manual_submission_finalized={}",
+                  first_result.has_value() );
 
     EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_first; },
                                kReplayTimeout,
