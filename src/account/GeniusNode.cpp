@@ -3294,6 +3294,16 @@ namespace sgns
         return crdt_transaction;
     }
 
+    TransactionManager::State GeniusNode::GetTransactionManagerState() const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return TransactionManager::State::CREATING;
+        }
+        return manager_result.value()->GetState();
+    }
+
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
     {
         auto manager_result = GetTransactionManager();
