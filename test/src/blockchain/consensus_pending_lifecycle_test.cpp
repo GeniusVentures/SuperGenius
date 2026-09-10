@@ -2667,3 +2667,149 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegis
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, key ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
+
+TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVoteSignatures )
+{
+    /**
+     * Bridge-mint quorum runs through the cumulative slot model
+     * (EvaluateSlotQuorum/SlotEvidenceReputation), which resolves registry
+     * membership and weight but never verifies vote signatures. Feeding it a
+     * raw remote vote vector let an attacker fabricate slot-hash-carrying
+     * approve votes attributed to real ACTIVE validators with garbage
+     * signatures and finalize a public-chain burn with zero real votes. The
+     * tally must count only signature-verified votes.
+     */
+    constexpr std::array<const char *, 3> private_keys = {
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" };
+
+    std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts;
+    for ( size_t index = 0; index < accounts.size(); ++index )
+    {
+        accounts[index] = sgns::GeniusAccount::NewFromPrivateKey(
+            sgns::TokenID::FromBytes( { 0x00 } ),
+            private_keys[index],
+            getPathString() + "/slot-quorum-" + std::to_string( index ) );
+        ASSERT_TRUE( accounts[index] );
+    }
+
+    auto registry = sgns::ValidatorRegistry::New(
+        db_,
+        1,
+        1,
+        sgns::ValidatorRegistry::WeightConfig{},
+        accounts.front()->GetAddress(),
+        []( const std::string &, std::function<void( outcome::result<std::string> )> cb )
+        { cb( outcome::failure( std::errc::not_supported ) ); } );
+    ASSERT_TRUE( registry );
+    ASSERT_FALSE( registry
+                      ->StoreGenesisRegistry( { accounts[0]->GetAddress(),
+                                                accounts[1]->GetAddress(),
+                                                accounts[2]->GetAddress() },
+                                              [accounts]( std::vector<uint8_t> payload )
+                                              { return accounts.front()->Sign( std::move( payload ) ); } )
+                      .has_error() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&registry]()
+        {
+            auto load = registry->LoadCurrentRegistry();
+            return load.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 2000 ),
+        "three-validator registry initialized",
+        nullptr );
+    ASSERT_EQ( sgns::ValidatorRegistry::TotalWeight( registry->LoadCurrentRegistry().value() ), 3 * 50000U );
+
+    auto manager = MakeSigningManager( registry, accounts.front() );
+    ASSERT_TRUE( manager );
+
+    // Slot-key handler is process-global: pair registration with unregistration.
+    sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject &subject )
+        {
+            const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+            if ( nonce.has_error() || nonce.value().tx_hash().empty() )
+            {
+                return std::string{};
+            }
+            return "canonical-" + nonce.value().tx_hash();
+        } );
+
+    SGTransaction::MintTxV2 mint;
+    ( *mint.mutable_chain_id() ) = "public";
+    ( *mint.mutable_token_id() ) = std::string( "token", 5 );
+    mint.set_amount( 7 );
+    sgns::EmbeddedTransaction tx;
+    *tx.mutable_mint_v2() = mint;
+
+    const auto subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                     7101u,
+                                                                     std::string( 32, '\xAA' ),
+                                                                     tx,
+                                                                     std::nullopt,
+                                                                     std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+    const auto proposal = manager->CreateProposal(
+        subject.value(), accounts.front()->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    ASSERT_TRUE( sgns::ConsensusManager::IsBridgeMintSubject( proposal.value() ) );
+
+    const auto now_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch() )
+            .count() );
+    const auto make_vote = [&]( const std::shared_ptr<sgns::GeniusAccount> &voter, bool corrupt_signature )
+        -> sgns::ConsensusManager::Vote {
+        sgns::ConsensusManager::Vote vote;
+        vote.set_proposal_id( proposal.value().proposal_id() );
+        vote.set_voter_id( voter->GetAddress() );
+        vote.set_approve( true );
+        vote.set_timestamp( now_ms );
+        // All three slots populated and shared across voters: with equal
+        // genesis weights this is structurally slot-quorate (50/25/75 of total
+        // voting reputation exceeds the 3/4 threshold), so a signature-blind
+        // tally reports quorum while an honest single voter never could.
+        vote.set_slot_0_hash( std::string( 32, '\xB0' ) );
+        vote.set_slot_1_hash( std::string( 32, '\xB1' ) );
+        vote.set_slot_2_hash( std::string( 32, '\xB2' ) );
+        const auto signing_bytes = sgns::ConsensusManager::VoteSigningBytes( vote );
+        EXPECT_TRUE( signing_bytes.has_value() );
+        const auto signature = voter->Sign( signing_bytes.value() );
+        vote.set_signature( signature.data(), signature.size() );
+        if ( corrupt_signature )
+        {
+            std::string corrupted = vote.signature();
+            corrupted[corrupted.size() - 1] = ( corrupted.back() == '\x00' ? '\x01' : '\x00' );
+            vote.set_signature( corrupted );
+        }
+        return vote;
+    };
+
+    // Honest control: three genuinely signed slot-evidence votes certify.
+    std::vector<sgns::ConsensusManager::Vote> honest_votes;
+    for ( const auto &account : accounts )
+    {
+        honest_votes.push_back( make_vote( account, false ) );
+    }
+    const auto honest_certificate = manager->CreateCertificate( proposal.value(), honest_votes );
+    ASSERT_TRUE( honest_certificate.has_value() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, honest_certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+
+    // Forged: same voters and evidence, every signature corrupted. The slot
+    // model must not count them.
+    std::vector<sgns::ConsensusManager::Vote> forged_votes;
+    for ( const auto &account : accounts )
+    {
+        forged_votes.push_back( make_vote( account, true ) );
+    }
+    const auto forged_certificate = manager->CreateCertificate( proposal.value(), forged_votes );
+    ASSERT_TRUE( forged_certificate.has_value() );
+    EXPECT_NE( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, forged_certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}

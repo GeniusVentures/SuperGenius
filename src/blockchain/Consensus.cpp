@@ -2036,6 +2036,13 @@ namespace sgns
         uint64_t                        total_weight    = ValidatorRegistry::TotalWeight( registry );
         uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
+        // Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation) resolve
+        // membership and weight but never verify signatures, so the bridge-mint
+        // branch below must only ever receive this signature-verified subset —
+        // feeding them the raw vector let fabricated votes attributed to real
+        // ACTIVE validators reach bridge-mint quorum with zero valid signatures.
+        std::vector<Vote>               verified_votes;
+        verified_votes.reserve( votes.size() );
 
         for ( const auto &vote : votes )
         {
@@ -2074,6 +2081,7 @@ namespace sgns
             {
                 continue;
             }
+            verified_votes.push_back( vote );
 
             logger_->debug( "{}: Valid voter signature for hash {}: voter_id={} approve={}",
                                              __func__,
@@ -2101,9 +2109,12 @@ namespace sgns
         // retained for observability; the slot tally is authoritative for
         // has_quorum on bridge mints. TallyVotes (certificate creation) and the
         // incremental HandleVote tally agree via this same dispatcher (Pitfall 1).
+        // Both slot helpers consume verified_votes only: they count membership
+        // and weight but never signatures, so unverified entries must never
+        // reach them.
         if ( IsBridgeMintSubject( proposal ) )
         {
-            const auto slot_result = registry_->EvaluateSlotQuorum( votes, registry );
+            const auto slot_result = registry_->EvaluateSlotQuorum( verified_votes, registry );
             tally.approved_weight  = slot_result.total_voting_reputation;
             tally.qualified_sum    = slot_result.qualified_sum;
             tally.slot_threshold   = slot_result.threshold;
@@ -2114,7 +2125,7 @@ namespace sgns
             // e.g. an evidence-starved mesh where vote slot population silently
             // no-ops — and the single-pool result stands; every approve voter has
             // still passed the public-chain witness validation in that case.
-            if ( SlotEvidenceReputation( votes, registry ) > slot_result.threshold )
+            if ( SlotEvidenceReputation( verified_votes, registry ) > slot_result.threshold )
             {
                 tally.has_quorum = slot_result.has_quorum;
             }
@@ -2188,8 +2199,11 @@ namespace sgns
 
         if ( IsBridgeMintSubject( proposal ) )
         {
-            // Bridge-mint subject: cumulative slot tally (D-06).
-            const auto slot_result = registry_->EvaluateSlotQuorum( votes, registry );
+            // Bridge-mint subject: cumulative slot tally (D-06). The slot model
+            // never verifies signatures itself, so only the signature-verified
+            // subset may enter it.
+            const auto verified_votes = SignatureVerifiedVotes( proposal, votes );
+            const auto slot_result    = registry_->EvaluateSlotQuorum( verified_votes, registry );
             tally.total_weight     = ValidatorRegistry::TotalWeight( registry );
             tally.approved_weight  = slot_result.total_voting_reputation;
             tally.has_quorum       = slot_result.has_quorum;
@@ -2257,6 +2271,37 @@ namespace sgns
                                          vote.voter_id().substr( 0, 8 ),
                                          vote.proposal_id() );
         return sgns::VoteSigningBytes( vote );
+    }
+
+    std::vector<ConsensusManager::Vote> ConsensusManager::SignatureVerifiedVotes(
+        const Proposal          &proposal,
+        const std::vector<Vote> &votes )
+    {
+        std::vector<Vote>               verified;
+        std::unordered_set<std::string> seen;
+        verified.reserve( votes.size() );
+        for ( const auto &vote : votes )
+        {
+            if ( vote.proposal_id() != proposal.proposal_id() )
+            {
+                continue;
+            }
+            if ( !seen.insert( vote.voter_id() ).second )
+            {
+                continue;
+            }
+            auto signing_bytes = VoteSigningBytes( vote );
+            if ( signing_bytes.has_error() )
+            {
+                continue;
+            }
+            if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
+            {
+                continue;
+            }
+            verified.push_back( vote );
+        }
+        return verified;
     }
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteBundleSigningBytes( const VoteBundle &bundle )
