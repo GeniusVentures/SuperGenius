@@ -320,7 +320,7 @@ namespace sgns
                     {
                         sgns::crdt::GlobalDB::Buffer registry_cid_key;
                         registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
-                        auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                        auto registry_cid = strong->db_->GetRaw( registry_cid_key );
                         if ( registry_cid.has_value() )
                         {
                             return std::string( registry_cid.value().toString() );
@@ -634,7 +634,7 @@ namespace sgns
     {
         sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
         genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
-        auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
+        auto genesis_cid = db_->GetRaw( genesis_cid_buffer_key );
         if ( genesis_cid.has_value() )
         {
             cids_.genesis_ = std::string( genesis_cid.value().toString() );
@@ -711,7 +711,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_key;
         account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) + address );
         logger_->debug( "[{}] Init account creation CID for {}", account_->GetAddress().substr( 0, 8 ), address );
-        auto account_creation_cid = db_->GetDataStore()->get( account_creation_cid_buffer_key );
+        auto account_creation_cid = db_->GetRaw( account_creation_cid_buffer_key );
         if ( account_creation_cid.has_value() )
         {
             logger_->debug( "[{}] Account creation CID for {}: {}",
@@ -732,7 +732,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_value;
         genesis_cid_buffer_value.put( cid );
 
-        auto put_result = db_->GetDataStore()->put( genesis_cid_buffer_key, genesis_cid_buffer_value );
+        auto put_result = db_->PutRaw( genesis_cid_buffer_key, genesis_cid_buffer_value );
         if ( put_result.has_error() )
         {
             logger_->error( "[{}] Failed to store genesis CID: {}",
@@ -753,8 +753,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_value;
         account_creation_cid_buffer_value.put( cid );
 
-        auto put_result = db_->GetDataStore()->put( account_creation_cid_buffer_key,
-                                                    account_creation_cid_buffer_value );
+        auto put_result = db_->PutRaw( account_creation_cid_buffer_key, account_creation_cid_buffer_value );
         if ( put_result.has_error() )
         {
             logger_->error( "[{}] Failed to store account creation CID: {}",
