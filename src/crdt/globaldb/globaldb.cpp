@@ -550,7 +550,15 @@ namespace sgns::crdt
                                                             const Buffer                          &value,
                                                             const std::unordered_set<std::string> &topics )
     {
-        return m_crdtDatastore->PutConvergentImmutableKey( key, value, topics );
+        // ShutdownNow() moves the datastore handle out: dereferencing the raw
+        // member here is the exact class of null-deref that segfaulted
+        // migration_sync_test on aarch64 (see the ActiveDataStore wrappers).
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->PutConvergentImmutableKey( key, value, topics );
     }
 
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
