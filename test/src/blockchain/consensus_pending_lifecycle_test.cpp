@@ -92,7 +92,7 @@ namespace sgns
             manager->HandleCertificate( certificate );
         }
 
-        static std::optional<std::vector<crdt::pb::Element>> FilterCertificate(
+        static sgns::crdt::CRDTDataFilter::ElementFilterResult FilterCertificate(
             const std::shared_ptr<ConsensusManager> &manager,
             const crdt::pb::Element                 &element )
         {
@@ -1178,7 +1178,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
 
     // Key-aware CRDT ingress accepts a certificate only when the supplied canonical slot matches.
     auto matching_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, matching_element );
-    EXPECT_FALSE( matching_filter.has_value() );
+    EXPECT_EQ( matching_filter.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kAccept );
     sgns::base::Buffer matching_buffer;
     matching_buffer.put( serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
@@ -1188,8 +1188,7 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate.proposal_id() ) );
 
     auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, mismatched_element );
-    ASSERT_TRUE( filter_result.has_value() );
-    EXPECT_TRUE( filter_result->empty() );
+    EXPECT_EQ( filter_result.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
     sgns::base::Buffer serialized_buffer;
     serialized_buffer.put( serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
@@ -1248,8 +1247,7 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
     element.set_key( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( existing ) );
     element.set_value( candidate_serialized );
     const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
-    ASSERT_TRUE( filtered.has_value() );
-    EXPECT_TRUE( filtered->empty() );
+    EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
 
     auto stored = manager->GetCertificateBySlot( sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ) );
     ASSERT_TRUE( stored.has_value() );
@@ -1376,12 +1374,11 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
         const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
         if ( SerializedCertificateHash( existing ) < SerializedCertificateHash( candidate ) )
         {
-            ASSERT_TRUE( filtered.has_value() );
-            EXPECT_TRUE( filtered->empty() );
+            EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
         }
         else
         {
-            EXPECT_FALSE( filtered.has_value() );
+            EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kAccept );
         }
     };
     // Both directions execute the critical Mint-equivocation diagnostic while
@@ -1415,15 +1412,18 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, FilterCertificateParksStalledCertificateForRegistrySync )
+TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCertificateForRetry )
 {
     /**
      * Given a structurally valid certificate that references a registry snapshot
      * this node has not synced, When it arrives through key-aware CRDT ingress,
-     * Then FilterCertificate parks it instead of dropping it: validation is
-     * Stalled, the authoritative slot lookup keeps reporting retry-later, and the
-     * work journal keeps the record retryable — while a structurally invalid
-     * certificate is still dropped and permanently-invalid journal work is
+     * Then FilterCertificate stalls the whole delta instead of storing the
+     * unvalidatable record: parking it would durably occupy the canonical slot
+     * with a cert that may never validate (one self-signed proposal referencing
+     * a nonexistent registry CID), permanently blocking overwrites and local
+     * voting. A structurally invalid certificate is still rejected outright, and
+     * any pre-existing stored stalled record (e.g. from before this policy)
+     * keeps its journal-driven retry while permanently-invalid journal work is
      * retired (Reject -> MarkDone) instead of spinning.
      */
     auto account = MakeSigningAccount();
@@ -1447,7 +1447,10 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateParksStalledCertificateF
     stalled_element.set_key( stalled_key );
     stalled_element.set_value( stalled_serialized );
     const auto stalled_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, stalled_element );
-    EXPECT_FALSE( stalled_filter.has_value() ); // parked, not dropped
+    // Stalled, not stored and not dropped: the delta job fails and the
+    // failed-root retry machinery re-evaluates once the registry snapshot syncs.
+    EXPECT_EQ( stalled_filter.decision,
+               sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kStall );
 
     // A structurally invalid certificate (corrupted subject payload hash) is dropped.
     auto invalid_certificate = MakeCertificateForRegistry(
@@ -1460,11 +1463,12 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateParksStalledCertificateF
     invalid_element.set_key( invalid_key );
     invalid_element.set_value( invalid_serialized );
     const auto invalid_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, invalid_element );
-    ASSERT_TRUE( invalid_filter.has_value() );
-    EXPECT_TRUE( invalid_filter->empty() );
+    EXPECT_EQ( invalid_filter.decision,
+               sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
 
-    // The parked record is not yet an approved authority: slot lookup errors and
-    // the accepted-scan reports retry-later instead of a final decision.
+    // A stored stalled record (as left by the pre-stall parking policy, written
+    // here directly via the test seam) is not yet an approved authority: slot
+    // lookup errors and the accepted-scan reports retry-later.
     sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, stalled_key, stalled_serialized );
     const auto stalled_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( stalled_certificate.proposal() );
     auto stored = manager->GetCertificateBySlot( stalled_slot );
@@ -1605,8 +1609,7 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
     element.set_value( serialized );
 
     auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
-    ASSERT_TRUE( filter_result.has_value() );
-    EXPECT_TRUE( filter_result->empty() );
+    EXPECT_EQ( filter_result.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
 
     std::atomic<int> handler_calls{ 0 };
     ASSERT_TRUE( manager->RegisterSubjectHandler(
