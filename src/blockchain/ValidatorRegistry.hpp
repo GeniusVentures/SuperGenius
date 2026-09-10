@@ -554,10 +554,13 @@ namespace sgns
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
          * @param[in] current_registry Current registry snapshot.
-         * @return Partitioned votes.
+         * @return Partitioned votes, or failure when the certificate's verified
+         *         votes do not reach quorum (an empty partition set is a verdict,
+         *         not a valid zero-vote tally).
          */
-        CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
-                                                  const Registry                   &current_registry ) const;
+        outcome::result<CertificateVotes> ExtractCertificateVotes(
+            const sgns::ConsensusCertificate &certificate,
+            const Registry                   &current_registry ) const;
         /**
          * @brief Builds next registry snapshot using a certificate-derived vote set.
          * @param[in] current_registry Current registry snapshot.
