@@ -113,7 +113,7 @@ namespace sgns
 
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-        auto version_ret = db_1_0_0_->GetDataStore()->get( version_key );
+        auto version_ret = db_1_0_0_->GetRaw( version_key );
 
         if ( version_ret.has_error() )
         {
@@ -399,7 +399,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        BOOST_OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_1_0_0_->PutRaw( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
 

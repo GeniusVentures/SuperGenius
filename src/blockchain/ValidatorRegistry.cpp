@@ -2341,7 +2341,7 @@ namespace sgns
 
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
-        auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
+        auto registry_cid = db_->GetRaw( registry_cid_key );
         if ( registry_cid.has_value() )
         {
             cached_registry_id_ = registry_cid.value().toString();
@@ -2385,7 +2385,7 @@ namespace sgns
         registry_cid_key.put( std::string( RegistryCidKey() ) );
         crdt::GlobalDB::Buffer registry_cid;
         registry_cid.put( cid );
-        (void) db_->GetDataStore()->put( registry_cid_key, registry_cid );
+        (void) db_->PutRaw( registry_cid_key, registry_cid );
         logger_->debug( "{}: persisted CID", __func__ );
     }
 
