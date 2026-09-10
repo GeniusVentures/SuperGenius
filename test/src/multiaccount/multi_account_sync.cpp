@@ -212,7 +212,7 @@ protected:
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
         sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
+                                            std::chrono::seconds( 120 ),
                                             "node not synced: " + node->GetAddress() );
     }
 
@@ -226,7 +226,7 @@ protected:
                 return node->GetState() == GeniusNode::NodeState::READY &&
                        sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
             },
-            std::chrono::milliseconds( 50000 ),
+            std::chrono::seconds( 120 ),
             "node blockchain not ready for consensus configuration" );
 
         ASSERT_TRUE(

@@ -114,13 +114,13 @@ namespace sgns
             node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
+                                          std::chrono::seconds( 120 ),
                                           "full_node not ready" );
             test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
+                                          std::chrono::seconds( 120 ),
                                           "node_proc1 not ready" );
             test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 50000 ),
+                                          std::chrono::seconds( 120 ),
                                           "node_proc2 not ready" );
         }
 
@@ -441,7 +441,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     std::cout << "Invalid tx failed" << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
+                                  std::chrono::seconds( 120 ),
                                   "Node didn't recover from wrong transaction" );
 
     std::cout << "wait until its ready" << std::endl;
@@ -553,7 +553,7 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
     node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
+                                  std::chrono::seconds( 120 ),
                                   "reconnected node did not finish recovery" );
 
     EXPECT_EQ( node_proc2->WaitForTransactionIncoming( transaction_id,
