@@ -828,13 +828,18 @@ namespace sgns
         }
 
         auto votes = ExtractCertificateVotes( certificate, current_registry );
+        if ( votes.has_error() )
+        {
+            logger_->error( "{}: certificate vote quorum not reached: {}", __func__, votes.error().message() );
+            return outcome::failure( votes.error() );
+        }
 
         RegistryUpdate update;
         update.set_prev_registry_hash( GetRegistryCid() );
         *update.mutable_registry() = BuildRegistryFromCertificate( current_registry,
                                                                    certificate,
-                                                                   votes.registered_votes,
-                                                                   votes.unregistered_votes );
+                                                                   votes.value().registered_votes,
+                                                                   votes.value().unregistered_votes );
 
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
@@ -1268,11 +1273,24 @@ namespace sgns
         for ( const auto &tx_cert : certificates )
         {
             auto votes = ExtractCertificateVotes( tx_cert, base_registry_result.value() );
-            for ( const auto &[validator_id, approve] : votes.registered_votes )
+            if ( votes.has_error() )
+            {
+                std::lock_guard<std::mutex> lock( batch_mutex_ );
+                applying_batch_subject_ids_.erase( subject_hash );
+                // The member's durable record exists and is slot-bound but its
+                // verified votes do not reach quorum against the batch's base
+                // registry: deterministic and permanent, so reject the batch.
+                logger_->error( "{}: member certificate quorum not reached subject_hash={} error={}",
+                                __func__,
+                                subject_hash.substr( 0, 8 ),
+                                votes.error().message() );
+                return BatchCertificateDecision::Reject;
+            }
+            for ( const auto &[validator_id, approve] : votes.value().registered_votes )
             {
                 registered_scores[validator_id] += approve ? 1 : -1;
             }
-            for ( const auto &[validator_id, approve] : votes.unregistered_votes )
+            for ( const auto &[validator_id, approve] : votes.value().unregistered_votes )
             {
                 unregistered_scores[validator_id] += approve ? 1 : -1;
             }
@@ -1642,11 +1660,18 @@ namespace sgns
                         return false;
                     }
                     auto votes = ExtractCertificateVotes( tx_cert, *base_registry );
-                    for ( const auto &[validator_id, approve] : votes.registered_votes )
+                    if ( votes.has_error() )
+                    {
+                        logger_->error( "{}: member certificate quorum not reached for batch slot={}",
+                                        __func__,
+                                        member_slot.substr( 0, 8 ) );
+                        return false;
+                    }
+                    for ( const auto &[validator_id, approve] : votes.value().registered_votes )
                     {
                         registered_scores[validator_id] += approve ? 1 : -1;
                     }
-                    for ( const auto &[validator_id, approve] : votes.unregistered_votes )
+                    for ( const auto &[validator_id, approve] : votes.value().unregistered_votes )
                     {
                         unregistered_scores[validator_id] += approve ? 1 : -1;
                     }
@@ -1667,9 +1692,17 @@ namespace sgns
             else
             {
                 auto votes = ExtractCertificateVotes( certificate, *base_registry );
+                if ( votes.has_error() )
+                {
+                    // Zero-vote certificates must not derive registry updates:
+                    // the recomputed "expected" would otherwise deterministically
+                    // match an attacker-crafted update and merge it.
+                    logger_->error( "{}: certificate quorum not reached: {}", __func__, votes.error().message() );
+                    return false;
+                }
                 expected   = BuildRegistryFromCertificate( *base_registry, certificate,
-                                                          votes.registered_votes,
-                                                          votes.unregistered_votes );
+                                                          votes.value().registered_votes,
+                                                          votes.value().unregistered_votes );
             }
             Registry provided = update.registry();
             NormalizeRegistry( provided );
@@ -1814,7 +1847,7 @@ namespace sgns
         return ValidateCertificate( certificate, current_registry, expected_registry_cid );
     }
 
-    ValidatorRegistry::CertificateVotes ValidatorRegistry::ExtractCertificateVotes(
+    outcome::result<ValidatorRegistry::CertificateVotes> ValidatorRegistry::ExtractCertificateVotes(
         const sgns::ConsensusCertificate &certificate,
         const Registry                   &current_registry ) const
     {
@@ -1864,7 +1897,12 @@ namespace sgns
         if ( !IsQuorum( approved_weight, total_weight ) )
         {
             logger_->error( "{}: quorum not reached approved={} total={}", __func__, approved_weight, total_weight );
-            return {};
+            // Quorum failure is a verdict, not data: callers must not derive a
+            // registry from an empty partition set. Returning an empty struct here
+            // let self-signed zero-vote certificates drive deterministic registry
+            // updates that VerifyUpdate would then accept (unauthenticated epoch
+            // advance).
+            return outcome::failure( std::errc::operation_not_permitted );
         }
 
         logger_->debug( "{}: quorum verified approved={} total={}", __func__, approved_weight, total_weight );

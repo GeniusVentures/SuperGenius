@@ -539,4 +539,87 @@ namespace
 
         manager->Close();
     }
+
+    TEST_F( ValidatorRegistryBatchSlotTest, CreateUpdateFromCertificateRejectsZeroVoteCertificate )
+    {
+        /**
+         * Given a certificate whose only legitimacy is the proposer's own
+         * signature (zero verified votes), When a registry update is derived
+         * from it, Then derivation fails closed: an empty vote partition is a
+         * quorum verdict, not a valid zero-vote tally. Pre-fix, the
+         * deterministic empty-votes derivation was attacker-computable and
+         * VerifyUpdate accepted it, enabling unauthenticated epoch advance.
+         */
+        auto account  = MakeAccount();
+        auto registry = MakeRegistry( account );
+        ASSERT_TRUE( registry );
+        auto manager = MakeManager( registry, account );
+        ASSERT_TRUE( manager );
+
+        const std::string tx_hash = "0xzero-vote-create-a";
+        auto subject = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 305, tx_hash, EmbeddedTransaction{}, std::nullopt, std::nullopt );
+        ASSERT_TRUE( subject.has_value() );
+        auto proposal = manager->CreateProposal(
+            subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        ASSERT_TRUE( proposal.has_value() );
+        // Binding-valid and self-signed, but zero votes: certificate creation
+        // does not gate on quorum, so this is exactly the attacker shape.
+        auto certificate = manager->CreateCertificate( proposal.value(), {} );
+        ASSERT_TRUE( certificate.has_value() );
+
+        auto update = registry->CreateUpdateFromCertificate( certificate.value() );
+        EXPECT_TRUE( update.has_error() );
+        EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
+
+        manager->Close();
+    }
+
+    TEST_F( ValidatorRegistryBatchSlotTest, HandleBatchCertificateRejectsZeroVoteMemberSlotRecord )
+    {
+        /**
+         * Given the durable /cert/<slot> record holds a slot-bound certificate
+         * with zero verified votes, When the batch is handled, Then the batch is
+         * permanently Rejected instead of deriving an aggregated update from an
+         * empty member tally.
+         */
+        auto account  = MakeAccount();
+        auto registry = MakeRegistry( account );
+        ASSERT_TRUE( registry );
+        auto manager = MakeManager( registry, account );
+        ASSERT_TRUE( manager );
+
+        registry->SetCertificatesPerBatch( 1 );
+        CaptureBatchSubjects( registry );
+
+        const std::string tx_hash = "0xzero-vote-member-a";
+        // A voted member stages the pending slot and submits the batch subject.
+        auto member = MakeMemberCertificate( manager, registry, account, tx_hash, 306 );
+        ASSERT_TRUE( member.has_value() );
+        ASSERT_TRUE( registry->OnFinalizedCertificate( member.value() ).has_value() );
+        ASSERT_EQ( submitted_subjects_.size(), 1U );
+
+        auto batch_certificate = MakeBatchCertificate( manager, registry, account, submitted_subjects_.front() );
+        ASSERT_TRUE( batch_certificate.has_value() );
+
+        // Same canonical slot (slot derives from tx_hash), binding-valid, but
+        // zero votes under the batch's base registry.
+        auto zero_subject = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(), 307, tx_hash, EmbeddedTransaction{}, std::nullopt, std::nullopt );
+        ASSERT_TRUE( zero_subject.has_value() );
+        auto zero_proposal = manager->CreateProposal(
+            zero_subject.value(), account->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+        ASSERT_TRUE( zero_proposal.has_value() );
+        auto zero_vote_member = manager->CreateCertificate( zero_proposal.value(), {} );
+        ASSERT_TRUE( zero_vote_member.has_value() );
+
+        WriteCertificateAtKey( "/cert/" + SlotFor( tx_hash ), zero_vote_member.value() );
+
+        auto decision = registry->HandleBatchCertificate( BatchSubjectHash( submitted_subjects_.front() ),
+                                                          batch_certificate.value() );
+        EXPECT_EQ( decision, ValidatorRegistry::BatchCertificateDecision::Reject );
+        EXPECT_EQ( registry->GetRegistryEpoch(), 0U );
+
+        manager->Close();
+    }
 } // namespace
