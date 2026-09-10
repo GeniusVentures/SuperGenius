@@ -20,6 +20,30 @@ target_link_libraries(utxo_manager_test
     base_rocksdb_test
 )
 
+# ELM deterministic funding (Phase 01-02): clocks matrix, cost rows, interim
+# submit rejection, elm_rate CRDT record. genius_node_test provides the node
+# harness; MSVC needs the whole archive so GeniusNode symbols link.
+addtest(elm_cost_clocks_test
+    elm_cost_clocks_test.cpp
+)
+
+target_link_libraries(elm_cost_clocks_test
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(elm_cost_clocks_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(elm_cost_clocks_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(elm_cost_clocks_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 if(MSVC)
     target_link_options(utxo_manager_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)

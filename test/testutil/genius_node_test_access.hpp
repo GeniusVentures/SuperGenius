@@ -43,6 +43,22 @@ namespace sgns
         {
             return node ? node->blockchain_retry_count_.load() : 0;
         }
+
+        /// Stage the ELM rate-record CRDT transaction (Phase 01-02).
+        /// GeniusNode::CreateElmRateRecordCRDTTransaction is private like its
+        /// sibling CreateEscrowInfoCRDTTransaction; Phase 4 will wire it into
+        /// ProcessImage, until then this is the only caller.
+        static outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateElmRateRecord(
+            const std::shared_ptr<GeniusNode> &node,
+            const std::string                 &escrow_path,
+            double                             maximum_processing_hours )
+        {
+            if ( !node )
+            {
+                return outcome::failure( GeniusNode::Error::TRANSACTIONS_NOT_READY );
+            }
+            return node->CreateElmRateRecordCRDTTransaction( escrow_path, maximum_processing_hours );
+        }
     };
 } // namespace sgns
 
