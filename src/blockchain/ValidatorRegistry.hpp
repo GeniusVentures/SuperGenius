@@ -302,6 +302,27 @@ namespace sgns
          */
         outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
         /**
+         * @brief Outcome classification of registry-update verification.
+         */
+        enum class UpdateVerification : uint8_t
+        {
+            kValid,           ///< Update fully verified.
+            kMissingDependency, ///< Referenced data (base registry snapshot, member certificate) not synced locally yet — retryable.
+            kInvalid,         ///< Update failed verification permanently.
+        };
+        /**
+         * @brief Verifies a registry update and classifies the failure mode.
+         * @details Missing dependencies must stall (retry once the referenced
+         *          data syncs) rather than reject: CRDT element arrival order
+         *          is unordered across deltas, so an update can legitimately
+         *          reach a node before the certificates/registry snapshot it
+         *          was derived from.
+         * @param[in] update Update to verify.
+         * @param[in] enforce_time_window Whether timestamp window checks are enforced.
+         * @return Verification verdict.
+         */
+        UpdateVerification VerifyUpdateClassified( const RegistryUpdate &update, bool enforce_time_window ) const;
+        /**
          * @brief Persists a registry update.
          * @param[in] update Registry update to store.
          * @return outcome::success on success, otherwise an error.
@@ -500,9 +521,12 @@ namespace sgns
         /**
          * @brief Filters CRDT elements to registry-update entries.
          * @param[in] element Incoming CRDT element.
-         * @return Aditional elements to be filtered out or nullopt when no other elements need to be removed.
+         * @return Accept to keep the element, Reject to strip it, or Stall when
+         *         referenced data (base registry snapshot / member certificates)
+         *         is not synced locally yet — the delta job then retries via the
+         *         failed-root machinery instead of being permanently dropped.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterRegistryUpdate( const crdt::pb::Element &element );
         /**
          * @brief Callback invoked when a registry update element is received.
          * @param[in] new_data New key/value data pair.

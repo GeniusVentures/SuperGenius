@@ -169,6 +169,16 @@ namespace sgns::crdt
         auto process_res = ProcessJobIteration( job_to_process );
         if ( process_res.has_failure() )
         {
+            if ( process_res.error() == ElementFilterDependencyStalled )
+            {
+                // Not an error: an element filter reported missing local
+                // dependencies (e.g. registry update ahead of its member
+                // certificates). The job fails without recording the head and
+                // the failed-root retry/rebroadcast machinery reprocesses it.
+                logger_->info( "{}: JOB STALLED (filter dependency not synced) for CID {}",
+                               __func__,
+                               job_to_process.root_node_->getCID().toString().value() );
+            }
             HandleJobProcessingFailure( job_to_process );
         }
         else
@@ -964,7 +974,13 @@ namespace sgns::crdt
 
         if ( !created_by_self )
         {
-            crdt_filter_.FilterElementsOnDelta( delta );
+            if ( crdt_filter_.FilterElementsOnDelta( delta ) )
+            {
+                // A filter stalled on a missing local dependency: surface as a
+                // job failure so no head is recorded and the failed-root retry
+                // schedule reprocesses this delta once the dependency syncs.
+                return outcome::failure( ElementFilterDependencyStalled );
+            }
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
             logger_->debug( "{}: Filtering node {} ", __func__, aNode.getCID().toString().value() );
         }

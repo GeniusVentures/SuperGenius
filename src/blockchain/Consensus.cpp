@@ -3008,13 +3008,16 @@ namespace sgns
                                              && db_->RegisterElementFilter(
                                                  pattern,
                                                  [weak_self]( const crdt::pb::Element &element )
-                                                     -> std::optional<std::vector<crdt::pb::Element>>
                                                  {
                                                      if ( auto strong = weak_self.lock() )
                                                      {
-                                                         return strong->FilterCertificate( element );
+                                                         // Stalled certificates stay accepted-and-journaled
+                                                         // (their durable record is the authority); only
+                                                         // registry updates stall via the filter contract.
+                                                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                                                             strong->FilterCertificate( element ) );
                                                      }
-                                                     return std::nullopt;
+                                                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                                                  } );
 
         db_->AddListenTopic( consensus_datastore_topic_ );

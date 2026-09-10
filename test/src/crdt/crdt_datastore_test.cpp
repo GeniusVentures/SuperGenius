@@ -353,7 +353,7 @@ namespace sgns::crdt
         std::promise<void> filters_complete;
         auto filters_complete_future = filters_complete.get_future();
 
-        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
+        auto filter_func = [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
         {
             if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
             {
@@ -365,9 +365,10 @@ namespace sgns::crdt
             if ( element.value() == rejectedKey )
             {
                 Element tombstone = element;
-                return std::vector<Element>{ tombstone }; // Reject this delta
+                return CRDTDataFilter::ElementFilterResult::Reject(
+                                                    std::vector<Element>{ tombstone } ); // Reject this delta
             }
-            return std::nullopt; // Accept this delta
+            return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
         };
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux1", ipfsDataStore_ );
@@ -431,7 +432,7 @@ namespace sgns::crdt
         std::promise<void> filters_complete;
         auto filters_complete_future = filters_complete.get_future();
 
-        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
+        auto filter_func = [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
         {
             if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
             {
@@ -443,9 +444,10 @@ namespace sgns::crdt
             if ( element.value() == rejectedKey )
             {
                 Element tombstone = element;
-                return std::vector<Element>{ tombstone }; // Reject this delta
+                return CRDTDataFilter::ElementFilterResult::Reject(
+                                                    std::vector<Element>{ tombstone } ); // Reject this delta
             }
-            return std::nullopt; // Accept this delta
+            return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
         };
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux2", ipfsDataStore_ );
@@ -508,7 +510,7 @@ namespace sgns::crdt
         std::promise<void> filters_complete;
         auto filters_complete_future = filters_complete.get_future();
 
-        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
+        auto filter_func = [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
         {
             if ( filter_called_count.fetch_add( 1 ) + 1 == 4 )
             {
@@ -520,9 +522,10 @@ namespace sgns::crdt
             if ( element.value() == rejectedKey )
             {
                 Element tombstone = element;
-                return std::vector<Element>{ tombstone }; // Reject this delta
+                return CRDTDataFilter::ElementFilterResult::Reject(
+                                                    std::vector<Element>{ tombstone } ); // Reject this delta
             }
-            return std::nullopt; // Accept this delta
+            return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
         };
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux3", ipfsDataStore_ );
@@ -612,26 +615,27 @@ namespace sgns::crdt
 
         //This Filter always accepts all values
         second_crdt->RegisterElementFilter( "Key.*",
-                                            [&]( const Element &element ) -> std::optional<std::vector<Element>>
+                                            [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
                                             {
                                                 record_filter_call();
 
                                                 // Check if any element has the rejected key
-                                                return std::nullopt; // Accept this delta
+                                                return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
                                             } );
 
         //This Filter checks the "RejectMe"
         second_crdt->RegisterElementFilter( "OtherKey.*",
-                                            [&]( const Element &element ) -> std::optional<std::vector<Element>>
+                                            [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
                                             {
                                                 record_filter_call();
 
                                                 if ( element.value() == rejectedKey )
                                                 {
                                                     Element tombstone = element;
-                                                    return std::vector<Element>{ tombstone }; // Reject this delta
+                                                    return CRDTDataFilter::ElementFilterResult::Reject(
+                                                    std::vector<Element>{ tombstone } ); // Reject this delta
                                                 }
-                                                return std::nullopt; // Accept this delta
+                                                return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
                                             } );
         second_crdt->Start();
 
@@ -685,6 +689,79 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
+        CloseAndResetCRDT( second_crdt, second_broadcaster );
+    }
+
+    TEST_F( CrdtDatastoreTest, FilterCallbackDependencyStallRetriesUntilAccepted )
+    {
+        /**
+         * A filter returning ElementFilterDependencyStalled must fail the whole
+         * delta job without applying the element or recording the head, and the
+         * failed-root retry machinery must reprocess the same delta once the
+         * filter accepts it — the registry-update convergence contract (update
+         * arriving before its member certificates must not be dropped forever).
+         */
+        const std::string stalledKey = "StallMe";
+
+        std::atomic<int>  stall_count{ 0 };
+        std::atomic<bool> allow_accept{ false };
+
+        auto filter_func = [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
+        {
+            if ( element.value() == stalledKey && !allow_accept.load() )
+            {
+                ++stall_count;
+                return CRDTDataFilter::ElementFilterResult::Stall();
+            }
+            return CRDTDataFilter::ElementFilterResult::Accept(); // Accept this delta
+        };
+
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux5", ipfsDataStore_ );
+
+        auto second_crdt        = crdt_pair.first;
+        auto second_broadcaster = crdt_pair.second;
+        broadcaster_->SetMirrorCounterPart( second_broadcaster );
+        second_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        second_crdt->RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->Start();
+
+        std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
+        auto                   element1 = delta->add_elements();
+        element1->set_key( "Key1" );
+        element1->set_value( stalledKey );
+        delta->set_priority( 1 );
+
+        ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
+        (void)final_cid;
+
+        // Wait until the filter has stalled at least once, then confirm the
+        // element is NOT applied while the dependency is missing.
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+        while ( stall_count.load() == 0 && std::chrono::steady_clock::now() < deadline )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        EXPECT_GE( stall_count.load(), 1 );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), false );
+
+        // Dependency arrives: the failed-root retry re-evaluates the SAME delta
+        // and it now applies. First retry fires ~5s after the failure.
+        allow_accept.store( true );
+        deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 25 );
+        bool converged = false;
+        while ( std::chrono::steady_clock::now() < deadline )
+        {
+            auto has_key = second_crdt->HasKey( { "Key1" } );
+            if ( has_key.has_value() && has_key.value() )
+            {
+                converged = true;
+                break;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        EXPECT_TRUE( converged );
+
         CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 }

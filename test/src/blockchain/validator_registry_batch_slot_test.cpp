@@ -622,4 +622,64 @@ namespace
 
         manager->Close();
     }
+
+    TEST_F( ValidatorRegistryBatchSlotTest, VerifyUpdateClassifiedStallsOnUnsyncedMemberAndBase )
+    {
+        /**
+         * CRDT element arrival order across deltas is unordered: an update can
+         * legitimately reach a node before the member certificates or base
+         * registry snapshot it was derived from. Verification must classify
+         * those as retryable (kMissingDependency) rather than permanently
+         * invalid — the delta then stalls through the element-filter contract
+         * instead of being dropped forever.
+         */
+        auto account  = MakeAccount();
+        auto registry = MakeRegistry( account );
+        ASSERT_TRUE( registry );
+        auto manager = MakeManager( registry, account );
+        ASSERT_TRUE( manager );
+
+        registry->SetCertificatesPerBatch( 1 );
+        CaptureBatchSubjects( registry );
+
+        const std::string tx_hash = "0xclassify-stall-a";
+        auto member = MakeMemberCertificate( manager, registry, account, tx_hash, 308 );
+        ASSERT_TRUE( member.has_value() );
+        ASSERT_TRUE( registry->OnFinalizedCertificate( member.value() ).has_value() );
+        ASSERT_EQ( submitted_subjects_.size(), 1U );
+
+        auto batch_certificate = MakeBatchCertificate( manager, registry, account, submitted_subjects_.front() );
+        ASSERT_TRUE( batch_certificate.has_value() );
+
+        WriteCertificateAtKey( "/cert/" + SlotFor( tx_hash ), member.value() );
+
+        ASSERT_EQ( registry->HandleBatchCertificate( BatchSubjectHash( submitted_subjects_.front() ),
+                                                     batch_certificate.value() ),
+                   ValidatorRegistry::BatchCertificateDecision::Approve );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&registry]() { return registry->GetRegistryEpoch() == 1; },
+            std::chrono::milliseconds( 5000 ),
+            "batch registry update applied",
+            nullptr );
+
+        auto applied = registry->LoadRegistryUpdate();
+        ASSERT_FALSE( applied.has_error() );
+
+        // Fully verifiable with everything present.
+        EXPECT_EQ( registry->VerifyUpdateClassified( applied.value(), false ),
+                   ValidatorRegistry::UpdateVerification::kValid );
+
+        // Structural corruption stays permanently invalid regardless of sync state.
+        auto tampered = applied.value();
+        tampered.mutable_registry()->set_epoch( 42 );
+        EXPECT_EQ( registry->VerifyUpdateClassified( tampered, false ),
+                   ValidatorRegistry::UpdateVerification::kInvalid );
+
+        // The member durable record has not synced to this node yet: retryable.
+        ASSERT_TRUE( db_->Remove( { "/cert/" + SlotFor( tx_hash ) }, {} ).has_value() );
+        EXPECT_EQ( registry->VerifyUpdateClassified( applied.value(), false ),
+                   ValidatorRegistry::UpdateVerification::kMissingDependency );
+
+        manager->Close();
+    }
 } // namespace

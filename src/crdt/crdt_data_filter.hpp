@@ -9,10 +9,13 @@
 #define _CRDT_DATA_FILTER_HPP_
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <memory>
 #include <regex>
 #include <shared_mutex>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 #include "crdt/proto/delta.pb.h"
@@ -21,13 +24,61 @@ namespace sgns::crdt
 {
     class CRDTWorkJournal;
 
+    /// Error the datastore maps a stalled element filter to. Signals "this
+    /// element's dependencies are not present locally yet" (e.g. a registry
+    /// update whose member certificates have not synced): the whole delta job
+    /// fails without recording its head, so the existing failed-root retry
+    /// schedule (and any fresh rebroadcast of the CID) reprocesses the delta
+    /// once the dependencies arrive. Distinct from rejection: a rejected
+    /// element is stripped permanently, a stalled one is retried.
+    inline constexpr std::errc ElementFilterDependencyStalled = std::errc::resource_unavailable_try_again;
+
     class CRDTDataFilter
     {
     public:
         /**
+         * @brief      Result of a single element-filter evaluation.
+         */
+        struct ElementFilterResult
+        {
+            enum class Decision
+            {
+                kAccept, ///< Keep the element (mark seen in the work journal).
+                kReject, ///< Strip the element, plus any extra elements listed below.
+                kStall,  ///< Dependencies missing locally: fail the whole delta job
+                         ///< so it is retried (no head recorded, nothing applied).
+            };
+
+            Decision                 decision = Decision::kAccept;
+            std::vector<pb::Element> additional_elements_to_remove; ///< Extra elements stripped when kReject.
+
+            static ElementFilterResult Accept()
+            {
+                return {};
+            }
+            static ElementFilterResult Reject( std::vector<pb::Element> extra = {} )
+            {
+                return ElementFilterResult{ Decision::kReject, std::move( extra ) };
+            }
+            static ElementFilterResult Stall()
+            {
+                return ElementFilterResult{ Decision::kStall, {} };
+            }
+            /// Adapts the legacy optional contract: nullopt accepts, a value strips.
+            static ElementFilterResult FromOptional( std::optional<std::vector<pb::Element>> legacy )
+            {
+                if ( legacy.has_value() )
+                {
+                    return Reject( std::move( legacy.value() ) );
+                }
+                return Accept();
+            }
+        };
+
+        /**
          * @brief      Element filtering callback definition
          */
-        using ElementFilterCallback = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
+        using ElementFilterCallback = std::function<ElementFilterResult( const pb::Element & )>;
 
         struct FilterCallbackEntry
         {
@@ -81,8 +132,12 @@ namespace sgns::crdt
         /**
          * @brief       Tries to filter the elements on delta according to stored filters
          * @param[in]   delta The delta to be filtered
+         * @return      true when a filter stalled on a missing local dependency —
+         *              the caller must fail the delta job without recording its
+         *              head so the retry machinery reprocesses it; false when
+         *              every element was accepted or stripped.
          */
-        void FilterElementsOnDelta( pb::Delta &delta ) const;
+        bool FilterElementsOnDelta( pb::Delta &delta ) const;
 
         /**
          * @brief       Tries to filter the tombstones on delta according to stored filters
