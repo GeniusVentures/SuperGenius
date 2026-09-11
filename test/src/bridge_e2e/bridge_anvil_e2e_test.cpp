@@ -343,36 +343,35 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
                R"("],"status":"active"}])";
     };
 
+    // Create the Light nodes FIRST and register them as genesis validators before the
+    // Full node exists. A node starts initializing its blockchain inside New(), and that
+    // init defers forever ("validator registry not initialized") unless the genesis
+    // validator set is already registered — so creating node 0 first races its own
+    // registration and the cluster never reaches READY. Registering all node addresses
+    // also lets the Phase 6 slot-based quorum be met (slot_public_min_group_ = 2 requires
+    // >= 2 distinct validators per PUBLIC hash group).
     spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
-
-    // Create all nodes upfront so their addresses are available before the
-    // genesis block is created. Processor nodes [1..kNodeCount-1] are Light
-    // nodes — their bootstraps wait for the genesis block via PubSub, which
-    // won't exist until the full node creates it.
-    spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
-    for ( unsigned int i = 0u; i < kNodeCount; ++i )
+    std::vector<std::string> light_addresses;
+    for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {
         s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ kAnvilAccountHexKeys[i] } );
         s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
+        light_addresses.push_back( s_nodes[i]->GetAddress() );
     }
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
 
-    // Register all node addresses as genesis validators so the Phase 6
-    // slot-based consensus quorum can be met (slot_public_min_group_ = 2
-    // requires ≥2 distinct validators per PUBLIC hash group).
+    s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
+    s_nodes[0]->SetChainlistFetcher( chainlist_fetcher );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { s_nodes[1]->GetAddress(), s_nodes[2]->GetAddress() } );
     spdlog::info( "bridge_anvil: authorized full node = {}, +{} additional genesis validators",
                   s_nodes[0]->GetAddress().substr( 0, 16 ),
                   kNodeCount - 1u );
 
-    // Wait for full node READY (genesis + account-creation blocks).
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
-                               kNodeReadyTimeout,
-                               "full node [0] READY",
-                               nullptr );
-
-    spdlog::info( "bridge_anvil: full node [0] READY, bootstrapping PubSub mesh for {} processor nodes",
-                  kNodeCount - 1u );
+    // Bootstrap the PubSub mesh BEFORE waiting on READY. Reaching READY requires
+    // discovering the validator registry head over the network, so a peerless node
+    // stays in INITIALIZING_BLOCKCHAIN forever ("registry not initialized"). Nodes are
+    // written with auto_dht=false, so explicit AddPeers is the only peer source here.
+    spdlog::info( "bridge_anvil: bootstrapping PubSub mesh for {} processor nodes", kNodeCount - 1u );
 
     for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {
@@ -387,6 +386,14 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         }
         s_nodes[i]->AddPeers( peers );
     }
+
+    // Wait for full node READY (genesis + account-creation blocks).
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
+                               kNodeReadyTimeout,
+                               "full node [0] READY",
+                               nullptr );
+
+    spdlog::info( "bridge_anvil: full node [0] READY" );
 
     // Wait for all processor nodes to sync and reach READY.
     ASSERT_WAIT_FOR_CONDITION(
@@ -445,9 +452,15 @@ void BridgeAnvilE2ETest::TearDownTestSuite()
         node.reset();
     }
     s_anvil.Stop();
+    // Best-effort only: libp2p's function-local static loggers pin the last-created
+    // node's soralog file sink for process lifetime, so its sgnslog.log still has an
+    // open handle here and Windows refuses the delete. SetUpTestSuite sweeps the
+    // per-node dirs in a fresh process (no locks) instead, so a leftover here is
+    // harmless -- failing teardown over it would fail an otherwise passing suite.
+    std::error_code ec;
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath, ec );
     }
 }
 
