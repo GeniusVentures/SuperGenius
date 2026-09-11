@@ -24,15 +24,6 @@ namespace sgns::crdt
 {
     class CRDTWorkJournal;
 
-    /// Error the datastore maps a stalled element filter to. Signals "this
-    /// element's dependencies are not present locally yet" (e.g. a registry
-    /// update whose member certificates have not synced): the whole delta job
-    /// fails without recording its head, so the existing failed-root retry
-    /// schedule (and any fresh rebroadcast of the CID) reprocesses the delta
-    /// once the dependencies arrive. Distinct from rejection: a rejected
-    /// element is stripped permanently, a stalled one is retried.
-    inline constexpr std::errc ElementFilterDependencyStalled = std::errc::resource_unavailable_try_again;
-
     class CRDTDataFilter
     {
     public:
@@ -45,8 +36,8 @@ namespace sgns::crdt
             {
                 kAccept, ///< Keep the element (mark seen in the work journal).
                 kReject, ///< Strip the element, plus any extra elements listed below.
-                kStall,  ///< Dependencies missing locally: fail the whole delta job
-                         ///< so it is retried (no head recorded, nothing applied).
+                kStall,  ///< Dependencies missing locally: strip the element and
+                         ///< re-evaluate the delta on the retry schedule.
             };
 
             Decision                 decision = Decision::kAccept;
@@ -132,10 +123,10 @@ namespace sgns::crdt
         /**
          * @brief       Tries to filter the elements on delta according to stored filters
          * @param[in]   delta The delta to be filtered
-         * @return      true when a filter stalled on a missing local dependency —
-         *              the caller must fail the delta job without recording its
-         *              head so the retry machinery reprocesses it; false when
-         *              every element was accepted or stripped.
+         * @return      true when a filter stalled on a missing local dependency:
+         *              that element is stripped unjournaled and the caller must
+         *              re-evaluate the delta once the dependency can arrive;
+         *              false when every element was accepted or rejected.
          */
         bool FilterElementsOnDelta( pb::Delta &delta ) const;
 

@@ -116,6 +116,7 @@ namespace sgns::crdt
                                 continue;
                             }
                             self->RetryDueFailedRoots();
+                            self->RetryStalledDeltas();
                             if ( self->SeedNextExternalRoot() )
                             {
                                 continue;
@@ -169,16 +170,6 @@ namespace sgns::crdt
         auto process_res = ProcessJobIteration( job_to_process );
         if ( process_res.has_failure() )
         {
-            if ( process_res.error() == ElementFilterDependencyStalled )
-            {
-                // Not an error: an element filter reported missing local
-                // dependencies (e.g. registry update ahead of its member
-                // certificates). The job fails without recording the head and
-                // the failed-root retry/rebroadcast machinery reprocesses it.
-                logger_->info( "{}: JOB STALLED (filter dependency not synced) for CID {}",
-                               __func__,
-                               job_to_process.root_node_->getCID().toString().value() );
-            }
             HandleJobProcessingFailure( job_to_process );
         }
         else
@@ -961,12 +952,13 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<pb::Delta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self )
+    outcome::result<CrdtDatastore::FilteredDelta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode,
+                                                                                   bool            created_by_self )
     {
         auto nodeBuffer = aNode.content();
 
-        auto delta = Delta();
-        if ( !delta.ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
+        FilteredDelta filtered;
+        if ( !filtered.delta.ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
         {
             logger_->debug( "{}: Can't parse delta from node buffer {}", __func__, aNode.getCID().toString().value() );
             return CrdtDatastore::Error::NODE_DESERIALIZATION;
@@ -974,13 +966,7 @@ namespace sgns::crdt
 
         if ( !created_by_self )
         {
-            if ( crdt_filter_.FilterElementsOnDelta( delta ) )
-            {
-                // A filter stalled on a missing local dependency: surface as a
-                // job failure so no head is recorded and the failed-root retry
-                // schedule reprocesses this delta once the dependency syncs.
-                return outcome::failure( ElementFilterDependencyStalled );
-            }
+            filtered.dependency_stalled = crdt_filter_.FilterElementsOnDelta( filtered.delta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
             logger_->debug( "{}: Filtering node {} ", __func__, aNode.getCID().toString().value() );
         }
@@ -988,7 +974,7 @@ namespace sgns::crdt
         {
             logger_->debug( "{}: Posting node {} without filtering", __func__, aNode.getCID().toString().value() );
         }
-        return delta;
+        return filtered;
     }
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
@@ -1016,7 +1002,17 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto cid_string, node_to_process->getCID().toString() );
 
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        auto &delta = filtered.delta;
+        if ( filtered.dependency_stalled )
+        {
+            // The stripped element belongs to this node, which may be deep inside the
+            // walk: track the node itself, because re-walking the root would stop at
+            // the already-resolved links and never look at this delta again.
+            logger_->info( "{}: element dependency not synced, re-evaluating {} later", __func__, cid_string );
+            std::lock_guard lock( dagWorkerMutex_ );
+            ScheduleStalledDeltaRetryLocked( node_to_process->getCID() );
+        }
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
@@ -1742,6 +1738,86 @@ namespace sgns::crdt
         }
     }
 
+    void CrdtDatastore::ScheduleStalledDeltaRetryLocked( const CID &cid )
+    {
+        auto &entry = stalledDeltas_[cid];
+        ++entry.attempts;
+        if ( entry.attempts > MAX_FAILED_ROOT_RETRIES )
+        {
+            stalledDeltas_.erase( cid );
+            logger_->warn( "{}: giving up on stalled delta {}", __func__, cid.toString().value() );
+        }
+        else
+        {
+            // attempts <= 8, so the shift cannot overflow.
+            entry.next_attempt = std::chrono::steady_clock::now() +
+                                 std::min( FAILED_ROOT_RETRY_BASE_DELAY * ( 1U << ( entry.attempts - 1 ) ),
+                                           FAILED_ROOT_RETRY_MAX_DELAY );
+        }
+        stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::RetryStalledDeltas()
+    {
+        if ( stalledDeltaRetryCount_.load( std::memory_order_relaxed ) == 0 )
+        {
+            return;
+        }
+
+        std::vector<CID> due;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            const auto      now = std::chrono::steady_clock::now();
+            due.reserve( stalledDeltas_.size() );
+            for ( auto &[cid, entry] : stalledDeltas_ )
+            {
+                if ( entry.next_attempt <= now )
+                {
+                    due.push_back( cid );
+                    // Re-armed rather than parked, so a lost pass cannot strand the entry.
+                    entry.next_attempt = now + FAILED_ROOT_RETRY_MAX_DELAY;
+                }
+            }
+        }
+
+        for ( const auto &cid : due )
+        {
+            // The node is already in the DAG: only the element the filter stripped is
+            // missing from the set, so re-filter and re-merge it in place. Re-walking
+            // it as a root would instead record an interior node as a head.
+            auto node = dagSyncer_->GetNodeWithoutRequest( cid );
+            if ( node.has_failure() || node.value() == nullptr )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto filtered = GetDeltaFromNode( *node.value(), false );
+            if ( filtered.has_failure() )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto merge_result = MergeDataFromDelta( cid, filtered.value().delta );
+            if ( merge_result.has_failure() || filtered.value().dependency_stalled )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            logger_->info( "{}: stalled delta {} applied after its dependency synced",
+                           __func__,
+                           cid.toString().value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            stalledDeltas_.erase( cid );
+            stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
+        }
+    }
+
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
     {
         auto has_block = dagSyncer_->HasBlock( cid );
@@ -2143,7 +2219,8 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
 
         //TODO - Check if filtering is needed here. Currently not filtering.
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node, true ) );
+        const auto &delta = filtered.delta;
 
         //TODO - Maybe check tombstones, right now just grabbing elements.
         std::vector elements( delta.elements().begin(), delta.elements().end() );

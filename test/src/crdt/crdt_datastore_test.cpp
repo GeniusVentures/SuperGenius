@@ -695,10 +695,9 @@ namespace sgns::crdt
     TEST_F( CrdtDatastoreTest, FilterCallbackDependencyStallRetriesUntilAccepted )
     {
         /**
-         * A filter returning ElementFilterDependencyStalled must fail the whole
-         * delta job without applying the element or recording the head, and the
-         * failed-root retry machinery must reprocess the same delta once the
-         * filter accepts it — the registry-update convergence contract (update
+         * A filter returning Stall must strip the element without applying it, and
+         * the stalled-delta retry must re-filter and re-merge the same delta once
+         * the filter accepts it — the registry-update convergence contract (update
          * arriving before its member certificates must not be dropped forever).
          */
         const std::string stalledKey = "StallMe";
@@ -745,8 +744,8 @@ namespace sgns::crdt
         EXPECT_GE( stall_count.load(), 1 );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), false );
 
-        // Dependency arrives: the failed-root retry re-evaluates the SAME delta
-        // and it now applies. First retry fires ~5s after the failure.
+        // Dependency arrives: the stalled-delta retry re-evaluates the SAME delta
+        // and it now applies. First retry fires ~5s after the stall.
         allow_accept.store( true );
         deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 25 );
         bool converged = false;

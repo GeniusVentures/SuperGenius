@@ -1244,7 +1244,7 @@ namespace sgns
                     // Corrupt or slot-mismatched durable record: permanently invalid.
                     logger_->error( "{}: rejecting corrupt member slot={} error={}",
                                     __func__,
-                                    member_slot.substr( 0, 8 ),
+                                    member_slot,
                                     cert_result.error().message() );
                     return BatchCertificateDecision::Reject;
                 }
@@ -1253,7 +1253,7 @@ namespace sgns
                 // upgrade over develop's Reject so late joiners and restarts converge).
                 logger_->debug( "{}: member slot={} not yet available, stalling batch subject_hash={}",
                                 __func__,
-                                member_slot.substr( 0, 8 ),
+                                member_slot,
                                 subject_hash.substr( 0, 8 ) );
                 return BatchCertificateDecision::Stalled;
             }
@@ -1262,7 +1262,7 @@ namespace sgns
             {
                 std::lock_guard<std::mutex> lock( batch_mutex_ );
                 applying_batch_subject_ids_.erase( subject_hash );
-                logger_->error( "{}: member slot={} registry binding mismatch", __func__, member_slot.substr( 0, 8 ) );
+                logger_->error( "{}: member slot={} registry binding mismatch", __func__, member_slot );
                 return BatchCertificateDecision::Reject;
             }
             certificates.push_back( cert_result.value() );
@@ -1665,7 +1665,7 @@ namespace sgns
                             // Corrupt or slot-mismatched durable record: permanently invalid.
                             logger_->error( "{}: corrupt member record for batch slot={}",
                                             __func__,
-                                            member_slot.substr( 0, 8 ) );
+                                            member_slot );
                             return UpdateVerification::kInvalid;
                         }
                         // The member durable record has not synced yet: stall so the
@@ -1673,7 +1673,7 @@ namespace sgns
                         // is unordered).
                         logger_->warn( "{}: member certificate not yet synced for batch slot={}",
                                        __func__,
-                                       member_slot.substr( 0, 8 ) );
+                                       member_slot );
                         return UpdateVerification::kMissingDependency;
                     }
                     const auto &tx_cert = certificate_result.value();
@@ -1688,7 +1688,7 @@ namespace sgns
                     {
                         logger_->error( "{}: member certificate quorum not reached for batch slot={}",
                                         __func__,
-                                        member_slot.substr( 0, 8 ) );
+                                        member_slot );
                         return UpdateVerification::kInvalid;
                     }
                     for ( const auto &[validator_id, approve] : votes.value().registered_votes )
