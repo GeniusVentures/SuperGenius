@@ -610,6 +610,10 @@ namespace sgns
                 }
                 else
                 {
+                    // Stamp the attempt even on failure: leaving the timestamp stale
+                    // retries on every loop tick, which produced ~28k warnings per run
+                    // while pubsub was down instead of one per interval.
+                    last_periodic_sync_time_ = now;
                     TransactionManagerLogger()->warn( "[{} - full: {}] Periodic sync head request failed",
                                                       account_m->GetAddress().substr( 0, 8 ),
                                                       full_node_m );
