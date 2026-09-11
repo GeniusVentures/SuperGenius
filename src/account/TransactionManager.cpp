@@ -4163,6 +4163,19 @@ namespace sgns
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m );
             }
+
+            // A single publish timeout demotes us to SYNCING, and SyncNonce() cannot
+            // climb back out while the same pubsub outage also fails its nonce request:
+            // it returns early and the node stays SYNCING forever, rejecting every
+            // subsequent mint with "Transaction manager is not ready". Sync head data
+            // arriving is proof the network is reachable again, so resume from here.
+            if ( GetState() == State::SYNCING )
+            {
+                TransactionManagerLogger()->info( "[{} - full: {}] Sync head data received while SYNCING, resuming",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m );
+                ChangeState( State::READY );
+            }
         }
     }
 
