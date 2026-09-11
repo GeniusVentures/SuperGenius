@@ -4496,7 +4496,21 @@ namespace sgns
                         conflicting_tx.value()->GetHash(),
                         tx_hash );
                     tx_lock.unlock();
-                    if ( ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
+                    // The incoming transaction carries a validated quorum certificate
+                    // (this handler only runs after ValidateCertificate and
+                    // CertificateMatchesTransaction); the conflict outranks it only if
+                    // it is final by the same standard. CheckTransactionValidity
+                    // promotes locally tracked transactions to CONFIRMED on signature
+                    // validity alone — letting that promotion win the BestHash
+                    // tie-break reverted a certified winner's already-applied effects
+                    // and DeleteTransaction'd it from the CRDT while every peer
+                    // confirmed it: permanent divergence on exactly this node.
+                    auto conflict_certificate = GetTransactionCertificate( *conflicting_tx.value() );
+                    const bool conflict_is_certified =
+                        conflict_certificate.has_value() &&
+                        CertificateMatchesTransaction( conflict_certificate.value(),
+                                                       *conflicting_tx.value() );
+                    if ( !conflict_is_certified || ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
                     {
                         auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
                         if ( result.has_error() )

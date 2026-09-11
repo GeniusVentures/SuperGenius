@@ -65,6 +65,12 @@ namespace sgns
             return tm.GetTransactionByHash( hash );
         }
 
+        static outcome::result<bool> CheckTransactionValidity( TransactionManager       &tm,
+                                                              const std::set<uint64_t> &nonces )
+        {
+            return tm.CheckTransactionValidity( nonces );
+        }
+
         static std::optional<TransactionManager::TrackedTx> GetTrackedTxByHash( TransactionManager &tm,
                                                                                 const std::string  &hash )
         {
@@ -1149,4 +1155,84 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     const auto confirmed = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     ASSERT_TRUE( confirmed.has_value() );
     EXPECT_EQ( confirmed->status, TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+TEST_F( CertificateFallbackTest, CertifiedWinnerBeatsSignatureOnlyConfirmedConflict )
+{
+    /**
+     * OnConsensusCertificate used to confirm the certified winner first and then
+     * arbitrate with a content tie-break, so a locally tracked transaction that
+     * CheckTransactionValidity had promoted to CONFIRMED on signature validity
+     * alone could win BestHash and revert the certified winner — un-confirming
+     * its applied effects and deleting it from the CRDT while every peer
+     * confirmed it. A quorum-certified transaction must outrank any
+     * non-certified CONFIRMED entry regardless of hash order; the tie-break
+     * stays only for two genuinely certified finalists.
+     */
+    const auto make_tx = []( const std::string &source, uint64_t nonce, char burn_fill ) {
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "mint-v2" );
+        dag.set_source_addr( source );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::system_clock::now().time_since_epoch() )
+                               .count() ) );
+        const auto burn_hash = base::Hash256::fromReadableString( std::string( 64, burn_fill ) );
+        assert( burn_hash.has_value() );
+        auto transaction = std::make_shared<MintTransactionV2>( MintTransactionV2::New( 42,
+                                                                                        "source-chain",
+                                                                                        kTestTokenId,
+                                                                                        std::move( dag ),
+                                                                                        { { burn_hash.value(), 0, {} } },
+                                                                                        source ) );
+        return transaction;
+    };
+
+    // Same nonce, different burns: conflicting by nonce+address, distinct slots.
+    auto tx_a = make_tx( account_->GetAddress(), 80, 'b' );
+    auto tx_b = make_tx( account_->GetAddress(), 80, 'c' );
+    tx_a->MakeSignature( *account_ );
+    tx_b->MakeSignature( *account_ );
+    ASSERT_NE( tx_a->GetHash(), tx_b->GetHash() );
+
+    // Assign roles so the tie-break always favors the signature-only conflict —
+    // the exact direction in which the pre-fix arbitration reverted the
+    // certified winner. (Hash order depends on the DAG timestamp, so the roles
+    // are chosen at runtime rather than fixed.)
+    const bool a_wins_tiebreak = blockchain_->BestHash( tx_a->GetHash(), tx_b->GetHash() ) == tx_a->GetHash();
+    const auto conflict_tx     = a_wins_tiebreak ? tx_a : tx_b;
+    const auto winner_tx       = a_wins_tiebreak ? tx_b : tx_a;
+    ASSERT_EQ( blockchain_->BestHash( conflict_tx->GetHash(), winner_tx->GetHash() ),
+               conflict_tx->GetHash() );
+
+    const auto certificate = BuildSignedCertificate( winner_tx );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( winner_tx->GetSlotID(), certificate.value() );
+
+    // The node tracks its own competing transaction and promotes it to CONFIRMED
+    // on signature validity alone (no certificate exists for its slot).
+    ASSERT_TRUE( FetchAndProcess( conflict_tx ).has_value() );
+    ASSERT_TRUE( CertificateFallbackTestAccess::CheckTransactionValidity( *tm_, { 80 } ).has_value() );
+    {
+        const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, conflict_tx->GetHash() );
+        ASSERT_TRUE( tracked.has_value() );
+        ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    }
+
+    // The quorum-certified winner arrives for the same nonce. Track it first so
+    // the handler runs the tracked-transaction path (with its arbitration)
+    // rather than the standalone-validator embedded fallback.
+    ASSERT_TRUE( FetchAndProcess( winner_tx ).has_value() );
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               winner_tx->GetHash(),
+                                                                               certificate.value() );
+    ASSERT_TRUE( result.has_value() );
+
+    const auto winner_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner_tx->GetHash() );
+    ASSERT_TRUE( winner_tracked.has_value() );
+    EXPECT_EQ( winner_tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    const auto conflict_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, conflict_tx->GetHash() );
+    ASSERT_TRUE( conflict_tracked.has_value() );
+    EXPECT_EQ( conflict_tracked->status, TransactionManager::TransactionStatus::FAILED );
 }
