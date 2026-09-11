@@ -388,6 +388,7 @@ namespace sgns
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class MultiNodeFinalityFaultTestAccess;
         friend class PayoutOutputsTestAccess;
+        friend class MultiAccountTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 

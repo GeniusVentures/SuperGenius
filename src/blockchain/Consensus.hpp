@@ -638,14 +638,13 @@ namespace sgns
          */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
         /**
-         * @brief Retrieves a certificate by its subject hash (secondary index).
+         * @brief Retrieves a certificate by its subject hash (legacy index).
          *
-         * SubmitCertificate persists each certificate twice: at the authoritative
-         * canonical-slot key (`/cert/<slot>`, consensus internals) and at the
-         * subject-hash key (`/cert/<subject_hash>`, consumer contract). This read
-         * serves the subject-hash record and verifies the hash binding plus full
-         * certificate validity. Consensus-internal lookups must use
-         * @ref GetCertificateBySlot with a derived slot.
+         * v3.0 persists a certificate only at the authoritative canonical-slot key
+         * (`/cert/<slot>`), so this read resolves develop-era records, which predate
+         * slot keys and carry only the subject-hash index. It verifies the hash
+         * binding plus full certificate validity. Every lookup of a record this tree
+         * wrote must use @ref GetCertificateBySlot with a derived slot.
          */
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
         /**
