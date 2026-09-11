@@ -430,20 +430,14 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
                R"("],"status":"active"}])";
     };
 
-    // Create ALL three nodes FIRST (matching Plan 04.1-01 pattern) so
-    // SetAdditionalGenesisValidatorAddresses has every address before the
-    // ValidatorRegistry initializes. The burn seeding happens AFTER the
-    // genesis validators are registered so the catch-up scan discovers the
-    // burns when it fires at READY.
+    // Create the Light nodes FIRST and register them as genesis validators before the
+    // Full node exists. A node starts initializing its blockchain inside New(), and that
+    // init defers forever ("validator registry not initialized") unless the genesis
+    // validator set is already registered — creating node_main first races its own
+    // registration, so the cluster never reaches READY. The burn seeding happens AFTER
+    // the genesis validators are registered so the catch-up scan discovers the burns
+    // when it fires at READY.
     const char *kWNodeType[] = { "Full", "Light", "Light" };
-
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
-    // Load node_main from the pre-seeded storage so it carries the EXACT
-    // burn-recipient key (see SeedAccountWithExactKey above) — its address IS the
-    // destination the pre-node burns pay, so the auto-minted funds are its own.
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
-    node_main->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
@@ -455,12 +449,16 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
     node_proc2->SetChainlistFetcher( chainlist_fetcher );
 
-    // Register all node addresses as genesis validators IMMEDIATELY after node
-    // creation so the ValidatorRegistry bootstraps the genesis registry before
-    // the blockchain attempts to initialize (must be called before the genesis
-    // block is created).
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { node_proc1->GetAddress(), node_proc2->GetAddress() } );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
+    // Load node_main from the pre-seeded storage so it carries the EXACT
+    // burn-recipient key (see SeedAccountWithExactKey above) — its address IS the
+    // destination the pre-node burns pay, so the auto-minted funds are its own.
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
+    node_main->SetChainlistFetcher( chainlist_fetcher );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
                   node_main->GetAddress().substr( 0, 16 ) );
 
