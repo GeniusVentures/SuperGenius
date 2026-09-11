@@ -1556,6 +1556,20 @@ namespace sgns
 
     const IInputValidator &TransactionManager::GetInputValidator( const std::string &chain_id ) const
     {
+        // The IInputValidator registry is process-global: with several nodes in one
+        // process only the first one claims a chain id, and the losers would validate
+        // through a peer's instance. The per-claim evidence would then land in that
+        // peer's store and every local vote would abstain from all RPC slots, which
+        // deadlocks bridge-mint slot quorum. Our own validator wins whenever it has
+        // endpoints wired for the chain.
+        if ( public_chain_input_validator_.GetFirstRpcUrl( chain_id ).has_value() )
+        {
+            TransactionManagerLogger()->debug( "{}: using own PublicChain validator for chain_id={}",
+                                               __func__,
+                                               chain_id );
+            return public_chain_input_validator_;
+        }
+
         if ( auto *validator = IInputValidator::Get( chain_id ) )
         {
             TransactionManagerLogger()->debug( "{}: Returning validator registered for chain_id={}",
