@@ -300,6 +300,36 @@ namespace sgns
                            UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
+         * @brief      Outcome of an atomic outpoint claim attempt.
+         */
+        enum class OutpointClaim : uint8_t
+        {
+            kClaimed,         ///< Transitioned READY -> RESERVED for the caller, under the UTXO lock.
+            kAlreadyReserved, ///< Another reservation owns it — INCLUDING one under the same id (a duplicate).
+            kAlreadyConsumed, ///< The outpoint is spent.
+            kNotClaimable,    ///< Unknown outpoint or mismatched type.
+        };
+
+        /**
+         * @brief       Atomically checks-and-reserves a single outpoint.
+         * @details     ReserveUTXOs is silent when the outpoint is already reserved
+         *              under the SAME id — exactly the duplicate-burn shape, since
+         *              MintFunds uses the burn hash as the reservation id — so a
+         *              check-then-reserve sequence around it could not detect a
+         *              concurrent duplicate. This variant performs both steps under
+         *              one critical section and reports every outcome.
+         * @param[in]   txid Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @param[in]   reservation_id The id to record on success.
+         * @param[in]   type Required UTXO type.
+         * @return      The claim outcome.
+         */
+        OutpointClaim TryReserveOutpoint( const base::Hash256 &txid,
+                                          uint32_t             output_idx,
+                                          const std::string   &reservation_id,
+                                          UTXOType             type = UTXOType::UTXO_NORMAL );
+
+        /**
          * @brief       Releases a previous reservation without consuming the inputs.
          * @param[in]   inputs The list of UTXOs to release
          * @param[in]   reservation_id The ID for the reservation
@@ -350,6 +380,19 @@ namespace sgns
          * @return      true if the outpoint exists and is in UTXO_RESERVED state
          */
         bool IsOutPointReserved( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+        /**
+         * @brief       Reports whether a CONSUMED outpoint carries real spend metadata.
+         * @details     ConsumeUTXOs synthesizes a zero-amount CONSUMED tombstone for
+         *              outpoints it cannot find — and a durability retry leaves
+         *              exactly that behind — which is the benign metadata-rebuild
+         *              path, not evidence of a spend. A CONSUMED entry with a
+         *              non-zero amount is a genuine spend: positive proof that a
+         *              sibling mint of the same burn applied its effects.
+         * @param[in]   utxo_id Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @return      true only when the outpoint is CONSUMED with real metadata.
+         */
+        bool IsOutPointGenuinelyConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
 
         /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address

@@ -71,6 +71,12 @@ namespace sgns
             return tm.CheckTransactionValidity( nonces );
         }
 
+        static outcome::result<void> ParseTransaction( TransactionManager                        &tm,
+                                                       const std::shared_ptr<GeniusTransaction> &tx )
+        {
+            return tm.ParseTransaction( tx );
+        }
+
         static std::optional<TransactionManager::TrackedTx> GetTrackedTxByHash( TransactionManager &tm,
                                                                                 const std::string  &hash )
         {
@@ -1235,4 +1241,59 @@ TEST_F( CertificateFallbackTest, CertifiedWinnerBeatsSignatureOnlyConfirmedConfl
     const auto conflict_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, conflict_tx->GetHash() );
     ASSERT_TRUE( conflict_tracked.has_value() );
     EXPECT_EQ( conflict_tracked->status, TransactionManager::TransactionStatus::FAILED );
+}
+
+TEST_F( CertificateFallbackTest, DuplicateBurnMintRefusedWhenSiblingConsumedOutpoint )
+{
+    /**
+     * The last line of the duplicate-burn defense: when a mint's burn input is
+     * already CONSUMED, a sibling mint for the same burn applied its effects —
+     * positive proof of duplication that no check-then-act race can fake. The
+     * parse path used to warn and create the outputs anyway, minting one
+     * verified burn twice. It must now refuse before any output exists.
+     */
+    const auto burn = base::Hash256::fromReadableString( std::string( 64, 'f' ) ).value();
+    auto mint_tx = std::make_shared<MintTransactionV2>( MintTransactionV2::New(
+        7,
+        "public",
+        kTestTokenId,
+        []
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_type( "mint-v2" );
+            dag.set_source_addr( "duplicate-burn-owner" );
+            dag.set_nonce( 81 );
+            dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::system_clock::now().time_since_epoch() )
+                                   .count() ) );
+            return dag;
+        }(),
+        { { burn, 0, {} } },
+        "duplicate-burn-owner" ) );
+    mint_tx->MakeSignature( *account_ );
+
+    // The sibling mint already consumed the burn outpoint.
+    auto &utxo_mgr = account_->GetUTXOManager();
+    ASSERT_TRUE( utxo_mgr
+                     .PutUTXO( GeniusUTXO( burn, 0, 7, kTestTokenId ),
+                               "duplicate-burn-owner",
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    InputUTXOInfo sibling_input;
+    sibling_input.txid_hash_  = burn;
+    sibling_input.output_idx_ = 0;
+    ASSERT_TRUE(
+        utxo_mgr.ConsumeUTXOs( { sibling_input }, "duplicate-burn-owner", UTXOManager::UTXOType::UTXO_BRIDGE )
+            .has_value() );
+
+    const uint64_t balance_before = utxo_mgr.GetBalance();
+
+    // The duplicate's parse must fail without creating outputs. Parse directly:
+    // arrival processing queues the parse for TickOnce, which this fixture does
+    // not run.
+    const auto result = CertificateFallbackTestAccess::ParseTransaction( *tm_, mint_tx );
+    EXPECT_TRUE( result.has_error() );
+
+    const uint64_t balance_after = utxo_mgr.GetBalance();
+    EXPECT_EQ( balance_after, balance_before );
 }

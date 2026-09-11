@@ -559,6 +559,45 @@ namespace sgns
         }
     }
 
+    UTXOManager::OutpointClaim UTXOManager::TryReserveOutpoint( const base::Hash256 &txid,
+                                                                uint32_t             output_idx,
+                                                                const std::string   &reservation_id,
+                                                                UTXOType             type )
+    {
+        const OutPoint outpoint{ txid, output_idx };
+
+        std::unique_lock lock( utxos_mutex_ );
+        auto             entry_it = utxo_outpoints_.find( outpoint );
+        if ( entry_it == utxo_outpoints_.end() )
+        {
+            logger_->warn( "TryReserveOutpoint: unknown outpoint {}:{}", txid.toReadableString(), output_idx );
+            return OutpointClaim::kNotClaimable;
+        }
+        if ( entry_it->second.state == UTXOState::UTXO_CONSUMED )
+        {
+            return OutpointClaim::kAlreadyConsumed;
+        }
+        if ( entry_it->second.state == UTXOState::UTXO_RESERVED )
+        {
+            // Same-id silence in ReserveUTXOs is what let a concurrent duplicate
+            // burn read as a successful claim; report every collision here.
+            auto reservation_it = local_reservations_.find( outpoint );
+            logger_->warn( "TryReserveOutpoint: {}:{} already reserved (holder={} caller={})",
+                           txid.toReadableString(),
+                           output_idx,
+                           reservation_it != local_reservations_.end() ? reservation_it->second : std::string( "?" ),
+                           reservation_id );
+            return OutpointClaim::kAlreadyReserved;
+        }
+        if ( entry_it->second.state != UTXOState::UTXO_READY || entry_it->second.type != type )
+        {
+            return OutpointClaim::kNotClaimable;
+        }
+        entry_it->second.state        = UTXOState::UTXO_RESERVED;
+        local_reservations_[outpoint] = reservation_id;
+        return OutpointClaim::kClaimed;
+    }
+
     void UTXOManager::RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs,
                                      const std::string                &reservation_id,
                                      UTXOType                          type )
@@ -681,6 +720,14 @@ namespace sgns
     {
         auto state = GetOutPointState( utxo_id, output_idx );
         return state.has_value() && state.value() == UTXOState::UTXO_RESERVED;
+    }
+
+    bool UTXOManager::IsOutPointGenuinelyConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        auto             it = utxo_outpoints_.find( OutPoint{ utxo_id, output_idx } );
+        return it != utxo_outpoints_.end() && it->second.state == UTXOState::UTXO_CONSUMED &&
+               it->second.utxo.GetAmount() != 0;
     }
 
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const

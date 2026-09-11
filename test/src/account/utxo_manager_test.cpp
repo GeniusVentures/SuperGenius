@@ -599,3 +599,53 @@ TEST_F( UTXOManagerTest, GetAllUTXOsIncludesBridgeTypeEntries )
     EXPECT_EQ( it->second[0].first, UTXOManager::UTXOState::UTXO_READY );
     EXPECT_EQ( it->second[0].second.GetAmount(), 1000u );
 }
+
+TEST_F( UTXOManagerTest, TryReserveOutpointClaimsOnceAndReportsCollisions )
+{
+    /**
+     * The duplicate-burn serialization point. ReserveUTXOs is silent when the
+     * outpoint is already reserved under the SAME id — and the burn hash is the
+     * reservation id, so that silence is exactly the concurrent-duplicate case.
+     * TryReserveOutpoint must claim exactly once and report every collision
+     * distinctly: same-id, different-id, consumed, and not-claimable.
+     */
+    const auto burn = base::Hash256::fromReadableString( std::string( 64, 'd' ) ).value();
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( burn, 0, 100, sgns::TokenID::FromBytes( { 0x00 } ) ),
+                                "claim-owner",
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+
+    // First claim wins.
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kClaimed );
+    // Same-id re-claim (the duplicate burn) is reported, not silently accepted.
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kAlreadyReserved );
+    // Different holder is also reported.
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "other-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kAlreadyReserved );
+    // Type mismatch against a READY outpoint is not claimable.
+    const auto other_burn = base::Hash256::fromReadableString( std::string( 64, 'c' ) ).value();
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( other_burn, 0, 50, sgns::TokenID::FromBytes( { 0x00 } ) ),
+                                "claim-owner",
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( other_burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_NORMAL ),
+               UTXOManager::OutpointClaim::kNotClaimable );
+    // Unknown outpoint is not claimable.
+    const auto unknown = base::Hash256::fromReadableString( std::string( 64, 'e' ) ).value();
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( unknown, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kNotClaimable );
+
+    // After consumption the claim reports spent.
+    InputUTXOInfo consumed_input;
+    consumed_input.txid_hash_  = burn;
+    consumed_input.output_idx_ = 0;
+    ASSERT_TRUE( utxo_manager
+                     ->ConsumeUTXOs( { consumed_input }, "claim-owner", UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kAlreadyConsumed );
+}

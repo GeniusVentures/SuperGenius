@@ -575,3 +575,42 @@ TEST_F( TransactionManagerRecoveryTest, PutConvergentImmutableFailsClosedAfterGl
     ASSERT_TRUE( put.has_error() );
     EXPECT_EQ( put.error(), std::errc::operation_canceled );
 }
+
+TEST_F( TransactionManagerRecoveryTest, ConcurrentDuplicateBurnMintsExactlyOnce )
+{
+    /**
+     * Duplicate-burn TOCTOU: two concurrent MintFunds calls for the same burn
+     * event (relayer redelivery racing an RPC mint) could both pass the
+     * reserved/consumed/marker checks before either reserved, and ReserveUTXOs
+     * was silent when the same id already held the reservation — so both mints
+     * were created and both applied effects, minting one verified burn twice.
+     * The atomic TryReserveOutpoint claim must admit exactly one caller
+     * regardless of interleaving.
+     */
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    const std::string burn_hash = std::string( 64, '9' );
+    std::atomic<int>  successes{ 0 };
+    std::atomic<bool> go{ false };
+
+    auto worker = [&]
+    {
+        while ( !go.load( std::memory_order_acquire ) )
+        {
+            std::this_thread::yield();
+        }
+        auto mint = manager_->MintFunds( 1000, burn_hash, "public", kTokenId, "" );
+        if ( mint.has_value() )
+        {
+            successes.fetch_add( 1 );
+        }
+    };
+
+    std::thread first( worker );
+    std::thread second( worker );
+    go.store( true, std::memory_order_release );
+    first.join();
+    second.join();
+
+    EXPECT_EQ( successes.load(), 1 );
+}

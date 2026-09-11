@@ -791,10 +791,32 @@ namespace sgns
         source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
-        // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
-        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs,
-                                                  transaction_hash,
-                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+        // Reserve the burn UTXO — transitions READY → RESERVED (D-18). The claim is
+        // the ATOMIC serialization point against duplicate burns: the reserved/
+        // consumed/marker checks above are only early exits, and two concurrent
+        // MintFunds calls for the same burn event (relayer redelivery on reorg or
+        // reconnect racing an RPC mint) could both pass them before either
+        // reserved. ReserveUTXOs was additionally silent when the SAME id — the
+        // burn hash is the reservation id — already held the reservation, so the
+        // duplicate read as a successful claim and both mints applied effects.
+        const auto claim = account_m->GetUTXOManager().TryReserveOutpoint(
+            source_input_hash,
+            0,
+            transaction_hash,
+            sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+        if ( claim != sgns::UTXOManager::OutpointClaim::kClaimed )
+        {
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Bridge burn not claimable (claim={}), rejecting duplicate mint for "
+                "chain={} tx_hash={}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                static_cast<int>( claim ),
+                chainid,
+                transaction_hash );
+            return outcome::failure( std::errc::already_connected );
+        }
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
@@ -2465,28 +2487,68 @@ namespace sgns
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
             auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
-            {
-                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
-            }
 
-            if ( !inputs.empty() )
+            // Inputs BEFORE outputs, with two discriminators:
+            //  - A genuinely-consumed burn input (CONSUMED with real, non-zero
+            //    metadata) is positive proof a sibling mint of the same burn
+            //    applied its effects — creating this transaction's outputs anyway
+            //    minted one verified burn twice, so refuse BEFORE any output
+            //    exists. ConsumeUTXOs synthesizes a zero-amount CONSUMED tombstone
+            //    for outpoints it cannot find (and a durability retry leaves
+            //    exactly that behind) — that is the benign rebuild path, not a
+            //    sibling spend.
+            //  - Outputs of THIS transaction already present means its effects
+            //    applied once: idempotent redelivery succeeds without re-applying.
+            const bool already_applied =
+                !outputs.empty() &&
+                account_m->GetUTXOManager().GetUnconsumedUTXO( hash, 0 ).has_value();
+            if ( !already_applied )
             {
-                BOOST_OUTCOME_TRY(
-                    auto consumed,
-                    account_m->GetUTXOManager().ConsumeUTXOs( inputs,
-                                                              mint_tx_v2->GetSrcAddress(),
-                                                              sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
-                if ( !consumed )
+                if ( !inputs.empty() )
                 {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] Mint-v2 {} did not consume every burn input (already consumed or "
-                        "missing); burn outpoint metadata may have been rebuilt with zero amount",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        mint_tx_v2->GetHash() );
+                    for ( const auto &input : inputs )
+                    {
+                        if ( account_m->GetUTXOManager().IsOutPointGenuinelyConsumed( input.txid_hash_,
+                                                                                     input.output_idx_ ) )
+                        {
+                            TransactionManagerLogger()->error(
+                                "[{} - full: {}] Mint-v2 {} burn input already consumed by a sibling mint — "
+                                "duplicate burn, refusing to apply effects",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                mint_tx_v2->GetHash() );
+                            return outcome::failure( std::errc::already_connected );
+                        }
+                    }
+                    BOOST_OUTCOME_TRY(
+                        auto consumed,
+                        account_m->GetUTXOManager().ConsumeUTXOs( inputs,
+                                                                  mint_tx_v2->GetSrcAddress(),
+                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                    if ( !consumed )
+                    {
+                        TransactionManagerLogger()->warn(
+                            "[{} - full: {}] Mint-v2 {} did not consume every burn input (missing or mismatched "
+                            "metadata); burn outpoint metadata may have been rebuilt with zero amount",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            mint_tx_v2->GetHash() );
+                    }
                 }
+
+                for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+                {
+                    GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
+                }
+            }
+            else
+            {
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] Mint-v2 {} outputs already present; idempotent redelivery",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    mint_tx_v2->GetHash() );
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
