@@ -91,6 +91,7 @@ namespace sgns::crdt
     {
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
+        bool                             dependency_stalled = false;
 
         FilterCallbackRegistry registry_snapshot;
         {
@@ -111,11 +112,14 @@ namespace sgns::crdt
 
                     if ( result.decision == ElementFilterResult::Decision::kStall )
                     {
-                        // Dependency stall: abort before mutating the delta or
-                        // journaling the key as seen — the caller fails the job
-                        // and the failed-root retry/rebroadcast machinery
-                        // reprocesses it once the dependency syncs.
-                        return true;
+                        // Strip like a rejection but without journaling the key as
+                        // seen, and tell the caller to re-evaluate this delta later.
+                        // Holding the whole delta back instead would stop the DAG
+                        // walk that carries the very dependency being waited on.
+                        elements_to_delete_indices.insert( i );
+                        dependency_stalled = true;
+                        filter_matched     = true;
+                        break;
                     }
 
                     if ( result.decision == ElementFilterResult::Decision::kReject )
@@ -166,7 +170,7 @@ namespace sgns::crdt
         {
             delta.mutable_elements()->DeleteSubrange( index, 1 );
         }
-        return false;
+        return dependency_stalled;
     }
 
     void CRDTDataFilter::FilterTombstonesOnDelta( pb::Delta &delta )
