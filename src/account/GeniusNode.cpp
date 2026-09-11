@@ -3230,45 +3230,49 @@ namespace sgns
                 return validator.GetFirstRpcUrl( chain_id_str );
             };
 
+            using BurnOutcome = evmwatcher::BridgeCatchupWatcher::BurnOutcome;
+
             auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
                                                                   const std::string                     &tx_hash_hex,
-                                                                  const std::string &chain_id_str ) -> bool
+                                                                  const std::string &chain_id_str ) -> BurnOutcome
             {
-                // Parse the ABI-decoded values into a BurnEventParams
+                // Malformed input returns Retry rather than Processed: a stuck, loudly
+                // logged cursor is a far safer failure mode than silently dropping a burn
+                // whose tokens are already destroyed on the source chain.
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
                 {
-                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
-                                               tx_hash_hex );
-                    return false;
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse burn event for tx {}", tx_hash_hex );
+                    return BurnOutcome::Retry;
                 }
 
-                // UTXO state checks (same guards as the old scan)
                 base::Hash256 burn_tx_hash;
                 if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
                 {
-                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — skipping",
-                                               tx_hash_hex );
-                    return false;
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {}", tx_hash_hex );
+                    return BurnOutcome::Retry;
                 }
 
                 auto strong = weak_self.lock();
                 if ( !strong || !strong->account_ )
                 {
-                    return false;
+                    return BurnOutcome::Retry; // shutting down — must not advance the cursor
                 }
+
+                // The UTXO state machine already distinguishes confirmed from in flight:
+                // CONSUMED means a mint was applied, RESERVED means one is awaiting consensus.
                 auto &utxo_mgr = strong->account_->GetUTXOManager();
                 if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — confirmed",
                                                  tx_hash_hex );
-                    return false;
+                    return BurnOutcome::Processed;
                 }
                 if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} RESERVED — mint in flight",
                                                  tx_hash_hex );
-                    return false;
+                    return BurnOutcome::InFlight;
                 }
 
                 try
@@ -3278,14 +3282,24 @@ namespace sgns
                                                       chain_id_str,
                                                       burn.value().token_id,
                                                       burn.value().destination );
-                    return result.has_value();
+                    // Submitted is not confirmed: the cursor stays held until a later poll sees
+                    // the outpoint CONSUMED. already_connected means another attempt is already
+                    // live or done, which is equally "in flight".
+                    if ( result || result.error() == std::errc::already_connected )
+                    {
+                        return BurnOutcome::InFlight;
+                    }
+                    strong->node_logger_->warn( "CatchUpWatcher: MintTokens failed for tx {}: {} — will retry",
+                                                tx_hash_hex,
+                                                result.error().message() );
+                    return BurnOutcome::Retry;
                 }
                 catch ( const std::exception &e )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
-                                                 tx_hash_hex,
-                                                 e.what() );
-                    return false;
+                    strong->node_logger_->warn( "CatchUpWatcher: MintTokens threw for tx {}: {} — will retry",
+                                                tx_hash_hex,
+                                                e.what() );
+                    return BurnOutcome::Retry;
                 }
             };
 

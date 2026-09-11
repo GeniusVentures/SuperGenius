@@ -84,6 +84,21 @@ namespace sgns::evmwatcher
         using RpcUrlResolver = std::function<std::optional<std::string>( const std::string &chain_id_str )>;
 
         /**
+         * @brief Outcome of presenting one discovered burn to the node.
+         *
+         * A plain bool cannot express this: submitting a mint is not the same as the mint
+         * being confirmed, and conflating the two let a rejected mint fall behind the block
+         * cursor and be lost forever (the burn is then never re-presented, so the tokens
+         * burned on the source chain are never minted here).
+         */
+        enum class BurnOutcome : uint8_t
+        {
+            Processed, ///< Mint is durably confirmed; the cursor may advance past this burn.
+            InFlight,  ///< A mint is reserved and awaiting consensus; hold the cursor, do not resubmit.
+            Retry      ///< No confirmed mint and none in flight; hold the cursor and re-present next poll.
+        };
+
+        /**
          * @brief Callback invoked for each discovered burn event.
          *
          * The watcher has already decoded the raw log into ABI values.
@@ -93,14 +108,16 @@ namespace sgns::evmwatcher
          * 2. Checking UTXO state (consumed / reserved)
          * 3. Calling MintTokens()
          *
+         * Only BurnOutcome::Processed lets the per-chain cursor move past this burn's block.
+         *
          * @param[in] decoded_values  ABI-decoded log parameters.
          * @param[in] tx_hash_hex     Source-chain transaction hash (hex, no 0x).
          * @param[in] chain_id_str    Source chain ID as a decimal string.
-         * @return true if the burn was successfully submitted for minting.
+         * @return Confirmation state of this burn's mint.
          */
-        using BurnProcessor = std::function<bool( const std::vector<eth::abi::AbiValue> &decoded_values,
-                                                  const std::string                     &tx_hash_hex,
-                                                  const std::string                     &chain_id_str )>;
+        using BurnProcessor = std::function<BurnOutcome( const std::vector<eth::abi::AbiValue> &decoded_values,
+                                                         const std::string                     &tx_hash_hex,
+                                                         const std::string                     &chain_id_str )>;
 
         /**
          * @brief      Constructs a BridgeCatchupWatcher.

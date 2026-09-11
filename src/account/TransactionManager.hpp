@@ -740,6 +740,15 @@ namespace sgns
         void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
         outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
+
+        /**
+         * @brief Releases the burn-UTXO reservation held by a mint that will never confirm.
+         *
+         * Must run on every terminal non-confirmed outcome (FAILED and UNCONFIRMED alike):
+         * a burn left RESERVED reads as "mint in flight" forever, stalling the bridge
+         * catch-up cursor and permanently stranding the burned tokens.
+         */
+        void ReleaseBridgeMintReservation( const std::shared_ptr<GeniusTransaction> &tx );
         bool EnterFinalityFaultBarrier();
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
