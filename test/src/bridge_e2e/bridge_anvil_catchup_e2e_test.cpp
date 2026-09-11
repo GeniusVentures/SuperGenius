@@ -113,13 +113,15 @@ namespace
     {
         return [&burn_count]( const std::vector<eth::abi::AbiValue> &decoded_values,
                               const std::string                     &tx_hash_hex,
-                              const std::string                     &chain_id_str ) -> bool
+                              const std::string                     &chain_id_str )
+            -> sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome
         {
             (void) decoded_values;
             (void) tx_hash_hex;
             (void) chain_id_str;
             burn_count.fetch_add( 1ull, std::memory_order_relaxed );
-            return true;
+            // Counting only: report the burn as settled so the cursor advances as before.
+            return sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome::Processed;
         };
     }
 } // anonymous namespace

@@ -2611,6 +2611,22 @@ namespace sgns
         return outcome::success();
     }
 
+    void TransactionManager::ReleaseBridgeMintReservation( const std::shared_ptr<GeniusTransaction> &tx )
+    {
+        if ( !tx || tx->GetType() != "mint-v2" )
+        {
+            return;
+        }
+        // MintFunds reserves under the burn hash it was handed, and that same string becomes
+        // dag_st.uncle_hash() via FillDAGStruct -- so this is the reservation id, byte for byte.
+        // RollbackUTXOs only clears RESERVED entries whose id matches, so it is a no-op once
+        // the outpoint has been consumed by a mint that won.
+        auto params_opt = tx->GetUTXOParametersOpt(); // always engaged for mint-v2
+        account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
+                                                   tx->dag_st.uncle_hash(),
+                                                   UTXOManager::UTXOType::UTXO_BRIDGE );
+    }
+
     bool TransactionManager::EnterFinalityFaultBarrier()
     {
         std::unique_lock lock( fault_test_mutex_ );
@@ -6181,6 +6197,10 @@ namespace sgns
                 if ( tx->GetSrcAddress() == account_m->GetAddress() )
                 {
                     account_m->ReleaseNonce( tx->GetNonce() );
+                    // An inconclusive expiry leaves no confirmed mint, so the burn has to
+                    // become re-mintable: without this the outpoint stays RESERVED forever
+                    // and the bridge catch-up cursor stalls on it permanently.
+                    ReleaseBridgeMintReservation( tx );
                 }
                 TransactionManagerLogger()->info(
                     "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
@@ -6227,9 +6247,7 @@ namespace sgns
                     {
                         if ( tx->GetType() == "mint-v2" )
                         {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
-                                                                       tx->dag_st.uncle_hash(),
-                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
+                            ReleaseBridgeMintReservation( tx );
                         }
                         else
                         {
@@ -6238,14 +6256,6 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
-
-                // Clear bridge mint reservation on failure
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
-                    (void) mint_tx;
-                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
