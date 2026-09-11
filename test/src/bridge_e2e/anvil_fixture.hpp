@@ -806,7 +806,11 @@ namespace sgns::test::anvil
                 return false;
             }
             std::string     rpc    = rpc_url_;
+#if defined( _WIN32 )
+            std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>NUL";
+#else
             std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>/dev/null";
+#endif
             // Stack-allocated capture: the value is never read after the loop, so a
             // heap new/delete pair is gratuitous and leaks if waitForCondition (or
             // the lambda) ever throws.
