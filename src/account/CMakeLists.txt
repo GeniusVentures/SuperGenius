@@ -22,6 +22,7 @@ target_link_libraries(sgns_genius_account
     crdt_globaldb
     ipfs-pubsub
     TrustWalletCore
+    SGAccountCommProto
     PRIVATE
     hasher
     sha
@@ -29,7 +30,6 @@ target_link_libraries(sgns_genius_account
     json_secure_storage
     secure_storage
     component_factory
-    SGAccountCommProto
     SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
@@ -101,7 +101,6 @@ set(GENIUS_NODE_LIBS
     ipfs-bitswap-proto
     ipfs-unixfs-proto
     ipfs-bitswap-cpp
-    AsyncIOManager
     Boost::Boost.DI
     ScaledInteger
     sgns_version
@@ -145,11 +144,10 @@ target_include_directories(
 add_library(genius_node_test ${GENIUS_NODE_SOURCES})
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 
-add_dependencies(genius_node rlp)
-
-#set_target_properties(genius_node PROPERTIES PU@)
 if(MSVC)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
+    target_compile_options(genius_node PRIVATE /bigobj)
+    target_compile_options(genius_node_test PRIVATE /bigobj)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
 endif()

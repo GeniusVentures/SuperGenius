@@ -53,20 +53,18 @@ endif()
 
 target_link_libraries(processing_service
     PUBLIC
-    MNN::MNN
-    Vulkan::Vulkan
-    ProcessingBase
     SGProcessingProto
-    PRIVATE
     crdt_globaldb
-    hexutil
     ipfs-pubsub
+    outcome
+    PRIVATE
+    ProcessingBase
+    hexutil
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
     ipfs-bitswap-cpp
     rapidjson
     sha
-    outcome
 )
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
