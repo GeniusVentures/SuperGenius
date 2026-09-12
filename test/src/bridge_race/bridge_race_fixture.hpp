@@ -81,6 +81,16 @@ protected:
     static constexpr std::chrono::milliseconds kRaceNodeReadyTimeout{ 90000 };
 
     /**
+     * @brief Budget for a mint to converge on every node.
+     *
+     * Separate from kRaceNodeReadyTimeout: convergence is gated on the consensus
+     * certificate reaching all 11 nodes over CRDT, which fans out through the single
+     * Full node and lands on the nodes one at a time, so it costs several times the
+     * cluster's startup budget.
+     */
+    static constexpr std::chrono::milliseconds kRaceMintTimeout{ 300000 };
+
+    /**
      * @brief Stability window a test waits after observing the expected mint, to catch
      *        a delayed double-mint on the watcher's next poll cycle (> production poll
      *        interval).

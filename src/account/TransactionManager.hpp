@@ -26,9 +26,9 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/GeniusAccount.hpp"
-#include "account/NodeType.hpp"
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
+#include "account/NodeType.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
@@ -44,6 +44,8 @@ namespace sgns::account
 
 namespace sgns
 {
+    class MintTransactionV2;
+
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -53,16 +55,18 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
-        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
-            5 ); ///< Unified timeout for all nonce requests
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS =
+            5000; ///< Unified timeout for all nonce requests (10 seconds)
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
         /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
         /// and refreshed via BurnConfig's quorum-signed CRDT value (BURN-02, BURN-03).
         static constexpr uint64_t BURN_BASIS_POINTS_DEFAULT = 100; // 1%
         static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
+        /// Fixed destination of the burn slice of an escrow payout.
+        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
         /**
          * @brief State of the Transaction Manager
@@ -116,7 +120,7 @@ namespace sgns
          * @param[in] processing_db Database of the CRDT
          * @param[in] ctx The io context used to run its inner methods
          * @param[in] account Genius account to be used
-         * @param[in] node_type Deployment role of this node (Full / Light / Archive)
+         * @param[in] full_node Parameter to indicate if the account is a full node
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
          * @return shared_ptr to the fully-wired TransactionManager instance
@@ -125,11 +129,31 @@ namespace sgns
          * @note timestamp_tolerance must be smaller than mutability_window
          */
         static std::shared_ptr<TransactionManager> New(
+            std::shared_ptr<crdt::GlobalDB>          processing_db,
+            std::shared_ptr<boost::asio::io_context> ctx,
+            std::shared_ptr<GeniusAccount>           account,
+            std::shared_ptr<Blockchain>              blockchain,
+            bool                                     full_node            = true,
+            uint16_t                                 subnet_id           = 0,
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
+
+        /**
+         * @brief Factory constructor variant taking the deployment role.
+         *
+         * @param[in] node_type Deployment role of this node (Full / Light / Archive). Full maps
+         *            onto the legacy full-node behaviour (full-node topic subscription).
+         * @param[in] initial_burn_basis_points Burn slice used until BurnConfig publishes a
+         *            quorum-signed value.
+         * @param[in] burn_config Optional BurnConfig whose refresh callback updates the cached
+         *            burn slice at runtime.
+         */
+        static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>            processing_db,
             std::shared_ptr<boost::asio::io_context>   ctx,
             std::shared_ptr<GeniusAccount>             account,
             std::shared_ptr<Blockchain>                blockchain,
-            NodeType                                   node_type                 = NodeType::Light,
+            NodeType                                   node_type,
             uint16_t                                   subnet_id                 = 0,
             std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
@@ -143,9 +167,15 @@ namespace sgns
         void StartListeningTopics();
         void StartCore();
 
+        void PrintAccountInfo() const;
+
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
-        size_t CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        std::vector<std::vector<uint8_t>> GetTransactions(
+            std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        std::vector<std::vector<uint8_t>> GetTransactions() const;
+        size_t                             CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        TransactionStatus                  GetTransactionStatusByTxId( const std::string &txId ) const;
 
         /**
          * @brief Creates and enqueues a transfer transaction.
@@ -169,7 +199,7 @@ namespace sgns
                                                 std::string transaction_hash,
                                                 std::string chainid,
                                                 TokenID     tokenid,
-                                                std::string destination );
+                                                std::string destination = "" );
 
         /**
          * @brief Creates and enqueues a one-time migration mint transaction.
@@ -193,17 +223,12 @@ namespace sgns
          * @param[in] amount  Total amount to lock in escrow.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
-         *
-         * @note The escrow hold carries no payout metadata. The developer address and cut are
-         *       reported per subtask by the processing peer that ran the work, since peers of a
-         *       single job may be running apps from different developers.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &job_id );
-
-        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
-                                                const SGProcessing::TaskResult          &task_result,
-                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
+                                                                           const SGProcessing::TaskResult          &task_result,
+                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         /**
          * @brief Submits an escrow payout and observes it without blocking for confirmation.
@@ -258,13 +283,14 @@ namespace sgns
             return state_m;
         }
 
-        TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
+        TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
         /**
-         * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
+         * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
+         * @return The conflicting transaction, or failure if none exists.
          */
-        std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
+        outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
             const GeniusTransaction &element ) const;
 
         /**
@@ -302,7 +328,7 @@ namespace sgns
          * @brief Queries all transaction keys from the CRDT across monitored networks
          *        and processes each one via FetchAndProcessTransaction.
          */
-        void QueryTransactions();
+        outcome::result<void> QueryTransactions();
 
         /**
          * @brief Deserializes, parses, and adds a single transaction to the processed map.
@@ -327,11 +353,42 @@ namespace sgns
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
             const EmbeddedTransaction &embedded );
 
+        /**
+         * @brief Verifies that an already validated certificate certifies @p transaction itself.
+         *
+         * Callers must locate the record through the transaction-derived canonical
+         * slot first. This supplies the second, exact-subject check required for
+         * shared slots, so a competing transaction cannot inherit finality.
+         */
+        static bool CertificateMatchesTransaction( const ConsensusCertificate &certificate,
+                                                   const GeniusTransaction    &transaction );
+        /**
+         * @brief Verifies the quorum-signed nonce subject names an exact account/nonce/hash.
+         *
+         * Used when only the certificate and the confirmed head hash are available
+         * (the transaction itself was never retained locally).
+         */
+        static bool CertificateBindsSubjectTo( const ConsensusCertificate &certificate,
+                                               std::string_view            account,
+                                               uint64_t                    nonce,
+                                               std::string_view            tx_hash );
+        /**
+         * @brief Loads the transaction's validated certificate from either durable index.
+         *
+         * Prefers the authoritative canonical-slot record and falls back to the
+         * subject-hash index record (develop consumer contract). Callers must still
+         * pass the result through CertificateMatchesTransaction.
+         */
+        outcome::result<ConsensusCertificate> GetTransactionCertificate( const GeniusTransaction &transaction ) const;
+
     protected:
         friend class GeniusNode;
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
+        friend class PayoutOutputsTestAccess;
+        friend class MultiAccountTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -341,37 +398,58 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
-        /// Destination of the burned fraction of an escrow payout.
-        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
+        struct TrackedTx
+        {
+            std::shared_ptr<GeniusTransaction> tx;
+            TransactionStatus                  status;
+            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+            // Set once ParseTransaction effects (e.g. mint UTXO application) succeeded
+            // for this entry so a certificate-work retry (e.g. failed
+            // PersistBridgeExecutedMarker) does not re-apply them.
+            bool effects_applied = false;
+        };
 
-        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%.
-        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+        struct ReplayProtectionResult
+        {
+            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
+        };
+
+        struct AccountUTXOState
+        {
+            uint64_t      version{ 0 };
+            base::Hash256 root{};
+            bool          initialized{ false };
+        };
+
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<Blockchain>              blockchain,
+                            bool                                     full_node,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                mutability_window );
+
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<Blockchain>              blockchain,
+                            bool                                     full_node,
+                            uint16_t                                 subnet_id,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                mutability_window );
 
         /**
-         * @brief Splits an escrow amount across contributing peers, their developers and the burn.
+         * @brief Builds escrow-payout outputs with per-result developer cuts and the burn slice.
          *
-         * Each subtask result names the peer that did the work plus the developer of the app that
-         * ran it, so a single job whose subtasks were processed by different apps pays each
-         * developer its own cut. The results share an even split of the amount left after the
-         * burn (the split remainder is burned too); each result's share is divided by its
-         * @c developer_cut, floored in the developer's disfavor, and minted in that result's
-         * token. Results with malformed metadata are skipped, they neither block the payout nor
-         * earn from it.
-         *
-         * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
-         * @param[in] escrow_amount Total amount locked by the escrow hold.
-         * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
-         * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
-         * @return Outputs in result order, then developers by (address, token), burn last; the
-         *         burn output is always present, zero-valued peer and developer credits are omitted.
+         * Splits the post-burn escrow amount evenly across valid subtask results, pays each
+         * result's developer its configured cut, and emits the burn output (burn + split dust)
+         * so peer+developer+burn always sums to the escrow amount.
          */
         static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
             const SGProcessing::TaskResult &task_result,
             uint64_t                        escrow_amount,
             const TokenID                  &escrow_token_id,
             uint64_t                        burn_basis_points );
-
-        friend class PayoutOutputsTestAccess;
 
         struct PendingTransactionWait
         {
@@ -393,35 +471,12 @@ namespace sgns
             std::atomic_bool                      completed{ false };
         };
 
-        struct TrackedTx
-        {
-            std::shared_ptr<GeniusTransaction> tx;
-            TransactionStatus                  status;
-            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
-        };
-
-        struct ReplayProtectionResult
-        {
-            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
-        };
-
-        struct AccountUTXOState
-        {
-            uint64_t      version{ 0 };
-            base::Hash256 root{};
-            bool          initialized{ false };
-        };
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>            processing_db,
-                            std::shared_ptr<boost::asio::io_context>   ctx,
-                            std::shared_ptr<GeniusAccount>             account,
-                            std::shared_ptr<Blockchain>                blockchain,
-                            NodeType                                   node_type,
-                            uint16_t                                   subnet_id,
-                            std::chrono::milliseconds                  timestamp_tolerance,
-                            std::chrono::milliseconds                  mutability_window,
-                            uint64_t                                   initial_burn_basis_points,
-                            std::shared_ptr<sgns::account::BurnConfig> burn_config );
+        static bool IsTerminalTransactionStatus( TransactionStatus status );
+        void        NotifyTransactionStatusChanged( const std::string &tx_id );
+        void        CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
+                                             TransactionStatus                              status,
+                                             boost::system::error_code                      error = {} );
+        void        CancelPendingTransactionWaits();
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
@@ -465,6 +520,16 @@ namespace sgns
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
 
         /**
+         * @brief Finds an exact-hash transaction at its normal CRDT path across
+         *        every monitored network.
+         *
+         * A decoded value is a candidate only when its intrinsic hash matches
+         * @p tx_hash; mismatched or unavailable CRDT values are not authority.
+         */
+        outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
+            const std::string &tx_hash ) const;
+
+        /**
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
@@ -477,6 +542,11 @@ namespace sgns
         static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
         /**
+         * @brief Fetches the proof for @p tx from the CRDT and runs full verification.
+         */
+        outcome::result<bool> CheckProof( const std::shared_ptr<GeniusTransaction> &tx );
+
+        /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.
          */
         outcome::result<void> ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx );
@@ -485,7 +555,10 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        void UpdateAccountUTXOState( const std::shared_ptr<GeniusTransaction> &tx, bool increment_version );
+        bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
+        void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -545,17 +618,12 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
+        std::shared_ptr<GeniusTransaction> GetTransactionByNonceAndAddress( uint64_t           nonce,
+                                                                            const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
-        TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
-        bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
-        static bool       IsTerminalTransactionStatus( TransactionStatus status );
-        void              NotifyTransactionStatusChanged( const std::string &tx_id );
-        void              CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
-                                                   TransactionStatus                              status,
-                                                   boost::system::error_code                      error = {} );
-        void              CancelPendingTransactionWaits();
+        bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
         /**
          * @brief Single iteration of the main processing loop.
@@ -583,7 +651,8 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<Blockchain>              blockchain_;
-        NodeType                                 node_type_m;       ///< Deployment role driving replication behavior.
+        bool                                     full_node_m;
+        bool                                     replicates_all_accounts_m_; ///< Role keeps a complete local ledger (Full/Archive); may finish init without a network nonce answer.
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
@@ -616,9 +685,10 @@ namespace sgns
         std::mutex                                                  payout_submission_mutex_;
         std::mutex                                                  transaction_waits_mutex_;
         std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> transaction_waits_;
-        std::chrono::milliseconds                                                             timestamp_tolerance_m;
-        std::chrono::milliseconds                                                             mutability_window_m;
-        uint64_t nonce_window_m = DEFAULT_NONCE_WINDOW;
+        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
+        std::chrono::milliseconds                                   timestamp_tolerance_m;
+        std::chrono::milliseconds                                   mutability_window_m;
+        uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
 
         // METRICS-01: Operational metrics counters
         // Atomic counters tracking vote rates, validation breakdown, and transaction lifecycle.
@@ -630,10 +700,19 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
+        bool                  fail_bridge_executed_marker_write_for_test_ = false;
+        std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
 
-        /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
-        ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
-        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
+        struct FinalityFaultBarrier
+        {
+            bool armed    = false;
+            bool entered  = false;
+            bool released = false;
+        };
+        mutable std::mutex      fault_test_mutex_;
+        std::condition_variable fault_test_cv_;
+        uint64_t                mint_effects_for_test_ = 0;
+        FinalityFaultBarrier    mint_effects_barrier_;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
@@ -649,16 +728,28 @@ namespace sgns
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 
-        std::mutex                      missing_tx_mutex_;
-        std::unordered_set<std::string> missing_tx_hashes_;
-
-        std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
-        mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
-        static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
+        std::mutex                            missing_tx_mutex_;
+        std::unordered_set<std::string>       missing_tx_hashes_;
+        std::chrono::steady_clock::time_point last_init_tx_request_time_{};
+        static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
+
+        void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
+        void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
+        outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
+
+        /**
+         * @brief Releases the burn-UTXO reservation held by a mint that will never confirm.
+         *
+         * Must run on every terminal non-confirmed outcome (FAILED and UNCONFIRMED alike):
+         * a burn left RESERVED reads as "mint in flight" forever, stalling the bridge
+         * catch-up cursor and permanently stranding the burned tokens.
+         */
+        void ReleaseBridgeMintReservation( const std::shared_ptr<GeniusTransaction> &tx );
+        bool EnterFinalityFaultBarrier();
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
@@ -666,8 +757,6 @@ namespace sgns
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
-        outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
-        outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
         static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers;
@@ -678,8 +767,10 @@ namespace sgns
          * @brief CRDT element filter for incoming transactions.
          *
          * Deserializes the element, verifies its signature,
-         * and checks for nonce conflicts. Rejected elements are returned as
-         * tombstones together with their associated proof key.
+         * and checks for nonce conflicts. When a conflict exists, applies
+         * ShouldReplaceTransaction to decide whether the new or existing
+         * transaction survives. Rejected elements are returned as tombstones
+         * together with their associated proof key.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
@@ -688,13 +779,22 @@ namespace sgns
         /**
          * @brief CRDT element filter for incoming proofs.
          *
-         * Currently accepts all proofs that are already stored or newly arriving
-         * (full verification path is present but short-circuited).
-         * Invalid proofs are tombstoned together with their associated tx key.
+         * Currently accepts all proofs (full verification is disabled until the
+         * reputation/penalty path exists), so no tombstones are produced here.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
+
+        /**
+         * @brief Decides whether @p new_tx should replace @p existing_tx.
+         *
+         * Rejects replacement when the hashes are identical or when the existing
+         * transaction is immutable. Otherwise, replaces when the new transaction
+         * has an earlier timestamp within tolerance (or unconditionally
+         * if disabled).
+         */
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -814,14 +914,8 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        struct InputValidatorSelection
-        {
-            std::string            chain_id;
-            const IInputValidator &validator;
-        };
-
-        InputValidatorSelection SelectInputValidator( const std::shared_ptr<GeniusTransaction> &tx ) const;
-
+        std::string               GetValidationChainId( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
     };

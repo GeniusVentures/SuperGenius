@@ -7,6 +7,7 @@
 #include <thread>
 
 #include <boost/asio/post.hpp>
+#include "testutil/genius_node_test_access.hpp"
 #include <boost/dll.hpp>
 #include <gtest/gtest.h>
 #include <libp2p/multi/multiaddress.hpp>
@@ -132,6 +133,11 @@ namespace sgns
             // Fails loudly if the pubsub_port override ever regresses and the node silently
             // falls back to an ephemeral port, which is what made this test flaky.
             ASSERT_EQ( full_node_->GetPubsubPort(), kBootstrapPubsubPort );
+            // Stop synchronously before destruction: a delayed-teardown zombie keeps the
+            // listener on port 21000 alive past reset(), the client then connects to the
+            // dying node (breaking the offline precondition) and the recreated full node
+            // cannot retake the port (never reaches READY). Same pattern as 2fc30a78e.
+            sgns::GeniusNodeTestAccess::StopNode( full_node_ );
             full_node_.reset();
 
             std::filesystem::create_directories( client_config_.BaseWritePath );
@@ -161,6 +167,14 @@ namespace sgns
 
         void TearDown() override
         {
+            if ( client_node_ )
+            {
+                sgns::GeniusNodeTestAccess::StopNode( client_node_ );
+            }
+            if ( full_node_ )
+            {
+                sgns::GeniusNodeTestAccess::StopNode( full_node_ );
+            }
             client_node_.reset();
             full_node_.reset();
         }
@@ -212,6 +226,10 @@ namespace sgns
             std::chrono::seconds( 20 ),
             "client did not connect to its configured bootstrap full node" ) );
 
+        // Plain reset here, NOT StopNode: the client must OBSERVE the bootstrap going
+        // offline — StopNode's immediate shutdown does not propagate a disconnect the
+        // peer's host registers within the wait window. The zombie dies naturally in
+        // the ~20s offline window, freeing port 21000 for the restart below.
         full_node_.reset();
 
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(

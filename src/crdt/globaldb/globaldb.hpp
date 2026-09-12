@@ -100,6 +100,11 @@ namespace sgns::crdt
                                   const Buffer                          &value,
                                   const std::unordered_set<std::string> &topics );
 
+        /** Writes an authoritative immutable record that converges by SHA-256 content ordering. */
+        outcome::result<CID> PutConvergentImmutable( const HierarchicalKey                 &key,
+                                                      const Buffer                          &value,
+                                                      const std::unordered_set<std::string> &topics );
+
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
@@ -157,6 +162,28 @@ namespace sgns::crdt
         void PrintDataStore();
 
         std::shared_ptr<RocksDB>                          GetDataStore();
+
+        /**
+         * @brief Reads a node-local key straight from RocksDB, bypassing the CRDT layer.
+         * @param[in] key Raw key, not a HierarchicalKey; nothing here is replicated.
+         * @return The stored value, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<Buffer> GetRaw( const Buffer &key ) const;
+
+        /**
+         * @brief Writes a node-local key straight to RocksDB, bypassing the CRDT layer.
+         * @param[in] key Raw key, not a HierarchicalKey; nothing here is replicated.
+         * @param[in] value Value to store.
+         * @return Failure on I/O error, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<void> PutRaw( const Buffer &key, const Buffer &value );
+
+        /**
+         * @brief Prefix-scans node-local keys straight from RocksDB, bypassing the CRDT layer.
+         * @param[in] key_prefix Raw key prefix.
+         * @return Matching key/value pairs, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<QueryResult> QueryRaw( const Buffer &key_prefix ) const;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
@@ -308,6 +335,8 @@ namespace sgns::crdt
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
         mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.
+
+        std::shared_ptr<RocksDB>       ActiveDataStore() const;
 
         std::shared_ptr<CrdtDatastore>        ActiveCRDTDataStore() const;
         std::shared_ptr<PubSubBroadcasterExt> ActiveBroadcaster() const;

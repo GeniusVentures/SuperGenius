@@ -25,7 +25,6 @@
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crypto/hasher.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
-#include "multisig/MultiSig.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -353,21 +352,41 @@ namespace sgns
         return outcome::success();
     }
 
+    uint64_t ValidatorRegistry::MaxWeight( Role role ) const
+    {
+        switch ( role )
+        {
+            case Role::GENESIS:
+                return weight_config_.genesis_max_weight_;
+            case Role::FULL:
+                return weight_config_.full_max_weight_;
+            case Role::SHARDED:
+                return weight_config_.sharded_max_weight_;
+            case Role::REGULAR:
+            default:
+                return weight_config_.regular_max_weight_;
+        }
+    }
+
     uint64_t ValidatorRegistry::ComputeWeight( Role role ) const
     {
         logger_->trace( "{}: entry role={}", __func__, static_cast<int>( role ) );
         uint64_t weight = weight_config_.regular_weight_;
+        uint64_t cap    = weight_config_.regular_max_weight_;
 
         switch ( role )
         {
             case Role::GENESIS:
                 weight = weight_config_.genesis_weight_;
+                cap    = weight_config_.genesis_max_weight_;
                 break;
             case Role::FULL:
                 weight = weight_config_.full_weight_;
+                cap    = weight_config_.full_max_weight_;
                 break;
             case Role::SHARDED:
                 weight = weight_config_.sharded_weight_;
+                cap    = weight_config_.sharded_max_weight_;
                 break;
             case Role::REGULAR:
             default:
@@ -380,7 +399,6 @@ namespace sgns
             return 0;
         }
 
-        const uint64_t cap = MaxWeight( role );
         if ( weight > cap )
         {
             logger_->debug( "{}: weight clamped to max {}", __func__, cap );
@@ -590,6 +608,33 @@ namespace sgns
         return registry;
     }
 
+    outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistry( const Registry &registry ) const
+    {
+        logger_->trace( "{}: entry validators={}", __func__, registry.validators().size() );
+        std::string serialized;
+        if ( !registry.SerializeToString( &serialized ) )
+        {
+            logger_->error( "{}: serialization failed", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        logger_->debug( "{}: serialized size={}", __func__, serialized.size() );
+        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
+    }
+
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::DeserializeRegistry(
+        const std::vector<uint8_t> &buffer ) const
+    {
+        logger_->trace( "{}: entry size={}", __func__, buffer.size() );
+        Registry proto;
+        if ( !proto.ParseFromArray( buffer.data(), static_cast<int>( buffer.size() ) ) )
+        {
+            logger_->error( "{}: parse failed", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        logger_->debug( "{}: parsed validators={}", __func__, proto.validators().size() );
+        return proto;
+    }
+
     outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistryUpdate(
         const RegistryUpdate &update ) const
     {
@@ -682,7 +727,9 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        // Make local creation authoritative before returning instead of depending on CRDT callback timing.
+        // Make local creation authoritative before returning instead of depending
+        // on CRDT callback timing: a fresh node must not wait for its own broadcast
+        // to come back before the registry cache reports initialized.
         RegistryUpdateReceived( { registry_key.GetKey(), std::move( update_buffer ) }, cid_string.value() );
 
         logger_->info( "{}: stored and initialized genesis registry CID {}", __func__, cid_string.value() );
@@ -732,15 +779,15 @@ namespace sgns
                 continue;
             }
             std::vector<uint8_t> serialized_update( registry_update_buffer.begin(), registry_update_buffer.end() );
-            auto                 update = DeserializeRegistryUpdate( serialized_update );
-            if ( update.has_error() )
+            auto                 decoded = DeserializeRegistryUpdate( serialized_update );
+            if ( decoded.has_error() )
             {
                 ValidatorRegistryLogger()->error( "{}: failed to parse registry update ", __func__ );
                 continue;
             }
 
             ValidatorRegistryLogger()->debug( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
-            return update.value().registry();
+            return decoded.value().registry();
         }
 
         return outcome::failure( std::errc::no_such_file_or_directory );
@@ -773,19 +820,26 @@ namespace sgns
             return outcome::failure( registry_result.error() );
         }
 
-        auto       current_registry = registry_result.value();
-        const auto current_cid      = GetRegistryCid();
-        if ( !ValidateCertificateForUpdate( certificate, current_registry, current_cid ) )
+        auto current_registry = registry_result.value();
+        if ( !ValidateCertificateForUpdate( certificate, current_registry ) )
         {
             logger_->error( "{}: invalid certificate", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, current_registry ) );
+        auto votes = ExtractCertificateVotes( certificate, current_registry );
+        if ( votes.has_error() )
+        {
+            logger_->error( "{}: certificate vote quorum not reached: {}", __func__, votes.error().message() );
+            return outcome::failure( votes.error() );
+        }
 
         RegistryUpdate update;
-        update.set_prev_registry_hash( current_cid );
-        *update.mutable_registry() = BuildRegistryFromAggregatedVotes( current_registry, votes );
+        update.set_prev_registry_hash( GetRegistryCid() );
+        *update.mutable_registry() = BuildRegistryFromCertificate( current_registry,
+                                                                   certificate,
+                                                                   votes.value().registered_votes,
+                                                                   votes.value().unregistered_votes );
 
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
@@ -834,6 +888,45 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> ValidatorRegistry::BeginRegistryUpdateTransaction(
+        const RegistryUpdate &update )
+    {
+        logger_->trace( "{}: entry epoch={}", __func__, update.registry().epoch() );
+        auto serialized_update = SerializeRegistryUpdate( update );
+        if ( serialized_update.has_error() )
+        {
+            logger_->error( "{}: failed to serialize registry update", __func__ );
+            return outcome::failure( serialized_update.error() );
+        }
+
+        base::Buffer update_buffer(
+            gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
+
+        auto tx = db_->BeginTransaction();
+        if ( !tx )
+        {
+            logger_->error( "{}: failed to begin atomic transaction", __func__ );
+            return outcome::failure( std::errc::not_enough_memory );
+        }
+
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        auto                  registry_put = tx->Put( registry_key, update_buffer );
+        if ( registry_put.has_error() )
+        {
+            logger_->error( "{}: failed to stage registry update in transaction", __func__ );
+            return outcome::failure( registry_put.error() );
+        }
+
+        logger_->debug( "{}: staged registry update in transaction", __func__ );
+        return tx;
+    }
+
+    void ValidatorRegistry::SetMaxNewValidatorsPerUpdate( size_t max_new )
+    {
+        logger_->trace( "{}: entry max_new={}", __func__, max_new );
+        max_new_validators_per_update_ = max_new;
+    }
+
     std::string ValidatorRegistry::GetRegistryCid() const
     {
         std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
@@ -868,21 +961,9 @@ namespace sgns
         submit_batch_subject_ = std::move( submitter );
     }
 
-    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot(
-        const std::vector<std::string> &subject_hashes ) const
+    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot( const std::vector<std::string> &members ) const
     {
-        if ( subject_hashes.empty() )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        std::string payload( subject_hashes[0] );
-        for ( size_t i = 1; i < subject_hashes.size(); ++i )
-        {
-            payload.push_back( '\n' );
-            payload += subject_hashes[i];
-        }
-        auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
-        return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        return ConsensusManager::ComputeBatchRoot( members );
     }
 
     outcome::result<std::vector<std::string>> ValidatorRegistry::SelectBatchSubjects(
@@ -899,8 +980,8 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             const auto                  key = BuildBatchKey( base_registry_cid, base_registry_epoch );
-            auto                        it  = pending_certificate_subjects_by_base_.find( key );
-            if ( it == pending_certificate_subjects_by_base_.end() ||
+            auto                        it  = pending_certificate_slots_by_base_.find( key );
+            if ( it == pending_certificate_slots_by_base_.end() ||
                  it->second.size() < static_cast<size_t>( certificate_count ) )
             {
                 return outcome::failure( std::errc::resource_unavailable_try_again );
@@ -911,23 +992,43 @@ namespace sgns
         {
             selected.resize( certificate_count );
         }
-        BOOST_OUTCOME_TRY( auto root_result, ComputeBatchRoot( selected ) );
-        if ( expected_root.has_value() && root_result != expected_root.value() )
+        auto root_result = ComputeBatchRoot( selected );
+        if ( root_result.has_error() )
+        {
+            return outcome::failure( root_result.error() );
+        }
+        if ( expected_root.has_value() && root_result.value() != expected_root.value() )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
         return selected;
     }
 
-    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySubjectHash(
-        const std::string &subject_hash ) const
+    outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySlot(
+        const std::string &slot_key ) const
     {
-        const auto cert_key = std::string( "/cert/" ) + subject_hash;
-        BOOST_OUTCOME_TRY( auto cert_get, db_->Get( crdt::HierarchicalKey( cert_key ) ) );
+        logger_->trace( "{}: entry slot={}", __func__, slot_key.substr( 0, 8 ) );
+        if ( slot_key.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto cert_key = std::string( "/cert/" ) + slot_key;
+        auto       cert_get = db_->Get( crdt::HierarchicalKey( cert_key ) );
+        if ( cert_get.has_error() )
+        {
+            return outcome::failure( cert_get.error() );
+        }
 
         sgns::ConsensusCertificate certificate;
-        if ( !certificate.ParseFromString( cert_get.toString() ) )
+        std::string                serialized = std::string( cert_get.value().toString() );
+        if ( !certificate.ParseFromString( serialized ) )
         {
+            logger_->error( "{}: failed to parse certificate at canonical slot", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( ConsensusManager::GetSlotKey( certificate.proposal() ) != slot_key )
+        {
+            logger_->error( "{}: certificate slot binding mismatch", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
         return certificate;
@@ -940,17 +1041,27 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
+        // Registry batch certificates finalize their own member batch; batching them
+        // again would recurse.  This guard is also idempotent for retries.
         if ( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
         {
             return outcome::success();
         }
 
-        BOOST_OUTCOME_TRY( auto subject_hash_result, ExtractConsensusSubjectHash( certificate.proposal().subject() ) );
+        // Certificates are authoritative only at their canonical slot; carry that
+        // slot in the batch subject so every node resolves members from the
+        // durable, replicated /cert/<slot> records (10-CR-02 durable representation).
+        const auto slot_key = ConsensusManager::GetSlotKey( certificate.proposal() );
+        if ( slot_key.empty() )
+        {
+            logger_->error( "{}: certificate proposal has no canonical slot", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
 
         const auto key = BuildBatchKey( certificate.registry_cid(), certificate.registry_epoch() );
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            pending_certificate_subjects_by_base_[key].insert( subject_hash_result );
+            pending_certificate_slots_by_base_[key].insert( slot_key );
         }
 
         return TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
@@ -971,49 +1082,62 @@ namespace sgns
             return outcome::success();
         }
 
-        BOOST_OUTCOME_TRY( auto base_registry, LoadRegistryByCid( base_registry_cid ) );
-        if ( base_registry.epoch() != base_registry_epoch )
+        auto base_registry_result = LoadRegistryByCid( base_registry_cid );
+        if ( base_registry_result.has_error() )
+        {
+            return outcome::failure( base_registry_result.error() );
+        }
+        if ( base_registry_result.value().epoch() != base_registry_epoch )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto selected = SelectBatchSubjects( base_registry_cid,
-                                             base_registry_epoch,
-                                             static_cast<uint32_t>( threshold ),
-                                             std::nullopt );
-        if ( selected.has_error() )
+        auto selected_result = SelectBatchSubjects( base_registry_cid,
+                                                    base_registry_epoch,
+                                                    static_cast<uint32_t>( threshold ),
+                                                    std::nullopt );
+        if ( selected_result.has_error() )
         {
-            if ( selected.error() == std::errc::resource_unavailable_try_again )
-            {
-                return outcome::success();
-            }
-            return outcome::failure( selected.error() );
+            return outcome::failure( selected_result.error() );
         }
 
-        BOOST_OUTCOME_TRY( auto root, ComputeBatchRoot( selected.value() ) );
+        auto root_result = ComputeBatchRoot( selected_result.value() );
+        if ( root_result.has_error() )
+        {
+            return outcome::failure( root_result.error() );
+        }
 
-        BOOST_OUTCOME_TRY( auto subject,
-                           ConsensusManager::CreateRegistryBatchSubject( genesis_authority_,
-                                                                         base_registry_cid,
-                                                                         base_registry_epoch,
-                                                                         base_registry_epoch + 1,
-                                                                         static_cast<uint32_t>( threshold ),
-                                                                         root ) );
+        auto subject_result = ConsensusManager::CreateRegistryBatchSubject( genesis_authority_,
+                                                                            base_registry_cid,
+                                                                            base_registry_epoch,
+                                                                            base_registry_epoch + 1,
+                                                                            static_cast<uint32_t>( threshold ),
+                                                                            root_result.value(),
+                                                                            selected_result.value() );
+        if ( subject_result.has_error() )
+        {
+            return outcome::failure( subject_result.error() );
+        }
 
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            BOOST_OUTCOME_TRY( auto batch_hash, ExtractConsensusSubjectHash( subject ) );
-            if ( pending_batch_subject_ids_.find( batch_hash ) != pending_batch_subject_ids_.end() )
+            auto                        batch_hash_result = ExtractConsensusSubjectHash( subject_result.value() );
+            if ( batch_hash_result.has_error() )
+            {
+                return outcome::failure( batch_hash_result.error() );
+            }
+            if ( pending_batch_subject_ids_.find( batch_hash_result.value() ) != pending_batch_subject_ids_.end() )
             {
                 return outcome::success();
             }
-            pending_batch_subject_ids_.insert( batch_hash );
+            pending_batch_subject_ids_.insert( batch_hash_result.value() );
         }
 
-        return submitter( subject );
+        return submitter( subject_result.value() );
     }
 
-    ValidatorRegistry::BatchSubjectDecision ValidatorRegistry::EvaluateBatchSubject( const ConsensusSubject &subject )
+    ValidatorRegistry::BatchSubjectDecision ValidatorRegistry::EvaluateBatchSubject(
+        const ConsensusSubject &subject )
     {
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( subject );
         if ( payload_result.has_error() )
@@ -1053,6 +1177,8 @@ namespace sgns
         const std::string                &subject_hash,
         const sgns::ConsensusCertificate &certificate )
     {
+        // Blocks Close() from draining the persistence worker while this handler
+        // is still reading GlobalDB, and rejects new work once teardown started.
         ActiveBatchHandlerGuard active_handler( *this );
         if ( !active_handler )
         {
@@ -1068,29 +1194,29 @@ namespace sgns
             }
             applying_batch_subject_ids_.insert( subject_hash );
         }
-        const auto stop_applying = [this, &subject_hash]( BatchCertificateDecision decision )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return decision;
-        };
 
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
         if ( payload_result.has_error() )
         {
-            return stop_applying( BatchCertificateDecision::Reject );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Reject;
         }
 
         const auto &payload              = payload_result.value();
         auto        base_registry_result = LoadRegistryByCid( payload.base_registry_cid() );
         if ( base_registry_result.has_error() )
         {
-            return stop_applying( BatchCertificateDecision::Stalled );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Stalled;
         }
         if ( base_registry_result.value().epoch() != payload.base_registry_epoch() ||
              !ValidateCertificate( certificate, base_registry_result.value(), payload.base_registry_cid() ) )
         {
-            return stop_applying( BatchCertificateDecision::Reject );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Reject;
         }
 
         auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
@@ -1099,35 +1225,126 @@ namespace sgns
                                                     std::string( payload.batch_root() ) );
         if ( selected_result.has_error() )
         {
-            return stop_applying( BatchCertificateDecision::Reject );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Reject;
         }
 
-        auto registry_result = BuildRegistryFromBatchCertificates( base_registry_result.value(),
-                                                                   payload,
-                                                                   selected_result.value() );
-        if ( registry_result.has_error() )
+        std::vector<sgns::ConsensusCertificate> certificates;
+        certificates.reserve( selected_result.value().size() );
+        for ( const auto &member_slot : selected_result.value() )
         {
-            return stop_applying( BatchCertificateDecision::Reject );
+            auto cert_result = LoadCertificateBySlot( member_slot );
+            if ( cert_result.has_error() )
+            {
+                std::lock_guard<std::mutex> lock( batch_mutex_ );
+                applying_batch_subject_ids_.erase( subject_hash );
+                if ( cert_result.error() == std::errc::invalid_argument )
+                {
+                    // Corrupt or slot-mismatched durable record: permanently invalid.
+                    logger_->error( "{}: rejecting corrupt member slot={} error={}",
+                                    __func__,
+                                    member_slot,
+                                    cert_result.error().message() );
+                    return BatchCertificateDecision::Reject;
+                }
+                // The member's durable /cert/<slot> record has not synced yet; the
+                // certificate work journal retries until it arrives (deliberate
+                // upgrade over develop's Reject so late joiners and restarts converge).
+                logger_->debug( "{}: member slot={} not yet available, stalling batch subject_hash={}",
+                                __func__,
+                                member_slot,
+                                subject_hash.substr( 0, 8 ) );
+                return BatchCertificateDecision::Stalled;
+            }
+            if ( cert_result.value().registry_cid() != payload.base_registry_cid() ||
+                 cert_result.value().registry_epoch() != payload.base_registry_epoch() )
+            {
+                std::lock_guard<std::mutex> lock( batch_mutex_ );
+                applying_batch_subject_ids_.erase( subject_hash );
+                logger_->error( "{}: member slot={} registry binding mismatch", __func__, member_slot );
+                return BatchCertificateDecision::Reject;
+            }
+            certificates.push_back( cert_result.value() );
+        }
+
+        std::unordered_map<std::string, int64_t> registered_scores;
+        std::unordered_map<std::string, int64_t> unregistered_scores;
+        for ( const auto &tx_cert : certificates )
+        {
+            auto votes = ExtractCertificateVotes( tx_cert, base_registry_result.value() );
+            if ( votes.has_error() )
+            {
+                std::lock_guard<std::mutex> lock( batch_mutex_ );
+                applying_batch_subject_ids_.erase( subject_hash );
+                // The member's durable record exists and is slot-bound but its
+                // verified votes do not reach quorum against the batch's base
+                // registry: deterministic and permanent, so reject the batch.
+                logger_->error( "{}: member certificate quorum not reached subject_hash={} error={}",
+                                __func__,
+                                subject_hash.substr( 0, 8 ),
+                                votes.error().message() );
+                return BatchCertificateDecision::Reject;
+            }
+            for ( const auto &[validator_id, approve] : votes.value().registered_votes )
+            {
+                registered_scores[validator_id] += approve ? 1 : -1;
+            }
+            for ( const auto &[validator_id, approve] : votes.value().unregistered_votes )
+            {
+                unregistered_scores[validator_id] += approve ? 1 : -1;
+            }
+        }
+
+        std::unordered_map<std::string, bool> registered_votes;
+        std::unordered_map<std::string, bool> unregistered_votes;
+        for ( const auto &[validator_id, score] : registered_scores )
+        {
+            registered_votes[validator_id] = score >= 0;
+        }
+        for ( const auto &[validator_id, score] : unregistered_scores )
+        {
+            unregistered_votes[validator_id] = score >= 0;
         }
 
         RegistryUpdate update;
         update.set_prev_registry_hash( payload.base_registry_cid() );
-        *update.mutable_registry() = registry_result.value();
+        *update.mutable_registry() = BuildRegistryFromAggregatedVotes( base_registry_result.value(),
+                                                                       registered_votes,
+                                                                       unregistered_votes );
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
         {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
             logger_->error( "{}: failed to serialize certificate", __func__ );
-            return stop_applying( BatchCertificateDecision::Reject );
+            return BatchCertificateDecision::Reject;
         }
         update.set_certificate( serialized_cert );
-        for ( const auto &tx_subject_hash : selected_result.value() )
+        for ( const auto &member_slot : selected_result.value() )
         {
-            update.add_batch_certificate_subject_hashes( tx_subject_hash );
+            update.add_batch_certificate_slots( member_slot );
+        }
+        for ( const auto &tx_cert : certificates )
+        {
+            auto member_subject_hash = ExtractConsensusSubjectHash( tx_cert.proposal().subject() );
+            if ( member_subject_hash.has_error() )
+            {
+                // Field 5 is informational metadata only; skip members without an
+                // extractable legacy subject hash.
+                continue;
+            }
+            update.add_batch_certificate_subject_hashes( member_subject_hash.value() );
         }
 
+        // Registry updates persist through the owned persistence worker instead of a
+        // detached thread, so teardown can drain in-flight stores before GlobalDB and
+        // the pubsub stack go away (the detached variant raced node shutdown).
         if ( !EnqueueRegistryWrite( subject_hash, std::move( update ) ) )
         {
-            return stop_applying( BatchCertificateDecision::Stalled );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Stalled;
         }
         return BatchCertificateDecision::Approve;
     }
@@ -1163,21 +1380,21 @@ namespace sgns
         auto              weak_self         = weak_from_this();
         const bool        filter_registered = db_->RegisterElementFilter(
             pattern,
-            [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            [weak_self]( const crdt::pb::Element &element )
             {
                 if ( auto strong = weak_self.lock() )
                 {
                     return strong->FilterRegistryUpdate( element );
                 }
-                return std::nullopt;
+                return crdt::CRDTDataFilter::ElementFilterResult::Accept();
             } );
         const bool callback_registered = db_->RegisterNewElementCallback(
             pattern,
-            [weak_self]( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid )
+            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->RegistryUpdateReceived( new_data, cid );
+                    strong->RegistryUpdateReceived( std::move( new_data ), cid );
                 }
             } );
 
@@ -1188,7 +1405,7 @@ namespace sgns
         return result;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> ValidatorRegistry::FilterRegistryUpdate(
+    crdt::CRDTDataFilter::ElementFilterResult ValidatorRegistry::FilterRegistryUpdate(
         const crdt::pb::Element &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
@@ -1197,18 +1414,30 @@ namespace sgns
         if ( decoded_update.has_error() )
         {
             logger_->error( "{}: parse failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
 
         RegistryUpdate update = decoded_update.value();
-        if ( !VerifyUpdate( update, false ) )
+        switch ( VerifyUpdateClassified( update, false ) )
         {
+        case UpdateVerification::kValid:
+            logger_->debug( "{}: update accepted", __func__ );
+            return crdt::CRDTDataFilter::ElementFilterResult::Accept();
+        case UpdateVerification::kMissingDependency:
+            // The update legitimately arrived before the data it was derived
+            // from (cross-delta arrival order is unordered). Stall the whole
+            // delta job instead of permanently dropping the element: the
+            // failed-root retry machinery reprocesses it once the dependency
+            // syncs, and no head is recorded meanwhile.
+            logger_->info( "{}: update dependencies not synced yet, stalling for retry: {}",
+                           __func__,
+                           element.key() );
+            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
+        case UpdateVerification::kInvalid:
+        default:
             logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
-
-        logger_->debug( "{}: update accepted", __func__ );
-        return std::nullopt;
     }
 
     void ValidatorRegistry::RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data,
@@ -1273,23 +1502,24 @@ namespace sgns
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const
+    ValidatorRegistry::UpdateVerification ValidatorRegistry::VerifyUpdateClassified(
+        const RegistryUpdate &update, bool enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
         {
             logger_->error( "{}: empty registry update", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         auto signing_bytes = ComputeUpdateSigningBytes( update );
         if ( signing_bytes.has_error() )
         {
             logger_->error( "{}: signing bytes computation failed", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
-        const std::string      &prev_registry_cid = update.prev_registry_hash();
+        const std::string prev_registry_cid = update.prev_registry_hash();
         std::optional<Registry> base_registry_snapshot;
         std::string             current_id;
         {
@@ -1298,27 +1528,22 @@ namespace sgns
             current_id             = cached_registry_id_;
         }
 
-        const bool needs_to_fetch_registry = !base_registry_snapshot || current_id.empty() ||
-                                             prev_registry_cid != current_id;
-        if ( !prev_registry_cid.empty() && needs_to_fetch_registry )
+        const Registry *base_registry = base_registry_snapshot ? &base_registry_snapshot.value() : nullptr;
+        bool needs_to_fetch_registry  = !base_registry || current_id.empty() || prev_registry_cid != current_id;
+        if ( !prev_registry_cid.empty() && ( needs_to_fetch_registry ) )
         {
             auto base_registry_result = LoadRegistryByCid( prev_registry_cid );
             if ( base_registry_result.has_error() )
             {
-                logger_->error( "{}: base registry unavailable cid={}", __func__, prev_registry_cid );
-                return false;
+                logger_->warn( "{}: base registry not synced yet cid={}", __func__, prev_registry_cid );
+                return UpdateVerification::kMissingDependency;
             }
             base_registry_snapshot = base_registry_result.value();
+            base_registry          = &base_registry_snapshot.value();
         }
 
-        if ( prev_registry_cid.empty() )
+        if ( !base_registry && prev_registry_cid.empty() )
         {
-            if ( base_registry_snapshot )
-            {
-                logger_->error( "{}: missing base registry for update", __func__ );
-                return false;
-            }
-
             logger_->debug( "{}: verifying genesis update", __func__ );
             for ( const auto &signature : update.signatures() )
             {
@@ -1326,30 +1551,22 @@ namespace sgns
                 {
                     continue;
                 }
-                if ( multisig::VerifyPayloadSignature( signature.validator_id(),
-                                                       std::vector<uint8_t>( signature.signature().begin(),
-                                                                              signature.signature().end() ),
-                                                       signing_bytes.value() ) )
+                if ( GeniusAccount::VerifySignature( signature.validator_id(),
+                                                     signature.signature(),
+                                                     signing_bytes.value() ) )
                 {
                     logger_->info( "{}: genesis update verified", __func__ );
-                    return true;
+                    return UpdateVerification::kValid;
                 }
             }
             logger_->error( "{}: genesis update verification failed", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
-        if ( !base_registry_snapshot )
+        if ( !base_registry || prev_registry_cid.empty() )
         {
             logger_->error( "{}: missing base registry for update", __func__ );
-            return false;
-        }
-        const Registry &base_registry = base_registry_snapshot.value();
-
-        if ( update.registry().epoch() != base_registry.epoch() + 1 )
-        {
-            logger_->error( "{}: epoch not next expected", __func__ );
-            return false;
+            return UpdateVerification::kInvalid;
         }
 
         if ( !update.certificate().empty() )
@@ -1358,50 +1575,186 @@ namespace sgns
             if ( !certificate.ParseFromString( update.certificate() ) )
             {
                 logger_->error( "{}: invalid certificate payload", __func__ );
-                return false;
+                return UpdateVerification::kInvalid;
             }
 
-            const bool certificate_valid = enforce_time_window
-                                               ? ValidateCertificateForUpdate( certificate,
-                                                                               base_registry,
-                                                                               prev_registry_cid )
-                                               : ValidateCertificate( certificate, base_registry, prev_registry_cid );
-            if ( !certificate_valid )
+            if ( enforce_time_window )
             {
-                logger_->error( "{}: certificate verification failed", __func__ );
-                return false;
+                if ( !ValidateCertificateForUpdate( certificate, *base_registry, prev_registry_cid ) )
+                {
+                    logger_->error( "{}: certificate verification failed", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
             }
-
-            auto expected_result = BuildExpectedRegistryFromCertificate( update, certificate, base_registry );
-            if ( expected_result.has_error() )
+            else
             {
-                return false;
+                if ( !ValidateCertificate( certificate, *base_registry, prev_registry_cid ) )
+                {
+                    logger_->error( "{}: certificate verification failed", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
             }
 
+            Registry expected;
+            auto batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
+                                     ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
+                                     : outcome::failure( std::errc::invalid_argument );
+            if ( batch_payload.has_value() )
+            {
+                const auto &payload = batch_payload.value();
+                if ( payload.base_registry_cid() != update.prev_registry_hash() ||
+                     payload.base_registry_epoch() != base_registry->epoch() ||
+                     payload.target_registry_epoch() != base_registry->epoch() + 1 )
+                {
+                    logger_->error( "{}: batch subject metadata mismatch", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+                if ( payload.member_certificate_slots_size() != static_cast<int>( payload.certificate_count() ) )
+                {
+                    logger_->error( "{}: batch subject member slot count mismatch", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+                if ( update.batch_certificate_slots_size() != static_cast<int>( payload.certificate_count() ) )
+                {
+                    logger_->error( "{}: batch update member slot count mismatch", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+                std::vector<std::string> slots;
+                slots.reserve( static_cast<size_t>( update.batch_certificate_slots_size() ) );
+                for ( const auto &slot : update.batch_certificate_slots() )
+                {
+                    if ( slot.empty() )
+                    {
+                        // Legacy subject-hash batch updates carry no slots and fail closed.
+                        logger_->error( "{}: batch update carries an empty member slot", __func__ );
+                        return UpdateVerification::kInvalid;
+                    }
+                    slots.push_back( slot );
+                }
+                std::sort( slots.begin(), slots.end() );
+                auto root_result = ComputeBatchRoot( slots );
+                if ( root_result.has_error() )
+                {
+                    logger_->error( "{}: batch root computation failed", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+                const auto payload_root = std::string( payload.batch_root() );
+                if ( payload_root != root_result.value() )
+                {
+                    logger_->error( "{}: batch root mismatch", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+                std::vector<std::string> payload_slots( payload.member_certificate_slots().begin(),
+                                                        payload.member_certificate_slots().end() );
+                std::sort( payload_slots.begin(), payload_slots.end() );
+                if ( payload_slots != slots )
+                {
+                    logger_->error( "{}: batch member slots differ from certificate payload", __func__ );
+                    return UpdateVerification::kInvalid;
+                }
+
+                std::unordered_map<std::string, int64_t> registered_scores;
+                std::unordered_map<std::string, int64_t> unregistered_scores;
+                for ( const auto &member_slot : slots )
+                {
+                    auto certificate_result = LoadCertificateBySlot( member_slot );
+                    if ( certificate_result.has_error() )
+                    {
+                        if ( certificate_result.error() == std::errc::invalid_argument )
+                        {
+                            // Corrupt or slot-mismatched durable record: permanently invalid.
+                            logger_->error( "{}: corrupt member record for batch slot={}",
+                                            __func__,
+                                            member_slot );
+                            return UpdateVerification::kInvalid;
+                        }
+                        // The member durable record has not synced yet: stall so the
+                        // delta retries once it arrives (arrival order across deltas
+                        // is unordered).
+                        logger_->warn( "{}: member certificate not yet synced for batch slot={}",
+                                       __func__,
+                                       member_slot );
+                        return UpdateVerification::kMissingDependency;
+                    }
+                    const auto &tx_cert = certificate_result.value();
+                    if ( tx_cert.registry_cid() != payload.base_registry_cid() ||
+                         tx_cert.registry_epoch() != payload.base_registry_epoch() )
+                    {
+                        logger_->error( "{}: batch certificate registry mismatch", __func__ );
+                        return UpdateVerification::kInvalid;
+                    }
+                    auto votes = ExtractCertificateVotes( tx_cert, *base_registry );
+                    if ( votes.has_error() )
+                    {
+                        logger_->error( "{}: member certificate quorum not reached for batch slot={}",
+                                        __func__,
+                                        member_slot );
+                        return UpdateVerification::kInvalid;
+                    }
+                    for ( const auto &[validator_id, approve] : votes.value().registered_votes )
+                    {
+                        registered_scores[validator_id] += approve ? 1 : -1;
+                    }
+                    for ( const auto &[validator_id, approve] : votes.value().unregistered_votes )
+                    {
+                        unregistered_scores[validator_id] += approve ? 1 : -1;
+                    }
+                }
+
+                std::unordered_map<std::string, bool> registered_votes;
+                std::unordered_map<std::string, bool> unregistered_votes;
+                for ( const auto &[validator_id, score] : registered_scores )
+                {
+                    registered_votes[validator_id] = score >= 0;
+                }
+                for ( const auto &[validator_id, score] : unregistered_scores )
+                {
+                    unregistered_votes[validator_id] = score >= 0;
+                }
+                expected = BuildRegistryFromAggregatedVotes( *base_registry, registered_votes, unregistered_votes );
+            }
+            else
+            {
+                auto votes = ExtractCertificateVotes( certificate, *base_registry );
+                if ( votes.has_error() )
+                {
+                    // Zero-vote certificates must not derive registry updates:
+                    // the recomputed "expected" would otherwise deterministically
+                    // match an attacker-crafted update and merge it.
+                    logger_->error( "{}: certificate quorum not reached: {}", __func__, votes.error().message() );
+                    return UpdateVerification::kInvalid;
+                }
+                expected   = BuildRegistryFromCertificate( *base_registry, certificate,
+                                                          votes.value().registered_votes,
+                                                          votes.value().unregistered_votes );
+            }
             Registry provided = update.registry();
-            Registry expected = expected_result.value();
-            const auto sort_validators = []( Registry &registry )
+            NormalizeRegistry( provided );
+            NormalizeRegistry( expected );
+
+            if ( provided.epoch() != base_registry->epoch() + 1 )
             {
-                auto *validators = registry.mutable_validators();
-                std::sort( validators->begin(),
-                           validators->end(),
-                           []( const ValidatorEntry &a, const ValidatorEntry &b )
-                           { return a.validator_id() < b.validator_id(); } );
-            };
-            sort_validators( provided );
-            sort_validators( expected );
+                logger_->error( "{}: epoch not next expected", __func__ );
+                return UpdateVerification::kInvalid;
+            }
 
             if ( provided.SerializeAsString() != expected.SerializeAsString() )
             {
                 logger_->error( "{}: registry mismatch against certificate", __func__ );
-                return false;
+                return UpdateVerification::kInvalid;
             }
 
             logger_->info( "{}: certificate-based update verified", __func__ );
-            return true;
+            return UpdateVerification::kValid;
         }
 
-        uint64_t              total_weight       = TotalWeight( base_registry );
+        if ( update.registry().epoch() != base_registry->epoch() + 1 )
+        {
+            logger_->error( "{}: epoch not next expected", __func__ );
+            return UpdateVerification::kInvalid;
+        }
+
+        uint64_t              total_weight       = TotalWeight( *base_registry );
         uint64_t              accumulated_weight = 0;
         std::set<std::string> seen;
 
@@ -1412,7 +1765,7 @@ namespace sgns
                 continue;
             }
 
-            const auto *validator = FindValidator( base_registry, signature.validator_id() );
+            const auto *validator = FindValidator( *base_registry, signature.validator_id() );
             if ( !validator || validator->status() != Status::ACTIVE )
             {
                 continue;
@@ -1429,51 +1782,17 @@ namespace sgns
             if ( IsQuorum( accumulated_weight, total_weight ) )
             {
                 logger_->info( "{}: quorum reached", __func__ );
-                return true;
+                return UpdateVerification::kValid;
             }
         }
 
         logger_->error( "{}: quorum not reached", __func__ );
-        return false;
+        return UpdateVerification::kInvalid;
     }
 
-    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::BuildExpectedRegistryFromCertificate(
-        const RegistryUpdate             &update,
-        const sgns::ConsensusCertificate &certificate,
-        const Registry                   &base_registry ) const
+    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const
     {
-        auto batch_payload = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
-        if ( batch_payload.has_error() )
-        {
-            BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, base_registry ) );
-            return BuildRegistryFromAggregatedVotes( base_registry, votes );
-        }
-
-        const auto &payload = batch_payload.value();
-        if ( payload.base_registry_cid() != update.prev_registry_hash() ||
-             payload.base_registry_epoch() != base_registry.epoch() ||
-             payload.target_registry_epoch() != base_registry.epoch() + 1 )
-        {
-            logger_->error( "{}: batch subject metadata mismatch", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        if ( update.batch_certificate_subject_hashes_size() != static_cast<int>( payload.certificate_count() ) )
-        {
-            logger_->error( "{}: batch subject certificate count mismatch", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        std::vector<std::string> subject_hashes( update.batch_certificate_subject_hashes().begin(),
-                                                 update.batch_certificate_subject_hashes().end() );
-        std::sort( subject_hashes.begin(), subject_hashes.end() );
-        auto root_result = ComputeBatchRoot( subject_hashes );
-        if ( root_result.has_error() || std::string( payload.batch_root() ) != root_result.value() )
-        {
-            logger_->error( "{}: batch root mismatch", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        return BuildRegistryFromBatchCertificates( base_registry, payload, subject_hashes );
+        return VerifyUpdateClassified( update, enforce_time_window ) == UpdateVerification::kValid;
     }
 
     bool ValidatorRegistry::ValidateCertificate( const sgns::ConsensusCertificate &certificate,
@@ -1516,13 +1835,14 @@ namespace sgns
             return false;
         }
 
-        if ( !expected_registry_cid.empty() && !proposal.registry_cid().empty() &&
-             proposal.registry_cid() != expected_registry_cid )
+        const std::string current_id = expected_registry_cid.empty() ? GetRegistryCid()
+                                                                     : std::string( expected_registry_cid );
+        if ( !current_id.empty() && !proposal.registry_cid().empty() && proposal.registry_cid() != current_id )
         {
             logger_->error( "{}: registry CID mismatch cert={} registry={}",
                             __func__,
                             proposal.registry_cid(),
-                            expected_registry_cid );
+                            current_id );
             return false;
         }
 
@@ -1589,6 +1909,7 @@ namespace sgns
             const auto *validator = FindValidator( current_registry, vote.voter_id() );
             if ( !validator )
             {
+                result.unregistered.insert( vote.voter_id() );
                 result.unregistered_votes[vote.voter_id()] = vote.approve();
                 continue;
             }
@@ -1598,27 +1919,74 @@ namespace sgns
             if ( vote.approve() && validator->status() == Status::ACTIVE )
             {
                 approved_weight += validator->weight();
+                result.approved.insert( vote.voter_id() );
             }
         }
 
         if ( !IsQuorum( approved_weight, total_weight ) )
         {
             logger_->error( "{}: quorum not reached approved={} total={}", __func__, approved_weight, total_weight );
-            return outcome::failure( std::errc::invalid_argument );
+            // Quorum failure is a verdict, not data: callers must not derive a
+            // registry from an empty partition set. Returning an empty struct here
+            // let self-signed zero-vote certificates drive deterministic registry
+            // updates that VerifyUpdate would then accept (unauthenticated epoch
+            // advance).
+            return outcome::failure( std::errc::operation_not_permitted );
         }
 
         logger_->debug( "{}: quorum verified approved={} total={}", __func__, approved_weight, total_weight );
         return result;
     }
 
-    ValidatorRegistry::Registry ValidatorRegistry::BuildRegistryFromAggregatedVotes(
-        const Registry         &current_registry,
-        const CertificateVotes &votes ) const
+    ValidatorRegistry::Registry ValidatorRegistry::BuildRegistryFromCertificate(
+        const Registry                              &current_registry,
+        const sgns::ConsensusCertificate            &certificate,
+        const std::unordered_map<std::string, bool> &registered_votes,
+        const std::unordered_map<std::string, bool> &unregistered_votes ) const
     {
+        logger_->debug(
+            "{}: building registry update proposal_id={} epoch={} current_validators={} registered_votes={} unregistered_votes={}",
+            __func__,
+            certificate.proposal_id().substr( 0, 8 ),
+            current_registry.epoch(),
+            current_registry.validators_size(),
+            registered_votes.size(),
+            unregistered_votes.size() );
+        if ( !unregistered_votes.empty() )
+        {
+            std::vector<std::string> unregistered_ids;
+            unregistered_ids.reserve( unregistered_votes.size() );
+            for ( const auto &pair : unregistered_votes )
+            {
+                unregistered_ids.push_back( pair.first.substr( 0, 8 ) );
+            }
+            std::sort( unregistered_ids.begin(), unregistered_ids.end() );
+            logger_->debug( "{}: unregistered voter ids (prefixes)={}", __func__, fmt::join( unregistered_ids, "," ) );
+        }
+
         Registry next = current_registry;
         next.set_epoch( current_registry.epoch() + 1 );
 
-        InsertNewValidators( next, votes.unregistered_votes );
+        const int before_count = next.validators_size();
+        InsertNewValidators( next, unregistered_votes );
+        const int after_insert = next.validators_size();
+        if ( after_insert > before_count )
+        {
+            std::vector<std::string> new_ids;
+            new_ids.reserve( static_cast<size_t>( after_insert - before_count ) );
+            for ( const auto &entry : next.validators() )
+            {
+                if ( !FindValidator( current_registry, entry.validator_id() ) )
+                {
+                    new_ids.push_back( entry.validator_id().substr( 0, 8 ) );
+                }
+            }
+            std::sort( new_ids.begin(), new_ids.end() );
+            logger_->debug( "{}: inserted {} new validators (prefixes)={}",
+                            __func__,
+                            new_ids.size(),
+                            fmt::join( new_ids, "," ) );
+        }
 
         std::vector<ValidatorEntry> entries;
         entries.reserve( static_cast<size_t>( next.validators_size() ) );
@@ -1627,14 +1995,64 @@ namespace sgns
             entries.push_back( entry );
         }
 
-        ApplyVoteEffects( entries, votes.registered_votes );
+        ApplyVoteEffects( entries, registered_votes );
         std::unordered_set<std::string> participants;
-        participants.reserve( votes.registered_votes.size() + votes.unregistered_votes.size() );
-        for ( const auto &pair : votes.registered_votes )
+        participants.reserve( registered_votes.size() + unregistered_votes.size() );
+        for ( const auto &pair : registered_votes )
         {
             participants.insert( pair.first );
         }
-        for ( const auto &pair : votes.unregistered_votes )
+        for ( const auto &pair : unregistered_votes )
+        {
+            participants.insert( pair.first );
+        }
+        ApplyInactivityDecay( entries, participants );
+        ApplyTotalWeightCap( entries );
+
+        std::sort( entries.begin(),
+                   entries.end(),
+                   []( const ValidatorEntry &a, const ValidatorEntry &b )
+                   { return a.validator_id() < b.validator_id(); } );
+
+        next.clear_validators();
+        for ( const auto &entry : entries )
+        {
+            *next.add_validators() = entry;
+        }
+
+        logger_->debug( "{}: built registry from certificate proposal_id={} epoch={} validators={}",
+                        __func__,
+                        certificate.proposal_id().substr( 0, 8 ),
+                        next.epoch(),
+                        next.validators_size() );
+        return next;
+    }
+
+    ValidatorRegistry::Registry ValidatorRegistry::BuildRegistryFromAggregatedVotes(
+        const Registry                              &current_registry,
+        const std::unordered_map<std::string, bool> &registered_votes,
+        const std::unordered_map<std::string, bool> &unregistered_votes ) const
+    {
+        Registry next = current_registry;
+        next.set_epoch( current_registry.epoch() + 1 );
+
+        InsertNewValidators( next, unregistered_votes );
+
+        std::vector<ValidatorEntry> entries;
+        entries.reserve( static_cast<size_t>( next.validators_size() ) );
+        for ( const auto &entry : next.validators() )
+        {
+            entries.push_back( entry );
+        }
+
+        ApplyVoteEffects( entries, registered_votes );
+        std::unordered_set<std::string> participants;
+        participants.reserve( registered_votes.size() + unregistered_votes.size() );
+        for ( const auto &pair : registered_votes )
+        {
+            participants.insert( pair.first );
+        }
+        for ( const auto &pair : unregistered_votes )
         {
             participants.insert( pair.first );
         }
@@ -1652,51 +2070,6 @@ namespace sgns
             *next.add_validators() = entry;
         }
         return next;
-    }
-
-    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::BuildRegistryFromBatchCertificates(
-        const Registry                 &current_registry,
-        const RegistryBatchSubject     &payload,
-        const std::vector<std::string> &subject_hashes ) const
-    {
-        std::unordered_map<std::string, int64_t> registered_scores;
-        std::unordered_map<std::string, int64_t> unregistered_scores;
-        for ( const auto &subject_hash : subject_hashes )
-        {
-            auto certificate_result = LoadCertificateBySubjectHash( subject_hash );
-            if ( certificate_result.has_error() )
-            {
-                logger_->error( "{}: missing certificate for batch hash={}", __func__, subject_hash.substr( 0, 8 ) );
-                return outcome::failure( certificate_result.error() );
-            }
-            const auto &certificate = certificate_result.value();
-            if ( certificate.registry_cid() != payload.base_registry_cid() ||
-                 certificate.registry_epoch() != payload.base_registry_epoch() )
-            {
-                logger_->error( "{}: batch certificate registry mismatch", __func__ );
-                return outcome::failure( std::errc::invalid_argument );
-            }
-            BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, current_registry ) );
-            for ( const auto &[validator_id, approve] : votes.registered_votes )
-            {
-                registered_scores[validator_id] += approve ? 1 : -1;
-            }
-            for ( const auto &[validator_id, approve] : votes.unregistered_votes )
-            {
-                unregistered_scores[validator_id] += approve ? 1 : -1;
-            }
-        }
-
-        CertificateVotes votes;
-        for ( const auto &[validator_id, score] : registered_scores )
-        {
-            votes.registered_votes[validator_id] = score >= 0;
-        }
-        for ( const auto &[validator_id, score] : unregistered_scores )
-        {
-            votes.unregistered_votes[validator_id] = score >= 0;
-        }
-        return BuildRegistryFromAggregatedVotes( current_registry, votes );
     }
 
     void ValidatorRegistry::InsertNewValidators( Registry                                    &registry,
@@ -1746,81 +2119,103 @@ namespace sgns
     {
         for ( auto &entry : entries )
         {
-            const auto vote_it = registered_votes.find( entry.validator_id() );
+            auto vote_it = registered_votes.find( entry.validator_id() );
             if ( vote_it == registered_votes.end() )
             {
                 continue;
             }
 
+            const bool     approve     = vote_it->second;
+            uint32_t       penalty     = static_cast<uint32_t>( entry.penalty_score() );
+            const uint32_t cap         = weight_config_.penalty_cap_;
+            const uint64_t old_weight  = entry.weight();
+            const uint32_t old_penalty = penalty;
+            const auto     old_status  = entry.status();
             entry.set_missed_epochs( 0 );
-            uint32_t penalty = entry.penalty_score();
 
-            if ( const bool reject = !vote_it->second; reject )
+            if ( approve )
             {
-                const uint32_t cap = weight_config_.penalty_cap_;
-                if ( entry.status() != Status::BLACKLISTED )
+                if ( penalty > 0 )
+                {
+                    penalty -= 1;
+                }
+                entry.set_penalty_score( penalty );
+
+                if ( entry.status() == Status::ACTIVE )
+                {
+                    const uint64_t increment = weight_config_.approval_increment_;
+                    if ( increment > 0 )
+                    {
+                        uint64_t role_cap = weight_config_.regular_max_weight_;
+                        switch ( entry.role() )
+                        {
+                            case Role::GENESIS:
+                                role_cap = weight_config_.genesis_max_weight_;
+                                break;
+                            case Role::FULL:
+                                role_cap = weight_config_.full_max_weight_;
+                                break;
+                            case Role::SHARDED:
+                                role_cap = weight_config_.sharded_max_weight_;
+                                break;
+                            case Role::REGULAR:
+                            default:
+                                role_cap = weight_config_.regular_max_weight_;
+                                break;
+                        }
+                        const uint64_t clamped = std::min( entry.weight() + increment, role_cap );
+                        entry.set_weight( clamped );
+                    }
+                }
+                else if ( penalty == 0 )
+                {
+                    entry.set_status( Status::ACTIVE );
+                }
+
+                // D-08: REGULAR -> FULL promotion once the approve-accumulated
+                // weight reaches the threshold with a clean penalty record.
+                if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
+                {
+                    entry.set_role( Role::FULL );
+                }
+            }
+            else
+            {
+                if ( entry.status() == Status::BLACKLISTED )
+                {
+                    const uint32_t bumped = std::min(
+                        cap,
+                        static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
+                    penalty = bumped;
+                }
+                else
                 {
                     if ( penalty < cap )
                     {
-                        ++penalty;
+                        penalty += 1;
                     }
                     if ( penalty >= weight_config_.penalty_threshold_ )
                     {
                         entry.set_status( Status::BLACKLISTED );
+                        const uint32_t bumped = std::min(
+                            cap,
+                            static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
+                        penalty = bumped;
                     }
                 }
-                if ( entry.status() == Status::BLACKLISTED )
-                {
-                    penalty  = std::min( penalty, cap );
-                    penalty += std::min( weight_config_.blacklist_bump_, cap - penalty );
-                }
                 entry.set_penalty_score( penalty );
-                continue;
             }
 
-            if ( penalty > 0 )
-            {
-                --penalty;
-            }
-            entry.set_penalty_score( penalty );
-
-            if ( entry.status() != Status::ACTIVE )
-            {
-                if ( penalty == 0 )
-                {
-                    entry.set_status( Status::ACTIVE );
-                }
-                continue;
-            }
-
-            const uint64_t increment = weight_config_.approval_increment_;
-            if ( increment > 0 )
-            {
-                const uint64_t cap    = MaxWeight( entry.role() );
-                const uint64_t weight = std::min( entry.weight(), cap );
-                entry.set_weight( weight + std::min( increment, cap - weight ) );
-            }
-
-            if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
-            {
-                entry.set_role( Role::FULL );
-            }
-        }
-    }
-
-    uint64_t ValidatorRegistry::MaxWeight( Role role ) const
-    {
-        switch ( role )
-        {
-            case Role::GENESIS:
-                return weight_config_.genesis_max_weight_;
-            case Role::FULL:
-                return weight_config_.full_max_weight_;
-            case Role::SHARDED:
-                return weight_config_.sharded_max_weight_;
-            case Role::REGULAR:
-            default:
-                return weight_config_.regular_max_weight_;
+            logger_->debug( "{}: vote effect id={} approve={} weight {}->{} penalty {}->{} status {}->{}",
+                            __func__,
+                            entry.validator_id().substr( 0, 8 ),
+                            approve,
+                            old_weight,
+                            entry.weight(),
+                            old_penalty,
+                            entry.penalty_score(),
+                            static_cast<int>( old_status ),
+                            static_cast<int>( entry.status() ) );
         }
     }
 
@@ -1837,7 +2232,7 @@ namespace sgns
             {
                 continue;
             }
-            uint32_t missed = entry.missed_epochs();
+            uint32_t missed = static_cast<uint32_t>( entry.missed_epochs() );
             if ( missed < std::numeric_limits<uint32_t>::max() )
             {
                 missed += 1;
@@ -1941,6 +2336,27 @@ namespace sgns
         }
     }
 
+    void ValidatorRegistry::NormalizeRegistry( Registry &registry )
+    {
+        std::vector<ValidatorEntry> entries;
+        entries.reserve( static_cast<size_t>( registry.validators_size() ) );
+        for ( const auto &entry : registry.validators() )
+        {
+            entries.push_back( entry );
+        }
+
+        std::sort( entries.begin(),
+                   entries.end(),
+                   []( const ValidatorEntry &a, const ValidatorEntry &b )
+                   { return a.validator_id() < b.validator_id(); } );
+
+        registry.clear_validators();
+        for ( const auto &entry : entries )
+        {
+            *registry.add_validators() = entry;
+        }
+    }
+
     const ValidatorRegistry::ValidatorEntry *ValidatorRegistry::FindValidator( const Registry    &registry,
                                                                                const std::string &validator_id )
     {
@@ -1960,15 +2376,24 @@ namespace sgns
     void ValidatorRegistry::InitializeCache()
     {
         logger_->trace( "{}: entry", __func__ );
+        std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
+        if ( cache_initialized_ )
+        {
+            logger_->error( "{}: cache already initialized", __func__ );
+            return;
+        }
+        logger_->trace( "{}: grabbing validator registry from CRDT", __func__ );
 
-        auto registry_get = db_->Get( crdt::HierarchicalKey{ std::string( RegistryKey() ) } );
-        if ( !registry_get.has_value() )
+        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
+        auto                  registry_get    = db_->Get( registry_key );
+        bool                  content_present = registry_get.has_value();
+        if ( !content_present )
         {
             logger_->error( "{}: registry content not found during cache init", __func__ );
             return;
         }
-
-        auto decoded = DeserializeRegistryUpdate( registry_get.value().toVector() );
+        const auto &buffer  = registry_get.value();
+        auto        decoded = DeserializeRegistryUpdate( buffer.toVector() );
         if ( !decoded.has_value() )
         {
             logger_->error( "{}: failed to parse registry content during cache init", __func__ );
@@ -1979,20 +2404,56 @@ namespace sgns
         cached_registry_ = decoded.value().registry();
         logger_->debug( "{}: cache populated validators={}", __func__, cached_registry_->validators().size() );
 
+        cache_initialized_ = true;
+
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
-        auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
-        if ( !registry_cid.has_value() )
+        auto registry_cid = db_->GetRaw( registry_cid_key );
+        if ( registry_cid.has_value() )
         {
-            logger_->error( "{}: registry content found but CID missing", __func__ );
-            RetryInitializationIfNeeded();
+            cached_registry_id_ = registry_cid.value().toString();
+            logger_->info( "{}: cache initialized with CID {}", __func__, cached_registry_id_ );
+            NotifyInitialized( true );
             return;
         }
 
-        cached_registry_id_ = registry_cid.value().toString();
-        cache_initialized_  = true;
-        logger_->info( "{}: cache initialized with CID {}", __func__, cached_registry_id_ );
-        NotifyInitialized( true );
+        std::unordered_set<CID> heads_to_request;
+
+        logger_->error( "{}: registry content found but CID missing, requesting heads", __func__ );
+
+        auto heads_result = db_->GetCRDTHeadList();
+        if ( heads_result.has_value() )
+        {
+            const auto &heads_map = heads_result.value().first;
+            auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
+            if ( it != heads_map.end() )
+            {
+                heads_to_request = it->second;
+            }
+        }
+        logger_->debug( "{}: heads to request={}", __func__, heads_to_request.size() );
+
+        lock.unlock();
+
+        if ( !heads_to_request.empty() )
+        {
+            RequestHeadCids( heads_to_request );
+        }
+        else
+        {
+            logger_->error( "{}: no heads available to request", __func__ );
+        }
+    }
+
+    void ValidatorRegistry::PersistLocalState( const std::string &cid ) const
+    {
+        logger_->trace( "{}: entry cid={}", __func__, cid );
+        crdt::GlobalDB::Buffer registry_cid_key;
+        registry_cid_key.put( std::string( RegistryCidKey() ) );
+        crdt::GlobalDB::Buffer registry_cid;
+        registry_cid.put( cid );
+        (void) db_->PutRaw( registry_cid_key, registry_cid );
+        logger_->debug( "{}: persisted CID", __func__ );
     }
 
     void ValidatorRegistry::RetryInitializationIfNeeded()
@@ -2026,20 +2487,15 @@ namespace sgns
         RequestHeadCids( it->second );
     }
 
-    void ValidatorRegistry::PersistLocalState( const std::string &cid ) const
-    {
-        logger_->trace( "{}: entry cid={}", __func__, cid );
-        crdt::GlobalDB::Buffer registry_cid_key;
-        registry_cid_key.put( std::string( RegistryCidKey() ) );
-        crdt::GlobalDB::Buffer registry_cid;
-        registry_cid.put( cid );
-        (void) db_->GetDataStore()->put( registry_cid_key, registry_cid );
-        logger_->debug( "{}: persisted CID", __func__ );
-    }
-
     void ValidatorRegistry::RequestHeadCids( const std::unordered_set<CID> &cids )
     {
         logger_->trace( "{}: entry count={}", __func__, cids.size() );
+        const char *func = __func__;
+        if ( cids.empty() )
+        {
+            logger_->error( "{}: empty CID set", __func__ );
+            return;
+        }
 
         struct RequestState
         {
@@ -2052,21 +2508,6 @@ namespace sgns
         };
 
         auto state = std::make_shared<RequestState>( cids.size() );
-        auto complete = [weak_self = weak_from_this(), state]( bool success )
-        {
-            if ( auto self = weak_self.lock() )
-            {
-                if ( success && !state->success_reported.exchange( true ) )
-                {
-                    self->NotifyInitialized( true );
-                }
-
-                if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
-                {
-                    self->NotifyInitialized( false );
-                }
-            }
-        };
 
         for ( const auto &cid : cids )
         {
@@ -2074,14 +2515,36 @@ namespace sgns
             if ( !cid_string.has_value() )
             {
                 logger_->error( "{}: failed to convert CID to string", __func__ );
-                complete( false );
+                if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
+                {
+                    NotifyInitialized( false );
+                }
                 continue;
             }
 
             logger_->debug( "{}: requesting CID {}", __func__, cid_string.value() );
             request_block_by_cid_(
                 cid_string.value(),
-                [complete]( outcome::result<std::string> result ) { complete( result.has_value() ); } );
+                [weak_self = weak_from_this(), state, func]( outcome::result<std::string> result )
+                {
+                    if ( auto self = weak_self.lock() )
+                    {
+                        if ( !result.has_error() )
+                        {
+                            if ( !state->success_reported.exchange( true ) )
+                            {
+                                self->logger_->info( "{}: head request succeeded", func );
+                                self->NotifyInitialized( true );
+                            }
+                        }
+
+                        if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
+                        {
+                            self->logger_->error( "{}: all head requests failed", func );
+                            self->NotifyInitialized( false );
+                        }
+                    }
+                } );
         }
     }
 

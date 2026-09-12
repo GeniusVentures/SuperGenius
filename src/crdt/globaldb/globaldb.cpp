@@ -146,6 +146,16 @@ namespace sgns::crdt
         m_logger->info( "GlobalDB shutdown finished" );
     }
 
+    std::shared_ptr<GlobalDB::RocksDB> GlobalDB::ActiveDataStore() const
+    {
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return nullptr;
+        }
+        return m_datastore;
+    }
+
     std::shared_ptr<CrdtDatastore> GlobalDB::ActiveCRDTDataStore() const
     {
         std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
@@ -536,6 +546,21 @@ namespace sgns::crdt
         return crdt_datastore->PutKey( key, value, topics );
     }
 
+    outcome::result<CID> GlobalDB::PutConvergentImmutable( const HierarchicalKey                 &key,
+                                                            const Buffer                          &value,
+                                                            const std::unordered_set<std::string> &topics )
+    {
+        // ShutdownNow() moves the datastore handle out: dereferencing the raw
+        // member here is the exact class of null-deref that segfaulted
+        // migration_sync_test on aarch64 (see the ActiveDataStore wrappers).
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->PutConvergentImmutableKey( key, value, topics );
+    }
+
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
@@ -717,6 +742,41 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
         return m_datastore;
+    }
+
+    // ShutdownNow() releases the datastore while CRDT callbacks may still be running, so every
+    // caller of GetDataStore() had to null-check the pointer before dereferencing it, and one
+    // that did not segfaulted migration_sync_test on aarch64. These three wrappers cover every
+    // raw-store operation the callers actually perform, so the check lives here once -- the
+    // discipline ActiveCRDTDataStore() already establishes for the other handle.
+    outcome::result<GlobalDB::Buffer> GlobalDB::GetRaw( const Buffer &key ) const
+    {
+        auto datastore = ActiveDataStore();
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return datastore->get( key );
+    }
+
+    outcome::result<void> GlobalDB::PutRaw( const Buffer &key, const Buffer &value )
+    {
+        auto datastore = ActiveDataStore();
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return datastore->put( key, value );
+    }
+
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryRaw( const Buffer &key_prefix ) const
+    {
+        auto datastore = ActiveDataStore();
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return datastore->query( key_prefix );
     }
 
     std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const

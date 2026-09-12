@@ -529,3 +529,88 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
 
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
 }
+
+TEST_F( TransactionManagerRecoveryTest, FundsAPIsFailClosedAfterStop )
+{
+    /**
+     * Stop() detaches the manager from GlobalDB, Blockchain and the account
+     * WITHOUT moving state_m out of READY — the funds APIs must check
+     * stopped_ separately from the state. A late burn event on the EthWatch
+     * thread (or an RPC call racing shutdown) that passed the READY-only
+     * guard would enqueue a mint no live manager ever sends while returning
+     * success to the relayer.
+     */
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    manager_->Stop();
+
+    EXPECT_TRUE( manager_->TransferFunds( 1, account_->GetAddress(), kTokenId ).has_error() );
+    EXPECT_TRUE( manager_
+                     ->MintFunds( 1,
+                                  std::string( 64, '1' ),
+                                  "public",
+                                  kTokenId,
+                                  account_->GetAddress() )
+                     .has_error() );
+    EXPECT_TRUE(
+        manager_->MigrationFunds( 1, "0.2.0", kTokenId, account_->GetAddress() ).has_error() );
+}
+
+TEST_F( TransactionManagerRecoveryTest, PutConvergentImmutableFailsClosedAfterGlobalDBShutdown )
+{
+    /**
+     * ShutdownNow() moves the CRDT datastore handle out of GlobalDB: every
+     * accessor must go through ActiveCRDTDataStore() and fail closed.
+     * PutConvergentImmutable dereferenced the raw member — the exact class
+     * of null-deref that segfaulted migration_sync_test on aarch64 — so a
+     * certificate write racing node shutdown crashed instead of failing.
+     */
+    manager_->Stop();
+    db_->ShutdownNow();
+
+    sgns::crdt::HierarchicalKey key( "immutable/after-shutdown" );
+    sgns::crdt::GlobalDB::Buffer value;
+    value.put( "certificate-bytes" );
+    const auto put = db_->PutConvergentImmutable( key, value, {} );
+    ASSERT_TRUE( put.has_error() );
+    EXPECT_EQ( put.error(), std::errc::operation_canceled );
+}
+
+TEST_F( TransactionManagerRecoveryTest, ConcurrentDuplicateBurnMintsExactlyOnce )
+{
+    /**
+     * Duplicate-burn TOCTOU: two concurrent MintFunds calls for the same burn
+     * event (relayer redelivery racing an RPC mint) could both pass the
+     * reserved/consumed/marker checks before either reserved, and ReserveUTXOs
+     * was silent when the same id already held the reservation — so both mints
+     * were created and both applied effects, minting one verified burn twice.
+     * The atomic TryReserveOutpoint claim must admit exactly one caller
+     * regardless of interleaving.
+     */
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    const std::string burn_hash = std::string( 64, '9' );
+    std::atomic<int>  successes{ 0 };
+    std::atomic<bool> go{ false };
+
+    auto worker = [&]
+    {
+        while ( !go.load( std::memory_order_acquire ) )
+        {
+            std::this_thread::yield();
+        }
+        auto mint = manager_->MintFunds( 1000, burn_hash, "public", kTokenId, "" );
+        if ( mint.has_value() )
+        {
+            successes.fetch_add( 1 );
+        }
+    };
+
+    std::thread first( worker );
+    std::thread second( worker );
+    go.store( true, std::memory_order_release );
+    first.join();
+    second.join();
+
+    EXPECT_EQ( successes.load(), 1 );
+}

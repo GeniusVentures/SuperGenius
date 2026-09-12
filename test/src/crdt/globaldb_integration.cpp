@@ -26,10 +26,12 @@
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "base/buffer.hpp"
+#include "base/hexutil.hpp"
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
+#include "crypto/hasher.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -60,6 +62,17 @@ namespace
     }
 
 #define WAIT_TIMEOUT ( std::chrono::milliseconds( 25000 ) )
+
+    std::string ImmutableValueHash( const std::string &value )
+    {
+        const auto hash = sgns::crypto::sha2_256( value.data(), value.size() );
+        return sgns::base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+    }
+
+    std::string LowestHashValue( const std::string &first, const std::string &second )
+    {
+        return ImmutableValueHash( first ) < ImmutableValueHash( second ) ? first : second;
+    }
 } // namespace
 
 class GlobalDBIntegrationTest : public ::testing::Test
@@ -99,8 +112,12 @@ public:
             ASSERT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
 
             auto io        = std::make_shared<boost::asio::io_context>();
+            // Scheduler backend must share the pubsub host's io_context: graphsync
+            // writes yamux streams, and a scheduler on the private io (run on its own
+            // thread below) races WriteQueue cross-thread — the Debug-only
+            // `item.unsent > 0` assertion. Same fix as 405513df5/ce91566ed.
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-                std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
                                                                                                  scheduler );
@@ -236,6 +253,86 @@ TEST_F( GlobalDBIntegrationTest, OperationsAreRejectedAfterShutdown )
     EXPECT_EQ( db->BeginTransaction(), nullptr );
     EXPECT_EQ( db->GetCRDTDataStore(), nullptr );
     EXPECT_EQ( db->GetBroadcaster(), nullptr );
+}
+
+TEST_F( GlobalDBIntegrationTest, ConvergentImmutableConcurrentWritesConvergeWhenAThenBSynchronize )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_immutable_a_then_b_1" );
+    testNodes->addNode( "globaldb_immutable_a_then_b_2" );
+
+    constexpr char topic[] = "immutable_slot";
+    for ( auto &node : testNodes->getNodes() )
+    {
+        ASSERT_FALSE( node.db->AddBroadcastTopic( topic ).has_error() );
+        node.db->AddListenTopic( topic );
+    }
+
+    const sgns::crdt::HierarchicalKey key( "/immutable/a-then-b" );
+    const std::string                 first_value  = "serialized-certificate-a";
+    const std::string                 second_value = "serialized-certificate-b";
+    const auto                        expected     = LowestHashValue( first_value, second_value );
+    sgns::base::Buffer                first_buffer;
+    first_buffer.put( first_value );
+    sgns::base::Buffer second_buffer;
+    second_buffer.put( second_value );
+
+    ASSERT_TRUE( testNodes->getNodes()[0].db->PutConvergentImmutable( key, first_buffer, { topic } ).has_value() );
+    ASSERT_TRUE( testNodes->getNodes()[1].db->PutConvergentImmutable( key, second_buffer, { topic } ).has_value() );
+
+    testNodes->connectNodes();
+    ASSERT_TRUE( testNodes->getNodes()[0].db->RequestHeadBroadcast( { topic } ).has_value() );
+    ASSERT_TRUE( testNodes->getNodes()[1].db->RequestHeadBroadcast( { topic } ).has_value() );
+
+    ASSERT_TRUE( waitForCondition(
+        [&]()
+        {
+            const auto first_result  = testNodes->getNodes()[0].db->Get( key );
+            const auto second_result = testNodes->getNodes()[1].db->Get( key );
+            return first_result.has_value() && second_result.has_value() &&
+                   first_result.value().toString() == expected && second_result.value().toString() == expected;
+        },
+        WAIT_TIMEOUT ) );
+}
+
+TEST_F( GlobalDBIntegrationTest, ConvergentImmutableConcurrentWritesConvergeWhenBThenASynchronize )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_immutable_b_then_a_1" );
+    testNodes->addNode( "globaldb_immutable_b_then_a_2" );
+
+    constexpr char topic[] = "immutable_slot";
+    for ( auto &node : testNodes->getNodes() )
+    {
+        ASSERT_FALSE( node.db->AddBroadcastTopic( topic ).has_error() );
+        node.db->AddListenTopic( topic );
+    }
+
+    const sgns::crdt::HierarchicalKey key( "/immutable/b-then-a" );
+    const std::string                 first_value  = "serialized-certificate-c";
+    const std::string                 second_value = "serialized-certificate-d";
+    const auto                        expected     = LowestHashValue( first_value, second_value );
+    sgns::base::Buffer                first_buffer;
+    first_buffer.put( first_value );
+    sgns::base::Buffer second_buffer;
+    second_buffer.put( second_value );
+
+    ASSERT_TRUE( testNodes->getNodes()[0].db->PutConvergentImmutable( key, first_buffer, { topic } ).has_value() );
+    ASSERT_TRUE( testNodes->getNodes()[1].db->PutConvergentImmutable( key, second_buffer, { topic } ).has_value() );
+
+    testNodes->connectNodes();
+    ASSERT_TRUE( testNodes->getNodes()[1].db->RequestHeadBroadcast( { topic } ).has_value() );
+    ASSERT_TRUE( testNodes->getNodes()[0].db->RequestHeadBroadcast( { topic } ).has_value() );
+
+    ASSERT_TRUE( waitForCondition(
+        [&]()
+        {
+            const auto first_result  = testNodes->getNodes()[0].db->Get( key );
+            const auto second_result = testNodes->getNodes()[1].db->Get( key );
+            return first_result.has_value() && second_result.has_value() &&
+                   first_result.value().toString() == expected && second_result.value().toString() == expected;
+        },
+        WAIT_TIMEOUT ) );
 }
 
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )

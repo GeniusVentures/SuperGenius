@@ -15,6 +15,7 @@
 #include "storage/rocksdb/rocksdb.hpp"
 
 #include <optional>
+#include <functional>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -299,6 +300,36 @@ namespace sgns
                            UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
+         * @brief      Outcome of an atomic outpoint claim attempt.
+         */
+        enum class OutpointClaim : uint8_t
+        {
+            kClaimed,         ///< Transitioned READY -> RESERVED for the caller, under the UTXO lock.
+            kAlreadyReserved, ///< Another reservation owns it — INCLUDING one under the same id (a duplicate).
+            kAlreadyConsumed, ///< The outpoint is spent.
+            kNotClaimable,    ///< Unknown outpoint or mismatched type.
+        };
+
+        /**
+         * @brief       Atomically checks-and-reserves a single outpoint.
+         * @details     ReserveUTXOs is silent when the outpoint is already reserved
+         *              under the SAME id — exactly the duplicate-burn shape, since
+         *              MintFunds uses the burn hash as the reservation id — so a
+         *              check-then-reserve sequence around it could not detect a
+         *              concurrent duplicate. This variant performs both steps under
+         *              one critical section and reports every outcome.
+         * @param[in]   txid Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @param[in]   reservation_id The id to record on success.
+         * @param[in]   type Required UTXO type.
+         * @return      The claim outcome.
+         */
+        OutpointClaim TryReserveOutpoint( const base::Hash256 &txid,
+                                          uint32_t             output_idx,
+                                          const std::string   &reservation_id,
+                                          UTXOType             type = UTXOType::UTXO_NORMAL );
+
+        /**
          * @brief       Releases a previous reservation without consuming the inputs.
          * @param[in]   inputs The list of UTXOs to release
          * @param[in]   reservation_id The ID for the reservation
@@ -349,6 +380,19 @@ namespace sgns
          * @return      true if the outpoint exists and is in UTXO_RESERVED state
          */
         bool IsOutPointReserved( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+        /**
+         * @brief       Reports whether a CONSUMED outpoint carries real spend metadata.
+         * @details     ConsumeUTXOs synthesizes a zero-amount CONSUMED tombstone for
+         *              outpoints it cannot find — and a durability retry leaves
+         *              exactly that behind — which is the benign metadata-rebuild
+         *              path, not evidence of a spend. A CONSUMED entry with a
+         *              non-zero amount is a genuine spend: positive proof that a
+         *              sibling mint of the same burn applied its effects.
+         * @param[in]   utxo_id Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @return      true only when the outpoint is CONSUMED with real metadata.
+         */
+        bool IsOutPointGenuinelyConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
 
         /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address
@@ -428,6 +472,9 @@ namespace sgns
         outcome::result<std::optional<UTXOCheckpoint>> LoadLatestCheckpoint( const std::string &address ) const;
 
     private:
+        friend class CertificateFallbackTestAccess;
+        friend class UTXOManagerTestAccess;
+
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";
         ///< Prefix for UTXO checkpoint keys in RocksDB
@@ -438,6 +485,23 @@ namespace sgns
          * @return      The database handle as a shared pointer
          */
         std::shared_ptr<storage::rocksdb> AcquireStorage() const;
+
+        /// @brief Captures one address's registry entries while utxos_mutex_ is held.
+        std::vector<std::pair<OutPoint, UTXOEntry>> SnapshotAddressUTXOsLocked( const std::string &address ) const;
+
+        /// @brief Persists a stable address snapshot without reading mutable registry state.
+        outcome::result<void> StoreUTXOSnapshot( const std::shared_ptr<storage::rocksdb>           &db,
+                                                 const std::string                                 &address,
+                                                 const std::vector<std::pair<OutPoint, UTXOEntry>> &entries );
+
+        /// @brief Captures and persists an address snapshot while utxos_mutex_ is exclusively held.
+        outcome::result<void> StoreUTXOsLocked( const std::string    &address,
+                                                std::function<void()> before_store_hook = {} );
+
+        // Friend-only fault and barrier seams for certificate durability regression coverage.
+        void SetFailNextPutUTXOStoreForTest( bool fail );
+        void SetPutUTXOBeforeStoreHookForTest( std::function<void()> hook );
+        void SetConsumeUTXOsBeforeStoreHookForTest( std::function<void()> hook );
 
         /**
          * @brief       Selects UTXOs to cover a required amount for a specific token, excluding reserved outpoints, and returns the selected inputs along with the total selected amount.
@@ -467,6 +531,9 @@ namespace sgns
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
         /// Transient local ownership for reservations; never persisted or used for consensus validity.
         std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
+        bool                                                    fail_next_put_utxo_store_for_test_{ false };
+        std::function<void()>                                   put_utxo_before_store_hook_for_test_;
+        std::function<void()>                                   consume_utxos_before_store_hook_for_test_;
     };
 
 }

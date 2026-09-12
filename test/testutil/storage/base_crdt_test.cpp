@@ -65,6 +65,26 @@ namespace test
         keypair_path_ = ( base_path / "keypair" ).string();
         db_path_      = ( base_path / "db" ).string();
 
+        // Reap exactly the derived paths before any consumer opens them: a leftover
+        // database from a killed/crashed run (or pid reuse) would otherwise be
+        // silently reopened by GlobalDB::New and poison the run with stale state.
+        // Never sweep more broadly - base_path also holds other live fixtures.
+        for ( const auto *stale_path : { &keypair_path_, &db_path_ } )
+        {
+            try
+            {
+                if ( fs::exists( *stale_path ) )
+                {
+                    fs::remove_all( *stale_path );
+                    std::cerr << "[CRDTFixture] removed pre-existing " << *stale_path << std::endl;
+                }
+            }
+            catch ( const fs::filesystem_error &err )
+            {
+                std::cerr << err.what() << std::endl;
+            }
+        }
+
         io_ = std::make_shared<io_context>();
 
         pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
@@ -91,6 +111,19 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        /*
+         * Teardown invariant (asio), mirroring Peer::Stop in
+         * multi_node_finality_fault_test.cpp: the io_context owned by
+         * GossipPubSub must outlive every I/O object that touches it. This
+         * fixture wires graphsync::Network from pubs_->GetHost() into
+         * GlobalDB::New, and Start(40001, {GetLocalAddress()}) creates a
+         * self-connection, so db_ (whose ~GlobalDB -> ~BasicHost deregisters
+         * leftover TcpConnections) must be reset BEFORE pubs_->Stop().
+         * Otherwise StopImpl frees m_context first and the later ~BasicHost
+         * deregisters from the freed kqueue reactor. With db_ released first,
+         * pubs_->Stop() is the FINAL host release.
+         */
+        db_.reset();
         try
         {
             if ( pubs_ )
@@ -102,15 +135,7 @@ namespace test
         {
             std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
         }
-        db_.reset();
-        try
-        {
-            pubs_.reset();
-        }
-        catch ( const std::exception &err )
-        {
-            std::cerr << "GossipPubSub destructor exception: " << err.what() << std::endl;
-        }
+        pubs_.reset();
         io_.reset();
 
         try

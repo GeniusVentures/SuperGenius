@@ -31,10 +31,14 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/process.hpp>
 
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+#include "account/GeniusAccount.hpp"
+#include "base/hexutil.hpp"
 #include "base/util.hpp"
-#include <base/parse_utility.hpp>         // rlp::base::parse::hex_bytes
-#include <eth/abi_decoder.hpp>            // eth::abi::event_signature_hash
-#include "account/BridgeEventTypes.hpp"   // sgns::kBridgeOutInitiatedSig (canonical sig string)
+#include <base/parse_utility.hpp>                        // rlp::base::parse::hex_bytes
+#include <eth/abi_decoder.hpp>                           // eth::abi::event_signature_hash
+#include "account/BridgeEventTypes.hpp"                  // sgns::kBridgeOutInitiatedSig (canonical sig string)
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 namespace sgns::test::anvil
 {
@@ -300,21 +304,35 @@ namespace sgns::test::anvil
                 return { "", false };
             }
         }
+        // GetAddress() renders X||Y big-endian. The v2 bridge event carries the
+        // X-only key in CONTRACT byte order (little-endian — the reverse of
+        // big-endian), which is what eth::DecompressXOnlyPubkey expects: it
+        // reverses the event bytes back to big-endian before parsing the point.
+        // Sending big-endian bytes here made the relayer decompress a different
+        // point, so the reconstructed destination never matched the account.
         const std::string x_half         = sgns_address_128.substr( 0, kHalfLen );
         const std::string y_half         = sgns_address_128.substr( kHalfLen, kHalfLen );
-        const std::string y_first_byte_hex = y_half.substr( 0, kByteHexChars );
 
-        unsigned int y_first_byte = 0u;
+        std::string x_contract_order;
+        x_contract_order.reserve( kHalfLen );
+        for ( unsigned int i = kHalfLen; i >= kByteHexChars; i -= kByteHexChars )
+        {
+            x_contract_order += x_half.substr( i - kByteHexChars, kByteHexChars );
+        }
+
+        // Integer parity of Y: the low byte of the big-endian rendering.
+        const std::string y_low_byte_hex = y_half.substr( kHalfLen - kByteHexChars, kByteHexChars );
+        unsigned int      y_low_byte     = 0u;
         try
         {
-            y_first_byte = static_cast<unsigned int>( std::stoul( y_first_byte_hex, nullptr, 16 ) );
+            y_low_byte = static_cast<unsigned int>( std::stoul( y_low_byte_hex, nullptr, 16 ) );
         }
         catch ( ... )
         {
             return { "", false };
         }
-        const bool destination_y_odd = ( y_first_byte & 1u ) != 0u;
-        return { "0x" + x_half, destination_y_odd };
+        const bool destination_y_odd = ( y_low_byte & 1u ) != 0u;
+        return { "0x" + x_contract_order, destination_y_odd };
     }
 
     /**
@@ -429,6 +447,117 @@ namespace sgns::test::anvil
         }
         spdlog::info( "SendBridgeOutBurn: burn tx hash = {}", tx_hash );
         return tx_hash;
+    }
+
+    /**
+     * @brief Pre-seeds the injected in-memory secure storage so a node created with
+     *        FromPublicKey{ GetEntirePubValue(key) } owns the EXACT secret key `key`.
+     *
+     * Burn destinations address the recipient by the Ethereum key's raw uncompressed
+     * public point (SendBridgeOutBurn takes EthereumKeyGenerator(key).GetEntirePubValue()
+     * as sgns_destination_128). GeniusAccount::NewFromPrivateKey derives a DIFFERENT key
+     * (the legacy sha256(TW-sign(ELGAMAL seed)) contract pinned by
+     * AccountAddressMatchesLegacyCrypto3SeedDerivation), so an account created that way
+     * never owns burns paid to the source key's public point. This helper instead plants
+     * "sgns_key" = the raw source-key bytes as the storage seed for the identifier
+     * GeniusAccount derives from GetEntirePubValue(key). KeySeedToPrivateKey reduces the
+     * seed modulo the curve order — the identity for a valid private key — and
+     * GeniusSigner(key).GetAddress() == GetEntirePubValue(key) (pinned by
+     * GeniusSignerTest.DerivesTheSameAddressAsEthereumKeyGenerator), so the loaded account
+     * signs with the exact source key and its address IS the burn recipient. Mints paid to
+     * the burn recipient are therefore owned and spendable by that account.
+     *
+     * Requires GeniusAccount::SetSecureStorageFactory to return MemorySecureStorage
+     * instances (all anvil-fixture suites install that factory): MemorySecureStorage
+     * shares one static store per identifier, so the seed planted here is visible to
+     * every later load of the same address.
+     *
+     * @param[in] eth_private_key_hex  Ethereum private key in hex (0x prefix optional).
+     * @return The 128-char account address (== GetEntirePubValue of the key) that the
+     *         node must be created with via FromPublicKey, or an empty string on failure.
+     */
+    static inline std::string SeedAccountWithExactKey( const std::string &eth_private_key_hex_in )
+    {
+        // Normalize an optional 0x prefix so both anvil-fixture key spellings work.
+        std::string eth_private_key_hex = eth_private_key_hex_in;
+        if ( eth_private_key_hex.rfind( "0x", 0 ) == 0 || eth_private_key_hex.rfind( "0X", 0 ) == 0 )
+        {
+            eth_private_key_hex.erase( 0, 2 );
+        }
+
+        // The account address (and burn recipient) is the source key's own public point.
+        std::string account_address;
+        try
+        {
+            const ethereum::EthereumKeyGenerator key_gen( eth_private_key_hex );
+            account_address = key_gen.GetEntirePubValue();
+        }
+        catch ( ... )
+        {
+            spdlog::error( "SeedAccountWithExactKey: invalid private key" );
+            return {};
+        }
+        if ( account_address.size() != 128u )
+        {
+            spdlog::error( "SeedAccountWithExactKey: unexpected pub value length {}", account_address.size() );
+            return {};
+        }
+
+        // Discover the storage identifier GeniusAccount derives for this address by
+        // probing NewFromPublicKey once with a recording factory. The probe itself
+        // fails (no sgns_key stored yet), but CreateSecureStorage hands the derived
+        // identifier to the factory — replicating the identifier format here (prefix +
+        // base58 of the public bytes) would silently drift if the production format
+        // ever changed.
+        std::string storage_identifier;
+        const auto  original_factory = sgns::GeniusAccount::GetSecureStorageFactory();
+        sgns::GeniusAccount::SetSecureStorageFactory(
+            [&storage_identifier]( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+            {
+                storage_identifier = identifier;
+                return std::make_shared<sgns::MemorySecureStorage>( identifier );
+            } );
+        (void)sgns::GeniusAccount::NewFromPublicKey( sgns::TokenID::FromBytes( { 0x00 } ), account_address );
+        sgns::GeniusAccount::SetSecureStorageFactory( original_factory );
+
+        if ( storage_identifier.empty() )
+        {
+            spdlog::error( "SeedAccountWithExactKey: could not capture storage identifier" );
+            return {};
+        }
+
+        // Plant "sgns_key" as the decimal 256-bit big-endian value of the raw key
+        // bytes — the exact format GenerateGeniusAddress stores a seed in.
+        const auto key_bytes_res = sgns::base::unhex( eth_private_key_hex );
+        if ( key_bytes_res.has_error() || key_bytes_res.value().size() != 32u )
+        {
+            spdlog::error( "SeedAccountWithExactKey: private key must be 32 bytes of hex" );
+            return {};
+        }
+        const auto                &key_bytes = key_bytes_res.value();
+        boost::multiprecision::uint256_t key_seed;
+        boost::multiprecision::import_bits( key_seed, key_bytes.begin(), key_bytes.end(), 8 );
+
+        sgns::MemorySecureStorage seeded_storage( storage_identifier );
+        if ( seeded_storage.Save( "sgns_key", key_seed.str() ).has_failure() )
+        {
+            spdlog::error( "SeedAccountWithExactKey: failed to save sgns_key" );
+            return {};
+        }
+
+        // Verify through the exact production load path the node will use: the seeded
+        // storage must yield an account whose address is the burn recipient.
+        const auto check = sgns::GeniusAccount::NewFromPublicKey( sgns::TokenID::FromBytes( { 0x00 } ),
+                                                                  account_address );
+        if ( check == nullptr || check->GetAddress() != account_address )
+        {
+            spdlog::error( "SeedAccountWithExactKey: seeded account does not own the burn recipient address" );
+            return {};
+        }
+
+        spdlog::info( "SeedAccountWithExactKey: account {} owns the exact burn-recipient key",
+                      account_address.substr( 0, 16 ) );
+        return account_address;
     }
 
     /**
@@ -677,7 +806,11 @@ namespace sgns::test::anvil
                 return false;
             }
             std::string     rpc    = rpc_url_;
+#if defined( _WIN32 )
+            std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>NUL";
+#else
             std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>/dev/null";
+#endif
             // Stack-allocated capture: the value is never read after the loop, so a
             // heap new/delete pair is gratuitous and leaks if waitForCondition (or
             // the lambda) ever throws.

@@ -4,23 +4,26 @@
 
 SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
 
-## Current Milestone: v1.1 Multi-Signature Secure CRDT Storage
-
-**Goal:** Add a decoupled multi-signature component and a secure CRDT storage layer so specific CRDT-backed values can only be created/updated when signed by a quorum of authorized peers — applied first to a new `TrustedPeerRegistry` (genesis-seeded, quorum-updatable) and to make `BURN_BASIS_POINTS` a quorum-signed, live-updatable CRDT value instead of a hardcoded constant.
-
-**Target features:**
-- `ISignedCRDTData`-style interface: per-type classes implement `Verify()`/`Apply()`, reusing `ConsensusAuth`'s signing-bytes/SHA-256/`VerifySignature` primitives (not `ConsensusManager`'s proposal/vote/certificate machinery)
-- Static topic/regex → policy registry (signer-set source + quorum rule + payload codec) declared in code
-- Propose/sign/quorum flow transported entirely over CRDT itself (pending-value + signature entries, filter-callback pattern like `ValidatorRegistry`), no new networking/RPC
-- New `TrustedPeerRegistry`: genesis-seeded initial set (hardcoded in genesis config), N-of-M configurable quorum from CURRENT members to add/remove/replace a member
-- `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value; `TransactionManager` caches it and refreshes via CRDT-change callback (no live CRDT read per `PayEscrow` call)
-- `ValidatorRegistry` migrated onto the new `ISignedCRDTData` interface (reusing the abstraction, not just `BURN_BASIS_POINTS`)
-
-This milestone is an **interface refactor of `GeniusNode`** — not new product capability. It cleans up the node construction API and moves runtime knobs into configuration files where they belong.
+This milestone rebuilds bridge-mint finality from the `develop` baseline. Competing proposals for one external burn must converge on a single canonical finality slot without treating CRDT callback timing or a local message-delivery flag as protocol authority.
 
 ## Core Value
 
-**Constructing a `GeniusNode` must be a single, self-documenting call driven by config files** — no more overloaded factory methods carrying boolean network/role flags that are really config concerns. If this refactor lands clean and all 18 call sites compile and tests pass, the milestone succeeds.
+**One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.**
+
+## Current Milestone: v3.0 Canonical Burn Finality Rebuild
+
+**Goal:** Implement a minimal, generic canonical-slot certificate path on `develop`, with a durable one-vote-per-slot lock, slot-keyed certificate authority, and safe publication recovery.
+
+**Target features:**
+- Canonical external-burn slot identity shared by every competing mint proposal
+- Deterministic winner/finality rules that preserve certificate-to-proposal binding
+- Persisted local vote locks that prohibit a second usable vote for a slot until matching finality or vote expiry
+- Generic slot-keyed certificate storage, persistence-before-advertisement, and safe publication recovery
+- Multi-node regression coverage for contention, delayed CRDT delivery, publisher loss, restart, and exactly-once minting
+
+## Concurrent Track (from develop)
+
+Develop carries an active parallel milestone this branch does not touch: **v1.1 Multi-Signature Secure CRDT Storage** (extended with ELM Bridging phases 13-14 as a product-v1.0 pre-ship requirement — see `.planning/MILESTONES.md` and ROADMAP "Track A: EVM Bridge Integration"). This branch (v3.0 canonical burn finality) is independent of that track; both ship together on develop.
 
 ## Requirements
 
@@ -40,37 +43,38 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - ✓ `auto_dht` + `port_seed` (renamed from `base_port`) read from `network_config.json` in `InitNetwork()` — config-wins precedence, safe defaults, port-resolution Doxygen (CFG-01, CFG-04) — **Validated in Phase 1**
 - ✓ `node_type` read from `sgns_config.json` in `LoadSgnsConfig()` (case-insensitive `NodeTypeFromString`, default Light) → `NodeType` enum; `is_full_node_` derived (Full/Archive→true, Light→false) in the reordered ctor; canonical `New(dev_config, AccountSource)` variant factory with `FromPublicKey` public (CFG-02, CFG-03, INTF-01, INTF-02, INTF-03) — **Validated in Phase 2** *(old factories retained until Phase 3 deletion per D-01)*
 - ✓ All ~25 `NewFromPrivateKey` call sites migrated to `New(dev_config, FromPrivateKey{...})`; old factories + old private ctor deleted (INTF-04); shared `WriteNetworkConfig`/`WriteSgnsConfig` helpers; full build + CTest green (MIG-01, MIG-02, MIG-03, MIG-04) — **Validated in Phase 3**
+- ✓ Canonical bridge-burn identity is shared by competing Mint proposals and derived from verified burn facts, never proposer address or nonce — **Validated in Phase 8**
+- ✓ Certificate publication has deterministic verifiable authority, persistence-before-advertisement, and safe failover — **Validated in Phase 10**
+- ✓ Local completion, PubSub receipt, CRDT synchronization, and restart recovery converge through one durable canonical-certificate path; honest validators produce one same-slot winner — **Validated in Phases 9–11**
+- ✓ A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart — production-path regression proof via real PubSub/CRDT/RocksDB/consensus/Mint-ingress (TEST-01..TEST-06) — **Validated in Phase 12**
 
 ### Active
 
-<!-- v1.1 milestone scope. Hypotheses until shipped. -->
+<!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] `ISignedCRDTData`-style interface exists: per-type classes implement `Verify()`/`Apply()`, reusing `ConsensusAuth`'s signing-bytes/SHA-256/`VerifySignature` primitives
-- [ ] Static topic/regex → policy registry (signer-set source + quorum rule + payload codec) declared in code
-- [ ] Propose/sign/quorum flow transported entirely over CRDT (pending-value + signature entries, filter-callback pattern like `ValidatorRegistry`) — no new networking/RPC
-- [ ] New `TrustedPeerRegistry`: genesis-seeded initial set (hardcoded in genesis config), N-of-M configurable quorum from CURRENT members to add/remove/replace a member
-- [ ] `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value; `TransactionManager` caches it and refreshes via CRDT-change callback (no live CRDT read per `PayEscrow` call)
-- [ ] `ValidatorRegistry` migrated onto the new `ISignedCRDTData` interface
+- (none — milestone v3.0 scope fully validated)
 
 ### Out of Scope
 
 <!-- Explicit boundaries to prevent scope creep. -->
 
-- `ConsensusManager` changes / pluggable voter sources — CRDT itself carries propose/sign/quorum messages, no consensus proposal/vote/certificate lifecycle involved
-- Any new pubsub/RPC transport — reuse existing CRDT put/filter-callback machinery
-- Unrelated consensus refactors
-- Propagating the `NodeType` enum into `TransactionManager` (60+ `full_node_m` refs), `UTXOManager`, `MigrationManager` — deferred from v1.0; still out of scope
-- Distinct runtime behavior between `Archive` and `Full` — deferred from v1.0; still out of scope
+- Propagating the `NodeType` enum into `TransactionManager` (60+ `full_node_m` refs), `UTXOManager`, `MigrationManager` — deferred; the derived bool stays this milestone
+- Distinct runtime behavior between `Archive` and `Full` — both map to `is_full_node_=true` for now; the `Archive` value exists for forward compatibility only
+- Any change to consensus, processing grid, EVM bridge, or API transport logic
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
+- Rewriting `DevConfig_st` or the dev-config plumbing — only the `GeniusNode` construction surface changes
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
+- Porting, rebasing, or repairing the rejected Phase 9–12 implementation — its design and dependencies are reference material only, not a source of production code
+- A local `DeliverySource` flag as proof of certificate authorship or CRDT write authority — local call provenance is neither network-verifiable nor durable
+- Broad TransactionManager, CRDT, registry, or persistence refactors that are not required by the canonical-finality contract
 
 ## Context
 
-**Current State (v1.0 — shipped 2026-07-03):** The GeniusNode construction-refactor milestone is complete. `New(dev_config, AccountSource)` is the sole public factory; `auto_dht`/`port_seed`/`node_type` are config-driven; `is_full_node_` is derived from `NodeType` in a reordered ctor (init-order hinge fixed); all ~25 call sites migrated; old factories deleted. Full build + CTest green; no behavior change for default/pre-existing configs. GSD subagent runtime was broken this milestone — all plan/execute/verify ran inline via the workflow's documented fallbacks.
+**Current State:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof. Phase 12's UAT round-2 gaps closed across six gap-closure rounds (teardown-invariant propagation, stale-fixture db immunity, SameBurn wait-predicate fix, post-restart certificate re-publication with surviving-replica retention + mesh-readiness gating); the publisher-observer meta-test apparatus was removed by developer directive (2026-09-03) — the suite is the six finality scenarios, three-consecutive-serial-pass verified with zero crashes. Exact-once mint held in every run ever recorded. Deferred (STATE.md): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard. The old exploratory worktree remains forensic reference only.
 
-**Note:** Between v1.0 and v1.1, a substantial body of bridge-relayer work (RPC endpoint wiring, burn detection, conflict/replay hardening, E2E integration, P2P burn-event gossip, deferred validation lifecycle — `.planning/phases/01` through `07`) was planned and executed directly without being tracked as a formal GSD milestone. `PROJECT.md`/`MILESTONES.md` were not reconciled against that work before starting v1.1; this is a known documentation gap, not a description of v1.1's own scope.
+**Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
-**v1.1 Goal:** Add a decoupled multi-signature component and secure CRDT storage layer so specific CRDT-backed values require quorum signatures to create/update — first applied to a new `TrustedPeerRegistry` and to `BURN_BASIS_POINTS` (currently a hardcoded constant in `TransactionManager.hpp:52`, with a comment already anticipating this: "Eventually settable via multisig CRDT config; hardcoded default until then"). Existing precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives. Key design decision from milestone questioning: do NOT route through `ConsensusManager` (voter/weight source is hardwired to a single `ValidatorRegistry` instance, not pluggable per proposal kind) — instead use CRDT's own put/filter-callback mechanism as the transport for proposals and signatures, same pattern `ValidatorRegistry` already uses.
+**Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable vote locking, and application idempotency must be specified as one protocol contract. The certificate store is generic and keyed by canonical slot, not a bridge-only finality side channel. The finality path cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -85,27 +89,27 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ## Constraints
 
-- **Tech stack**: C++17, CMake, RapidJSON, Boost, libp2p, git submodules — no new dependencies this milestone.
-- **Compatibility**: deployed nodes have `network_config.json` / `sgns_config.json` **without** the new keys — they must keep working via defaults; no hard-fail on missing keys.
-- **Non-functional**: no behavior change for existing configurations from earlier milestones.
-- **Scope boundary (v1.1)**: no `ConsensusManager` changes; no new pubsub/RPC transport — CRDT put/filter-callback is the only transport for proposals/signatures.
-- **Scope boundary (v1.0, still holds)**: the `NodeType` enum stops at the `GeniusNode` boundary (derived bool passed downstream).
+- **Tech stack**: C++17, CMake, existing RocksDB/CRDT/libp2p facilities; no new dependency unless research establishes a concrete need.
+- **Protocol safety**: a certificate remains cryptographically bound to its exact winning proposal while the canonical slot establishes the shared finality domain.
+- **Publication safety**: writer authority and failover must be deterministic, protocol-verifiable, and covered by failure tests; no local-only provenance shortcut.
+- **Durability**: write ordering and restart recovery must prevent a second certificate or second mint effect.
+- **Verification**: multi-node tests must exercise production ingress and propagation paths, not direct local-author helper calls.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| v1.1: Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle | `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance per manager, not pluggable per proposal kind — extending it is bigger scope than needed | — Pending |
-| v1.1: Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks), no new networking | `ValidatorRegistry` already proves this pattern works for signature+quorum-gated CRDT updates; avoids building new RPC/gossip machinery | — Pending |
-| v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | — Pending |
-| v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | — Pending |
-| v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | — Pending |
-| v1.0: `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
-| v1.0: `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`) |
-| v1.0: Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
-| v1.0: Single `New(dev_config, AccountSource)` with `std::variant` | One entry point, self-documenting, forward-compatible for new account sources; eliminates 3 near-duplicate factories | Phase 2 ✓ (canonical factory + variant added; old factories deleted Phase 3) |
-| v1.0: `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
-| v1.0: Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ |
+| `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
+| `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`). Factory params still exist (additive) — collapse deferred to Phase 2/3 |
+| Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor. Enum introduced at the boundary now, deep migration later | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
+| Single `New(dev_config, AccountSource)` with `std::variant` | One entry point, self-documenting, forward-compatible for new account sources; eliminates 3 near-duplicate factories | Phase 2 ✓ (canonical factory + variant added; old factories retained until Phase 3 deletion per D-01) |
+| No compatibility shim — migrate all 18 call sites directly | Only this repo consumes the factory; a shim would just delay the cleanup. Tests already write `sgns_config.json`, so the config-write pattern is established | Phase 3 ✓ (all ~25 call sites migrated + old factories deleted) |
+| `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
+| Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ (all three defaults verified: `auto_dht=true`/`port_seed=40001` Phase 1, `node_type=Light` Phase 2) |
+| Restart canonical-finality work from `develop` | The unmerged Phase 9–12 branch has a large blast radius and a publication-authority design flaw; retain its observations, not its implementation | — Pending |
+| Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | Phase 10 ✓ |
+| Store authoritative certificates by canonical slot | Same-slot contenders must meet one generic certificate authority, while the certificate itself retains exact-proposal binding; no bridge-only finality record is introduced | Phase 10 ✓ |
+| Persist one local active vote per slot before publication | Volatile slot arbitration is insufficient after restart or cleanup; a published vote remains locked until matching durable finality or cryptographic expiry | Phase 9 ✓ |
 
 ## Evolution
 
@@ -125,4 +129,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-20 — milestone v1.1 (Multi-Signature Secure CRDT Storage) started*
+*Last updated: 2026-09-03 after v3.0 milestone (Canonical Burn Finality Rebuild shipped; 13 acknowledged deferred items in STATE.md; next milestone not yet planned)*

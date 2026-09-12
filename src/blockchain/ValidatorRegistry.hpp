@@ -302,11 +302,51 @@ namespace sgns
          */
         outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
         /**
+         * @brief Outcome classification of registry-update verification.
+         */
+        enum class UpdateVerification : uint8_t
+        {
+            kValid,           ///< Update fully verified.
+            kMissingDependency, ///< Referenced data (base registry snapshot, member certificate) not synced locally yet — retryable.
+            kInvalid,         ///< Update failed verification permanently.
+        };
+        /**
+         * @brief Verifies a registry update and classifies the failure mode.
+         * @details Missing dependencies must stall (retry once the referenced
+         *          data syncs) rather than reject: CRDT element arrival order
+         *          is unordered across deltas, so an update can legitimately
+         *          reach a node before the certificates/registry snapshot it
+         *          was derived from.
+         * @param[in] update Update to verify.
+         * @param[in] enforce_time_window Whether timestamp window checks are enforced.
+         * @return Verification verdict.
+         */
+        UpdateVerification VerifyUpdateClassified( const RegistryUpdate &update, bool enforce_time_window ) const;
+        /**
          * @brief Persists a registry update.
          * @param[in] update Registry update to store.
          * @return outcome::success on success, otherwise an error.
          */
         outcome::result<void> StoreRegistryUpdate( const RegistryUpdate &update );
+        /**
+         * @brief Begins a CRDT atomic transaction for multi-key registry writes.
+         * @param[in] update Registry update whose payload seeds the transaction.
+         * @return Transaction handle or an error.
+         */
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
+            const RegistryUpdate &update );
+        /**
+         * @brief Serializes a registry snapshot protobuf.
+         * @param[in] registry Registry snapshot to serialize.
+         * @return Serialized bytes or an error.
+         */
+        outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
+        /**
+         * @brief Deserializes a registry snapshot protobuf.
+         * @param[in] buffer Serialized registry bytes.
+         * @return Parsed registry or an error.
+         */
+        outcome::result<Registry> DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
         /**
          * @brief Serializes a registry update protobuf.
          * @param[in] update Registry update to serialize.
@@ -334,6 +374,11 @@ namespace sgns
          * @param[in] batch_size Number of certificates per batch.
          */
         void SetCertificatesPerBatch( size_t batch_size );
+        /**
+         * @brief Sets the cap on newly admitted validators per registry update.
+         * @param[in] max_new Maximum new validators admitted per update.
+         */
+        void SetMaxNewValidatorsPerUpdate( size_t max_new );
         /**
          * @brief Sets callback used to submit generated batch subjects.
          * @param[in] submitter Subject submitter callback.
@@ -451,6 +496,8 @@ namespace sgns
         {
             std::unordered_map<std::string, bool> registered_votes;   ///< Vote decisions by registered validators.
             std::unordered_map<std::string, bool> unregistered_votes; ///< Vote decisions by unregistered validators.
+            std::unordered_set<std::string>       unregistered;       ///< Unregistered voter ids (observability).
+            std::unordered_set<std::string>       approved;           ///< Approving active validator ids (observability).
         };
 
         /**
@@ -474,9 +521,12 @@ namespace sgns
         /**
          * @brief Filters CRDT elements to registry-update entries.
          * @param[in] element Incoming CRDT element.
-         * @return Aditional elements to be filtered out or nullopt when no other elements need to be removed.
+         * @return Accept to keep the element, Reject to strip it, or Stall when
+         *         referenced data (base registry snapshot / member certificates)
+         *         is not synced locally yet — the delta job then retries via the
+         *         failed-root machinery instead of being permanently dropped.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterRegistryUpdate( const crdt::pb::Element &element );
         /**
          * @brief Callback invoked when a registry update element is received.
          * @param[in] new_data New key/value data pair.
@@ -514,7 +564,7 @@ namespace sgns
          */
         bool ValidateCertificate( const sgns::ConsensusCertificate &certificate,
                                   const Registry                   &current_registry,
-                                  std::string_view                  expected_registry_cid ) const;
+                                  std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Validates certificate suitability for generating a registry update.
          * @param[in] certificate Certificate to validate.
@@ -523,36 +573,41 @@ namespace sgns
          */
         bool ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
                                            const Registry                   &current_registry,
-                                           std::string_view                  expected_registry_cid ) const;
+                                           std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
          * @param[in] current_registry Current registry snapshot.
-         * @return Partitioned votes, or an error when the certificate has no quorum.
+         * @return Partitioned votes, or failure when the certificate's verified
+         *         votes do not reach quorum (an empty partition set is a verdict,
+         *         not a valid zero-vote tally).
          */
         outcome::result<CertificateVotes> ExtractCertificateVotes(
             const sgns::ConsensusCertificate &certificate,
             const Registry                   &current_registry ) const;
         /**
+         * @brief Builds next registry snapshot using a certificate-derived vote set.
+         * @param[in] current_registry Current registry snapshot.
+         * @param[in] certificate Certificate whose votes drive the update.
+         * @param[in] registered_votes Vote decisions from registered validators.
+         * @param[in] unregistered_votes Vote decisions from unregistered validators.
+         * @return Derived registry snapshot.
+         */
+        Registry BuildRegistryFromCertificate( const Registry                              &current_registry,
+                                               const sgns::ConsensusCertificate            &certificate,
+                                               const std::unordered_map<std::string, bool> &registered_votes,
+                                               const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        /**
          * @brief Builds next registry snapshot from aggregated vote maps.
          * @param[in] current_registry Current registry snapshot.
-         * @param[in] votes Partitioned vote decisions.
+         * @param[in] registered_votes Vote decisions from registered validators.
+         * @param[in] unregistered_votes Vote decisions from unregistered validators.
          * @return Derived registry snapshot.
          */
         Registry BuildRegistryFromAggregatedVotes(
-            const Registry         &current_registry,
-            const CertificateVotes &votes ) const;
-        /**
-         * @brief Builds the next registry by aggregating a batch of finalized certificates.
-         * @param[in] current_registry Registry against which votes are evaluated.
-         * @param[in] payload Batch metadata constraining the certificates.
-         * @param[in] subject_hashes Subject hashes of the certificates to aggregate.
-         * @return Derived registry snapshot or an error.
-         */
-        outcome::result<Registry> BuildRegistryFromBatchCertificates(
-            const Registry                 &current_registry,
-            const RegistryBatchSubject     &payload,
-            const std::vector<std::string> &subject_hashes ) const;
+            const Registry                              &current_registry,
+            const std::unordered_map<std::string, bool> &registered_votes,
+            const std::unordered_map<std::string, bool> &unregistered_votes ) const;
         /**
          * @brief Inserts eligible unregistered validators into registry.
          * @param[in,out] registry Registry being updated.
@@ -586,12 +641,17 @@ namespace sgns
          */
         void ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
         /**
+         * @brief Normalizes a registry snapshot for deterministic comparison.
+         * @param[in,out] registry Registry to normalize in place.
+         */
+        static void NormalizeRegistry( Registry &registry );
+        /**
          * @brief Initializes local cache from persistent storage.
          */
         void InitializeCache();
 
         /**
-         * @brief Builds map key for pending certificate subjects by base registry.
+         * @brief Builds map key for pending certificate slots by base registry.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
@@ -602,30 +662,32 @@ namespace sgns
         }
 
         /**
-         * @brief Computes deterministic batch root from subject hashes.
-         * @param[in] subject_hashes Subject hashes included in the batch.
+         * @brief Computes deterministic batch root from batch member identifiers.
+         * @param[in] members Member identifiers (canonical certificate slots) included in the batch.
          * @return Batch root hash or an error.
          */
-        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &subject_hashes ) const;
+        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &members ) const;
         /**
-         * @brief Selects subjects eligible for a registry batch proposal.
+         * @brief Selects canonical certificate slots eligible for a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @param[in] certificate_count Required number of certificates.
          * @param[in] expected_root Optional expected batch root constraint.
-         * @return Selected subject-hash list or an error.
+         * @return Selected canonical certificate slots or an error.
          */
         outcome::result<std::vector<std::string>> SelectBatchSubjects( const std::string         &base_registry_cid,
                                                                        uint64_t                   base_registry_epoch,
                                                                        uint32_t                   certificate_count,
                                                                        std::optional<std::string> expected_root ) const;
         /**
-         * @brief Loads certificate referenced by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Loaded certificate or an error.
+         * @brief Loads the authoritative member certificate from its canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return Certificate when the durable `/cert/<slot>` record parses and binds
+         *         to the exact slot, or an error. A datastore miss is reported as the
+         *         underlying lookup error so callers can distinguish a not-yet-synced
+         *         member (retry) from a corrupt or mismatched record (reject).
          */
-        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
+        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Attempts to create and submit a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
@@ -691,7 +753,7 @@ namespace sgns
         size_t certificates_per_batch_ = DefaultCertificatesPerBatch; ///< Certificates required per batch subject.
         mutable std::mutex batch_mutex_;                              ///< Guards batch-tracking collections.
         std::unordered_map<std::string, std::set<std::string>>
-            pending_certificate_subjects_by_base_;                  ///< Pending subject hashes keyed by base registry.
+            pending_certificate_slots_by_base_;                  ///< Pending canonical certificate slots keyed by base registry.
         std::unordered_set<std::string> pending_batch_subject_ids_; ///< Batch subject ids pending finalization.
         std::unordered_set<std::string> finalized_batch_subject_ids_; ///< Batch subject ids already finalized.
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
