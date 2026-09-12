@@ -1,0 +1,47 @@
+{
+  "name": "invalid-bad-format-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "testInput",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "tensor",
+      "format": "FLOAT32"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "testOutput",
+      "source_uri_param": "file://processing_datatypes/float_output.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "bad_format_inference",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/float_model.mnn",
+        "format": "UNKNOWN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:testInput",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:testOutput",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ]
+}

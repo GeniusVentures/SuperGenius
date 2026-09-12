@@ -1,0 +1,61 @@
+{
+  "name": "regression-b-parseblocksize-model-only",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "description": "Regression Bug B: model-only assumption crash in ParseBlockSize — a shader-only render pass with NO model field",
+  "inputs": [
+    {
+      "name": "vertexData",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "buffer",
+      "dimensions": { "width": 1 }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "framebufferOut",
+      "source_uri_param": "file://processing_datatypes/regression_b_output.raw",
+      "type": "image"
+    }
+  ],
+  "passes": [
+    {
+      "name": "shader_only_render",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "spirv",
+            "source": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "spirv",
+            "source": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
+            "entry_point": "main"
+          }
+        ]
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:vertexData"
+      },
+      "vertex_layout": [
+        {
+          "name": "inPosition",
+          "format": "FLOAT32",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

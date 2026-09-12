@@ -1329,6 +1329,27 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
+    outcome::result<void> CrdtDatastore::PutKeyLocal( const HierarchicalKey &aKey,
+                                                      const Buffer          &aValue,
+                                                      const std::string     &aID )
+    {
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( deltaResult.error() );
+        }
+
+        auto priorityResult = set_->GetPriority( aKey.GetKey() );
+        if ( priorityResult.has_failure() )
+        {
+            return outcome::failure( priorityResult.error() );
+        }
+
+        deltaResult.value()->set_priority( priorityResult.value() + 1 );
+
+        return set_->Merge( *deltaResult.value(), aID );
+    }
+
     outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey                 &aKey,
                                                    const std::unordered_set<std::string> &topics )
     {

@@ -324,7 +324,12 @@ namespace sgns::crdt
 
         std::shared_ptr<DataStore> dataStore_ = nullptr;
         HierarchicalKey            namespaceKey_;
-        std::mutex                 mutex_;
+        // Recursive: PutElems holds this lock across its synchronous putHookFunc_ callback,
+        // and that callback can trigger a write that re-enters PutElems on the same thread
+        // (e.g. a certificate-confirmation PutHook driving confirmed-transaction processing
+        // that itself writes back into this same CrdtSet). A plain std::mutex self-deadlocks
+        // on that reentry.
+        std::recursive_mutex       mutex_;
         PutHookPtr                 putHookFunc_    = nullptr;
         DeleteHookPtr              deleteHookFunc_ = nullptr;
 

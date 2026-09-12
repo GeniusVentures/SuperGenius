@@ -48,6 +48,19 @@ namespace sgns
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
     /**
+     * @brief Discovery entry returned by GetRegistrationsForMain.
+     *
+     * Each entry identifies a child wallet registered to the queried main wallet.
+     */
+    struct RegistrationDiscoveryEntry
+    {
+        std::string                         child_addr;  ///< Child wallet public address (128-hex)
+        std::string                         main_addr;   ///< Main wallet public address (128-hex)
+        uint64_t                            sequence;    ///< Registration sequence number
+        SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+    };
+
+    /**
      * @brief Coordinates transaction creation, CRDT propagation, verification, and status tracking.
      */
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
@@ -155,6 +168,117 @@ namespace sgns
          * @return Transaction hash on success.
          */
         outcome::result<std::string> TransferFunds( uint64_t amount, std::string destination, TokenID token_id );
+
+        /**
+         * @brief Creates and enqueues a child-wallet registration transaction.
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
+         * @param[in] sequence      Registration sequence number (caller-supplied per D-42).
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( std::string                          main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata,
+                                                    uint64_t                             sequence );
+
+        /**
+         * @brief Creates and enqueues a child-wallet registration transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1
+         * (or 1 if no prior registration exists).
+         *
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( std::string                          main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Creates and enqueues a transfer transaction recovering funds from a registered child
+         *        wallet back to this account's own address (D-60/D-62/CONS-02).
+         *
+         * Selects UTXOs owned by @p child_address (never this account's own UTXOs), builds a
+         * DAGStruct scoped to @p child_address (child's own nonce/previous-hash chain, not this
+         * account's), and signs both the whole-transaction and every per-input signature with this
+         * account's own key. Consensus accepts the resulting transaction because the CRDT
+         * registration record certifies the parent-child relationship (Blockchain::CheckCertifiedParent),
+         * not because this account possesses the child's private key.
+         *
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover.
+         * @param[in] token_id      Token being recovered.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
+         *
+         * Clears the registration's main_address to a 128-character zero-sentinel and sets
+         * detach_flag=true, superseding the current registration record. Child-signed only.
+         *
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
+         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
+         *
+         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
+         *
+         * Sets main_address to the caller-supplied new main and detach_flag=false, superseding the
+         * current registration record. Handles both Registered->Registered replacement AND
+         * re-registration from Detached/Revoked. Child-signed only — no consent from the old main.
+         *
+         * @param[in] new_main_address    New main wallet public address (128-hex).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata,
+                                                  uint64_t                             sequence,
+                                                  uint64_t                             supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
+         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
+         *
+         * @param[in] new_main_address New main wallet public address (128-hex).
+         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Creates and enqueues a main-initiated Revoke transaction (D-36).
+         *
+         * Main-signed — this account is the tx's own source. Fails fast client-side if the target's
+         * reg/ record is absent or already detached, avoiding broadcast of a transaction
+         * CheckParentChildAuthority would reject anyway.
+         *
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RevokeChild( std::string child_address );
 
         /**
          * @brief Creates and enqueues a mint transaction.
@@ -332,6 +456,8 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class RegistrationE2ETestAccess;
+        friend class RegTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -428,6 +554,15 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<GeniusTransaction> & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
+
+        /**
+         * @brief Builds a DAGStruct scoped to an arbitrary source address rather than this account's
+         *        own address — used by RecoverFromChild (D-60) where the tx's declared src is a
+         *        registered child, not this account. Derives nonce from
+         *        account_m->GetPeerNonce(source_address) (never ReserveNextNonce, which is this
+         *        account's own private counter) and a previous-hash chain scoped to source_address.
+         */
+        SGTransaction::DAGStruct FillDAGStructForAddress( const std::string &source_address );
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
@@ -666,6 +801,57 @@ namespace sgns
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op parser for "registration" tx type (Phase 3 Plan 04 fix).
+         * @details RegistrationTransaction carries no UTXO parameters — its CRDT
+         *          acceptance/validation is handled entirely by FilterRegistration/
+         *          RegElementCallback, independently of this post-confirmation dispatch table.
+         *          This entry exists solely so CheckTransactionWellFormed's
+         *          transaction_parsers.find(tx.GetType()) membership check recognizes
+         *          "registration" as a known type — without it, EVERY registration transaction
+         *          unconditionally fails ValidateTransactionForConsensus ("Unknown tx type"),
+         *          meaning Blockchain::CheckCertifiedParent's CheckCertificate(reg_tx->GetHash())
+         *          gate (D-26, added Plan 01) could never resolve true for any real registration
+         *          proposal submitted through the normal nonce-consensus pipeline. Discovered
+         *          while implementing Plan 04's CONS-02 certification test.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> ParseRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op reverter for "registration" tx type — see ParseRegistrationTransaction.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> RevertRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief Parser for "revoke" tx type — applies the RevokeTx's effect to the target
+         *        reg/{child_addr} record (Phase 5).
+         * @details Unlike ParseRegistrationTransaction, this is NOT a no-op. A RevokeTx is
+         *          stored/broadcast at tx/{hash} (SendTransactionItem's default path, since only
+         *          "registration" routes to reg/{src_addr}), so its effect on reg/{child_addr}
+         *          must be actively applied here once the transaction is confirmed. Reads the
+         *          existing reg/{child_addr} record, preserves main_address/sequence/metadata/
+         *          supersedes_sequence, and writes back a copy with detach_flag=true via a direct
+         *          local globaldb_m->Put — mirrors PutProducedUTXOs' established "derive a
+         *          side-effect locally, per-node, from an already-validated transaction" pattern.
+         *          This local write is never re-validated by this node's own FilterRegistration
+         *          (CrdtDatastore::GetDeltaFromNode only filters deltas received FROM peers, not
+         *          elements this node posts itself), which is safe because CheckParentChildAuthority's
+         *          "revoke" branch has already gated this RevokeTx during consensus validation before
+         *          ParseTransaction ever runs.
+         * @return outcome::success() once applied, or forwards a Put failure. Tolerates an absent
+         *         or already-registration-typed-mismatched reg/{child_addr} record (logs and returns
+         *         success) rather than failing the whole confirmed-transaction pipeline.
+         */
+        outcome::result<void> ParseRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op reverter for "revoke" tx type (Phase 5).
+         * @details Reverting a Revoke would require snapshotting the PRIOR reg/ state, which is
+         *          not currently tracked. Leaving a rolled-back Revoke's target in the
+         *          (already-applied) Detached state is a conservative, fail-safe default — the
+         *          child remains protected, not accidentally re-exposed to main's authority.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> RevertRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
@@ -695,6 +881,29 @@ namespace sgns
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
+
+        /**
+         * @brief CRDT element filter for incoming child-wallet registrations.
+         *
+         * Phase 4: minimal gates a-c per D-44.
+         * Gates: (a) deserialization failure, (b) invalid child signature,
+         * (c) malformed main_address (not 128 hex chars).
+         * Phase 5 adds: (d) sequence monotonicity check — reads existing reg/{child_addr} via CRDT Get, rejects non-monotonic or zero sequences.
+         * (e) supersedes_sequence fork-prevention gate (D-38) — rejects any lifecycle-change RegistrationTx whose supersedes_sequence does not match the currently-stored record's sequence.
+         *
+         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         */
+        std::optional<std::vector<crdt::pb::Element>> FilterRegistration( const crdt::pb::Element &element );
+
+        /**
+         * @brief Decides whether @p new_tx should replace @p existing_tx.
+         *
+         * Rejects replacement when the hashes are identical or when the existing
+         * transaction is immutable. Otherwise, replaces when the new transaction
+         * has an earlier timestamp within tolerance (or unconditionally
+         * if disabled).
+         */
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -745,6 +954,15 @@ namespace sgns
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
 
         /**
+         * @brief CRDT new-element callback for the reg/ namespace.
+         *
+         * Deserializes the incoming RegistrationTx and, when main_address matches
+         * the local account, calls AddListenTopic(child_addr) to follow the child
+         * wallet's pubsub channel (D-49).
+         */
+        void RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
+
+        /**
          * @brief CRDT deleted-element callback. Pushes the key onto
          *        deleted_data_queue_ and wakes the tick loop.
          */
@@ -774,6 +992,7 @@ namespace sgns
             const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+        bool                   CheckParentChildAuthority( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
@@ -792,6 +1011,18 @@ namespace sgns
         bool                  HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
+
+        /**
+         * @brief Enumerates child registrations naming a specific main wallet.
+         *
+         * Scans the reg/ CRDT namespace across all monitored networks and returns
+         * entries whose main_address matches @p main_address.
+         *
+         * @param[in] main_address Main wallet public address (128-hex) to query for.
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
 
         /**
          * @brief Obtains the public-chain input validator for RPC endpoint wiring.

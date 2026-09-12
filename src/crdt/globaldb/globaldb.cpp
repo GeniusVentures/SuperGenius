@@ -554,6 +554,11 @@ namespace sgns::crdt
         return batch.Commit( topics );
     }
 
+    outcome::result<void> GlobalDB::PutLocal( const HierarchicalKey &key, const Buffer &value, const std::string &id )
+    {
+        return m_crdtDatastore->PutKeyLocal( key, value, id );
+    }
+
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         auto crdt_datastore = ActiveCRDTDataStore();

@@ -76,6 +76,8 @@ namespace sgns::processing
 
         float GetProgress() const override;
 
+        std::shared_ptr<ProcessingTaskQueue> GetTaskQueue() const override;
+
     private:
         /**
          * @brief       Private constructor for ProcessingCoreImpl. Use the static New method to create instances.

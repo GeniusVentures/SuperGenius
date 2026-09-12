@@ -8,11 +8,13 @@
 #include <mutex>
 #include <system_error>
 #include <unordered_set>
+#include <boost/format.hpp>
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include <primitives/cid/cid.hpp>
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "outcome/outcome.hpp"
+#include "account/proto/SGTransaction.pb.h"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 {
@@ -1856,6 +1858,40 @@ namespace sgns
     bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
     {
         return consensus_manager_->CheckCertificateForSubject( subject_hash );
+    }
+
+    std::optional<std::string> Blockchain::CheckCertifiedParent( const std::string &child_addr ) const
+    {
+        // Mirrors the existing reg-key format ("/bc-%hu/" + "reg/" + address, see
+        // account/TransactionManager.cpp:618-619, :2873-2874) without depending on genius_node symbols.
+        std::string reg_key =
+            ( boost::format( std::string( "/bc-%hu/" ) ) % sgns::version::GetNetworkID() ).str() + "reg/" + child_addr;
+
+        auto existing_data = db_->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return std::nullopt;
+        }
+
+        SGTransaction::RegistrationTx tx_struct;
+        if ( !tx_struct.ParseFromArray( existing_data.value().data(),
+                                         static_cast<int>( existing_data.value().size() ) ) )
+        {
+            return std::nullopt;
+        }
+
+        if ( tx_struct.dag_struct().type() != "registration" )
+        {
+            return std::nullopt;
+        }
+
+        const std::string reg_hash = tx_struct.dag_struct().data_hash();
+        if ( !CheckCertificate( reg_hash ) )
+        {
+            return std::nullopt;
+        }
+
+        return tx_struct.main_address();
     }
 
     bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const

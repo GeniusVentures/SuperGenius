@@ -71,6 +71,8 @@ set(GENIUS_NODE_SOURCES
     MintTransaction.cpp
     MintTransactionV2.cpp
     MigrationTransaction.cpp
+    RegistrationTransaction.cpp
+    RevokeTransaction.cpp
     EscrowTransaction.cpp
     GeniusInputValidator.cpp
     MigrationInputValidator.cpp

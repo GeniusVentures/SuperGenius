@@ -21,3 +21,5 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+add_subdirectory(regtest)
