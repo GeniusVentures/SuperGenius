@@ -86,6 +86,20 @@ namespace sgns
     // evidence for the full, larger set, without needing a thread per call site.
     TEST_F( VulkanConcurrentInitTest, RepeatedConcurrentInitNoRaceOrCrash )
     {
+        // The 12s ctest TIMEOUT for this target was calibrated on a real-Vulkan-GPU host
+        // (2.99s observed, 4x margin). On GPU-less hosts (e.g. WSL with only llvmpipe),
+        // the two inference threads fall back to CPU emulation and a single iteration
+        // alone exceeds that entire budget (measured ~12s/iteration on llvmpipe), so the
+        // run can only ever end as a misleading ctest Timeout. Skip instead — same policy
+        // as CreateSucceedsWithRealVulkanDevicePresent below: the VulkanInitMutex race
+        // coverage this test provides needs a real device to be meaningful anyway.
+        if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+        {
+            GTEST_SKIP() << "No usable Vulkan device found on this host; concurrent-init "
+                            "iteration runtime is CPU-emulated and cannot fit the 12s "
+                            "deadlock-canary ctest timeout calibrated for GPU hosts.";
+        }
+
         constexpr int kIterations = 25;
 
         for ( int iter = 0; iter < kIterations; ++iter )
