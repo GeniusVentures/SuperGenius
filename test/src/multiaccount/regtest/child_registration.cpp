@@ -193,8 +193,23 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
+        // Deterministic, collision-free listen port. WriteNetworkConfig only takes a port_seed,
+        // which GeniusNode::GenerateRandomPort hashes with the node's address to derive the
+        // actual listen port — two different (seed, address) pairs can collide on the SAME
+        // derived port (observed: genesis seed 40001 and child seed 40003 both deriving 40299,
+        // leaving the child unable to hear the genesis validator-registry broadcast and never
+        // reaching READY). Writing an explicit "pubsub_port" instead pins the listen port
+        // exactly (LoadNetworkConfig: pubsub_port overrides GenerateRandomPort entirely), and
+        // the per-node id suffix keeps each node's port unique. The file is written here in
+        // full (mirroring WriteNetworkConfig's contents plus the override) because that helper
+        // has no pubsub_port parameter and appending after its closing brace would be invalid JSON.
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        {
+            std::ofstream networkConfigFile( devConfig.BaseWritePath + "/network_config.json" );
+            networkConfigFile << "{ \"port_seed\": " << uniquePort << ", \"auto_dht\": false"
+                              << ", \"upnp_enabled\": false"
+                              << ", \"pubsub_port\": \"" << uniquePort << "\" }";
+        }
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                            isFullNode ? "Full" : "Light",
                                            /*is_processor=*/isProcessor );

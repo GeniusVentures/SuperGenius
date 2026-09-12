@@ -268,6 +268,12 @@ namespace
             if ( tm_ )
                 tm_->Stop();
             work_guard_.reset();
+            // Resetting the work guard alone is NOT enough to end io_->run(): the CRDTFixture's
+            // GlobalDB scheduler/timers keep posting recurring work to io_ until the fixture's
+            // own destructor stops db_/pubs_, which only runs AFTER this TearDown returns. Stop
+            // the io_context explicitly so run() unblocks and the join below terminates (same
+            // pattern as bridge_rlpx_e2e_test.cpp's StopIo).
+            io_->stop();
             if ( io_thread_.joinable() )
                 io_thread_.join();
             GeniusAccount::SetSecureStorageFactory( nullptr );
