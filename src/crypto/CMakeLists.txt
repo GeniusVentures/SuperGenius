@@ -2,10 +2,11 @@ add_library(hasher
     hasher.cpp
 )
 target_link_libraries(hasher
+    PUBLIC
+    blob
     PRIVATE
     ipfs-lite-cpp::blake2
     twox
-    buffer
     sha
     keccak
 )

@@ -5,10 +5,13 @@ add_library(genius_prover
     GeniusProver.cpp
 )
 target_link_libraries(genius_prover
+    PUBLIC
     outcome
     Boost::boost
     Boost::log
     Boost::json
+    Boost::filesystem
+    Boost::unit_test_framework
     LLVMIRReader
     LLVMCore
     LLVMSupport
@@ -18,25 +21,28 @@ add_library(basic_proof
     IBasicProof.cpp
 )
 target_link_libraries(basic_proof
-    genius_prover
+    PUBLIC
     outcome
+    Boost::json
     SGProofProto
+    PRIVATE
+    genius_prover
 )
 
 add_library(transfer_proof
     TransferProof.cpp
 )
 target_link_libraries(transfer_proof
+    PUBLIC
     basic_proof
-    Boost::unit_test_framework
 )
 
 add_library(processing_proof
     ProcessingProof.cpp
 )
 target_link_libraries(processing_proof
+    PUBLIC
     basic_proof
-    Boost::unit_test_framework
 )
 
 # add_library(recursive_transfer_proof
