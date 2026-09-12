@@ -67,6 +67,7 @@
 #include <bitswap.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include "FileManager.hpp"
+#include <openssl/crypto.h>
 
 namespace
 {
@@ -89,6 +90,13 @@ namespace
         return base + dist( rng );
     }
 
+    // OpenSSL registers OPENSSL_cleanup through atexit on first use. Node worker
+    // threads can still sit inside a TLS call when main returns -- the startup
+    // chainlist fetch blocks for up to 15s -- and cleanup frees the ENGINE lock
+    // underneath them, which segfaults the process after the tests passed.
+    // Leaking OpenSSL state at exit is cheaper than that crash.
+    [[maybe_unused]] const bool OPENSSL_NO_ATEXIT_INSTALLED =
+        OPENSSL_init_crypto( OPENSSL_INIT_NO_ATEXIT, nullptr ) == 1;
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
