@@ -1588,6 +1588,13 @@ namespace sgns
             const std::string existing_bytes( existing.value().toString() );
             if ( existing_bytes != encoded )
             {
+                // Exact-vote guard — deliberately NOT relaxed for expiry: the stored
+                // vote may still be certifying its proposal from other peers'
+                // retained copies, and peers tally observed votes latest-wins, so an
+                // expiry-driven replacement could strip weight from a still-live
+                // winner (CorruptOrExpiredActiveVoteCannotAuthorizeAReplacement).
+                // Sanctioned replacement goes through
+                // EraseDurableActiveVoteRecord on provably-safe release instead.
                 return outcome::failure( std::errc::operation_not_permitted );
             }
             auto decoded = DecodeActiveVoteRecord( slot_key, existing_bytes );
@@ -1665,6 +1672,26 @@ namespace sgns
             if ( decoded.has_error() )
             {
                 logger_->error( "{}: ignored invalid durable active vote slot={}", __func__, slot_key );
+                continue;
+            }
+            // Deadline BEFORE locks: an expired record is a dead attempt — peers
+            // stop accepting the vote after acceptance_deadline_ms, so re-announcing
+            // it is pointless — and taking active_vote_locked/candidates_frozen on
+            // its behalf wedged the slot permanently (no re-vote, no new candidates,
+            // and nothing to prove unwinnability for a release: the wedge case was
+            // every restart longer than the ~2s window, i.e. all of them). The
+            // expired path installs bookkeeping only, so a later attempt can vote
+            // again under the observed-votes latest-wins tally.
+            if ( now_ms >= decoded.value().acceptance_deadline_ms )
+            {
+                logger_->info( "{}: durable vote for slot {} expired (deadline {} < now {}); "
+                               "recovering bookkeeping only, slot stays votable",
+                               __func__,
+                               slot_key.substr( 0, 8 ),
+                               decoded.value().acceptance_deadline_ms,
+                               now_ms );
+                auto &slot_state = slot_states_[slot_key];
+                slot_state.voted_proposal_ids.insert( decoded.value().proposal.proposal_id() );
                 continue;
             }
             auto &slot_state = slot_states_[slot_key];

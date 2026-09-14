@@ -3121,3 +3121,54 @@ TEST_F( ConsensusPendingLifecycleTest, SubmitCertificateWritesOnlyTheCanonicalSl
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
+
+TEST_F( ConsensusPendingLifecycleTest, ExpiredDurableVoteRecoveryDoesNotLockSlot )
+{
+    /**
+     * RecoverActiveVotes set active_vote_locked/candidates_frozen/best BEFORE
+     * consulting the acceptance deadline, so any restart longer than the ~2s
+     * window — i.e. every real restart — left the slot permanently locked with
+     * the vote neither replayed (peers reject it post-deadline) nor released
+     * (no cleanup path, and no observed dissent can ever prove unwinnability on
+     * a frozen slot). An expired record must recover as bookkeeping only: the
+     * slot stays votable and the node abstains safely rather than wedging.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto proposal = MakeProposal( manager, registry, 95, "0xexpired-recovery" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
+    sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
+    auto bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot );
+    ASSERT_TRUE( bytes.has_value() );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
+
+    // Simulate the restart outlasting the acceptance window: expire the durable
+    // record's own deadline, then restart the manager over the same datastore.
+    sgns::ActiveVoteRecord expired;
+    ASSERT_TRUE( expired.ParseFromString( bytes.value() ) );
+    const auto past_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) - 60000;
+    expired.set_acceptance_deadline_ms( past_ms );
+    std::string expired_bytes;
+    ASSERT_TRUE( expired.SerializeToString( &expired_bytes ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteActiveVoteRecord( manager, slot, expired_bytes );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+    auto restarted = MakeSigningManager( registry, account );
+    ASSERT_TRUE( restarted );
+
+    // The wedge: pre-fix this lock was true forever with no release path.
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( restarted, slot ) );
+    // The expired vote is not replayed (peers would reject it post-deadline).
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).empty() );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
+}
