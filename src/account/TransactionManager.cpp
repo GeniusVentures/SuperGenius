@@ -4942,6 +4942,29 @@ namespace sgns
                                                tx_hash );
             return reject_and_maybe_fail_local( "witness validation failed" );
         }
+        if ( witness_validation == WitnessValidationResult::PENDING )
+        {
+            // Defer on the producers' certificates: when one finalizes on this
+            // node, WakePendingDependency re-runs this subject's validation.
+            std::vector<ConsensusManager::PendingDependencyKey> dependencies;
+            if ( auto params = tx->GetUTXOParametersOpt(); params.has_value() )
+            {
+                dependencies.reserve( params->first.size() );
+                for ( const auto &input : params->first )
+                {
+                    dependencies.push_back( ConsensusManager::PendingDependencyKey::Certificate(
+                        input.txid_hash_.toReadableString() ) );
+                }
+            }
+            TransactionManagerLogger()->info(
+                "[{} - full: {}] {}: Witness pending on unsynced producer for hash {} ({} dependencies)",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx_hash,
+                dependencies.size() );
+            return ConsensusManager::ValidationResult::Pending( std::move( dependencies ) );
+        }
 
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
@@ -5541,15 +5564,28 @@ namespace sgns
             return WitnessValidationResult::INVALID;
         }
         (void) consumed_root_result;
-        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), blockchain_ );
+        const auto witness_verdict = validator.ValidateWitness( subject, tx, params_opt.value(), blockchain_ );
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validator witness result tx={} chain_id={} result={}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
                                            __func__,
                                            tx->GetHash(),
                                            chain_id,
-                                           witness_ok );
-        return witness_ok ? WitnessValidationResult::VALID : WitnessValidationResult::INVALID;
+                                           static_cast<int>( witness_verdict ) );
+        switch ( witness_verdict )
+        {
+        case IInputValidator::WitnessVerdict::kValid:
+            return WitnessValidationResult::VALID;
+        case IInputValidator::WitnessVerdict::kNotSynced:
+            // Cross-delta arrival order is unordered: a producer's transaction or
+            // certificate legitimately arrives after the spending subject. Retry,
+            // do not reject — rejecting here turned a transient gap into a
+            // validation failure for certificate-first delivery.
+            return WitnessValidationResult::PENDING;
+        case IInputValidator::WitnessVerdict::kInvalid:
+        default:
+            return WitnessValidationResult::INVALID;
+        }
     }
 
     std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
@@ -6136,19 +6172,56 @@ namespace sgns
                     break;
                 }
 
-                std::unique_lock tx_lock( tx_mutex_m );
-                auto             it = tx_processed_m.find( key );
-                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                // Same ordering the mint branch enforces: effects BEFORE the
+                // CONFIRMED record. Writing CONFIRMED first stranded
+                // CONFIRMED-without-effects on a parse failure, and redelivery
+                // short-circuited on the existing CONFIRMED entry so the effects
+                // were never applied. effects_applied reserves the parse for THIS
+                // invocation (concurrent redelivery skips straight to the
+                // idempotent confirm) and keeps a failed attempt retryable.
+                bool apply_effects = false;
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
-                    break;
+                    std::unique_lock tx_lock( tx_mutex_m );
+                    auto             it = tx_processed_m.find( key );
+                    if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                    {
+                        if ( it->second.effects_applied )
+                        {
+                            // Effects were already durable on a prior delivery.
+                            return outcome::success();
+                        }
+                        // A pre-ordering-fix strand: CONFIRMED recorded but the parse
+                        // never succeeded. Fall through and apply the effects now.
+                        TransactionManagerLogger()->warn(
+                            "[{} - full: {}] {}: Re-applying effects for already-CONFIRMED transaction {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            tx->GetHash() );
+                    }
+                    apply_effects = it == tx_processed_m.end() || !it->second.effects_applied;
+                    tx_processed_m[key] =
+                        TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
                 }
-                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
+
+                if ( apply_effects )
+                {
+                    auto parse_result = ParseTransaction( tx );
+                    if ( parse_result.has_error() )
+                    {
+                        // Nothing durably changed for this entry yet; keep it
+                        // retryable instead of stranding CONFIRMED-without-effects.
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        tx_processed_m[key] =
+                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                        return parse_result;
+                    }
+                }
+
+                {
+                    std::unique_lock tx_lock( tx_mutex_m );
+                    tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce(), true };
+                }
 
                 // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
                 metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
@@ -6158,17 +6231,12 @@ namespace sgns
                                                   __func__,
                                                   tx->GetHash() );
 
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of CONFIRMED to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
-                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
                 }
+                return outcome::success();
             }
 
             break;

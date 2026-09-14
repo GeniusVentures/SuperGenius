@@ -12,6 +12,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
@@ -57,6 +58,19 @@ namespace sgns
                                                              TransactionManager::TransactionStatus     status )
         {
             return manager.ChangeTransactionState( transaction, status );
+        }
+
+        static std::optional<TransactionManager::TrackedTx> GetTrackedTx( TransactionManager    &manager,
+                                                                         const std::string     &tx_hash )
+        {
+            std::shared_lock lock( manager.tx_mutex_m );
+            auto             it = manager.tx_processed_m.find( TransactionManager::GetTransactionPath( tx_hash ) );
+            return it != manager.tx_processed_m.end() ? std::optional{ it->second } : std::nullopt;
+        }
+
+        static void SetFailNextPutUTXOStore( sgns::UTXOManager &utxo_manager, bool fail )
+        {
+            utxo_manager.SetFailNextPutUTXOStoreForTest( fail );
         }
     };
 } // namespace sgns
@@ -619,4 +633,122 @@ TEST_F( TransactionManagerRecoveryTest, ConcurrentDuplicateBurnMintsExactlyOnce 
     second.join();
 
     EXPECT_EQ( successes.load(), 1 );
+}
+
+TEST_F( TransactionManagerRecoveryTest, NonMintConfirmAppliesEffectsBeforeConfirmRecord )
+{
+    /**
+     * The non-mint CONFIRMED path wrote the CONFIRMED tracking record BEFORE
+     * ParseTransaction, so a parse failure stranded CONFIRMED-without-effects
+     * and redelivery short-circuited on the existing entry — permanently
+     * unrecoverable. Effects must apply first; a failed parse stays retryable
+     * (VERIFYING, effects_applied=false) and a retry completes the confirm.
+     */
+    auto transaction = MakeTransaction();
+    ASSERT_TRUE( transaction );
+
+    // First confirm attempt fails inside ParseTransaction (output store fails).
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetFailNextPutUTXOStore(
+        account_->GetUTXOManager(), true );
+    auto first = sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *manager_, transaction, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_TRUE( first.has_error() );
+
+    auto tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                     transaction->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, sgns::TransactionManager::TransactionStatus::VERIFYING );
+    EXPECT_FALSE( tracked->effects_applied );
+
+    // Retry with the store healthy: effects apply, then the CONFIRMED record.
+    auto second = sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *manager_, transaction, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_TRUE( second.has_value() );
+
+    tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_, transaction->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( tracked->effects_applied );
+}
+
+namespace
+{
+    /// Validator whose witness verdict is controllable, registered for a
+    /// dedicated chain id so the pending mapping can be exercised without
+    /// building full witness proofs.
+    class ControllableWitnessValidator final : public sgns::IInputValidator
+    {
+    public:
+        sgns::IInputValidator::WitnessVerdict verdict_ = sgns::IInputValidator::WitnessVerdict::kValid;
+
+        bool ValidateUTXOParameters( const sgns::UTXOTxParameters &,
+                                     const std::string &,
+                                     const sgns::UTXOManager & ) const override
+        {
+            return true;
+        }
+
+        sgns::IInputValidator::WitnessVerdict ValidateWitness(
+            const sgns::ConsensusSubject &,
+            const std::shared_ptr<sgns::GeniusTransaction> &,
+            const sgns::UTXOTxParameters &,
+            const std::shared_ptr<sgns::Blockchain> & ) const override
+        {
+            return verdict_;
+        }
+
+        bool RequiresConsensusUTXOData() const override
+        {
+            return false;
+        }
+    };
+} // namespace
+
+TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInvalid )
+{
+    /**
+     * Witness validation conflated "producer not synced yet" with "invalid":
+     * cross-delta arrival order is unordered, so certificate-first delivery
+     * turned a transient gap into a hard validation failure. kNotSynced must
+     * map to PENDING (retryable), with INVALID still rejected.
+     */
+    static ControllableWitnessValidator validator;
+    validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kNotSynced;
+    ASSERT_TRUE( sgns::IInputValidator::Register( "witness-pending-chain", &validator ) );
+
+    // The tx must carry UTXO parameters to reach the validator and route to
+    // the controllable validator's chain: a MintV2 with a burn input whose
+    // producer record is absent locally — exactly the unsynced shape.
+    const auto producer_hash = sgns::base::Hash256::fromReadableString( std::string( 64, '7' ) ).value();
+    auto transaction = std::make_shared<sgns::MintTransactionV2>( sgns::MintTransactionV2::New(
+        1,
+        "witness-pending-chain",
+        kTokenId,
+        MakeDAG( account_->ReserveNextNonce() ),
+        { { producer_hash, 0, {} } },
+        account_->GetAddress() ) );
+    transaction->MakeSignature( *account_ );
+    ASSERT_TRUE( transaction );
+
+    auto commitment = manager_->BuildUTXOTransitionCommitment( transaction );
+    ASSERT_TRUE( commitment.has_value() );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                               transaction->GetNonce(),
+                                                               transaction->GetHash(),
+                                                               transaction->SerializeToEmbeddedTransaction(),
+                                                               commitment,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    {
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::PENDING );
+    }
+    {
+        validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kInvalid;
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::INVALID );
+    }
+
+    sgns::IInputValidator::UnregisterIf( "witness-pending-chain", &validator );
 }
