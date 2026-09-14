@@ -238,11 +238,13 @@ namespace
 
             sgns::crdt::GlobalDB::Buffer certificate_data;
             certificate_data.put( certificate.SerializeAsString() );
-            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetHash() ),
+            // The canonical slot record is the sole certificate authority: store
+            // and check at the transaction's slot, never at its hash.
+            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetSlotID() ),
                                    certificate_data,
                                    { "CRDT.Datastore.TEST.Channel" } )
                              .has_value() );
-            ASSERT_TRUE( blockchain_->CheckCertificate( transaction->GetHash() ) );
+            ASSERT_TRUE( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) );
         }
 
         void StoreTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
@@ -432,6 +434,10 @@ TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPrevio
 {
     auto previous_transaction = MakeTransaction( 0 );
     StoreCertificate( previous_transaction );
+    // The certificate's slot record alone no longer proves a chain link from the
+    // bare head hash (the by-hash recovery path is removed; no legacy records
+    // exist): the durable transaction plus its slot certificate do.
+    StoreTransaction( previous_transaction );
     const auto persisted_hash = account_->GetLocalConfirmedTxHash( 0 );
     ASSERT_TRUE( persisted_hash.has_value() );
     ASSERT_EQ( persisted_hash.value(), previous_transaction->GetHash() );
