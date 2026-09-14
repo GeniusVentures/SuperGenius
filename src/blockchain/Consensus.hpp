@@ -1206,6 +1206,12 @@ namespace sgns
         FinalityFaultBarrier    certificate_persisted_barrier_;
         FinalityFaultBarrier    accepted_certificate_barrier_;
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
+        /// Orphaned pending-vote queues (proposal never seen locally) are evicted
+        /// once the map exceeds this bound and a queue's newest vote outlives the
+        /// TTL below — otherwise a peer replaying votes for unseen proposals grew
+        /// the map forever.
+        static constexpr size_t                kMaxTrackedPendingVoteQueues{ 10000 };
+        static constexpr std::chrono::minutes  kPendingVoteQueueTTL{ 30 };
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
@@ -1213,11 +1219,14 @@ namespace sgns
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
         std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.
-        std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW }; ///< Accepted timestamp window.
-        std::chrono::milliseconds certificate_delay_{
-            std::chrono::milliseconds( 2000 ) };                             ///< Delay before certificate processing.
-        std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
-        std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
+        // Tuning members are written by Configure* after construction while the
+        // round timer and pubsub threads read them: stored as atomic millisecond
+        // counts and materialized into chrono values at each read (a plain
+        // chrono member is a torn-read data race).
+        std::atomic<int64_t> timestamp_window_ms_{ DEFAULT_TIMESTAMP_WINDOW.count() }; ///< Accepted timestamp window.
+        std::atomic<int64_t> certificate_delay_ms_{ 2000 };                            ///< Delay before certificate processing.
+        std::atomic<int64_t> round_duration_ms_{ DEFAULT_ROUND_DURATION.count() };     ///< Consensus round duration.
+        std::atomic<int64_t> round_skew_ms_{ DEFAULT_ROUND_SKEW.count() }; ///< Round skew tolerance.
         std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
         bool                      certificate_filter_registered_   = false; ///< Owns the CRDT certificate filter.
         bool                      certificate_callback_registered_ = false; ///< Owns the CRDT certificate callback.
