@@ -3,6 +3,7 @@ add_library(processing_service
     processing_tasksplit.cpp
     processing_tasksplit_elm.cpp
     processing_clocks_elm.cpp
+    elm_settlement.cpp
     processing_engine.cpp
     processing_node.cpp
     processing_service.cpp
