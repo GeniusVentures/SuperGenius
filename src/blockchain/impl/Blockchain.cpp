@@ -217,6 +217,28 @@ namespace sgns
                 return strong->consensus_manager_->SubmitProposal( proposal, true );
             } );
 
+        // All batch proposals competing for one registry transition (same base
+        // snapshot + target epoch) must share one canonical slot, so the proven
+        // burn-slot arbitration machinery — candidate comparison in the window,
+        // lowest-hash certificate convergence, SubmitCertificate ordering —
+        // deterministically selects exactly one winner. Without this, each batch
+        // content hashed to its own subject-id slot, competing batches certified
+        // independently, and the winner was settled downstream at the registry
+        // update layer, where same-epoch resolution is CRDT-priority-based
+        // (arrival order, restart-flippable) rather than deterministic.
+        ConsensusManager::RegisterSlotKeyHandler(
+            REGISTRY_BATCH_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto payload = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                if ( payload.has_error() )
+                {
+                    return {};
+                }
+                return "registry-batch:" + payload.value().base_registry_cid() + ":" +
+                       std::to_string( payload.value().target_registry_epoch() );
+            } );
+
         instance->consensus_manager_->RegisterSubjectHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
             [weak_instance](

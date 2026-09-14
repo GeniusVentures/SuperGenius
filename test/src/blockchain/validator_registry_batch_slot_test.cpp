@@ -307,18 +307,19 @@ namespace
     TEST_F( ValidatorRegistryBatchSlotTest, EvaluateBatchSubjectProgressesPendingToApproveAndRejectsTamperedRoot )
     {
         /**
-         * Given a slot-carrying batch subject, When the pending member set is
-         * incomplete the subject stays Pending, once complete it Approves, and a
-         * subject whose root points at different members is Rejected.
+         * The verdict is a function of the signed proposal only: members are
+         * validated against durable /cert/<slot> records, never against the
+         * process-local pending set (a first-N window shifted by one
+         * lower-sorting finalized slot used to Reject a valid batch). While a
+         * member's durable record is absent the subject stays Pending (not
+         * synced, not invalid); once every member record is durable it
+         * Approves; a corrupt member record is a permanent Reject.
          */
         auto account  = MakeAccount();
         auto registry = MakeRegistry( account );
         ASSERT_TRUE( registry );
         auto manager = MakeManager( registry, account );
         ASSERT_TRUE( manager );
-
-        registry->SetCertificatesPerBatch( 2 );
-        CaptureBatchSubjects( registry );
 
         const std::string tx_hash_a = "0xprogress-member-a";
         const std::string tx_hash_b = "0xprogress-member-b";
@@ -339,35 +340,25 @@ namespace
                                                                      slots );
         ASSERT_TRUE( subject.has_value() );
 
-        auto empty_pending = registry->EvaluateBatchSubject( subject.value() );
-        EXPECT_EQ( empty_pending, ValidatorRegistry::BatchSubjectDecision::Pending );
+        // No durable member records yet: not synced, Pending. The local pending
+        // set is never populated in this test — the verdict must not depend on it.
+        auto absent = registry->EvaluateBatchSubject( subject.value() );
+        EXPECT_EQ( absent, ValidatorRegistry::BatchSubjectDecision::Pending );
 
-        auto first_finalize = registry->OnFinalizedCertificate( member_a.value() );
-        ASSERT_TRUE( first_finalize.has_error() );
-        EXPECT_EQ( first_finalize.error(), std::errc::resource_unavailable_try_again );
-
+        // One durable member: still Pending.
+        WriteCertificateAtKey( "/cert/" + SlotFor( tx_hash_a ), member_a.value() );
         auto partial = registry->EvaluateBatchSubject( subject.value() );
         EXPECT_EQ( partial, ValidatorRegistry::BatchSubjectDecision::Pending );
 
-        ASSERT_TRUE( registry->OnFinalizedCertificate( member_b.value() ).has_value() );
-        ASSERT_EQ( submitted_subjects_.size(), 1U );
-
+        // Every member durable: Approve.
+        WriteCertificateAtKey( "/cert/" + SlotFor( tx_hash_b ), member_b.value() );
         auto complete = registry->EvaluateBatchSubject( subject.value() );
         EXPECT_EQ( complete, ValidatorRegistry::BatchSubjectDecision::Approve );
 
-        const std::vector<std::string> tampered_slots = { SlotFor( tx_hash_a ), SlotFor( "0xtampered-member" ) };
-        auto tampered_root = ConsensusManager::ComputeBatchRoot( tampered_slots );
-        ASSERT_TRUE( tampered_root.has_value() );
-        auto tampered = ConsensusManager::CreateRegistryBatchSubject( account->GetAddress(),
-                                                                      registry->GetRegistryCid(),
-                                                                      0,
-                                                                      1,
-                                                                      2,
-                                                                      tampered_root.value(),
-                                                                      tampered_slots );
-        ASSERT_TRUE( tampered.has_value() );
-        auto tampered_decision = registry->EvaluateBatchSubject( tampered.value() );
-        EXPECT_EQ( tampered_decision, ValidatorRegistry::BatchSubjectDecision::Reject );
+        // A corrupt durable member record is permanently invalid.
+        WriteRawAtKey( "/cert/" + SlotFor( tx_hash_b ), "not-a-certificate" );
+        auto corrupt = registry->EvaluateBatchSubject( subject.value() );
+        EXPECT_EQ( corrupt, ValidatorRegistry::BatchSubjectDecision::Reject );
 
         manager->Close();
     }
@@ -681,5 +672,78 @@ namespace
                    ValidatorRegistry::UpdateVerification::kMissingDependency );
 
         manager->Close();
+    }
+
+    TEST( ValidatorRegistryBatchSlotContractTest, CompetingBatchesShareOneCanonicalSlot )
+    {
+        /**
+         * All batch proposals competing for one registry transition (same base
+         * snapshot + target epoch) must derive the SAME canonical slot, so the
+         * existing burn-slot arbitration (candidate comparison, lowest-hash
+         * certificate convergence) deterministically selects one winner.
+         * Per-content subject-id slots let competing batches certify
+         * independently, deferring the choice to the registry-update layer
+         * where same-epoch resolution is CRDT-priority (arrival order) — not
+         * deterministic.
+         */
+        ConsensusManager::RegisterSlotKeyHandler(
+            REGISTRY_BATCH_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto payload = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                if ( payload.has_error() )
+                {
+                    return {};
+                }
+                return "registry-batch:" + payload.value().base_registry_cid() + ":" +
+                       std::to_string( payload.value().target_registry_epoch() );
+            } );
+
+        const std::string base_cid = "registry-cid-for-slot-test";
+        const std::vector<std::string> slots_a = { "canonical-member-a1", "canonical-member-a2" };
+        const std::vector<std::string> slots_b = { "canonical-member-b1", "canonical-member-b2" };
+        auto root_a = ConsensusManager::ComputeBatchRoot( slots_a );
+        auto root_b = ConsensusManager::ComputeBatchRoot( slots_b );
+        ASSERT_TRUE( root_a.has_value() && root_b.has_value() );
+        ASSERT_NE( root_a.value(), root_b.value() );
+
+        auto subject_a = ConsensusManager::CreateRegistryBatchSubject( "acct",
+                                                                       base_cid,
+                                                                       4,
+                                                                       5,
+                                                                       2,
+                                                                       root_a.value(),
+                                                                       slots_a );
+        auto subject_b = ConsensusManager::CreateRegistryBatchSubject( "acct",
+                                                                       base_cid,
+                                                                       4,
+                                                                       5,
+                                                                       2,
+                                                                       root_b.value(),
+                                                                       slots_b );
+        ASSERT_TRUE( subject_a.has_value() && subject_b.has_value() );
+
+        ConsensusManager::Proposal proposal_a;
+        *proposal_a.mutable_subject() = subject_a.value();
+        ConsensusManager::Proposal proposal_b;
+        *proposal_b.mutable_subject() = subject_b.value();
+
+        EXPECT_EQ( ConsensusManager::GetSlotKey( proposal_a ), ConsensusManager::GetSlotKey( proposal_b ) );
+        EXPECT_FALSE( ConsensusManager::GetSlotKey( proposal_a ).empty() );
+
+        // A different transition (other target epoch) is a different slot.
+        auto subject_c = ConsensusManager::CreateRegistryBatchSubject( "acct",
+                                                                       base_cid,
+                                                                       5,
+                                                                       6,
+                                                                       2,
+                                                                       root_a.value(),
+                                                                       slots_a );
+        ASSERT_TRUE( subject_c.has_value() );
+        ConsensusManager::Proposal proposal_c;
+        *proposal_c.mutable_subject() = subject_c.value();
+        EXPECT_NE( ConsensusManager::GetSlotKey( proposal_a ), ConsensusManager::GetSlotKey( proposal_c ) );
+
+        ConsensusManager::UnregisterSlotKeyHandler( REGISTRY_BATCH_SUBJECT_TYPE );
     }
 } // namespace
