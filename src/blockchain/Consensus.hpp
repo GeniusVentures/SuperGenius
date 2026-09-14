@@ -637,40 +637,6 @@ namespace sgns
          * @return `true` only when the exact authoritative record is approved.
          */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
-        /**
-         * @brief Retrieves a certificate by its subject hash (legacy index).
-         *
-         * v3.0 persists a certificate only at the authoritative canonical-slot key
-         * (`/cert/<slot>`), so this read resolves develop-era records, which predate
-         * slot keys and carry only the subject-hash index. It verifies the hash
-         * binding plus full certificate validity. Every lookup of a record this tree
-         * wrote must use @ref GetCertificateBySlot with a derived slot.
-         */
-        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
-        /**
-         * @brief Checks for an approved certificate via the subject-hash index.
-         * @param[in] subject_hash Subject hash key, without the `/cert/` prefix.
-         * @return `true` when the subject-hash record is present and approved.
-         */
-        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
-        /**
-         * @brief Checks whether a certificate exists for the exact supplied subject.
-         * @param[in] subject Subject instance used to derive a canonical slot.
-         * @return `true` if a certificate exists, otherwise `false`.
-         */
-        bool CheckCertificateForSubject( const Subject &subject ) const;
-        /**
-         * @brief Dispatches pending certificate work for one subject-hash index record.
-         * @param[in] subject_hash Subject hash (nonce subjects: the transaction hash) whose
-         *                         `/cert/<subject_hash>` work should be consumed.
-         *
-         * A successful by-hash durable readback proves certificate finality, so a consumer
-         * that just verified the record through `Blockchain::CheckCertificate` may also
-         * deliver its not-yet-consumed acceptance work synchronously. Serializes with the
-         * timer/registration recovery through `certificate_recovery_mutex_`; a handler
-         * must never call back into this method (it would self-deadlock).
-         */
-        void DispatchCertificateWorkForSubject( const std::string &subject_hash );
 
     protected:
         /**
@@ -1060,7 +1026,7 @@ namespace sgns
          * @param[in] entry Work-journal entry to process.
          *
          * Caller must hold `certificate_recovery_mutex_`. Shared by the full-journal
-         * recovery scan and the single-subject `DispatchCertificateWorkForSubject` path.
+         * recovery scan.
          */
         void DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry );
         void                      ExpirePendingProposals();

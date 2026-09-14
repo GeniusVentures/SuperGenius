@@ -297,30 +297,11 @@ namespace sgns
          */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
         /**
-         * @brief Checks the subject-hash certificate index and consumes pending work.
-         * @param[in] subject_hash Subject hash (nonce subjects: the transaction hash),
-         *                         without the `/cert/` prefix.
-         * @return `true` when the hash-verifying subject-hash record is approved.
-         *
-         * A successful durable readback proves finality, so this call also delivers
-         * any not-yet-consumed certificate acceptance work for the subject to its
-         * registered handler before returning.
-         */
-        bool CheckCertificate( const std::string &subject_hash );
-        /**
-         * @brief Performs strict certificate check for a specific subject object.
-         * @param[in] subject Subject to evaluate.
-         * @return `true` when certificate exists and matches strictly.
-         */
-        bool CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
-        /**
          * @brief Loads the validated authoritative certificate by canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return Certificate on success, otherwise an error.
          */
         outcome::result<ConsensusManager::Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
-        /** @deprecated Use GetCertificateBySlot with a derived slot. */
-        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash( const std::string &slot_key ) const;
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.

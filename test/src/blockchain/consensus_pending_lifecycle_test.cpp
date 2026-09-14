@@ -3116,8 +3116,13 @@ TEST_F( ConsensusPendingLifecycleTest, SubmitCertificateWritesOnlyTheCanonicalSl
     const auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( proposal.subject() );
     ASSERT_TRUE( subject_hash.has_value() );
     ASSERT_NE( subject_hash.value(), slot_key.substr( slot_key.find( "/cert/" ) + strlen( "/cert/" ) ) );
-    const auto by_hash = manager->GetCertificateBySubjectHash( subject_hash.value() );
-    EXPECT_TRUE( by_hash.has_error() );
+    // The by-hash authority was removed outright (no consensus version was ever
+    // deployed; there are no legacy records to serve): assert no record exists.
+    auto datastore = db_->GetDataStore();
+    ASSERT_TRUE( datastore );
+    sgns::crdt::GlobalDB::Buffer by_hash_key;
+    by_hash_key.put( "/cert/" + subject_hash.value() );
+    EXPECT_TRUE( datastore->get( by_hash_key ).has_error() );
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
