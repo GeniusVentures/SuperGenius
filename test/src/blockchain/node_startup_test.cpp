@@ -132,10 +132,11 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
     std::cout << "=== Starting Genesis Creator Ready Before Account-Creation Pubsub Timeout Test ===" << std::endl;
 
     // Must stay below TIMEOUT_ACC_CREATION_BLOCK_MS (8000ms) to detect the
-    // PubSub-timeout stall. Measured genesis-creator READY is ~1.2s (genesis +
-    // account-creation logic ~0.2s; remainder is node init: PubSub/DHT/UPnP/DB
-    // migration). The < 1s stretch goal is therefore bounded by node init, not
-    // by the account-creation path fixed here.
+    // PubSub-timeout stall. The stall would park the node in
+    // INITIALIZING_BLOCKCHAIN for ~8s, so the budget only covers
+    // INITIALIZING_BLOCKCHAIN -> READY. INITIALIZING_DATABASE (RocksDB open)
+    // can legitimately stall for tens of seconds when parallel test binaries
+    // contend on disk, and must not count against the budget.
     constexpr int kGenesisCreatorReadyBudgetMs = 7000;
 
     auto node_full = CreateNode( "full_node_acc_creation_timing",
@@ -145,13 +146,19 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
                                  true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
 
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetState() >= GeniusNode::NodeState::INITIALIZING_BLOCKCHAIN; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "genesis creator never reached blockchain initialization" );
+
     std::chrono::milliseconds ready_elapsed_ms;
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( kReadyPollTimeoutMs ),
                                   "genesis creator never reached READY",
                                   &ready_elapsed_ms );
 
-    std::cout << "Genesis creator reached READY in " << ready_elapsed_ms.count() << "ms" << std::endl;
+    std::cout << "Genesis creator reached READY in " << ready_elapsed_ms.count()
+              << "ms after blockchain initialization began" << std::endl;
 
     ASSERT_LT( ready_elapsed_ms.count(), kGenesisCreatorReadyBudgetMs )
         << "Genesis creator READY took " << ready_elapsed_ms.count()
