@@ -1531,6 +1531,66 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, DuplicateCertificateSightingKeepsJournalWorkDispatchable )
+{
+    /**
+     * Regression for the recovered-head wedge: FilterElementsOnDelta calls
+     * MarkSeen for every accepted certificate, and duplicate deltas carrying
+     * the same cert are routine during head recovery/rebroadcast. MarkSeen used
+     * to rewrite an existing Stalled entry back to Seen while recovery only
+     * dispatched Stalled entries, so a re-sighting between merge and dispatch
+     * parked committed certificate work forever (durable record present,
+     * handler never ran). Re-sighting must not regress the entry, and a
+     * Seen-only entry — left when the merge is a no-op duplicate so the element
+     * callback never fires — must still be picked up by recovery.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto journal = db_->GetWorkJournal();
+    ASSERT_TRUE( journal );
+
+    // Certificates referencing an unsynced registry stay journaled for retry,
+    // which is what makes a wedged state observable through the journal.
+    auto certificate = MakeCertificateForRegistry( account, "unsynced-registry-cid", 92, "0xduplicate-sighting" );
+    const auto key   = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate );
+    ASSERT_FALSE( key.empty() );
+    std::string serialized;
+    ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, key, serialized );
+
+    // Element callback ran: work is queued and retryable.
+    sgns::base::Buffer buffer;
+    buffer.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ key, buffer } );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, key ) );
+
+    // A duplicate delta's filter acceptance must not regress queued work.
+    journal->MarkSeen( key );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, key ) );
+
+    // A Seen-only entry (filter sighting journaled, element callback skipped on
+    // a no-op merge) must still be dispatched by recovery.
+    auto second = MakeCertificateForRegistry( account, "unsynced-registry-cid", 93, "0xseen-only-dispatch" );
+    const auto seen_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second );
+    ASSERT_FALSE( seen_key.empty() );
+    std::string seen_serialized;
+    ASSERT_TRUE( second.SerializeToString( &seen_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, seen_key, seen_serialized );
+    ASSERT_TRUE( journal->MarkDone( seen_key ) ); // clear the hook-created entry
+    journal->MarkSeen( seen_key );                // filter-only sighting, no callback
+
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, seen_key ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnApprovedBoundCertificate )
 {
     auto account = MakeSigningAccount();
