@@ -127,6 +127,22 @@ namespace sgns
             return entry.has_value() && entry->state == state;
         }
 
+        /// True when the entry is Stalled with a live (not-yet-expired) backoff
+        /// lease — i.e., the handler-failure backoff has engaged.
+        static bool HasLiveBackoffLease( const std::shared_ptr<ConsensusManager> &manager, const std::string &key )
+        {
+            const auto entry = manager->certificate_work_journal_->GetEntry( key );
+            if ( !entry.has_value() || entry->state != crdt::CRDTWorkJournal::State::Stalled )
+            {
+                return false;
+            }
+            const auto now_ms = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() );
+            return entry->lease_until_ms != 0 && entry->lease_until_ms > now_ms;
+        }
+
         static bool HasNoCertificateWork( const std::shared_ptr<ConsensusManager> &manager, const std::string &key )
         {
             return !manager->certificate_work_journal_->GetEntry( key ).has_value();
@@ -1296,4 +1312,51 @@ TEST_F( CertificateFallbackTest, DuplicateBurnMintRefusedWhenSiblingConsumedOutp
 
     const uint64_t balance_after = utxo_mgr.GetBalance();
     EXPECT_EQ( balance_after, balance_before );
+}
+
+TEST_F( CertificateFallbackTest, RepeatedHandlerFailuresEngageBackoffLease )
+{
+    /**
+     * A handler failing once or twice is transient (storage glitch) and must
+     * retry on the next tick exactly as before — the fault choreography
+     * depends on it. A handler failing persistently re-runs full certificate
+     * validation plus itself on every 500ms tick forever — a CPU/log loop — so
+     * after the fast-retry threshold the stall must carry a live backoff lease.
+     */
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 130 );
+    ASSERT_TRUE( winner );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    const auto key = "/cert/" + winner->GetSlotID();
+    crdt::GlobalDB::Buffer callback_value;
+    callback_value.put( certificate.value().SerializeAsString() );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager, crdt::CRDTCallbackManager::NewDataPair{ key, std::move( callback_value ) } );
+
+    // Sticky marker failure: every dispatch fails at the handler.
+    CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, true );
+
+    // Early failures stay on the fast path: Stalled with no live lease.
+    for ( int i = 0; i < 4; ++i )
+    {
+        CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+        ASSERT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+            manager, key, crdt::CRDTWorkJournal::State::Stalled ) );
+        ASSERT_FALSE( CertificateFallbackTestAccess::HasLiveBackoffLease( manager, key ) );
+    }
+
+    // Past the fast-retry threshold the stall carries a live backoff lease.
+    for ( int i = 0; i < 6; ++i )
+    {
+        CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    }
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState(
+        manager, key, crdt::CRDTWorkJournal::State::Stalled ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasLiveBackoffLease( manager, key ) );
+
+    CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, false );
 }

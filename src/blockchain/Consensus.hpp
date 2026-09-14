@@ -1212,6 +1212,21 @@ namespace sgns
         /// the map forever.
         static constexpr size_t                kMaxTrackedPendingVoteQueues{ 10000 };
         static constexpr std::chrono::minutes  kPendingVoteQueueTTL{ 30 };
+        /// Memo cache for LoadRegistryByCid on the vote-receive hot path: a CID
+        /// names immutable delta content, so the decoded Registry is a pure
+        /// function of the CID and caching is safe by construction. Capped small
+        /// (epochs advance slowly); guarded by registry_cache_mutex_.
+        static constexpr size_t kRegistryCacheMaxEntries{ 8 };
+        mutable std::mutex registry_cache_mutex_;
+        mutable std::unordered_map<std::string, ValidatorRegistry::Registry> registry_cache_;
+
+        /// Cached LoadRegistryByCid for hot paths (vote receive); falls back to
+        /// the direct load on a miss and memoizes the result.
+        outcome::result<ValidatorRegistry::Registry> LoadRegistryByCidCached( const std::string &cid ) const;
+
+        /// Handler failures at or below this many journal attempts retry on the
+        /// next tick; beyond it the stall carries an exponential backoff lease.
+        static constexpr uint64_t kHandlerFailureFastRetries{ 8 };
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
