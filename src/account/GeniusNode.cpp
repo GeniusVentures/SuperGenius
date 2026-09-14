@@ -67,6 +67,7 @@
 #include <bitswap.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include "FileManager.hpp"
+#include <openssl/crypto.h>
 
 namespace
 {
@@ -89,6 +90,13 @@ namespace
         return base + dist( rng );
     }
 
+    // OpenSSL registers OPENSSL_cleanup through atexit on first use. Node worker
+    // threads can still sit inside a TLS call when main returns -- the startup
+    // chainlist fetch blocks for up to 15s -- and cleanup frees the ENGINE lock
+    // underneath them, which segfaults the process after the tests passed.
+    // Leaking OpenSSL state at exit is cheaper than that crash.
+    [[maybe_unused]] const bool OPENSSL_NO_ATEXIT_INSTALLED =
+        OPENSSL_init_crypto( OPENSSL_INIT_NO_ATEXIT, nullptr ) == 1;
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -217,9 +225,6 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
-        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
-            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
-            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         autodht_( true ),
         isprocessor_( true ),
@@ -1417,6 +1422,12 @@ namespace sgns
         }
         node_logger_->info( "PubSub started at address: {}", interface_address );
 
+        // GraphSync writes to libp2p streams from its scheduler thread; libp2p is
+        // single-threaded per host, so the scheduler must run on PubSub's io_context.
+        scheduler_ = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub_->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+
         pubsub_->GetHost()->getConnectionManagerConfig().high_water = settings.high_water;
         pubsub_->GetHost()->getConnectionManagerConfig().low_water  = settings.low_water;
         return true;
@@ -1426,7 +1437,11 @@ namespace sgns
     {
         // Initialize Bitswap for IPFS content-addressed data exchange
         bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+        // Same rule as GraphSync: Bitswap holds the libp2p host, so its callbacks and
+        // stream writes belong on the host's io_context, not the node's pool.
+        bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(),
+                                                                  *bitswap_event_bus_,
+                                                                  pubsub_->GetAsioContext() );
         bitswap_->initialize();
         if ( !ipfs_cache_dir_.empty() )
         {
@@ -3223,45 +3238,49 @@ namespace sgns
                 return validator.GetFirstRpcUrl( chain_id_str );
             };
 
+            using BurnOutcome = evmwatcher::BridgeCatchupWatcher::BurnOutcome;
+
             auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
                                                                   const std::string                     &tx_hash_hex,
-                                                                  const std::string &chain_id_str ) -> bool
+                                                                  const std::string &chain_id_str ) -> BurnOutcome
             {
-                // Parse the ABI-decoded values into a BurnEventParams
+                // Malformed input returns Retry rather than Processed: a stuck, loudly
+                // logged cursor is a far safer failure mode than silently dropping a burn
+                // whose tokens are already destroyed on the source chain.
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
                 {
-                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
-                                               tx_hash_hex );
-                    return false;
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse burn event for tx {}", tx_hash_hex );
+                    return BurnOutcome::Retry;
                 }
 
-                // UTXO state checks (same guards as the old scan)
                 base::Hash256 burn_tx_hash;
                 if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
                 {
-                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — skipping",
-                                               tx_hash_hex );
-                    return false;
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {}", tx_hash_hex );
+                    return BurnOutcome::Retry;
                 }
 
                 auto strong = weak_self.lock();
                 if ( !strong || !strong->account_ )
                 {
-                    return false;
+                    return BurnOutcome::Retry; // shutting down — must not advance the cursor
                 }
+
+                // The UTXO state machine already distinguishes confirmed from in flight:
+                // CONSUMED means a mint was applied, RESERVED means one is awaiting consensus.
                 auto &utxo_mgr = strong->account_->GetUTXOManager();
                 if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — confirmed",
                                                  tx_hash_hex );
-                    return false;
+                    return BurnOutcome::Processed;
                 }
                 if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} RESERVED — mint in flight",
                                                  tx_hash_hex );
-                    return false;
+                    return BurnOutcome::InFlight;
                 }
 
                 try
@@ -3271,14 +3290,24 @@ namespace sgns
                                                       chain_id_str,
                                                       burn.value().token_id,
                                                       burn.value().destination );
-                    return result.has_value();
+                    // Submitted is not confirmed: the cursor stays held until a later poll sees
+                    // the outpoint CONSUMED. already_connected means another attempt is already
+                    // live or done, which is equally "in flight".
+                    if ( result || result.error() == std::errc::already_connected )
+                    {
+                        return BurnOutcome::InFlight;
+                    }
+                    strong->node_logger_->warn( "CatchUpWatcher: MintTokens failed for tx {}: {} — will retry",
+                                                tx_hash_hex,
+                                                result.error().message() );
+                    return BurnOutcome::Retry;
                 }
                 catch ( const std::exception &e )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
-                                                 tx_hash_hex,
-                                                 e.what() );
-                    return false;
+                    strong->node_logger_->warn( "CatchUpWatcher: MintTokens threw for tx {}: {} — will retry",
+                                                tx_hash_hex,
+                                                e.what() );
+                    return BurnOutcome::Retry;
                 }
             };
 

@@ -95,23 +95,25 @@ namespace sgns
 
         if ( !instance->db_->RegisterElementFilter(
                  genesis_pattern,
-                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 [weak_instance]( const crdt::pb::Element &element )
                  {
                      if ( auto strong = weak_instance.lock() )
                      {
-                         return strong->FilterGenesis( element );
+                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                             strong->FilterGenesis( element ) );
                      }
-                     return std::nullopt;
+                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                  } ) ||
              !instance->db_->RegisterElementFilter(
                  account_creation_pattern,
-                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 [weak_instance]( const crdt::pb::Element &element )
                  {
                      if ( auto strong = weak_instance.lock() )
                      {
-                         return strong->FilterAccountCreation( element );
+                         return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                             strong->FilterAccountCreation( element ) );
                      }
-                     return std::nullopt;
+                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                  } ) )
         {
             instance->logger_->error( "[{}] Failed to register blockchain filters",
@@ -213,6 +215,28 @@ namespace sgns
                                                                                registry_cid,
                                                                                registry_epoch ) );
                 return strong->consensus_manager_->SubmitProposal( proposal, true );
+            } );
+
+        // All batch proposals competing for one registry transition (same base
+        // snapshot + target epoch) must share one canonical slot, so the proven
+        // burn-slot arbitration machinery — candidate comparison in the window,
+        // lowest-hash certificate convergence, SubmitCertificate ordering —
+        // deterministically selects exactly one winner. Without this, each batch
+        // content hashed to its own subject-id slot, competing batches certified
+        // independently, and the winner was settled downstream at the registry
+        // update layer, where same-epoch resolution is CRDT-priority-based
+        // (arrival order, restart-flippable) rather than deterministic.
+        ConsensusManager::RegisterSlotKeyHandler(
+            REGISTRY_BATCH_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto payload = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                if ( payload.has_error() )
+                {
+                    return {};
+                }
+                return "registry-batch:" + payload.value().base_registry_cid() + ":" +
+                       std::to_string( payload.value().target_registry_epoch() );
             } );
 
         instance->consensus_manager_->RegisterSubjectHandler(
@@ -320,7 +344,7 @@ namespace sgns
                     {
                         sgns::crdt::GlobalDB::Buffer registry_cid_key;
                         registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
-                        auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                        auto registry_cid = strong->db_->GetRaw( registry_cid_key );
                         if ( registry_cid.has_value() )
                         {
                             return std::string( registry_cid.value().toString() );
@@ -634,7 +658,7 @@ namespace sgns
     {
         sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_key;
         genesis_cid_buffer_key.put( std::string( GENESIS_CID_KEY ) );
-        auto genesis_cid = db_->GetDataStore()->get( genesis_cid_buffer_key );
+        auto genesis_cid = db_->GetRaw( genesis_cid_buffer_key );
         if ( genesis_cid.has_value() )
         {
             cids_.genesis_ = std::string( genesis_cid.value().toString() );
@@ -711,7 +735,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_key;
         account_creation_cid_buffer_key.put( std::string( ACCOUNT_CREATION_CID_KEY_PREFIX ) + address );
         logger_->debug( "[{}] Init account creation CID for {}", account_->GetAddress().substr( 0, 8 ), address );
-        auto account_creation_cid = db_->GetDataStore()->get( account_creation_cid_buffer_key );
+        auto account_creation_cid = db_->GetRaw( account_creation_cid_buffer_key );
         if ( account_creation_cid.has_value() )
         {
             logger_->debug( "[{}] Account creation CID for {}: {}",
@@ -732,7 +756,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer genesis_cid_buffer_value;
         genesis_cid_buffer_value.put( cid );
 
-        auto put_result = db_->GetDataStore()->put( genesis_cid_buffer_key, genesis_cid_buffer_value );
+        auto put_result = db_->PutRaw( genesis_cid_buffer_key, genesis_cid_buffer_value );
         if ( put_result.has_error() )
         {
             logger_->error( "[{}] Failed to store genesis CID: {}",
@@ -753,8 +777,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer account_creation_cid_buffer_value;
         account_creation_cid_buffer_value.put( cid );
 
-        auto put_result = db_->GetDataStore()->put( account_creation_cid_buffer_key,
-                                                    account_creation_cid_buffer_value );
+        auto put_result = db_->PutRaw( account_creation_cid_buffer_key, account_creation_cid_buffer_value );
         if ( put_result.has_error() )
         {
             logger_->error( "[{}] Failed to store account creation CID: {}",
@@ -1840,10 +1863,6 @@ namespace sgns
 
     outcome::result<void> Blockchain::TryResumeProposal( const std::string &hash )
     {
-        if ( consensus_manager_->CheckCertificateForSubject( hash ) )
-        {
-            return outcome::success();
-        }
         return consensus_manager_->ResumeProposalHandling( hash );
     }
 
@@ -1853,20 +1872,22 @@ namespace sgns
         return consensus_manager_->WakePendingDependency( dependency );
     }
 
-    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
+    bool Blockchain::CheckCertificateForSlot( const std::string &slot_key )
     {
-        return consensus_manager_->CheckCertificateForSubject( subject_hash );
+        if ( !consensus_manager_->CheckCertificateForSlot( slot_key ) )
+        {
+            return false;
+        }
+        // The approved slot record proves finality; deliver any not-yet-consumed
+        // acceptance work for this slot synchronously so certificate effects land
+        // before the caller observes the record.
+        consensus_manager_->DispatchCertificateWorkForSlot( slot_key );
+        return true;
     }
 
-    bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySlot( const std::string &slot_key ) const
     {
-        return consensus_manager_->CheckCertificateForSubject( subject );
-    }
-
-    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
-        const std::string &subject_hash ) const
-    {
-        return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
+        return consensus_manager_->GetCertificateBySlot( slot_key );
     }
 
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )

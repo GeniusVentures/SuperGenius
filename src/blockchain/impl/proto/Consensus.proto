@@ -99,6 +99,9 @@ message RegistryBatchSubject {
   uint64 target_registry_epoch = 3;
   uint32 certificate_count = 4;
   bytes batch_root = 5;
+  // Canonical certificate slots of the batch members (sorted; size ==
+  // certificate_count; ComputeBatchRoot(slots) == batch_root).
+  repeated string member_certificate_slots = 6;
 }
 
 message ConsensusProposal {
@@ -143,6 +146,23 @@ message ConsensusVote {
   bytes slot_1_hash = 7;
   // PUBLIC endpoint hash (weight < 50). Empty = abstain (D-05).
   bytes slot_2_hash = 8;
+}
+
+// Private validator durability state. This envelope is intentionally not part
+// of ConsensusMessage: it must never be replicated or advertised on PubSub.
+message ActiveVoteRecord {
+  string canonical_slot = 1;
+  bytes proposal_bytes = 2;
+  bytes vote_bytes = 3;
+  uint64 acceptance_deadline_ms = 4;
+}
+
+message ConsensusVoteBundle {
+  string proposal_id = 1;
+  string aggregator_id = 2;
+  uint64 timestamp = 3;
+  repeated ConsensusVote votes = 4;
+  bytes signature = 5;
 }
 
 message ConsensusCertificate {

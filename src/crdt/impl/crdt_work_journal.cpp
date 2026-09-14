@@ -31,15 +31,14 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( mutex_ );
         auto                        maybe_entry = GetEntryUnlocked( key );
 
-        Entry entry;
+        // A re-sighting must not regress a tracked key: filter re-evaluation of
+        // an already-queued element would otherwise rewrite Stalled to Seen and
+        // reset its dispatch progress.
         if ( maybe_entry.has_value() )
         {
-            entry = maybe_entry.value();
-            if ( entry.state == State::Processing )
-            {
-                return;
-            }
+            return;
         }
+        Entry entry;
         entry.key            = key;
         entry.state          = State::Seen;
         entry.updated_at_ms  = NowMs();

@@ -9,10 +9,13 @@
 #define _CRDT_DATA_FILTER_HPP_
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <memory>
 #include <regex>
 #include <shared_mutex>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 #include "crdt/proto/delta.pb.h"
@@ -25,9 +28,48 @@ namespace sgns::crdt
     {
     public:
         /**
+         * @brief      Result of a single element-filter evaluation.
+         */
+        struct ElementFilterResult
+        {
+            enum class Decision
+            {
+                kAccept, ///< Keep the element (mark seen in the work journal).
+                kReject, ///< Strip the element, plus any extra elements listed below.
+                kStall,  ///< Dependencies missing locally: strip the element and
+                         ///< re-evaluate the delta on the retry schedule.
+            };
+
+            Decision                 decision = Decision::kAccept;
+            std::vector<pb::Element> additional_elements_to_remove; ///< Extra elements stripped when kReject.
+
+            static ElementFilterResult Accept()
+            {
+                return {};
+            }
+            static ElementFilterResult Reject( std::vector<pb::Element> extra = {} )
+            {
+                return ElementFilterResult{ Decision::kReject, std::move( extra ) };
+            }
+            static ElementFilterResult Stall()
+            {
+                return ElementFilterResult{ Decision::kStall, {} };
+            }
+            /// Adapts the legacy optional contract: nullopt accepts, a value strips.
+            static ElementFilterResult FromOptional( std::optional<std::vector<pb::Element>> legacy )
+            {
+                if ( legacy.has_value() )
+                {
+                    return Reject( std::move( legacy.value() ) );
+                }
+                return Accept();
+            }
+        };
+
+        /**
          * @brief      Element filtering callback definition
          */
-        using ElementFilterCallback = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
+        using ElementFilterCallback = std::function<ElementFilterResult( const pb::Element & )>;
 
         struct FilterCallbackEntry
         {
@@ -81,8 +123,12 @@ namespace sgns::crdt
         /**
          * @brief       Tries to filter the elements on delta according to stored filters
          * @param[in]   delta The delta to be filtered
+         * @return      true when a filter stalled on a missing local dependency:
+         *              that element is stripped unjournaled and the caller must
+         *              re-evaluate the delta once the dependency can arrive;
+         *              false when every element was accepted or rejected.
          */
-        void FilterElementsOnDelta( pb::Delta &delta ) const;
+        bool FilterElementsOnDelta( pb::Delta &delta ) const;
 
         /**
          * @brief       Tries to filter the tombstones on delta according to stored filters

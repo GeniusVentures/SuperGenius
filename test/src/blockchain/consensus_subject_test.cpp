@@ -95,7 +95,7 @@ TEST( ConsensusSubjectTest, CreatesGenericSubject )
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
     ASSERT_TRUE( type_hash.has_value() );
-    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value().toString() );
+    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value() );
 
     const auto computed_id = sgns::ConsensusManager::ComputeSubjectId( subject );
     ASSERT_TRUE( computed_id.has_value() );
@@ -176,7 +176,7 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::NONCE_SUBJECT_TYPE );
     ASSERT_TRUE( type_hash.has_value() );
-    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value().toString() );
+    EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value() );
 
     EXPECT_TRUE( sgns::ConsensusManagerTestAccess::ValidateSubject( subject ) );
     EXPECT_TRUE( sgns::ConsensusManagerTestAccess::CheckSubject( subject ) );

@@ -158,6 +158,11 @@ namespace sgns::crdt
                                      const Buffer                          &aValue,
                                      const std::unordered_set<std::string> &topics );
 
+        /** Stores bytes through the replicated content-hash-convergent immutable path. */
+        outcome::result<CID> PutConvergentImmutableKey( const HierarchicalKey                 &aKey,
+                                                        const Buffer                          &aValue,
+                                                        const std::unordered_set<std::string> &topics );
+
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
         * @return true if key found or false if not found or outcome::failure on error
@@ -313,13 +318,19 @@ namespace sgns::crdt
          * @return      Success if the nodes were fetched, or failure otherwise
          */
         outcome::result<void> FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks );
+        /** @brief A node's delta after filtering, with whether an element stalled on a missing dependency. */
+        struct FilteredDelta
+        {
+            Delta delta;
+            bool  dependency_stalled = false;
+        };
         /**
          * @brief       Gets the Delta from a given IPLD node, filtering it if it wasn't created by self
          * @param[in]   aNode The IPLD node to get the Delta from
          * @param[in]   created_by_self True if the node was created by self, false otherwise
-         * @return      The Delta contained in the node, or failure otherwise
+         * @return      The filtered Delta contained in the node, or failure otherwise
          */
-        outcome::result<Delta> GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
+        outcome::result<FilteredDelta> GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
         /**
          * @brief       Merges the data from a given Delta into the CRDT set
          * @param[in]   node_cid The CID of the node from which the Delta was obtained
@@ -429,6 +440,13 @@ namespace sgns::crdt
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
         void CleanupFailedJob( const RootCIDJob &job );
+        void MarkJobFailedLocked( const CID &cid, bool schedule_retry );
+        void ScheduleFailedRootRetryLocked( const CID &cid );
+        void ClearFailedRootRetryLocked( const CID &cid );
+        void RetryDueFailedRoots();
+        void ScheduleStalledDeltaRetryLocked( const CID &cid );
+        /// Re-filters and re-merges deltas that had an element stripped for a missing dependency.
+        void RetryStalledDeltas();
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -486,8 +504,32 @@ namespace sgns::crdt
         CRDTCallbackManager crdt_cb_manager_;
 
         std::map<CID, JobStatus> pending_jobs_;
-        bool                     has_full_node_topic_;
-        std::atomic_bool         shutdown_started_{ false };
+
+        // Local retry of failed external root fetches. Waiting for the sender's next
+        // rebroadcast (60s default) to retry made one transient dial failure stall CRDT
+        // sync longer than most consumer timeouts.
+        struct FailedRootRetry
+        {
+            std::chrono::steady_clock::time_point next_attempt;
+            uint32_t                              attempts = 0;
+        };
+
+        // Exponential backoff (5s, 10s, 20s, 40s, capped at 60s): quick recovery from
+        // startup races without sustained request pressure on a struggling network.
+        static constexpr std::chrono::seconds FAILED_ROOT_RETRY_BASE_DELAY{ 5 };
+        static constexpr std::chrono::seconds FAILED_ROOT_RETRY_MAX_DELAY{ 60 };
+        static constexpr uint32_t             MAX_FAILED_ROOT_RETRIES = 8;
+        std::map<CID, FailedRootRetry>        failedRootRetries_; // guarded by dagWorkerMutex_
+        // Nodes whose delta had an element stripped unapplied because its dependency
+        // had not synced yet, with the same backoff as failed roots. Guarded by
+        // dagWorkerMutex_.
+        std::map<CID, FailedRootRetry> stalledDeltas_;
+        std::atomic<size_t>            stalledDeltaRetryCount_{ 0 };
+        // Mirrors failedRootRetries_.size() so the worker loop can skip the mutex
+        // when there is nothing to retry (the common steady state).
+        std::atomic<size_t> failedRootRetryCount_{ 0 };
+        bool                has_full_node_topic_;
+        std::atomic_bool    shutdown_started_{ false };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );

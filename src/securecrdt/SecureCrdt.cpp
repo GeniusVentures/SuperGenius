@@ -211,13 +211,13 @@ namespace sgns::securecrdt
             const bool registered = db_->RegisterElementFilter(
                 pattern,
                 [weak_self, entry]( const sgns::crdt::pb::Element &element )
-                    -> std::optional<std::vector<sgns::crdt::pb::Element>>
                 {
                     if ( auto strong = weak_self.lock() )
                     {
-                        return strong->FilterSecureCrdtUpdate( entry, element );
+                        return sgns::crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterSecureCrdtUpdate( entry, element ) );
                     }
-                    return std::nullopt;
+                    return sgns::crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
             all_registered = all_registered && registered;
         }

@@ -34,6 +34,8 @@
 namespace sgns
 {
     class ValidatorRegistry;
+    class CertificateFallbackTestAccess;
+    class MultiNodeFinalityFaultTestAccess;
 
     class Migration3_5_0To3_6_0;
     class Migration3_6_0To3_7_0;
@@ -162,6 +164,15 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         /**
+         * @brief Returns the CRDT database used for authoritative transaction evidence.
+         * @return Shared GlobalDB instance, or null when the blockchain has no database.
+         */
+        std::shared_ptr<crdt::GlobalDB> GetGlobalDB() const
+        {
+            return db_;
+        }
+
+        /**
          * @brief Forces full-node mode behavior for bootstrap/generation flow.
          */
         void SetFullNodeMode();
@@ -280,25 +291,21 @@ namespace sgns
          */
         outcome::result<void> TryResumePendingDependency( const ConsensusManager::PendingDependencyKey &dependency );
         /**
-         * @brief Checks whether any certificate exists for subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return `true` when certificate exists.
+         * @brief Checks the authoritative slot record and consumes pending work.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` when the authoritative slot record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the slot to its
+         * registered handler before returning.
          */
-        bool CheckCertificate( const std::string &subject_hash ) const;
+        bool CheckCertificateForSlot( const std::string &slot_key );
         /**
-         * @brief Performs strict certificate check for a specific subject object.
-         * @param[in] subject Subject to evaluate.
-         * @return `true` when certificate exists and matches strictly.
-         */
-        bool CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
-        /**
-         * @brief Loads certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
+         * @brief Loads the validated authoritative certificate by canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return Certificate on success, otherwise an error.
          */
-        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
-
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
@@ -312,6 +319,7 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
         friend class CertificateFallbackTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
