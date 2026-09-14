@@ -209,32 +209,10 @@ TEST_F( ElmCostNode, ElmCostRows )
     }
 }
 
-// ===================== Submit acceptance (OD-1 flip — Phase 4, 04-03) =====================
-// The Phase 1 comment predicted exactly this flip: submission now SUCCEEDS,
-// escrow is held, and the balance drops by the deterministic amount.
-
-TEST_F( ElmCostNode, ElmSubmitRejectedBeforeEscrow )
-{
-    // Fund the requester so an INSUFFICIENT_FUNDS result could NEVER mask the
-    // expected success -- the hold happens after the balance check by design.
-    ASSERT_TRUE(
-        node_->MintTokens( 50000000000, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
-            .has_value() );
-    const uint64_t balanceBefore = node_->GetBalance();
-
-    auto submit = node_->ProcessImage( BuildElmJobJson() );
-    ASSERT_TRUE( submit.has_value() ) << "funded ELM submit must succeed (Phase 4 flip), got error code "
-                                      << static_cast<int>( submit.error().value() );
-    EXPECT_FALSE( submit.value().empty() );
-
-    // Escrow held: HoldEscrow reserves WHOLE UTXOs (ReserveUTXOs moves them
-    // out of the READY state), so a single-mint wallet's spendable balance
-    // drops by AT LEAST the deterministic escrow -- not exactly it (the
-    // remainder returns on release). 1.0h default funding -> 300.
-    EXPECT_LE( node_->GetBalance(), balanceBefore - sgns::processing::ElmEscrowMinions( 1.0 ) );
-}
-
 // ===================== Rate record CRDT content (OD-2) =====================
+// (Runs BEFORE the submit leg: a node that has processed a submission keeps
+// its grid machinery live, which can starve a LATER fixture's startup —
+// one-live-node-per-process ordering, the elm_lock_timeout_test guidance.)
 
 TEST_F( ElmCostNode, ElmRateRecordPutsSiblingKey )
 {
@@ -263,4 +241,32 @@ TEST_F( ElmCostNode, ElmRateRecordPutsSiblingKey )
     // And the escrow path itself is NOT touched by the rate record (sibling,
     // not the same key).
     EXPECT_FALSE( tx->HasKey( sgns::crdt::HierarchicalKey( escrowPath ) ) );
+}
+
+// ===================== Submit acceptance (OD-1 flip — Phase 4, 04-03) =====================
+// The Phase 1 comment predicted exactly this flip: submission now SUCCEEDS,
+// escrow is held, and the balance drops by the deterministic amount.
+// DELIBERATELY LAST in the file: the submitted task keeps this node's
+// processing engine live for the queue timeout window; a fixture AFTER this
+// one could starve (observed as the second node never reaching READY).
+
+TEST_F( ElmCostNode, ElmSubmitRejectedBeforeEscrow )
+{
+    // Fund the requester so an INSUFFICIENT_FUNDS result could NEVER mask the
+    // expected success -- the hold happens after the balance check by design.
+    ASSERT_TRUE(
+        node_->MintTokens( 50000000000, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
+            .has_value() );
+    const uint64_t balanceBefore = node_->GetBalance();
+
+    auto submit = node_->ProcessImage( BuildElmJobJson() );
+    ASSERT_TRUE( submit.has_value() ) << "funded ELM submit must succeed (Phase 4 flip), got error code "
+                                      << static_cast<int>( submit.error().value() );
+    EXPECT_FALSE( submit.value().empty() );
+
+    // Escrow held: HoldEscrow reserves WHOLE UTXOs (ReserveUTXOs moves them
+    // out of the READY state), so a single-mint wallet's spendable balance
+    // drops by AT LEAST the deterministic escrow -- not exactly it (the
+    // remainder returns on release). 1.0h default funding -> 300.
+    EXPECT_LE( node_->GetBalance(), balanceBefore - sgns::processing::ElmEscrowMinions( 1.0 ) );
 }
