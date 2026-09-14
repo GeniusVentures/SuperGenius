@@ -1455,27 +1455,13 @@ namespace sgns
             }
         }
 
-        // The confirmed head may reference a transaction this node never retained
-        // (certificate-only delivery). The head hash plus a quorum-valid certificate
-        // whose signed subject names that exact account/nonce/hash still proves the
-        // chain link.
-        auto head_certificate_result = blockchain_->GetCertificateBySubjectHash( persisted_hash );
-        if ( head_certificate_result.has_error() ||
-             !CertificateBindsSubjectTo( head_certificate_result.value(),
-                                         account_m->GetAddress(),
-                                         nonce - 1,
-                                         persisted_hash ) )
-        {
-            return "";
-        }
-
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted head",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            persisted_hash,
-            nonce );
-        return persisted_hash;
+        // No by-hash certificate recovery: v3.0 writes certificates only at
+        // /cert/<canonical-slot>, so a head hash alone can no longer resolve its
+        // certificate (no consensus version was ever deployed; there are no
+        // legacy /cert/<subject_hash> records to serve). Certificate-only
+        // delivery reconstructs and stores the embedded transaction, after which
+        // the slot-authoritative path above resolves it.
+        return "";
     }
 
     std::string TransactionManager::QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const
@@ -2021,24 +2007,6 @@ namespace sgns
         }
     }
 
-    bool TransactionManager::CertificateBindsSubjectTo( const ConsensusCertificate &certificate,
-                                                        std::string_view            account,
-                                                        uint64_t                    nonce,
-                                                        std::string_view            tx_hash )
-    {
-        const auto &subject       = certificate.proposal().subject();
-        auto        nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
-        if ( nonce_subject.has_error() )
-        {
-            return false;
-        }
-
-        // The quorum-signed nonce payload names the exact account, nonce, and
-        // transaction hash this certificate finalizes.
-        return subject.account_id() == account && nonce_subject.value().nonce() == nonce &&
-               nonce_subject.value().tx_hash() == tx_hash;
-    }
-
     bool TransactionManager::CertificateMatchesTransaction( const ConsensusCertificate &certificate,
                                                             const GeniusTransaction    &transaction )
     {
@@ -2070,16 +2038,11 @@ namespace sgns
     outcome::result<ConsensusCertificate> TransactionManager::GetTransactionCertificate(
         const GeniusTransaction &transaction ) const
     {
-        auto slot_certificate = blockchain_->GetCertificateBySlot( transaction.GetSlotID() );
-        if ( slot_certificate.has_value() )
-        {
-            return slot_certificate;
-        }
-        // The canonical slot record is the only record v3.0 writes; this
-        // subject-hash lookup resolves develop-era records, which predate slot
-        // keys and may only carry that index. The exact-transaction binding is
-        // still enforced by CertificateMatchesTransaction at the call site.
-        return blockchain_->GetCertificateBySubjectHash( transaction.GetHash() );
+        // The canonical slot record is the only certificate authority: v3.0
+        // writes nothing else, and no consensus version was deployed before it,
+        // so there are no legacy records to fall back to. The exact-transaction
+        // binding is enforced by CertificateMatchesTransaction at call sites.
+        return blockchain_->GetCertificateBySlot( transaction.GetSlotID() );
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )

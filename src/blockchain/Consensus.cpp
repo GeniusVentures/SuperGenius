@@ -2663,8 +2663,10 @@ namespace sgns
         // v3.0 registry semantics, and it would give a losing transaction of
         // a contended slot a durable, quorum-valid record nothing arbitrates
         // against (the slot key converges by lowest hash; distinct subjects
-        // get distinct hash keys with no mutual ordering). Consumers needing
-        // legacy records resolve them read-only via GetCertificateBySubjectHash.
+        // get distinct hash keys with no mutual ordering). No consensus
+        // version was ever deployed, so no legacy by-hash records exist and
+        // the by-hash read path is removed outright — the slot record is the
+        // sole certificate authority.
         if ( !EnterFinalityFaultBarrier( certificate_persisted_barrier_ ) )
         {
             return outcome::failure( std::errc::operation_canceled );
@@ -4475,23 +4477,6 @@ namespace sgns
         ProcessCommittedCertificate( entry.key, certificate );
     }
 
-    void ConsensusManager::DispatchCertificateWorkForSubject( const std::string &subject_hash )
-    {
-        if ( subject_hash.empty() )
-        {
-            return;
-        }
-        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
-
-        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
-        auto entry = certificate_work_journal_->GetEntry( key );
-        if ( !entry.has_value() )
-        {
-            return;
-        }
-        DispatchStalledCertificateEntryLocked( entry.value() );
-    }
-
     void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )
     {
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
@@ -4583,110 +4568,6 @@ namespace sgns
     bool ConsensusManager::CheckCertificateForSlot( const std::string &slot_key ) const
     {
         return GetCertificateBySlot( slot_key ).has_value();
-    }
-
-    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
-        const std::string &subject_hash ) const
-    {
-        if ( subject_hash.empty() || !db_ )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
-
-        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
-
-        Certificate certificate;
-        if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
-        {
-            logger_->error( "{}: invalid certificate payload key={}", __func__, key );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        auto current_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( current_hash.has_error() || current_hash.value() != subject_hash )
-        {
-            logger_->error( "{}: certificate subject hash mismatch expected={} actual={}",
-                                             __func__,
-                                             subject_hash,
-                                             current_hash.has_value() ? current_hash.value() : std::string( "?" ) );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        if ( ValidateCertificate( certificate ) != Check::Approve )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        return certificate;
-    }
-
-    bool ConsensusManager::CheckCertificateForSubject( const std::string &subject_hash ) const
-    {
-        return GetCertificateBySubjectHash( subject_hash ).has_value();
-    }
-
-    bool ConsensusManager::CheckCertificateForSubject( const ConsensusManager::Subject &subject ) const
-    {
-        Proposal slot_proposal;
-        *slot_proposal.mutable_subject() = subject;
-        const auto slot_key = GetSlotKey( slot_proposal );
-        if ( slot_key.empty() )
-        {
-            logger_->error( "{}: Failed to derive a slot for subject {}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return false;
-        }
-        auto certificate_result = GetCertificateBySlot( slot_key );
-        if ( certificate_result.has_error() )
-        {
-            logger_->error( "{}: Failed to get the certificate for slot {}, error: {}",
-                                             __func__,
-                                             slot_key,
-                                             certificate_result.error().message() );
-            return false;
-        }
-        auto &certificate                   = certificate_result.value();
-        auto  certificate_subject_id_result = ComputeSubjectId( certificate.proposal().subject() );
-        if ( certificate_subject_id_result.has_error() )
-        {
-            logger_->error( "{}: failed for hash {}: certificate subject id computation error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ),
-                                             certificate_subject_id_result.error().message() );
-            return false;
-        }
-        auto &certificate_subject_id = certificate_subject_id_result.value();
-        auto  subject_id_result      = ComputeSubjectId( subject );
-        if ( subject_id_result.has_error() )
-        {
-            logger_->error( "{}: failed for hash {}: subject id computation error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ),
-                                             subject_id_result.error().message() );
-            return false;
-        }
-        auto proposed_subject_id = subject_id_result.value();
-        bool equal               = proposed_subject_id == certificate_subject_id;
-        if ( !equal )
-        {
-            logger_->debug( "{}: Match for subject and certificate (hash {}): MISMATCH",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return false;
-        }
-        auto certificate_check = ValidateCertificate( certificate );
-        if ( certificate_check != Check::Approve )
-        {
-            logger_->error( "{}: certificate failed validation for hash {}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return false;
-        }
-        logger_->debug( "{}: Match for subject and certificate (hash {}): {}",
-                                         __func__,
-                                         GetPrintableSubjectHash( subject ),
-                                         equal ? "Match" : "MISMATCH" );
-        return true;
     }
 
     std::string ConsensusManager::GetPrintableSubjectHash( const Subject &subject )
