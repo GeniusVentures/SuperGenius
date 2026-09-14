@@ -357,7 +357,8 @@ namespace sgns
                     }
 
                     std::unique_lock<std::mutex> lock( self->timer_mutex_ );
-                    auto                         interval = self->round_duration_ / 2;
+                    auto                         interval = std::chrono::milliseconds(
+                        self->round_duration_ms_.load( std::memory_order_relaxed ) ) / 2;
                     if ( interval.count() <= 0 )
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
@@ -626,10 +627,10 @@ namespace sgns
         if ( window.count() <= 0 )
         {
             logger_->warn( "{}: using default window", __func__ );
-            timestamp_window_ = DEFAULT_TIMESTAMP_WINDOW;
+            timestamp_window_ms_.store( DEFAULT_TIMESTAMP_WINDOW.count(), std::memory_order_relaxed );
             return;
         }
-        timestamp_window_ = window;
+        timestamp_window_ms_.store( window.count(), std::memory_order_relaxed );
     }
 
     void ConsensusManager::ConfigureRoundDuration( std::chrono::milliseconds duration )
@@ -637,10 +638,10 @@ namespace sgns
         if ( duration.count() <= 0 )
         {
             logger_->warn( "{}: using default round duration", __func__ );
-            round_duration_ = DEFAULT_ROUND_DURATION;
+            round_duration_ms_.store( DEFAULT_ROUND_DURATION.count(), std::memory_order_relaxed );
             return;
         }
-        round_duration_ = duration;
+        round_duration_ms_.store( duration.count(), std::memory_order_relaxed );
     }
 
     void ConsensusManager::ConfigureRoundSkew( std::chrono::milliseconds skew )
@@ -648,10 +649,10 @@ namespace sgns
         if ( skew.count() < 0 )
         {
             logger_->warn( "{}: using default round skew", __func__ );
-            round_skew_ = DEFAULT_ROUND_SKEW;
+            round_skew_ms_.store( DEFAULT_ROUND_SKEW.count(), std::memory_order_relaxed );
             return;
         }
-        round_skew_ = skew;
+        round_skew_ms_.store( skew.count(), std::memory_order_relaxed );
     }
 
     void ConsensusManager::ConfigureCertificateDelay( std::chrono::milliseconds delay )
@@ -659,10 +660,10 @@ namespace sgns
         if ( delay.count() < 0 )
         {
             logger_->warn( "{}: using zero delay", __func__ );
-            certificate_delay_ = std::chrono::milliseconds( 0 );
+            certificate_delay_ms_.store( 0, std::memory_order_relaxed );
             return;
         }
-        certificate_delay_ = delay;
+        certificate_delay_ms_.store( delay.count(), std::memory_order_relaxed );
     }
 
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
@@ -674,7 +675,7 @@ namespace sgns
         const auto now_ms    = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::system_clock::now().time_since_epoch() )
                                    .count();
-        const auto window_ms = timestamp_window_.count();
+        const auto window_ms = timestamp_window_ms_.load( std::memory_order_relaxed );
         if ( now_ms < 0 || window_ms < 0 )
         {
             return false;
@@ -691,7 +692,7 @@ namespace sgns
 
     uint64_t ConsensusManager::GetCurrentRound( uint64_t proposal_ts_ms ) const
     {
-        if ( proposal_ts_ms == 0 || round_duration_.count() <= 0 )
+        if ( proposal_ts_ms == 0 || round_duration_ms_.load( std::memory_order_relaxed ) <= 0 )
         {
             return 0;
         }
@@ -703,12 +704,12 @@ namespace sgns
         {
             return 0;
         }
-        const auto skew_ms = static_cast<int64_t>( round_skew_.count() );
+        const auto skew_ms = round_skew_ms_.load( std::memory_order_relaxed );
         if ( elapsed <= skew_ms )
         {
             return 0;
         }
-        const auto round_ms = static_cast<int64_t>( round_duration_.count() );
+        const auto round_ms = round_duration_ms_.load( std::memory_order_relaxed );
         auto       round    = static_cast<uint64_t>( ( elapsed - skew_ms ) / round_ms );
         logger_->debug( "{}: Returning round={}", __func__, round );
         return round;
@@ -1962,6 +1963,38 @@ namespace sgns
     {
         std::lock_guard lock( proposals_mutex_ );
         pending_votes_[vote.proposal_id()].push_back( vote );
+        // Bound the orphan accumulation: a peer replaying votes for proposals
+        // this node never handled grew one vector per unseen proposal id
+        // forever (nothing else removed them). Once the map exceeds the bound,
+        // evict queues whose proposal is unknown and whose newest vote is older
+        // than the TTL — such a queue can no longer grow or ever be consumed.
+        if ( pending_votes_.size() <= kMaxTrackedPendingVoteQueues )
+        {
+            return;
+        }
+        const auto now_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+        for ( auto it = pending_votes_.begin(); it != pending_votes_.end(); )
+        {
+            const bool known = proposals_.find( it->first ) != proposals_.end() ||
+                               pending_entries_.find( it->first ) != pending_entries_.end();
+            uint64_t newest_ms = 0;
+            for ( const auto &vote : it->second )
+            {
+                newest_ms = std::max<uint64_t>( newest_ms, vote.timestamp() );
+            }
+            const bool expired = newest_ms + kPendingVoteQueueTTL.count() < now_ms;
+            if ( !known && expired )
+            {
+                it = pending_votes_.erase( it );
+            }
+            else
+            {
+                ++it;
+            }
+        }
     }
 
     std::vector<ConsensusManager::Vote> ConsensusManager::TakePendingVotes( const std::string &proposal_id )
@@ -3007,11 +3040,11 @@ namespace sgns
             const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                     std::chrono::system_clock::now().time_since_epoch() )
                                     .count();
-            if ( state.quorum_reached_ts_ms != 0 && certificate_delay_.count() > 0 )
+            if ( state.quorum_reached_ts_ms != 0 && certificate_delay_ms_.load( std::memory_order_relaxed ) > 0 )
             {
                 const auto elapsed_ms = static_cast<int64_t>( now_ms ) -
                                         static_cast<int64_t>( state.quorum_reached_ts_ms );
-                if ( elapsed_ms < static_cast<int64_t>( certificate_delay_.count() ) )
+                if ( elapsed_ms < certificate_delay_ms_.load( std::memory_order_relaxed ) )
                 {
                     logger_->debug( "{}: certificate delay not elapsed for hash {} proposal_id={} "
                                                      "elapsed_ms={} delay_ms={}",
@@ -3019,7 +3052,7 @@ namespace sgns
                                                      GetPrintableSubjectHash( state.proposal.subject() ),
                                                      state.proposal.proposal_id().substr( 0, 8 ),
                                                      elapsed_ms,
-                                                     certificate_delay_.count() );
+                                                     certificate_delay_ms_.load( std::memory_order_relaxed ) );
                     continue;
                 }
             }
@@ -4550,6 +4583,11 @@ namespace sgns
         auto certificate_handler_result = handler( subject_hash.value(), certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
         {
+            // NOTE: deliberately still a zero lease (retry on the next 500ms
+            // tick). An exponential backoff here is the right long-term shape for
+            // persistently failing handlers, but it breaks the synchronous
+            // recovery choreography the fault tests rely on; deferred with the
+            // open findings rather than half-landed.
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
             return;
         }

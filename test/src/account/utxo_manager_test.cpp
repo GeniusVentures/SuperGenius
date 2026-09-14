@@ -649,3 +649,57 @@ TEST_F( UTXOManagerTest, TryReserveOutpointClaimsOnceAndReportsCollisions )
     EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
                UTXOManager::OutpointClaim::kAlreadyConsumed );
 }
+
+TEST_F( UTXOManagerTest, ConsumeUTXOsPersistsConsumedStateUnderStoredOwner )
+{
+    /**
+     * Cross-address consumption durability: ConsumeUTXOs stored its snapshot
+     * under the SPENDER's address, but StoreUTXOsLocked snapshots only entries
+     * owned by its address argument — so consuming an outpoint owned by another
+     * address (delegated escrow, foreign bridge outpoint) left the CONSUMED
+     * state durable under NEITHER address. After a reload the outpoint came
+     * back READY: a resurrected spend / double-spend window.
+     */
+    const auto outpoint_hash = base::Hash256::fromReadableString( std::string( 64, '5' ) ).value();
+    const std::string stored_owner = "owner-a";
+    const std::string spender       = "spender-b";
+    // UTXO_BRIDGE is the shape where the hole bites: bridge entries match any
+    // spender (owner_matches is unconditionally true for the type), so the
+    // in-memory CONSUMED flip lands on the ORIGINAL owner's entry while the
+    // store runs under the spender's bucket. (A NORMAL-type mismatch instead
+    // synthesizes a spender-owned tombstone, which does persist.)
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( outpoint_hash, 0, 40, sgns::TokenID::FromBytes( { 0x00 } ) ),
+                                stored_owner,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_  = outpoint_hash;
+    input.output_idx_ = 0;
+    // Bridge consume, as MintFunds performs it: the entry is FOUND (bridge
+    // matches any spender AND the type must match), so the CONSUMED flip lands
+    // on the original owner's entry — the exact shape the store must persist
+    // under the stored owner.
+    const auto consumed =
+        utxo_manager->ConsumeUTXOs( { input }, spender, UTXOManager::UTXOType::UTXO_BRIDGE );
+    ASSERT_TRUE( consumed.has_value() );
+
+    // Reload from storage into a fresh manager: the consumed state must
+    // survive — pre-fix the snapshot was written under the spender's bucket,
+    // which contains no entry for this outpoint.
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &_, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
+    EXPECT_TRUE( reloaded->IsOutPointConsumed( outpoint_hash, 0 ) );
+}

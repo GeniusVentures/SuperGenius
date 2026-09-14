@@ -300,13 +300,52 @@ namespace sgns
             consumed = consumed && utxo_found;
         }
 
-        if ( auto store_result = StoreUTXOsLocked( address, consume_utxos_before_store_hook_for_test_ );
-             store_result.has_error() )
+        // Persist the CONSUMED state under every consumed outpoint's STORED
+        // owner, not just the spender: StoreUTXOsLocked snapshots only entries
+        // owned by its address argument, so a cross-address spend (delegated
+        // escrow, bridge outpoints owned by another address) left the consumed
+        // state durable under NEITHER address — after restart LoadUTXOs reloaded
+        // the outpoint READY: a resurrected spend / double-spend window.
+        std::vector<std::string> owners_to_store;
+        if ( consume_utxos_before_store_hook_for_test_ )
         {
-            utxo_outpoints_     = previous_utxo_outpoints;
-            address_outpoints_  = previous_address_outpoints;
-            local_reservations_ = previous_reservations;
-            return outcome::failure( store_result.error() );
+            consume_utxos_before_store_hook_for_test_();
+        }
+        for ( const auto &input_info : infos )
+        {
+            const OutPoint outpoint{ input_info.txid_hash_, input_info.output_idx_ };
+            std::string    owner = address;
+            if ( auto it = utxo_outpoints_.find( outpoint ); it != utxo_outpoints_.end() )
+            {
+                const auto &stored = it->second.utxo.GetOwnerAddress();
+                if ( !stored.empty() )
+                {
+                    owner = stored;
+                }
+            }
+            if ( std::find( owners_to_store.begin(), owners_to_store.end(), owner ) == owners_to_store.end() )
+            {
+                owners_to_store.push_back( owner );
+            }
+        }
+
+        std::vector<std::string> stored_so_far;
+        for ( const auto &owner : owners_to_store )
+        {
+            if ( auto store_result = StoreUTXOsLocked( owner ); store_result.has_error() )
+            {
+                // Restore memory, then repair every already-stored owner bucket
+                // from the restored state so disk and memory agree on rollback.
+                utxo_outpoints_     = previous_utxo_outpoints;
+                address_outpoints_  = previous_address_outpoints;
+                local_reservations_ = previous_reservations;
+                for ( const auto &repaired : stored_so_far )
+                {
+                    (void) StoreUTXOsLocked( repaired );
+                }
+                return outcome::failure( store_result.error() );
+            }
+            stored_so_far.push_back( owner );
         }
 
         return consumed;
