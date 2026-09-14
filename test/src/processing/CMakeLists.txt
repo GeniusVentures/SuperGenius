@@ -91,6 +91,36 @@ else()
     )
 endif()
 
+# elmbridge 04-04 (FUND-03/OD-3): settlement arithmetic matrix + envelope
+# filter + BuildPayoutOutputs ELM branch/parity. PURE unit legs (no node);
+# BuildPayoutOutputs reached via the test-access friend class (the
+# payout_outputs_test pattern — lighter than WHOLEARCHIVE: TransactionManager
+# symbols come from genius_node_test's link closure).
+addtest(elm_settlement_test
+    elm_settlement_test.cpp
+)
+
+target_link_libraries(elm_settlement_test
+    processing_service
+    SGProcessingProto
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(elm_settlement_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(elm_settlement_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(elm_settlement_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(elm_settlement_test PROPERTIES TIMEOUT 120)
+
 # Phase 19 (VALD-02): points the new Vald02* TEST cases at this phase's fresh, real, already
 # checked-in cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not
 # copied or duplicated into SuperGenius (D-01-REVISED). Four "../" levels walk from this directory
