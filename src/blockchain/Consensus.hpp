@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -454,7 +455,7 @@ namespace sgns
         /**
          * @brief Filters a vote vector down to proposal-bound, deduplicated,
          *        signature-verified entries.
-         * @details Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation)
+         * @details Slot-quorum helpers (EvaluateSlotQuorum)
          *          resolve registry membership and weight but never verify vote
          *          signatures, so any remotely-received vote vector fed to them
          *          must pass through this filter first — otherwise fabricated
@@ -1040,6 +1041,14 @@ namespace sgns
          */
         void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
         /**
+         * @brief Drains pubsub-validated certificates into `ProcessCommittedCertificate`.
+         *
+         * Certificate commit work otherwise waits for the `/cert/` CRDT element to
+         * replicate; the pubsub copy already passed `ValidateCertificate`, so the
+         * round thread can run the same commit path immediately.
+         */
+        void ProcessAcceptedCertificates();
+        /**
          * @brief Runs the durable readback-to-dispatch sequence for one journal entry.
          * @param[in] entry Work-journal entry to process.
          *
@@ -1227,6 +1236,23 @@ namespace sgns
         /// Handler failures at or below this many journal attempts retry on the
         /// next tick; beyond it the stall carries an exponential backoff lease.
         static constexpr uint64_t kHandlerFailureFastRetries{ 8 };
+
+        /// @brief Certificates validated over pubsub that the `/cert/` CRDT element has
+        ///        not replicated yet; `GetCertificateBySlot` serves them so
+        ///        nonce-chained subjects resolve their predecessor dependency
+        ///        without waiting a full sync interval per chain link.
+        mutable std::unordered_map<std::string, Certificate> validated_cert_by_slot_;
+        /// @brief Subject hashes whose commit handler already ran, so the pubsub fast
+        ///        path, per-aggregator republishes, and the later CRDT dispatch cannot
+        ///        double-run it.
+        mutable std::unordered_set<std::string>              processed_certificates_;
+        std::deque<Certificate>                              accepted_certificates_;
+        mutable std::mutex                                   validated_certs_mutex_;
+
+        /// @brief Caches a certificate that passed `ValidateCertificate` (keeping the
+        ///        lowest-hash record per slot like the durable store does) and queues
+        ///        it for commit work on the round thread.
+        void QueueAcceptedCertificate( const Certificate &certificate );
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 

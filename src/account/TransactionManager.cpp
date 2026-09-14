@@ -4143,14 +4143,22 @@ namespace sgns
         const std::string &address ) const
     {
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        std::optional<TrackedTx>            best;
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( tracked.tx && ( tracked.cached_nonce == nonce ) && ( tracked.tx->GetSrcAddress() == address ) )
+            if ( !tracked.tx || tracked.cached_nonce != nonce || tracked.tx->GetSrcAddress() != address )
             {
-                return tracked;
+                continue;
+            }
+            // Retried mints leave FAILED losers at the same nonce; they must not
+            // shadow the entry that can still finalize.
+            if ( !best.has_value() ||
+                 ( best->status == TransactionStatus::FAILED && tracked.status != TransactionStatus::FAILED ) )
+            {
+                best = tracked;
             }
         }
-        return std::nullopt;
+        return best;
     }
 
     std::optional<TransactionManager::TrackedTx> TransactionManager::GetTrackedTxByHash(
@@ -6109,9 +6117,21 @@ namespace sgns
                                                    tx.GetHash() );
                 return { ConsensusManager::ValidationResult::Reject() };
             }
-            auto previous_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( previous_hash ) );
-            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                 previous_transaction_result.value()->GetHash() != previous_hash )
+            // A certificate-confirmed predecessor is tracked in memory while its
+            // /tx/ element is still replicating; check tracked state before the
+            // durable read.
+            auto previous_transaction = GetTransactionByHash( previous_hash );
+            if ( !previous_transaction )
+            {
+                auto previous_transaction_result =
+                    FetchTransaction( *globaldb_m, GetTransactionPath( previous_hash ) );
+                if ( previous_transaction_result.has_value() && previous_transaction_result.value() &&
+                     previous_transaction_result.value()->GetHash() == previous_hash )
+                {
+                    previous_transaction = previous_transaction_result.value();
+                }
+            }
+            if ( !previous_transaction )
             {
                 // Registration transactions persist at reg/{src_addr}, not tx/{hash}
                 // (SendTransactionItem routes them there), so any nonce chain that
@@ -6191,10 +6211,10 @@ namespace sgns
                     { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
             }
 
-            auto previous_cert_result = blockchain_->GetCertificateBySlot(
-                previous_transaction_result.value()->GetSlotID() );
+            auto previous_cert_result =
+                blockchain_->GetCertificateBySlot( previous_transaction->GetSlotID() );
             if ( previous_cert_result.has_error() ||
-                 !CertificateMatchesTransaction( previous_cert_result.value(), *previous_transaction_result.value() ) )
+                 !CertificateMatchesTransaction( previous_cert_result.value(), *previous_transaction ) )
             {
                 TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
                                                    account_m->GetAddress().substr( 0, 8 ),

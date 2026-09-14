@@ -69,37 +69,6 @@ namespace sgns
                                 []( unsigned char c ) { return c >= '0' && c <= '9'; } );
         }
 
-        /// Approve-vote reputation (ACTIVE validators, deduplicated) whose votes
-        /// carry at least one RPC slot hash. This is the maximum qualified_sum the
-        /// cumulative slot model could ever reach for this vote set: every voter
-        /// contributes at most its full weight across slots 0/1/2 (50/25/75 sum
-        /// weights to 100%, D-02/D-03).
-        uint64_t SlotEvidenceReputation( const std::vector<ConsensusVote>               &votes,
-                                         const ValidatorRegistry::Registry              &registry )
-        {
-            std::unordered_set<std::string> seen;
-            uint64_t                       reputation = 0;
-            for ( const auto &vote : votes )
-            {
-                if ( !vote.approve() || !seen.insert( vote.voter_id() ).second )
-                {
-                    continue;
-                }
-                const bool carries_slot_hash = !vote.slot_0_hash().empty() || !vote.slot_1_hash().empty() ||
-                                               !vote.slot_2_hash().empty();
-                if ( !carries_slot_hash )
-                {
-                    continue;
-                }
-                const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
-                if ( validator && validator->status() == ValidatorRegistry::Status::ACTIVE )
-                {
-                    reputation += validator->weight();
-                }
-            }
-            return reputation;
-        }
-
         std::string SerializedCertificateHash( std::string_view serialized )
         {
             const auto hash = crypto::sha2_256( serialized.data(), serialized.size() );
@@ -401,6 +370,7 @@ namespace sgns
                         self->ProcessCertificates();
                         self->UpdateCertificatesPending();
                     }
+                    self->ProcessAcceptedCertificates();
                     self->ExpirePendingProposals();
                     self->ProcessDuePendingRetries();
                     self->ProcessDueVoteWork();
@@ -1313,6 +1283,13 @@ namespace sgns
         if ( fail_accepted_certificate_scan_for_test_ )
         {
             return outcome::failure( std::errc::io_error );
+        }
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            if ( validated_cert_by_slot_.find( slot_key ) != validated_cert_by_slot_.end() )
+            {
+                return true;
+            }
         }
         const auto key = std::string( CERTIFICATE_BASE_PATH_KEY ) + slot_key;
         auto value = db_->Get( { key } );
@@ -2280,7 +2257,7 @@ namespace sgns
         uint64_t                        total_weight    = ValidatorRegistry::TotalWeight( registry );
         uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
-        // Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation) resolve
+        // Slot-quorum helpers (EvaluateSlotQuorum) resolve
         // membership and weight but never verify signatures, so the bridge-mint
         // branch below must only ever receive this signature-verified subset —
         // feeding them the raw vector let fabricated votes attributed to real
@@ -2363,13 +2340,13 @@ namespace sgns
             tally.qualified_sum    = slot_result.qualified_sum;
             tally.slot_threshold   = slot_result.threshold;
             // D-06 governs only while the mesh's slot evidence can structurally
-            // reach quorum: the maximum attainable qualified_sum is the reputation
-            // whose votes carry slot hashes. When that ceiling cannot pass the
-            // threshold the cumulative model is unreachable for this vote set —
-            // e.g. an evidence-starved mesh where vote slot population silently
-            // no-ops — and the single-pool result stands; every approve voter has
+            // reach quorum: the maximum attainable qualified_sum is bounded by the
+            // slots the votes actually carry (w/2 for DIRECT, w/4 per public group).
+            // When that ceiling cannot pass the threshold the cumulative model is
+            // unreachable for this vote set — e.g. a DIRECT-only or public-pair
+            // mesh — and the single-pool result stands; every approve voter has
             // still passed the public-chain witness validation in that case.
-            if ( SlotEvidenceReputation( verified_votes, registry ) > slot_result.threshold )
+            if ( slot_result.max_qualified_sum > slot_result.threshold )
             {
                 tally.has_quorum = slot_result.has_quorum;
             }
@@ -2697,6 +2674,7 @@ namespace sgns
             }
             if ( SerializedCertificateHash( existing.value().toString() ) < SerializedCertificateHash( serialized ) )
             {
+                QueueAcceptedCertificate( existing_certificate );
                 return outcome::success();
             }
         }
@@ -2722,6 +2700,12 @@ namespace sgns
             std::lock_guard lock( fault_test_mutex_ );
             ++fault_test_counters_.certificate_write_successes;
         }
+
+        // Receivers expose this certificate through HandleCertificate, but the
+        // notification is not echoed back to the publisher; without this the
+        // submitting node waits for its own CRDT readback to resolve
+        // Certificate(subject) pending dependencies.
+        QueueAcceptedCertificate( certificate );
 
         // The canonical slot record is the ONLY durable record v3.0 writes.
         // A secondary /cert/<subject_hash> copy was considered and rejected:
@@ -3700,6 +3684,13 @@ namespace sgns
             return;
         }
 
+        // The CRDT copy lags pubsub by the sync interval; dependents pended on this
+        // certificate resolve against the validated cache in the meantime.
+        // Commit-side work (vote release, subject handler) re-runs validation and
+        // may block on RPC, so it cannot run on the pubsub receive path; the round
+        // thread drains the queue.
+        QueueAcceptedCertificate( certificate );
+
         ProposalState proposal_state;
         auto          fetch_proposal_state_ret = FetchProposalState( certificate );
         if ( fetch_proposal_state_ret.has_value() )
@@ -4562,12 +4553,30 @@ namespace sgns
 
     void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )
     {
+        // The pubsub fast path, peer aggregators, and the later CRDT dispatch all
+        // reach this function for the same logical certificate; each aggregator's
+        // vote set serializes differently, so dedupe by subject, not bytes. Claim
+        // it once, and release the claim on every retryable stall so the journal
+        // path can still finish the work.
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash.has_error() )
         {
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
             return;
         }
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            if ( !processed_certificates_.insert( subject_hash.value() ).second )
+            {
+                (void) certificate_work_journal_->MarkDone( key );
+                return;
+            }
+        }
+        auto release_claim = [&]()
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            processed_certificates_.erase( subject_hash.value() );
+        };
 
         registry_->OnFinalizedCertificate( certificate );
 
@@ -4577,6 +4586,7 @@ namespace sgns
             auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
             if ( it == certificate_subject_handlers_.end() )
             {
+                release_claim();
                 certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
                 logger_->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
                 return;
@@ -4589,6 +4599,7 @@ namespace sgns
         if ( release.has_error() )
         {
             // A read/decode/remove failure leaves the durable certificate work retryable.
+            release_claim();
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
             return;
         }
@@ -4603,6 +4614,7 @@ namespace sgns
         }
         if ( !EnterFinalityFaultBarrier( accepted_certificate_barrier_ ) )
         {
+            release_claim();
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
             return;
         }
@@ -4617,6 +4629,7 @@ namespace sgns
             // loop. The threshold keeps stall-then-recover fault choreography on
             // the fast path; attempt_count counts every journal transition
             // (receipt alone adds several), so the shift is clamped from below.
+            release_claim();
             auto           entry    = certificate_work_journal_->GetEntry( key );
             const uint64_t attempts = entry.has_value() ? entry->attempt_count : 0;
             if ( attempts <= kHandlerFailureFastRetries )
@@ -4640,6 +4653,48 @@ namespace sgns
         (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
     }
 
+    void ConsensusManager::ProcessAcceptedCertificates()
+    {
+        std::deque<Certificate> certificates;
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            certificates.swap( accepted_certificates_ );
+        }
+        if ( certificates.empty() )
+        {
+            return;
+        }
+        // Same serialization as the journal dispatch path.
+        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+        for ( const auto &certificate : certificates )
+        {
+            ProcessCommittedCertificate( GetExpectedCertificateSlotKey( certificate ), certificate );
+        }
+    }
+
+    void ConsensusManager::QueueAcceptedCertificate( const Certificate &certificate )
+    {
+        const auto slot_key = GetSlotKey( certificate.proposal() );
+        if ( slot_key.empty() )
+        {
+            return;
+        }
+        const auto candidate_hash = SerializedCertificateHash( certificate.SerializeAsString() );
+
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            if ( auto slot_it = validated_cert_by_slot_.find( slot_key );
+                 slot_it != validated_cert_by_slot_.end() &&
+                 SerializedCertificateHash( slot_it->second.SerializeAsString() ) <= candidate_hash )
+            {
+                return;
+            }
+            validated_cert_by_slot_[slot_key] = certificate;
+            accepted_certificates_.push_back( certificate );
+        }
+        timer_cv_.notify_all();
+    }
+
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySlot( const std::string &slot_key ) const
     {
         if ( slot_key.empty() || !db_ )
@@ -4647,6 +4702,15 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
         const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + slot_key;
+
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            if ( auto it = validated_cert_by_slot_.find( slot_key );
+                 it != validated_cert_by_slot_.end() )
+            {
+                return it->second;
+            }
+        }
 
         BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
 
@@ -4667,6 +4731,11 @@ namespace sgns
         if ( ValidateCertificate( certificate ) != Check::Approve )
         {
             return outcome::failure( std::errc::invalid_argument );
+        }
+        // The durable record converged; the pubsub fast-path entry is redundant.
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            validated_cert_by_slot_.erase( slot_key );
         }
         return certificate;
     }

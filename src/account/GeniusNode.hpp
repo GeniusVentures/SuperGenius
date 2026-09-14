@@ -881,12 +881,12 @@ namespace sgns
          *
          * Allows callers (including E2E tests) to register RPC endpoints for chains
          * that are not in the default mainnet set (e.g. Sepolia testnet).
-         * The transaction manager must be in READY state.
+         * Safe to call before the transaction manager is READY — configuration is
+         * queued and applied when the manager is created.
          *
          * @param[in] chain_id  Numeric EVM chain ID as a string (e.g. "11155111" for Sepolia).
          * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
-         * @return True when the endpoints were configured; false when the transaction
-         *         manager is absent or not READY.
+         * @return True — the configuration is always accepted and applied.
          */
         bool ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
@@ -1028,6 +1028,11 @@ namespace sgns
         mutable std::mutex catchup_mutex_;
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
+        /// Endpoint configuration accepted by ConfigureRpcEndpoint before the
+        /// transaction manager exists; replayed onto each TransactionManager at
+        /// creation so call order never silently drops operator/test config.
+        std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> pending_rpc_endpoints_;
+        std::mutex pending_rpc_endpoints_mutex_;
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
