@@ -1144,30 +1144,52 @@ namespace sgns
         {
             return BatchSubjectDecision::Reject;
         }
+        const auto &payload = payload_result.value();
 
-        const auto &payload         = payload_result.value();
-        auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
-                                                           payload.base_registry_epoch(),
-                                                           payload.certificate_count(),
-                                                           std::string( payload.batch_root() ) );
-        if ( selected_result.has_error() )
-        {
-            if ( selected_result.error() == std::errc::resource_unavailable_try_again )
-            {
-                return BatchSubjectDecision::Pending;
-            }
-            return BatchSubjectDecision::Reject;
-        }
-
+        // The verdict is a function of the SIGNED PROPOSAL ONLY: every member the
+        // payload names is validated against the durable, replicated /cert/<slot>
+        // records. Consulting the process-local pending set here made the verdict
+        // a function of (proposal, local observation): a first-N window shifted by
+        // one lower-sorting finalized slot computed a different root and Rejected a
+        // perfectly valid batch (a permanent verdict), splitting the quorum across
+        // honest nodes and stalling the epoch. A missing member record means "not
+        // synced yet", not invalid — Pending lets the retry machinery converge.
         auto registry_result = LoadRegistryByCid( payload.base_registry_cid() );
         if ( registry_result.has_error() )
         {
             return BatchSubjectDecision::Pending;
         }
-
         if ( registry_result.value().epoch() != payload.base_registry_epoch() )
         {
             return BatchSubjectDecision::Reject;
+        }
+
+        for ( const auto &member_slot : payload.member_certificate_slots() )
+        {
+            auto cert_result = LoadCertificateBySlot( member_slot );
+            if ( cert_result.has_error() )
+            {
+                if ( cert_result.error() == std::errc::invalid_argument )
+                {
+                    // Corrupt or slot-mismatched durable record: permanently invalid.
+                    logger_->error( "{}: rejecting corrupt member slot={} error={}",
+                                    __func__,
+                                    member_slot,
+                                    cert_result.error().message() );
+                    return BatchSubjectDecision::Reject;
+                }
+                // The member's durable record has not synced yet.
+                logger_->debug( "{}: member slot={} not yet available, pending",
+                                __func__,
+                                member_slot );
+                return BatchSubjectDecision::Pending;
+            }
+            if ( cert_result.value().registry_cid() != payload.base_registry_cid() ||
+                 cert_result.value().registry_epoch() != payload.base_registry_epoch() )
+            {
+                logger_->error( "{}: member slot={} registry binding mismatch", __func__, member_slot );
+                return BatchSubjectDecision::Reject;
+            }
         }
 
         return BatchSubjectDecision::Approve;
@@ -1219,20 +1241,18 @@ namespace sgns
             return BatchCertificateDecision::Reject;
         }
 
-        auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
-                                                    payload.base_registry_epoch(),
-                                                    payload.certificate_count(),
-                                                    std::string( payload.batch_root() ) );
-        if ( selected_result.has_error() )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
-        }
+        // Members come from the SIGNED payload, never from the process-local
+        // pending set: the set is only the proposer's selection heuristic, and
+        // enumerating from it here could Reject or mis-derive a batch this node
+        // itself voted for whenever its local first-N window differed from the
+        // proposer's. Every payload member is validated against the durable
+        // /cert/<slot> records below.
+        std::vector<std::string> selected( payload.member_certificate_slots().begin(),
+                                           payload.member_certificate_slots().end() );
 
         std::vector<sgns::ConsensusCertificate> certificates;
-        certificates.reserve( selected_result.value().size() );
-        for ( const auto &member_slot : selected_result.value() )
+        certificates.reserve( selected.size() );
+        for ( const auto &member_slot : selected )
         {
             auto cert_result = LoadCertificateBySlot( member_slot );
             if ( cert_result.has_error() )
@@ -1321,7 +1341,7 @@ namespace sgns
             return BatchCertificateDecision::Reject;
         }
         update.set_certificate( serialized_cert );
-        for ( const auto &member_slot : selected_result.value() )
+        for ( const auto &member_slot : selected )
         {
             update.add_batch_certificate_slots( member_slot );
         }
