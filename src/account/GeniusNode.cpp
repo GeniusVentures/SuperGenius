@@ -13,8 +13,12 @@
 #include <random>
 #include <cctype>
 #include <filesystem>
+#include <map>
+#include <optional>
 #include <set>
 #include <string_view>
+#include <vector>
+#include "processing/elm_settlement.hpp"
 
 #include <boost/asio/post.hpp>
 #include <boost/format.hpp>
@@ -3041,6 +3045,137 @@ namespace sgns
             return;
         }
 
+        // ── ELM settlement leg (elmbridge 04-05, Pattern 4 — P4-3's
+        // avoidance): extract measured windows from the result artifacts and
+        // hand them to the payout. Runs ONLY for elm_processing tasks; every
+        // non-ELM task takes the unchanged payout call with defaulted args.
+        std::optional<sgns::processing::ElmSettlementData> elmSettlement;
+        {
+            // (1) Sniff the task JSON (plain nlohmann; root generated set only).
+            try
+            {
+                const auto taskJson = nlohmann::json::parse( maybe_task.value().json_data() );
+                if ( taskJson.contains( "job_type" ) && taskJson.at( "job_type" ).is_string()
+                    && taskJson.at( "job_type" ).get<std::string>() == "elm_processing" )
+                {
+                    // (2) {work_item_id -> subtaskid} from the splitter-written
+                    // map (Pattern 3: plain nlohmann, never the quicktype schema).
+                    std::map<std::string, std::string> subtaskByWorkItem;
+                    if ( taskJson.contains( "elm_subtask_map" ) && taskJson.at( "elm_subtask_map" ).is_array() )
+                    {
+                        for ( const auto &entry : taskJson.at( "elm_subtask_map" ) )
+                        {
+                            if ( entry.is_object() && entry.contains( "work_item_id" )
+                                && entry.contains( "subtaskid" ) )
+                            {
+                                subtaskByWorkItem[ entry.at( "work_item_id" ).get<std::string>() ] =
+                                    entry.at( "subtaskid" ).get<std::string>();
+                            }
+                        }
+                    }
+
+                    // (3)+(4) Fetch each result's envelope artifact and extract
+                    // its window. Fresh call-scoped io_context per fetch (the
+                    // fetchOutputData pattern — NEVER a shared running loop,
+                    // T-15-10 precedent). Empty ipfs_results_data_id or an
+                    // unparseable/missing envelope contributes NO window and
+                    // never blocks the others.
+                    sgns::processing::ElmSettlementData data;
+                    for ( const auto &result : taskresult.subtask_results() )
+                    {
+                        const std::string &artifactUri = result.ipfs_results_data_id();
+                        if ( artifactUri.empty() )
+                        {
+                            continue;
+                        }
+                        std::vector<uint8_t> envelopeBytes;
+                        {
+                            auto             freshContext = std::make_shared<boost::asio::io_context>();
+                            std::vector<char> collected;
+                            bool             fetchSucceeded = false;
+                            FileManager::GetInstance().LoadASync(
+                                artifactUri,
+                                false,
+                                false,
+                                freshContext,
+                                [ &collected, &fetchSucceeded ]( FileManager::ResultType buffers )
+                                {
+                                    if ( buffers && !buffers.value()->second.empty() )
+                                    {
+                                        collected.insert( collected.end(),
+                                                          buffers.value()->second.front().begin(),
+                                                          buffers.value()->second.front().end() );
+                                        fetchSucceeded = true;
+                                    }
+                                },
+                                "file" );
+                            freshContext->run();
+                            if ( !fetchSucceeded )
+                            {
+                                node_logger_->warn(
+                                    "[{}]{}: ELM settlement: envelope fetch failed for {} (no window)",
+                                    account_tag,
+                                    FUNC,
+                                    result.subtaskid() );
+                                continue;
+                            }
+                            envelopeBytes.assign( collected.begin(), collected.end() );
+                        }
+
+                        // Key the window by subtaskid via the envelope's echoed
+                        // work_item_id; unmapped ids keep the result key.
+                        std::string subtaskId = result.subtaskid();
+                        try
+                        {
+                            const auto envelope = nlohmann::json::parse( envelopeBytes );
+                            if ( envelope.is_object() && envelope.contains( "work_item_id" ) )
+                            {
+                                const auto wid = envelope.at( "work_item_id" ).get<std::string>();
+                                const auto it  = subtaskByWorkItem.find( wid );
+                                if ( it != subtaskByWorkItem.end() )
+                                {
+                                    subtaskId = it->second;
+                                }
+                            }
+                        }
+                        catch ( const std::exception & )
+                        {
+                            // ElmWindowFromEnvelopeJson re-parses; a non-object
+                            // here simply leaves the result key.
+                        }
+                        auto window = sgns::processing::ElmWindowFromEnvelopeJson( envelopeBytes, subtaskId );
+                        if ( window.has_value() )
+                        {
+                            data.windows.push_back( std::move( *window ) );
+                        }
+                    }
+                    if ( !data.windows.empty() )
+                    {
+                        elmSettlement = std::move( data );
+                    }
+                    else
+                    {
+                        node_logger_->warn(
+                            "[{}]{}: ELM settlement: no well-formed windows for {} — even-split fallback",
+                            account_tag,
+                            FUNC,
+                            task_id );
+                    }
+                }
+            }
+            catch ( const std::exception &e )
+            {
+                node_logger_->warn( "[{}]{}: ELM settlement sniff failed for {}: {}",
+                                    account_tag,
+                                    FUNC,
+                                    task_id,
+                                    e.what() );
+            }
+        }
+        // (5) Refund address: deliberately NOT threaded from here — PayEscrow
+        // derives it from escrow_tx->GetSrcAddress() (ledger-owned,
+        // T-04-04-03); the defaulted empty parameter preserves that authority.
+
         node_logger_->info( "[{}]{}: Creating the payout transaction", account_tag, FUNC );
         manager_result.value()->AsyncPayEscrow(
             maybe_task.value().escrow_path(),
@@ -3080,7 +3215,8 @@ namespace sgns
                               task_id,
                               completion.transaction_id,
                               completion.elapsed.count() );
-            } );
+            },
+            elmSettlement.has_value() ? &elmSettlement.value() : nullptr );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
