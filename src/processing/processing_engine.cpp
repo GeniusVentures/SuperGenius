@@ -115,6 +115,12 @@ namespace sgns::processing
                 }
 
                 // @todo set initial hash code that depends on node id
+                // Elmbridge 04-03 diagnostic-hardening: a worker-thread
+                // exception here would std::terminate the node (the original
+                // code had no try around the core call). Catch, log, and skip
+                // the result — the queue's timeout path owns the retry.
+                try
+                {
                 auto maybe_result = _this->m_processingCore->ProcessSubTask(
                     subTask,
                     std::hash<std::string>{}( nodeId ) );
@@ -154,6 +160,12 @@ namespace sgns::processing
                 else
                 {
                     _this->m_processingErrorSink( maybe_result.error().message() );
+                }
+                }
+                catch ( const std::exception &e )
+                {
+                    _this->m_logger->error( "[WORKER EXCEPTION] subtask {}: {}", subtaskId, e.what() );
+                    _this->m_processingErrorSink( "worker exception: " + std::string( e.what() ) );
                 }
             } );
         thread.detach();

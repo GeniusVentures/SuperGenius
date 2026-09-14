@@ -67,9 +67,13 @@ namespace sgns
 
                 // Worker-side contract (04-02): the subtask's json_data is a
                 // serialized ModelNode whose source names this work item —
-                // exactly what ResolveElmWorkItem scans for.
+                // exactly what ResolveElmWorkItem scans for. name/type are
+                // schema-required by model_node (from_json j.at) — the work
+                // item id doubles as the node name; type is the LLM kind.
                 sgns::ModelNode node;
+                node.set_name( elm.get_work_item_id() );
                 node.set_source( "input:" + elm.get_work_item_id() );
+                node.set_type( sgns::DataType::LLM );
                 nlohmann::json nodeJson;
                 sgns::to_json( nodeJson, node );
                 subtask.set_json_data( nodeJson.dump( -1 ) );

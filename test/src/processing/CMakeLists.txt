@@ -65,6 +65,32 @@ target_link_libraries(elm_validation_mode_test
     ipfs-pubsub
 )
 
+# elmbridge 04-03 (JOB-02): splitter mapping/map-tolerance/submit-acceptance.
+# The submit leg runs a full node (ElmCostNode pattern): genius_node_test
+# harness + WHOLEARCHIVE on MSVC; TIMEOUT 600 for node startup.
+addtest(elm_splitter_test
+    elm_splitter_test.cpp
+)
+
+target_link_libraries(elm_splitter_test
+    processing_service
+    SGProcessingProto
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(elm_splitter_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(elm_splitter_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(elm_splitter_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 # Phase 19 (VALD-02): points the new Vald02* TEST cases at this phase's fresh, real, already
 # checked-in cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not
 # copied or duplicated into SuperGenius (D-01-REVISED). Four "../" levels walk from this directory
