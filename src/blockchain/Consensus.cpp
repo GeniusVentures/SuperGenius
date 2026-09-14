@@ -2508,6 +2508,33 @@ namespace sgns
         return sgns::ProposalSigningBytes( proposal );
     }
 
+    outcome::result<ValidatorRegistry::Registry> ConsensusManager::LoadRegistryByCidCached(
+        const std::string &cid ) const
+    {
+        {
+            std::lock_guard lock( registry_cache_mutex_ );
+            auto            it = registry_cache_.find( cid );
+            if ( it != registry_cache_.end() )
+            {
+                return it->second;
+            }
+        }
+        auto loaded = registry_->LoadRegistryByCid( cid );
+        if ( loaded.has_error() )
+        {
+            return loaded;
+        }
+        {
+            std::lock_guard lock( registry_cache_mutex_ );
+            if ( registry_cache_.size() >= kRegistryCacheMaxEntries )
+            {
+                registry_cache_.clear();
+            }
+            registry_cache_.emplace( cid, loaded.value() );
+        }
+        return loaded;
+    }
+
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteSigningBytes( const Vote &vote )
     {
         ConsensusManagerLogger()->trace( "{}: called with voter address {} proposal_id={}",
@@ -3068,7 +3095,7 @@ namespace sgns
                     round );
                 continue;
             }
-            auto proposal_registry_result = registry_->LoadRegistryByCid( state.proposal.registry_cid() );
+            auto proposal_registry_result = LoadRegistryByCidCached( state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 logger_->debug( "{}: skipping proposal due to registry load error={} proposal_id={}",
@@ -3575,7 +3602,7 @@ namespace sgns
                 return;
             }
 
-            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal_state.proposal.registry_cid() );
+            auto proposal_registry_result = LoadRegistryByCidCached( proposal_state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 logger_->warn( "{}: deferred vote: registry load error={} proposal_id={}",
@@ -4583,12 +4610,30 @@ namespace sgns
         auto certificate_handler_result = handler( subject_hash.value(), certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
         {
-            // NOTE: deliberately still a zero lease (retry on the next 500ms
-            // tick). An exponential backoff here is the right long-term shape for
-            // persistently failing handlers, but it breaks the synchronous
-            // recovery choreography the fault tests rely on; deferred with the
-            // open findings rather than half-landed.
-            certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+            // Transient handler failures retry on the next 500ms tick exactly as
+            // before; a handler failing REPEATEDLY (kHandlerFailureFastRetries or
+            // more) backs off exponentially, because re-running full certificate
+            // validation plus the handler every tick forever is a CPU/log-spam
+            // loop. The threshold keeps stall-then-recover fault choreography on
+            // the fast path; attempt_count counts every journal transition
+            // (receipt alone adds several), so the shift is clamped from below.
+            auto           entry    = certificate_work_journal_->GetEntry( key );
+            const uint64_t attempts = entry.has_value() ? entry->attempt_count : 0;
+            if ( attempts <= kHandlerFailureFastRetries )
+            {
+                certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+                return;
+            }
+            const auto                   shift = static_cast<unsigned>(
+                std::min<uint64_t>( attempts - kHandlerFailureFastRetries, 7 ) );
+            std::chrono::milliseconds backoff( 500ULL << shift );
+            backoff = std::min( backoff, std::chrono::milliseconds( 60000 ) );
+            logger_->warn( "{}: handler failed {} times, backing off {}ms for key {}",
+                           __func__,
+                           attempts,
+                           backoff.count(),
+                           key );
+            certificate_work_journal_->MarkStalled( key, backoff );
             return;
         }
         (void) certificate_work_journal_->MarkDone( key );
