@@ -4402,7 +4402,11 @@ namespace sgns
         {
             return;
         }
-        if ( entry.state != crdt::CRDTWorkJournal::State::Stalled )
+        // Seen entries are dispatchable too: the element callback that would
+        // stall them is skipped whenever the merge is a no-op (e.g. the same
+        // certificate arriving in a second delta), which would otherwise leave
+        // committed work wedged in Seen forever.
+        if ( entry.state == crdt::CRDTWorkJournal::State::Processing )
         {
             return;
         }
