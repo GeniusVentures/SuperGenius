@@ -53,6 +53,7 @@
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
+#include "processing/processing_tasksplit_elm.hpp"
 #include "processing/processing_clocks_elm.hpp"
 #include <eth/abi_decoder.hpp>
 #include <base/parse_utility.hpp>
@@ -2263,12 +2264,13 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
-        // ELM branch (Phase 1 interim, OD-1): elm_processing jobs parse+validate
-        // through the schema gates, price deterministically via GetElmProcessCost,
-        // then reject with a structured error BEFORE the UTXO balance check, the
-        // task/splitter block, and HoldEscrow -- no UTXOs can be stranded by a hold
-        // no splitter can ever consume. Phase 4 replaces this early return with the
-        // ELM splitter. SC-5: this is the ONLY conditional added to the non-ELM path.
+        // ELM branch (elmbridge Phase 4, plan 04-03 — replaces the Phase 1
+        // interim ELM_SUBMIT_UNAVAILABLE early return): split 1:1 via
+        // ProcessTaskSplitterELM, price deterministically, hold escrow, stage
+        // the elm_rate record onto the SAME CRDT transaction as the escrow
+        // info (P4-9 — exactly one commit per submit, inside EnqueueTask),
+        // and enqueue. SC-5/E2E-02: the ONLY conditional on the non-ELM path;
+        // everything below the branch is byte-identical for legacy jobs.
         {
             // Materialize the by-value optional (quicktype getters return
             // boost::optional<T> by value -- see plan 01-01 SUMMARY lifetime note).
@@ -2280,7 +2282,77 @@ namespace sgns
                 {
                     return outcome::failure( Error::PROCESS_COST_ERROR );
                 }
-                return outcome::failure( Error::ELM_SUBMIT_UNAVAILABLE );
+
+                if ( account_->GetUTXOManager().GetBalance() < elmFunds )
+                {
+                    return outcome::failure( Error::INSUFFICIENT_FUNDS );
+                }
+
+                SGProcessing::Task task;
+                auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
+
+                // Small json without extra indentation; the ELM splitter adds
+                // elm_subtask_map to THIS object, so serialize json_data AFTER
+                // splitting (the published task JSON carries the map).
+                json smalljson;
+                sgns::to_json( smalljson, procmgr->GetProcessingData() );
+                task.set_ipfs_block_id( uuidstring );
+                task.set_random_seed( 0 );
+                task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
+
+                // Materialize the by-value elms optional into a named local
+                // (UB rule), then split 1:1 (01-DESIGN-SUBTASK-MAPPING).
+                const auto elmsOpt = procmgr->GetProcessingData().get_elms();
+                const auto elms    = elmsOpt.value_or( std::vector<sgns::Elm>{} );
+
+                processing::ProcessTaskSplitterELM taskSplitter;
+                std::list<SGProcessing::SubTask>   subTasks;
+                taskSplitter.SplitTask( task,
+                                        subTasks,
+                                        elms,
+                                        pubsub_->GetHost()->getId().toBase58(),
+                                        smalljson );
+
+                // NOW the task JSON carries the splitter-written map.
+                task.set_json_data( smalljson.dump( -1 ) );
+
+                if ( subTasks.empty() )
+                {
+                    // Belt-and-braces: CheckElmValidity already guarantees
+                    // non-empty elms at Create.
+                    return outcome::failure( Error::INVALID_JSON );
+                }
+
+                BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+                BOOST_OUTCOME_TRY( auto result_pair, manager->HoldEscrow( elmFunds, uuidstring ) );
+
+                auto [tx_id, escrow_data_pair] = result_pair;
+                auto [escrow_path, escrow_data] = escrow_data_pair;
+
+                task.set_escrow_path( escrow_path );
+
+                // One transaction: escrow info + elm_rate sibling key (P4-9).
+                BOOST_OUTCOME_TRY( auto crdt_transaction,
+                                   CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
+                BOOST_OUTCOME_TRY( auto composed_transaction,
+                                   CreateElmRateRecordCRDTTransaction(
+                                       escrow_path, procmgr->GetElmMaximumProcessingHours(), crdt_transaction ) );
+
+                auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks, composed_transaction );
+                if ( enqueue_task_return.has_failure() )
+                {
+                    return outcome::failure( Error::DATABASE_WRITE_ERROR );
+                }
+
+                // Track this task locally so it can be polled later via GetMyTaskIds()
+                my_task_ids_.push_back( uuidstring );
+                if ( my_task_ids_.size() > kMyTasksMemoryLimit )
+                {
+                    my_task_ids_.erase( my_task_ids_.begin() ); // Evict oldest
+                }
+                PersistMyTaskIds();
+
+                return tx_id;
             }
         }
 
@@ -3268,9 +3340,27 @@ namespace sgns
         const std::string &escrow_path,
         double             maximum_processing_hours )
     {
+        // Shipped 2-arg form (unit-tested in Phase 1): fresh transaction,
+        // delegate to the composing overload.
+        return CreateElmRateRecordCRDTTransaction(
+            escrow_path, maximum_processing_hours, tx_globaldb_->BeginTransaction() );
+    }
+
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateElmRateRecordCRDTTransaction(
+        const std::string                       &escrow_path,
+        double                                   maximum_processing_hours,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+    {
         // OD-2: record the rate actually used at hold time as a SIBLING key of
         // the escrow record (the escrow itself stays at the plain escrow_path).
-        auto crdt_transaction = tx_globaldb_->BeginTransaction();
+        // P4-9 (Phase 4, plan 04-03): the composing form — ProcessImage stages
+        // this Put onto the SAME transaction as the escrow info, and
+        // EnqueueTask commits ONCE. A crash between hold and enqueue leaves
+        // the standard HoldEscrow recovery path; no orphaned second commit.
+        if ( !crdt_transaction )
+        {
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
 
         const json rateRecord = {
             { "usd_per_hour", sgns::processing::kUsdPerHourElm },
@@ -3285,12 +3375,6 @@ namespace sgns
             std::move( key ),
             sgns::base::Buffer( std::vector<uint8_t>( rateRecord.dump().begin(), rateRecord.dump().end() ) ) ) );
 
-        // Phase 4: the production caller wires this into ProcessImage inside the
-        // same CRDT transaction as CreateEscrowInfoCRDTTransaction (multi-Put
-        // atomic transaction precedent: impl/TaskQueueImpl.cpp:32-67). In Phase 1
-        // the interim ELM_SUBMIT_UNAVAILABLE rejection returns before any escrow
-        // hold, so there is no production caller yet -- this helper is the
-        // unit-tested building block Phase 4 composes.
         return crdt_transaction;
     }
 

@@ -211,7 +211,7 @@ namespace sgns
             TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction did not finalize within the timeout.
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
             INVALID_NODE_TYPE         = 16, ///< sgns_config.json node_type string was not Full/Light/Archive.
-            ELM_SUBMIT_UNAVAILABLE    = 17, ///< ELM submission is not yet wired to a splitter; reserved UTXOs are protected by rejecting before escrow hold.
+            ELM_SUBMIT_UNAVAILABLE    = 17, ///< RETIRED (elmbridge 04-03): ELM submission is wired; value kept for enum stability, never returned.
         };
 
         /**
@@ -1321,6 +1321,26 @@ namespace sgns
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateElmRateRecordCRDTTransaction(
             const std::string &escrow_path,
             double             maximum_processing_hours );
+
+        /**
+         * @brief Composing overload: stages the elm_rate Put onto an EXISTING
+         *        transaction (P4-9 — one commit per submit).
+         *
+         * ProcessImage's ELM branch builds the escrow-info transaction first,
+         * then adds the rate record to THAT SAME transaction via this
+         * overload; TaskQueueImpl::EnqueueTask extends it further and commits
+         * exactly once. The 2-arg overload above delegates here with a fresh
+         * transaction (shipped signature + unit test unchanged).
+         *
+         * @param[in] escrow_path Escrow key the rate record is a sibling of.
+         * @param[in] maximum_processing_hours Declared hours for this job.
+         * @param[in] transaction Existing transaction to stage the Put onto.
+         * @return success (the passed transaction, mutated), or error.
+         */
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateElmRateRecordCRDTTransaction(
+            const std::string                      &escrow_path,
+            double                                  maximum_processing_hours,
+            std::shared_ptr<crdt::AtomicTransaction> transaction );
 
         /**
          * @brief Starts DHT provider discovery for the processing grid topic.
