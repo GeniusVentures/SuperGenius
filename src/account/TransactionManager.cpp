@@ -1106,7 +1106,9 @@ namespace sgns
         const SGProcessing::TaskResult &task_result,
         uint64_t                        escrow_amount,
         const TokenID                  &escrow_token_id,
-        uint64_t                        burn_basis_points )
+        uint64_t                        burn_basis_points,
+        const sgns::processing::ElmSettlementData *elmSettlement,
+        const std::string                        &refundAddress )
     {
         using boost::multiprecision::uint128_t;
 
@@ -1154,41 +1156,125 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        // Even split of what is left after the burn; the split remainder is burned too, so every
-        // minion is accounted for without an apportionment pass. Each result's developer cut is
-        // floored and the floor residue stays with that result's peer, so a result's peer and
-        // developer outputs always sum to its per-result share.
-        const auto per_result = available / valid_results.size();
-        const auto dust       = available % valid_results.size();
-
         std::vector<OutputDestInfo> outputs;
-        outputs.reserve( valid_results.size() * 2 + 1 );
-        // Developer credits from several results collapse into one output per (address, token).
-        std::map<std::pair<std::string, std::string>, uint64_t> developer_amounts;
-        for ( const auto *result : valid_results )
-        {
-            const auto dev_amount = static_cast<uint64_t>(
-                static_cast<uint128_t>( per_result ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
-            developer_amounts[{ result->developer_address(), result->token_id() }] += dev_amount;
+        uint64_t tailAmount = 0; // the always-present closing output (burn, +dust for even-split)
 
-            const auto peer_amount = static_cast<uint64_t>( per_result ) - dev_amount;
-            if ( peer_amount != 0 )
-            {
-                outputs.push_back( { peer_amount,
-                                     result->node_address(),
-                                     TokenID::FromBytes( result->token_id().data(), result->token_id().size() ) } );
-            }
-        }
-        for ( const auto &[key, amount] : developer_amounts )
+        if ( elmSettlement != nullptr )
         {
-            if ( amount != 0 )
+            // ── ELM branch (elmbridge 04-04, OD-3): proportional-by-window ──
+            // The billable pool caps at the POST-BURN available so Σ(outputs)
+            // conserves exactly: refund covers everything the split did not
+            // pay, the burn tail closes the remainder.
+            const uint64_t availableU64 = static_cast<uint64_t>( available );
+            const auto split = sgns::processing::ElmWindowsToShares( elmSettlement->windows, availableU64 );
+            if ( split.shares.empty() )
             {
-                const auto &[address, token_bytes] = key;
-                outputs.push_back( { amount, address, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
+                // Zero well-formed windows: refuse rather than paying
+                // everything to nobody (fail-closed; the escrow release path
+                // surfaces the error).
+                logger->error( "ELM escrow payout: no well-formed settlement windows — refusing payout" );
+                return std::errc::invalid_argument;
             }
+
+            // Refund = escrow − burn − billable (the split refunds availableU64
+            // − billable; burn rides the tail).
+            const uint64_t refund = split.refundMinions;
+            if ( refund > 0 )
+            {
+                if ( refundAddress.empty() )
+                {
+                    // Fail-closed: a refund with no ledger-derived target is a
+                    // wiring bug, never a silent drop (T-04-04-03).
+                    logger->error( "ELM escrow payout: nonzero refund ({} minions) with empty refund address",
+                                   refund );
+                    return std::errc::invalid_argument;
+                }
+                outputs.push_back( { refund, refundAddress, escrow_token_id } );
+            }
+
+            // Share lookup keyed by subtaskid; results with no well-formed
+            // window get NOTHING (§3.3 — filtered, not blocking).
+            std::map<std::string, uint64_t> shareBySubtask;
+            for ( const auto &s : split.shares )
+            {
+                shareBySubtask[ s.subtaskid ] = s.minions;
+            }
+
+            std::map<std::pair<std::string, std::string>, uint64_t> developerAmounts;
+            for ( const auto *result : valid_results )
+            {
+                const auto it = shareBySubtask.find( result->subtaskid() );
+                if ( it == shareBySubtask.end() || it->second == 0 )
+                {
+                    logger->warn( "ELM escrow payout: subtask {} has no well-formed window — excluded",
+                                  result->subtaskid() );
+                    continue;
+                }
+                const uint64_t share = it->second;
+                // Developer cut: identical math to the even-split branch —
+                // floored in the developer's disfavor, residue stays with peer.
+                const auto dev_amount = static_cast<uint64_t>(
+                    static_cast<uint128_t>( share ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
+                developerAmounts[ { result->developer_address(), result->token_id() } ] += dev_amount;
+                const uint64_t peer_amount = share - dev_amount;
+                if ( peer_amount != 0 )
+                {
+                    outputs.push_back( { peer_amount,
+                                         result->node_address(),
+                                         TokenID::FromBytes( result->token_id().data(), result->token_id().size() ) } );
+                }
+            }
+            for ( const auto &[ key, amount ] : developerAmounts )
+            {
+                if ( amount != 0 )
+                {
+                    const auto &[ address, token_bytes ] = key;
+                    outputs.push_back( { amount,
+                                         address,
+                                         TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
+                }
+            }
+            tailAmount = static_cast<uint64_t>( burn );
+        }
+        else
+        {
+            // ── Even-split branch (pre-existing behavior, byte-identical) ──
+            // Even split of what is left after the burn; the split remainder is
+            // burned too. Each result's developer cut is floored and the floor
+            // residue stays with that result's peer, so a result's peer and
+            // developer outputs always sum to its per-result share.
+            const auto per_result = available / valid_results.size();
+            const auto dust       = available % valid_results.size();
+
+            outputs.reserve( valid_results.size() * 2 + 1 );
+            // Developer credits from several results collapse into one output per (address, token).
+            std::map<std::pair<std::string, std::string>, uint64_t> developer_amounts;
+            for ( const auto *result : valid_results )
+            {
+                const auto dev_amount = static_cast<uint64_t>(
+                    static_cast<uint128_t>( per_result ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
+                developer_amounts[ { result->developer_address(), result->token_id() } ] += dev_amount;
+
+                const auto peer_amount = static_cast<uint64_t>( per_result ) - dev_amount;
+                if ( peer_amount != 0 )
+                {
+                    outputs.push_back( { peer_amount,
+                                         result->node_address(),
+                                         TokenID::FromBytes( result->token_id().data(), result->token_id().size() ) } );
+                }
+            }
+            for ( const auto &[ key, amount ] : developer_amounts )
+            {
+                if ( amount != 0 )
+                {
+                    const auto &[ address, token_bytes ] = key;
+                    outputs.push_back( { amount, address, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) } );
+                }
+            }
+            tailAmount = static_cast<uint64_t>( burn + dust );
         }
         // Always emitted, even at zero, so the release has a fixed shape for observers.
-        outputs.push_back( { static_cast<uint64_t>( burn + dust ), std::string( BURN_ADDRESS ), escrow_token_id } );
+        outputs.push_back( { tailAmount, std::string( BURN_ADDRESS ), escrow_token_id } );
 
         const auto total = std::accumulate( outputs.cbegin(),
                                             outputs.cend(),
@@ -1205,7 +1291,9 @@ namespace sgns
     outcome::result<std::string> TransactionManager::PayEscrow(
         const std::string                       &escrow_path,
         const SGProcessing::TaskResult          &task_result,
-        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+        const sgns::processing::ElmSettlementData *elmSettlement,
+        const std::string                        &refundAddress )
     {
         // Dereferences globaldb_m and account_m below; Stop() has already detached from both.
         if ( stopped_.load() )
@@ -1249,7 +1337,11 @@ namespace sgns
                            BuildPayoutOutputs( task_result,
                                                escrow_tx->GetAmount(),
                                                escrow_params.second.front().token_id,
-                                               burn_basis_points_.load( std::memory_order_relaxed ) ) );
+                                               burn_basis_points_.load( std::memory_order_relaxed ),
+                                               elmSettlement,
+                                               // Refund target: the ledger's OWN escrow source —
+                                               // never result/envelope data (T-04-04-03).
+                                               escrow_tx->GetSrcAddress() ) );
 
         InputUTXOInfo escrow_utxo_input;
         escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();
@@ -1280,7 +1372,9 @@ namespace sgns
                                              SGProcessing::TaskResult                 task_result,
                                              std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
                                              std::chrono::milliseconds                timeout,
-                                             TransactionCompletionCallback            callback )
+                                             TransactionCompletionCallback            callback,
+                                             const sgns::processing::ElmSettlementData *elmSettlement,
+                                             const std::string                        &refundAddress )
     {
         if ( !callback )
         {
@@ -1297,7 +1391,7 @@ namespace sgns
             return;
         }
 
-        auto payout = PayEscrow( escrow_path, task_result, std::move( crdt_transaction ) );
+        auto payout = PayEscrow( escrow_path, task_result, std::move( crdt_transaction ), elmSettlement, refundAddress );
         submission_lock.unlock();
         if ( payout.has_error() )
         {

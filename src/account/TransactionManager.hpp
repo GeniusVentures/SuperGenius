@@ -35,6 +35,7 @@
 
 #include "blockchain/Blockchain.hpp"
 #include "processing/proto/SGProcessing.pb.h"
+#include "processing/elm_settlement.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns::account
@@ -327,7 +328,9 @@ namespace sgns
 
         outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
                                                 const SGProcessing::TaskResult          &task_result,
-                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+                                                const sgns::processing::ElmSettlementData *elmSettlement = nullptr,
+                                                const std::string                        &refundAddress = "" );
 
         /**
          * @brief Submits an escrow payout and observes it without blocking for confirmation.
@@ -340,7 +343,9 @@ namespace sgns
                              SGProcessing::TaskResult                 task_result,
                              std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
                              std::chrono::milliseconds                timeout,
-                             TransactionCompletionCallback            callback );
+                             TransactionCompletionCallback            callback,
+                             const sgns::processing::ElmSettlementData *elmSettlement = nullptr,
+                             const std::string                        &refundAddress = "" );
 
         /**
          * @brief Asynchronously observes an already-tracked outgoing transaction.
@@ -495,7 +500,9 @@ namespace sgns
             const SGProcessing::TaskResult &task_result,
             uint64_t                        escrow_amount,
             const TokenID                  &escrow_token_id,
-            uint64_t                        burn_basis_points );
+            uint64_t                        burn_basis_points,
+            const sgns::processing::ElmSettlementData *elmSettlement = nullptr,
+            const std::string                        &refundAddress = "" );
 
         friend class PayoutOutputsTestAccess;
 
