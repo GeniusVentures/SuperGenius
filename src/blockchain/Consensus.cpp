@@ -4477,6 +4477,23 @@ namespace sgns
         ProcessCommittedCertificate( entry.key, certificate );
     }
 
+    void ConsensusManager::DispatchCertificateWorkForSlot( const std::string &slot_key )
+    {
+        if ( slot_key.empty() )
+        {
+            return;
+        }
+        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + slot_key;
+
+        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+        auto entry = certificate_work_journal_->GetEntry( key );
+        if ( !entry.has_value() )
+        {
+            return;
+        }
+        DispatchStalledCertificateEntryLocked( entry.value() );
+    }
+
     void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )
     {
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );

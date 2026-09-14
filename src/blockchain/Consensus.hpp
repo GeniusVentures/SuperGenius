@@ -636,7 +636,25 @@ namespace sgns
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return `true` only when the exact authoritative record is approved.
          */
+        /**
+         * @brief Checks the authoritative slot record and consumes pending work.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` only when the exact authoritative record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the slot to its
+         * registered handler before returning (the CRDT arrival callback only
+         * journals; the round timer would otherwise defer the dispatch by up to
+         * half a round). Serializes with the timer/registration recovery through
+         * `certificate_recovery_mutex_`; a handler must never call back into this
+         * method (it would self-deadlock).
+         */
         bool CheckCertificateForSlot( const std::string &slot_key ) const;
+        /**
+         * @brief Dispatches pending certificate work for one canonical-slot record.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         */
+        void DispatchCertificateWorkForSlot( const std::string &slot_key );
 
     protected:
         /**

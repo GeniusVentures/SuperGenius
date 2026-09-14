@@ -291,11 +291,15 @@ namespace sgns
          */
         outcome::result<void> TryResumePendingDependency( const ConsensusManager::PendingDependencyKey &dependency );
         /**
-         * @brief Checks whether an approved certificate exists for canonical slot.
+         * @brief Checks the authoritative slot record and consumes pending work.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return `true` when the authoritative slot record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the slot to its
+         * registered handler before returning.
          */
-        bool CheckCertificateForSlot( const std::string &slot_key ) const;
+        bool CheckCertificateForSlot( const std::string &slot_key );
         /**
          * @brief Loads the validated authoritative certificate by canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.

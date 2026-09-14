@@ -1872,9 +1872,17 @@ namespace sgns
         return consensus_manager_->WakePendingDependency( dependency );
     }
 
-    bool Blockchain::CheckCertificateForSlot( const std::string &slot_key ) const
+    bool Blockchain::CheckCertificateForSlot( const std::string &slot_key )
     {
-        return consensus_manager_->CheckCertificateForSlot( slot_key );
+        if ( !consensus_manager_->CheckCertificateForSlot( slot_key ) )
+        {
+            return false;
+        }
+        // The approved slot record proves finality; deliver any not-yet-consumed
+        // acceptance work for this slot synchronously so certificate effects land
+        // before the caller observes the record.
+        consensus_manager_->DispatchCertificateWorkForSlot( slot_key );
+        return true;
     }
 
     outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySlot( const std::string &slot_key ) const
