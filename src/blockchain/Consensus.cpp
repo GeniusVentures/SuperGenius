@@ -1948,7 +1948,13 @@ namespace sgns
         for ( const auto &proposal : expired )
         {
             FireProposalCleanupCallbacks( proposal );
-            ClearProposalSlot( proposal );
+            // Remove ONLY this proposal's entry: ClearProposalSlot erases every
+            // sibling sharing the canonical slot plus the whole slot state, so a
+            // TTL expiry on one deferred dependent took a quorate sibling's votes
+            // and window with it. Full-slot clearing is reserved for slot-terminal
+            // events (certificate accepted / submitted / slot decided).
+            std::lock_guard lock( proposals_mutex_ );
+            proposals_.erase( proposal.proposal_id() );
         }
     }
 

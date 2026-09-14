@@ -146,10 +146,11 @@ namespace sgns
         return valid;
     }
 
-    bool GeniusInputValidator::ValidateWitness( const ConsensusSubject                   &subject,
-                                                const std::shared_ptr<GeniusTransaction> &tx,
-                                                const UTXOTxParameters                   &params,
-                                                const std::shared_ptr<Blockchain>        &blockchain ) const
+    IInputValidator::WitnessVerdict GeniusInputValidator::ValidateWitness(
+        const ConsensusSubject                   &subject,
+        const std::shared_ptr<GeniusTransaction> &tx,
+        const UTXOTxParameters                   &params,
+        const std::shared_ptr<Blockchain>        &blockchain ) const
     {
         auto logger = InputValidatorLogger();
         logger->trace( "ValidateWitness(Genius): tx={} inputs={} outputs={}",
@@ -162,14 +163,14 @@ namespace sgns
             logger->error( "ValidateWitness(Genius) missing dependency: tx_present={} blockchain_present={}",
                            tx != nullptr,
                            blockchain != nullptr );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         if ( nonce_subject.has_error() || !nonce_subject.value().has_utxo_witness() ||
              !nonce_subject.value().has_utxo_commitment() )
         {
             logger->error( "ValidateWitness(Genius) invalid nonce subject for tx={}", PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto &inputs  = params.first;
@@ -177,13 +178,13 @@ namespace sgns
         if ( inputs.empty() || outputs.empty() )
         {
             logger->debug( "ValidateWitness(Genius) rejected empty params for tx={}", PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
         const auto tx_hash_result = base::Hash256::fromReadableString( tx->GetHash() );
         if ( tx_hash_result.has_error() )
         {
             logger->error( "ValidateWitness(Genius) invalid tx hash encoding: tx={}", PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
         const auto &commitment = nonce_subject.value().utxo_commitment();
         if ( commitment.consumed_outpoints_root().size() != base::Hash256::size() ||
@@ -191,7 +192,7 @@ namespace sgns
         {
             logger->error( "ValidateWitness(Genius) invalid commitment root sizes for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
         auto consumed_root_result = base::Hash256::fromSpan(
             gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.consumed_outpoints_root().data() ) ),
@@ -200,7 +201,7 @@ namespace sgns
         {
             logger->error( "ValidateWitness(Genius) failed to decode consumed root for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
         auto produced_root_result = base::Hash256::fromSpan(
             gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.produced_outputs_root().data() ) ),
@@ -209,7 +210,7 @@ namespace sgns
         {
             logger->error( "ValidateWitness(Genius) failed to decode produced root for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         if ( commitment.consumed_outpoints_size() != static_cast<int>( inputs.size() ) ||
@@ -222,7 +223,7 @@ namespace sgns
                 inputs.size(),
                 commitment.produced_outputs_size(),
                 outputs.size() );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         std::unordered_set<std::string> commitment_outpoints;
@@ -238,7 +239,7 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) failed to decode committed consumed outpoint hash for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             if ( !commitment_outpoints
                       .emplace( OutPointKey( out_hash_result.value(), committed_outpoint.output_index() ) )
@@ -246,7 +247,7 @@ namespace sgns
             {
                 logger->debug( "ValidateWitness(Genius) duplicate committed consumed outpoint for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             committed_consumed_payloads.push_back(
                 SerializeOutpointLeafPayload( out_hash_result.value(), committed_outpoint.output_index() ) );
@@ -263,7 +264,7 @@ namespace sgns
              ComputeMerkleRootFromPayloads( tx_consumed_payloads ) != consumed_root_result.value() )
         {
             logger->debug( "ValidateWitness(Genius) consumed root mismatch for tx={}", PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         std::unordered_set<std::string> commitment_outputs;
@@ -279,7 +280,7 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) failed to decode committed produced output hash for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             auto payload = SerializeOutputLeafPayload(
                 out_hash_result.value(),
@@ -293,7 +294,7 @@ namespace sgns
             {
                 logger->debug( "ValidateWitness(Genius) duplicate committed produced output for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             committed_produced_payloads.push_back( std::move( payload ) );
         }
@@ -322,7 +323,7 @@ namespace sgns
         {
             logger->debug( "ValidateWitness(Genius) produced output mismatch for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         std::unordered_map<std::string, const ConsumedInputProof *> proofs;
@@ -336,13 +337,13 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) failed to decode consumed proof hash for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             if ( !proofs.emplace( OutPointKey( hash_result.value(), proof.output_index() ), &proof ).second )
             {
                 logger->debug( "ValidateWitness(Genius) duplicate consumed proof entry for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
         }
 
@@ -372,7 +373,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) signature verification failed for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             auto proof_it = proofs.find( OutPointKey( input.txid_hash_, input.output_idx_ ) );
@@ -381,7 +382,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) missing consumed proof for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             const auto outpoint_key = OutPointKey( input.txid_hash_, input.output_idx_ );
@@ -390,7 +391,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) duplicate input detected for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const auto &proof = *proof_it->second;
 
@@ -400,7 +401,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) proof payload too short for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             auto payload_hash_result = base::Hash256::fromSpan(
@@ -410,7 +411,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) proof payload tx hash mismatch for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const auto payload_output_idx = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
                                                           OUTPUT_INDEX_OFFSET );
@@ -419,7 +420,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) proof payload output index mismatch for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const auto owner_len = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
                                                  OWNER_ADDRESS_LENGTH_OFFSET );
@@ -429,7 +430,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) proof payload owner length overflow for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const std::string payload_owner( payload.data() + OWNER_ADDRESS_OFFSET,
                                              payload.data() + OWNER_ADDRESS_OFFSET + owner_len );
@@ -444,7 +445,7 @@ namespace sgns
                                PreviewValue( tx->GetHash() ),
                                PreviewValue( payload_owner ),
                                PreviewValue( tx->GetSrcAddress() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const size_t      token_offset  = OWNER_ADDRESS_OFFSET + owner_len;
             const size_t      amount_offset = token_offset + TOKEN_ID_BYTES_IN_PAYLOAD;
@@ -454,7 +455,7 @@ namespace sgns
                 logger->debug( "ValidateWitness(Genius) unregistered input token for tx={} input_index={}",
                                PreviewValue( tx->GetHash() ),
                                input.output_idx_ );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const uint64_t input_amount = ReadUInt64BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
                                                         amount_offset );
@@ -462,7 +463,7 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) input amount overflow for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
@@ -471,28 +472,38 @@ namespace sgns
             auto       producer_transaction_result = TransactionManager::FetchTransaction(
                 *blockchain->GetGlobalDB(),
                 TransactionManager::GetTransactionPath( producer_hash ) );
-            if ( producer_transaction_result.has_error() || !producer_transaction_result.value() ||
-                 producer_transaction_result.value()->GetHash() != producer_hash )
+            if ( producer_transaction_result.has_error() || !producer_transaction_result.value() )
             {
-                logger->error( "ValidateWitness(Genius) missing producer transaction for input tx={}",
+                // The producer transaction has not CRDT-synced to this node yet:
+                // retryable, not invalid (certificate-first delivery order is
+                // unordered across deltas).
+                logger->debug( "ValidateWitness(Genius) producer transaction not yet synced for input tx={}",
                                PreviewValue( producer_hash ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kNotSynced;
+            }
+            if ( producer_transaction_result.value()->GetHash() != producer_hash )
+            {
+                logger->error( "ValidateWitness(Genius) producer transaction hash mismatch for input tx={}",
+                               PreviewValue( producer_hash ) );
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             auto producer_cert_result = blockchain->GetCertificateBySlot(
                 producer_transaction_result.value()->GetSlotID() );
             if ( producer_cert_result.has_error() )
             {
-                logger->error( "ValidateWitness(Genius) missing producer certificate for input tx={}",
+                // The producer's certificate record has not synced yet (or the
+                // producer never finalized): retryable, not invalid.
+                logger->debug( "ValidateWitness(Genius) producer certificate not yet synced for input tx={}",
                                PreviewValue( producer_hash ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kNotSynced;
             }
             if ( !TransactionManager::CertificateMatchesTransaction( producer_cert_result.value(),
                                                                      *producer_transaction_result.value() ) )
             {
                 logger->error( "ValidateWitness(Genius) producer certificate does not certify input tx={}",
                                PreviewValue( producer_hash ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const auto &producer_subject = producer_cert_result.value().proposal().subject();
             auto        producer_nonce   = ConsensusManager::DecodeNonceSubject( producer_subject );
@@ -500,14 +511,14 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) invalid producer nonce subject for input tx={}",
                                PreviewValue( input.txid_hash_.toReadableString() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             const auto &producer_commitment = producer_nonce.value().utxo_commitment();
             if ( producer_commitment.produced_outputs_root().size() != base::Hash256::size() )
             {
                 logger->error( "ValidateWitness(Genius) invalid producer output root size for input tx={}",
                                PreviewValue( input.txid_hash_.toReadableString() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             auto produced_root_result = base::Hash256::fromSpan( gsl::span(
                 reinterpret_cast<uint8_t *>( const_cast<char *>( producer_commitment.produced_outputs_root().data() ) ),
@@ -516,7 +527,7 @@ namespace sgns
             {
                 logger->error( "ValidateWitness(Genius) failed to decode producer output root for input tx={}",
                                PreviewValue( input.txid_hash_.toReadableString() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
 
             auto produced_hash = HashLeaf( payload_vec );
@@ -529,7 +540,7 @@ namespace sgns
                 {
                     logger->error( "ValidateWitness(Genius) failed to decode proof branch sibling for input tx={}",
                                    PreviewValue( input.txid_hash_.toReadableString() ) );
-                    return false;
+                    return IInputValidator::WitnessVerdict::kInvalid;
                 }
 
                 if ( step.is_left_sibling() )
@@ -546,7 +557,7 @@ namespace sgns
             {
                 logger->debug( "ValidateWitness(Genius) produced branch root mismatch for input tx={}",
                                PreviewValue( input.txid_hash_.toReadableString() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
         }
 
@@ -556,13 +567,13 @@ namespace sgns
             {
                 logger->debug( "ValidateWitness(Genius) unregistered output token for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
             if ( !add_amount( output_amount_total, output.encrypted_amount ) )
             {
                 logger->error( "ValidateWitness(Genius) output amount overflow for tx={}",
                                PreviewValue( tx->GetHash() ) );
-                return false;
+                return IInputValidator::WitnessVerdict::kInvalid;
             }
         }
 
@@ -572,10 +583,10 @@ namespace sgns
                            PreviewValue( tx->GetHash() ),
                            input_amount_total,
                            output_amount_total );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         logger->info( "ValidateWitness(Genius) succeeded for tx={}", PreviewValue( tx->GetHash() ) );
-        return true;
+        return IInputValidator::WitnessVerdict::kValid;
     }
 } // namespace sgns

@@ -3177,3 +3177,48 @@ TEST_F( ConsensusPendingLifecycleTest, ExpiredDurableVoteRecoveryDoesNotLockSlot
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).empty() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
 }
+
+TEST_F( ConsensusPendingLifecycleTest, PendingTtlExpiryDoesNotWipeSiblingSlotState )
+{
+    /**
+     * ExpirePendingProposals used ClearProposalSlot, which erases EVERY proposal
+     * sharing the canonical slot plus the whole slot state — so one deferred
+     * dependent's TTL took a quorate sibling's votes and window with it. Expiry
+     * must remove only the expired proposal's own entry; full-slot clearing is
+     * reserved for slot-terminal events.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    // Two proposals competing for ONE canonical slot (same burn facts, distinct
+    // nonces/hashes), both tracked as pending deferrals.
+    auto winner = MakeProposal( manager, registry, 96, "0xttl-siblings" );
+    winner.set_proposal_id( "a-ttl-winner" );
+    auto dependent = winner;
+    dependent.set_proposal_id( "z-ttl-dependent" );
+    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( winner );
+
+    // The sibling is a live tracked proposal (the quorate one whose votes the
+    // old code destroyed); the dependent is a deferred pending entry sharing the
+    // slot whose TTL fires.
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, winner );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, winner.proposal_id() ) );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        dependent,
+        "0xttl-siblings",
+        sgns::ConsensusManager::ValidationResult::Pending() ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ForcePendingExpired( manager, dependent.proposal_id() );
+    sgns::ConsensusPendingLifecycleTestAccess::ExpirePendingProposals( manager );
+
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, dependent.proposal_id() ) );
+    // Pre-fix, ClearProposalSlot erased the sibling AND the shared slot state.
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, winner.proposal_id() ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}

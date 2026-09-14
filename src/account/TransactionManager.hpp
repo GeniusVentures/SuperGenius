@@ -850,6 +850,8 @@ namespace sgns
         {
             VALID,
             DRIFT,
+            PENDING, ///< A producer dependency (transaction or certificate) has not
+                     /// CRDT-synced yet: retryable, not evidence of invalidity.
             INVALID
         };
 

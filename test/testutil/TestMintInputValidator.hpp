@@ -29,12 +29,13 @@ namespace sgns::test
             return true;
         }
 
-        bool ValidateWitness( const ConsensusSubject & /*subject*/,
-                              const std::shared_ptr<GeniusTransaction> & /*tx*/,
-                              const UTXOTxParameters & /*params*/,
-                              const std::shared_ptr<Blockchain> & /*blockchain*/ ) const override
+        IInputValidator::WitnessVerdict ValidateWitness(
+            const ConsensusSubject & /*subject*/,
+            const std::shared_ptr<GeniusTransaction> & /*tx*/,
+            const UTXOTxParameters & /*params*/,
+            const std::shared_ptr<Blockchain> & /*blockchain*/ ) const override
         {
-            return true;
+            return IInputValidator::WitnessVerdict::kValid;
         }
 
         bool RequiresConsensusUTXOData() const override

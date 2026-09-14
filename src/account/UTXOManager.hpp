@@ -44,6 +44,8 @@ namespace sgns
      * @brief Owns the local UTXO set, supports coin selection, validation, persistence,
      *        reservations, and deterministic snapshot hashing.
      */
+    class TransactionManagerPendingLifecycleTestAccess;
+
     class UTXOManager
     {
     public:
@@ -473,6 +475,7 @@ namespace sgns
 
     private:
         friend class CertificateFallbackTestAccess;
+        friend class TransactionManagerPendingLifecycleTestAccess;
         friend class UTXOManagerTestAccess;
 
         /// Prefix for UTXO-related keys in RocksDB
