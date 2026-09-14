@@ -32,9 +32,3 @@ target_link_libraries(base_crdt_test
     base_fs_test
     crdt_globaldb
     )
-
-add_library(std_list_adapter INTERFACE)
-
-target_link_libraries(std_list_adapter INTERFACE
-    outcome
-    )

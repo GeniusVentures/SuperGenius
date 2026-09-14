@@ -2,14 +2,15 @@
 
 #include "account/proto/SGTransaction.pb.h"
 
-#include "base/endian.h"
 #include "base/hexutil.hpp"
 #include <algorithm>
 #include <cctype>
 
+#include <boost/endian/conversion.hpp>
+
 std::vector<uint8_t> sgns::InputUTXOInfo::SerializeForSigning() const
 {
-    auto little_ended = htole32( output_idx_ );
+    auto little_ended = boost::endian::native_to_little( output_idx_ );
 
     std::vector<uint8_t> vec( 36 );
 
