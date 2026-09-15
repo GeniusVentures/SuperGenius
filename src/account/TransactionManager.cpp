@@ -5688,7 +5688,7 @@ namespace sgns
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Parent-child authority check failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
-                                               node_type_m,
+                                               full_node_m,
                                                __func__,
                                                tx->GetHash() );
             return ConsensusManager::ValidationResult::Reject();
