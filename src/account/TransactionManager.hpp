@@ -601,25 +601,6 @@ namespace sgns
                                              boost::system::error_code                      error = {} );
         void        CancelPendingTransactionWaits();
 
-        struct TrackedTx
-        {
-            std::shared_ptr<GeniusTransaction> tx;
-            TransactionStatus                  status;
-            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
-        };
-
-        struct ReplayProtectionResult
-        {
-            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
-        };
-
-        struct AccountUTXOState
-        {
-            uint64_t      version{ 0 };
-            base::Hash256 root{};
-            bool          initialized{ false };
-        };
-
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,

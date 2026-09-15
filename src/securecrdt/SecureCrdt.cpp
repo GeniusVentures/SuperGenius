@@ -686,14 +686,15 @@ namespace sgns::securecrdt
         {
             const bool registered = db_->RegisterElementFilter(
                 CandidatePattern( entry.domain ),
-                [weak_self](
-                    const sgns::crdt::pb::Element &element ) -> std::optional<std::vector<sgns::crdt::pb::Element>>
+                [weak_self]( const sgns::crdt::pb::Element &element )
                 {
                     if ( auto strong = weak_self.lock() )
                     {
-                        return strong->FilterCandidateApproval( element );
+                        return sgns::crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterCandidateApproval( element ) );
                     }
-                    return std::vector<sgns::crdt::pb::Element>{};
+                    // Legacy contract returned an engaged (empty) vector here: strip.
+                    return sgns::crdt::CRDTDataFilter::ElementFilterResult::Reject();
                 } );
             all_registered = all_registered && registered;
         }

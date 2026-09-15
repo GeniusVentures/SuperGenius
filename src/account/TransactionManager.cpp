@@ -2112,7 +2112,7 @@ namespace sgns
 
             if ( transaction->HasUTXOParameters() )
             {
-                if ( !BuildUTXOTransitionCommitment( transaction ).has_value() )
+                if ( !BuildUTXOTransitionCommitment( *transaction ).has_value() )
                 {
                     TransactionManagerLogger()->error(
                         "[{} - full: {}] {}: Missing required UTXO commitment for tx={} type={}",
@@ -2124,8 +2124,8 @@ namespace sgns
                     return outcome::failure( std::errc::invalid_argument );
                 }
 
-                if ( GetInputValidator( GetValidationChainId( transaction ) ).RequiresConsensusUTXOData() &&
-                     !BuildUTXOWitness( transaction ).has_value() )
+                if ( GetInputValidator( GetValidationChainId( *transaction ) ).RequiresConsensusUTXOData() &&
+                     !BuildUTXOWitness( *transaction ).has_value() )
                 {
                     TransactionManagerLogger()->error(
                         "[{} - full: {}] {}: Missing required UTXO witness for tx={} type={}",
@@ -2231,7 +2231,7 @@ namespace sgns
 
         for ( auto &transaction : transactions_sent )
         {
-            const auto  chain_id           = GetValidationChainId( transaction );
+            const auto  chain_id           = GetValidationChainId( *transaction );
             const auto &validator          = GetInputValidator( chain_id );
             const bool  utxo_data_required = validator.RequiresConsensusUTXOData();
 
@@ -4344,7 +4344,7 @@ namespace sgns
         if ( should_delete )
         {
             std::vector<crdt::pb::Element> additional_elements_to_delete;
-            auto                           maybe_proof_key = GetExpectedProofKey( element.key(), new_tx );
+            auto                           maybe_proof_key = GetExpectedProofKey( element.key(), new_tx.get() );
             if ( maybe_proof_key.has_value() )
             {
                 crdt::pb::Element proof_element;
@@ -6447,7 +6447,7 @@ namespace sgns
         {
             return std::nullopt;
         }
-        auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
+        auto tx_hash = base::Hash256::fromReadableString( tx.GetHash() );
         if ( tx_hash.has_error() )
         {
             return std::nullopt;
@@ -6709,6 +6709,12 @@ namespace sgns
                 }
             }
         };
+        const auto tx_hash = base::Hash256::fromReadableString( tx.GetHash() );
+        if ( tx_hash.has_error() )
+        {
+            return false;
+        }
+
         if ( !tx.HasUTXOParameters() )
         {
             return false;
@@ -6719,23 +6725,17 @@ namespace sgns
         {
             return false;
         }
-        const auto &inputs = params_opt->first;
-
-        std::vector<GeniusUTXO> produced_outputs;
-        if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
-        {
-            return false;
-        }
+        const auto &[inputs, outputs] = params_opt.value();
         remove_inputs( inputs );
         for ( std::uint32_t i = 0; i < outputs.size(); ++i )
         {
-            if ( output.GetOwnerAddress() == tx.GetSrcAddress() )
+            if ( outputs[i].dest_address == tx.GetSrcAddress() )
             {
                 snapshot.emplace_back( tx_hash.value(),
                                        i,
                                        outputs[i].encrypted_amount,
                                        outputs[i].token_id,
-                                       tx->GetSrcAddress() );
+                                       tx.GetSrcAddress() );
             }
         }
         return true;
@@ -6918,7 +6918,7 @@ namespace sgns
 
                     if ( apply_effects )
                     {
-                        auto parse_result = ParseTransaction( tx );
+                        auto parse_result = ParseTransaction( *tx );
                         if ( parse_result.has_error() )
                         {
                             // Release the reservation so a certificate-work retry re-applies
@@ -6997,7 +6997,7 @@ namespace sgns
 
                 if ( apply_effects )
                 {
-                    auto parse_result = ParseTransaction( tx );
+                    auto parse_result = ParseTransaction( *tx );
                     if ( parse_result.has_error() )
                     {
                         // Nothing durably changed for this entry yet; keep it
@@ -7022,16 +7022,6 @@ namespace sgns
                                                   __func__,
                                                   tx->GetHash() );
 
-                m_logger->debug( "{}: Set status of CONFIRMED to transaction {}", __func__, tx->GetHash() );
-                auto parse_result = ParseTransaction( *tx );
-                if ( parse_result.has_error() )
-                {
-                    // The tracked state was already promoted. Wake observers even when
-                    // applying its account-side effects fails.
-                    tx_lock.unlock();
-                    NotifyTransactionStatusChanged( tx->GetHash() );
-                    return outcome::failure( parse_result.error() );
-                }
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
@@ -7063,7 +7053,7 @@ namespace sgns
                     // An inconclusive expiry leaves no confirmed mint, so the burn has to
                     // become re-mintable: without this the outpoint stays RESERVED forever
                     // and the bridge catch-up cursor stalls on it permanently.
-                    ReleaseBridgeMintReservation( tx );
+                    ReleaseBridgeMintReservation( *tx );
                 }
                 TransactionManagerLogger()->info(
                     "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
@@ -7106,7 +7096,7 @@ namespace sgns
                     {
                         if ( tx->GetType() == "mint-v2" )
                         {
-                            ReleaseBridgeMintReservation( tx );
+                            ReleaseBridgeMintReservation( *tx );
                         }
                         else
                         {
