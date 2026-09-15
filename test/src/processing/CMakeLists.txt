@@ -121,6 +121,35 @@ endif()
 
 set_tests_properties(elm_settlement_test PROPERTIES TIMEOUT 120)
 
+# elmbridge 04-05 (E2E-01..E2E-03, milestone acceptance): empty-cache
+# single-node E2E + overtime leg + non-ELM regression gate.
+# SGPROC_ELM_TEST_MODEL_DIR-gated (GTEST_SKIP with the README cross-ref);
+# TIMEOUT 1800 = ~4x margin over the ~557MB-download leg (P4-10).
+addtest(elm_e2e_test
+    elm_e2e_test.cpp
+)
+
+target_link_libraries(elm_e2e_test
+    processing_service
+    SGProcessingProto
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(elm_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(elm_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(elm_e2e_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(elm_e2e_test PROPERTIES TIMEOUT 1800)
+
 # Phase 19 (VALD-02): points the new Vald02* TEST cases at this phase's fresh, real, already
 # checked-in cross-machine .cap fixture pair, living in the outer repo's .planning tree -- not
 # copied or duplicated into SuperGenius (D-01-REVISED). Four "../" levels walk from this directory
