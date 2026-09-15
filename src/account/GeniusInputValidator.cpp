@@ -464,7 +464,28 @@ namespace sgns
 
             std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
 
-            auto producer_cert_result = blockchain.GetCertificateBySubjectHash( input.txid_hash_.toReadableString() );
+            const auto producer_hash               = input.txid_hash_.toReadableString();
+            auto       producer_transaction_result = TransactionManager::FetchTransaction(
+                *blockchain.GetGlobalDB(),
+                TransactionManager::GetTransactionPath( producer_hash ) );
+            if ( producer_transaction_result.has_error() || !producer_transaction_result.value() )
+            {
+                // The producer transaction has not CRDT-synced to this node yet:
+                // retryable, not invalid (certificate-first delivery order is
+                // unordered across deltas).
+                logger->debug( "ValidateWitness(Genius) producer transaction not yet synced for input tx={}",
+                               PreviewValue( producer_hash ) );
+                return IInputValidator::WitnessVerdict::kNotSynced;
+            }
+            if ( producer_transaction_result.value()->GetHash() != producer_hash )
+            {
+                logger->error( "ValidateWitness(Genius) producer transaction hash mismatch for input tx={}",
+                               PreviewValue( producer_hash ) );
+                return IInputValidator::WitnessVerdict::kInvalid;
+            }
+
+            auto producer_cert_result = blockchain.GetCertificateBySlot(
+                producer_transaction_result.value()->GetSlotID() );
             if ( producer_cert_result.has_error() )
             {
                 // The producer's certificate record has not synced yet (or the
