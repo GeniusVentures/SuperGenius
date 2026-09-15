@@ -71,10 +71,10 @@ namespace sgns
             return tm.CheckTransactionValidity( nonces );
         }
 
-        static outcome::result<void> ParseTransaction( TransactionManager                        &tm,
+        static outcome::result<void> ParseTransaction( TransactionManager         &tm,
                                                        const std::shared_ptr<GeniusTransaction> &tx )
         {
-            return tm.ParseTransaction( tx );
+            return tm.ParseTransaction( *tx );
         }
 
         static std::optional<TransactionManager::TrackedTx> GetTrackedTxByHash( TransactionManager &tm,

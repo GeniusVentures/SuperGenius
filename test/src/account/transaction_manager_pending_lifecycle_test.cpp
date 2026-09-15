@@ -763,9 +763,9 @@ namespace
 
         sgns::IInputValidator::WitnessVerdict ValidateWitness(
             const sgns::ConsensusSubject &,
-            const std::shared_ptr<sgns::GeniusTransaction> &,
+            const sgns::GeniusTransaction &,
             const sgns::UTXOTxParameters &,
-            const std::shared_ptr<sgns::Blockchain> & ) const override
+            const sgns::Blockchain & ) const override
         {
             return verdict_;
         }
@@ -803,7 +803,7 @@ TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInval
     transaction->MakeSignature( *account_ );
     ASSERT_TRUE( transaction );
 
-    auto commitment = manager_->BuildUTXOTransitionCommitment( transaction );
+    auto commitment = manager_->BuildUTXOTransitionCommitment( *transaction );
     ASSERT_TRUE( commitment.has_value() );
     auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
                                                                transaction->GetNonce(),
@@ -814,12 +814,12 @@ TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInval
     ASSERT_TRUE( subject.has_value() );
 
     {
-        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), *transaction );
         EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::PENDING );
     }
     {
         validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kInvalid;
-        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), *transaction );
         EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::INVALID );
     }
 
