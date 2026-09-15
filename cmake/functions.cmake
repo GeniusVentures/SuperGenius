@@ -25,6 +25,16 @@ function(addtest test_name)
         LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/test_lib
     )
     disable_clang_tidy(${test_name})
+    # Windows: the vendored Vulkan loader's DLL must sit next to every exe that
+    # imports it (SGProcessors pulls it into the whole test closure) or the
+    # process dies with 0xc0000135 before main() runs. copy_if_different makes
+    # the per-test copies no-ops after the first. VULKAN_RUNTIME_DLL is
+    # resolved in build/CommonBuildParameters.cmake.
+    if(WIN32 AND VULKAN_RUNTIME_DLL)
+        add_custom_command(TARGET ${test_name} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${VULKAN_RUNTIME_DLL}" "$<TARGET_FILE_DIR:${test_name}>/vulkan-1.dll")
+    endif()
 endfunction()
 
 function(addtest_part test_name)

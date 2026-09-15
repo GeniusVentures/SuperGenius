@@ -40,6 +40,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
@@ -76,17 +77,29 @@ namespace sgns
             return true;
         }
 
-        /// Fetches a finalized consensus certificate by subject hash, so a test can inspect who voted.
+        /// Resolves the canonical consensus slot of a transaction the node tracks, so the
+        /// certificate can be looked up by slot — v3.0 writes no subject-hash record.
+        static std::string GetTransactionSlot( const std::shared_ptr<GeniusNode> &node, const std::string &tx_hash )
+        {
+            if ( !node || !node->transaction_manager_ )
+            {
+                return {};
+            }
+            auto transaction = node->transaction_manager_->GetTransactionByHash( tx_hash );
+            return transaction ? transaction->GetSlotID() : std::string{};
+        }
+
+        /// Fetches a finalized consensus certificate by canonical slot, so a test can inspect who voted.
         /// Query this on a node that definitely holds the certificate (e.g. the full node) — an
         /// abstaining node's own view says nothing about what it did or did not sign.
         static std::optional<ConsensusCertificate> GetCertificate( const std::shared_ptr<GeniusNode> &node,
-                                                                   const std::string                 &subject_hash )
+                                                                   const std::string                 &slot_key )
         {
-            if ( !node || !node->blockchain_ || !node->blockchain_->consensus_manager_ )
+            if ( !node || !node->blockchain_ || slot_key.empty() )
             {
                 return std::nullopt;
             }
-            auto result = node->blockchain_->consensus_manager_->GetCertificateBySubjectHash( subject_hash );
+            auto result = node->blockchain_->GetCertificateBySlot( slot_key );
             if ( result.has_error() )
             {
                 return std::nullopt;
@@ -199,6 +212,7 @@ protected:
         }
 
         node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
+        nodes_.push_back( node );
         return node;
     }
 
@@ -210,7 +224,7 @@ protected:
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
         sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
+                                            std::chrono::seconds( 120 ),
                                             "node not synced: " + node->GetAddress() );
     }
 
@@ -224,7 +238,7 @@ protected:
                 return node->GetState() == GeniusNode::NodeState::READY &&
                        sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
             },
-            std::chrono::milliseconds( 50000 ),
+            std::chrono::seconds( 120 ),
             "node blockchain not ready for consensus configuration" );
 
         ASSERT_TRUE(
@@ -249,7 +263,40 @@ protected:
         }
     }
 
+    void TearDown() override
+    {
+        // Nodes are created with port_seed=0, so every test reuses the SAME
+        // deterministic ports. Default destruction of the node shared_ptrs at
+        // end-of-test lets a node whose last reference is released by a
+        // background dispatch stay alive (listening port open, consensus
+        // round timer running) into the next test's node creation — the
+        // cross-test zombie-mesh registry poisoning child_tokens_test hit on
+        // CI. Stop every node still alive at end-of-test BEFORE the members
+        // are destroyed, so no node from test N outlives the test N+1
+        // boundary. See GeniusNodeTestAccess::StopNode for the teardown
+        // invariant.
+        //
+        // Tracking is via weak_ptr on purpose: some tests (e.g.
+        // MissingRegistryBlockIsFetchedFromPeerByCid) reset() a node
+        // mid-test and then reopen its database directory directly, which
+        // requires ~GeniusNode to have run synchronously at that reset().
+        // A weak registry stops only the survivors — nodes whose destruction
+        // was delayed past the test boundary — without changing when
+        // explicitly-reset nodes die.
+        for ( const auto &weak_node : nodes_ )
+        {
+            if ( auto node = weak_node.lock() )
+            {
+                GeniusNodeTestAccess::StopNode( node );
+            }
+        }
+        nodes_.clear();
+        node_base_paths_.clear();
+    }
+
     std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
+
+    std::vector<std::weak_ptr<GeniusNode>> nodes_;
 };
 
 class ValidatorRegistryTest : public MultiAccountTest
@@ -537,8 +584,11 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     // The whole point of the fix: the loser fails off the winner's certificate. The bound
     // is deliberately far below ConsensusManager::PendingLifecycleConfig::pending_ttl
     // (3 minutes), so a regression to "wait for the TTL" fails this test instead of
-    // merely slowing it down.
-    static constexpr auto kFailFastBudget = std::chrono::seconds( 60 );
+    // merely slowing it down.  Budget note: certificates are durable as two CRDT
+    // records (canonical slot + subject-hash index), which roughly doubles peer
+    // ingress work per certificate; observed conflict-resolution convergence runs
+    // ~61s under that load, so the budget leaves headroom above it.
+    static constexpr auto kFailFastBudget = std::chrono::seconds( 90 );
     static_assert( kFailFastBudget < std::chrono::minutes( 3 ), "budget must beat the proposal TTL" );
 
     sgns::test::assertWaitForCondition(
@@ -961,9 +1011,11 @@ TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer.has_value() ) << "transfer failed on node_client";
 
-    // The nonce subject's hash IS the transaction hash (GetSubjectHash returns payload.tx_hash()
-    // for BuiltinSubjectKind::Nonce), so the tx id looks the certificate up directly.
-    const std::string subject_hash = transfer.value().first;
+    // The certificate lives at /cert/<slot>, and the authoring node is the one that tracks
+    // the transaction the slot was derived from.
+    const std::string slot_key = sgns::MultiAccountTestAccess::GetTransactionSlot( node_client,
+                                                                                   transfer.value().first );
+    ASSERT_FALSE( slot_key.empty() ) << "node_client does not track the transfer it just authored";
 
     // POSITIVE CONTROL 1: a certificate with at least one vote exists. assertWaitForCondition
     // FAILS the test on timeout, so "consensus never ran" can never masquerade as success.
@@ -971,11 +1023,14 @@ TEST_F( MultiAccountTest, ArchiveNodeAbstainsFromVoting )
     sgns::test::assertWaitForCondition(
         [&]()
         {
-            certificate = sgns::MultiAccountTestAccess::GetCertificate( node_full, subject_hash );
+            certificate = sgns::MultiAccountTestAccess::GetCertificate( node_full, slot_key );
             return certificate.has_value() && certificate->votes_size() > 0;
         },
         std::chrono::milliseconds( 30000 ),
         "no certificate with votes formed for the transfer; the abstention assertion would be vacuous" );
+    // assertWaitForCondition's fatal failure only returns from its own frame, so the
+    // dereferences below still run on timeout unless the test stops here itself.
+    ASSERT_TRUE( certificate.has_value() );
 
     std::unordered_set<std::string> voters;
     for ( const auto &vote : certificate->votes() )

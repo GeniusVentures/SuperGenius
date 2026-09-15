@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-      CCACHE_MAXSIZE: "30G"
+      CCACHE_MAXSIZE: "50"
     outputs:
       linux_x64: ${{ steps.pick.outputs.linux_x64 }}
       linux_arm: ${{ steps.pick.outputs.linux_arm }}

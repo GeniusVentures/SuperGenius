@@ -110,13 +110,21 @@ protected:
 
     static void TearDownTestSuite()
     {
+        // Ordered pre-destruction shutdown (see GeniusNodeTestAccess::StopNode):
+        // stop each node's services, round timer and pubsub listener BEFORE the
+        // shared_ptr release, so default destruction can never leave a zombie
+        // node overlapping a later binary phase. Same landmine child_tokens_test
+        // hit on CI (port_seed=0 reuses the same ports across suites).
         std::cout << "Tear down main" << std::endl;
+        sgns::GeniusNodeTestAccess::StopNode( node_main );
         node_main.reset();
 
         std::cout << "Tear down 2" << std::endl;
+        sgns::GeniusNodeTestAccess::StopNode( node_proc1 );
         node_proc1.reset();
 
         std::cout << "Tear down 3" << std::endl;
+        sgns::GeniusNodeTestAccess::StopNode( node_proc2 );
         node_proc2.reset();
     }
 };

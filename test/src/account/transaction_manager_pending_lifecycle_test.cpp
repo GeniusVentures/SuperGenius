@@ -12,6 +12,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
@@ -57,6 +58,19 @@ namespace sgns
                                                              TransactionManager::TransactionStatus     status )
         {
             return manager.ChangeTransactionState( transaction, status );
+        }
+
+        static std::optional<TransactionManager::TrackedTx> GetTrackedTx( TransactionManager    &manager,
+                                                                         const std::string     &tx_hash )
+        {
+            std::shared_lock lock( manager.tx_mutex_m );
+            auto             it = manager.tx_processed_m.find( TransactionManager::GetTransactionPath( tx_hash ) );
+            return it != manager.tx_processed_m.end() ? std::optional{ it->second } : std::nullopt;
+        }
+
+        static void SetFailNextPutUTXOStore( sgns::UTXOManager &utxo_manager, bool fail )
+        {
+            utxo_manager.SetFailNextPutUTXOStoreForTest( fail );
         }
     };
 } // namespace sgns
@@ -238,11 +252,13 @@ namespace
 
             sgns::crdt::GlobalDB::Buffer certificate_data;
             certificate_data.put( certificate.SerializeAsString() );
-            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetHash() ),
+            // The canonical slot record is the sole certificate authority: store
+            // and check at the transaction's slot, never at its hash.
+            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetSlotID() ),
                                    certificate_data,
                                    { "CRDT.Datastore.TEST.Channel" } )
                              .has_value() );
-            ASSERT_TRUE( blockchain_->CheckCertificate( transaction->GetHash() ) );
+            ASSERT_TRUE( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) );
         }
 
         void StoreTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
@@ -432,6 +448,10 @@ TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPrevio
 {
     auto previous_transaction = MakeTransaction( 0 );
     StoreCertificate( previous_transaction );
+    // The certificate's slot record alone no longer proves a chain link from the
+    // bare head hash (the by-hash recovery path is removed; no legacy records
+    // exist): the durable transaction plus its slot certificate do.
+    StoreTransaction( previous_transaction );
     const auto persisted_hash = account_->GetLocalConfirmedTxHash( 0 );
     ASSERT_TRUE( persisted_hash.has_value() );
     ASSERT_EQ( persisted_hash.value(), previous_transaction->GetHash() );
@@ -528,4 +548,207 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     DeleteStoredTransaction( previous_transaction );
 
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
+}
+
+TEST_F( TransactionManagerRecoveryTest, FundsAPIsFailClosedAfterStop )
+{
+    /**
+     * Stop() detaches the manager from GlobalDB, Blockchain and the account
+     * WITHOUT moving state_m out of READY — the funds APIs must check
+     * stopped_ separately from the state. A late burn event on the EthWatch
+     * thread (or an RPC call racing shutdown) that passed the READY-only
+     * guard would enqueue a mint no live manager ever sends while returning
+     * success to the relayer.
+     */
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    manager_->Stop();
+
+    EXPECT_TRUE( manager_->TransferFunds( 1, account_->GetAddress(), kTokenId ).has_error() );
+    EXPECT_TRUE( manager_
+                     ->MintFunds( 1,
+                                  std::string( 64, '1' ),
+                                  "public",
+                                  kTokenId,
+                                  account_->GetAddress() )
+                     .has_error() );
+    EXPECT_TRUE(
+        manager_->MigrationFunds( 1, "0.2.0", kTokenId, account_->GetAddress() ).has_error() );
+}
+
+TEST_F( TransactionManagerRecoveryTest, PutConvergentImmutableFailsClosedAfterGlobalDBShutdown )
+{
+    /**
+     * ShutdownNow() moves the CRDT datastore handle out of GlobalDB: every
+     * accessor must go through ActiveCRDTDataStore() and fail closed.
+     * PutConvergentImmutable dereferenced the raw member — the exact class
+     * of null-deref that segfaulted migration_sync_test on aarch64 — so a
+     * certificate write racing node shutdown crashed instead of failing.
+     */
+    manager_->Stop();
+    db_->ShutdownNow();
+
+    sgns::crdt::HierarchicalKey key( "immutable/after-shutdown" );
+    sgns::crdt::GlobalDB::Buffer value;
+    value.put( "certificate-bytes" );
+    const auto put = db_->PutConvergentImmutable( key, value, {} );
+    ASSERT_TRUE( put.has_error() );
+    EXPECT_EQ( put.error(), std::errc::operation_canceled );
+}
+
+TEST_F( TransactionManagerRecoveryTest, ConcurrentDuplicateBurnMintsExactlyOnce )
+{
+    /**
+     * Duplicate-burn TOCTOU: two concurrent MintFunds calls for the same burn
+     * event (relayer redelivery racing an RPC mint) could both pass the
+     * reserved/consumed/marker checks before either reserved, and ReserveUTXOs
+     * was silent when the same id already held the reservation — so both mints
+     * were created and both applied effects, minting one verified burn twice.
+     * The atomic TryReserveOutpoint claim must admit exactly one caller
+     * regardless of interleaving.
+     */
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    const std::string burn_hash = std::string( 64, '9' );
+    std::atomic<int>  successes{ 0 };
+    std::atomic<bool> go{ false };
+
+    auto worker = [&]
+    {
+        while ( !go.load( std::memory_order_acquire ) )
+        {
+            std::this_thread::yield();
+        }
+        auto mint = manager_->MintFunds( 1000, burn_hash, "public", kTokenId, "" );
+        if ( mint.has_value() )
+        {
+            successes.fetch_add( 1 );
+        }
+    };
+
+    std::thread first( worker );
+    std::thread second( worker );
+    go.store( true, std::memory_order_release );
+    first.join();
+    second.join();
+
+    EXPECT_EQ( successes.load(), 1 );
+}
+
+TEST_F( TransactionManagerRecoveryTest, NonMintConfirmAppliesEffectsBeforeConfirmRecord )
+{
+    /**
+     * The non-mint CONFIRMED path wrote the CONFIRMED tracking record BEFORE
+     * ParseTransaction, so a parse failure stranded CONFIRMED-without-effects
+     * and redelivery short-circuited on the existing entry — permanently
+     * unrecoverable. Effects must apply first; a failed parse stays retryable
+     * (VERIFYING, effects_applied=false) and a retry completes the confirm.
+     */
+    auto transaction = MakeTransaction();
+    ASSERT_TRUE( transaction );
+
+    // First confirm attempt fails inside ParseTransaction (output store fails).
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetFailNextPutUTXOStore(
+        account_->GetUTXOManager(), true );
+    auto first = sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *manager_, transaction, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_TRUE( first.has_error() );
+
+    auto tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                     transaction->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, sgns::TransactionManager::TransactionStatus::VERIFYING );
+    EXPECT_FALSE( tracked->effects_applied );
+
+    // Retry with the store healthy: effects apply, then the CONFIRMED record.
+    auto second = sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *manager_, transaction, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_TRUE( second.has_value() );
+
+    tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_, transaction->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( tracked->effects_applied );
+}
+
+namespace
+{
+    /// Validator whose witness verdict is controllable, registered for a
+    /// dedicated chain id so the pending mapping can be exercised without
+    /// building full witness proofs.
+    class ControllableWitnessValidator final : public sgns::IInputValidator
+    {
+    public:
+        sgns::IInputValidator::WitnessVerdict verdict_ = sgns::IInputValidator::WitnessVerdict::kValid;
+
+        bool ValidateUTXOParameters( const sgns::UTXOTxParameters &,
+                                     const std::string &,
+                                     const sgns::UTXOManager & ) const override
+        {
+            return true;
+        }
+
+        sgns::IInputValidator::WitnessVerdict ValidateWitness(
+            const sgns::ConsensusSubject &,
+            const std::shared_ptr<sgns::GeniusTransaction> &,
+            const sgns::UTXOTxParameters &,
+            const std::shared_ptr<sgns::Blockchain> & ) const override
+        {
+            return verdict_;
+        }
+
+        bool RequiresConsensusUTXOData() const override
+        {
+            return false;
+        }
+    };
+} // namespace
+
+TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInvalid )
+{
+    /**
+     * Witness validation conflated "producer not synced yet" with "invalid":
+     * cross-delta arrival order is unordered, so certificate-first delivery
+     * turned a transient gap into a hard validation failure. kNotSynced must
+     * map to PENDING (retryable), with INVALID still rejected.
+     */
+    static ControllableWitnessValidator validator;
+    validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kNotSynced;
+    ASSERT_TRUE( sgns::IInputValidator::Register( "witness-pending-chain", &validator ) );
+
+    // The tx must carry UTXO parameters to reach the validator and route to
+    // the controllable validator's chain: a MintV2 with a burn input whose
+    // producer record is absent locally — exactly the unsynced shape.
+    const auto producer_hash = sgns::base::Hash256::fromReadableString( std::string( 64, '7' ) ).value();
+    auto transaction = std::make_shared<sgns::MintTransactionV2>( sgns::MintTransactionV2::New(
+        1,
+        "witness-pending-chain",
+        kTokenId,
+        MakeDAG( account_->ReserveNextNonce() ),
+        { { producer_hash, 0, {} } },
+        account_->GetAddress() ) );
+    transaction->MakeSignature( *account_ );
+    ASSERT_TRUE( transaction );
+
+    auto commitment = manager_->BuildUTXOTransitionCommitment( transaction );
+    ASSERT_TRUE( commitment.has_value() );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                               transaction->GetNonce(),
+                                                               transaction->GetHash(),
+                                                               transaction->SerializeToEmbeddedTransaction(),
+                                                               commitment,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    {
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::PENDING );
+    }
+    {
+        validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kInvalid;
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::INVALID );
+    }
+
+    sgns::IInputValidator::UnregisterIf( "witness-pending-chain", &validator );
 }

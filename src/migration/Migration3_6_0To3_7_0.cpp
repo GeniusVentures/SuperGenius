@@ -101,7 +101,7 @@ namespace sgns
 
         crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-        auto version_ret = db_3_7_0_->GetDataStore()->get( version_key );
+        auto version_ret = db_3_7_0_->GetRaw( version_key );
 
         if ( version_ret.has_error() )
         {
@@ -344,7 +344,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         crdt::GlobalDB::Buffer version_value;
         version_value.put( ToVersion() );
-        BOOST_OUTCOME_TRY( db_3_7_0_->GetDataStore()->put( version_key, version_value ) );
+        BOOST_OUTCOME_TRY( db_3_7_0_->PutRaw( version_key, version_value ) );
         logger_->info( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();
@@ -385,7 +385,7 @@ namespace sgns
 
         crdt::GlobalDB::Buffer key_buf;
         key_buf.put( std::string( kLegacyUTXOPrefix.substr( 0, kLegacyUTXOPrefix.size() - 1 ) ) );
-        auto utxo_list = db_3_6_0_->GetDataStore()->query( key_buf );
+        auto utxo_list = db_3_6_0_->QueryRaw( key_buf );
         if ( utxo_list.has_error() )
         {
             if ( utxo_list.error() == storage::DatabaseError::NOT_FOUND )

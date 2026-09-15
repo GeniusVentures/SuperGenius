@@ -119,4 +119,11 @@ namespace sgns
     {
         return { GetSrcAddress() };
     }
+
+    std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> &
+    GeniusTransaction::GetDeSerializers()
+    {
+        static std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+        return deserializers_map;
+    }
 }

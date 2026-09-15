@@ -113,13 +113,15 @@ namespace
     {
         return [&burn_count]( const std::vector<eth::abi::AbiValue> &decoded_values,
                               const std::string                     &tx_hash_hex,
-                              const std::string                     &chain_id_str ) -> bool
+                              const std::string                     &chain_id_str )
+            -> sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome
         {
             (void) decoded_values;
             (void) tx_hash_hex;
             (void) chain_id_str;
             burn_count.fetch_add( 1ull, std::memory_order_relaxed );
-            return true;
+            // Counting only: report the burn as settled so the cursor advances as before.
+            return sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome::Processed;
         };
     }
 } // anonymous namespace
@@ -177,6 +179,17 @@ protected:
     /** @brief Pre-node burn tx hashes seeded on the local Anvil fork before any node starts. */
     static std::vector<std::string> s_pre_node_burn_hashes;
 
+    /**
+     * @brief Address of node_main's account — the EXACT burn recipient.
+     *
+     * The pre-node burns pay EthereumKeyGenerator(kAnvilAccountHexKeys[0]).
+     * GetEntirePubValue(), the source key's own public point. node_main is created
+     * FromPrivateKey-from-storage with that EXACT key (seeded via
+     * SeedAccountWithExactKey), because NewFromPrivateKey's legacy derivation yields a
+     * DIFFERENT address that would never receive the mints.
+     */
+    static std::string s_receiving_address;
+
     /** @brief Anvil fork block (eth_blockNumber captured BEFORE pre-node burns per D-22). */
     static uint64_t s_fork_block;
 
@@ -209,6 +222,18 @@ protected:
 
     /** @brief Timeout for the auto-mint path after node READY (scan runs after CRDT sync). */
     static inline constexpr std::chrono::milliseconds kCatchupMintTimeout{ 30000 };
+
+    /**
+     * @brief Budget for Test A's full auto-mint sequence: the watcher's first poll plus
+     *        ONE consensus round per seeded burn.
+     *
+     * Mint proposals for the backfilled burns serialize through consensus (~6s per round
+     * measured on Linux Debug), so the budget must scale with kNumCatchupBurns. The flat
+     * kCatchupMintTimeout it replaced expired ~300ms before the third mint's certificate
+     * landed, failing at balance 2 of 3.
+     */
+    static inline constexpr std::chrono::milliseconds kCatchupAllMintsTimeout{
+        kCatchupMintTimeout + std::chrono::milliseconds{ kNumCatchupBurns * 20000 } };
 
     /** @brief > production 15s poll_interval; gates on node READY liveness for Test C (D-26). */
     static inline constexpr std::chrono::milliseconds kCatchupPollIntervalGate{ 16000 };
@@ -255,6 +280,7 @@ std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc1 = nullptr;
 std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc2 = nullptr;
 sgns::test::anvil::AnvilProcess BridgeAnvilCatchupE2ETest::s_anvil;
 std::vector<std::string>        BridgeAnvilCatchupE2ETest::s_pre_node_burn_hashes;
+std::string                     BridgeAnvilCatchupE2ETest::s_receiving_address;
 uint64_t                        BridgeAnvilCatchupE2ETest::s_fork_block = 0ull;
 
 std::array<GeniusNodeConfig, BridgeAnvilCatchupE2ETest::kNodeCount> BridgeAnvilCatchupE2ETest::s_configs = { {
@@ -356,6 +382,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         const std::string              sgns_dest = key_gen.GetEntirePubValue();
         spdlog::info( "catchup_e2e: derived SGNS destination {} from private key", sgns_dest.substr( 0, 16 ) );
 
+        // The burns above pay the source key's OWN public point. Seed the receiving
+        // account with that exact key so node_main (created FromPrivateKey-from-storage
+        // below) owns the burn recipient and the minted funds are spendable by it.
+        // NewFromPrivateKey's legacy derivation produces a different address and
+        // would never see these mints.
+        s_receiving_address = sgns::test::anvil::SeedAccountWithExactKey( kAnvilAccountHexKeys[0] );
+        ASSERT_FALSE( s_receiving_address.empty() )
+            << "Could not seed the receiving account with the exact burn-recipient key";
+        ASSERT_EQ( s_receiving_address, sgns_dest )
+            << "Seeded receiving account must own the burn destination";
+
         spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
         for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
         {
@@ -393,17 +430,14 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
                R"("],"status":"active"}])";
     };
 
-    // Create ALL three nodes FIRST (matching Plan 04.1-01 pattern) so
-    // SetAdditionalGenesisValidatorAddresses has every address before the
-    // ValidatorRegistry initializes. The burn seeding happens AFTER the
-    // genesis validators are registered so the catch-up scan discovers the
-    // burns when it fires at READY.
+    // Create the Light nodes FIRST and register them as genesis validators before the
+    // Full node exists. A node starts initializing its blockchain inside New(), and that
+    // init defers forever ("validator registry not initialized") unless the genesis
+    // validator set is already registered — creating node_main first races its own
+    // registration, so the cluster never reaches READY. The burn seeding happens AFTER
+    // the genesis validators are registered so the catch-up scan discovers the burns
+    // when it fires at READY.
     const char *kWNodeType[] = { "Full", "Light", "Light" };
-
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
-    node_main->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
@@ -415,12 +449,16 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
     node_proc2->SetChainlistFetcher( chainlist_fetcher );
 
-    // Register all node addresses as genesis validators IMMEDIATELY after node
-    // creation so the ValidatorRegistry bootstraps the genesis registry before
-    // the blockchain attempts to initialize (must be called before the genesis
-    // block is created).
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { node_proc1->GetAddress(), node_proc2->GetAddress() } );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
+    // Load node_main from the pre-seeded storage so it carries the EXACT
+    // burn-recipient key (see SeedAccountWithExactKey above) — its address IS the
+    // destination the pre-node burns pay, so the auto-minted funds are its own.
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
+    node_main->SetChainlistFetcher( chainlist_fetcher );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
                   node_main->GetAddress().substr( 0, 16 ) );
 
@@ -520,7 +558,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
     // a scan) and provides zero coverage (WR-01).
     EXPECT_WAIT_FOR_CONDITION(
         [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
-        kCatchupMintTimeout,
+        kCatchupAllMintsTimeout,
         "Catch-up scan must mint all pre-node burns",
         nullptr );
 

@@ -120,4 +120,13 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
                                   std::chrono::milliseconds( 150000 ),
                                   "Recovery node balance not updated in time" );
+
+    // The balance arrives while the recovery node is still booting, and the boot handler
+    // holds a strong reference: returning here would drop the test's shared_ptr without
+    // running ~GeniusNode, leaving the node's io_ threads alive past main() to fault on
+    // spdlog's already-destroyed static registry. Wait for the boot to finish so the
+    // destructor runs on this thread and joins them.
+    test::assertWaitForCondition( [&]() { return recoveryNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 150000 ),
+                                  "Recovery node did not finish booting" );
 }

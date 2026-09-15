@@ -39,14 +39,18 @@ namespace sgns::test
     /// @brief Build 3 genuinely divergent per-slot RPC endpoint mock configs (DIRECT +
     ///        2x PUBLIC), each with a distinct URL, for exercising RPC-endpoint
     ///        disagreement against the >75% weighted quorum rule (D-09).
-    /// @param direct_behavior   Behavior for the "mock://direct" slot (default kSuccess).
+    /// @param direct_behavior   Behavior for the DIRECT slot (default kSuccess).
     /// @param public1_behavior  Behavior for the "mock://public1" slot (default kWrongLogs).
     /// @param public2_behavior  Behavior for the "mock://public2" slot (default kTimeout).
-    /// @return Array of exactly 3 MockEndpointConfig with distinct "mock://" URLs.
+    /// @param direct_url        URL for the DIRECT slot. Overridable because a caller may
+    ///                          need that slot to carry a URL a real transport can also
+    ///                          resolve, while its behavior still comes from the mock.
+    /// @return Array of exactly 3 MockEndpointConfig with distinct URLs.
     std::array<MockEndpointConfig, 3> BuildDivergentSlotConfigs(
         MockBehavior direct_behavior  = MockBehavior::kSuccess,
         MockBehavior public1_behavior = MockBehavior::kWrongLogs,
-        MockBehavior public2_behavior = MockBehavior::kTimeout );
+        MockBehavior public2_behavior = MockBehavior::kTimeout,
+        std::string  direct_url       = "mock://direct" );
 
 } // namespace sgns::test
 

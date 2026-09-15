@@ -1,6 +1,6 @@
 /**
  * @file       registration_transaction_test.cpp
- * @brief      Unit tests for RegistrationTransaction — factory, serialization round-trip, topics,
+ * @brief      Unit tests for RegistrationTransaction â€” factory, serialization round-trip, topics,
  *             filter gates, and end-to-end registration flow.
  * @date       2026-07-15
  * @author     (Phase 4)
@@ -61,7 +61,7 @@ namespace
 } // namespace
 
 // ---------------------------------------------------------------------------
-// RoundTripSerialization — SerializeByteVector → DeSerializeByteVector
+// RoundTripSerialization â€” SerializeByteVector â†’ DeSerializeByteVector
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionTest, RoundTripSerialization )
 {
@@ -97,7 +97,7 @@ TEST_F( RegistrationTransactionTest, RoundTripSerialization )
 }
 
 // ---------------------------------------------------------------------------
-// FactoryFillHash — New() calls FillHash; GetHash is non-empty and GetType is "registration"
+// FactoryFillHash â€” New() calls FillHash; GetHash is non-empty and GetType is "registration"
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionTest, FactoryFillHash )
 {
@@ -116,7 +116,7 @@ TEST_F( RegistrationTransactionTest, FactoryFillHash )
 }
 
 // ---------------------------------------------------------------------------
-// SerializeToEmbeddedTransaction — oneof registration() set correctly
+// SerializeToEmbeddedTransaction â€” oneof registration() set correctly
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionTest, SerializeToEmbeddedTransaction )
 {
@@ -141,7 +141,7 @@ TEST_F( RegistrationTransactionTest, SerializeToEmbeddedTransaction )
 }
 
 // ---------------------------------------------------------------------------
-// GetTopics — includes main_address_
+// GetTopics â€” includes main_address_
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionTest, GetTopics )
 {
@@ -220,7 +220,7 @@ namespace
             auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
             assert( load_result.has_value() );
 
-            // Second bare identity (D-60/D-65, Phase 3 Plan 04) — the "child" used by
+            // Second bare identity (D-60/D-65, Phase 3 Plan 04) â€” the "child" used by
             // CONS-01/CONS-02/REGR-01/02/03 tests. No own TransactionManager, per
             // 03-RESEARCH.md's Open Question #1 recommendation: the gates under test
             // (CheckParentChildAuthority/CheckTransactionAuthorization) are invoked directly
@@ -233,11 +233,11 @@ namespace
 
             // Make account_ the self-authorized genesis validator so EnsureValidatorRegistry()
             // (called synchronously inside Blockchain::New) actually establishes a real,
-            // single-validator registry with a non-empty registry CID — required for
+            // single-validator registry with a non-empty registry CID â€” required for
             // CertifyChildRegistration's CreateConsensusProposal/SubmitProposal recipe to reach
             // quorum and produce a real certificate (D-65/D-26). Without this, account_'s address
             // never matches the default DEFAULT_FULL_NODE_PUB_ADDRESS, EnsureValidatorRegistry()
-            // is a no-op, and every proposal is rejected for having an empty registry_cid —
+            // is a no-op, and every proposal is rejected for having an empty registry_cid â€”
             // pre-existing tests never noticed because they never checked CheckCertificate.
             Blockchain::SetAuthorizedFullNodeAddress( account_->GetAddress() );
 
@@ -258,7 +258,7 @@ namespace
             assert( tm_ != nullptr );
 
             // Run the io_context on a worker thread so TickOnce() (self-reposting) drives the
-            // TransactionManager state machine through INITIALIZING → READY.
+            // TransactionManager state machine through INITIALIZING â†’ READY.
             work_guard_.emplace( boost::asio::make_work_guard( *io_ ) );
             io_thread_  = std::thread( [this]() { io_->run(); } );
         }
@@ -281,15 +281,15 @@ namespace
 
         /**
          * @brief Seeds `account_` (main) with a REAL, spendable, traceable UTXO via
-         *        TransactionManager::MigrationFunds — required so ordinary transfer/recovery
+         *        TransactionManager::MigrationFunds â€” required so ordinary transfer/recovery
          *        tests (CONS-01/CONS-02/REGR-01/02) have funds to move.
          * @details Two earlier approaches were tried and rejected during implementation:
          *          (1) seeding via a directly-`PutUTXO`-injected synthetic UTXO (fake all-zero
-         *          txid, no real producing transaction) — `TransferFunds`'s `SendTransactionItem`
+         *          txid, no real producing transaction) â€” `TransferFunds`'s `SendTransactionItem`
          *          step calls `BuildUTXOWitness`, which requires the input's producing
          *          transaction to actually exist (`GetTransactionByHash`) so it can extract
-         *          produced-output leaves and build a merkle inclusion proof — "Missing producer
-         *          transaction" otherwise. (2) `TransactionManager::MintFunds` — this is a real
+         *          produced-output leaves and build a merkle inclusion proof â€” "Missing producer
+         *          transaction" otherwise. (2) `TransactionManager::MintFunds` â€” this is a real
          *          bridge-style mint requiring `PublicChainInputValidator`'s RPC-backed smart-
          *          contract verification (`VerifyPublicChainSmartContract`), which this bare test
          *          fixture has no RPC endpoint configured for; the mint's own consensus witness
@@ -303,7 +303,7 @@ namespace
          *          (D-65-scoped; requires no RPC). Once genuinely CONFIRMED, its output becomes a
          *          normal, `GetTransactionByHash`-traceable producer for later ordinary spends.
          * @param[in] amount Amount to migrate to main's own address.
-         * @param[in] migration_version Unique per-call migration namespace — MigrationTransaction
+         * @param[in] migration_version Unique per-call migration namespace â€” MigrationTransaction
          *            derives a one-time claim key from (migration_version, address, token_id), so
          *            each call within the same test MUST use a distinct value.
          */
@@ -340,7 +340,7 @@ namespace
          * @param[in] sequence Registration sequence number.
          * @param[in] metadata Registration metadata.
          * @return The constructed, certified RegistrationTransaction. Callers MUST immediately
-         *         assert `blockchain_->CheckCertificate(child_reg.GetHash())` — this helper uses
+         *         assert `blockchain_->CheckCertificate(child_reg.GetHash())` â€” this helper uses
          *         non-fatal EXPECT_* internally since it returns a value (ASSERT_* requires a
          *         void-returning function).
          */
@@ -351,7 +351,7 @@ namespace
             dag.set_type( "registration" );
             dag.set_source_addr( child_account_->GetAddress() );
             dag.set_nonce( 0 );
-            // A real (non-zero, current) timestamp is required — this tx now goes through the
+            // A real (non-zero, current) timestamp is required â€” this tx now goes through the
             // REAL ValidateTransactionForConsensus pipeline (CheckTransactionWellFormed/
             // CheckTransactionTimestamp), unlike the pre-existing unit tests in this file that
             // never submit their manually-built DAGStructs for actual consensus validation.
@@ -368,7 +368,7 @@ namespace
         }
 
         /**
-         * @brief Certifies an already-built, already-signed RegistrationTransaction — shared tail
+         * @brief Certifies an already-built, already-signed RegistrationTransaction â€” shared tail
          *        extracted from CertifyChildRegistration (Phase 5 Plan 05) so a manually-built
          *        lifecycle-change RegistrationTransaction (e.g. a post-Revoke re-registration,
          *        which CertifyChildRegistration's own 2-arg signature can't express since it
@@ -380,10 +380,10 @@ namespace
          * Submits a manually-assembled consensus proposal signed by @p signer, waits for the
          * certificate, then writes @p reg_tx directly into the CRDT at
          * reg/{reg_tx.GetSrcAddress()} (the CRDT write is deferred past certification so
-         * FilterRegistration's gate 3b sees the pre-change stored sequence — D-38 / D-70).
+         * FilterRegistration's gate 3b sees the pre-change stored sequence â€” D-38 / D-70).
          *
-         * Per this fixture's registration convention, every RegistrationTx — initial or
-         * lifecycle-change — is always signed by the registering child itself (D-04/D-05/D-37),
+         * Per this fixture's registration convention, every RegistrationTx â€” initial or
+         * lifecycle-change â€” is always signed by the registering child itself (D-04/D-05/D-37),
          * so @p signer is always child_account_ in practice; kept as a parameter rather than
          * hard-coded so this helper's contract stays explicit about whose signature the
          * proposal_id/signature fields need).
@@ -391,26 +391,26 @@ namespace
          * Uses non-fatal EXPECT_* internally (void-returning function). Callers MUST immediately
          * assert `blockchain_->CheckCertificate(reg_tx.GetHash())`.
          * @param[in] reg_tx Already child-signed RegistrationTransaction to certify.
-         * @param[in] signer The identity that signed reg_tx — signs the consensus proposal too.
+         * @param[in] signer The identity that signed reg_tx â€” signs the consensus proposal too.
          */
         void CertifySignedRegistrationTx( const RegistrationTransaction &reg_tx, GeniusAccount &signer )
         {
             // Certify by manually assembling and SIGNER-signing a consensus proposal, then
             // submitting it through main's blockchain_ for automatic self-voting/certification.
             //
-            // NOTE (deviation from the plan's literal wording — discovered during
+            // NOTE (deviation from the plan's literal wording â€” discovered during
             // implementation, not assumed): Blockchain::CreateConsensusProposal cannot be used
             // here. It always signs the proposal with THIS blockchain_ instance's own bound
             // signer (account_'s/main's key, fixed at Blockchain::New construction), while also
             // using its single account_id parameter for TWO independent purposes: (1) the nonce
             // subject's account_id, which TransactionManager::HandleNonceConsensusSubject
             // requires to equal the embedded transaction's own GetSrcAddress() (the child's
-            // address, for a child-signed registration) — a data-integrity check — and (2) the
+            // address, for a child-signed registration) â€” a data-integrity check â€” and (2) the
             // proposal's proposer_id, which ConsensusManager::CheckProposal verifies the
             // proposal's signature against. Passing the child's address satisfies (1) but fails
-            // (2) (signed by main, not child — confirmed via this exact rejection during
+            // (2) (signed by main, not child â€” confirmed via this exact rejection during
             // implementation: "signature verification failed proposer_id=<child_addr>"); passing
-            // main's address satisfies (2) but fails (1) ("Account mismatch" — also directly
+            // main's address satisfies (2) but fails (1) ("Account mismatch" â€” also directly
             // observed). These two checks are only simultaneously satisfiable if the proposal is
             // genuinely signed by the same identity that signed reg_tx. The fix: build the
             // Subject via the public static Blockchain::CreateConsensusNonceSubject, then
@@ -419,7 +419,7 @@ namespace
             // directly callable), signing with signer.Sign(...) so proposer_id genuinely matches
             // the signing key. The automatic self-VOTE that follows (cast by main, the sole
             // registered validator, via SubmitProposal's default self_vote=true) is unaffected by
-            // this — voting and proposing are independent signing operations, and main's vote
+            // this â€” voting and proposing are independent signing operations, and main's vote
             // alone reaches quorum in this single-validator registry regardless of who proposed.
             auto embedded_tx    = reg_tx.SerializeToEmbeddedTransaction();
             auto subject_result = Blockchain::CreateConsensusNonceSubject( reg_tx.GetSrcAddress(),
@@ -464,7 +464,7 @@ namespace
                 EXPECT_TRUE( submit_result.has_value() ) << "SubmitProposal should succeed";
             }
 
-            EXPECT_WAIT_FOR_CONDITION( ([this, &reg_tx]() { return blockchain_->CheckCertificate( reg_tx.GetHash() ); }),
+            EXPECT_WAIT_FOR_CONDITION( ([this, &reg_tx]() { return blockchain_->CheckCertificateForSlot( reg_tx.GetSlotID() ); }),
                 std::chrono::milliseconds( 25000 ),
                 "Registration should be certified within timeout",
                 nullptr );
@@ -472,7 +472,7 @@ namespace
             // Write the registration into the CRDT at reg/{src_addr} AFTER the certificate is
             // confirmed. Deferring the CRDT write past certification ensures FilterRegistration's
             // gate 3b (D-38: supersedes_sequence == stored_sequence fork-prevention) sees the
-            // pre-change stored sequence, not the new one — critical for lifecycle-change
+            // pre-change stored sequence, not the new one â€” critical for lifecycle-change
             // registrations (Detach/Replace-Main/re-registration) where a premature CRDT write
             // would advance the stored sequence and cause a self-inflicted tombstone (D-70).
             std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + reg_tx.GetSrcAddress();
@@ -495,13 +495,13 @@ namespace
 } // namespace
 
 // ---------------------------------------------------------------------------
-// ChildRegistrationEndToEnd — verifies the full RegisterChild flow
+// ChildRegistrationEndToEnd â€” verifies the full RegisterChild flow
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
 {
     // Start the TransactionManager and poll for READY state.
     // TickOnce() (self-reposting on the io_context worker thread) drives the state machine
-    // through INITIALIZING → InitTransactions → READY. CheckNonce() blocks ~5s on network
+    // through INITIALIZING â†’ InitTransactions â†’ READY. CheckNonce() blocks ~5s on network
     // nonce fetch, so allow generous timeout.
     tm_->Start();
 
@@ -526,7 +526,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     auto tx = RegistrationE2ETestAccess::GetTransactionByHash( *tm_, tx_hash );
     ASSERT_NE( tx, nullptr );
 
-    // Verify status is SENDING (processed asynchronously by TickOnce READY branch — poll briefly)
+    // Verify status is SENDING (processed asynchronously by TickOnce READY branch â€” poll briefly)
     EXPECT_WAIT_FOR_CONDITION( ([this, &tx_hash]() { return tm_->GetTransactionStatusByTxId( tx_hash ) == TransactionManager::TransactionStatus::SENDING; }),
         std::chrono::milliseconds( 10000 ),
         "Transaction should reach SENDING status",
@@ -550,7 +550,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
 }
 
 // ---------------------------------------------------------------------------
-// ChildRegistrationTamperedSignatureRejected — per D-45: tampered sig fails
+// ChildRegistrationTamperedSignatureRejected â€” per D-45: tampered sig fails
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionTest, ChildRegistrationTamperedSignatureRejected )
 {
@@ -589,7 +589,7 @@ TEST_F( RegistrationTransactionTest, ChildRegistrationTamperedSignatureRejected 
     ASSERT_TRUE( tx_struct.ParseFromArray( serialized.data(), serialized.size() ) )
         << "Should parse valid serialized RegistrationTx";
 
-    // Tamper the DAG signature — flip the last byte of the signature
+    // Tamper the DAG signature â€” flip the last byte of the signature
     auto *dag_mutable = tx_struct.mutable_dag_struct();
     std::string sig = dag_mutable->signature();
     ASSERT_FALSE( sig.empty() ) << "Signature should be non-empty after signing";
@@ -612,7 +612,7 @@ TEST_F( RegistrationTransactionTest, ChildRegistrationTamperedSignatureRejected 
 }
 
 // ---------------------------------------------------------------------------
-// FilterRegistrationAcceptsValid — valid RegistrationTx passes filter
+// FilterRegistrationAcceptsValid â€” valid RegistrationTx passes filter
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsValid )
 {
@@ -647,7 +647,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsValid )
 }
 
 // ---------------------------------------------------------------------------
-// FilterRegistrationRejectsBadMainAddress — malformed main_address gets tombstone
+// FilterRegistrationRejectsBadMainAddress â€” malformed main_address gets tombstone
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsBadMainAddress )
 {
@@ -659,7 +659,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsBadMainAddress 
 
     SGTransaction::RegistrationMetadata metadata;
 
-    // main_address is only 64 chars — not a valid 128-hex public key
+    // main_address is only 64 chars â€” not a valid 128-hex public key
     std::string bad_main_address( 64, 'b' );
 
     auto tx = RegistrationTransaction::New( bad_main_address, 1, metadata, dag );
@@ -682,7 +682,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsBadMainAddress 
 }
 
 // ---------------------------------------------------------------------------
-// FilterRegistrationRejectsTamperedSignature — tampered sig gets tombstone
+// FilterRegistrationRejectsTamperedSignature â€” tampered sig gets tombstone
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsTamperedSignature )
 {
@@ -720,7 +720,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsTamperedSignatu
     element.set_key( "/bc/999/reg/" + account_->GetAddress() );
     element.set_value( std::string( tampered_bytes.begin(), tampered_bytes.end() ) );
 
-    // Call FilterRegistration via accessor — should reject with tombstone
+    // Call FilterRegistration via accessor â€” should reject with tombstone
     auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );
 
     EXPECT_TRUE( result.has_value() )
@@ -759,7 +759,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsZeroSequence )
 
 // ---------------------------------------------------------------------------
 // Gate (d): FilterRegistrationRejectsNonMonotonicSequence
-// Pre-populate CRDT with sequence=4, then test sequence=3 → tombstone
+// Pre-populate CRDT with sequence=4, then test sequence=3 â†’ tombstone
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsNonMonotonicSequence )
 {
@@ -808,7 +808,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsNonMonotonicSeq
 
 // ---------------------------------------------------------------------------
 // Gate (d): FilterRegistrationAcceptsHigherSequence
-// Pre-populate CRDT with sequence=4, then test sequence=5 → accepted
+// Pre-populate CRDT with sequence=4, then test sequence=5 â†’ accepted
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsHigherSequence )
 {
@@ -856,7 +856,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsHigherSequence 
 }
 
 // ---------------------------------------------------------------------------
-// RegisterChildAutoDeriveSequence — 2-arg overload auto-derives from CRDT
+// RegisterChildAutoDeriveSequence â€” 2-arg overload auto-derives from CRDT
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveFirstRegistration )
 {
@@ -873,7 +873,7 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveFirstRegistration
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "auto_derive_test" );
 
-    // 2-arg call — should auto-derive sequence=1 (first registration)
+    // 2-arg call â€” should auto-derive sequence=1 (first registration)
     auto result = tm_->RegisterChild( main_address, metadata );
     ASSERT_TRUE( result.has_value() );
     std::string tx_hash = result.value();
@@ -912,7 +912,7 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromSto
         "CRDT should be committed and status should reach SENDING",
         nullptr );
 
-    // Second: 2-arg call — should auto-derive sequence=6 (stored=5 + 1)
+    // Second: 2-arg call â€” should auto-derive sequence=6 (stored=5 + 1)
     auto result2 = tm_->RegisterChild( main_address, metadata );
     ASSERT_TRUE( result2.has_value() );
 
@@ -950,7 +950,7 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildPreservesCallerSequence )
 }
 
 // ---------------------------------------------------------------------------
-// GetRegistrationsForMain — discovery read path tests (Phase 05-02 Task 1)
+// GetRegistrationsForMain â€” discovery read path tests (Phase 05-02 Task 1)
 // ---------------------------------------------------------------------------
 
 TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsEmptyForNoChildren )
@@ -1044,26 +1044,26 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainFiltersByMainAddr
         "Registrations for main_a should appear in CRDT",
         nullptr );
 
-    // Query main_a — should find the registration
+    // Query main_a â€” should find the registration
     auto entries_a = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
     ASSERT_TRUE( entries_a.has_value() );
     EXPECT_GE( entries_a.value().size(), 1 );
 
-    // Query main_b — should be empty (no child registered to it)
+    // Query main_b â€” should be empty (no child registered to it)
     auto entries_b = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_b );
     ASSERT_TRUE( entries_b.has_value() );
     EXPECT_TRUE( entries_b.value().empty() )
-        << "Expected empty vector for main_b — no child registered to it";
+        << "Expected empty vector for main_b â€” no child registered to it";
 }
 
 // ===================================================================
-// Phase 3 Plan 04 — CONS-01/CONS-02/D-21/REGR-01/02/03 end-to-end tests
+// Phase 3 Plan 04 â€” CONS-01/CONS-02/D-21/REGR-01/02/03 end-to-end tests
 // against the real consensus pipeline (CheckParentChildAuthority,
 // CheckTransactionAuthorization).
 // ===================================================================
 
 // ---------------------------------------------------------------------------
-// MainFundsChildApprovedByGate — CONS-01: an ordinary main-signed transfer to
+// MainFundsChildApprovedByGate â€” CONS-01: an ordinary main-signed transfer to
 // a would-be-child address, and to an arbitrary unregistered address, both
 // succeed unchanged. No registration state exists in this test at all.
 // ---------------------------------------------------------------------------
@@ -1087,7 +1087,7 @@ TEST_F( RegistrationTransactionE2ETest, MainFundsChildApprovedByGate )
 
     constexpr uint64_t kAmount = 100;
 
-    // Ordinary transfer to a would-be-child address — nothing registered in this test;
+    // Ordinary transfer to a would-be-child address â€” nothing registered in this test;
     // CONS-01 requires zero registration state.
     auto result_to_child_addr = tm_->TransferFunds( kAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( result_to_child_addr.has_value() )
@@ -1100,7 +1100,7 @@ TEST_F( RegistrationTransactionE2ETest, MainFundsChildApprovedByGate )
 }
 
 // ---------------------------------------------------------------------------
-// MainRecoversFromChildApproved — CONS-02: a certified child's funds can be
+// MainRecoversFromChildApproved â€” CONS-02: a certified child's funds can be
 // recovered by main, and both CheckParentChildAuthority and
 // CheckTransactionAuthorization independently approve the resulting tx.
 // ---------------------------------------------------------------------------
@@ -1117,7 +1117,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "cons02_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified before recovery can be attempted";
 
     MintMainFunds( 1000, "cons02_migration" );
@@ -1128,7 +1128,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
     auto fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
 
-    // Poll for the child's UTXO to appear — the node's own TickOnce READY-branch ingests its
+    // Poll for the child's UTXO to appear â€” the node's own TickOnce READY-branch ingests its
     // own submitted transaction and calls PutProducedUTXOs on first CRDT observation.
     ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
         std::chrono::milliseconds( 10000 ),
@@ -1148,7 +1148,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
 }
 
 // ---------------------------------------------------------------------------
-// MainRecoveryWrongDestinationRejected — D-21: a main-signed, certified-
+// MainRecoveryWrongDestinationRejected â€” D-21: a main-signed, certified-
 // child-sourced transaction with a destination other than the certified main
 // address is rejected by CheckParentChildAuthority specifically (not by
 // CheckTransactionAuthorization).
@@ -1158,7 +1158,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoveryWrongDestinationRejected )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "d21_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified for the D-21 destination check to even apply";
 
     SGTransaction::DAGStruct dag;
@@ -1166,13 +1166,13 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoveryWrongDestinationRejected )
     dag.set_source_addr( child_account_->GetAddress() );
     dag.set_nonce( 0 );
 
-    // Empty inputs — CheckParentChildAuthority/CheckTransactionAuthorization never inspect
+    // Empty inputs â€” CheckParentChildAuthority/CheckTransactionAuthorization never inspect
     // input ownership, only the whole-tx signature and the primary output's destination.
     std::vector<InputUTXOInfo>  inputs;
     std::vector<OutputDestInfo> outputs{ { 100, std::string( 128, 'q' ), kTestTokenId } }; // NOT account_'s address
 
     auto tx = std::make_shared<TransferTransaction>( TransferTransaction::New( inputs, outputs, dag ) );
-    tx->MakeSignature( *account_ ); // main signs — this is what makes it "delegated", not child-self-signed
+    tx->MakeSignature( *account_ ); // main signs â€” this is what makes it "delegated", not child-self-signed
 
     EXPECT_FALSE( tm_->CheckParentChildAuthority( *tx ) )
         << "D-21: a delegated recovery to a destination other than the certified main address must be rejected";
@@ -1181,7 +1181,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoveryWrongDestinationRejected )
 }
 
 // ---------------------------------------------------------------------------
-// ChildTransferToArbitraryAndMainUnaffected — REGR-01: child-self-signed
+// ChildTransferToArbitraryAndMainUnaffected â€” REGR-01: child-self-signed
 // transfers to an arbitrary address and to its own registered main both pass
 // unconditionally (no destination restriction applies to the child's own key).
 // ---------------------------------------------------------------------------
@@ -1198,7 +1198,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "regr01_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) );
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) );
 
     MintMainFunds( 1000, "regr01_migration" );
 
@@ -1236,7 +1236,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
         std::vector<OutputDestInfo> outputs{ { 100, dest_address, kTestTokenId } };
 
         auto tx = std::make_shared<TransferTransaction>( TransferTransaction::New( inputs, outputs, dag ) );
-        tx->MakeSignature( *child_account_ ); // the CHILD's own key — genuine self-signed spend
+        tx->MakeSignature( *child_account_ ); // the CHILD's own key â€” genuine self-signed spend
 
         EXPECT_TRUE( tm_->CheckParentChildAuthority( *tx ) )
             << "A child-self-signed transfer must be approved unconditionally (no destination restriction)";
@@ -1249,9 +1249,9 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
 }
 
 // ---------------------------------------------------------------------------
-// ChildTransferToDevWalletUnaffected — REGR-02: a child-signed transfer to a
+// ChildTransferToDevWalletUnaffected â€” REGR-02: a child-signed transfer to a
 // developer-style destination passes unchanged. Per GeniusNode::PayDev's
-// verified implementation (GeniusNode.cpp:2331-2334 — a thin wrapper over
+// verified implementation (GeniusNode.cpp:2331-2334 â€” a thin wrapper over
 // TransferFunds with zero separate code path), any child-signed transfer to
 // an arbitrary destination transitively proves REGR-02 without needing to
 // instantiate a full GeniusNode in this fixture.
@@ -1269,7 +1269,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "regr02_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) );
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) );
 
     MintMainFunds( 1000, "regr02_migration" );
 
@@ -1316,10 +1316,10 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
 }
 
 // ---------------------------------------------------------------------------
-// ChildCannotClaimMainAsSourceRejected — REGR-03: a transaction claiming
+// ChildCannotClaimMainAsSourceRejected â€” REGR-03: a transaction claiming
 // src=main_addr but signed with the child's own key is rejected by
 // CheckTransactionAuthorization. The child never holds main's private key
-// regardless of what src it claims — unaffected by every change in Plans
+// regardless of what src it claims â€” unaffected by every change in Plans
 // 01-03, since the new certified-main branch only ever accepts a signature
 // made with the CERTIFIED MAIN's own key, never a child's key masquerading
 // as main.
@@ -1338,17 +1338,17 @@ TEST_F( RegistrationTransactionE2ETest, ChildCannotClaimMainAsSourceRejected )
     tx->MakeSignature( *child_account_ ); // the child's key, which does not match account_'s address
 
     EXPECT_FALSE( tm_->CheckTransactionAuthorization( *tx ) )
-        << "A child cannot spend main's UTXOs even claiming src=main_addr — the whole-tx signature "
+        << "A child cannot spend main's UTXOs even claiming src=main_addr â€” the whole-tx signature "
            "check must fail since the child never holds main's private key";
 }
 
 // ===================================================================
-// Phase 5 Plan 04 — Detach/Replace-Main adversarial + E2E tests
+// Phase 5 Plan 04 â€” Detach/Replace-Main adversarial + E2E tests
 // (LIFE-01/02/03/04, gate 3b fork detection, nonce-chain replay).
 // ===================================================================
 
 // ---------------------------------------------------------------------------
-// FilterRegistrationRejectsForkedSupersedesSequence — Gate 3b (D-38): a
+// FilterRegistrationRejectsForkedSupersedesSequence â€” Gate 3b (D-38): a
 // lifecycle-change RegistrationTx whose supersedes_sequence no longer matches
 // the currently-stored sequence (a fork attempt) is rejected.
 // ---------------------------------------------------------------------------
@@ -1374,7 +1374,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsForkedSupersede
     ASSERT_TRUE( put_result.has_value() ) << "Pre-population Put should succeed";
 
     // First lifecycle-change element: sequence=2, detach_flag=true, supersedes_sequence=1
-    // (matches the base's stored sequence) — should be accepted.
+    // (matches the base's stored sequence) â€” should be accepted.
     SGTransaction::DAGStruct dag2;
     dag2.set_type( "registration" );
     dag2.set_source_addr( account_->GetAddress() );
@@ -1396,7 +1396,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsForkedSupersede
     EXPECT_FALSE( first_result.has_value() )
         << "First lifecycle-change element with a valid supersedes_sequence should be accepted";
 
-    // FilterRegistration only VALIDATES — it does not itself write the CRDT record in this
+    // FilterRegistration only VALIDATES â€” it does not itself write the CRDT record in this
     // direct-accessor-call test path. Re-Put the accepted element's own bytes at the same
     // reg/ key so the stored sequence genuinely advances to 2, mirroring how the existing
     // monotonic-sequence tests manually advance stored state between assertions.
@@ -1405,7 +1405,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsForkedSupersede
     ASSERT_TRUE( advance_result.has_value() ) << "Advancing stored state Put should succeed";
 
     // Second lifecycle-change element: sequence=3 (higher, so gate (d)'s monotonicity check
-    // passes on its own), but supersedes_sequence=1 — now STALE, since the stored sequence has
+    // passes on its own), but supersedes_sequence=1 â€” now STALE, since the stored sequence has
     // moved to 2. This is the fork: a lifecycle-change tx claiming to supersede a sequence that
     // has itself already been superseded.
     SGTransaction::DAGStruct dag3;
@@ -1430,9 +1430,9 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsForkedSupersede
 }
 
 // ---------------------------------------------------------------------------
-// FilterRegistrationRejectsMissingSupersedesLink — Gate 3b (D-38): a
+// FilterRegistrationRejectsMissingSupersedesLink â€” Gate 3b (D-38): a
 // lifecycle-change RegistrationTx with no prior reg/ record at all is
-// rejected (the "!current" fork-detection branch, design doc §9.3).
+// rejected (the "!current" fork-detection branch, design doc Â§9.3).
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsMissingSupersedesLink )
 {
@@ -1463,7 +1463,7 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsMissingSupersed
 }
 
 // ---------------------------------------------------------------------------
-// DetachChildEndToEnd — TransactionManager::DetachChild (D-35): the stored
+// DetachChildEndToEnd â€” TransactionManager::DetachChild (D-35): the stored
 // reg/ record ends with detach_flag=true, main_address=128-char zero
 // sentinel, sequence=2 (1 from initial registration, 2 from Detach).
 // ---------------------------------------------------------------------------
@@ -1525,7 +1525,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
 }
 
 // ---------------------------------------------------------------------------
-// ReplaceMainEndToEnd — TransactionManager::ReplaceMain (D-37): the stored
+// ReplaceMainEndToEnd â€” TransactionManager::ReplaceMain (D-37): the stored
 // reg/ record ends with the new main_address and detach_flag=false.
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
@@ -1585,7 +1585,7 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
 }
 
 // ---------------------------------------------------------------------------
-// ReRegistrationAfterDetachViaReplaceMain — D-39: a child can re-register at
+// ReRegistrationAfterDetachViaReplaceMain â€” D-39: a child can re-register at
 // any time after Detach via ReplaceMain, proven end-to-end through the real
 // gate 3b/sequence-monotonicity checks.
 // ---------------------------------------------------------------------------
@@ -1669,7 +1669,7 @@ ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); re
 }
 
 // ---------------------------------------------------------------------------
-// DetachPreservesChildUTXOsKeypairNonce — LIFE-04: Detach leaves the child's
+// DetachPreservesChildUTXOsKeypairNonce â€” LIFE-04: Detach leaves the child's
 // address, UTXOs, and standalone transacting capability unaffected.
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
@@ -1723,10 +1723,10 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
         "Detach should be visible within timeout",
         nullptr );
 
-    // Address is unchanged — no keypair rotation API exists, confirmed by construction.
+    // Address is unchanged â€” no keypair rotation API exists, confirmed by construction.
     EXPECT_EQ( account_->GetAddress(), address_before );
 
-    // UTXO balance is unchanged across Detach — a lifecycle-change registration tx never
+    // UTXO balance is unchanged across Detach â€” a lifecycle-change registration tx never
     // touches UTXOs.
     EXPECT_EQ( account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ), balance_before );
 
@@ -1739,7 +1739,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
 }
 
 // ---------------------------------------------------------------------------
-// LifecycleChangeReplayRejectedByNonceChain — design doc §9.4/T-03-12: a
+// LifecycleChangeReplayRejectedByNonceChain â€” design doc Â§9.4/T-03-12: a
 // stale lifecycle-change RegistrationTx reusing an already-consumed nonce is
 // rejected by the nonce chain, independent of and in addition to
 // FilterRegistration's own sequence-monotonicity gate.
@@ -1757,12 +1757,12 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "replay_nonce_test" );
 
-    // Consumes nonce 0 — this is the transaction whose nonce the replayed tx below will reuse.
+    // Consumes nonce 0 â€” this is the transaction whose nonce the replayed tx below will reuse.
     auto        register_result = tm_->RegisterChild( std::string( 128, 'n' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
     std::string register_hash = register_result.value();
 
-    // Poll for CONFIRMED — CheckTransactionReplayProtection's nonce-chain check reads
+    // Poll for CONFIRMED â€” CheckTransactionReplayProtection's nonce-chain check reads
     // account_m->GetPeerNonce(), which is only populated once a transaction is genuinely
     // CONFIRMED (certified), not merely SENDING.
     ASSERT_WAIT_FOR_CONDITION( ([this, &register_hash]() { return tm_->GetTransactionStatusByTxId( register_hash ) == TransactionManager::TransactionStatus::CONFIRMED; }),
@@ -1770,7 +1770,7 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
         "Initial registration should be CONFIRMED within timeout",
         nullptr );
 
-    // Consumes nonce 1 — advances the nonce chain further, matching the plan's setup sequence.
+    // Consumes nonce 1 â€” advances the nonce chain further, matching the plan's setup sequence.
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
     EXPECT_WAIT_FOR_CONDITION( ([this, &detach_result]() {
@@ -1783,7 +1783,7 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
         nullptr );
 
     // Manually construct a "replayed" lifecycle-change RegistrationTransaction reusing nonce 0
-    // (the STALE, already-consumed nonce) — everything else about this tx is well-formed and
+    // (the STALE, already-consumed nonce) â€” everything else about this tx is well-formed and
     // would otherwise be a plausible Detach.
     SGTransaction::DAGStruct dag;
     dag.set_type( "registration" );
@@ -1804,13 +1804,13 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
 }
 
 // ===================================================================
-// Phase 5 Plan 05 — Revoke adversarial + E2E test coverage (LIFE-01/02/04,
+// Phase 5 Plan 05 â€” Revoke adversarial + E2E test coverage (LIFE-01/02/04,
 // the main-initiated half of the lifecycle surface's adversarial coverage;
 // Plan 04 above covered the child-initiated Detach/Replace-Main half).
 // ===================================================================
 
 // ---------------------------------------------------------------------------
-// RevokeChildEndToEnd — TransactionManager::RevokeChild (D-36): a certified
+// RevokeChildEndToEnd â€” TransactionManager::RevokeChild (D-36): a certified
 // child's registration is revoked by main; the resulting reg/ record ends
 // with detach_flag=true while main_address/sequence are preserved.
 // ---------------------------------------------------------------------------
@@ -1827,7 +1827,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_e2e_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified before Revoke can be attempted";
 
     auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
@@ -1865,20 +1865,20 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
 }
 
 // ---------------------------------------------------------------------------
-// RevokeRejectedForNonMain — T-05-09: a RevokeTx signed by an address that is
+// RevokeRejectedForNonMain â€” T-05-09: a RevokeTx signed by an address that is
 // NOT the certified main on record is rejected by CheckParentChildAuthority,
 // while ordinary signature verification (CheckTransactionAuthorization) still
-// passes — isolating the rejection to the parent-child authority gate.
+// passes â€” isolating the rejection to the parent-child authority gate.
 // ---------------------------------------------------------------------------
 TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForNonMain )
 {
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_nonmain_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified for the non-main rejection check to even apply";
 
-    // A third, unrelated identity — neither the certified main nor the child.
+    // A third, unrelated identity â€” neither the certified main nor the child.
     auto attacker = GeniusAccount::New( kTestTokenId, base_path / "revoke_attacker" );
     ASSERT_NE( attacker, nullptr );
 
@@ -1888,7 +1888,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForNonMain )
     dag.set_nonce( 0 );
 
     auto tx = std::make_shared<RevokeTransaction>( RevokeTransaction::New( child_account_->GetAddress(), 1, dag ) );
-    tx->MakeSignature( *attacker ); // attacker validly signs as themselves — signature check passes
+    tx->MakeSignature( *attacker ); // attacker validly signs as themselves â€” signature check passes
 
     EXPECT_FALSE( tm_->CheckParentChildAuthority( *tx ) )
         << "A RevokeTx signed by a non-main address must be rejected by CheckParentChildAuthority";
@@ -1897,7 +1897,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForNonMain )
 }
 
 // ---------------------------------------------------------------------------
-// RevokeRejectedForAlreadyDetachedChild — a second RevokeTx targeting a reg/
+// RevokeRejectedForAlreadyDetachedChild â€” a second RevokeTx targeting a reg/
 // record that is already detach_flag==true is rejected by
 // CheckParentChildAuthority.
 // ---------------------------------------------------------------------------
@@ -1914,7 +1914,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_already_detached_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified before Revoke can be attempted";
 
     auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
@@ -1965,7 +1965,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
 }
 
 // ---------------------------------------------------------------------------
-// RevokeRejectedForSequenceMismatch — a RevokeTx whose registration_sequence
+// RevokeRejectedForSequenceMismatch â€” a RevokeTx whose registration_sequence
 // does not match the currently-stored reg/ record's sequence is rejected by
 // CheckParentChildAuthority specifically, not by CheckTransactionAuthorization.
 // ---------------------------------------------------------------------------
@@ -1974,7 +1974,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForSequenceMismatch )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_seq_mismatch_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified for the sequence-mismatch rejection check to even apply";
 
     SGTransaction::DAGStruct dag;
@@ -1993,7 +1993,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForSequenceMismatch )
 }
 
 // ---------------------------------------------------------------------------
-// ReRegistrationAfterRevoke — D-39: a revoked child can re-register (to the
+// ReRegistrationAfterRevoke â€” D-39: a revoked child can re-register (to the
 // same or a different main) at a higher sequence. Re-registration is
 // CHILD-initiated (ReplaceMain/DetachChild are always child-signed, D-37);
 // since this fixture's child_account_ has no own TransactionManager (D-65),
@@ -2014,7 +2014,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "rereg_after_revoke_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified before Revoke can be attempted";
 
     auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
@@ -2050,7 +2050,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     dag.set_source_addr( child_account_->GetAddress() );
     dag.set_nonce( 1 );
     // Nonce > 0 requires previous_hash to resolve to a certified transaction for this same
-    // address (EvaluateTransactionReplayProtection, TransactionManager.cpp:4648-4659) — child_reg
+    // address (EvaluateTransactionReplayProtection, TransactionManager.cpp:4648-4659) â€” child_reg
     // is child_account_'s nonce=0 certified tx, so it's the correct link for this nonce=1 tx.
     dag.set_previous_hash( child_reg.GetHash() );
     dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2065,7 +2065,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     rereg_tx.MakeSignature( *child_account_ );
 
     CertifySignedRegistrationTx( rereg_tx, *child_account_ );
-    ASSERT_TRUE( blockchain_->CheckCertificate( rereg_tx.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( rereg_tx.GetSlotID() ) )
         << "Re-registration should be certified before checking the stored reg/ record";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
@@ -2097,7 +2097,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
 }
 
 // ---------------------------------------------------------------------------
-// RevokePreservesChildUTXOsKeypairNonce — LIFE-04: Revoke leaves the child's
+// RevokePreservesChildUTXOsKeypairNonce â€” LIFE-04: Revoke leaves the child's
 // address and UTXOs unaffected, the revoked child remains a fully functional,
 // standalone-capable wallet, and the former main's delegated authority over
 // it is gone.
@@ -2115,7 +2115,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_life04_test" );
     auto child_reg = CertifyChildRegistration( 1, metadata );
-    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( child_reg.GetSlotID() ) )
         << "Child registration must be certified before funding/Revoke";
 
     MintMainFunds( 1000, "revoke_life04_migration" );
@@ -2157,10 +2157,10 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
         "Revoke should be visible within timeout",
         nullptr );
 
-    // Address is unchanged — no keypair rotation API exists, confirmed by construction.
+    // Address is unchanged â€” no keypair rotation API exists, confirmed by construction.
     EXPECT_EQ( child_account_->GetAddress(), address_before );
 
-    // UTXO balance is unchanged across Revoke — RevokeTx never touches UTXOs.
+    // UTXO balance is unchanged across Revoke â€” RevokeTx never touches UTXOs.
     EXPECT_EQ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ), balance_before );
 
     // The revoked child remains a fully functional, standalone-capable wallet (D-39): a
@@ -2189,7 +2189,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     std::vector<OutputDestInfo> outputs{ { 100, std::string( 128, 'y' ), kTestTokenId } };
 
     auto self_tx = std::make_shared<TransferTransaction>( TransferTransaction::New( inputs, outputs, transfer_dag ) );
-    self_tx->MakeSignature( *child_account_ ); // the CHILD's own key — genuine self-signed spend
+    self_tx->MakeSignature( *child_account_ ); // the CHILD's own key â€” genuine self-signed spend
 
     EXPECT_TRUE( tm_->CheckParentChildAuthority( *self_tx ) )
         << "A revoked child's self-signed transfer must still be approved (revoke does not disable the "
@@ -2199,11 +2199,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
 
     // Negative invariant: the former main no longer has any delegated recovery authority over
     // the revoked child. ParseRevokeTransaction (TransactionManager.cpp, Plan 02) rewrites the
-    // reg/ record's dag_struct from scratch when applying a Revoke — the rewritten record's own
+    // reg/ record's dag_struct from scratch when applying a Revoke â€” the rewritten record's own
     // data_hash was never itself submitted as a nonce-consensus subject, so
     // blockchain_->CheckCertifiedParent can no longer resolve a certificate for it. Confirm this
     // explicitly first (this is the mechanism, not detach_flag directly, that gates post-revoke
-    // authority — CheckCertifiedParent's own CheckCertificate gate requires the CURRENT
+    // authority â€” CheckCertifiedParent's own CheckCertificate gate requires the CURRENT
     // certified registration to be read):
     auto post_revoke_certified_main = blockchain_->CheckCertifiedParent( child_account_->GetAddress() );
     EXPECT_TRUE( !post_revoke_certified_main.has_value() || *post_revoke_certified_main != account_->GetAddress() )
@@ -2213,7 +2213,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     // MainRecoveryWrongDestinationRejected's construction) targeting the revoked child. The
     // authoritative rejection lives in CheckTransactionAuthorization: its D-60 certified-main
     // delegation branch requires CheckCertifiedParent to resolve, which it no longer does once
-    // revoked — so a main-signed, child-sourced transaction is no longer accepted as a valid
+    // revoked â€” so a main-signed, child-sourced transaction is no longer accepted as a valid
     // action at all (neither a genuine child-self-signed spend nor a still-certified delegated
     // recovery).
     SGTransaction::DAGStruct delegated_dag;
@@ -2226,7 +2226,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
 
     auto delegated_tx = std::make_shared<TransferTransaction>(
         TransferTransaction::New( delegated_inputs, delegated_outputs, delegated_dag ) );
-    delegated_tx->MakeSignature( *account_ ); // main signs — this is what makes it "delegated"
+    delegated_tx->MakeSignature( *account_ ); // main signs â€” this is what makes it "delegated"
 
     EXPECT_FALSE( tm_->CheckTransactionAuthorization( *delegated_tx ) )
         << "A former main's delegated-recovery-shaped transaction against a revoked child must fail "

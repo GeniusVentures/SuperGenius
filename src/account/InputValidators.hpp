@@ -48,6 +48,18 @@ namespace sgns
     {
     public:
         /**
+         * @brief Verdict of a witness validation, distinguishing a missing local
+         *        dependency from a structural failure.
+         */
+        enum class WitnessVerdict : uint8_t
+        {
+            kValid,    ///< Witness proves the parameters valid.
+            kNotSynced,///< A producer transaction or certificate has not CRDT-synced yet:
+                       /// retryable, NOT evidence of invalidity.
+            kInvalid,  ///< Structural or cryptographic failure: permanently invalid.
+        };
+
+        /**
          * @brief Destroys the input validator.
          */
         virtual ~IInputValidator() = default;
@@ -71,10 +83,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service used to resolve producer certificates when required.
          * @return True when the witness proves that @p params are valid for @p tx.
          */
-        virtual bool ValidateWitness( const ConsensusSubject                     &subject,
-                                      const std::shared_ptr<GeniusTransaction> &tx,
-                                      const UTXOTxParameters                     &params,
-                                      const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
+        virtual WitnessVerdict ValidateWitness( const ConsensusSubject                     &subject,
+                                                const std::shared_ptr<GeniusTransaction> &tx,
+                                                const UTXOTxParameters                     &params,
+                                                const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
 
         /**
          * @brief Indicates whether this validator requires consensus-provided UTXO data.
