@@ -6007,6 +6007,52 @@ namespace sgns
                 return { ConsensusManager::ValidationResult::Reject() };
             }
             auto previous_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( previous_hash ) );
+            if ( ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                   previous_transaction_result.value()->GetHash() != previous_hash )
+                 && tx.GetType() == "registration" )
+            {
+                // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+                // (SendTransactionItem routes them there), so a re-registration's
+                // nonce predecessor cannot resolve through the tx/ namespace. The
+                // stored reg/ record is the child's current chain head — but a revoke
+                // rewrites it locally (detach_flag) under a fresh hash, so the stored
+                // record may no longer match the ORIGINAL registration the sender
+                // chains to. The immutable certificate at the predecessor's slot
+                // still embeds the original transaction: resolve through it.
+                const std::string reg_key = GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
+                auto reg_data = globaldb_m->Get( reg_key );
+                if ( reg_data.has_value() )
+                {
+                    auto stored_reg = DeSerializeTransaction( reg_data.value() );
+                    if ( !stored_reg.has_error() && stored_reg.value() &&
+                         stored_reg.value()->GetHash() == previous_hash )
+                    {
+                        previous_transaction_result = stored_reg;
+                    }
+                }
+                if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                     previous_transaction_result.value()->GetHash() != previous_hash )
+                {
+                    const std::string prev_slot = tx.GetSrcAddress() + ":" + std::to_string( tx.GetNonce() - 1 );
+                    auto prev_cert = blockchain_->GetCertificateBySlot( prev_slot );
+                    if ( prev_cert.has_value() )
+                    {
+                        auto prev_subject = ConsensusManager::DecodeNonceSubject(
+                            prev_cert.value().proposal().subject() );
+                        if ( !prev_subject.has_error() &&
+                             prev_subject.value().tx_hash() == previous_hash &&
+                             prev_cert.value().proposal().subject().account_id() == tx.GetSrcAddress() )
+                        {
+                            auto embedded = DeSerializeEmbeddedTransaction( prev_subject.value().transaction() );
+                            if ( embedded.has_value() && embedded.value() &&
+                                 embedded.value()->GetHash() == previous_hash )
+                            {
+                                previous_transaction_result = embedded;
+                            }
+                        }
+                    }
+                }
+            }
             if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
                  previous_transaction_result.value()->GetHash() != previous_hash )
             {

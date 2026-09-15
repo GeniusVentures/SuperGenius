@@ -1917,10 +1917,24 @@ namespace sgns
         // were removed together with the legacy /cert/<subject_hash> records —
         // no consensus version was deployed, so none exist to fall back to).
         // Require a validated quorum certificate on the slot this registration
-        // transaction occupies.
+        // transaction occupies, AND bind it to the STORED record: the certificate
+        // embeds the exact certified transaction hash, so a locally rewritten
+        // reg/ record (e.g. ParseRevokeTransaction's detach_flag rewrite, whose
+        // fresh dag hash was never a consensus subject) no longer resolves —
+        // revoking the certified binding is what withdraws the main's delegated
+        // authority.
         const std::string slot_key = tx_struct.dag_struct().source_addr() + ":" +
                                      std::to_string( tx_struct.dag_struct().nonce() );
-        if ( GetCertificateBySlot( slot_key ).has_error() )
+        auto certificate_result = GetCertificateBySlot( slot_key );
+        if ( certificate_result.has_error() )
+        {
+            return std::nullopt;
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
+            certificate_result.value().proposal().subject() );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().tx_hash() != tx_struct.dag_struct().data_hash() )
         {
             return std::nullopt;
         }

@@ -2085,7 +2085,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
                 }
             }
             return false;
-        }),
+        } ),
         std::chrono::milliseconds( 10000 ),
         "Re-registered reg/ record should be visible within timeout",
         nullptr );

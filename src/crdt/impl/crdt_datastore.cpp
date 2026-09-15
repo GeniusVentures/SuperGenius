@@ -1056,8 +1056,20 @@ namespace sgns::crdt
                                 links.size() );
             }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
+            // ConvergentImmutablePriority is a sentinel, not a height: recording it
+            // in the heads table poisons maxHeight for every later CreateDAGNode,
+            // whose height+1 wraps to 0 and makes fresh-key writes tie at priority 0
+            // (SetValue then fails the tie-break value read with NOT_FOUND). Record
+            // the immutable delta at the current max height instead so the sequence
+            // stays monotonic without ever reaching the sentinel.
+            uint64_t head_priority = delta.priority();
+            if ( head_priority == CrdtSet::ConvergentImmutablePriority )
+            {
+                BOOST_OUTCOME_TRY( auto current_heads, heads_->GetList( {} ) );
+                head_priority = current_heads.second;
+            }
             UpdateCRDTHeads( job_to_process.root_node_->getCID(),
-                             delta.priority(),
+                             head_priority,
                              job_to_process.created_by_self_ || has_full_node_topic_ );
             logger_->debug( "{}: UpdateCRDTHeads complete for {}", __func__, root_cid_string );
             {
@@ -1389,7 +1401,15 @@ namespace sgns::crdt
             return outcome::failure( priorityResult.error() );
         }
 
-        deltaResult.value()->set_priority( priorityResult.value() + 1 );
+        // Write at the SAME priority as the stored value, not +1: a local
+        // derived write (e.g. ParseRevokeTransaction's detach_flag rewrite) is
+        // not a chain advance in the broadcast height sequence. Bumping +1 let
+        // one local write permanently outrank every later broadcast write to the
+        // key on this node (a certified re-registration could never overwrite a
+        // revoked record). At equal priority the tie-break writes the new value
+        // (values differ), keeping derived state mutable by authoritative
+        // broadcasts while still replacing whatever was stored.
+        deltaResult.value()->set_priority( priorityResult.value() );
 
         return set_->Merge( *deltaResult.value(), aID );
     }
