@@ -982,6 +982,13 @@ namespace sgns
         {
             RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
         }
+        if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+        {
+            ProposalState state;
+            state.proposal = proposal;
+            state.slot_key = GetSlotKey( proposal );
+            proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+        }
 
         const auto  dependencies   = NormalizePendingDependencies( subject_hash, validation_result );
         const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
@@ -1115,13 +1122,31 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( handler_it == subject_handlers_.end() )
             {
-                logger_->error(
-                    "{}: rejected: subject handler missing type_hash={} reason={}",
+                auto retry_hash = GetSubjectHash( proposal.subject() );
+                if ( retry_hash.has_error() )
+                {
+                    logger_->error( "{}: rejected: subject hash missing proposal_id={} reason={}",
+                                                     __func__,
+                                                     proposal.proposal_id().substr( 0, 8 ),
+                                                     reason );
+                    return;
+                }
+                // Handler registration trails subsystem init; re-pend so the next
+                // scheduled retry runs once the handler exists instead of dropping
+                // the proposal inside the registration gap.
+                logger_->warn(
+                    "{}: deferred: subject handler missing type_hash={} proposal_id={} reason={}. Keeping proposal pending",
                     __func__,
                     base::hex_lower( gsl::span<const uint8_t>(
                         reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
                         proposal.subject().subject_type_hash().hash().size() ) ),
+                    proposal.proposal_id().substr( 0, 8 ),
                     reason );
+                AddPendingProposal( proposal,
+                                    retry_hash.value(),
+                                    ValidationResult::Pending(),
+                                    scheduled_retry_count,
+                                    last_retry_at );
                 return;
             }
             subject_handler = handler_it->second;
@@ -1265,6 +1290,10 @@ namespace sgns
 
         for ( const auto &candidate : retry_now )
         {
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
             RetryPendingProposal( candidate.proposal, "scheduled-retry", candidate.scheduled_retry_count, now );
         }
     }
@@ -2780,6 +2809,17 @@ namespace sgns
             return;
         }
 
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
+            {
+                // Already queued for deferred subject validation; a gossip
+                // redelivery must not rerun the datastore reads below or reset
+                // the scheduled retry.
+                return;
+            }
+        }
+
         auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
@@ -2790,17 +2830,6 @@ namespace sgns
                 proposal.registry_cid(),
                 proposal.proposal_id().substr( 0, 8 ),
                 subject_hash.value().substr( 0, 8 ) );
-
-            {
-                std::lock_guard lock( proposals_mutex_ );
-                if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
-                {
-                    ProposalState state;
-                    state.proposal = proposal;
-                    state.slot_key = GetSlotKey( proposal );
-                    proposals_.emplace( proposal.proposal_id(), std::move( state ) );
-                }
-            }
 
             AddPendingProposal( proposal, subject_hash.value() );
             return;
@@ -2839,73 +2868,28 @@ namespace sgns
             return;
         }
 
-        SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
-            auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
-            if ( handler_it == subject_handlers_.end() )
+            if ( subject_handlers_.find( proposal.subject().subject_type_hash().hash() ) == subject_handlers_.end() )
             {
-                logger_->error(
-                    "{}: rejected: subject handler missing type_hash={}",
+                // Subject handlers are registered by async subsystem init (the
+                // transaction manager comes up after the validator registry);
+                // a proposal that beats registration must outlive the gap.
+                logger_->warn(
+                    "{}: deferred: subject handler missing type_hash={} proposal_id={}. Keeping proposal pending",
                     __func__,
                     base::hex_lower( gsl::span<const uint8_t>(
                         reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
-                        proposal.subject().subject_type_hash().hash().size() ) ) );
-                return;
+                        proposal.subject().subject_type_hash().hash().size() ) ),
+                    proposal.proposal_id().substr( 0, 8 ) );
             }
-            subject_handler = handler_it->second;
         }
 
-        auto subject_result = subject_handler( proposal.subject() );
-        if ( subject_result.has_error() )
-        {
-            logger_->error( "{}: rejected: subject handler error for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-
-        const auto &validation_result = subject_result.value();
-        if ( validation_result.check == Check::Reject )
-        {
-            logger_->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-
-        if ( validation_result.check == Check::Stalled )
-        {
-            logger_->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
-                                            __func__,
-                                            GetPrintableSubjectHash( proposal.subject() ),
-                                            proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-
-        if ( validation_result.check == Check::Pending )
-        {
-            {
-                std::lock_guard lock( proposals_mutex_ );
-                if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
-                {
-                    ProposalState state;
-                    state.proposal = proposal;
-                    state.slot_key = GetSlotKey( proposal );
-                    proposals_.emplace( proposal.proposal_id(), std::move( state ) );
-                }
-            }
-            logger_->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            AddPendingProposal( proposal, subject_hash.value(), validation_result );
-            return;
-        }
-
-        ContinueProposalAfterSubject( proposal );
+        // The subject handler can block on RPC (witness/endpoint validation) and
+        // HandleProposal runs on the pubsub receive path — running it inline
+        // stalls all consensus intake for this node. Pend and let the scheduled
+        // retry run it on the round-timer thread.
+        AddPendingProposal( proposal, subject_hash.value() );
     }
 
     outcome::result<void> ConsensusManager::ResumeProposalHandling( const std::string &subject_hash )
@@ -3024,6 +3008,10 @@ namespace sgns
 
         for ( auto &state : to_process )
         {
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
             auto accepted_certificate = HasAcceptedCertificateForSlot( state.slot_key );
             if ( accepted_certificate.has_error() )
             {
@@ -3529,7 +3517,12 @@ namespace sgns
             return;
         }
 
-        bool has_quorum = false;
+        // Snapshot what the blocking reads need; the datastore and registry loads
+        // must not run under proposals_mutex_ — a slow read would serialize every
+        // vote and certificate handler on this node behind it.
+        std::string slot_key;
+        std::string registry_cid;
+        uint64_t    registry_epoch = 0;
         {
             std::lock_guard lock( proposals_mutex_ );
             auto            it = proposals_.find( vote.proposal_id() );
@@ -3541,18 +3534,50 @@ namespace sgns
                                                  vote.proposal_id().substr( 0, 8 ) );
                 return;
             }
-            auto &proposal_state = it->second;
-            auto accepted_certificate = HasAcceptedCertificateForSlot( proposal_state.slot_key );
-            if ( accepted_certificate.has_value() && accepted_certificate.value() )
-            {
-                logger_->debug( "{}: ignored: vote for already certified slot {} proposal_id={}",
-                                                 __func__,
-                                                 proposal_state.slot_key.substr( 0, 8 ),
-                                                 vote.proposal_id().substr( 0, 8 ) );
-                pending_votes_.erase( vote.proposal_id() );
-                return;
-            }
-            auto slot_it = slot_states_.find( proposal_state.slot_key );
+            slot_key       = it->second.slot_key;
+            registry_cid   = it->second.proposal.registry_cid();
+            registry_epoch = it->second.proposal.registry_epoch();
+        }
+
+        auto accepted_certificate = HasAcceptedCertificateForSlot( slot_key );
+        if ( accepted_certificate.has_value() && accepted_certificate.value() )
+        {
+            logger_->debug( "{}: ignored: vote for already certified slot {} proposal_id={}",
+                                             __func__,
+                                             slot_key.substr( 0, 8 ),
+                                             vote.proposal_id().substr( 0, 8 ) );
+            std::lock_guard lock( proposals_mutex_ );
+            pending_votes_.erase( vote.proposal_id() );
+            return;
+        }
+
+        auto proposal_registry_result = LoadRegistryByCidCached( registry_cid );
+        if ( proposal_registry_result.has_error() )
+        {
+            logger_->warn( "{}: deferred vote: registry load error={} proposal_id={}",
+                                            __func__,
+                                            proposal_registry_result.error().message(),
+                                            vote.proposal_id().substr( 0, 8 ) );
+            std::lock_guard lock( proposals_mutex_ );
+            pending_votes_[vote.proposal_id()].push_back( vote );
+            return;
+        }
+        const auto &proposal_registry = proposal_registry_result.value();
+        if ( registry_epoch != proposal_registry.epoch() )
+        {
+            logger_->error( "{}: rejected: registry mismatch proposal_id={}",
+                                             __func__,
+                                             vote.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+
+        const auto *validator           = registry_->FindValidator( proposal_registry, vote.voter_id() );
+        const bool  is_active_validator = validator && validator->status() == ValidatorRegistry::Status::ACTIVE;
+
+        bool has_quorum = false;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            slot_it = slot_states_.find( slot_key );
             if ( slot_it != slot_states_.end() )
             {
                 auto &slot_state = slot_it->second;
@@ -3578,6 +3603,15 @@ namespace sgns
                 }
             }
 
+            auto it = proposals_.find( vote.proposal_id() );
+            if ( it == proposals_.end() )
+            {
+                // Cleared while the reads ran: the slot was decided or the proposal
+                // expired — either way the vote is moot (already retained above).
+                return;
+            }
+            auto &proposal_state = it->second;
+
             if ( proposal_state.seen_voters.find( vote.voter_id() ) != proposal_state.seen_voters.end() )
             {
                 logger_->trace( "{}: ignored: duplicate vote voter_id={}",
@@ -3585,28 +3619,6 @@ namespace sgns
                                                  vote.voter_id().substr( 0, 8 ) );
                 return;
             }
-
-            auto proposal_registry_result = LoadRegistryByCidCached( proposal_state.proposal.registry_cid() );
-            if ( proposal_registry_result.has_error() )
-            {
-                logger_->warn( "{}: deferred vote: registry load error={} proposal_id={}",
-                                                __func__,
-                                                proposal_registry_result.error().message(),
-                                                vote.proposal_id().substr( 0, 8 ) );
-                pending_votes_[vote.proposal_id()].push_back( vote );
-                return;
-            }
-            const auto &proposal_registry = proposal_registry_result.value();
-            if ( proposal_state.proposal.registry_epoch() != proposal_registry.epoch() )
-            {
-                logger_->error( "{}: rejected: registry mismatch proposal_id={}",
-                                                 __func__,
-                                                 vote.proposal_id().substr( 0, 8 ) );
-                return;
-            }
-
-            const auto *validator           = registry_->FindValidator( proposal_registry, vote.voter_id() );
-            const bool  is_active_validator = validator && validator->status() == ValidatorRegistry::Status::ACTIVE;
 
             if ( it->second.total_weight == 0 )
             {
@@ -4460,33 +4472,49 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        // Timer and post-registration recovery can run concurrently. Keep one
-        // durable readback-to-handler dispatch in flight so a stalled entry is
-        // claimed by this manager until it is explicitly stalled again or done.
-        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
-
-        // Compiled once: CRDTWorkJournal takes an optional<std::regex> pattern and
-        // re-compiling on every timer tick would dominate the recovery path.
-        static std::regex PATTERN{ CERT_KEY_PATTERN.data(), CERT_KEY_PATTERN.size() };
-        auto recovered = certificate_work_journal_->RecoverStaleProcessing( PATTERN, std::chrono::seconds( 15 ) );
-        if ( recovered > 0 )
+        std::vector<CommittedCertificateWork> works;
         {
-            logger_->info( "{}: recovered {} stale certificate work items", __func__, recovered );
+            // Timer and post-registration recovery can run concurrently. Keep one
+            // durable readback-to-dispatch sequence in flight so a stalled entry is
+            // claimed by this manager until it is explicitly stalled again or done.
+            std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+
+            // Compiled once: CRDTWorkJournal takes an optional<std::regex> pattern and
+            // re-compiling on every timer tick would dominate the recovery path.
+            static std::regex PATTERN{ CERT_KEY_PATTERN.data(), CERT_KEY_PATTERN.size() };
+            auto recovered =
+                certificate_work_journal_->RecoverStaleProcessing( PATTERN, std::chrono::seconds( 15 ) );
+            if ( recovered > 0 )
+            {
+                logger_->info( "{}: recovered {} stale certificate work items", __func__, recovered );
+            }
+
+            auto unfinished = certificate_work_journal_->ListUnfinished( PATTERN );
+
+            for ( const auto &entry : unfinished )
+            {
+                if ( auto work = DispatchStalledCertificateEntryLocked( entry ) )
+                {
+                    works.push_back( std::move( work.value() ) );
+                }
+            }
         }
-
-        auto unfinished = certificate_work_journal_->ListUnfinished( PATTERN );
-
-        for ( const auto &entry : unfinished )
+        for ( const auto &work : works )
         {
-            DispatchStalledCertificateEntryLocked( entry );
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
+            FinishCommittedCertificate( work );
         }
     }
 
-    void ConsensusManager::DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry )
+    std::optional<ConsensusManager::CommittedCertificateWork>
+        ConsensusManager::DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry )
     {
         if ( entry.key.empty() )
         {
-            return;
+            return std::nullopt;
         }
         // Seen entries are dispatchable too: the element callback that would
         // stall them is skipped whenever the merge is a no-op (e.g. the same
@@ -4494,20 +4522,20 @@ namespace sgns
         // committed work wedged in Seen forever.
         if ( entry.state == crdt::CRDTWorkJournal::State::Processing )
         {
-            return;
+            return std::nullopt;
         }
         const auto now_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
         if ( entry.lease_until_ms != 0 && entry.lease_until_ms > now_ms )
         {
-            return;
+            return std::nullopt;
         }
         auto value = db_->Get( { entry.key } );
         if ( value.has_error() )
         {
             certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
-            return;
+            return std::nullopt;
         }
         Certificate certificate;
         if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
@@ -4516,22 +4544,22 @@ namespace sgns
             // The durable record is permanently invalid; retire the work instead
             // of spinning on it every tick.
             certificate_work_journal_->MarkDone( entry.key );
-            return;
+            return std::nullopt;
         }
         const auto validation = ValidateCertificate( certificate );
         if ( validation == Check::Stalled )
         {
             // Registry-dependent quorum still deferred; keep the retry loop alive.
             certificate_work_journal_->MarkStalled( entry.key, std::chrono::milliseconds( 0 ) );
-            return;
+            return std::nullopt;
         }
         if ( validation != Check::Approve )
         {
             certificate_work_journal_->MarkDone( entry.key );
-            return;
+            return std::nullopt;
         }
 
-        ProcessCommittedCertificate( entry.key, certificate );
+        return PrepareCommittedCertificate( entry.key, certificate );
     }
 
     void ConsensusManager::DispatchCertificateWorkForSlot( const std::string &slot_key )
@@ -4542,16 +4570,24 @@ namespace sgns
         }
         const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + slot_key;
 
-        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
-        auto entry = certificate_work_journal_->GetEntry( key );
-        if ( !entry.has_value() )
+        std::optional<CommittedCertificateWork> work;
         {
-            return;
+            std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+            auto entry = certificate_work_journal_->GetEntry( key );
+            if ( entry.has_value() )
+            {
+                work = DispatchStalledCertificateEntryLocked( entry.value() );
+            }
         }
-        DispatchStalledCertificateEntryLocked( entry.value() );
+        if ( work.has_value() )
+        {
+            FinishCommittedCertificate( work.value() );
+        }
     }
 
-    void ConsensusManager::ProcessCommittedCertificate( const std::string &key, const Certificate &certificate )
+    std::optional<ConsensusManager::CommittedCertificateWork> ConsensusManager::PrepareCommittedCertificate(
+        const std::string &key,
+        const Certificate &certificate )
     {
         // The pubsub fast path, peer aggregators, and the later CRDT dispatch all
         // reach this function for the same logical certificate; each aggregator's
@@ -4561,15 +4597,25 @@ namespace sgns
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash.has_error() )
         {
+            logger_->warn( "{}: subject hash unavailable for key {}", __func__, key );
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
-            return;
+            return std::nullopt;
         }
         {
             std::lock_guard lock( validated_certs_mutex_ );
             if ( !processed_certificates_.insert( subject_hash.value() ).second )
             {
-                (void) certificate_work_journal_->MarkDone( key );
-                return;
+                // An in-flight commit owns the journal entry — its finish path
+                // marks done or stalls for retry. Only a completed one retires it.
+                if ( committed_certificates_.find( subject_hash.value() ) != committed_certificates_.end() )
+                {
+                    (void) certificate_work_journal_->MarkDone( key );
+                }
+                else
+                {
+                    logger_->debug( "{}: commit already in flight for key {}", __func__, key );
+                }
+                return std::nullopt;
             }
         }
         auto release_claim = [&]()
@@ -4578,7 +4624,7 @@ namespace sgns
             processed_certificates_.erase( subject_hash.value() );
         };
 
-        registry_->OnFinalizedCertificate( certificate );
+        (void) registry_->OnFinalizedCertificate( certificate );
 
         CertificateSubjectHandler handler;
         {
@@ -4589,7 +4635,7 @@ namespace sgns
                 release_claim();
                 certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
                 logger_->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
-                return;
+                return std::nullopt;
             }
             handler = it->second;
         }
@@ -4599,9 +4645,14 @@ namespace sgns
         if ( release.has_error() )
         {
             // A read/decode/remove failure leaves the durable certificate work retryable.
+            logger_->warn( "{}: active vote release failed key={} slot={} error={}",
+                           __func__,
+                           key,
+                           slot_key,
+                           release.error().message() );
             release_claim();
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
-            return;
+            return std::nullopt;
         }
 
         // A successful durable readback proves finality even when this node never
@@ -4614,12 +4665,18 @@ namespace sgns
         }
         if ( !EnterFinalityFaultBarrier( accepted_certificate_barrier_ ) )
         {
+            logger_->warn( "{}: finality fault barrier rejected key={}", __func__, key );
             release_claim();
             certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
-            return;
+            return std::nullopt;
         }
 
-        auto certificate_handler_result = handler( subject_hash.value(), certificate );
+        return CommittedCertificateWork{ key, subject_hash.value(), certificate, std::move( handler ) };
+    }
+
+    void ConsensusManager::FinishCommittedCertificate( const CommittedCertificateWork &work )
+    {
+        auto certificate_handler_result = work.handler( work.subject_hash, work.certificate );
         if ( certificate_handler_result.has_error() || certificate_handler_result.value() == Check::Stalled )
         {
             // Transient handler failures retry on the next 500ms tick exactly as
@@ -4629,12 +4686,15 @@ namespace sgns
             // loop. The threshold keeps stall-then-recover fault choreography on
             // the fast path; attempt_count counts every journal transition
             // (receipt alone adds several), so the shift is clamped from below.
-            release_claim();
-            auto           entry    = certificate_work_journal_->GetEntry( key );
+            {
+                std::lock_guard lock( validated_certs_mutex_ );
+                processed_certificates_.erase( work.subject_hash );
+            }
+            auto           entry    = certificate_work_journal_->GetEntry( work.key );
             const uint64_t attempts = entry.has_value() ? entry->attempt_count : 0;
             if ( attempts <= kHandlerFailureFastRetries )
             {
-                certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
+                certificate_work_journal_->MarkStalled( work.key, std::chrono::milliseconds( 0 ) );
                 return;
             }
             const auto                   shift = static_cast<unsigned>(
@@ -4645,12 +4705,16 @@ namespace sgns
                            __func__,
                            attempts,
                            backoff.count(),
-                           key );
-            certificate_work_journal_->MarkStalled( key, backoff );
+                           work.key );
+            certificate_work_journal_->MarkStalled( work.key, backoff );
             return;
         }
-        (void) certificate_work_journal_->MarkDone( key );
-        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
+        {
+            std::lock_guard lock( validated_certs_mutex_ );
+            committed_certificates_.insert( work.subject_hash );
+        }
+        (void) certificate_work_journal_->MarkDone( work.key );
+        (void) WakePendingDependency( PendingDependencyKey::Certificate( work.subject_hash ) );
     }
 
     void ConsensusManager::ProcessAcceptedCertificates()
@@ -4664,11 +4728,24 @@ namespace sgns
         {
             return;
         }
-        // Same serialization as the journal dispatch path.
-        std::unique_lock recovery_lock( certificate_recovery_mutex_ );
         for ( const auto &certificate : certificates )
         {
-            ProcessCommittedCertificate( GetExpectedCertificateSlotKey( certificate ), certificate );
+            if ( stop_timer_.load() )
+            {
+                return;
+            }
+            std::optional<CommittedCertificateWork> work;
+            {
+                // Same dispatch serialization as the journal path; the handler
+                // runs after the lock is released so one slow commit cannot
+                // stall the rest of the queue.
+                std::unique_lock recovery_lock( certificate_recovery_mutex_ );
+                work = PrepareCommittedCertificate( GetExpectedCertificateSlotKey( certificate ), certificate );
+            }
+            if ( work.has_value() )
+            {
+                FinishCommittedCertificate( work.value() );
+            }
         }
     }
 

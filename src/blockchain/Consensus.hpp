@@ -1037,11 +1037,39 @@ namespace sgns
          */
         void ReleaseUnwinnableSlots( const std::vector<std::string> &slot_keys );
         /**
-         * @brief Processes a certificate only after its authoritative slot value has been read back.
+         * @brief Commit work claimed under `certificate_recovery_mutex_`.
+         *
+         * The certificate handler runs after the mutex is released: it can block
+         * on RPC, and holding the dispatch mutex across it would stall every
+         * other certificate's dispatch behind one handler call.
          */
-        void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
+        struct CommittedCertificateWork
+        {
+            std::string               key;          ///< Journal key for the certificate.
+            std::string               subject_hash; ///< Claimed subject hash.
+            Certificate               certificate;  ///< Certificate being committed.
+            CertificateSubjectHandler handler;      ///< Resolved subject handler.
+        };
         /**
-         * @brief Drains pubsub-validated certificates into `ProcessCommittedCertificate`.
+         * @brief Claims and prepares a certificate commit under `certificate_recovery_mutex_`.
+         * @param[in] key Journal key for the certificate.
+         * @param[in] certificate Certificate to commit.
+         * @return Work to finish after the caller releases the mutex, or `std::nullopt`
+         *         when the certificate is a duplicate, stalled, or undispatchable.
+         */
+        std::optional<CommittedCertificateWork> PrepareCommittedCertificate( const std::string &key,
+                                                                             const Certificate &certificate );
+        /**
+         * @brief Runs the handler, journal transition, and dependency wake for
+         *        prepared commit work.
+         * @param[in] work Work returned by `PrepareCommittedCertificate`.
+         *
+         * Must NOT run under `certificate_recovery_mutex_`: the handler and the
+         * dependency wake can block on RPC.
+         */
+        void FinishCommittedCertificate( const CommittedCertificateWork &work );
+        /**
+         * @brief Drains pubsub-validated certificates into the commit path.
          *
          * Certificate commit work otherwise waits for the `/cert/` CRDT element to
          * replicate; the pubsub copy already passed `ValidateCertificate`, so the
@@ -1051,11 +1079,14 @@ namespace sgns
         /**
          * @brief Runs the durable readback-to-dispatch sequence for one journal entry.
          * @param[in] entry Work-journal entry to process.
+         * @return Commit work to finish after the caller releases
+         *         `certificate_recovery_mutex_`, or `std::nullopt` when undispatchable.
          *
          * Caller must hold `certificate_recovery_mutex_`. Shared by the full-journal
          * recovery scan.
          */
-        void DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry );
+        std::optional<CommittedCertificateWork> DispatchStalledCertificateEntryLocked(
+            const crdt::CRDTWorkJournal::Entry &entry );
         void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
@@ -1242,10 +1273,15 @@ namespace sgns
         ///        nonce-chained subjects resolve their predecessor dependency
         ///        without waiting a full sync interval per chain link.
         mutable std::unordered_map<std::string, Certificate> validated_cert_by_slot_;
-        /// @brief Subject hashes whose commit handler already ran, so the pubsub fast
-        ///        path, per-aggregator republishes, and the later CRDT dispatch cannot
-        ///        double-run it.
+        /// @brief Subject hashes claimed for commit (in-flight or done), so the
+        ///        pubsub fast path, per-aggregator republishes, and the later CRDT
+        ///        dispatch cannot double-run it.
         mutable std::unordered_set<std::string>              processed_certificates_;
+        /// @brief Subset of `processed_certificates_` whose handler completed.
+        ///        Handlers now run after `certificate_recovery_mutex_` is released,
+        ///        so a concurrent dispatch must not `MarkDone` a journal entry
+        ///        whose commit is still in flight — its `MarkStalled` would no-op.
+        mutable std::unordered_set<std::string>              committed_certificates_;
         std::deque<Certificate>                              accepted_certificates_;
         mutable std::mutex                                   validated_certs_mutex_;
 

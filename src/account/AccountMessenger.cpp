@@ -108,7 +108,19 @@ namespace sgns
 
     void AccountMessenger::Stop()
     {
-        stop_worker_.store( true );
+        std::queue<RequestTask> dropped;
+        {
+            std::lock_guard lock( queue_mutex_ );
+            stop_worker_.store( true );
+            // The worker would drain these with full network timeouts while
+            // producers keep enqueueing — fail them instead so the join returns.
+            dropped.swap( request_queue_ );
+        }
+        while ( !dropped.empty() )
+        {
+            FailTask( dropped.front() );
+            dropped.pop();
+        }
         queue_cv_.notify_one();
         if ( worker_thread_.joinable() )
         {
@@ -910,7 +922,7 @@ namespace sgns
             {
                 std::unique_lock lock( queue_mutex_ );
                 queue_cv_.wait( lock, [this]() { return stop_worker_.load() || !request_queue_.empty(); } );
-                if ( stop_worker_.load() && request_queue_.empty() )
+                if ( stop_worker_.load() )
                 {
                     break;
                 }
@@ -1031,9 +1043,31 @@ namespace sgns
     {
         {
             std::lock_guard lock( queue_mutex_ );
-            request_queue_.push( std::move( task ) );
+            if ( !stop_worker_.load() )
+            {
+                request_queue_.push( std::move( task ) );
+                queue_cv_.notify_one();
+                return;
+            }
         }
-        queue_cv_.notify_one();
+        // Stopped: callers blocked on a promise must not be left waiting.
+        FailTask( task );
+    }
+
+    void AccountMessenger::FailTask( const RequestTask &task )
+    {
+        if ( task.nonce_promise )
+        {
+            task.nonce_promise->set_value( outcome::failure( std::errc::operation_canceled ) );
+        }
+        if ( task.utxo_promise )
+        {
+            task.utxo_promise->set_value( outcome::failure( std::errc::operation_canceled ) );
+        }
+        if ( task.callback )
+        {
+            task.callback( outcome::failure( std::errc::operation_canceled ) );
+        }
     }
 
     bool AccountMessenger::HasRequestPeers() const
@@ -1107,7 +1141,8 @@ namespace sgns
                 }
             }
 
-            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            if ( stop_worker_.load() ||
+                 std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 break; // total timeout reached
             }
@@ -1211,13 +1246,17 @@ namespace sgns
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = timeout;
-        while ( !HasRequestPeers() )
+        while ( !stop_worker_.load() && !HasRequestPeers() )
         {
             if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 return outcome::failure( Error::GENESIS_REQUEST_ERROR );
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        if ( stop_worker_.load() )
+        {
+            return outcome::failure( Error::GENESIS_REQUEST_ERROR );
         }
 
         auto request_result = send_request( req_id );
@@ -1260,7 +1299,8 @@ namespace sgns
                 }
             }
 
-            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            if ( stop_worker_.load() ||
+                 std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 logger_->debug( "[{}] Timeout: no BlockResponse received for req_id {}",
                                 address_.substr( 0, 8 ),
@@ -1359,7 +1399,8 @@ namespace sgns
                 }
             }
 
-            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            if ( stop_worker_.load() ||
+                 std::chrono::steady_clock::now() - start_time >= full_timeout )
             {
                 logger_->debug( "[{}] Timeout: no UTXOResponse received for req_id {}",
                                 address_.substr( 0, 8 ),
