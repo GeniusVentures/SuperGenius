@@ -1751,7 +1751,53 @@ namespace sgns
             return persisted_hash;
         }
 
+        auto registration_hash = GetRegisteredOutgoingPreviousHash( nonce );
+        if ( !registration_hash.empty() )
+        {
+            return registration_hash;
+        }
+
         return QueryOutgoingPreviousHashFromCRDT( nonce );
+    }
+
+    std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+        // (SendTransactionItem routes them there), so a nonce chain that passes
+        // through a registration (e.g. RegisterChild then a mint) cannot resolve
+        // its predecessor through the tx/ namespace. Resolve the registration
+        // through its canonical slot certificate: the cert embeds the exact
+        // certified transaction hash, which binds the chain link the same way
+        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        if ( nonce == 0 || !globaldb_m )
+        {
+            return "";
+        }
+
+        const std::string slot_key = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
+        auto certificate_result = blockchain_->GetCertificateBySlot( slot_key );
+        if ( certificate_result.has_error() )
+        {
+            return "";
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
+            certificate_result.value().proposal().subject() );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET ||
+             nonce_subject.value().nonce() != ( nonce - 1 ) ||
+             certificate_result.value().proposal().subject().account_id() != account_m->GetAddress() )
+        {
+            return "";
+        }
+
+        auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
+        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        {
+            return "";
+        }
+
+        return embedded.value()->GetHash();
     }
 
     std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
@@ -6007,18 +6053,19 @@ namespace sgns
                 return { ConsensusManager::ValidationResult::Reject() };
             }
             auto previous_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( previous_hash ) );
-            if ( ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                   previous_transaction_result.value()->GetHash() != previous_hash )
-                 && tx.GetType() == "registration" )
+            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                 previous_transaction_result.value()->GetHash() != previous_hash )
             {
                 // Registration transactions persist at reg/{src_addr}, not tx/{hash}
-                // (SendTransactionItem routes them there), so a re-registration's
-                // nonce predecessor cannot resolve through the tx/ namespace. The
-                // stored reg/ record is the child's current chain head — but a revoke
-                // rewrites it locally (detach_flag) under a fresh hash, so the stored
-                // record may no longer match the ORIGINAL registration the sender
-                // chains to. The immutable certificate at the predecessor's slot
-                // still embeds the original transaction: resolve through it.
+                // (SendTransactionItem routes them there), so any nonce chain that
+                // passes through a registration (a re-registration, or an ordinary
+                // transfer/mint after RegisterChild) cannot resolve its predecessor
+                // through the tx/ namespace. The stored reg/ record is the child's
+                // current chain head — but a revoke rewrites it locally (detach_flag)
+                // under a fresh hash, so the stored record may no longer match the
+                // ORIGINAL registration the sender chains to. The immutable
+                // certificate at the predecessor's slot still embeds the original
+                // transaction: resolve through it.
                 const std::string reg_key = GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
                 auto reg_data = globaldb_m->Get( reg_key );
                 if ( reg_data.has_value() )
