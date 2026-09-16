@@ -125,7 +125,10 @@ public:
                     }
                     return false;
                 },
-                std::chrono::milliseconds( 5000 ),
+                // Windows CI runners regularly need well over 5s for the first
+                // GossipPubSub Start (address monitoring monopolizes the io context
+                // on loaded hosts); fast machines still return as soon as it is up.
+                std::chrono::milliseconds( 60000 ),
                 "PubSub node startup failed",
                 &nodeStartTime );
 
