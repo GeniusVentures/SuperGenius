@@ -270,7 +270,10 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
             }
             return false;
         },
-        std::chrono::milliseconds( 20000 ),
+        // There is no mesh settle wait between AddPeers and the first commit, so
+        // this window must absorb identify + gossip mesh formation + graphsync of
+        // the 512KB value. Loaded Windows runners have shown 6s dial gaps alone.
+        std::chrono::milliseconds( 60000 ),
         "Replication to gdb2 did not complete in time" );
 
     bool                         getConfirmed2 = false;
@@ -287,7 +290,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
             }
             return false;
         },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 60000 ),
         "Replication to gdb4 did not complete in time" );
     auto result2 = gdb3->Get( tx_key );
     auto result3 = gdb4->Get( tx_key );
