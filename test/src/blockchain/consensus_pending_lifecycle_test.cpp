@@ -499,6 +499,25 @@ namespace sgns
             it->second.acceptance_deadline_ms = 1;
         }
 
+        /// Keeps a retryable vote inside its acceptance window so a slow host cannot
+        /// expire it between forcing the retry and processing vote work: the publish
+        /// inside ProcessDueVoteWork can block on the pubsub strand for up to a
+        /// second (errc::timed_out is retryable), and the round timer runs concurrent
+        /// passes, stretching the test past the 2s default candidate window.
+        /// CorruptOrExpiredActiveVoteCannotAuthorizeAReplacement expires the deadline
+        /// deliberately and must NOT use this.
+        static void KeepActiveVoteAcceptanceOpen( const std::shared_ptr<ConsensusManager> &manager,
+                                                  const std::string                       &slot_key,
+                                                  uint64_t                                 ms_from_now = 60000 )
+        {
+            auto it = manager->active_votes_.find( slot_key );
+            ASSERT_TRUE( it != manager->active_votes_.end() );
+            const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                           std::chrono::system_clock::now().time_since_epoch() )
+                                                           .count() );
+            it->second.acceptance_deadline_ms = now_ms + ms_from_now;
+        }
+
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(
             const std::shared_ptr<ConsensusManager> &manager,
             const std::string                       &subject_hash )
@@ -2112,6 +2131,7 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
 
     sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( manager );
     sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( manager, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::KeepActiveVoteAcceptanceOpen( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front(), record.vote_bytes() );
@@ -2122,6 +2142,7 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( restarted, slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( restarted );
     sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( restarted, slot );
+    sgns::ConsensusPendingLifecycleTestAccess::KeepActiveVoteAcceptanceOpen( restarted, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( restarted );
     ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).size(), 1U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).front(), record.vote_bytes() );
@@ -2240,6 +2261,7 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
         ASSERT_TRUE( node.manager );
         sgns::ConsensusPendingLifecycleTestAccess::ClearActiveVoteAnnouncements( node.manager );
         sgns::ConsensusPendingLifecycleTestAccess::ForceActiveVoteRetryDue( node.manager, slot );
+        sgns::ConsensusPendingLifecycleTestAccess::KeepActiveVoteAcceptanceOpen( node.manager, slot );
         sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( node.manager );
         ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).size(), 1U );
         EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).front(),
