@@ -491,6 +491,79 @@ TEST_F( TransactionManagerPreviousHashTest, FallsBackToCrdtWhenConfirmedHeadHist
     EXPECT_EQ( transaction->GetPreviousHash(), previous_transaction->GetHash() );
 }
 
+// Regression (CI run 35021511258, MissedCrdtHeadIsRecoveredAfterReconnect): a
+// nonce-slot competitor arriving while the loser is terminally rejected must not
+// resurrect the loser to VERIFYING — the resurrected entry then qualifies as the
+// next outgoing transaction's previous hash, chaining it onto a predecessor whose
+// certificate will never exist.
+TEST_F( TransactionManagerPreviousHashTest, NonceConflictKeepsTerminallyRejectedTransactionFailed )
+{
+    auto failed_transaction = MakeTransaction( 1 );
+    // Reusing a committed CRDT transaction makes Put() fail deterministically.
+    auto committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 failed_transaction,
+                                                                 std::move( committed_transaction ) );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( failed_transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    // Same-nonce competitor stored without a certificate: processing it must not
+    // disturb the loser's terminal FAILED status.
+    auto competitor = MakeTransaction( 1 );
+    ASSERT_NE( competitor->GetHash(), failed_transaction->GetHash() );
+    StoreTransaction( competitor );
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+            return manager_->GetTransactionStatusByTxId( competitor->GetHash() ) ==
+                   sgns::TransactionManager::TransactionStatus::VERIFYING;
+        },
+        std::chrono::seconds( 5 ),
+        "stored competitor was not processed" );
+
+    const auto tracked_failed =
+        sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                          failed_transaction->GetHash() );
+    ASSERT_TRUE( tracked_failed.has_value() );
+    EXPECT_EQ( tracked_failed->status, sgns::TransactionManager::TransactionStatus::FAILED );
+}
+
+// Regression (same run): with two tracked same-nonce candidates, the chain head
+// for the next transaction must be the CONFIRMED one — never a non-terminal
+// competitor — regardless of tracked-map iteration order.
+TEST_F( TransactionManagerPreviousHashTest, TrackedPreviousHashPrefersConfirmedCandidate )
+{
+    auto confirmed_transaction = MakeTransaction( 1 );
+    StoreCertificate( confirmed_transaction );
+    StoreTransaction( confirmed_transaction );
+    ProcessStoredTransaction( confirmed_transaction );
+
+    // Simulate the mid-race state: a doomed same-nonce competitor tracked as
+    // non-terminal alongside the confirmed head.
+    auto resurrected_competitor = MakeTransaction( 1 );
+    ASSERT_NE( resurrected_competitor->GetHash(), confirmed_transaction->GetHash() );
+    (void) sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *manager_, resurrected_competitor, sgns::TransactionManager::TransactionStatus::VERIFYING );
+    const auto tracked_competitor =
+        sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                          resurrected_competitor->GetHash() );
+    ASSERT_TRUE( tracked_competitor.has_value() );
+    ASSERT_EQ( tracked_competitor->status, sgns::TransactionManager::TransactionStatus::VERIFYING );
+
+    const auto transaction_id = manager_->MigrationFunds( 1, "tracked-prefers-confirmed", kTokenId );
+    ASSERT_TRUE( transaction_id.has_value() );
+    const auto transaction = FindOutgoingTransaction( transaction_id.value() );
+    ASSERT_TRUE( transaction );
+
+    EXPECT_EQ( transaction->GetNonce(), 2U );
+    EXPECT_EQ( transaction->GetPreviousHash(), confirmed_transaction->GetHash() );
+}
+
 TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsumedInputs )
 {
     auto previous_transaction = MakeTransaction( 0 );

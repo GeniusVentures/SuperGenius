@@ -1391,6 +1391,13 @@ namespace sgns
 
     std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
     {
+        // Candidate heads for the previous nonce: a CONFIRMED (certificate-backed)
+        // entry always wins over an in-flight one, and ties inside a tier resolve by
+        // BestHash. unordered_map iteration order must never decide which hash the
+        // next transaction chains onto — a doomed same-nonce competitor tracked as
+        // non-terminal used to win that lottery and chain the next transaction onto
+        // a predecessor that can never be certified.
+        std::vector<std::pair<std::string, bool>> candidates; // {hash, confirmed}
         {
             std::shared_lock tx_lock( tx_mutex_m );
             for ( const auto &[_, tracked] : tx_processed_m )
@@ -1411,10 +1418,40 @@ namespace sgns
                 {
                     continue;
                 }
-                return tracked.tx->GetHash();
+                candidates.emplace_back( tracked.tx->GetHash(),
+                                         tracked.status == TransactionStatus::CONFIRMED );
             }
         }
-        return "";
+
+        if ( candidates.empty() )
+        {
+            return "";
+        }
+
+        const std::string *selected           = nullptr;
+        bool               selected_confirmed = false;
+
+        for ( const auto &[hash, confirmed] : candidates )
+        {
+            if ( !selected || ( confirmed && !selected_confirmed ) )
+            {
+                selected           = &hash;
+                selected_confirmed = confirmed;
+            }
+            else if ( confirmed == selected_confirmed && blockchain_->BestHash( *selected, hash ) == hash )
+            {
+                selected = &hash;
+            }
+        }
+
+        TransactionManagerLogger()->debug(
+            "[{} - full: {}] Recovered previous hash {} for nonce {} from tracked head (confirmed={})",
+            account_m->GetAddress().substr( 0, 8 ),
+            full_node_m,
+            *selected,
+            nonce,
+            selected_confirmed );
+        return *selected;
     }
 
     std::string TransactionManager::GetPersistedOutgoingPreviousHash( uint64_t nonce ) const
@@ -3990,13 +4027,33 @@ namespace sgns
                 tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
             }
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                conflicting_tx.value()->GetHash() );
-            tx_lock.unlock();
-            BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
+            if ( it != tx_processed_m.end() &&
+                 ( it->second.status == TransactionStatus::FAILED ||
+                   it->second.status == TransactionStatus::INVALID ) )
+            {
+                // Terminal rejection is final: a validation-rejected transaction can
+                // never earn a certificate, so resetting it to VERIFYING only
+                // resurrects a dead proposal — and while resurrected it qualifies as
+                // the next outgoing transaction's previous hash, chaining a new
+                // transaction onto a predecessor whose certificate will never exist.
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] Keeping terminally rejected conflicting transaction {}: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    conflicting_tx.value()->GetHash(),
+                    static_cast<int>( it->second.status ) );
+            }
+            else
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    conflicting_tx.value()->GetHash() );
+                tx_lock.unlock();
+                BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(),
+                                                           TransactionStatus::VERIFYING ) );
+            }
         }
 
         TransactionManagerLogger()->debug(
