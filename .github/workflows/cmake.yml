@@ -268,6 +268,14 @@ jobs:
         with:
           path: "SuperGenius"
           submodules: "recursive"
+          # The VALD-02 cross-machine .cap fixtures under
+          # SuperGenius/test/src/processing/fixtures/ are tracked via Git LFS
+          # (.gitattributes "*.cap filter=lfs"). Without lfs: true the checkout
+          # materializes 134-byte pointer files and
+          # processing_validation_core_test's DeserializeCaptureFile correctly
+          # rejects them on every platform (observed run 35045845230: test #89
+          # failed on all six desktop jobs).
+          lfs: true
           persist-credentials: true # We need the credentials for uploading the release later
 
       - name: Download thirdparty release
