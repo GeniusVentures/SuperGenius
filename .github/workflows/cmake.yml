@@ -269,20 +269,44 @@ jobs:
         # lfs:true hard-fails with "Unable to locate executable file: git-lfs"
         # (run 35136102223) before any later step could install it. Windows,
         # macOS, and the Ubuntu-host Android jobs all have git-lfs already, so
-        # this is a cheap no-op check for them. Bullseye's apt indices are
-        # frozen (EOL 2026-08-31), hence the same Check-Valid-Until=false flag
-        # the "Configure Linux host" step below uses. Delete this step together
-        # with the bullseye refs when the AlmaLinux migration completes (the
-        # almalinux-8 image bakes git-lfs in).
+        # this is a cheap no-op check for them.
+        #
+        # apt is deliberately NOT used: bullseye is EOL (2026-08-31) and its
+        # frozen indices now reference packages the mirrors have purged --
+        # `apt-get install git-lfs` 404s on
+        # git-lfs_2.13.2-1+deb11u2.deb from bullseye-security. Instead we
+        # drop in the official static binary from GitHub releases (public
+        # download, single self-contained executable for amd64 and arm64
+        # alike). Delete this step together with the bullseye refs when the
+        # AlmaLinux migration completes (the almalinux-8 image bakes git-lfs
+        # in).
         if: ${{ runner.os == 'Linux' }}
         run: |
           if command -v git-lfs >/dev/null 2>&1; then
             echo "git-lfs already present: $(git-lfs version)"
-          else
-            sudo apt-get -o Acquire::Check-Valid-Until=false update
-            sudo apt-get -o Acquire::Check-Valid-Until=false install -y git-lfs
-            git-lfs version
+            exit 0
           fi
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64)  lfs_arch="amd64" ;;
+            aarch64) lfs_arch="arm64" ;;
+            *) echo "Unsupported architecture for git-lfs download: $arch"; exit 1 ;;
+          esac
+          # 3.7.1 matches the Windows runner's version; v3.x static tarballs
+          # are just the single binary + manpages. curl preferred, wget
+          # fallback -- the bullseye image is not guaranteed to carry either.
+          url="https://github.com/git-lfs/git-lfs/releases/download/v3.7.1/git-lfs-linux-${lfs_arch}-v3.7.1.tar.gz"
+          if command -v curl >/dev/null 2>&1; then
+            curl -fsSL --retry 3 -o /tmp/git-lfs.tgz "$url"
+          elif command -v wget >/dev/null 2>&1; then
+            wget -q --tries=3 -O /tmp/git-lfs.tgz "$url"
+          else
+            echo "ERROR: neither curl nor wget found in container"; exit 1
+          fi
+          tar -xzf /tmp/git-lfs.tgz -C /tmp
+          sudo install -m 0755 /tmp/git-lfs-3.7.1/git-lfs /usr/local/bin/git-lfs
+          rm -rf /tmp/git-lfs.tgz /tmp/git-lfs-3.7.1
+          git-lfs version
 
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v7
