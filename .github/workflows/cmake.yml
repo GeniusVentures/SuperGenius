@@ -263,6 +263,27 @@ jobs:
           $SUDO rm -rf thirdparty zkLLVM
           ls -la
 
+      - name: Install git-lfs (Linux containers)
+        # TEMPORARY until the debian-bullseye → almalinux-8 container migration
+        # lands: the bullseye image predates git-lfs, and actions/checkout's
+        # lfs:true hard-fails with "Unable to locate executable file: git-lfs"
+        # (run 35136102223) before any later step could install it. Windows,
+        # macOS, and the Ubuntu-host Android jobs all have git-lfs already, so
+        # this is a cheap no-op check for them. Bullseye's apt indices are
+        # frozen (EOL 2026-08-31), hence the same Check-Valid-Until=false flag
+        # the "Configure Linux host" step below uses. Delete this step together
+        # with the bullseye refs when the AlmaLinux migration completes (the
+        # almalinux-8 image bakes git-lfs in).
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          if command -v git-lfs >/dev/null 2>&1; then
+            echo "git-lfs already present: $(git-lfs version)"
+          else
+            sudo apt-get -o Acquire::Check-Valid-Until=false update
+            sudo apt-get -o Acquire::Check-Valid-Until=false install -y git-lfs
+            git-lfs version
+          fi
+
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v7
         with:
