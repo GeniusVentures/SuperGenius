@@ -518,6 +518,18 @@ namespace sgns
             it->second.acceptance_deadline_ms = now_ms + ms_from_now;
         }
 
+        /// Pins the bounded replay cadence far beyond any test duration. The
+        /// manager's 500ms round timer keeps running concurrent ProcessDueVoteWork
+        /// passes; on a stalled host (pubsub publish blocking for its 1s completion
+        /// timeout) those passes legitimately re-announce an active vote mid-test,
+        /// breaking exact announcement-count assertions. Tests that exercise retry
+        /// force it due explicitly (ForceActiveVoteRetryDue), which overrides this.
+        static void SetActiveVoteRetryInterval( const std::shared_ptr<ConsensusManager> &manager,
+                                                std::chrono::milliseconds               interval )
+        {
+            manager->active_vote_retry_interval_ = interval;
+        }
+
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(
             const std::shared_ptr<ConsensusManager> &manager,
             const std::string                       &subject_hash )
@@ -667,6 +679,7 @@ namespace
                 [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
                 account->GetAddress() );
             EXPECT_TRUE( manager );
+            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager, std::chrono::minutes( 10 ) );
             return manager;
         }
 
@@ -869,6 +882,7 @@ namespace
                 [account = node.account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
                 node.account->GetAddress() );
             EXPECT_TRUE( manager );
+            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager, std::chrono::minutes( 10 ) );
             return manager;
         }
 
