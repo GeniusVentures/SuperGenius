@@ -179,6 +179,11 @@ namespace sgns::processing
         return 0.0f;
     }
 
+    std::shared_ptr<ProcessingTaskQueue> ProcessingCoreImpl::GetTaskQueue() const
+    {
+        return task_queue_;
+    }
+
     outcome::result<void> ProcessingCoreImpl::IncProcessingSubTaskCount()
     {
         std::scoped_lock<std::mutex> subTaskCountLock( subtask_count_mutex_ );

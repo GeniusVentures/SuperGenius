@@ -270,6 +270,29 @@ set_target_properties(Vulkan::Vulkan PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
 )
 
+# On macOS, libMoltenVK.a contains Objective-C code that calls Metal.
+# The ObjC runtime (-lobjc) and Metal frameworks must be linked by
+# every consumer of Vulkan::Vulkan or the linker fails with undefined
+# _objc_msgSend / _objc_retain / _objc_release etc.
+# AppKit does not exist on iOS (ld: framework 'AppKit' not found); MoltenVK
+# uses UIKit there, mirroring the gating in SGProcessors.
+if(APPLE)
+    target_link_libraries(Vulkan::Vulkan INTERFACE
+        "-framework Metal"
+        "-framework IOSurface"
+        "-framework QuartzCore"
+        "-framework Foundation"
+        "-framework CoreFoundation"
+        "-framework CoreGraphics"
+        "-framework IOKit"
+    )
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework AppKit")
+    else()
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework UIKit")
+    endif()
+endif()
+
 # Resolve the Vulkan runtime DLL that matches the loader we just linked.
 # The thirdparty Vulkan-Loader installs vulkan-1.dll (runtime) alongside
 # vulkan-1.lib (import lib, found above). Every exe that links it — directly
@@ -528,6 +551,16 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+# enable_testing() must run before any add_subdirectory() below so that CTest's
+# per-directory CTestTestfile.cmake chain (root -> SGProcessingManager -> test ->
+# capability/artifacts/capture) is actually generated; calling it only inside the
+# later if(BUILD_TESTING) block (after these subdirectories are already configured)
+# left ctest silently unable to discover any test registered under them, even
+# though the leaf CMakeLists.txt files call enable_testing()/add_test() themselves.
+if(BUILD_TESTING)
+    enable_testing()
+endif()
+
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
@@ -536,7 +569,6 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 if(BUILD_TESTING)
-    enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
 

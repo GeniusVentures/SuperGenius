@@ -24,6 +24,8 @@
 #include "MigrationInputValidator.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
+#include "RegistrationTransaction.hpp"
+#include "RevokeTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/BurnConfig.hpp"
 #include "processing/processing_validation_core.hpp"
@@ -115,7 +117,12 @@ namespace sgns
             { "mint-v2", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "migration", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "escrow-hold",
-              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
+              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
+            { "registration",
+              { &TransactionManager::ParseRegistrationTransaction,
+                &TransactionManager::RevertRegistrationTransaction } },
+            { "revoke",
+              { &TransactionManager::ParseRevokeTransaction, &TransactionManager::RevertRevokeTransaction } } };
 
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
@@ -223,6 +230,19 @@ namespace sgns
                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
 
+            // Register the reg/ element filter for child-wallet registrations
+            (void) instance->globaldb_m->RegisterElementFilter(
+                "^/?" + blockchain_base + "reg/[^/]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterRegistration( element ) );
+                    }
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
+                } );
+
             (void) instance->globaldb_m->RegisterNewElementCallback(
                 "^/?" + blockchain_base + "tx/[^/]+",
                 [weak_ptr( std::weak_ptr<TransactionManager>(
@@ -231,6 +251,16 @@ namespace sgns
                     if ( auto strong = weak_ptr.lock() )
                     {
                         strong->NewElementCallback( std::move( new_data ), cid );
+                    }
+                } );
+            (void) instance->globaldb_m->RegisterNewElementCallback(
+                "^/?" + blockchain_base + "reg/[^/]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>(
+                    instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->RegElementCallback( std::move( new_data ), cid );
                     }
                 } );
             (void) instance->globaldb_m->RegisterDeletedElementCallback(
@@ -345,11 +375,14 @@ namespace sgns
                 std::string       blockchain_base = GetBlockChainBase( network_id );
                 const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
                 const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
+                const std::string reg_pattern     = "^/?" + blockchain_base + "reg/[^/]+";
 
                 globaldb_m->UnregisterNewElementCallback( tx_pattern );
                 globaldb_m->UnregisterDeletedElementCallback( tx_pattern );
                 globaldb_m->UnregisterElementFilter( tx_pattern );
                 globaldb_m->UnregisterElementFilter( proof_pattern );
+                globaldb_m->UnregisterNewElementCallback( reg_pattern );
+                globaldb_m->UnregisterElementFilter( reg_pattern );
             }
         }
         account_m->ClearGetTransactionCIDMethod();
@@ -684,6 +717,251 @@ namespace sgns
         EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
 
         return transfer_transaction->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RecoverFromChild( std::string child_address,
+                                                                       uint64_t    amount,
+                                                                       TokenID     token_id )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::vector<InputUTXOInfo> inputs;
+        uint64_t                   selected_amount = 0;
+
+        for ( const auto &utxo : account_m->GetUTXOManager().GetUnconsumedUTXOs( child_address ) )
+        {
+            if ( !( utxo.GetTokenID() == token_id ) )
+            {
+                continue;
+            }
+
+            InputUTXOInfo input;
+            input.txid_hash_  = utxo.GetTxID();
+            input.output_idx_ = utxo.GetOutputIdx();
+            input.signature_  = account_m->Sign( input.SerializeForSigning() );
+
+            inputs.push_back( std::move( input ) );
+            selected_amount += utxo.GetAmount();
+
+            if ( selected_amount >= amount )
+            {
+                break;
+            }
+        }
+
+        if ( selected_amount < amount )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::vector<OutputDestInfo> outputs;
+        outputs.push_back( { amount, account_m->GetAddress(), token_id } );
+        if ( selected_amount > amount )
+        {
+            outputs.push_back( { selected_amount - amount, child_address, token_id } );
+        }
+
+        auto recover_transaction = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( inputs, outputs, FillDAGStructForAddress( child_address ) ) );
+
+        recover_transaction->MakeSignature( *account_m );
+
+        account_m->GetUTXOManager().ReserveUTXOs( inputs, recover_transaction->GetHash() );
+
+        EnqueueTransaction( std::make_pair( recover_transaction, std::nullopt ) );
+
+        return recover_transaction->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata,
+        uint64_t                            sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( main_address ), sequence, std::move( metadata ), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // Auto-derive sequence: read reg/{child_addr} from CRDT, use stored + 1 (or 1 if none)
+        uint64_t    sequence = 1;
+        std::string reg_key  = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( existing_data.has_value() )
+        {
+            auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+            if ( !maybe_existing.has_error() )
+            {
+                auto existing = maybe_existing.value();
+                if ( existing->GetType() == "registration" )
+                {
+                    auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing );
+                    if ( existing_reg )
+                    {
+                        sequence = existing_reg->GetSequence() + 1;
+                    }
+                }
+            }
+        }
+
+        return RegisterChild( std::move( main_address ), std::move( metadata ), sequence );
+    }
+
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        static const std::string kZeroAddress( 128, '0' );
+
+        auto tx = std::make_shared<RegistrationTransaction>( RegistrationTransaction::New( kZeroAddress,
+                                                                                            sequence,
+                                                                                            std::move( metadata ),
+                                                                                            FillDAGStruct(),
+                                                                                            /*detach_flag=*/true,
+                                                                                            supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return DetachChild( std::move( metadata ), existing_reg->GetSequence() + 1, existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( new_main_address ),
+                                          sequence,
+                                          std::move( metadata ),
+                                          FillDAGStruct(),
+                                          /*detach_flag=*/false,
+                                          supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return ReplaceMain( std::move( new_main_address ),
+                            std::move( metadata ),
+                            existing_reg->GetSequence() + 1,
+                            existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::RevokeChild( std::string child_address )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + child_address;
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg || existing_reg->GetDetachFlag() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto tx = std::make_shared<RevokeTransaction>(
+            RevokeTransaction::New( child_address, existing_reg->GetSequence(), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
     }
 
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
@@ -1367,6 +1645,93 @@ namespace sgns
         return dag;
     }
 
+    SGTransaction::DAGStruct TransactionManager::FillDAGStructForAddress( const std::string &source_address )
+    {
+        SGTransaction::DAGStruct dag;
+        auto                     timestamp = std::chrono::system_clock::now();
+
+        auto           peer_nonce_result = account_m->GetPeerNonce( source_address );
+        const uint64_t nonce             = peer_nonce_result.has_value() ? ( peer_nonce_result.value() + 1 ) : 0;
+
+        const auto previous_hash = [&]() -> std::string
+        {
+            if ( nonce == 0 )
+            {
+                return "";
+            }
+
+            const auto previous_nonce = nonce - 1;
+            {
+                std::shared_lock tx_lock( tx_mutex_m );
+                for ( const auto &[_, tracked] : tx_processed_m )
+                {
+                    if ( tracked.tx && tracked.tx->GetSrcAddress() == source_address &&
+                         tracked.cached_nonce == previous_nonce && tracked.status != TransactionStatus::FAILED &&
+                         tracked.status != TransactionStatus::INVALID )
+                    {
+                        return tracked.tx->GetHash();
+                    }
+                }
+            }
+
+            std::string selected_hash;
+            for ( auto network_id : GetMonitoredNetworkIDs() )
+            {
+                const std::string query_path = GetBlockChainBase( network_id ) + "tx";
+                auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
+                if ( !tx_list.has_value() )
+                {
+                    continue;
+                }
+
+                for ( const auto &[_, value] : tx_list.value() )
+                {
+                    auto tx_result = DeSerializeTransaction( value );
+                    if ( !tx_result.has_value() || !tx_result.value() )
+                    {
+                        continue;
+                    }
+
+                    const auto &candidate = tx_result.value();
+                    if ( candidate->GetSrcAddress() != source_address || candidate->GetNonce() != previous_nonce )
+                    {
+                        continue;
+                    }
+
+                    auto candidate_certificate = GetTransactionCertificate( *candidate );
+                    if ( candidate_certificate.has_error() ||
+                         !CertificateMatchesTransaction( candidate_certificate.value(), *candidate ) )
+                    {
+                        continue;
+                    }
+
+                    if ( selected_hash.empty() ||
+                         blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                    {
+                        selected_hash = candidate->GetHash();
+                    }
+                }
+            }
+
+            if ( !selected_hash.empty() )
+            {
+                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions (address {})",
+                                 selected_hash,
+                                 nonce,
+                                 source_address );
+            }
+            return selected_hash;
+        }();
+
+        dag.set_previous_hash( previous_hash );
+        dag.set_nonce( nonce );
+        dag.set_source_addr( source_address );
+        dag.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
+
+        return dag;
+    }
+
     std::string TransactionManager::GetOutgoingPreviousHash( uint64_t nonce ) const
     {
         if ( nonce == 0 )
@@ -1386,7 +1751,53 @@ namespace sgns
             return persisted_hash;
         }
 
+        auto registration_hash = GetRegisteredOutgoingPreviousHash( nonce );
+        if ( !registration_hash.empty() )
+        {
+            return registration_hash;
+        }
+
         return QueryOutgoingPreviousHashFromCRDT( nonce );
+    }
+
+    std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+        // (SendTransactionItem routes them there), so a nonce chain that passes
+        // through a registration (e.g. RegisterChild then a mint) cannot resolve
+        // its predecessor through the tx/ namespace. Resolve the registration
+        // through its canonical slot certificate: the cert embeds the exact
+        // certified transaction hash, which binds the chain link the same way
+        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        if ( nonce == 0 || !globaldb_m )
+        {
+            return "";
+        }
+
+        const std::string slot_key = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
+        auto certificate_result = blockchain_->GetCertificateBySlot( slot_key );
+        if ( certificate_result.has_error() )
+        {
+            return "";
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
+            certificate_result.value().proposal().subject() );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET ||
+             nonce_subject.value().nonce() != ( nonce - 1 ) ||
+             certificate_result.value().proposal().subject().account_id() != account_m->GetAddress() )
+        {
+            return "";
+        }
+
+        auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
+        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        {
+            return "";
+        }
+
+        return embedded.value()->GetHash();
     }
 
     std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
@@ -1748,7 +2159,21 @@ namespace sgns
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
 
-            auto                   transaction_path = GetTransactionPath( *transaction );
+            std::string transaction_path;
+            if ( transaction->GetType() == "registration" )
+            {
+                auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( transaction );
+                if ( !reg_tx )
+                {
+                    m_logger->error( "SendTransactionItem: dynamic_pointer_cast<RegistrationTransaction> returned null" );
+                    return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+                }
+                transaction_path = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            }
+            else
+            {
+                transaction_path = GetTransactionPath( *transaction );
+            }
             crdt::HierarchicalKey  tx_key( transaction_path );
             crdt::GlobalDB::Buffer data_transaction;
 
@@ -1757,7 +2182,13 @@ namespace sgns
                                                full_node_m,
                                                tx_key.GetKey() );
 
-            data_transaction.put( transaction->SerializeByteVector() );
+            auto serializedBytes = transaction->SerializeByteVector();
+            if ( serializedBytes.empty() )
+            {
+                m_logger->error( "SendTransactionItem: SerializeByteVector returned empty for transaction {}", transaction->GetHash() );
+                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+            data_transaction.put( serializedBytes );
             BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
             if ( maybe_proof )
@@ -1989,6 +2420,8 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "registration", &RegistrationTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "revoke", &RevokeTransaction::DeSerializeByteVector );
             return true;
         }();
         (void) registered;
@@ -2036,6 +2469,20 @@ namespace sgns
                 std::string bytes;
                 embedded.escrow_release().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRegistration:
+            {
+                std::string bytes;
+                embedded.registration().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "registration" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRevoke:
+            {
+                std::string bytes;
+                embedded.revoke().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "revoke" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::TRANSACTION_NOT_SET:
@@ -2813,6 +3260,94 @@ namespace sgns
                 account_m->GetUTXOManager().RestoreConsumedUTXOs( inputs, escrow_tx->GetSrcAddress() ) );
         }
 
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRegistrationTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Registration
+        // transactions carry no UTXO parameters and are already fully handled (signature/
+        // sequence/monotonicity validation, CRDT persistence) by FilterRegistration/
+        // RegElementCallback. This entry exists solely to satisfy transaction_parsers'
+        // membership check in CheckTransactionWellFormed/ParseTransaction/RevertTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRegistrationTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op — see ParseRegistrationTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    {
+        auto revoke_tx = std::dynamic_pointer_cast<RevokeTransaction>( tx );
+        if ( !revoke_tx )
+        {
+            m_logger->error( "ParseRevokeTransaction: dynamic_pointer_cast<RevokeTransaction> returned null" );
+            return std::errc::invalid_argument;
+        }
+
+        std::string reg_key = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            m_logger->warn( "ParseRevokeTransaction: no reg/ record found for child {} — nothing to update",
+                             revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+        {
+            m_logger->warn(
+                "ParseRevokeTransaction: reg/ record for child {} is missing or not a registration — nothing to update",
+                revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+        if ( !existing_reg )
+        {
+            m_logger->warn( "ParseRevokeTransaction: reg/ record for child {} did not cast to RegistrationTransaction",
+                             revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        SGTransaction::DAGStruct updated_dag;
+        updated_dag.set_type( "registration" );
+        updated_dag.set_source_addr( revoke_tx->GetChildAddress() );
+
+        auto updated_reg = RegistrationTransaction::New( existing_reg->GetMainAddress(),
+                                                          existing_reg->GetSequence(),
+                                                          existing_reg->GetMetadata(),
+                                                          updated_dag,
+                                                          /*detach_flag=*/true,
+                                                          existing_reg->GetSupersedesSequence() );
+
+        auto put_result = globaldb_m->PutLocal( crdt::HierarchicalKey( reg_key ),
+                                                base::Buffer( updated_reg.SerializeByteVector() ),
+                                                revoke_tx->GetHash() );
+        if ( put_result.has_error() )
+        {
+            m_logger->error( "ParseRevokeTransaction: failed to write updated reg/ record for child {}",
+                              revoke_tx->GetChildAddress() );
+            return put_result.error();
+        }
+
+        m_logger->info( "ParseRevokeTransaction: applied revoke — reg/{} detach_flag set to true",
+                         revoke_tx->GetChildAddress() );
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRevokeTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Reverting a Revoke
+        // would require snapshotting the prior reg/ state, which is not currently tracked; leaving
+        // the target Detached is the conservative, fail-safe default.
         return outcome::success();
     }
 
@@ -3780,6 +4315,104 @@ namespace sgns
         return maybe_tombstones;
     }
 
+    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterRegistration(
+        const crdt::pb::Element &element )
+    {
+        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+        bool                                          should_delete = true;
+        do
+        {
+            // Gate (a): deserialization failure
+            auto maybe_new_tx = DeSerializeTransaction( element.value() );
+            if ( maybe_new_tx.has_error() )
+            {
+                m_logger->error( "Failed to deserialize registration {}", element.key() );
+                break;
+            }
+            auto new_tx = maybe_new_tx.value();
+            if ( new_tx->GetType() != "registration" )
+            {
+                break;
+            }
+            auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( new_tx );
+            if ( !reg_tx )
+            {
+                break;
+            }
+
+            // Gate (b): invalid child signature
+            if ( !CheckTransactionAuthorization( *reg_tx ) )
+            {
+                m_logger->error( "Invalid signature on registration {}", element.key() );
+                break;
+            }
+
+            // Gate (c): malformed main_address (not 128 hex chars)
+            if ( reg_tx->GetMainAddress().size() != 128 )
+            {
+                m_logger->error( "Malformed main_address in registration {}", element.key() );
+                break;
+            }
+
+            // Gate (d): sequence monotonicity — reject zero sequences and
+            // non-monotonic (incoming <= stored) sequences per D-46.
+            if ( reg_tx->GetSequence() == 0 )
+            {
+                m_logger->error( "Zero sequence in registration {}", element.key() );
+                break;
+            }
+            std::shared_ptr<RegistrationTransaction> existing_reg;
+            std::string reg_key = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            auto existing_data = globaldb_m->Get( reg_key );
+            if ( existing_data.has_value() )
+            {
+                auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+                if ( !maybe_existing_tx.has_error() )
+                {
+                    auto existing_tx = maybe_existing_tx.value();
+                    if ( existing_tx->GetType() == "registration" )
+                    {
+                        existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing_tx );
+                        if ( existing_reg && reg_tx->GetSequence() <= existing_reg->GetSequence() )
+                        {
+                            m_logger->error(
+                                "Non-monotonic sequence in registration {}: incoming={}, stored={}",
+                                element.key(),
+                                reg_tx->GetSequence(),
+                                existing_reg->GetSequence() );
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Gate 3b (e): supersedes_sequence fork-prevention (D-38) — a lifecycle-change
+            // RegistrationTx (Detach/Replace-Main) whose supersedes_sequence is non-zero must
+            // match the currently-stored record's sequence, or is rejected as a fork attempt.
+            if ( reg_tx->GetSupersedesSequence() != 0 )
+            {
+                if ( !existing_reg || reg_tx->GetSupersedesSequence() != existing_reg->GetSequence() )
+                {
+                    m_logger->error(
+                        "Forked supersedes_sequence in registration {}: incoming={}, stored={}",
+                        element.key(),
+                        reg_tx->GetSupersedesSequence(),
+                        existing_reg ? existing_reg->GetSequence() : 0 );
+                    break;
+                }
+            }
+
+            should_delete = false;
+        } while ( 0 );
+
+        if ( should_delete )
+        {
+            // No cascade-delete — reg/ has no paired namespace (D-13)
+            maybe_tombstones = std::vector<crdt::pb::Element>{};
+        }
+        return maybe_tombstones;
+    }
+
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )
     {
         // Proof verification is deliberately not enabled yet: enabling
@@ -4231,6 +4864,30 @@ namespace sgns
                                            full_node_m,
                                            key,
                                            queue_size );
+    }
+
+    void TransactionManager::RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid )
+    {
+        // Deserialize the element value to check main_address
+        auto maybe_tx = DeSerializeTransaction( new_data.second );
+        if ( maybe_tx.has_error() || maybe_tx.value()->GetType() != "registration" )
+        {
+            return;
+        }
+        auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_tx.value() );
+        if ( !reg_tx )
+        {
+            return;
+        }
+
+        // D-49: if this registration names the local node as main, follow the child
+        if ( reg_tx->GetMainAddress() == account_m->GetAddress() )
+        {
+            m_logger->info( "Discovered new child registration: child={}, main={}, following child channel",
+                            reg_tx->GetSrcAddress().substr( 0, 16 ),
+                            reg_tx->GetMainAddress().substr( 0, 16 ) );
+            globaldb_m->AddListenTopic( reg_tx->GetSrcAddress() );
+        }
     }
 
     void TransactionManager::DeleteElementCallback( std::string deleted_key )
@@ -5130,6 +5787,15 @@ namespace sgns
                                                tx->GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
+        if ( !CheckParentChildAuthority( *tx ) )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Parent-child authority check failed tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
         if ( !CheckTransactionTimestamp( *tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Timestamp check failed tx={}",
@@ -5239,12 +5905,139 @@ namespace sgns
                                                tx.GetHash() );
             return true;
         }
+        if ( tx.GetType() == "transfer" )
+        {
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( certified_main.has_value() && tx.CheckSignatureAgainst( *certified_main ) )
+            {
+                m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+        }
         TransactionManagerLogger()->error( "[{} - full: {}] {}: Authorization failed tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
                                            __func__,
                                            tx.GetHash() );
         return false;
+    }
+
+    bool TransactionManager::CheckParentChildAuthority( const GeniusTransaction &tx ) const
+    {
+        m_logger->debug( "{}: Checking parent-child authority tx={}", __func__, tx.GetHash() );
+
+        if ( tx.GetType() == "transfer" )
+        {
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( !certified_main.has_value() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            if ( tx.CheckSignature() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            auto params = tx.GetUTXOParametersOpt();
+            if ( !params.has_value() || params->second.empty() )
+            {
+                m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+                return false;
+            }
+            if ( params->second.front().dest_address == *certified_main )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+            return false;
+        }
+
+        if ( tx.GetType() == "revoke" )
+        {
+            // Note: CheckTransactionAuthorization already ran (ValidateTransactionForConsensus
+            // order) and verified main's signature over the whole RevokeTx via ordinary
+            // tx.CheckSignature() — main is the tx's own signer, so no additional
+            // signature re-verification is needed here.
+            auto revoke_tx = dynamic_cast<const RevokeTransaction *>( &tx );
+            if ( !revoke_tx )
+            {
+                m_logger->error( "{}: Parent-child authority failed — not a RevokeTransaction tx={}",
+                                  __func__,
+                                  tx.GetHash() );
+                return false;
+            }
+
+            std::string reg_key = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+            auto        existing_data = globaldb_m->Get( reg_key );
+            if ( !existing_data.has_value() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — no reg/ record for child {} tx={}",
+                                  __func__,
+                                  revoke_tx->GetChildAddress(),
+                                  tx.GetHash() );
+                return false;
+            }
+
+            auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+            if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — reg/ record for child {} is missing or not a registration tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+
+            auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+            if ( !existing_reg )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — reg/ record for child {} did not cast to RegistrationTransaction tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+
+            if ( existing_reg->GetDetachFlag() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — child {} already detached/revoked tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+            if ( existing_reg->GetMainAddress() != tx.GetSrcAddress() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — signer is not the certified main for child {} tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+            if ( revoke_tx->GetRegistrationSequence() != existing_reg->GetSequence() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — sequence mismatch for child {}: revoke={}, stored={} tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    revoke_tx->GetRegistrationSequence(),
+                    existing_reg->GetSequence(),
+                    tx.GetHash() );
+                return false;
+            }
+
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+
+        m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+        return true;
     }
 
     bool TransactionManager::CheckTransactionTimestamp( const GeniusTransaction &tx ) const
@@ -5317,6 +6110,53 @@ namespace sgns
                 return { ConsensusManager::ValidationResult::Reject() };
             }
             auto previous_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( previous_hash ) );
+            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                 previous_transaction_result.value()->GetHash() != previous_hash )
+            {
+                // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+                // (SendTransactionItem routes them there), so any nonce chain that
+                // passes through a registration (a re-registration, or an ordinary
+                // transfer/mint after RegisterChild) cannot resolve its predecessor
+                // through the tx/ namespace. The stored reg/ record is the child's
+                // current chain head — but a revoke rewrites it locally (detach_flag)
+                // under a fresh hash, so the stored record may no longer match the
+                // ORIGINAL registration the sender chains to. The immutable
+                // certificate at the predecessor's slot still embeds the original
+                // transaction: resolve through it.
+                const std::string reg_key = GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
+                auto reg_data = globaldb_m->Get( reg_key );
+                if ( reg_data.has_value() )
+                {
+                    auto stored_reg = DeSerializeTransaction( reg_data.value() );
+                    if ( !stored_reg.has_error() && stored_reg.value() &&
+                         stored_reg.value()->GetHash() == previous_hash )
+                    {
+                        previous_transaction_result = stored_reg;
+                    }
+                }
+                if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                     previous_transaction_result.value()->GetHash() != previous_hash )
+                {
+                    const std::string prev_slot = tx.GetSrcAddress() + ":" + std::to_string( tx.GetNonce() - 1 );
+                    auto prev_cert = blockchain_->GetCertificateBySlot( prev_slot );
+                    if ( prev_cert.has_value() )
+                    {
+                        auto prev_subject = ConsensusManager::DecodeNonceSubject(
+                            prev_cert.value().proposal().subject() );
+                        if ( !prev_subject.has_error() &&
+                             prev_subject.value().tx_hash() == previous_hash &&
+                             prev_cert.value().proposal().subject().account_id() == tx.GetSrcAddress() )
+                        {
+                            auto embedded = DeSerializeEmbeddedTransaction( prev_subject.value().transaction() );
+                            if ( embedded.has_value() && embedded.value() &&
+                                 embedded.value()->GetHash() == previous_hash )
+                            {
+                                previous_transaction_result = embedded;
+                            }
+                        }
+                    }
+                }
+            }
             if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
                  previous_transaction_result.value()->GetHash() != previous_hash )
             {
@@ -6431,6 +7271,55 @@ namespace sgns
         return !result.has_error();
     }
 
+    outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
+        const std::string &main_address )
+    {
+        std::vector<RegistrationDiscoveryEntry> results;
+        for ( auto network_id : GetMonitoredNetworkIDs() )
+        {
+            const std::string query_path = GetBlockChainBase( network_id ) + "reg";
+            auto reg_list = globaldb_m->QueryKeyValues( query_path );
+            if ( reg_list.has_error() )
+            {
+                m_logger->error( "Unable to query registrations on {}", query_path );
+                continue;
+            }
+
+            for ( const auto &[key, value] : reg_list.value() )
+            {
+                auto maybe_tx = DeSerializeTransaction( value );
+                if ( maybe_tx.has_error() )
+                {
+                    m_logger->trace( "Failed to deserialize reg/ value, skipping" );
+                    continue;
+                }
+                auto tx = maybe_tx.value();
+                if ( tx->GetType() != "registration" )
+                {
+                    continue;
+                }
+                auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
+                if ( !reg_tx )
+                {
+                    continue;
+                }
+                if ( reg_tx->GetMainAddress() != main_address )
+                {
+                    m_logger->trace( "Skipping registration for different main: {}",
+                                     reg_tx->GetMainAddress().substr( 0, 16 ) );
+                    continue;
+                }
+
+                RegistrationDiscoveryEntry entry;
+                entry.child_addr = reg_tx->GetSrcAddress();
+                entry.main_addr  = reg_tx->GetMainAddress();
+                entry.sequence   = reg_tx->GetSequence();
+                entry.metadata   = reg_tx->GetMetadata();
+                results.push_back( std::move( entry ) );
+            }
+        }
+        return results;
+    }
 }
 
 fmt::format_context::iterator fmt::formatter<sgns::TransactionManager::State>::format(

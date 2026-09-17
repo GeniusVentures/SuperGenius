@@ -1790,4 +1790,455 @@ namespace sgns
         ASSERT_LT( mean_abs_diff, 1e-3 ) << "Mean absolute diff too large";
         ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
     }
+
+    // =======================================================================
+    // Phase 09: 5 new MNN processor types (audio, image, ml, string, volume)
+    // =======================================================================
+
+    TEST_F( ProcessingDatatypesTest, AudioValidationTest )
+    {
+        const std::string &instance_str = PatchedJson( "audio-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &inputs     = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_name(), "inputAudio" );
+        // Audio input type is schema-level — verify the input is valid
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "audio_input.raw" ) != std::string::npos );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 256 );
+        ASSERT_EQ( dims.get_block_len().value(), 256 );
+        ASSERT_EQ( dims.get_chunk_stride().value(), 256 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "audioOutput" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
+
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_EQ( passes[0].get_name(), "audio_inference" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
+
+        std::cout << "Audio validation test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, AudioProcessingTest )
+    {
+        const std::string &instance_str = PatchedJson( "audio-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &passes     = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto  model       = passes[0].get_model().value();
+        const auto &input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (audio)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        if ( process_result.has_value() )
+        {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        }
+        else
+        {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        std::cout << "Audio processing test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, ImageValidationTest )
+    {
+        const std::string &instance_str = PatchedJson( "image-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &inputs     = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_name(), "inputImage" );
+        // Image input type is schema-level — verify the input is valid
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "image_input.raw" ) != std::string::npos );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 32 );
+        ASSERT_EQ( dims.get_height().value(), 32 );
+        ASSERT_EQ( dims.get_block_len().value(), 32 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "imageOutput" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
+
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_EQ( passes[0].get_name(), "image_inference" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
+
+        std::cout << "Image validation test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, ImageProcessingTest )
+    {
+        const std::string &instance_str = PatchedJson( "image-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &passes     = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto  model       = passes[0].get_model().value();
+        const auto &input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (image)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        if ( process_result.has_value() )
+        {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        }
+        else
+        {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        std::cout << "Image processing test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, MlValidationTest )
+    {
+        const std::string &instance_str = PatchedJson( "ml-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &inputs     = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        // ML input type is schema-level — verify the input is valid
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "ml_input.raw" ) != std::string::npos );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 64 );
+        ASSERT_EQ( dims.get_block_len().value(), 64 );
+        ASSERT_EQ( dims.get_chunk_stride().value(), 64 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "mlOutput" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
+
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_EQ( passes[0].get_name(), "ml_inference" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
+
+        std::cout << "ML validation test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, MlProcessingTest )
+    {
+        const std::string &instance_str = PatchedJson( "ml-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &passes     = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto  model       = passes[0].get_model().value();
+        const auto &input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (ml)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        if ( process_result.has_value() )
+        {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        }
+        else
+        {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        std::cout << "ML processing test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, StringConformanceValidationTest )
+    {
+        const std::string &instance_str = PatchedJson( "string-conformance-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &inputs     = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_name(), "inputText" );
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::STRING );
+
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "textEmbedding" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
+
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_EQ( passes[0].get_name(), "string_conformance_inference" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
+        ASSERT_TRUE( model.get_source_uri_param().find( "string_tiny.mnn" ) != std::string::npos );
+
+        std::cout << "String conformance validation test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, StringConformanceProcessingTest )
+    {
+        const std::string &instance_str = PatchedJson( "string-conformance-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &passes     = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto  model       = passes[0].get_model().value();
+        const auto &input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (string conformance)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        if ( process_result.has_value() )
+        {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        }
+        else
+        {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        std::cout << "String conformance processing test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, VolumeValidationTest )
+    {
+        const std::string &instance_str = PatchedJson( "volume-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &inputs     = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        // Volume input type is schema-level — verify the input is valid
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "volume_input.raw" ) != std::string::npos );
+        ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
+        auto dims = inputs[0].get_dimensions().value();
+        ASSERT_EQ( dims.get_width().value(), 16 );
+        ASSERT_EQ( dims.get_height().value(), 16 );
+        ASSERT_EQ( dims.get_chunk_count().value(), 16 );
+        ASSERT_EQ( dims.get_block_len().value(), 16 );
+        ASSERT_TRUE( inputs[0].get_format().has_value() );
+        ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
+
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "volumeOutput" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
+
+        const auto &passes = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_EQ( passes[0].get_name(), "volume_inference" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model = passes[0].get_model().value();
+        ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
+
+        std::cout << "Volume validation test passed successfully" << std::endl;
+    }
+
+    TEST_F( ProcessingDatatypesTest, VolumeProcessingTest )
+    {
+        const std::string &instance_str = PatchedJson( "volume-processing-definition.json" );
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
+        ASSERT_TRUE( manager_result.has_value() )
+            << "Failed to create ProcessingManager: " << manager_result.error().message();
+
+        const auto &manager = manager_result.value();
+        ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
+
+        auto        processing = manager->GetProcessingData();
+        const auto &passes     = processing.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto  model       = passes[0].get_model().value();
+        const auto &input_nodes = model.get_input_nodes();
+        ASSERT_EQ( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        std::cout << "Calling Process() on ProcessingManager (volume)..." << std::endl;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        if ( process_result.has_value() )
+        {
+            std::cout << "Process() succeeded!" << std::endl;
+            std::cout << "Result hash size: " << process_result.value().size() << " bytes" << std::endl;
+            std::cout << "Number of chunk hashes: " << chunkhashes.size() << std::endl;
+
+            ASSERT_FALSE( process_result.value().empty() ) << "Result hash should not be empty";
+            ASSERT_GT( chunkhashes.size(), 0 ) << "Should have at least one chunk hash";
+        }
+        else
+        {
+            std::cout << "Process() failed: " << process_result.error().message() << std::endl;
+            FAIL() << "Process() should succeed: " << process_result.error().message();
+        }
+
+        std::cout << "Volume processing test passed successfully" << std::endl;
+    }
 }

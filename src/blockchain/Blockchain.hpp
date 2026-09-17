@@ -301,6 +301,13 @@ namespace sgns
          */
         bool CheckCertificateForSlot( const std::string &slot_key );
         /**
+         * @brief Looks up the certified parent (main) address for a registered child.
+         * @param[in] child_addr Child address whose `reg/` record should be resolved.
+         * @return The certified main address, or `std::nullopt` when the child is unregistered,
+         *         malformed, or not yet certified (D-26).
+         */
+        std::optional<std::string> CheckCertifiedParent( const std::string &child_addr ) const;
+        /**
          * @brief Loads the validated authoritative certificate by canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return Certificate on success, otherwise an error.

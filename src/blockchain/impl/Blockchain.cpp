@@ -8,11 +8,13 @@
 #include <mutex>
 #include <system_error>
 #include <unordered_set>
+#include <boost/format.hpp>
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include <primitives/cid/cid.hpp>
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "outcome/outcome.hpp"
+#include "account/proto/SGTransaction.pb.h"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 {
@@ -1883,6 +1885,61 @@ namespace sgns
         // before the caller observes the record.
         consensus_manager_->DispatchCertificateWorkForSlot( slot_key );
         return true;
+    }
+
+    std::optional<std::string> Blockchain::CheckCertifiedParent( const std::string &child_addr ) const
+    {
+        // Mirrors the existing reg-key format ("/bc-%hu/" + "reg/" + address, see
+        // account/TransactionManager.cpp:618-619, :2873-2874) without depending on genius_node symbols.
+        std::string reg_key =
+            ( boost::format( std::string( "/bc-%hu/" ) ) % sgns::version::GetNetworkID() ).str() + "reg/" + child_addr;
+
+        auto existing_data = db_->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return std::nullopt;
+        }
+
+        SGTransaction::RegistrationTx tx_struct;
+        if ( !tx_struct.ParseFromArray( existing_data.value().data(),
+                                         static_cast<int>( existing_data.value().size() ) ) )
+        {
+            return std::nullopt;
+        }
+
+        if ( tx_struct.dag_struct().type() != "registration" )
+        {
+            return std::nullopt;
+        }
+
+        // v3.0 slot-authoritative certificates: the canonical slot record at
+        // /cert/<slot> is the only certificate authority (subject-hash lookups
+        // were removed together with the legacy /cert/<subject_hash> records —
+        // no consensus version was deployed, so none exist to fall back to).
+        // Require a validated quorum certificate on the slot this registration
+        // transaction occupies, AND bind it to the STORED record: the certificate
+        // embeds the exact certified transaction hash, so a locally rewritten
+        // reg/ record (e.g. ParseRevokeTransaction's detach_flag rewrite, whose
+        // fresh dag hash was never a consensus subject) no longer resolves —
+        // revoking the certified binding is what withdraws the main's delegated
+        // authority.
+        const std::string slot_key = tx_struct.dag_struct().source_addr() + ":" +
+                                     std::to_string( tx_struct.dag_struct().nonce() );
+        auto certificate_result = GetCertificateBySlot( slot_key );
+        if ( certificate_result.has_error() )
+        {
+            return std::nullopt;
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
+            certificate_result.value().proposal().subject() );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().tx_hash() != tx_struct.dag_struct().data_hash() )
+        {
+            return std::nullopt;
+        }
+
+        return tx_struct.main_address();
     }
 
     outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySlot( const std::string &slot_key ) const

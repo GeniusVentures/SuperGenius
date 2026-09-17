@@ -28,6 +28,25 @@ target_link_libraries(task_queue_test
     base_crdt_test
 )
 
+addtest(processing_validation_core_test
+    processing_validation_core_test.cpp
+)
+
+target_link_libraries(processing_validation_core_test
+    processing_service
+    SGProcessingProto
+    sgproccapture
+)
+
+# Phase 19 (VALD-02): the Vald02* TEST cases read a real cross-machine .cap fixture pair.
+# The fixtures now live IN this repo under fixtures/ (tracked via Git LFS, see .gitattributes)
+# instead of reaching out of the SuperGenius submodule into the outer repo's .planning tree —
+# the old "../../../../.planning/..." path only worked in a checkout that had that planning
+# workspace present and LFS-pulled, breaking standalone SuperGenius builds and CI.
+target_compile_definitions(processing_validation_core_test PRIVATE
+    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
+
 addtest(processing_result_durability_test
     processing_result_durability_test.cpp
     processing_service_test_base.cpp

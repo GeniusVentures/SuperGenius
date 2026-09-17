@@ -1,0 +1,82 @@
+{
+  "name": "render-lighting",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "lightingVertexInput",
+      "source_uri_param": "file://processing_dispatch/lighting-vertex-data.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "lightingRenderOutput",
+      "source_uri_param": "file://processing_dispatch/lighting-render-output.raw",
+      "type": "image"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "byteQuantMode",
+      "type": "int",
+      "default": 5,
+      "description": "Empirically-derived lighting byteQuantMode (Phase 17 D-06/D-08, RENDTOL-02). 17-CAPTURE-RESULTS-ROUND1.md's Round 1 capture measured maxAbsDelta=0.0 for lighting (contentHashMatch=true), giving a divergence-absorption floor of N=0 -- but that capture is now known to have measured a degenerate solid-black render caused by a push-constant field-order bug (fixed in Phase 17-06: lighting_fragment_shader.glsl's push_constant struct now matches ResolveUniforms's alphabetical packing order), so it is NOT a valid basis for real cross-hardware divergence and a fresh capture against the corrected shader is still pending. secv01_render_lighting_counter_test.cpp's own binary search over N in [0,8] against a deliberately wrong lightColor ([1,1,1] -> [0.5,0.5,0.5]) found the counter-test passes through N=5 and fails (artifactIds collide) at N=6 -- N=5 is chosen as one integer step of margin below that confirmed failure boundary. This value is honestly derived from the counter-test's own corruption-detection boundary, not from a fresh real-divergence measurement for the corrected shader."
+    }
+  ],
+  "passes": [
+    {
+      "name": "lightingPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "glsl",
+            "source": "file://processing_dispatch/lighting_vertex_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/lighting_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ],
+        "uniforms": {
+          "lightDir": { "type": "vec3", "value": [-0.3, -1.0, -0.2] },
+          "lightColor": { "type": "vec3", "value": [1.0, 1.0, 1.0] },
+          "viewPos": { "type": "vec3", "value": [0.0, 0.0, 3.0] }
+        }
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:lightingVertexInput"
+      },
+      "vertex_layout": [
+        { "name": "inPosX", "format": "FLOAT32", "offset": 0 },
+        { "name": "inPosY", "format": "FLOAT32", "offset": 4 },
+        { "name": "inPosZ", "format": "FLOAT32", "offset": 8 },
+        { "name": "inNormX", "format": "FLOAT32", "offset": 12 },
+        { "name": "inNormY", "format": "FLOAT32", "offset": 16 },
+        { "name": "inNormZ", "format": "FLOAT32", "offset": 20 }
+      ],
+      "pipeline_state": {
+        "topology": "triangle_list",
+        "cull_mode": "none",
+        "front_face": "ccw",
+        "depth_test": "disabled"
+      }
+    }
+  ]
+}

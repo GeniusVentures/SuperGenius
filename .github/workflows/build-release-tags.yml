@@ -184,6 +184,18 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          foreach ($p in @("C:\Program Files\Git\bin", "C:\Program Files\Git\usr\bin")) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          $bash = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          Write-Output $(if ($bash) { "Bash location: $bash" } else { "WARNING: bash.exe not found in PATH" })
+
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{runner.workspace}}
@@ -193,24 +205,30 @@ jobs:
           echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{github.workspace}}"
 
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
+          fi
+
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
           
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
           if [ -d "thirdparty" ]; then
             echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+            $SUDO rm -rf thirdparty
           fi
           if [ -d "zkLLVM" ]; then
             echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+            $SUDO rm -rf zkLLVM
           fi
 
           echo "=== POST-CLEANUP DEBUG ==="
@@ -361,14 +379,67 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-          
+
+          # Refresh apt indices first, for two reasons:
+          #  1. GitHub-hosted runners use mirror+file:/etc/apt/apt-mirrors.txt
+          #     (Azure mirrors) whose cached lists can reference superseded
+          #     package versions (e.g. libgcrypt20-dev 1.10.3-2ubuntu0.1, a
+          #     dep of libsecret-1-dev) that 404 until the index is refreshed.
+          #  2. Debian 11 (bullseye) LTS ended 2026-08-31 and debian-security
+          #     stopped refreshing, so that suite's Release file is permanently
+          #     expired and a plain `apt-get update` exits 100 inside the
+          #     bullseye build container. Check-Valid-Until=false keeps the
+          #     frozen repos usable; it is a no-op where indices are fresh
+          #     (e.g. the Android jobs on Ubuntu hosts).
+          sudo apt-get -o Acquire::Check-Valid-Until=false update
           sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows'}}
         run: |
-          choco install ccache -A
+          choco install ccache ninja -A
+
+          # ccache only works with the Ninja generator: CMake honours
+          # CMAKE_<LANG>_COMPILER_LAUNCHER for Ninja and Makefiles, and silently
+          # drops it for Visual Studio. Ninja in turn does not discover the MSVC
+          # environment on its own the way the Visual Studio generator does, so
+          # export what vcvars64 sets up.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
+
+          # Snapshot the pre-vcvars PATH so the export below can skip entries
+          # the runner already provides.
+          $existingPath = @($env:PATH -split ';' | ForEach-Object { $_.TrimEnd('\').ToLower() } | Where-Object { $_ })
+
+          cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -notmatch '^([^=]+)=(.*)$') { return }
+            $name, $value = $matches[1], $matches[2]
+            if ($name -eq 'PATH') {
+              # Export vcvars' PATH in its own order, but only entries that are
+              # NEW relative to the runner PATH. Re-exporting system dirs
+              # (System32 et al.) pushes them ahead of the Git Bash dirs
+              # registered by the earlier "Configure bash on Windows" step;
+              # System32 contains the WSL bash.exe launcher, which then
+              # hijacks every later `shell: bash` step on hosts where WSL
+              # cannot run ("Nested virtualization is not supported"). The
+              # cl.exe directory is not on the base PATH and survives this
+              # filter; vcvars emits it twice with different case
+              # (HostX64/Hostx64) and duplicate entries are harmless.
+              $value -split ';' |
+                Where-Object { $_ -and $existingPath -notcontains $_.TrimEnd('\').ToLower() } |
+                Add-Content -Path $env:GITHUB_PATH
+            } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
+              "$name=$value" | Add-Content -Path $env:GITHUB_ENV
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
