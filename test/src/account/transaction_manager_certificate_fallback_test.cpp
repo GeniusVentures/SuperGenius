@@ -800,6 +800,24 @@ TEST_F( CertificateFallbackTest, SharedMintSlotConfirmsOnlyTheCertifiedTransacti
     ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
     ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
 
+    // The persisted slot certificate is ALSO delivered asynchronously: the CRDT
+    // cert callback reconstructs the winner and the round timer confirms it via
+    // OnConsensusCertificate. When that path tracks the tx first, the test's
+    // synchronous FetchAndProcess is an idempotent no-op and CONFIRMED lands a
+    // timer tick later (CI observed the winner VERIFYING one second before the
+    // async confirm). Wait for the eventual state instead of racing it.
+    ASSERT_TRUE( ::waitForCondition(
+                     [&]()
+                     {
+                         const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_,
+                                                                                                 winner->GetHash() );
+                         return tracked.has_value() &&
+                                tracked->status == TransactionManager::TransactionStatus::CONFIRMED;
+                     },
+                     std::chrono::milliseconds( 10000 ),
+                     nullptr ) )
+        << "winner mint was not confirmed from its persisted slot certificate";
+
     const auto winner_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
     const auto loser_tracked  = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() );
     ASSERT_TRUE( winner_tracked.has_value() );
