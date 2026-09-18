@@ -217,18 +217,14 @@ namespace sgns::crdt
             std::unique_lock lock_jobs( dagWorkerMutex_ );
             if ( !job.created_by_self_ )
             {
-                std::queue<RootCIDJob> tmp;
-                while ( !selfCreatedJobList_.empty() )
+                for ( std::queue<RootCIDJob> scan = selfCreatedJobList_; !scan.empty(); scan.pop() )
                 {
-                    auto queued = selfCreatedJobList_.front();
-                    selfCreatedJobList_.pop();
-                    if ( queued.root_node_->getCID() == job.root_node_->getCID() )
+                    if ( scan.front().root_node_->getCID() == job.root_node_->getCID() )
                     {
                         self_created_job_pending = true;
+                        break;
                     }
-                    tmp.push( std::move( queued ) );
                 }
-                std::swap( selfCreatedJobList_, tmp );
             }
             if ( !self_created_job_pending )
             {
@@ -550,11 +546,12 @@ namespace sgns::crdt
             logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
                             __func__ );
             auto keep_alive = shared_from_this();
-            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
+            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->StopSyncerAfterWorkerDrain(); } )
+                .detach();
             return;
         }
 
-        WaitForWorkersToExit();
+        StopSyncerAfterWorkerDrain();
 
         started_ = false;
         logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
@@ -614,6 +611,15 @@ namespace sgns::crdt
             }
         }
         return false;
+    }
+
+    void CrdtDatastore::StopSyncerAfterWorkerDrain()
+    {
+        WaitForWorkersToExit();
+        if ( dagSyncer_ )
+        {
+            dagSyncer_->StopSync();
+        }
     }
 
     void CrdtDatastore::WaitForWorkersToExit()
@@ -1611,6 +1617,17 @@ namespace sgns::crdt
     {
         auto cid_string_result = cid.toString();
         logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid_string_result.value() );
+
+        // Root jobs are processed one at a time, so a worker waiting on a job it
+        // (or a sibling) must process would wait forever. Fail instead of hanging.
+        if ( IsCurrentThreadInternalWorker() )
+        {
+            logger_->error( "WaitForJob: called from CRDT worker thread for CID {}; refusing to self-deadlock",
+                            cid_string_result.value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_.erase( cid );
+            return outcome::failure( Error::NODE_CREATION );
+        }
 
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();

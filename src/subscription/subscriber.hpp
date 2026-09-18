@@ -16,8 +16,7 @@ namespace sgns::subscription {
    * @tparam Arguments is a set of types of objects needed to construct Type.
    */
   template <typename Key, typename Type, typename... Arguments>
-  class Subscriber final : public std::enable_shared_from_this<
-                               Subscriber<Key, Type, Arguments...>> {
+  class Subscriber final {
    public:
     using KeyType = Key;
     using ValueType = Type;
