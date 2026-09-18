@@ -15,6 +15,64 @@ on:
         description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
         required: false
         type: string
+      # Names must be build_<target>-<abi>_<build-type>: the skip step looks
+      # them up dynamically instead of enumerating every combination.
+      build_Android-arm64-v8a_Release:
+        description: "Build Android arm64-v8a Release"
+        default: true
+        type: boolean
+      build_Android-arm64-v8a_Debug:
+        description: "Build Android arm64-v8a Debug"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Release:
+        description: "Build Android armeabi-v7a Release"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Debug:
+        description: "Build Android armeabi-v7a Debug"
+        default: true
+        type: boolean
+      build_iOS_Release:
+        description: "Build iOS Release"
+        default: true
+        type: boolean
+      build_iOS_Debug:
+        description: "Build iOS Debug"
+        default: true
+        type: boolean
+      build_OSX_Release:
+        description: "Build OSX Release"
+        default: true
+        type: boolean
+      build_OSX_Debug:
+        description: "Build OSX Debug"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Release:
+        description: "Build Linux x86_64 Release"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Debug:
+        description: "Build Linux x86_64 Debug"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Release:
+        description: "Build Linux aarch64 Release"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Debug:
+        description: "Build Linux aarch64 Debug"
+        default: true
+        type: boolean
+      build_Windows_Release:
+        description: "Build Windows Release"
+        default: true
+        type: boolean
+      build_Windows_Debug:
+        description: "Build Windows Debug"
+        default: true
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -184,6 +242,13 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      # Shell-agnostic body so this works on both bash and pwsh runners.
+      - name: Skip build disabled by workflow_dispatch input
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs[format('build_{0}{1}_{2}', matrix.target, matrix.abi && format('-{0}', matrix.abi) || '', matrix.build-type)] }}
+        run: |
+          echo "Skipping build for ${{ matrix.target }}${{ matrix.abi && format(' {0}', matrix.abi) || '' }} ${{ matrix.build-type }}"
+          exit 78
+
       - name: Configure bash on Windows (use Git Bash, not WSL)
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
         run: |
@@ -551,7 +616,14 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        # Pin clang explicitly rather than relying on the /usr/bin/cc and
+        # /usr/bin/c++ update-alternatives symlinks: on AlmaLinux 8
+        # /usr/bin/c++ is a real file owned by gcc-c++ (not an alternatives
+        # symlink like Debian's), so the update-alternatives takeover fails
+        # silently and CMake falls back to g++ 8.5, which cannot compile the
+        # zkLLVM crypto3 constexpr code in ProofSystem (run 35377550250,
+        # divide.hpp:347 "is not a constant expression" on all Linux jobs).
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
