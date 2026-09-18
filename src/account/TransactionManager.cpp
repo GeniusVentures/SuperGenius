@@ -6151,11 +6151,10 @@ namespace sgns
                     if ( !stored_reg.has_error() && stored_reg.value() &&
                          stored_reg.value()->GetHash() == previous_hash )
                     {
-                        previous_transaction_result = stored_reg;
+                        previous_transaction = stored_reg.value();
                     }
                 }
-                if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                     previous_transaction_result.value()->GetHash() != previous_hash )
+                if ( !previous_transaction || previous_transaction->GetHash() != previous_hash )
                 {
                     const std::string prev_slot = tx.GetSrcAddress() + ":" + std::to_string( tx.GetNonce() - 1 );
                     auto prev_cert = blockchain_->GetCertificateBySlot( prev_slot );
@@ -6171,14 +6170,13 @@ namespace sgns
                             if ( embedded.has_value() && embedded.value() &&
                                  embedded.value()->GetHash() == previous_hash )
                             {
-                                previous_transaction_result = embedded;
+                                previous_transaction = embedded.value();
                             }
                         }
                     }
                 }
             }
-            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                 previous_transaction_result.value()->GetHash() != previous_hash )
+            if ( !previous_transaction || previous_transaction->GetHash() != previous_hash )
             {
                 // Invalid is not missing: when this node already holds the finalized
                 // predecessor of the sender's chain for this nonce and it is not the
