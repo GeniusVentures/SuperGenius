@@ -267,6 +267,14 @@ namespace
         {
             if ( tm_ )
                 tm_->Stop();
+            // Stop the blockchain here instead of leaving it to ~Blockchain during fixture
+            // destruction: Blockchain::Stop joins the consensus round-timer thread on this
+            // thread. Without it the timer can hold the last ConsensusManager reference past
+            // static teardown and abort the process at exit (observed on the macOS runner:
+            // SIGABRT in rocksdb Mutex::Lock from ~ConsensusManager on the timer thread
+            // while exit() ran global destructors).
+            if ( blockchain_ )
+                blockchain_->Stop();
             work_guard_.reset();
             // Resetting the work guard alone is NOT enough to end io_->run(): the CRDTFixture's
             // GlobalDB scheduler/timers keep posting recurring work to io_ until the fixture's
