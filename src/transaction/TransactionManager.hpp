@@ -51,6 +51,19 @@ namespace sgns
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
     /**
+     * @brief Discovery entry returned by GetRegistrationsForMain.
+     *
+     * Each entry identifies a child wallet registered to the queried main wallet.
+     */
+    struct RegistrationDiscoveryEntry
+    {
+        std::string                         child_addr;  ///< Child wallet public address (128-hex)
+        std::string                         main_addr;   ///< Main wallet public address (128-hex)
+        uint64_t                            sequence;    ///< Registration sequence number
+        SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+    };
+
+    /**
      * @brief Coordinates transaction creation, CRDT propagation, verification, and status tracking.
      */
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
@@ -770,6 +783,18 @@ namespace sgns
         {
             return public_chain_input_validator_;
         }
+
+        /**
+         * @brief Enumerates the child-wallet registrations recorded under a main wallet.
+         *
+         * Scans the per-network `reg` subtrees of the monitored networks and collects
+         * the registration transactions whose main address matches @p main_address.
+         *
+         * @param main_address Main wallet public address (128-hex).
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
