@@ -3,6 +3,8 @@
 #ifndef SRC_KECCAK_H
 #define SRC_KECCAK_H
 
+#include <stdint.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

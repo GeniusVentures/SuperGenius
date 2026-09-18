@@ -487,9 +487,25 @@ jobs:
           cargo install cbindgen
           rustup target add wasm32-unknown-emscripten
 
+      - name: Pin host clang for native Linux builds
+        # On AlmaLinux 8 /usr/bin/c++ is a real file owned by gcc-c++ (not an
+        # alternatives symlink like Debian's), so the update-alternatives
+        # takeover in "Configure Linux host" fails silently and CMake falls
+        # back to g++ 8.5, which cannot compile the zkLLVM crypto3 constexpr
+        # code in ProofSystem (run 35377550250, divide.hpp:347 "is not a
+        # constant expression" on all Linux jobs). Setting the pin via an env
+        # var keeps it scoped to native Linux targets only: Android must keep
+        # the NDK toolchain-file compilers (an explicit -D would override
+        # them), and the Windows/macOS hosts use their own toolchains.
+        if: ${{ matrix.target == 'Linux' }}
+        run: echo "COMPILER_PIN=-DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)" >> $GITHUB_ENV
+
       - name: Configure CMake
         working-directory: ${{ github.workspace }}/SuperGenius
-        run: cmake -S build/${{ matrix.target }} -B ${{ env.BUILD_DIRECTORY }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DTHIRDPARTY_BUILD_DIR=${{ env.THIRDPARTY_BUILD_DIR }} -DZKLLVM_BUILD_DIR=${{ env.ZKLLVM_BUILD_DIR }} ${{ matrix.cmake_args }}
+        # COMPILER_PIN is empty except on native Linux targets (see the
+        # "Pin host clang" step above), so the other platforms configure
+        # exactly as before.
+        run: cmake -S build/${{ matrix.target }} -B ${{ env.BUILD_DIRECTORY }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} ${{ env.COMPILER_PIN }} -DTHIRDPARTY_BUILD_DIR=${{ env.THIRDPARTY_BUILD_DIR }} -DZKLLVM_BUILD_DIR=${{ env.ZKLLVM_BUILD_DIR }} ${{ matrix.cmake_args }}
 
       - name: Build SuperGenius
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
