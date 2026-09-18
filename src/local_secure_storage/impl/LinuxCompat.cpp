@@ -1,5 +1,12 @@
 #include "Linux.hpp"
 
+// String-API implementation of LinuxSecureStorage for libsecret < 0.19
+// (e.g. 0.18.6 on AlmaLinux 8), which lacks secret_password_lookup_binary_sync
+// / secret_password_store_binary_sync. Selected by CMake when pkg-config
+// reports libsecret-1 < 0.19; impl/Linux.cpp is used otherwise. Serialized
+// JSON contains no NUL bytes, so the two implementations are functionally
+// equivalent.
+
 #include <iostream>
 
 #include <glib.h>
@@ -20,8 +27,8 @@ namespace sgns
 
     outcome::result<rj::Document> LinuxSecureStorage::LoadJSON() const
     {
-        GError      *error  = nullptr;
-        SecretValue *result = secret_password_lookup_binary_sync( &schema_, nullptr, &error, NULL );
+        GError *error = nullptr;
+        gchar *result = secret_password_lookup_sync( &schema_, nullptr, &error, NULL );
 
         if ( result == nullptr )
         {
@@ -33,16 +40,14 @@ namespace sgns
         {
             std::cerr << "Error loading secret: " << error->message << '\n';
             g_error_free( error );
+            secret_password_free( result );
             return outcome::failure( std::errc::bad_message );
         }
 
-        gsize        length = 0;
-        const gchar *data   = secret_value_get( result, &length );
-
         rj::Document d;
-        d.Parse( data, length );
+        d.Parse( result );
 
-        secret_value_unref( result );
+        secret_password_free( result );
 
         if ( d.HasParseError() || ( !d.IsObject() && !d.Empty() ) )
         {
@@ -58,27 +63,23 @@ namespace sgns
         rj::Writer       writer( password );
         document.Accept( writer );
 
-        GError      *error = nullptr;
-        SecretValue *value = secret_value_new( password.GetString(), password.GetLength(), "application/json" );
-
-        if ( !secret_password_store_binary_sync( &schema_,
-                                                 SECRET_COLLECTION_DEFAULT,
-                                                 "SuperGenius",
-                                                 value,
-                                                 nullptr,
-                                                 &error,
-                                                 NULL ) )
+        GError *error = nullptr;
+        if ( !secret_password_store_sync( &schema_,
+                                          SECRET_COLLECTION_DEFAULT,
+                                          "SuperGenius",
+                                          password.GetString(),
+                                          nullptr,
+                                          &error,
+                                          NULL ) )
         {
             if ( error != nullptr )
             {
                 std::cerr << "Error saving secret: " << error->message << '\n';
                 g_error_free( error );
             }
-            secret_value_unref( value );
             return outcome::failure( std::errc::bad_message );
         }
 
-        secret_value_unref( value );
         return outcome::success();
     }
 }
