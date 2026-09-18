@@ -48,6 +48,7 @@
 #include "FileManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/TestMintInputValidator.hpp"
@@ -116,29 +117,29 @@ protected:
         // D-51: genesis-authorized node (full node + processor + authorized)
         genesis_node_ = CreateNode( "regtest_genesis", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ), true, true, true );
-        ASSERT_WAIT_FOR_CONDITION(
-            ([&]() { return genesis_node_->GetState() == GeniusNode::NodeState::READY; }),
-            std::chrono::milliseconds( 180000 ), "genesis_node_ not synced", nullptr );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( genesis_node_ ) );
 
         // Main wallet node A
         main_node_ = CreateNode( "regtest_main", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ) );
         main_node_->GetPubSub()->AddPeers( { genesis_node_->GetPubSub()->GetInterfaceAddress() } );
-        ASSERT_WAIT_FOR_CONDITION(
-            ([&]() { return main_node_->GetState() == GeniusNode::NodeState::READY; }),
-            std::chrono::milliseconds( 180000 ), "main_node_ not synced", nullptr );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( main_node_ ) );
 
         // Child wallet node B
         child_node_ = CreateNode( "regtest_child", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ) );
         child_node_->GetPubSub()->AddPeers( { genesis_node_->GetPubSub()->GetInterfaceAddress() } );
-        ASSERT_WAIT_FOR_CONDITION(
-            ([&]() { return child_node_->GetState() == GeniusNode::NodeState::READY; }),
-            std::chrono::milliseconds( 180000 ), "child_node_ not synced", nullptr );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( child_node_ ) );
     }
 
     static void TearDownTestSuite()
     {
+        // Stop every node before releasing it: a live consensus round timer / pubsub listener
+        // surviving into static teardown aborts at process exit (same teardown invariant as
+        // multi_account_sync.cpp — see GeniusNodeTestAccess::StopNode).
+        GeniusNodeTestAccess::StopNode( child_node_ );
+        GeniusNodeTestAccess::StopNode( main_node_ );
+        GeniusNodeTestAccess::StopNode( genesis_node_ );
         child_node_.reset();
         main_node_.reset();
         genesis_node_.reset();
@@ -210,9 +211,25 @@ protected:
                               << ", \"upnp_enabled\": false"
                               << ", \"pubsub_port\": \"" << uniquePort << "\" }";
         }
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                           isFullNode ? "Full" : "Light",
-                                           /*is_processor=*/isProcessor );
+        // Fail-closed trust gate (Phase 13): a node with no trusted peers and no persisted
+        // trust state refuses to boot (FATAL_TRUST_MISMATCH). Give each node a self-contained
+        // policy — its own deterministic account as sole trusted peer/bootstrapper with 1/1
+        // thresholds — mirroring multi_account_sync.cpp's CreateNode. The address is probed
+        // through GeniusAccount so it matches the node's KDF-derived identity exactly.
+        auto authority = GeniusAccount::NewFromPrivateKey( devConfig.TokenID, key.c_str(), devConfig.BaseWritePath );
+        if ( !authority )
+        {
+            return nullptr;
+        }
+        test::WriteTrustedSgnsConfig( devConfig.BaseWritePath,
+                                      isFullNode ? "Full" : "Light",
+                                      isProcessor,
+                                      /*rpc_catchup=*/false,
+                                      { authority->GetAddress() },
+                                      authority->GetAddress(),
+                                      /*membership_threshold=*/1,
+                                      /*burn_threshold=*/1,
+                                      /*network_id=*/144 );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {
