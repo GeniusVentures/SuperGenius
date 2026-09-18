@@ -2966,7 +2966,7 @@ TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVote
 {
     /**
      * Bridge-mint quorum runs through the cumulative slot model
-     * (EvaluateSlotQuorum/SlotEvidenceReputation), which resolves registry
+     * (EvaluateSlotQuorum), which resolves registry
      * membership and weight but never verifies vote signatures. Feeding it a
      * raw remote vote vector let an attacker fabricate slot-hash-carrying
      * approve votes attributed to real ACTIVE validators with garbage

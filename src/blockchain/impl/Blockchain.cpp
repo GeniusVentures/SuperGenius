@@ -693,6 +693,19 @@ namespace sgns
 
     void Blockchain::RequestValidatorRegistry()
     {
+        // The messenger's single worker needs up to TIMEOUT_GENESIS_BLOCK per
+        // queued task; re-requests without this floor build an unbounded backlog.
+        const auto now  = std::chrono::steady_clock::now();
+        auto       last = last_registry_block_request_.load( std::memory_order_relaxed );
+        if ( ( last != std::chrono::steady_clock::time_point{} ) &&
+             ( now - last < REGISTRY_BLOCK_REQUEST_MIN_INTERVAL ) )
+        {
+            return;
+        }
+        if ( !last_registry_block_request_.compare_exchange_strong( last, now ) )
+        {
+            return;
+        }
         if ( account_->RequestValidatorRegistry( TIMEOUT_GENESIS_BLOCK, {} ).has_error() )
         {
             logger_->warn( "[{}] Failed to request validator registry during blockchain init",
@@ -719,17 +732,8 @@ namespace sgns
                        ValidatorRegistry::ValidatorTopic() );
 
         // A peer exists (the head request went out), so the direct registry-CID request can
-        // now succeed.
-        const auto now  = std::chrono::steady_clock::now();
-        auto       last = last_registry_block_request_.load( std::memory_order_relaxed );
-        if ( ( last == std::chrono::steady_clock::time_point{} ) ||
-             ( now - last >= REGISTRY_BLOCK_REQUEST_MIN_INTERVAL ) )
-        {
-            if ( last_registry_block_request_.compare_exchange_strong( last, now ) )
-            {
-                RequestValidatorRegistry();
-            }
-        }
+        // now succeed. RequestValidatorRegistry applies the min-interval floor itself.
+        RequestValidatorRegistry();
     }
 
     outcome::result<void> Blockchain::InitAccountCreationCID( const std::string &address )
