@@ -3964,17 +3964,42 @@ namespace sgns
                 return outcome;
             };
 
-            catchup_watcher_ = std::make_unique<evmwatcher::BridgeCatchupWatcher>(
+            // Build first, install + start under lifecycle_mutex_ only after
+            // re-validating the generation. SelectAccount() moves-and-stops whatever
+            // watcher is a member AT THAT INSTANT; one installed here for a
+            // generation that was retired mid-initialization would never be stopped
+            // by that switch, and MessagingWatcher's default destructor only DETACHES
+            // its boost::thread - a leaked poller running burn callbacks against the
+            // retired generation's objects. An unstarted watcher is safe to discard.
+            // Stop-before-overwrite also covers a re-run of this initializer.
+            auto built_watcher = std::make_unique<evmwatcher::BridgeCatchupWatcher>(
                 catchup_config,
                 nullptr, // no raw message callback needed
                 std::move( chains_provider ),
                 std::move( rpc_resolver ),
                 std::move( burn_processor ) );
-
-            catchup_watcher_->startWatching();
-            catchup_callback_owner_generation_.store( account_services.generation );
-            node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
-                                catchup_config.poll_interval.count() );
+            {
+                std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+                if ( account_service_switching_ ||
+                     account_services.generation != account_service_generation_ )
+                {
+                    node_logger_->debug(
+                        "InitializeAndStartBridge: discarding catch-up watcher for retired generation" );
+                    built_watcher.reset();
+                }
+                else
+                {
+                    if ( catchup_watcher_ )
+                    {
+                        catchup_watcher_->stopWatching();
+                    }
+                    catchup_watcher_ = std::move( built_watcher );
+                    catchup_watcher_->startWatching();
+                    catchup_callback_owner_generation_.store( account_services.generation );
+                    node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
+                                        catchup_config.poll_interval.count() );
+                }
+            }
         }
         else
         {
