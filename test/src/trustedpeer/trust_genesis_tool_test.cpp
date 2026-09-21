@@ -219,12 +219,15 @@ namespace
 
         GenesisCeremony::Error Run( GenesisCeremony &ceremony,
                                     GenesisCeremony::Network network,
-                                    std::string confirmation )
+                                    std::string confirmation,
+                                    std::chrono::milliseconds serve_duration = std::chrono::milliseconds( 0 ) )
         {
+            auto request   = Request();
+            request.serve_duration = serve_duration;
             std::istringstream input( std::move( confirmation ) );
             std::ostringstream output;
             std::ostringstream errors;
-            auto result = ceremony.Run( Request(), network, input, output, errors );
+            auto result = ceremony.Run( request, network, input, output, errors );
             captured_output_ = output.str();
             captured_errors_ = errors.str();
             return result.has_error() ? static_cast<GenesisCeremony::Error>( result.error().value() )
@@ -287,6 +290,33 @@ TEST_F( TrustGenesisToolTest, SecretFileReviewSubmitsDurablyCleansesThenUnlinks 
     EXPECT_EQ( account_storage_calls, 0U );
     EXPECT_EQ( captured_output_.find( PRIVATE_KEY ), std::string::npos );
     EXPECT_EQ( captured_errors_.find( PRIVATE_KEY ), std::string::npos );
+}
+
+TEST_F( TrustGenesisToolTest, DurableConfirmationServesToPeersBeforeReturning )
+{
+    // Durable confirmation only proves the LOCAL store committed; CRDT head
+    // delivery and the peers' GraphSync fetches are still in flight when it is
+    // reached, and the tool is the only serving transport for the fresh DAG.
+    // The ceremony must run the serving window before returning success.
+    std::vector<std::chrono::milliseconds> served_windows;
+    auto network = RealNetwork();
+    network.serve = [&]( std::chrono::milliseconds duration ) { served_windows.push_back( duration ); };
+
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n",
+                    std::chrono::milliseconds( 250 ) ),
+               GenesisCeremony::Error::SUCCESS );
+
+    ASSERT_EQ( served_windows.size(), 1U ) << "serving window must run exactly once after confirmation";
+    EXPECT_EQ( served_windows.front(), std::chrono::milliseconds( 250 ) );
+    const auto confirmed_at = captured_output_.find( "Genesis durably confirmed." );
+    const auto serving_at   = captured_output_.find( "Serving genesis to peers for " );
+    const auto complete_at  = captured_output_.find( "Genesis serving window complete." );
+    ASSERT_NE( confirmed_at, std::string::npos );
+    ASSERT_NE( serving_at, std::string::npos );
+    ASSERT_NE( complete_at, std::string::npos );
+    EXPECT_LT( confirmed_at, serving_at ) << "serving notice must follow durable confirmation";
+    EXPECT_LT( serving_at, complete_at ) << "serving window must complete before returning";
 }
 
 TEST_F( TrustGenesisToolTest, WrongFingerprintLeavesSecretAndDoesNotSubmit )

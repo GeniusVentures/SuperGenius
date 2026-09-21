@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -46,7 +47,11 @@ namespace
                "  approve          explicitly approve one exact candidate ID\n"
                "\nmake-manifest options:\n"
                "  --network-id N --bootstrapper ADDRESS --peers ADDR[,ADDR...] --out PATH\n"
-               "  [--membership-threshold N] [--burn-threshold N]   (default: majority/burn floors)\n";
+               "  [--membership-threshold N] [--burn-threshold N]   (default: majority/burn floors)\n"
+               "\ngenesis options:\n"
+               "  [--timeout-seconds N]   confirmation poll deadline (default 30)\n"
+               "  [--serve-seconds N]     keep serving the genesis DAG to peers after durable\n"
+               "                          confirmation (default 600, 0 exits immediately)\n";
     }
 
     struct Arguments
@@ -140,7 +145,10 @@ namespace
             allowed.insert( "--key-stdin" );
         }
         if ( arguments.operation == "genesis" )
+        {
             allowed.insert( "--timeout-seconds" );
+            allowed.insert( "--serve-seconds" );
+        }
         else if ( arguments.operation == "propose-policy" )
             allowed.insert( "--candidate" );
         else if ( arguments.operation == "propose-burn" )
@@ -497,6 +505,24 @@ int main( int argc, char **argv )
             }
             request.confirmation_timeout = std::chrono::seconds( *seconds );
         }
+        // After local durable confirmation the tool is still the only peer serving
+        // the freshly written genesis DAG; CRDT head delivery and the peers'
+        // GraphSync fetches are asynchronous. Default to a 10-minute serving
+        // window so exiting does not strand peers that have not fetched yet;
+        // --serve-seconds 0 restores the immediate-exit behavior for scripting.
+        constexpr uint64_t kDefaultServeSeconds = 600;
+        uint64_t          serve_seconds         = kDefaultServeSeconds;
+        if ( const auto serve = arguments->values.find( "--serve-seconds" ); serve != arguments->values.end() )
+        {
+            const auto seconds = ParseUint64( serve->second );
+            if ( !seconds || *seconds > 86400 )
+            {
+                std::cerr << "invalid --serve-seconds\n";
+                return EXIT_FAILURE;
+            }
+            serve_seconds = *seconds;
+        }
+        request.serve_duration = std::chrono::seconds( serve_seconds );
         GenesisCeremony::Network network;
         network.start = [&] { return runtime.Start(); };
         network.submit = [&]( const GenesisManifest &value,
@@ -505,6 +531,10 @@ int main( int argc, char **argv )
                               TrustedPeerRegistry::SignCallback sign )
         { return runtime.SubmitGenesis( value, signature, address, std::move( sign ) ); };
         network.confirmed = [&] { return runtime.Confirmed(); };
+        // Holding TrustRuntime (and its GlobalDbNetworkComposition) alive for the
+        // requested duration keeps pubsub broadcasting heads and GraphSync serving
+        // fetches while the process waits.
+        network.serve = []( std::chrono::milliseconds duration ) { std::this_thread::sleep_for( duration ); };
         GenesisCeremony ceremony;
         auto result = ceremony.Run( request, network, std::cin, std::cout, std::cerr );
         return result.has_value() ? EXIT_SUCCESS : ( std::cerr << result.error().message() << '\n', EXIT_FAILURE );
