@@ -87,6 +87,13 @@ namespace sgns::trustedpeer
                 TrustedPeerRegistry::SignCallback )>
                 submit;
             std::function<outcome::result<std::optional<ConfirmedTrustSnapshot>>()> confirmed;
+            /// Keeps the serving transport up for the requested duration after durable
+            /// confirmation. Local confirmation only proves this process's store
+            /// committed: CRDT head delivery to peers and their subsequent GraphSync
+            /// fetches are asynchronous, and exiting destroys the only node holding
+            /// the freshly written genesis DAG. Without a serving window, peers that
+            /// have not fetched yet are stranded waiting for a genesis nobody serves.
+            std::function<void( std::chrono::milliseconds )> serve;
         };
 
         struct Request
@@ -96,6 +103,10 @@ namespace sgns::trustedpeer
             bool key_stdin = false;
             std::chrono::milliseconds confirmation_timeout{ std::chrono::seconds( 30 ) };
             std::chrono::milliseconds poll_interval{ std::chrono::milliseconds( 100 ) };
+            /// Post-confirmation serving window. Zero preserves the historical
+            /// behavior of returning immediately after local durable confirmation
+            /// (unit tests, scripted flows); production wiring sets a nonzero window.
+            std::chrono::milliseconds serve_duration{ std::chrono::milliseconds( 0 ) };
         };
 
         GenesisCeremony();

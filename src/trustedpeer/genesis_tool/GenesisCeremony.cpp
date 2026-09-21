@@ -231,6 +231,21 @@ namespace sgns::trustedpeer
                     return outcome::failure( Error::KEY_FILE_UNLINK_FAILED );
                 }
                 output << "Genesis durably confirmed.\n";
+                // Durable confirmation is a LOCAL statement: this tool's store
+                // committed. It says nothing about remote propagation - head
+                // broadcast and the peers' GraphSync fetches are still in flight,
+                // and this process is the only serving transport for the freshly
+                // written DAG. Keep it up for the requested window so peers that
+                // have not fetched yet are not stranded waiting for a genesis
+                // nobody serves anymore.
+                if ( network.serve && request.serve_duration > std::chrono::milliseconds::zero() )
+                {
+                    output << "Serving genesis to peers for "
+                           << std::chrono::duration_cast<std::chrono::seconds>( request.serve_duration ).count()
+                           << "s before exit.\n";
+                    network.serve( request.serve_duration );
+                    output << "Genesis serving window complete.\n";
+                }
                 return outcome::success();
             }
             if ( request.confirmation_timeout.count() > 0 ) hooks_.sleep( request.poll_interval );
