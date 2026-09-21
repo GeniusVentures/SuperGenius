@@ -468,6 +468,9 @@ namespace sgns::crdt
         void ScheduleFailedRootRetryLocked( const CID &cid );
         void ClearFailedRootRetryLocked( const CID &cid );
         void RetryDueFailedRoots();
+        void ScheduleStalledDeltaRetryLocked( const CID &cid );
+        /// Re-filters and re-merges deltas that had an element stripped for a missing dependency.
+        void RetryStalledDeltas();
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -541,6 +544,11 @@ namespace sgns::crdt
         static constexpr std::chrono::seconds FAILED_ROOT_RETRY_MAX_DELAY{ 60 };
         static constexpr uint32_t             MAX_FAILED_ROOT_RETRIES = 8;
         std::map<CID, FailedRootRetry>        failedRootRetries_; // guarded by dagWorkerMutex_
+        // Nodes whose delta had an element stripped unapplied because its dependency
+        // had not synced yet, with the same backoff as failed roots. Guarded by
+        // dagWorkerMutex_.
+        std::map<CID, FailedRootRetry> stalledDeltas_;
+        std::atomic<size_t>            stalledDeltaRetryCount_{ 0 };
         // Mirrors failedRootRetries_.size() so the worker loop can skip the mutex
         // when there is nothing to retry (the common steady state).
         std::atomic<size_t> failedRootRetryCount_{ 0 };

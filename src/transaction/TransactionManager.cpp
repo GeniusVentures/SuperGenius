@@ -2744,6 +2744,47 @@ namespace sgns
         return std::nullopt;
     }
 
+    outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> TransactionManager::
+        FetchExactTransactionFromCRDT( const std::string &tx_hash ) const
+    {
+        if ( !globaldb_m )
+        {
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        for ( const auto network_id : GetMonitoredNetworkIDs() )
+        {
+            const auto transaction_key = GetTransactionPath( network_id, tx_hash );
+            auto       transaction     = FetchTransaction( *globaldb_m, transaction_key );
+            if ( transaction.has_error() )
+            {
+                if ( transaction.error() != storage::DatabaseError::NOT_FOUND )
+                {
+                    return outcome::failure( transaction.error() );
+                }
+                continue;
+            }
+            if ( !transaction.value() )
+            {
+                continue;
+            }
+
+            if ( transaction.value()->GetHash() == tx_hash && transaction.value()->CheckHash() )
+            {
+                return std::optional<std::shared_ptr<GeniusTransaction>>{ transaction.value() };
+            }
+
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Ignoring CRDT transaction with mismatched or invalid hash at {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                transaction_key );
+        }
+
+        return std::optional<std::shared_ptr<GeniusTransaction>>{};
+    }
+
     outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
         const std::string &main_address )
     {
