@@ -66,6 +66,13 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );
     ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
+
+    // Stop on the test thread before scope exit. On CI a background holder can keep the
+    // node's shared_ptr alive past the test boundary; its late destructor then races
+    // process-exit static teardown (observed as "pthread lock: Invalid argument" ->
+    // SIGABRT on the arm64 Linux runner after all tests had already passed). Explicit
+    // teardown runs the full shutdown early, while every static is still alive.
+    GeniusNodeTestAccess::StopNode( node );
 }
 
 // Scene B (CONTEXT D-04): New(dev_config, AccountSource) preserves nullptr-on-failure.
@@ -112,6 +119,9 @@ TEST( NodeTypeDerivation, ArchiveReplicatesButDoesNotProcess )
     EXPECT_FALSE( node->IsProcessor() ) << "Archive must not process, even with is_processor=true";
 
     ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
+
+    // Same teardown invariant as ConfigDrivenCaseInsensitive above.
+    GeniusNodeTestAccess::StopNode( node );
 }
 
 // The role predicates are the whole point of replacing the bool: Full and Archive agree on
