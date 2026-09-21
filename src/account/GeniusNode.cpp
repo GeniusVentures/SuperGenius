@@ -2176,31 +2176,6 @@ namespace sgns
                                  services_shutdown.error().message() );
         }
         ShutdownNodePolicyServices();
-        if ( tx_globaldb_ )
-        {
-            tx_globaldb_->ShutdownNow();
-        }
-
-        if ( graphsyncnetwork_ )
-        {
-            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
-            graphsyncnetwork_->stop( nullptr );
-            node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
-        }
-
-        // FileManager is a process-wide singleton holding a copy of bitswap_ (set in
-        // InitNetwork). Implicit destruction cannot reach it, so drop that copy here
-        // or the service outlives this node.
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-
-        node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
-    }
-
-    GeniusNode::~GeniusNode()
-    {
-        node_logger_->debug( "~GeniusNode CALLED" );
-
-        ShutdownForDestruction();
 
         // GraphSync retains PubSub's libp2p host, whose sockets are backed by
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
@@ -2240,6 +2215,34 @@ namespace sgns
             }
         }
         io_threads_.clear();
+
+        if ( tx_globaldb_ )
+        {
+            tx_globaldb_->ShutdownNow();
+        }
+
+        if ( graphsyncnetwork_ )
+        {
+            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
+            graphsyncnetwork_->stop( nullptr );
+            node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
+        }
+
+        // FileManager is a process-wide singleton holding a copy of bitswap_ (set in
+        // InitNetwork). Implicit destruction cannot reach it, so drop that copy here
+        // or the service outlives this node.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+
+        node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
+    }
+
+    GeniusNode::~GeniusNode()
+    {
+        node_logger_->debug( "~GeniusNode CALLED" );
+
+        ShutdownForDestruction();
+
+        const auto caller_thread_id = std::this_thread::get_id();
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
