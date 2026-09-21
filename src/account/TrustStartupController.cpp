@@ -604,15 +604,35 @@ namespace sgns::account
     {
         std::shared_ptr<boost::asio::steady_timer> timer;
         std::shared_ptr<RefreshTestHooks>           hooks;
+        bool                                        redispatch = false;
         {
             std::lock_guard<std::mutex> lock( dispatch->mutex );
-            dispatch->active = false;
+            dispatch->active        = false;
             dispatch->retry_waiting = false;
+            timer                   = std::move( dispatch->retry_timer );
+            hooks                   = dispatch->test_hooks;
+            // A refresh request that arrived while the finishing pass was active
+            // must not be dropped: the pass snapshots the pending candidate queues,
+            // so a candidate queued by a callback that fired mid-pass can be
+            // invisible to it. Restart the dispatcher instead of clearing the
+            // flag. RunDispatchAttempt clears coalesced_request on entry, so the
+            // flag surviving here means precisely "a request arrived after the
+            // finishing pass started and may be unprocessed". Without this, a
+            // quorum-approved policy or burn successor could stay inactive until
+            // some unrelated future CRDT write triggers a refresh.
+            redispatch = dispatch->coalesced_request && !dispatch->stopped;
             dispatch->coalesced_request = false;
-            timer = std::move( dispatch->retry_timer );
-            hooks = dispatch->test_hooks;
+            if ( redispatch )
+            {
+                dispatch->active = true;
+            }
         }
         if ( timer ) timer->cancel();
+        if ( redispatch )
+        {
+            boost::asio::post( dispatch->executor, [dispatch] { RunDispatchAttempt( dispatch, 1 ); } );
+            return;
+        }
         if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
     }
 
@@ -624,7 +644,16 @@ namespace sgns::account
         {
             std::lock_guard<std::mutex> lock( dispatch->mutex );
             stopped = dispatch->stopped;
-            if ( !stopped ) dispatch->retry_waiting = false;
+            if ( !stopped )
+            {
+                dispatch->retry_waiting = false;
+                // Starting an attempt supersedes any coalesced request: this pass
+                // re-reads the pending candidate queues, so it serves both requests
+                // that arrived during the previous active pass and those that arrived
+                // while its retry timer was pending. Clearing here keeps the flag
+                // meaning exactly "a request arrived that no started pass covers".
+                dispatch->coalesced_request = false;
+            }
             hooks = dispatch->test_hooks;
         }
         if ( stopped )
