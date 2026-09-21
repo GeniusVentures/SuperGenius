@@ -675,6 +675,41 @@ TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksSta
     ASSERT_EQ( stale_callback_side_effects.load(), 0U ) << "CR-11 generation mismatch";
 }
 
+TEST_F( MultiAccountTest, SecondSelectAccountDuringAsyncSwitchReturnsInProgress )
+{
+    auto node = CreateNode( "switch_in_flight_guard", true, false, true, {}, true );
+    ASSERT_TRUE( node );
+    WaitForReady( node );
+
+    const auto original_address = node->GetAddress();
+    const auto replacement_key  = DeterministicKey( "switch_in_flight_guard_replacement" );
+    ASSERT_TRUE( node->AddAccountWithKey( replacement_key.c_str() ).has_value() );
+    const auto accounts     = node->GetAvailableAccounts();
+    const auto replacement  = std::find_if( accounts.begin(),
+                                            accounts.end(),
+                                            [&]( const std::string &address ) { return address != original_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+
+    // The first switch returns success immediately, but the replacement manager
+    // is published asynchronously (blockchain init completion -> INITIALIZING_
+    // TRANSACTIONS). A second switch issued before that publication must be
+    // rejected with operation_in_progress: the completion chain checks only the
+    // lifecycle state, so two overlapping chains could cross-wire managers and
+    // callbacks for the wrong generation. The second call runs on the same
+    // thread before any io work can complete the first chain, so the window is
+    // held open deterministically.
+    const auto switched = node->SelectAccount( *replacement );
+    ASSERT_TRUE( switched.has_value() ) << switched.error().message();
+
+    const auto second = node->SelectAccount( original_address );
+    ASSERT_TRUE( second.has_error() ) << "second switch during async publication must be rejected";
+    EXPECT_EQ( second.error(), std::make_error_code( std::errc::operation_in_progress ) );
+
+    // The in-flight switch still completes and publishes the requested account.
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
+    EXPECT_EQ( node->GetAddress(), *replacement );
+}
+
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
     // Create nodes dynamically

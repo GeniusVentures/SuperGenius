@@ -741,9 +741,15 @@ namespace sgns
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
+                // A SelectAccount-driven switch holds account_service_switching_ until
+                // this case either publishes the complete replacement account/manager
+                // pair (the sole publication point below) or parks the node on an
+                // exit that ends the switch chain. Every non-publication exit below
+                // must clear the flag or the node stays permanently unavailable.
                 if ( !blockchain_ )
                 {
                     node_logger_->error( "Blockchain not initialized, cannot initialize transactions" );
+                    account_service_switching_ = false;
                     return;
                 }
 
@@ -879,6 +885,7 @@ namespace sgns
                     if ( created.has_error() )
                     {
                         node_logger_->critical( "Trust startup failed closed: {}", created.error().message() );
+                        account_service_switching_ = false;
                         StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                         return;
                     }
@@ -896,12 +903,18 @@ namespace sgns
                         auto refreshed = trust_startup_controller_->Refresh();
                         if ( refreshed.has_error() )
                         {
+                            account_service_switching_ = false;
                             StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                             return;
                         }
                     }
                     if ( !trust_startup_controller_->IsEconomicallyReady() )
                     {
+                        // Parking in a WAITING state ends the switch chain: the new
+                        // account is active, the manager does not exist until genesis
+                        // confirms and this case re-runs. Snapshot consumers see the
+                        // {account, null manager} pair, same as before the switch.
+                        account_service_switching_ = false;
                         StateTransition( trust_startup_controller_->GetState() ==
                                                  sgns::account::TrustStartupController::State::FreshWaitingForGenesis
                                              ? NodeState::WAITING_FOR_TRUST_GENESIS
@@ -915,6 +928,7 @@ namespace sgns
                     // policy must not boot unrestricted.
                     node_logger_->critical(
                         "No trusted peers configured and no persisted trust state; refusing unrestricted boot" );
+                    account_service_switching_ = false;
                     StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                     return;
                 }
@@ -935,6 +949,7 @@ namespace sgns
                 if ( !transaction_manager_ )
                 {
                     node_logger_->error( "TransactionManager construction failed" );
+                    account_service_switching_ = false;
                     return;
                 }
 
@@ -2531,7 +2546,13 @@ namespace sgns
                 std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
                 account_ = std::move( account );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
-                account_service_switching_ = false;
+                // Keep account_service_switching_ set: the replacement manager is
+                // published only when the asynchronous blockchain initialization
+                // completes (the INITIALIZING_TRANSACTIONS publication below).
+                // Clearing here would expose the new account with no manager via
+                // SnapshotAccountServices() and let a second SelectAccount begin
+                // while this chain is still outstanding. Every state-machine exit
+                // that does not publish clears the flag where it parks the node.
             }
         }
         else
