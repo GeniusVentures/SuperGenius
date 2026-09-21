@@ -116,6 +116,7 @@ namespace sgns::crdt
                                 continue;
                             }
                             self->RetryDueFailedRoots();
+                            self->RetryStalledDeltas();
                             if ( self->SeedNextExternalRoot() )
                             {
                                 continue;
@@ -1792,6 +1793,86 @@ namespace sgns::crdt
                 logger_->info( "RetryDueFailedRoots: retrying root CID {}", cid.toString().value() );
                 dagWorkerCv_.notify_one();
             }
+        }
+    }
+
+    void CrdtDatastore::ScheduleStalledDeltaRetryLocked( const CID &cid )
+    {
+        auto &entry = stalledDeltas_[cid];
+        ++entry.attempts;
+        if ( entry.attempts > MAX_FAILED_ROOT_RETRIES )
+        {
+            stalledDeltas_.erase( cid );
+            logger_->warn( "{}: giving up on stalled delta {}", __func__, cid.toString().value() );
+        }
+        else
+        {
+            // attempts <= 8, so the shift cannot overflow.
+            entry.next_attempt = std::chrono::steady_clock::now() +
+                                 std::min( FAILED_ROOT_RETRY_BASE_DELAY * ( 1U << ( entry.attempts - 1 ) ),
+                                           FAILED_ROOT_RETRY_MAX_DELAY );
+        }
+        stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::RetryStalledDeltas()
+    {
+        if ( stalledDeltaRetryCount_.load( std::memory_order_relaxed ) == 0 )
+        {
+            return;
+        }
+
+        std::vector<CID> due;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            const auto      now = std::chrono::steady_clock::now();
+            due.reserve( stalledDeltas_.size() );
+            for ( auto &[cid, entry] : stalledDeltas_ )
+            {
+                if ( entry.next_attempt <= now )
+                {
+                    due.push_back( cid );
+                    // Re-armed rather than parked, so a lost pass cannot strand the entry.
+                    entry.next_attempt = now + FAILED_ROOT_RETRY_MAX_DELAY;
+                }
+            }
+        }
+
+        for ( const auto &cid : due )
+        {
+            // The node is already in the DAG: only the element the filter stripped is
+            // missing from the set, so re-filter and re-merge it in place. Re-walking
+            // it as a root would instead record an interior node as a head.
+            auto node = dagSyncer_->GetNodeWithoutRequest( cid );
+            if ( node.has_failure() || node.value() == nullptr )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto filtered = GetDeltaFromNode( *node.value(), false );
+            if ( filtered.has_failure() )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto merge_result = MergeDataFromDelta( cid, filtered.value().delta );
+            if ( merge_result.has_failure() || filtered.value().dependency_stalled )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            logger_->info( "{}: stalled delta {} applied after its dependency synced",
+                           __func__,
+                           cid.toString().value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            stalledDeltas_.erase( cid );
+            stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
         }
     }
 

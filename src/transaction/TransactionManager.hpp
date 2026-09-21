@@ -551,6 +551,16 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
+        /**
+         * @brief Finds an exact-hash transaction at its normal CRDT path across
+         *        every monitored network.
+         *
+         * A decoded value is a candidate only when its intrinsic hash matches
+         * @p tx_hash; mismatched or unavailable CRDT values are not authority.
+         */
+        outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
+            const std::string &tx_hash ) const;
+
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
