@@ -319,6 +319,34 @@ TEST_F( TrustGenesisToolTest, DurableConfirmationServesToPeersBeforeReturning )
     EXPECT_LT( serving_at, complete_at ) << "serving window must complete before returning";
 }
 
+TEST_F( TrustGenesisToolTest, BurnActivationRetriesWhenApprovalsNotYetVisible )
+{
+    ConfirmForAdmin();
+    auto local = burn_config_->OnTrustedPeerGenesisConfirmed();
+    ASSERT_TRUE( local.has_value() ) << local.error().message();
+
+    // Window where the candidate is discoverable but its approval record is not
+    // yet visible to the scoped approval read (flaky TRUST_ACTIVATION_FAILED on a
+    // loaded runner right after the local approval submission). Activation must
+    // report not-activatable so the candidate stays pending and later refresh
+    // passes retry — erroring here puts the node's own initial burn on the
+    // controller's permanent failed-candidate list and strands startup.
+    auto unseen = local.value();
+    unseen.content_hash.assign( unseen.content_hash.size(), '0' );
+    auto not_visible = burn_config_->TryActivateBurnCandidate( unseen );
+    ASSERT_TRUE( not_visible.has_value() ) << not_visible.error().message();
+    EXPECT_FALSE( not_visible.value() ) << "approval-invisible candidate must stay pending, not fail";
+
+    // The transient miss must not disturb the real candidate: once its approvals
+    // reach quorum (this fixture's manifest needs the local plus one remote
+    // approval - burn_threshold 2), it still activates.
+    (void) SubmitRemoteInitialBurnApproval();
+    auto activated = burn_config_->TryActivateBurnCandidate( local.value() );
+    ASSERT_TRUE( activated.has_value() ) << activated.error().message();
+    EXPECT_TRUE( activated.value() );
+    EXPECT_TRUE( burn_config_->IsEconomicallyReady() );
+}
+
 TEST_F( TrustGenesisToolTest, WrongFingerprintLeavesSecretAndDoesNotSubmit )
 {
     size_t submits = 0;
