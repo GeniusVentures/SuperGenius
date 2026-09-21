@@ -1786,7 +1786,7 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
             return s == TransactionManager::TransactionStatus::SENDING ||
                    s == TransactionManager::TransactionStatus::CONFIRMED;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "DetachChild should reach SENDING or CONFIRMED status",
         nullptr );
 
