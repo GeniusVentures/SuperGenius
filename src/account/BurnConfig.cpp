@@ -346,7 +346,15 @@ namespace sgns::account
         if ( snapshot.has_error() ) return snapshot.error();
         auto approvals = secure_crdt_->ReadCandidateApprovals( candidate_id );
         if ( approvals.has_error() ) return approvals.error();
-        if ( approvals.value().empty() ) return outcome::failure( std::errc::invalid_argument );
+        // A candidate can be discoverable (listed or callback-queued) a moment before
+        // the approval record that carries it is visible to this scoped read —
+        // observed as a flaky TRUST_ACTIVATION_FAILED right after
+        // OnTrustedPeerGenesisConfirmed submitted the local approval. Empty means
+        // "not visible yet", not malformed: report not-activatable so the candidate
+        // stays pending and later refresh passes retry it. Erroring here would land
+        // the node's own initial burn on the controller's permanent failed-candidate
+        // list and strand startup until manual intervention.
+        if ( approvals.value().empty() ) return false;
         const auto &core = approvals.value().front().core;
         auto candidate = sgns::trustedpeer::ConfirmedBurnState::DecodeCanonical( core.payload );
         auto expected_core = candidate ? BurnCandidateCore( *candidate, candidate_domain_ ) : std::nullopt;
