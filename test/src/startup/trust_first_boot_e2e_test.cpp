@@ -2006,6 +2006,65 @@ namespace
                    std::optional<std::string>( current_hash ) );
     }
 
+    TEST( TrustFirstBootE2ETest, CoalescedRequestDuringActivePassIsRedispatched )
+    {
+        // A refresh request arriving while a pass is mid-flight can be invisible to
+        // that pass: it snapshots the pending candidate queues before the callback
+        // enqueues its candidate. FinishDispatch used to clear the coalesced flag
+        // unconditionally, dropping the only record of the request and leaving a
+        // quorum-approved successor inactive until an unrelated future CRDT write.
+        // The dispatcher must restart instead of going idle.
+        auto observations = std::make_shared<RefreshObservations>();
+        auto hooks        = MakeRefreshHooks( observations );
+        auto refreshed_during_pass = std::make_shared<std::atomic_bool>( false );
+        auto inner_observe_attempt  = hooks->observe_attempt;
+        hooks->observe_attempt = [observations, refreshed_during_pass, inner_observe_attempt]( uint32_t attempt )
+        {
+            inner_observe_attempt( attempt );
+            // Re-enter RequestDispatch exactly once, from inside the active pass.
+            // Copy the bound callback out and release observations->mutex first:
+            // RequestDispatch's coalesced path fires observe_coalesced_request,
+            // which locks the same (non-recursive) mutex on this thread.
+            if ( !refreshed_during_pass->exchange( true ) )
+            {
+                std::function<void()> reenter;
+                {
+                    std::lock_guard<std::mutex> lock( observations->mutex );
+                    reenter = observations->request_refresh;
+                }
+                if ( reenter ) reenter();
+            }
+        };
+        auto harness = MakeReadyRefreshHarness( "coalesced-active-redispatch", hooks );
+        ASSERT_NE( harness, nullptr );
+
+        std::function<void()> request_refresh;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            request_refresh = observations->request_refresh;
+        }
+        ASSERT_TRUE( static_cast<bool>( request_refresh ) );
+        request_refresh();
+
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return observations->idle && observations->attempts.size() == 2U;
+            },
+            E2E_WAIT_TIMEOUT,
+            "coalesced mid-pass refresh request was dropped instead of redispatched" );
+        uint32_t coalesced_requests = 0;
+        size_t   attempt_count      = 0;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            coalesced_requests = observations->coalesced_requests;
+            attempt_count      = observations->attempts.size();
+        }
+        EXPECT_EQ( coalesced_requests, 1U ) << "mid-pass request must coalesce, not start a nested pass";
+        EXPECT_EQ( attempt_count, 2U ) << "the coalesced request must drive a second pass before idle";
+    }
+
     void RunWorkerCallbackLastOwnerChild()
     {
         auto observations = std::make_shared<RefreshObservations>();
