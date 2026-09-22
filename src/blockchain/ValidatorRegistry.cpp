@@ -481,6 +481,10 @@ namespace sgns
         PublicHashGroups                slot1_groups;
         PublicHashGroups                slot2_groups;
         uint64_t                        slot0_contribution = 0;
+        uint64_t                        slot1_carriers     = 0;
+        uint64_t                        slot2_carriers     = 0;
+        uint64_t                        slot1_carrier_weight = 0;
+        uint64_t                        slot2_carrier_weight = 0;
 
         const auto add_public_vote = []( PublicHashGroups &groups, const std::string &hash, uint64_t weight )
         {
@@ -513,6 +517,16 @@ namespace sgns
             {
                 slot0_contribution += ( weight * weight_config.slot_direct_numerator_ ) /
                                       weight_config.slot_direct_denominator_;
+            }
+            if ( !vote.slot_1_hash().empty() )
+            {
+                ++slot1_carriers;
+                slot1_carrier_weight += weight;
+            }
+            if ( !vote.slot_2_hash().empty() )
+            {
+                ++slot2_carriers;
+                slot2_carrier_weight += weight;
             }
             add_public_vote( slot1_groups, vote.slot_1_hash(), weight );
             add_public_vote( slot2_groups, vote.slot_2_hash(), weight );
@@ -550,6 +564,22 @@ namespace sgns
 
         result.qualified_sum = slot0_contribution + slot1_contribution + slot2_contribution;
         result.has_quorum    = result.qualified_sum > result.threshold;
+
+        // Ceiling on qualified_sum for this vote set: public slots reach their
+        // ceiling only when enough distinct carriers exist to form one group.
+        const auto public_ceiling = [&]( uint64_t carriers, uint64_t carrier_weight )
+        {
+            if ( weight_config.slot_public_denominator_ == 0 ||
+                 carriers < weight_config.slot_public_min_group_ )
+            {
+                return uint64_t{ 0 };
+            }
+            return ( carrier_weight * weight_config.slot_public_numerator_ ) /
+                   weight_config.slot_public_denominator_;
+        };
+        result.max_qualified_sum = slot0_contribution +
+                                   public_ceiling( slot1_carriers, slot1_carrier_weight ) +
+                                   public_ceiling( slot2_carriers, slot2_carrier_weight );
 
         ValidatorRegistryLogger()->debug(
             "{}: slot0={} slot1={} slot2={} qualified_sum={} total_voting_rep={} threshold={} has_quorum={}",

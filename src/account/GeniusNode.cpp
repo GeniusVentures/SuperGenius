@@ -777,6 +777,16 @@ namespace sgns
                                                                 burn_config_->GetCachedBasisPoints(),
                                                                 burn_config_ );
 
+                {
+                    std::lock_guard lock( pending_rpc_endpoints_mutex_ );
+                    for ( const auto &[pending_chain_id, pending_endpoints] : pending_rpc_endpoints_ )
+                    {
+                        transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints(
+                            pending_chain_id,
+                            pending_endpoints );
+                    }
+                }
+
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
                                                     TransactionManager::State new_state )
@@ -3313,14 +3323,18 @@ namespace sgns
 
     bool GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto transaction_manager = transaction_manager_;
-        if ( !transaction_manager || transaction_manager->GetState() != TransactionManager::State::READY )
-        {
-            node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
-            return false;
-        }
         const size_t endpoint_count = endpoints.size();
-        transaction_manager->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        {
+            std::lock_guard lock( pending_rpc_endpoints_mutex_ );
+            pending_rpc_endpoints_[chain_id] = endpoints;
+        }
+        // A missing or not-yet-READY transaction manager still accepts the config:
+        // the pending map above is replayed at TransactionManager::New, so a call
+        // made during init is never silently dropped.
+        if ( auto transaction_manager = transaction_manager_ )
+        {
+            transaction_manager->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        }
         node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoint_count, chain_id );
         return true;
     }

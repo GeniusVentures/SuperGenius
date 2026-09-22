@@ -128,6 +128,11 @@ namespace sgns
             uint64_t qualified_sum           = 0; ///< Sum of slot-weighted contributions (D-06).
             uint64_t total_voting_reputation = 0; ///< Sum of weight of ALL approve voters.
             uint64_t threshold               = 0; ///< ceil(total * slot_quorum_numerator_ / slot_quorum_denominator_).
+            /// Maximum qualified_sum this exact vote set could ever reach: slot 0
+            /// contributes at most w/2 per carrier, each public slot at most
+            /// sum(carrier weights)/4 and only when >= slot_public_min_group_
+            /// validators carry it (best case: all carriers agree on one hash).
+            uint64_t max_qualified_sum       = 0;
             bool     has_quorum              = false; ///< qualified_sum > threshold (STRICT, D-06).
         };
 
