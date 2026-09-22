@@ -8,6 +8,7 @@
 #define _GENIUS_NODE_HPP_
 
 #include <chrono>
+#include <condition_variable>
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -1018,6 +1019,49 @@ namespace sgns
         /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
         uint64_t account_service_generation_ = 0;
         bool     account_service_switching_  = false;
+
+        /// Generation-scoped submission lease: an API call that validated an
+        /// account-service snapshot and is about to drive a long TransactionManager
+        /// submission (UTXO reservation through enqueue) holds a lease, so
+        /// SelectAccount() drains in-flight submissions before stopping the manager
+        /// instead of stranding a returned transaction hash that will never be
+        /// processed. Dedicated mutex (NOT lifecycle_mutex_) so the drain
+        /// condition_variable never waits on the recursive lifecycle lock.
+        /// @note Lock order: lifecycle_mutex_ -> submission_lease_mutex_ only.
+        void AcquireSubmissionLease();
+        void ReleaseSubmissionLease();
+        bool WaitForSubmissionLeasesToDrain( std::chrono::milliseconds timeout );
+        std::mutex              submission_lease_mutex_;
+        std::condition_variable submission_leases_cv_;
+        size_t                  active_submission_leases_      = 0;
+        std::chrono::milliseconds submission_lease_drain_timeout_{ std::chrono::milliseconds( 30000 ) };
+
+        /// RAII holder for one submission lease. Acquire() is called while
+        /// lifecycle_mutex_ is held so lease ownership is atomic with the snapshot
+        /// validation in the same critical section; a switch cannot begin between
+        /// the two.
+        class SubmissionLease
+        {
+        public:
+            explicit SubmissionLease( GeniusNode &node ) : node_( node ) {}
+            ~SubmissionLease()
+            {
+                if ( held_ )
+                {
+                    node_.ReleaseSubmissionLease();
+                }
+            }
+            SubmissionLease( const SubmissionLease & )            = delete;
+            SubmissionLease &operator=( const SubmissionLease & ) = delete;
+            void Acquire()
+            {
+                node_.AcquireSubmissionLease();
+                held_ = true;
+            }
+        private:
+            GeniusNode &node_;
+            bool        held_ = false;
+        };
         /// State currently executing inside StateTransition; nested transitions temporarily replace it.
         std::optional<NodeState> transition_in_progress_;
         /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.

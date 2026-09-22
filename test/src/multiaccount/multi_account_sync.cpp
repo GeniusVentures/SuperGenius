@@ -88,6 +88,43 @@ namespace sgns
             return node->catchup_callback_owner_generation_.load();
         }
 
+        /// RAII test handle for one submission lease. Release() is explicit so a
+        /// test can free the lease at a chosen moment (dtor releases if still held).
+        struct TestSubmissionLease
+        {
+            std::shared_ptr<GeniusNode> node;
+            ~TestSubmissionLease()
+            {
+                Release();
+            }
+            void Release()
+            {
+                if ( node )
+                {
+                    node->ReleaseSubmissionLease();
+                    node.reset();
+                }
+            }
+        };
+
+        static TestSubmissionLease HoldSubmissionLease( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( node )
+            {
+                node->AcquireSubmissionLease();
+            }
+            return { node };
+        }
+
+        static void SetSubmissionLeaseDrainTimeout( const std::shared_ptr<GeniusNode> &node,
+                                                    std::chrono::milliseconds           timeout )
+        {
+            if ( node )
+            {
+                node->submission_lease_drain_timeout_ = timeout;
+            }
+        }
+
         static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )
         {
             return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
@@ -706,6 +743,63 @@ TEST_F( MultiAccountTest, SecondSelectAccountDuringAsyncSwitchReturnsInProgress 
     EXPECT_EQ( second.error(), std::make_error_code( std::errc::operation_in_progress ) );
 
     // The in-flight switch still completes and publishes the requested account.
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
+    EXPECT_EQ( node->GetAddress(), *replacement );
+}
+
+TEST_F( MultiAccountTest, SelectAccountDrainsSubmissionLeasesBeforeSwitching )
+{
+    auto node = CreateNode( "submission_lease_drain", true, false, true, {}, true );
+    ASSERT_TRUE( node );
+    WaitForReady( node );
+
+    const auto original_address = node->GetAddress();
+    const auto replacement_key  = DeterministicKey( "submission_lease_drain_replacement" );
+    ASSERT_TRUE( node->AddAccountWithKey( replacement_key.c_str() ).has_value() );
+    const auto accounts    = node->GetAvailableAccounts();
+    const auto replacement = std::find_if( accounts.begin(),
+                                           accounts.end(),
+                                           [&]( const std::string &address ) { return address != original_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+
+    // Drain timeout: a held lease makes the switch abort busy instead of waiting
+    // forever, and the node stays on the original account (nothing was mutated).
+    MultiAccountTestAccess::SetSubmissionLeaseDrainTimeout( node, std::chrono::milliseconds( 200 ) );
+    {
+        auto lease    = MultiAccountTestAccess::HoldSubmissionLease( node );
+        auto blocked  = node->SelectAccount( *replacement );
+        ASSERT_TRUE( blocked.has_error() ) << "switch under a held lease must not proceed";
+        EXPECT_EQ( blocked.error(), std::make_error_code( std::errc::device_or_resource_busy ) );
+    }
+    EXPECT_EQ( node->GetAddress(), original_address ) << "aborted switch must not move the account";
+
+    // Drain success: while the lease is held the switch cannot return (restore a
+    // drain timeout far beyond this check); releasing the lease lets it complete
+    // and publish. This is the no-strand guarantee: the in-flight submission
+    // finishes before SelectAccount stops the manager.
+    MultiAccountTestAccess::SetSubmissionLeaseDrainTimeout( node, std::chrono::seconds( 30 ) );
+    std::atomic_bool select_returned{ false };
+    std::atomic_bool select_succeeded{ false };
+    {
+        auto lease = MultiAccountTestAccess::HoldSubmissionLease( node );
+        ASSERT_TRUE( lease.node );
+        std::thread selector(
+            [&]
+            {
+                auto result = node->SelectAccount( *replacement );
+                select_succeeded.store( result.has_value() );
+                select_returned.store( true );
+            } );
+
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+        EXPECT_FALSE( select_returned.load() ) << "switch must wait while a submission lease is held";
+
+        lease.Release();
+        selector.join();
+        EXPECT_TRUE( select_returned.load() );
+        EXPECT_TRUE( select_succeeded.load() ) << "switch must complete once the lease drains";
+    }
+
     ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
     EXPECT_EQ( node->GetAddress(), *replacement );
 }

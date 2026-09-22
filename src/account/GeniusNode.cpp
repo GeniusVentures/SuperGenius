@@ -2513,6 +2513,26 @@ namespace sgns
             account_service_switching_ = true;
             ++account_service_generation_; // invalidate every captured account-service snapshot
             catchup_callback_owner_generation_.store( 0 );
+        }
+
+        // In-flight submissions (TransferFunds/MintTokens/RecoverFromChild) hold a
+        // generation-scoped lease from their snapshot validation until their manager
+        // call returns; account_service_switching_ blocks new acquisitions. Drain
+        // them BEFORE stopping services so no submission is cut off mid-flight
+        // after reserving UTXOs — a stopped manager would strand the transaction
+        // hash the API already returned. On timeout the switch aborts cleanly:
+        // nothing has been mutated yet, and the bumped generation only
+        // invalidates stale snapshots.
+        if ( !WaitForSubmissionLeasesToDrain( submission_lease_drain_timeout_ ) )
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            account_service_switching_ = false;
+            node_logger_->warn( "{}: timed out waiting for in-flight submissions to drain", __func__ );
+            return std::errc::device_or_resource_busy;
+        }
+
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             previous_watcher = std::move( catchup_watcher_ );
         }
 
@@ -2833,9 +2853,25 @@ namespace sgns
                                                          TokenID            tokenid,
                                                          std::string        destination )
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ||
-             snapshot.manager->GetState() != TransactionManager::State::READY )
+        // Submission lease: see TransferFunds — a concurrent SelectAccount()
+        // drains this call instead of stopping the manager mid-submission.
+        SubmissionLease                 lease( *this );
+        AccountServiceSnapshot          snapshot;
+        bool                            usable = false;
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( !account_service_switching_ )
+            {
+                snapshot = SnapshotAccountServices();
+                usable   = snapshot.account && snapshot.manager &&
+                         snapshot.manager->GetState() == TransactionManager::State::READY;
+                if ( usable )
+                {
+                    lease.Acquire();
+                }
+            }
+        }
+        if ( !usable )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
@@ -2983,9 +3019,28 @@ namespace sgns
                                                             const std::string &destination,
                                                             TokenID            token_id )
     {
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ||
-             snapshot.manager->GetState() != TransactionManager::State::READY )
+        // Hold a submission lease across the whole call so a concurrent
+        // SelectAccount() waits for the reservation+enqueue to finish instead of
+        // stopping this manager mid-flight and stranding the returned tx hash.
+        // Acquired under lifecycle_mutex_ so lease ownership is atomic with the
+        // snapshot validation in the same critical section.
+        SubmissionLease                 lease( *this );
+        AccountServiceSnapshot          snapshot;
+        bool                            usable = false;
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( !account_service_switching_ )
+            {
+                snapshot = SnapshotAccountServices();
+                usable   = snapshot.account && snapshot.manager &&
+                         snapshot.manager->GetState() == TransactionManager::State::READY;
+                if ( usable )
+                {
+                    lease.Acquire();
+                }
+            }
+        }
+        if ( !usable )
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
@@ -3033,13 +3088,31 @@ namespace sgns
                                                                uint64_t           amount,
                                                                TokenID            token_id )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        // Submission lease: see TransferFunds — a concurrent SelectAccount()
+        // drains this call instead of stopping the manager mid-submission.
+        SubmissionLease                 lease( *this );
+        AccountServiceSnapshot          snapshot;
+        bool                            usable = false;
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( !account_service_switching_ )
+            {
+                snapshot = SnapshotAccountServices();
+                usable   = snapshot.account && snapshot.manager &&
+                         snapshot.manager->GetState() == TransactionManager::State::READY;
+                if ( usable )
+                {
+                    lease.Acquire();
+                }
+            }
+        }
+        if ( !usable )
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        auto available_balance = account_->GetUTXOManager().GetBalance( token_id, child_address );
+        auto available_balance = snapshot.account->GetUTXOManager().GetBalance( token_id, child_address );
         if ( available_balance < amount )
         {
             node_logger_->error( "{}: insufficient child funds: requested={}, available={}",
@@ -3049,8 +3122,8 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->RecoverFromChild( child_address, amount, token_id ) );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                            snapshot.manager->RecoverFromChild( child_address, amount, token_id ) );
 
         node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
@@ -3593,6 +3666,32 @@ namespace sgns
         }
         side_effect();
         return true;
+    }
+
+    void GeniusNode::AcquireSubmissionLease()
+    {
+        {
+            std::lock_guard<std::mutex> lock( submission_lease_mutex_ );
+            ++active_submission_leases_;
+        }
+    }
+
+    void GeniusNode::ReleaseSubmissionLease()
+    {
+        {
+            std::lock_guard<std::mutex> lock( submission_lease_mutex_ );
+            if ( active_submission_leases_ > 0 )
+            {
+                --active_submission_leases_;
+            }
+        }
+        submission_leases_cv_.notify_all();
+    }
+
+    bool GeniusNode::WaitForSubmissionLeasesToDrain( std::chrono::milliseconds timeout )
+    {
+        std::unique_lock<std::mutex> lock( submission_lease_mutex_ );
+        return submission_leases_cv_.wait_for( lock, timeout, [&] { return active_submission_leases_ == 0; } );
     }
 
     std::string GeniusNode::GetAddress() const
