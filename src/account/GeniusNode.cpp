@@ -2223,7 +2223,7 @@ namespace sgns
 
         if ( graphsyncnetwork_ )
         {
-            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
+            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers after PubSub stop" );
             graphsyncnetwork_->stop( nullptr );
             node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
