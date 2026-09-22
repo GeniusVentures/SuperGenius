@@ -185,28 +185,31 @@ jobs:
             build-type: Release
             runner_key: linux_x64
             container: ghcr.io/geniusventures/almalinux-8:latest
-            cmake_args: -DSGNS_PRINT_LOGS=ON
+            cmake_args: -DSGNS_PRINT_LOGS=ON -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)  # pin clang: on AlmaLinux 8 /usr/bin/c++ is a real file owned by gcc-c++ (not an
+            # alternatives symlink like Debian's), so the update-alternatives takeover silently
+            # fails and CMake falls back to g++ 8.5, which cannot compile the zkLLVM crypto3
+            # constexpr code in ProofSystem (divide.hpp:347 "is not a constant expression")
           - target: Linux
             id: Linux-x86_64
             abi: x86_64
             build-type: Debug
             runner_key: linux_x64
             container: ghcr.io/geniusventures/almalinux-8:latest
-            cmake_args: -DSGNS_PRINT_LOGS=ON
+            cmake_args: -DSGNS_PRINT_LOGS=ON -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
           - target: Linux
             id: Linux-aarch64
             abi: aarch64
             build-type: Release
             runner_key: linux_arm
             container: ghcr.io/geniusventures/almalinux-8:latest
-            cmake_args: -DSGNS_PRINT_LOGS=ON
+            cmake_args: -DSGNS_PRINT_LOGS=ON -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
           - target: Linux
             id: Linux-aarch64
             abi: aarch64
             build-type: Debug
             runner_key: linux_arm
             container: ghcr.io/geniusventures/almalinux-8:latest
-            cmake_args: -DSGNS_PRINT_LOGS=ON
+            cmake_args: -DSGNS_PRINT_LOGS=ON -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
           - target: Android
             id: Android-arm64-v8a
             abi: arm64-v8a
