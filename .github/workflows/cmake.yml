@@ -611,11 +611,17 @@ jobs:
           #   ProcessingNodesModuleTest.SinglePostProcessing touch MNN (the
           #   DISABLED_* siblings never run regardless); the remaining
           #   account/ledger/transfer cases are pure and keep running.
-          CTEST_EXCLUDE_REGEX=""
+          # gtest filter grammar is POSITIVE-NEGATIVE with ONE dash: the
+          # negative section is ':'-separated WITHOUT per-pattern dashes.
+          # '-A:-B:-C' silently parses its 2nd/3rd patterns as literal
+          # '-B'/'-C' (matching nothing), so the exclusions never apply and
+          # the excluded cases run anyway (run 35781614193: PostProcessing
+          # and SinglePostProcessing still aborted). '*-A:B:C' is the
+          # unambiguous form.
           GTEST_FILTER_VALUE="*"
           if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
             CTEST_EXCLUDE_REGEX="processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
-            GTEST_FILTER_VALUE="-AccountManagement.SetPayoutAddress:-ProcessingNodesTest.PostProcessing:-ProcessingNodesModuleTest.SinglePostProcessing"
+            GTEST_FILTER_VALUE="*-AccountManagement.SetPayoutAddress:ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
             echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
           fi
           export CTEST_EXCLUDE_REGEX
