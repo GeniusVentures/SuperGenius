@@ -26,6 +26,14 @@ endif()
 
 set(ABI_SUBFOLDER_NAME "/${ARCH}")
 
+# sgns::secure_storage's Linux backend links PkgConfig::LIBSECRET PUBLIC, so the
+# exported supergeniusTargets.cmake references it — bake the definition into the
+# generated SuperGeniusConfig.cmake (via cmake/config.cmake.in) so downstream
+# consumers don't have to provide it. Other platform entries leave it unset.
+set(SUPERGENIUS_CONFIG_LIBSECRET
+"find_package(PkgConfig)
+pkg_check_modules(LIBSECRET IMPORTED_TARGET libsecret-1>=0.18.4)")
+
 # include common compiler options
 include(../CommonCompilerOptions.cmake)
 

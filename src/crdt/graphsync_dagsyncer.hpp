@@ -70,6 +70,18 @@ namespace sgns::crdt
         ~GraphsyncDAGSyncer() override
         {
             logger_->debug( "~GraphsyncDAGSyncer CALLED" );
+            // Stop graphsync while our members are still alive so the
+            // implicit ~GraphsyncImpl teardown is a no-op (started_ ==
+            // false) instead of cancelling requests during member
+            // destruction, when the mutexes those request paths guard
+            // (request_status_mutex_ etc.) are already gone. Defense-in-
+            // depth, not a fix for an observed re-entry: request callbacks
+            // capture weak_from_this(), which fails to lock during
+            // destruction, so they no-op anyway. (The 2026-09-19 macOS
+            // app-quit SIGABRT in this area was traced to the embedding
+            // app tearing its GlobalDB down while node threads were still
+            // live, and is fixed there.)
+            StopSync();
         }
 
         outcome::result<void> Listen( const Multiaddress &listen_to );

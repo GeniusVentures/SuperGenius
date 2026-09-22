@@ -19,6 +19,8 @@
 #include <atomic>
 #include <optional>
 #include <unordered_map>
+#include <mutex>
+#include <thread>
 
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -611,8 +613,14 @@ namespace sgns
             {} }; ///< When the last direct registry-CID request went out; default = never.
         std::atomic<bool> start_deferred_{
             false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
-        bool genesis_ready_          = false; ///< Indicates genesis block is ready.
-        bool account_creation_ready_ = false; ///< Indicates account-creation block is ready.
+
+        /// Signals CID-watch threads to exit; set by Stop() so they cannot
+        /// poll the GlobalDB or fire result callbacks during node teardown.
+        std::atomic<bool>        watchers_stop_requested_{ false };
+        mutable std::mutex       cid_watchers_mutex_;             ///< Guards cid_watchers_ push/join.
+        std::vector<std::thread> cid_watchers_;                   ///< Joinable CID-watch threads (never detached).
+        bool                     genesis_ready_          = false; ///< Indicates genesis block is ready.
+        bool                     account_creation_ready_ = false; ///< Indicates account-creation block is ready.
 
         std::shared_ptr<ConsensusManager> consensus_manager_; ///< Consensus manager used for proposals/certificates.
     };

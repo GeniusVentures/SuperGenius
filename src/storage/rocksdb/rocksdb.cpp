@@ -17,7 +17,14 @@ namespace sgns::storage
 {
     using BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions;
 
-    rocksdb::~rocksdb() {}
+    rocksdb::~rocksdb()
+    {
+        // Observability for the DB-close path: use_count()==1 means this
+        // thread runs the deleter (Close + delete) right after this body —
+        // the deterministic case. Anything higher is a straggler reference
+        // (dagSyncer block store, per-call copies) deferring the close.
+        logger_->debug( "~rocksdb: DB at {} has {} outstanding ref(s) at wrapper destruction", path_, db_.use_count() );
+    }
 
     outcome::result<std::shared_ptr<rocksdb>> rocksdb::create( std::string_view path, const Options &options )
     {
