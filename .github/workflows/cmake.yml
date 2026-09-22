@@ -363,9 +363,14 @@ jobs:
           # container) still need apt. Refresh apt indices there first: the
           # GitHub-hosted mirror lists can reference superseded package
           # versions that 404 until the index is refreshed.
+          # mesa-vulkan-drivers provides the llvmpipe software Vulkan ICD:
+          # GPU-less runners (ARM) rely on MNN's CPU-fallback path, which
+          # still needs to create a Vulkan instance — without an ICD the
+          # loader returns VK_ERROR_INCOMPATIBLE_DRIVER and MNN asserts
+          # (VulkanInstance.cpp:89) on Debug builds (run 35675445960).
           if command -v dnf >/dev/null 2>&1; then
-            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
-              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers
             fi
           else
             sudo apt-get -o Acquire::Check-Valid-Until=false update
