@@ -26,9 +26,9 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
-#include "account/NodeType.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
@@ -45,7 +45,7 @@ namespace sgns::account
 
 namespace sgns
 {
-    class MintTransactionV2;
+    class TransactionConsensusHandler;
 
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
@@ -69,18 +69,16 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS =
-            5000; ///< Unified timeout for all nonce requests (10 seconds)
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
+        static constexpr std::string_view          GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
+        static constexpr std::chrono::milliseconds NONCE_REQUEST_TIMEOUT        = std::chrono::seconds(
+            5 ); ///< Unified timeout for all nonce requests
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
         /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
         /// and refreshed via BurnConfig's quorum-signed CRDT value (BURN-02, BURN-03).
         static constexpr uint64_t BURN_BASIS_POINTS_DEFAULT = 100; // 1%
         static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
-        /// Fixed destination of the burn slice of an escrow payout.
-        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
         enum class Error : uint8_t
         {
@@ -139,7 +137,7 @@ namespace sgns
          * @param[in] processing_db Database of the CRDT
          * @param[in] ctx The io context used to run its inner methods
          * @param[in] account Genius account to be used
-         * @param[in] full_node Parameter to indicate if the account is a full node
+         * @param[in] node_type Deployment role of this node (Full / Light / Archive)
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
          * @return shared_ptr to the fully-wired TransactionManager instance
@@ -152,32 +150,11 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context> ctx,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<Blockchain>              blockchain,
-            bool                                     full_node,
+            NodeType                                 node_type                 = NodeType::Light,
             uint16_t                                 subnet_id                 = 0,
             std::chrono::milliseconds                timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window         = std::chrono::milliseconds( 0 ) );
-
-        /**
-         * @brief Factory constructor variant taking the deployment role.
-         *
-         * @param[in] node_type Deployment role of this node (Full / Light / Archive). Full maps
-         *            onto the legacy full-node behaviour (full-node topic subscription).
-         * @param[in] initial_burn_basis_points Burn slice used until a confirmed trust policy
-         *            publishes a quorum-signed value.
-         * @param[in] confirmed_burn_provider Optional node-scoped provider whose confirmed
-         *            basis points drive the live burn rate; without one the cached fallback
-         *            value applies.
-         */
-        static std::shared_ptr<TransactionManager> New(
-            std::shared_ptr<crdt::GlobalDB>            processing_db,
-            std::shared_ptr<boost::asio::io_context>   ctx,
-            std::shared_ptr<GeniusAccount>             account,
-            std::shared_ptr<Blockchain>                blockchain,
-            NodeType                                   node_type                 = NodeType::Light,
-            uint16_t                                   subnet_id                 = 0,
-            std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
-            uint64_t                                   initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::chrono::milliseconds                mutability_window         = std::chrono::milliseconds( 0 ),
+            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
             std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider = nullptr );
 
         ~TransactionManager();
@@ -187,15 +164,9 @@ namespace sgns
         void StartListeningTopics();
         void StartCore();
 
-        void PrintAccountInfo() const;
-
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
-        std::vector<std::vector<uint8_t>> GetTransactions(
-            std::optional<TransactionStatus> tx_status = std::nullopt ) const;
-        std::vector<std::vector<uint8_t>> GetTransactions() const;
-        size_t                             CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
-        TransactionStatus                  GetTransactionStatusByTxId( const std::string &txId ) const;
+        size_t CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
 
         /**
          * @brief Creates and enqueues a transfer transaction.
@@ -205,117 +176,6 @@ namespace sgns
          * @return Transaction hash on success.
          */
         outcome::result<std::string> TransferFunds( uint64_t amount, std::string destination, TokenID token_id );
-
-        /**
-         * @brief Creates and enqueues a child-wallet registration transaction.
-         * @param[in] main_address Main wallet public address (128-hex).
-         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
-         * @param[in] sequence      Registration sequence number (caller-supplied per D-42).
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> RegisterChild( std::string                          main_address,
-                                                    SGTransaction::RegistrationMetadata  metadata,
-                                                    uint64_t                             sequence );
-
-        /**
-         * @brief Creates and enqueues a child-wallet registration transaction with auto-derived sequence.
-         *
-         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1
-         * (or 1 if no prior registration exists).
-         *
-         * @param[in] main_address Main wallet public address (128-hex).
-         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> RegisterChild( std::string                          main_address,
-                                                    SGTransaction::RegistrationMetadata  metadata );
-
-        /**
-         * @brief Creates and enqueues a transfer transaction recovering funds from a registered child
-         *        wallet back to this account's own address (D-60/D-62/CONS-02).
-         *
-         * Selects UTXOs owned by @p child_address (never this account's own UTXOs), builds a
-         * DAGStruct scoped to @p child_address (child's own nonce/previous-hash chain, not this
-         * account's), and signs both the whole-transaction and every per-input signature with this
-         * account's own key. Consensus accepts the resulting transaction because the CRDT
-         * registration record certifies the parent-child relationship (Blockchain::CheckCertifiedParent),
-         * not because this account possesses the child's private key.
-         *
-         * @param[in] child_address Registered child wallet address to recover funds from.
-         * @param[in] amount        Amount to recover.
-         * @param[in] token_id      Token being recovered.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
-
-        /**
-         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
-         *
-         * Clears the registration's main_address to a 128-character zero-sentinel and sets
-         * detach_flag=true, superseding the current registration record. Child-signed only.
-         *
-         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
-         * @param[in] sequence            New registration sequence number (caller-supplied).
-         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
-                                                  uint64_t                            sequence,
-                                                  uint64_t                            supersedes_sequence );
-
-        /**
-         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
-         *
-         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
-         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
-         *
-         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
-
-        /**
-         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
-         *
-         * Sets main_address to the caller-supplied new main and detach_flag=false, superseding the
-         * current registration record. Handles both Registered->Registered replacement AND
-         * re-registration from Detached/Revoked. Child-signed only — no consent from the old main.
-         *
-         * @param[in] new_main_address    New main wallet public address (128-hex).
-         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
-         * @param[in] sequence            New registration sequence number (caller-supplied).
-         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
-                                                  SGTransaction::RegistrationMetadata  metadata,
-                                                  uint64_t                             sequence,
-                                                  uint64_t                             supersedes_sequence );
-
-        /**
-         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
-         *
-         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
-         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
-         *
-         * @param[in] new_main_address New main wallet public address (128-hex).
-         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
-                                                  SGTransaction::RegistrationMetadata  metadata );
-
-        /**
-         * @brief Creates and enqueues a main-initiated Revoke transaction (D-36).
-         *
-         * Main-signed — this account is the tx's own source. Fails fast client-side if the target's
-         * reg/ record is absent or already detached, avoiding broadcast of a transaction
-         * CheckParentChildAuthority would reject anyway.
-         *
-         * @param[in] child_address Registered child wallet address being revoked.
-         * @return Transaction hash on success.
-         */
-        outcome::result<std::string> RevokeChild( std::string child_address );
 
         /**
          * @brief Creates and enqueues a mint transaction.
@@ -330,7 +190,7 @@ namespace sgns
                                                 std::string transaction_hash,
                                                 std::string chainid,
                                                 TokenID     tokenid,
-                                                std::string destination = "" );
+                                                std::string destination );
 
         /**
          * @brief Creates and enqueues a one-time migration mint transaction.
@@ -354,12 +214,17 @@ namespace sgns
          * @param[in] amount  Total amount to lock in escrow.
          * @param[in] job_id  Job identifier whose blake2b-256 hash becomes the escrow destination address.
          * @return Pair of (transaction hash, (escrow address, serialized transaction)) on success.
+         *
+         * @note The escrow hold carries no payout metadata. The developer address and cut are
+         *       reported per subtask by the processing peer that ran the work, since peers of a
+         *       single job may be running apps from different developers.
          */
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         /**
          * @brief Submits an escrow payout and observes it without blocking for confirmation.
@@ -414,14 +279,13 @@ namespace sgns
             return state_m;
         }
 
+        TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
-        TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
         /**
-         * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
-         * @return The conflicting transaction, or failure if none exists.
+         * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
          */
-        outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
+        std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
             const GeniusTransaction &element ) const;
 
         /**
@@ -459,7 +323,7 @@ namespace sgns
          * @brief Queries all transaction keys from the CRDT across monitored networks
          *        and processes each one via FetchAndProcessTransaction.
          */
-        outcome::result<void> QueryTransactions();
+        void QueryTransactions();
 
         /**
          * @brief Deserializes, parses, and adds a single transaction to the processed map.
@@ -484,34 +348,13 @@ namespace sgns
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
             const EmbeddedTransaction &embedded );
 
-        /**
-         * @brief Verifies that an already validated certificate certifies @p transaction itself.
-         *
-         * Callers must locate the record through the transaction-derived canonical
-         * slot first. This supplies the second, exact-subject check required for
-         * shared slots, so a competing transaction cannot inherit finality.
-         */
-        static bool CertificateMatchesTransaction( const ConsensusCertificate &certificate,
-                                                   const GeniusTransaction    &transaction );
-        /**
-         * @brief Loads the transaction's validated certificate from either durable index.
-         *
-         * Prefers the authoritative canonical-slot record and falls back to the
-         * subject-hash index record (develop consumer contract). Callers must still
-         * pass the result through CertificateMatchesTransaction.
-         */
-        outcome::result<ConsensusCertificate> GetTransactionCertificate( const GeniusTransaction &transaction ) const;
-
     protected:
         friend class GeniusNode;
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
-        friend class RegistrationE2ETestAccess;
-        friend class RegTestAccess;
-        friend class MultiNodeFinalityFaultTestAccess;
-        friend class PayoutOutputsTestAccess;
         friend class MultiAccountTestAccess;
+        friend class TransactionConsensusHandler;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -521,58 +364,37 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
-        struct TrackedTx
-        {
-            std::shared_ptr<GeniusTransaction> tx;
-            TransactionStatus                  status;
-            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
-            // Set once ParseTransaction effects (e.g. mint UTXO application) succeeded
-            // for this entry so a certificate-work retry (e.g. failed
-            // PersistBridgeExecutedMarker) does not re-apply them.
-            bool effects_applied = false;
-        };
+        /// Destination of the burned fraction of an escrow payout.
+        static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-        struct ReplayProtectionResult
-        {
-            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
-        };
-
-        struct AccountUTXOState
-        {
-            uint64_t      version{ 0 };
-            base::Hash256 root{};
-            bool          initialized{ false };
-        };
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            bool                                     full_node,
-                            uint16_t                                 subnet_id,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
+        /// Scale of SubTaskResult::developer_cut; 1'000'000 == 100%.
+        static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
 
         /**
-         * @brief Builds escrow-payout outputs with per-result developer cuts and the burn slice.
+         * @brief Splits an escrow amount across contributing peers, their developers and the burn.
          *
-         * Splits the post-burn escrow amount evenly across valid subtask results, pays each
-         * result's developer its configured cut, and emits the burn output (burn + split dust)
-         * so peer+developer+burn always sums to the escrow amount.
+         * Each subtask result names the peer that did the work plus the developer of the app that
+         * ran it, so a single job whose subtasks were processed by different apps pays each
+         * developer its own cut. The results share an even split of the amount left after the
+         * burn (the split remainder is burned too); each result's share is divided by its
+         * @c developer_cut, floored in the developer's disfavor, and minted in that result's
+         * token. Results with malformed metadata are skipped, they neither block the payout nor
+         * earn from it.
+         *
+         * @param[in] task_result Collected subtask results carrying peer and developer payout metadata.
+         * @param[in] escrow_amount Total amount locked by the escrow hold.
+         * @param[in] escrow_token_id Token of the escrow lock output, used for the burn output.
+         * @param[in] burn_basis_points Fraction of the escrow burned before the peer/developer split.
+         * @return Outputs in result order, then developers by (address, token), burn last; the
+         *         burn output is always present, zero-valued peer and developer credits are omitted.
          */
         static outcome::result<std::vector<OutputDestInfo>> BuildPayoutOutputs(
             const SGProcessing::TaskResult &task_result,
             uint64_t                        escrow_amount,
             const TokenID                  &escrow_token_id,
             uint64_t                        burn_basis_points );
+
+        friend class PayoutOutputsTestAccess;
 
         struct PendingTransactionWait
         {
@@ -594,12 +416,19 @@ namespace sgns
             std::atomic_bool                      completed{ false };
         };
 
-        static bool IsTerminalTransactionStatus( TransactionStatus status );
-        void        NotifyTransactionStatusChanged( const std::string &tx_id );
-        void        CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
-                                             TransactionStatus                              status,
-                                             boost::system::error_code                      error = {} );
-        void        CancelPendingTransactionWaits();
+        struct TrackedTx
+        {
+            std::shared_ptr<GeniusTransaction> tx;
+            TransactionStatus                  status;
+            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+        };
+
+        struct AccountUTXOState
+        {
+            uint64_t      version{ 0 };
+            base::Hash256 root{};
+            bool          initialized{ false };
+        };
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
@@ -617,19 +446,9 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
-
-        /**
-         * @brief Builds a DAGStruct scoped to an arbitrary source address rather than this account's
-         *        own address — used by RecoverFromChild (D-60) where the tx's declared src is a
-         *        registered child, not this account. Derives nonce from
-         *        account_m->GetPeerNonce(source_address) (never ReserveNextNonce, which is this
-         *        account's own private counter) and a previous-hash chain scoped to source_address.
-         */
-        SGTransaction::DAGStruct FillDAGStructForAddress( const std::string &source_address );
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
-        std::string              GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
@@ -664,33 +483,6 @@ namespace sgns
         static std::vector<uint16_t> GetMonitoredNetworkIDs();
 
         /**
-         * @brief Finds an exact-hash transaction at its normal CRDT path across
-         *        every monitored network.
-         *
-         * A decoded value is a candidate only when its intrinsic hash matches
-         * @p tx_hash; mismatched or unavailable CRDT values are not authority.
-         */
-        outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
-            const std::string &tx_hash ) const;
-
-        /**
-         * @brief Derives the proof key that corresponds to a transaction key by
-         *        replacing "/tx/" with "/proof/".
-         */
-        static outcome::result<std::string> GetExpectedProofKey( const std::string       &tx_key,
-                                                                 const GeniusTransaction *tx );
-
-        /**
-         * @brief Inverse of GetExpectedProofKey — derives the tx key from a proof key.
-         */
-        static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
-
-        /**
-         * @brief Fetches the proof for @p tx from the CRDT and runs full verification.
-         */
-        outcome::result<bool> CheckProof( const std::shared_ptr<GeniusTransaction> &tx );
-
-        /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.
          */
         outcome::result<void> ParseTransaction( const GeniusTransaction &tx );
@@ -699,10 +491,6 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const GeniusTransaction &tx );
-        bool                  DoesTransactionMutateUTXOState( const GeniusTransaction &tx ) const;
-        std::unordered_set<std::string> CollectTouchedAccounts( const GeniusTransaction &tx ) const;
-        AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
-        void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
         void UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
 
         /**
@@ -763,12 +551,36 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
-        std::shared_ptr<GeniusTransaction> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                            const std::string &address ) const;
+        /**
+         * @brief Finds an exact-hash transaction at its normal CRDT path across
+         *        every monitored network.
+         *
+         * A decoded value is a candidate only when its intrinsic hash matches
+         * @p tx_hash; mismatched or unavailable CRDT values are not authority.
+         */
+        outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
+            const std::string &tx_hash ) const;
+
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
-        bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
+        /// @brief Verifies a transaction's signature, accepting the legacy DAG form.
+        bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+
+        /**
+         * @brief Erases the tracking entry for @p tx_hash iff it is still VERIFYING.
+         * @return true when an entry was erased.
+         */
+        bool RemoveTrackedIfVerifying( const std::string &tx_hash );
+
+        TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
+        bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
+        static bool       IsTerminalTransactionStatus( TransactionStatus status );
+        void              NotifyTransactionStatusChanged( const std::string &tx_id );
+        void              CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
+                                                   TransactionStatus                              status,
+                                                   boost::system::error_code                      error = {} );
+        void              CancelPendingTransactionWaits();
 
         /**
          * @brief Single iteration of the main processing loop.
@@ -780,24 +592,12 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
-                                                                         const ConsensusCertificate &certificate );
-        /**
-         * @brief Handles proposal timeout cleanup for VERIFYING tracking entries.
-         *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
-         *        up due to timeout. Local outgoing entries become UNCONFIRMED; remote temporary entries are
-         *        removed. CONFIRMED entries are left untouched. Missing entries are skipped silently.
-         * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
-         */
-        void OnProposalTimeoutCleanup( const std::string &tx_hash );
-
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<Blockchain>              blockchain_;
-        bool                                     full_node_m;
-        bool                                     replicates_all_accounts_m_; ///< Role keeps a complete local ledger (Full/Archive); may finish init without a network nonce answer.
+        NodeType                                 node_type_m;       ///< Deployment role driving replication behavior.
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
@@ -830,41 +630,23 @@ namespace sgns
         std::mutex                                                  payout_submission_mutex_;
         std::mutex                                                  transaction_waits_mutex_;
         std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> transaction_waits_;
-        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
-        std::chrono::milliseconds                                   timestamp_tolerance_m;
-        std::chrono::milliseconds                                   mutability_window_m;
-        uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
+        std::chrono::milliseconds                                                             timestamp_tolerance_m;
+        std::chrono::milliseconds                                                             mutability_window_m;
 
         // METRICS-01: Operational metrics counters
         // Atomic counters tracking vote rates, validation breakdown, and transaction lifecycle.
         // Flushed to log on TransactionManager destruction (per D-12/D-13/D-14).
-        std::atomic<uint64_t> metrics_cert_fallback_success_{ 0 };
-        std::atomic<uint64_t> metrics_cert_fallback_failure_{ 0 };
-        std::atomic<uint64_t> metrics_validation_approve_{ 0 };
-        std::atomic<uint64_t> metrics_validation_reject_{ 0 };
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
-        bool                  fail_bridge_executed_marker_write_for_test_ = false;
-        std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
 
-        struct FinalityFaultBarrier
-        {
-            bool armed    = false;
-            bool entered  = false;
-            bool released = false;
-        };
-        mutable std::mutex      fault_test_mutex_;
-        std::condition_variable fault_test_cv_;
-        uint64_t                mint_effects_for_test_ = 0;
-        FinalityFaultBarrier    mint_effects_barrier_;
-
+        /// @brief Compatibility burn rate for managers constructed without a trust provider.
+        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
         /// @brief Node-scoped durable-ready burn state shared by every replacement manager.
         std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider_;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
-        static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -876,28 +658,16 @@ namespace sgns
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 
-        std::mutex                            missing_tx_mutex_;
-        std::unordered_set<std::string>       missing_tx_hashes_;
-        std::chrono::steady_clock::time_point last_init_tx_request_time_{};
-        static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
+        std::mutex                      missing_tx_mutex_;
+        std::unordered_set<std::string> missing_tx_hashes_;
+
+        std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
+        mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
+        static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
-
-        void                  SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
-        void                  SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
-        outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
-
-        /**
-         * @brief Releases the burn-UTXO reservation held by a mint that will never confirm.
-         *
-         * Must run on every terminal non-confirmed outcome (FAILED and UNCONFIRMED alike):
-         * a burn left RESERVED reads as "mint in flight" forever, stalling the bridge
-         * catch-up cursor and permanently stranding the burned tokens.
-         */
-        void ReleaseBridgeMintReservation( const GeniusTransaction &tx );
-        bool EnterFinalityFaultBarrier();
 
         outcome::result<void> ParseTransferTransaction( const GeniusTransaction &tx );
         outcome::result<void> ParseMintTransaction( const GeniusTransaction &tx );
@@ -907,57 +677,6 @@ namespace sgns
         outcome::result<void> RevertEscrowTransaction( const GeniusTransaction &tx );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
-        /**
-         * @brief No-op parser for "registration" tx type (Phase 3 Plan 04 fix).
-         * @details RegistrationTransaction carries no UTXO parameters — its CRDT
-         *          acceptance/validation is handled entirely by FilterRegistration/
-         *          RegElementCallback, independently of this post-confirmation dispatch table.
-         *          This entry exists solely so CheckTransactionWellFormed's
-         *          transaction_parsers.find(tx.GetType()) membership check recognizes
-         *          "registration" as a known type — without it, EVERY registration transaction
-         *          unconditionally fails ValidateTransactionForConsensus ("Unknown tx type"),
-         *          meaning Blockchain::CheckCertifiedParent's CheckCertificate(reg_tx->GetHash())
-         *          gate (D-26, added Plan 01) could never resolve true for any real registration
-         *          proposal submitted through the normal nonce-consensus pipeline. Discovered
-         *          while implementing Plan 04's CONS-02 certification test.
-         * @return Always outcome::success() — no state to mutate.
-         */
-        outcome::result<void> ParseRegistrationTransaction( const GeniusTransaction &tx );
-        /**
-         * @brief No-op reverter for "registration" tx type — see ParseRegistrationTransaction.
-         * @return Always outcome::success() — no state to mutate.
-         */
-        outcome::result<void> RevertRegistrationTransaction( const GeniusTransaction &tx );
-        /**
-         * @brief Parser for "revoke" tx type — applies the RevokeTx's effect to the target
-         *        reg/{child_addr} record (Phase 5).
-         * @details Unlike ParseRegistrationTransaction, this is NOT a no-op. A RevokeTx is
-         *          stored/broadcast at tx/{hash} (SendTransactionItem's default path, since only
-         *          "registration" routes to reg/{src_addr}), so its effect on reg/{child_addr}
-         *          must be actively applied here once the transaction is confirmed. Reads the
-         *          existing reg/{child_addr} record, preserves main_address/sequence/metadata/
-         *          supersedes_sequence, and writes back a copy with detach_flag=true via a direct
-         *          local globaldb_m->Put — mirrors PutProducedUTXOs' established "derive a
-         *          side-effect locally, per-node, from an already-validated transaction" pattern.
-         *          This local write is never re-validated by this node's own FilterRegistration
-         *          (CrdtDatastore::GetDeltaFromNode only filters deltas received FROM peers, not
-         *          elements this node posts itself), which is safe because CheckParentChildAuthority's
-         *          "revoke" branch has already gated this RevokeTx during consensus validation before
-         *          ParseTransaction ever runs.
-         * @return outcome::success() once applied, or forwards a Put failure. Tolerates an absent
-         *         or already-registration-typed-mismatched reg/{child_addr} record (logs and returns
-         *         success) rather than failing the whole confirmed-transaction pipeline.
-         */
-        outcome::result<void> ParseRevokeTransaction( const GeniusTransaction &tx );
-        /**
-         * @brief No-op reverter for "revoke" tx type (Phase 5).
-         * @details Reverting a Revoke would require snapshotting the PRIOR reg/ state, which is
-         *          not currently tracked. Leaving a rolled-back Revoke's target in the
-         *          (already-applied) Detached state is a conservative, fail-safe default — the
-         *          child remains protected, not accidentally re-exposed to main's authority.
-         * @return Always outcome::success() — no state to mutate.
-         */
-        outcome::result<void> RevertRevokeTransaction( const GeniusTransaction &tx );
 
         static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers;
@@ -968,10 +687,8 @@ namespace sgns
          * @brief CRDT element filter for incoming transactions.
          *
          * Deserializes the element, verifies its signature,
-         * and checks for nonce conflicts. When a conflict exists, applies
-         * ShouldReplaceTransaction to decide whether the new or existing
-         * transaction survives. Rejected elements are returned as tombstones
-         * together with their associated proof key.
+         * and checks for nonce conflicts. Rejected elements are returned as
+         * tombstones together with their associated proof key.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
@@ -980,35 +697,13 @@ namespace sgns
         /**
          * @brief CRDT element filter for incoming proofs.
          *
-         * Currently accepts all proofs (full verification is disabled until the
-         * reputation/penalty path exists), so no tombstones are produced here.
+         * Currently accepts all proofs that are already stored or newly arriving
+         * (full verification path is present but short-circuited).
+         * Invalid proofs are tombstoned together with their associated tx key.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
-
-        /**
-         * @brief CRDT element filter for incoming child-wallet registrations.
-         *
-         * Phase 4: minimal gates a-c per D-44.
-         * Gates: (a) deserialization failure, (b) invalid child signature,
-         * (c) malformed main_address (not 128 hex chars).
-         * Phase 5 adds: (d) sequence monotonicity check — reads existing reg/{child_addr} via CRDT Get, rejects non-monotonic or zero sequences.
-         * (e) supersedes_sequence fork-prevention gate (D-38) — rejects any lifecycle-change RegistrationTx whose supersedes_sequence does not match the currently-stored record's sequence.
-         *
-         * @return nullopt to accept, or a vector of tombstone elements to reject.
-         */
-        std::optional<std::vector<crdt::pb::Element>> FilterRegistration( const crdt::pb::Element &element );
-
-        /**
-         * @brief Decides whether @p new_tx should replace @p existing_tx.
-         *
-         * Rejects replacement when the hashes are identical or when the existing
-         * transaction is immutable. Otherwise, replaces when the new transaction
-         * has an earlier timestamp within tolerance (or unconditionally
-         * if disabled).
-         */
-        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -1059,15 +754,6 @@ namespace sgns
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
 
         /**
-         * @brief CRDT new-element callback for the reg/ namespace.
-         *
-         * Deserializes the incoming RegistrationTx and, when main_address matches
-         * the local account, calls AddListenTopic(child_addr) to follow the child
-         * wallet's pubsub channel (D-49).
-         */
-        void RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
-
-        /**
          * @brief CRDT deleted-element callback. Pushes the key onto
          *        deleted_data_queue_ and wakes the tick loop.
          */
@@ -1079,55 +765,16 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
-        enum class WitnessValidationResult : uint8_t
-        {
-            VALID,
-            DRIFT,
-            PENDING, ///< A producer dependency (transaction or certificate) has not
-                     /// CRDT-synced yet: retryable, not evidence of invalidity.
-            INVALID
-        };
-
         /**
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
-            const ConsensusManager::Subject &subject );
-        ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
-        bool                   CheckParentChildAuthority( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
-        bool                   CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
-        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
-        std::optional<UTXOWitness> BuildUTXOWitness( const GeniusTransaction &tx ) const;
-        bool                       ApplyTransactionToUTXOSnapshot( const GeniusTransaction &tx,
-                                                                   std::vector<GeniusUTXO> &snapshot ) const;
-        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject  &subject,
-                                                                const GeniusTransaction &tx ) const;
-        bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
-        void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
-
-        /**
-         * @brief Enumerates child registrations naming a specific main wallet.
-         *
-         * Scans the reg/ CRDT namespace across all monitored networks and returns
-         * entries whose main_address matches @p main_address.
-         *
-         * @param[in] main_address Main wallet public address (128-hex) to query for.
-         * @return Vector of RegistrationDiscoveryEntry on success.
-         */
-        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
-            const std::string &main_address );
 
         /**
          * @brief Obtains the public-chain input validator for RPC endpoint wiring.
@@ -1147,11 +794,21 @@ namespace sgns
             return public_chain_input_validator_;
         }
 
+        /**
+         * @brief Enumerates the child-wallet registrations recorded under a main wallet.
+         *
+         * Scans the per-network `reg` subtrees of the monitored networks and collects
+         * the registration transactions whose main address matches @p main_address.
+         *
+         * @param main_address Main wallet public address (128-hex).
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
+
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        std::string               GetValidationChainId( const GeniusTransaction &tx ) const;
-        const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         struct InputValidatorSelection
         {
             std::string            chain_id;
@@ -1159,8 +816,12 @@ namespace sgns
         };
 
         InputValidatorSelection SelectInputValidator( const GeniusTransaction &tx ) const;
+
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
+
+        /// @brief Consensus-facing half of this manager; see TransactionConsensusHandler.
+        std::unique_ptr<TransactionConsensusHandler> consensus_m_;
     };
 }
 

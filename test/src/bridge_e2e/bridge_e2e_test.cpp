@@ -20,7 +20,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
