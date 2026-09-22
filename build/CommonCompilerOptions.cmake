@@ -62,6 +62,13 @@ if (ENABLE_COVERAGE)
     endif()
 endif()
 
+# GNUInstallDirs resolves lib64 on RedHat-family 64-bit Linux (AlmaLinux 8)
+# but lib on Debian/Windows/macOS. Downstream consumers (GeniusSDK, wallet)
+# and the historical release layout expect lib — every static library and
+# cmake config hint lands there on the Debian-based images. Pin the install
+# libdir so EL8 hosts produce identical artifacts (no-op elsewhere, where
+# GNUInstallDirs already resolves lib).
+set(CMAKE_INSTALL_LIBDIR lib)
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)

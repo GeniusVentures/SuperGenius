@@ -336,7 +336,7 @@ jobs:
             if ! rpm -q ccache ninja-build vulkan-loader-devel vulkan-headers \
                         libsecret-devel dbus gnome-keyring >/dev/null 2>&1; then
               sudo dnf install -y ccache ninja-build vulkan-loader-devel vulkan-headers \
-                        libsecret-devel dbus gnome-keyring
+                        libsecret-devel dbus gnome-keyring mesa-vulkan-drivers
             fi
           else
             # Refresh apt indices first: GitHub-hosted runners use
