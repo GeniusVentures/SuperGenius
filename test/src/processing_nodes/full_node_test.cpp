@@ -93,12 +93,18 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
+        // TIMEOUT_MINT is only 30s in Release builds (50s under SGNS_DEBUG), which
+        // is not enough for the approved->finalized leg on a slow hosted macOS
+        // runner: run 35764381725 saw consensus approve the mint and still time
+        // out 25s later. Budget the finalization wait explicitly, independent of
+        // build type, like the 30s CRDT-visibility waits in
+        // registration_transaction_test.
         auto mintRes = originalNode->MintTokens( 500000,
                                                  sgns::test::NextMintSourceHash(),
                                                  "test",
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  "",
-                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                 std::chrono::milliseconds( 60000 ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );
