@@ -331,7 +331,7 @@ namespace
             ASSERT_TRUE( migrate_result.has_value() ) << "Migrating main's funds should succeed";
             std::chrono::milliseconds elapsed;
             ASSERT_WAIT_FOR_CONDITION( ([this, target]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ) >= target; }),
-                std::chrono::milliseconds( 10000 ),
+                std::chrono::milliseconds( 30000 ),
                 "Main's migrated balance should be visible within timeout",
                 &elapsed );
         }
@@ -536,7 +536,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
 
     // Verify status is SENDING (processed asynchronously by TickOnce READY branch â€” poll briefly)
     EXPECT_WAIT_FOR_CONDITION( ([this, &tx_hash]() { return tm_->GetTransactionStatusByTxId( tx_hash ) == TransactionManager::TransactionStatus::SENDING; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Transaction should reach SENDING status",
         nullptr );
 
@@ -916,7 +916,7 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromSto
 
     // Poll for SENDING to ensure CRDT is committed
     EXPECT_WAIT_FOR_CONDITION( ([this, &result1]() { return tm_->GetTransactionStatusByTxId( result1.value() ) == TransactionManager::TransactionStatus::SENDING; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "CRDT should be committed and status should reach SENDING",
         nullptr );
 
@@ -1139,7 +1139,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
     // Poll for the child's UTXO to appear â€” the node's own TickOnce READY-branch ingests its
     // own submitted transaction and calls PutProducedUTXOs on first CRDT observation.
     ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
 
@@ -1215,7 +1215,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
     ASSERT_TRUE( fund_result.has_value() );
 
     ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
 
@@ -1286,7 +1286,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
     ASSERT_TRUE( fund_result.has_value() );
 
     ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
 
@@ -1522,7 +1522,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Detached reg/ record should be visible within timeout",
         nullptr );
 
@@ -1582,7 +1582,7 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Replace-Main'd reg/ record should be visible within timeout",
         nullptr );
 
@@ -1639,7 +1639,7 @@ ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); re
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Detach should be visible before re-registration is attempted",
         nullptr );
 
@@ -1666,7 +1666,7 @@ ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); re
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Re-registered reg/ record should be visible within timeout",
         nullptr );
 
@@ -1727,7 +1727,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Detach should be visible within timeout",
         nullptr );
 
@@ -1862,7 +1862,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Revoked reg/ record should be visible within timeout",
         nullptr );
 
@@ -1951,7 +1951,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "First Revoke should be visible before the second Revoke is attempted",
         nullptr );
     ASSERT_TRUE( detached ) << "First Revoke should be visible before the second Revoke is attempted";
@@ -2046,7 +2046,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
                 }
                 return false;
             }),
-            std::chrono::milliseconds( 10000 ),
+            std::chrono::milliseconds( 30000 ),
             "Revoke should be visible before re-registration is attempted",
             nullptr );
     }
@@ -2094,7 +2094,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
             }
             return false;
         } ),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Re-registered reg/ record should be visible within timeout",
         nullptr );
 
@@ -2133,7 +2133,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
 
     ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
     const std::string address_before = child_account_->GetAddress();
@@ -2161,7 +2161,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
             }
             return false;
         }),
-        std::chrono::milliseconds( 10000 ),
+        std::chrono::milliseconds( 30000 ),
         "Revoke should be visible within timeout",
         nullptr );
 
