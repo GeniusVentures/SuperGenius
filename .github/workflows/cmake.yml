@@ -363,68 +363,21 @@ jobs:
           # container) still need apt. Refresh apt indices there first: the
           # GitHub-hosted mirror lists can reference superseded package
           # versions that 404 until the index is refreshed.
-          # mesa-vulkan-drivers provides the llvmpipe software Vulkan ICD:
-          # GPU-less runners (ARM) rely on MNN's CPU-fallback path, which
-          # still needs to create a Vulkan instance — without an ICD the
-          # loader returns VK_ERROR_INCOMPATIBLE_DRIVER and MNN asserts
-          # (VulkanInstance.cpp:89) on Debug builds (run 35675445960).
+          #
+          # NOTE: mesa-vulkan-drivers was tried here and deliberately NOT
+          # kept: the EL8 lavapipe ICD returns VK_ERROR_INITIALIZATION_FAILED
+          # on the ARM runner's Cortex-A720/A520 (bullseye's mesa worked on
+          # the same host), so the package installs but cannot initialize —
+          # see the Run tests (Linux) exclusion comment.
           if command -v dnf >/dev/null 2>&1; then
-            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers >/dev/null 2>&1; then
-              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
             fi
           else
             sudo apt-get -o Acquire::Check-Valid-Until=false update
             sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
           fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
-      - name: Vulkan environment diagnostics (Linux)
-        # TEMPORARY diagnostic for the ARM Debug MNN VulkanInstance assert
-        # (runs 35675445960 / 35701510569): mesa-vulkan-drivers installs OK
-        # yet vkCreateInstance still fails. Dump what the loader can actually
-        # see so we can tell "ICD present but undiscovered" (XDG_DATA_DIRS /
-        # icd.d lookup) from "ICD absent from the package" from "device nodes
-        # not passed into the container". Runs right after host setup so a
-        # failing job doesn't burn a full build first; no working-directory
-        # because the build tree doesn't exist yet at this point. Remove once
-        # the root cause is fixed.
-        if: ${{ matrix.target == 'Linux' }}
-        shell: bash
-        continue-on-error: true
-        run: |
-          echo "=== uname / XDG ==="
-          uname -a
-          echo "XDG_DATA_DIRS=${XDG_DATA_DIRS:-<unset>}"
-          echo "VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-<unset>} VK_DRIVER_FILES=${VK_DRIVER_FILES:-<unset>}"
-          echo "=== ICD manifests on disk ==="
-          ls -la /usr/share/vulkan/icd.d/ 2>/dev/null || echo "no /usr/share/vulkan/icd.d"
-          ls -la /etc/vulkan/icd.d/ 2>/dev/null || echo "no /etc/vulkan/icd.d"
-          find /usr /etc -name '*lvp*.json' -o -name '*radeon*.json' 2>/dev/null | head -5
-          echo "=== ICD library files ==="
-          find /usr/lib64 /usr/lib -name 'libvulkan_lvp*' -o -name 'libVK_LVP*' 2>/dev/null | head -5
-          echo "=== device nodes ==="
-          ls -la /dev/dri 2>/dev/null || echo "no /dev/dri in container"
-          echo "=== ICD manifest contents ==="
-          cat /usr/share/vulkan/icd.d/lvp_icd.*.json 2>/dev/null || true
-          echo "=== ICD library linkage (dlopen feasibility) ==="
-          ldd /usr/lib64/libvulkan_lvp.so 2>/dev/null | grep -i 'not found' && echo "^^ BROKEN DEPS" || ldd /usr/lib64/libvulkan_lvp.so 2>/dev/null | head -10
-          echo "=== loader debug (driver loading only, deduped) ==="
-          if ! command -v vulkaninfo >/dev/null 2>&1; then
-            sudo dnf install -y vulkan-tools || true
-          fi
-          if command -v vulkaninfo >/dev/null 2>&1; then
-            # 'all' floods the log with repeated LAYER-search blocks that crowd
-            # out the section that matters (driver/ICD loading). driver+error
-            # keeps ICD discovery + dlopen + vkCreateInstance outcomes.
-            set -o pipefail
-            VK_LOADER_DEBUG=driver,error vulkaninfo --summary > /tmp/vkinfo.txt 2>&1 || true
-            grep -E 'DRIVER|ICD|driver|icd|CreateInstance|ERROR|WARN|GPU|Device' /tmp/vkinfo.txt | awk '!seen[$0]++' | head -80 || true
-            echo "=== summary tail (device enumeration result) ==="
-            tail -40 /tmp/vkinfo.txt
-          else
-            echo "vulkaninfo unavailable (dnf install failed?)"
-          fi
-
-
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows' }}
         run: |
@@ -630,15 +583,31 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
         shell: bash
         run: |
-          dbus-run-session -- bash -c '\
+          # MNN's VulkanInstance ctor asserts (VulkanInstance.cpp:89) when
+          # vkCreateInstance fails, killing the process before its own
+          # graceful supportVulkan() fallback can run. On the ARM runner
+          # (Cortex-A720/A520) the EL8 lavapipe ICD itself returns
+          # VK_ERROR_INITIALIZATION_FAILED (verified via vulkaninfo in a
+          # privileged container; bullseye's mesa initialized fine on the
+          # same host — runs 35675445960 / 35701510569). Debug-only because
+          # NDEBUG compiles the assert out. Skip the affected suites until
+          # the MNN assert is patched to degrade gracefully (rider for the
+          # next thirdparty rebuild); x86 (real GPU) and aarch64 Release
+          # keep full coverage.
+          EXCLUDE=""
+          if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
+            EXCLUDE="-E 'account_management_test|processing_datatypes_test|processing_nodes_test|child_tokens_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test'"
+            echo "Skipping Vulkan-crashing suites on aarch64 Debug (see comment)"
+          fi
+          eval "dbus-run-session -- bash -c '\
             mkdir -p ~/.cache ~/.local/share/keyrings && \
-            echo -n "login" > ~/.local/share/keyrings/default && \
-            echo "[keyring]
+            echo -n \"login\" > ~/.local/share/keyrings/default && \
+            echo \"[keyring]
             display-name=login
             lock-on-idle=false
-            lock-after=false" > ~/.local/share/keyrings/login.keyring && \
-            eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry'
+            lock-after=false\" > ~/.local/share/keyrings/login.keyring && \
+            eval \$(printf \"\\n\" | gnome-keyring-daemon --unlock --components=secrets) && \
+            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry $EXCLUDE'"
 
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics

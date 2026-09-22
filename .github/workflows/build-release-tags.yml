@@ -452,12 +452,9 @@ jobs:
           # net that avoids repo traffic when the image already provides
           # everything; Ubuntu runners (used by the Android builds, which run
           # without a container) still need apt.
-          # mesa-vulkan-drivers provides the llvmpipe software Vulkan ICD that
-          # MNN's CPU-fallback path needs to create a Vulkan instance on
-          # GPU-less runners (see cmake.yml for the full story).
           if command -v dnf >/dev/null 2>&1; then
-            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers >/dev/null 2>&1; then
-              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd mesa-vulkan-drivers
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
             fi
           else
             sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
