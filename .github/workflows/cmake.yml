@@ -403,12 +403,23 @@ jobs:
           find /usr/lib64 /usr/lib -name 'libvulkan_lvp*' -o -name 'libVK_LVP*' 2>/dev/null | head -5
           echo "=== device nodes ==="
           ls -la /dev/dri 2>/dev/null || echo "no /dev/dri in container"
-          echo "=== loader debug ==="
+          echo "=== ICD manifest contents ==="
+          cat /usr/share/vulkan/icd.d/lvp_icd.*.json 2>/dev/null || true
+          echo "=== ICD library linkage (dlopen feasibility) ==="
+          ldd /usr/lib64/libvulkan_lvp.so 2>/dev/null | grep -i 'not found' && echo "^^ BROKEN DEPS" || ldd /usr/lib64/libvulkan_lvp.so 2>/dev/null | head -10
+          echo "=== loader debug (driver loading only, deduped) ==="
           if ! command -v vulkaninfo >/dev/null 2>&1; then
             sudo dnf install -y vulkan-tools || true
           fi
           if command -v vulkaninfo >/dev/null 2>&1; then
-            VK_LOADER_DEBUG=all vulkaninfo --summary 2>&1 | head -60 || true
+            # 'all' floods the log with repeated LAYER-search blocks that crowd
+            # out the section that matters (driver/ICD loading). driver+error
+            # keeps ICD discovery + dlopen + vkCreateInstance outcomes.
+            set -o pipefail
+            VK_LOADER_DEBUG=driver,error vulkaninfo --summary > /tmp/vkinfo.txt 2>&1 || true
+            grep -E 'DRIVER|ICD|driver|icd|CreateInstance|ERROR|WARN|GPU|Device' /tmp/vkinfo.txt | awk '!seen[$0]++' | head -80 || true
+            echo "=== summary tail (device enumeration result) ==="
+            tail -40 /tmp/vkinfo.txt
           else
             echo "vulkaninfo unavailable (dnf install failed?)"
           fi
