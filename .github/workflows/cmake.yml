@@ -594,20 +594,46 @@ jobs:
           # the MNN assert is patched to degrade gracefully (rider for the
           # next thirdparty rebuild); x86 (real GPU) and aarch64 Release
           # keep full coverage.
-          EXCLUDE=""
+          # Pass exclusions through the ENVIRONMENT, never through eval'd
+          # string re-parsing: eval "bash -c '... $EXCLUDE'" re-tokenizes the
+          # line, and the single quotes around the regex close the outer
+          # single-quoted string so the pipes become shell pipes and ctest
+          # test names get executed as commands (observed in the first run
+          # of this exclusion). dbus-run-session and bash -c propagate env
+          # untouched.
+          #
+          # Two granularities:
+          # - CTEST_EXCLUDE_REGEX drops suites whose EVERY case instantiates
+          #   the processing manager (MNN) and would abort before reporting.
+          # - GTEST_FILTER narrows the three mixed suites to their
+          #   non-processing cases: only AccountManagement.SetPayoutAddress,
+          #   ProcessingNodesTest.PostProcessing, and
+          #   ProcessingNodesModuleTest.SinglePostProcessing touch MNN (the
+          #   DISABLED_* siblings never run regardless); the remaining
+          #   account/ledger/transfer cases are pure and keep running.
+          CTEST_EXCLUDE_REGEX=""
+          GTEST_FILTER_VALUE="*"
           if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
-            EXCLUDE="-E 'account_management_test|processing_datatypes_test|processing_nodes_test|child_tokens_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test'"
-            echo "Skipping Vulkan-crashing suites on aarch64 Debug (see comment)"
+            CTEST_EXCLUDE_REGEX="processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
+            GTEST_FILTER_VALUE="-AccountManagement.SetPayoutAddress:-ProcessingNodesTest.PostProcessing:-ProcessingNodesModuleTest.SinglePostProcessing"
+            echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
           fi
-          eval "dbus-run-session -- bash -c '\
+          export CTEST_EXCLUDE_REGEX
+          export GTEST_FILTER="$GTEST_FILTER_VALUE"
+          dbus-run-session -- bash -c '\
             mkdir -p ~/.cache ~/.local/share/keyrings && \
-            echo -n \"login\" > ~/.local/share/keyrings/default && \
-            echo \"[keyring]
+            echo -n "login" > ~/.local/share/keyrings/default && \
+            echo "[keyring]
             display-name=login
             lock-on-idle=false
-            lock-after=false\" > ~/.local/share/keyrings/login.keyring && \
-            eval \$(printf \"\\n\" | gnome-keyring-daemon --unlock --components=secrets) && \
-            ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry $EXCLUDE'"
+            lock-after=false" > ~/.local/share/keyrings/login.keyring && \
+            eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
+            if [ -n "$CTEST_EXCLUDE_REGEX" ]; then \
+              ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry -E "$CTEST_EXCLUDE_REGEX"; \
+            else \
+              ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry; \
+            fi'
+          unset GTEST_FILTER
 
       - name: Collect macOS crash diagnostics
         id: collect_macos_crash_diagnostics
