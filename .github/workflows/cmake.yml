@@ -377,6 +377,42 @@ jobs:
             sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
           fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+      - name: Vulkan environment diagnostics (Linux)
+        # TEMPORARY diagnostic for the ARM Debug MNN VulkanInstance assert
+        # (runs 35675445960 / 35701510569): mesa-vulkan-drivers installs OK
+        # yet vkCreateInstance still fails. Dump what the loader can actually
+        # see so we can tell "ICD present but undiscovered" (XDG_DATA_DIRS /
+        # icd.d lookup) from "ICD absent from the package" from "device nodes
+        # not passed into the container". Runs right after host setup so a
+        # failing job doesn't burn a full build first; no working-directory
+        # because the build tree doesn't exist yet at this point. Remove once
+        # the root cause is fixed.
+        if: ${{ matrix.target == 'Linux' }}
+        shell: bash
+        continue-on-error: true
+        run: |
+          echo "=== uname / XDG ==="
+          uname -a
+          echo "XDG_DATA_DIRS=${XDG_DATA_DIRS:-<unset>}"
+          echo "VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-<unset>} VK_DRIVER_FILES=${VK_DRIVER_FILES:-<unset>}"
+          echo "=== ICD manifests on disk ==="
+          ls -la /usr/share/vulkan/icd.d/ 2>/dev/null || echo "no /usr/share/vulkan/icd.d"
+          ls -la /etc/vulkan/icd.d/ 2>/dev/null || echo "no /etc/vulkan/icd.d"
+          find /usr /etc -name '*lvp*.json' -o -name '*radeon*.json' 2>/dev/null | head -5
+          echo "=== ICD library files ==="
+          find /usr/lib64 /usr/lib -name 'libvulkan_lvp*' -o -name 'libVK_LVP*' 2>/dev/null | head -5
+          echo "=== device nodes ==="
+          ls -la /dev/dri 2>/dev/null || echo "no /dev/dri in container"
+          echo "=== loader debug ==="
+          if ! command -v vulkaninfo >/dev/null 2>&1; then
+            sudo dnf install -y vulkan-tools || true
+          fi
+          if command -v vulkaninfo >/dev/null 2>&1; then
+            VK_LOADER_DEBUG=all vulkaninfo --summary 2>&1 | head -60 || true
+          else
+            echo "vulkaninfo unavailable (dnf install failed?)"
+          fi
+
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows' }}
@@ -568,40 +604,6 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/macos-crash-reports"
           touch "$RUNNER_TEMP/macos-tests-started"
-
-      - name: Vulkan environment diagnostics (Linux)
-        # TEMPORARY diagnostic for the ARM Debug MNN VulkanInstance assert
-        # (runs 35675445960 / 35701510569): mesa-vulkan-drivers installs OK
-        # yet vkCreateInstance still fails. Dump what the loader can actually
-        # see so we can tell "ICD present but undiscovered" (XDG_DATA_DIRS /
-        # icd.d lookup) from "ICD absent from the package" from "device nodes
-        # not passed into the container". Remove once the root cause is fixed.
-        if: ${{ matrix.target == 'Linux' }}
-        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
-        shell: bash
-        continue-on-error: true
-        run: |
-          echo "=== uname / XDG ==="
-          uname -a
-          echo "XDG_DATA_DIRS=${XDG_DATA_DIRS:-<unset>}"
-          echo "VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-<unset>} VK_DRIVER_FILES=${VK_DRIVER_FILES:-<unset>}"
-          echo "=== ICD manifests on disk ==="
-          ls -la /usr/share/vulkan/icd.d/ 2>/dev/null || echo "no /usr/share/vulkan/icd.d"
-          ls -la /etc/vulkan/icd.d/ 2>/dev/null || echo "no /etc/vulkan/icd.d"
-          find /usr /etc -name '*lvp*.json' -o -name '*radeon*.json' 2>/dev/null | head -5
-          echo "=== ICD library files ==="
-          find /usr/lib64 /usr/lib -name 'libvulkan_lvp*' -o -name 'libVK_LVP*' 2>/dev/null | head -5
-          echo "=== device nodes ==="
-          ls -la /dev/dri 2>/dev/null || echo "no /dev/dri in container"
-          echo "=== loader debug ==="
-          if ! command -v vulkaninfo >/dev/null 2>&1; then
-            sudo dnf install -y vulkan-tools || true
-          fi
-          if command -v vulkaninfo >/dev/null 2>&1; then
-            VK_LOADER_DEBUG=all vulkaninfo --summary 2>&1 | head -60 || true
-          else
-            echo "vulkaninfo unavailable (dnf install failed?)"
-          fi
 
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
