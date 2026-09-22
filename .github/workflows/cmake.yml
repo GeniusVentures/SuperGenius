@@ -184,28 +184,28 @@ jobs:
             abi: x86_64
             build-type: Release
             runner_key: linux_x64
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
             cmake_args: -DSGNS_PRINT_LOGS=ON
           - target: Linux
             id: Linux-x86_64
             abi: x86_64
             build-type: Debug
             runner_key: linux_x64
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
             cmake_args: -DSGNS_PRINT_LOGS=ON
           - target: Linux
             id: Linux-aarch64
             abi: aarch64
             build-type: Release
             runner_key: linux_arm
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
             cmake_args: -DSGNS_PRINT_LOGS=ON
           - target: Linux
             id: Linux-aarch64
             abi: aarch64
             build-type: Debug
             runner_key: linux_arm
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
             cmake_args: -DSGNS_PRINT_LOGS=ON
           - target: Android
             id: Android-arm64-v8a
@@ -263,51 +263,6 @@ jobs:
           $SUDO rm -rf thirdparty zkLLVM
           ls -la
 
-      - name: Install git-lfs (Linux containers)
-        # TEMPORARY until the debian-bullseye → almalinux-8 container migration
-        # lands: the bullseye image predates git-lfs, and actions/checkout's
-        # lfs:true hard-fails with "Unable to locate executable file: git-lfs"
-        # (run 35136102223) before any later step could install it. Windows,
-        # macOS, and the Ubuntu-host Android jobs all have git-lfs already, so
-        # this is a cheap no-op check for them.
-        #
-        # apt is deliberately NOT used: bullseye is EOL (2026-08-31) and its
-        # frozen indices now reference packages the mirrors have purged --
-        # `apt-get install git-lfs` 404s on
-        # git-lfs_2.13.2-1+deb11u2.deb from bullseye-security. Instead we
-        # drop in the official static binary from GitHub releases (public
-        # download, single self-contained executable for amd64 and arm64
-        # alike). Delete this step together with the bullseye refs when the
-        # AlmaLinux migration completes (the almalinux-8 image bakes git-lfs
-        # in).
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          if command -v git-lfs >/dev/null 2>&1; then
-            echo "git-lfs already present: $(git-lfs version)"
-            exit 0
-          fi
-          arch="$(uname -m)"
-          case "$arch" in
-            x86_64)  lfs_arch="amd64" ;;
-            aarch64) lfs_arch="arm64" ;;
-            *) echo "Unsupported architecture for git-lfs download: $arch"; exit 1 ;;
-          esac
-          # 3.7.1 matches the Windows runner's version; v3.x static tarballs
-          # are just the single binary + manpages. curl preferred, wget
-          # fallback -- the bullseye image is not guaranteed to carry either.
-          url="https://github.com/git-lfs/git-lfs/releases/download/v3.7.1/git-lfs-linux-${lfs_arch}-v3.7.1.tar.gz"
-          if command -v curl >/dev/null 2>&1; then
-            curl -fsSL --retry 3 -o /tmp/git-lfs.tgz "$url"
-          elif command -v wget >/dev/null 2>&1; then
-            wget -q --tries=3 -O /tmp/git-lfs.tgz "$url"
-          else
-            echo "ERROR: neither curl nor wget found in container"; exit 1
-          fi
-          tar -xzf /tmp/git-lfs.tgz -C /tmp
-          sudo install -m 0755 /tmp/git-lfs-3.7.1/git-lfs /usr/local/bin/git-lfs
-          rm -rf /tmp/git-lfs.tgz /tmp/git-lfs-3.7.1
-          git-lfs version
-
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v7
         with:
@@ -362,19 +317,33 @@ jobs:
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
 
-          # Refresh apt indices first, for two reasons:
-          #  1. GitHub-hosted runners use mirror+file:/etc/apt/apt-mirrors.txt
-          #     (Azure mirrors) whose cached lists can reference superseded
-          #     package versions (e.g. libgcrypt20-dev 1.10.3-2ubuntu0.1, a
-          #     dep of libsecret-1-dev) that 404 until the index is refreshed.
-          #  2. Debian 11 (bullseye) LTS ended 2026-08-31 and debian-security
-          #     stopped refreshing, so that suite's Release file is permanently
-          #     expired and a plain `apt-get update` exits 100 inside the
-          #     bullseye build container. Check-Valid-Until=false keeps the
-          #     frozen repos usable; it is a no-op where indices are fresh
-          #     (e.g. the Android jobs on Ubuntu hosts).
-          sudo apt-get -o Acquire::Check-Valid-Until=false update
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
+          # Linux matrix jobs run in the AlmaLinux 8 CI container (glibc 2.28
+          # floor) - the same image the thirdparty prebuilts are built in since
+          # thirdparty#117, so the link-time libstdc++ matches the prebuilt
+          # baseline. The previous debian-bullseye container (EOL 2026-08-31)
+          # shipped a GCC 10-era runtime that cannot resolve
+          # std::__throw_bad_array_new_length() referenced by the rebuilt
+          # prebuilt libgtest (run 35736908384). The Android jobs run on
+          # Ubuntu hosts without a container and still need apt.
+          if command -v dnf >/dev/null 2>&1; then
+            # The almalinux-8 image ships clang, cmake, ninja, git-lfs and the
+            # perl modules OpenSSL's Configure needs; this guarded install is a
+            # safety net mirroring thirdparty's post-migration setup, avoiding
+            # repo traffic when the image already provides everything.
+            if ! rpm -q ccache ninja-build vulkan-loader-devel vulkan-headers \
+                        libsecret-devel dbus gnome-keyring >/dev/null 2>&1; then
+              sudo dnf install -y ccache ninja-build vulkan-loader-devel vulkan-headers \
+                        libsecret-devel dbus gnome-keyring
+            fi
+          else
+            # Refresh apt indices first: GitHub-hosted runners use
+            # mirror+file:/etc/apt/apt-mirrors.txt (Azure mirrors) whose cached
+            # lists can reference superseded package versions (e.g.
+            # libgcrypt20-dev 1.10.3-2ubuntu0.1, a dep of libsecret-1-dev)
+            # that 404 until the index is refreshed.
+            sudo apt-get update
+            sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
