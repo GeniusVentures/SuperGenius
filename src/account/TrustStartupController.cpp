@@ -775,12 +775,19 @@ namespace sgns::account
             std::lock_guard<std::mutex> lock( dispatch->mutex );
             if ( dispatch->stopped ) return;
             dispatch->retry_timer = timer;
+            // Arm the wait while publication of retry_timer_ is still serialized
+            // against the destructor. Arming outside this critical section left a
+            // window where the destructor moved and cancelled a not-yet-armed
+            // timer (a no-op), the wait was then installed afterwards, and the
+            // dispatch state stayed alive until the full retry delay had elapsed
+            // - permitting delayed post-destruction dispatch work instead of the
+            // prompt cancellation the destructor intends.
+            timer->async_wait( [dispatch, next_attempt]( const boost::system::error_code &timer_error )
+            {
+                if ( timer_error == boost::asio::error::operation_aborted ) return;
+                RunDispatchAttempt( dispatch, next_attempt );
+            } );
         }
-        timer->async_wait( [dispatch, next_attempt]( const boost::system::error_code &timer_error )
-        {
-            if ( timer_error == boost::asio::error::operation_aborted ) return;
-            RunDispatchAttempt( dispatch, next_attempt );
-        } );
     }
 
     void TrustStartupController::RequestRefresh()
