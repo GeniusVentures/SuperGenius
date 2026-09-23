@@ -51,7 +51,12 @@ namespace
                "\ngenesis options:\n"
                "  [--timeout-seconds N]   confirmation poll deadline (default 30)\n"
                "  [--serve-seconds N]     keep serving the genesis DAG to peers after durable\n"
-               "                          confirmation (default 600, 0 exits immediately)\n";
+               "                          confirmation (default 600, 0 exits immediately)\n"
+               "\nadmin options:\n"
+               "  [--timeout-seconds N]   list/approve catch-up window while candidates sync\n"
+               "                          in from peers (default 30, 0 reads immediately)\n"
+               "  [--serve-seconds N]     keep serving after approve/propose-* so peers fetch\n"
+               "                          the update (default 600, 0 exits immediately)\n";
     }
 
     struct Arguments
@@ -149,6 +154,19 @@ namespace
             allowed.insert( "--timeout-seconds" );
             allowed.insert( "--serve-seconds" );
         }
+        else if ( arguments.operation == "list" )
+        {
+            allowed.insert( "--timeout-seconds" );
+        }
+        else if ( arguments.operation == "approve" )
+        {
+            allowed.insert( "--timeout-seconds" );
+            allowed.insert( "--serve-seconds" );
+        }
+        else if ( arguments.operation == "propose-policy" || arguments.operation == "propose-burn" )
+        {
+            allowed.insert( "--serve-seconds" );
+        }
         else if ( arguments.operation == "propose-policy" )
             allowed.insert( "--candidate" );
         else if ( arguments.operation == "propose-burn" )
@@ -223,6 +241,40 @@ namespace
         if ( parsed.ec != std::errc() || parsed.ptr != value.data() + value.size() )
             return std::nullopt;
         return result;
+    }
+
+    // Post-write propagation window shared by genesis and the mutating admin
+    // operations. Local writes are not remote propagation: head announcements and
+    // the peers' GraphSync fetches are asynchronous, and exiting destroys
+    // GlobalDbNetworkComposition - the only transport serving the fresh DAG.
+    constexpr uint64_t kDefaultServeSeconds = 600;
+
+    std::optional<uint64_t> ParseServeSeconds( const Arguments &arguments, std::ostream &errors )
+    {
+        uint64_t serve_seconds = kDefaultServeSeconds;
+        if ( const auto serve = arguments.values.find( "--serve-seconds" ); serve != arguments.values.end() )
+        {
+            const auto seconds = ParseUint64( serve->second );
+            if ( !seconds || *seconds > 86400 )
+            {
+                errors << "invalid --serve-seconds\n";
+                return std::nullopt;
+            }
+            serve_seconds = *seconds;
+        }
+        return serve_seconds;
+    }
+
+    void ServeBeforeExit( uint64_t serve_seconds )
+    {
+        if ( serve_seconds == 0 )
+        {
+            return;
+        }
+        std::cout << "Serving updated trust state to peers for " << serve_seconds
+                  << "s before exit (0 peers fetched = update confined to this database).\n";
+        std::this_thread::sleep_for( std::chrono::seconds( serve_seconds ) );
+        std::cout << "Serving window complete.\n";
     }
 
     int MakeManifest( const Arguments &arguments )
@@ -507,22 +559,14 @@ int main( int argc, char **argv )
         }
         // After local durable confirmation the tool is still the only peer serving
         // the freshly written genesis DAG; CRDT head delivery and the peers'
-        // GraphSync fetches are asynchronous. Default to a 10-minute serving
-        // window so exiting does not strand peers that have not fetched yet;
-        // --serve-seconds 0 restores the immediate-exit behavior for scripting.
-        constexpr uint64_t kDefaultServeSeconds = 600;
-        uint64_t          serve_seconds         = kDefaultServeSeconds;
-        if ( const auto serve = arguments->values.find( "--serve-seconds" ); serve != arguments->values.end() )
+        // GraphSync fetches are asynchronous. --serve-seconds 0 restores the
+        // immediate-exit behavior for scripting.
+        const auto serve_seconds = ParseServeSeconds( *arguments, std::cerr );
+        if ( !serve_seconds )
         {
-            const auto seconds = ParseUint64( serve->second );
-            if ( !seconds || *seconds > 86400 )
-            {
-                std::cerr << "invalid --serve-seconds\n";
-                return EXIT_FAILURE;
-            }
-            serve_seconds = *seconds;
+            return EXIT_FAILURE;
         }
-        request.serve_duration = std::chrono::seconds( serve_seconds );
+        request.serve_duration = std::chrono::seconds( *serve_seconds );
         GenesisCeremony::Network network;
         network.start = [&] { return runtime.Start(); };
         network.submit = [&]( const GenesisManifest &value,
@@ -558,9 +602,35 @@ int main( int argc, char **argv )
     }
 
     LocalTrustAdmin admin( runtime.registry(), runtime.burn_config() );
+
+    // Bounded catch-up window for reads: GlobalDbNetworkComposition::Start()
+    // only launches the asynchronous PubSub/GlobalDB stack - there is no
+    // synchronization barrier, so a list/approve issued against a database that
+    // has not received the latest candidate yet reports an empty list or fails
+    // while the candidate head/DAG is still arriving. Poll for up to the window
+    // (default 30s; --timeout-seconds 0 restores the immediate read).
+    uint64_t read_catchup_seconds = 30;
+    if ( const auto timeout = arguments->values.find( "--timeout-seconds" ); timeout != arguments->values.end() )
+    {
+        const auto seconds = ParseUint64( timeout->second );
+        if ( !seconds || *seconds > 86400 )
+        {
+            std::cerr << "invalid --timeout-seconds\n";
+            return EXIT_FAILURE;
+        }
+        read_catchup_seconds = *seconds;
+    }
+    const auto read_deadline = std::chrono::steady_clock::now() + std::chrono::seconds( read_catchup_seconds );
+
     if ( arguments->operation == "list" )
     {
         auto listed = admin.ListCandidates();
+        while ( listed.has_value() && listed.value().empty() && std::chrono::steady_clock::now() < read_deadline )
+        {
+            std::cout << "No candidates visible yet - waiting for CRDT catch-up...\n";
+            std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+            listed = admin.ListCandidates();
+        }
         if ( listed.has_error() )
             return std::cerr << listed.error().message() << '\n', EXIT_FAILURE;
         for ( const auto &candidate : listed.value() )
@@ -578,6 +648,14 @@ int main( int argc, char **argv )
         if ( proposed.has_error() )
             return std::cerr << proposed.error().message() << '\n', EXIT_FAILURE;
         std::cout << FormatCandidateId( proposed.value() ) << '\n';
+        // Serve the fresh proposal: exiting immediately would destroy the only
+        // transport serving its DAG before peers can fetch it.
+        const auto serve_seconds = ParseServeSeconds( *arguments, std::cerr );
+        if ( !serve_seconds )
+        {
+            return EXIT_FAILURE;
+        }
+        ServeBeforeExit( *serve_seconds );
         return EXIT_SUCCESS;
     }
     if ( arguments->operation == "propose-burn" )
@@ -589,15 +667,38 @@ int main( int argc, char **argv )
         if ( proposed.has_error() )
             return std::cerr << proposed.error().message() << '\n', EXIT_FAILURE;
         std::cout << FormatCandidateId( proposed.value() ) << '\n';
+        const auto serve_seconds = ParseServeSeconds( *arguments, std::cerr );
+        if ( !serve_seconds )
+        {
+            return EXIT_FAILURE;
+        }
+        ServeBeforeExit( *serve_seconds );
         return EXIT_SUCCESS;
     }
 
     const auto candidate = ParseCandidateId( arguments->values.at( "--candidate-id" ) );
     if ( !candidate )
         return std::cerr << "invalid candidate ID\n", EXIT_FAILURE;
+    // The target ID is exact: retry while the referenced record has not arrived
+    // (ReadCandidateApprovals runs before the record is available otherwise).
     auto approved = admin.Approve( *candidate );
+    while ( approved.has_error() && std::chrono::steady_clock::now() < read_deadline )
+    {
+        std::cout << "Candidate " << FormatCandidateId( *candidate )
+                  << " not visible yet - waiting for CRDT catch-up...\n";
+        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+        approved = admin.Approve( *candidate );
+    }
     if ( approved.has_error() )
         return std::cerr << approved.error().message() << '\n', EXIT_FAILURE;
     std::cout << FormatCandidateId( approved.value() ) << '\n';
+    // An approval can complete a quorum or activate a successor: serve the
+    // update so other nodes fetch it instead of staying on the old policy.
+    const auto serve_seconds = ParseServeSeconds( *arguments, std::cerr );
+    if ( !serve_seconds )
+    {
+        return EXIT_FAILURE;
+    }
+    ServeBeforeExit( *serve_seconds );
     return EXIT_SUCCESS;
 }
