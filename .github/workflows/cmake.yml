@@ -424,6 +424,16 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
           Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
 
+          # Cap compiler concurrency on the self-hosted SG-WIN11 box: 24
+          # cl.exe instances compiling zkLLVM/crypto3 headers exhaust its
+          # 32 GB and page to disk (observed 2026-09: builds crawling at
+          # sub-1GHz + hard paging; RDP barely updating). The bare `-j` in
+          # the build step honours this env cap. Hosted Windows runners
+          # (8 vCPU, fleet RAM) keep unbounded parallelism.
+          if ("${{ runner.environment }}" -eq "self-hosted") {
+            Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_BUILD_PARALLEL_LEVEL=8"
+          }
+
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS' }}
         run: |
