@@ -66,6 +66,12 @@ namespace sgns::processing
 
         bool HasQueueOwnership() const;
 
+        /**
+         * @brief Stops the processing engine and joins its in-flight subtask
+         *        threads so no result write or publish outlives this call.
+         */
+        void StopEngine();
+
         /** Set callback for mirroring results from other nodes */
         void setMirrorResultCallback( std::function<void( const std::string & )> callback );
 

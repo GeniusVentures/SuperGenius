@@ -132,11 +132,19 @@ endif()
 # every target derives the same 11 account addresses. Beyond correctness, 5 x (11 GeniusNodes
 # + a forking Anvil) does not fit the fixture's 90s readiness budget on a developer box.
 # ctest never co-schedules two tests holding the same RESOURCE_LOCK name.
+#
+# The requires_foundry label marks these tests as needing the Foundry binaries
+# (anvil + cast) on PATH. CI excludes them deterministically via
+# `ctest -LE requires_foundry` (cmake.yml) instead of relying on the fixture's
+# runtime GTEST_SKIP PATH probe -- that probe only "passes" them in ~1.4s on
+# runners without Foundry and would silently run them for real (failing, and
+# taking minutes) if Foundry ever lands on a runner. Local `ctest` runs still
+# execute them and skip inside the fixture when Foundry is missing.
 set_tests_properties(
     bridge_race_single_burn_test
     bridge_race_batch_test
     bridge_race_fault_rpc_test
     bridge_race_fault_kill_test
     bridge_race_fault_partition_test
-    PROPERTIES RESOURCE_LOCK bridge_race_cluster
+    PROPERTIES RESOURCE_LOCK bridge_race_cluster LABELS "requires_foundry"
 )

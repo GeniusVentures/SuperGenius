@@ -63,10 +63,11 @@ namespace sgns
         return valid;
     }
 
-    bool PublicChainInputValidator::ValidateWitness( const ConsensusSubject                     &subject,
-                                                     const std::shared_ptr<GeniusTransaction> &tx,
-                                                     const UTXOTxParameters                     &params,
-                                                     const std::shared_ptr<Blockchain>          &blockchain ) const
+    IInputValidator::WitnessVerdict PublicChainInputValidator::ValidateWitness(
+        const ConsensusSubject                     &subject,
+        const std::shared_ptr<GeniusTransaction> &tx,
+        const UTXOTxParameters                     &params,
+        const std::shared_ptr<Blockchain>          &blockchain ) const
     {
         auto logger = InputValidatorLogger();
         (void)blockchain;
@@ -76,7 +77,7 @@ namespace sgns
         {
             logger->error( "ValidateWitness(PublicChain) invalid inputs: tx_present={} inputs={} outputs={}",
                            tx != nullptr, params.first.size(), params.second.size() );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
@@ -84,14 +85,14 @@ namespace sgns
         {
             logger->error( "ValidateWitness(PublicChain) failed to decode nonce subject for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         if ( !nonce_subject.value().has_utxo_commitment() )
         {
             logger->error( "ValidateWitness(PublicChain) missing UTXO commitment for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto &commitment = nonce_subject.value().utxo_commitment();
@@ -100,7 +101,7 @@ namespace sgns
         {
             logger->debug( "ValidateWitness(PublicChain) commitment size mismatch for tx={}",
                            PreviewValue( tx->GetHash() ) );
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         // Feed the public-chain verification with the explicit input hash.
@@ -141,7 +142,7 @@ namespace sgns
             logger->error( "ValidateWitness(PublicChain) failed for tx={} source={}",
                            PreviewValue( tx->GetHash() ), PreviewValue( source_reference ) );
         }
-        return verified;
+        return verified ? IInputValidator::WitnessVerdict::kValid : IInputValidator::WitnessVerdict::kInvalid;
     }
 
     void PublicChainInputValidator::SetRpcEndpoints( const std::string &chain_id,

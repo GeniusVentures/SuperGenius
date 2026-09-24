@@ -217,6 +217,7 @@ namespace sgns
         static constexpr size_t kDestinationYOddIndex = 6;
         // SG public key is the uncompressed X||Y coordinates (32 + 32 bytes).
         static constexpr size_t kSgnsPubKeyBytes      = 64;
+        static constexpr size_t kSgnsCoordinateHexChars = 64;  ///< One X or Y half, bare hex.
 
         if ( values.size() < kExpectedMinParams )
         {
@@ -295,7 +296,26 @@ namespace sgns
                 BridgeRelayerLogger()->error( "ParseBurnEventValues: X-only decompression failed" );
                 return outcome::failure( std::errc::invalid_argument );
             }
-            destination = std::move( *dest_opt );
+            // DecompressXOnlyPubkey renders both halves in CONTRACT byte order
+            // (little-endian) because its input X is contract order. GetAddress()
+            // and the v1 event payload are big-endian, so byte-reverse each
+            // 32-byte half before handing the destination to MintFunds —
+            // otherwise the mint credits a recipient no node owns.
+            if ( dest_opt->size() != 2 * kSgnsCoordinateHexChars )
+            {
+                BridgeRelayerLogger()->error( "ParseBurnEventValues: decompressed destination has unexpected length {}",
+                                              dest_opt->size() );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            destination.reserve( dest_opt->size() );
+            for ( const auto half : { 0u, 1u } )
+            {
+                const auto begin = half * kSgnsCoordinateHexChars;
+                for ( unsigned int i = kSgnsCoordinateHexChars; i >= 2; i -= 2 )
+                {
+                    destination += dest_opt->substr( begin + i - 2, 2 );
+                }
+            }
         }
         else
         {

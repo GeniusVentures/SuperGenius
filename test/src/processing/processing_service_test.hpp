@@ -33,7 +33,11 @@ public:
 
     std::vector<std::shared_ptr<SubTaskQueueAccessorImpl>> m_processing_queues_accessors;
 
-    std::vector<std::unique_ptr<std::atomic<bool>>> m_IsTaskFinalized;
+    // Shared (not unique) so completion callbacks can keep their flag alive:
+    // SubTaskQueueAccessorImpl's broadcast handler holds a strong self reference
+    // while it runs, so a late FinalizeQueueProcessing can invoke the sink after
+    // TearDown cleared the fixture vectors (CI crash: null unique_ptr deref).
+    std::vector<std::shared_ptr<std::atomic<bool>>> m_IsTaskFinalized;
 
     // Track ProcessingServiceImpl instances to properly stop them in TearDown
     std::vector<std::shared_ptr<ProcessingServiceImpl>> m_processing_services;

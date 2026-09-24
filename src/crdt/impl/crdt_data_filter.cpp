@@ -87,10 +87,11 @@ namespace sgns::crdt
                                    tombstone_registry_.end() );
     }
 
-    void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
+    bool CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
     {
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
+        bool                             dependency_stalled = false;
 
         FilterCallbackRegistry registry_snapshot;
         {
@@ -109,15 +110,27 @@ namespace sgns::crdt
                 {
                     auto result = entry->filter( element );
 
-                    if ( result.has_value() )
+                    if ( result.decision == ElementFilterResult::Decision::kStall )
                     {
-                        // Always delete the matching element when result has value
+                        // Strip like a rejection but without journaling the key as
+                        // seen, and tell the caller to re-evaluate this delta later.
+                        // Holding the whole delta back instead would stop the DAG
+                        // walk that carries the very dependency being waited on.
+                        elements_to_delete_indices.insert( i );
+                        dependency_stalled = true;
+                        filter_matched     = true;
+                        break;
+                    }
+
+                    if ( result.decision == ElementFilterResult::Decision::kReject )
+                    {
+                        // Always delete the matching element when rejecting
                         elements_to_delete_indices.insert( i );
 
-                        if ( !result->empty() )
+                        if ( !result.additional_elements_to_remove.empty() )
                         {
                             // Also delete additional elements from the vector
-                            for ( const auto &additional_element : *result )
+                            for ( const auto &additional_element : result.additional_elements_to_remove )
                             {
                                 additional_elements_to_delete.push_back( additional_element.key() );
                             }
@@ -157,6 +170,7 @@ namespace sgns::crdt
         {
             delta.mutable_elements()->DeleteSubrange( index, 1 );
         }
+        return dependency_stalled;
     }
 
     void CRDTDataFilter::FilterTombstonesOnDelta( pb::Delta &delta )

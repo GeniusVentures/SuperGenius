@@ -1,6 +1,8 @@
 #ifndef SUPERGENIUS_CRDT_SET_HPP
 #define SUPERGENIUS_CRDT_SET_HPP
 
+#include <cstdint>
+#include <limits>
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
 #include "crdt/hierarchical_key.hpp"
@@ -18,6 +20,9 @@ namespace sgns::crdt
     class CrdtSet
     {
     public:
+        /// Reserved replicated priority for values that converge by serialized-content hash.
+        static constexpr uint64_t ConvergentImmutablePriority = std::numeric_limits<uint64_t>::max();
+
         using Delta       = pb::Delta;
         using Element     = pb::Element;
         using Buffer      = base::Buffer;

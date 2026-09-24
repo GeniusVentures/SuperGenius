@@ -43,10 +43,11 @@ namespace
         const std::string &token_id,
         uint64_t           amount,
         const std::string &dest_addr,
-        const std::string &burn_tx_hash )
+        const std::string &burn_tx_hash,
+        uint64_t           nonce = 1 )
     {
         NonceSubject subject;
-        subject.set_nonce( 1 );
+        subject.set_nonce( nonce );
         subject.set_tx_hash( "test-tx-hash" );
 
         auto *embedded = subject.mutable_transaction();
@@ -57,6 +58,7 @@ namespace
         auto *output = mint->mutable_utxo_params()->mutable_outputs()->Add();
         output->set_dest_addr( dest_addr );
         output->set_encrypted_amount( amount );
+        output->set_token_id( token_id );
 
         if ( !burn_tx_hash.empty() )
         {
@@ -187,6 +189,51 @@ TEST_F( ConsensusSlotKeyTest, SameBurnHashProducesSameKey )
     auto key_b = ConsensusSlotKeyTestAccess::GetSlotKey( proposal_b );
 
     EXPECT_EQ( key_a, key_b );
+}
+
+TEST_F( ConsensusSlotKeyTest, MintSlotIgnoresProposalEnvelope )
+{
+    const auto baseline = MakeMintV2NonceSubject(
+        "1", "token-42", 1000000, "0xdest", kBurnHash1, 1 );
+    const auto competing = MakeMintV2NonceSubject(
+        "1", "token-42", 1000000, "0xdest", kBurnHash1, 99 );
+
+    const auto baseline_proposal = MakeProposal(
+        baseline, "proposal-baseline", "proposer-baseline" );
+    const auto competing_proposal = MakeProposal(
+        competing, "proposal-competing", "proposer-competing" );
+
+    const auto baseline_slot = ConsensusSlotKeyTestAccess::GetSlotKey( baseline_proposal );
+    const auto competing_slot = ConsensusSlotKeyTestAccess::GetSlotKey( competing_proposal );
+
+    EXPECT_EQ( baseline_slot, competing_slot );
+    EXPECT_EQ( 0, baseline_slot.find( "mint-v2:" ) );
+}
+
+TEST_F( ConsensusSlotKeyTest, MintSlotRetainsEveryVerifiedBurnFact )
+{
+    const auto baseline = MakeMintV2NonceSubject(
+        "1", "token-42", 1000000, "0xdest", kBurnHash1 );
+    const auto baseline_slot = ConsensusSlotKeyTestAccess::GetSlotKey(
+        MakeProposal( baseline, "proposal-baseline", "proposer-baseline" ) );
+
+    const auto changed_chain = MakeMintV2NonceSubject(
+        "2", "token-42", 1000000, "0xdest", kBurnHash1 );
+    const auto changed_token = MakeMintV2NonceSubject(
+        "1", "token-43", 1000000, "0xdest", kBurnHash1 );
+    const auto changed_source = MakeMintV2NonceSubject(
+        "1", "token-42", 1000000, "0xdest", kBurnHash2 );
+    const auto changed_amount = MakeMintV2NonceSubject(
+        "1", "token-42", 1000001, "0xdest", kBurnHash1 );
+    const auto changed_destination = MakeMintV2NonceSubject(
+        "1", "token-42", 1000000, "0xother-dest", kBurnHash1 );
+
+    EXPECT_NE( baseline_slot, ConsensusSlotKeyTestAccess::GetSlotKey( MakeProposal( changed_chain ) ) );
+    EXPECT_NE( baseline_slot, ConsensusSlotKeyTestAccess::GetSlotKey( MakeProposal( changed_token ) ) );
+    EXPECT_NE( baseline_slot, ConsensusSlotKeyTestAccess::GetSlotKey( MakeProposal( changed_source ) ) );
+    EXPECT_NE( baseline_slot, ConsensusSlotKeyTestAccess::GetSlotKey( MakeProposal( changed_amount ) ) );
+    EXPECT_NE( baseline_slot,
+               ConsensusSlotKeyTestAccess::GetSlotKey( MakeProposal( changed_destination ) ) );
 }
 
 TEST_F( ConsensusSlotKeyTest, NoBurnHashFallsBackToCurrentKey )

@@ -38,8 +38,11 @@ message RegistryUpdate {
   Registry registry = 1;
   string prev_registry_hash = 2;
   repeated SignatureEntry signatures = 3;
-  bytes certificate = 4; 
+  bytes certificate = 4;
+  // Informational metadata only - nothing reads it for verification.
   repeated string batch_certificate_subject_hashes = 5;
+  // Authoritative batch members as canonical certificate slots.
+  repeated string batch_certificate_slots = 6;
 }
 
 message RegistrySigningPayload {

@@ -67,7 +67,7 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
                                  [&]( const std::shared_ptr<GeniusNode> &node )
                                  { return node->GetBalance( dest_addr ) >= initial_balance + kMintAmount; } );
         },
-        BridgeRaceE2ETest::kRaceNodeReadyTimeout,
+        BridgeRaceE2ETest::kRaceMintTimeout,
         "All 11 nodes must independently mint the contested burn exactly once",
         nullptr );
 

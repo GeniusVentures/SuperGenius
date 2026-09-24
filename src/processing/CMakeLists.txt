@@ -56,20 +56,22 @@ endif()
 
 target_link_libraries(processing_service
     PUBLIC
-    MNN::MNN
-    Vulkan::Vulkan
-    ProcessingBase
     SGProcessingProto
-    PRIVATE
     crdt_globaldb
-    hexutil
     ipfs-pubsub
+    outcome
+    # Public header processing_validation_core.hpp includes <Parameter.hpp>
+    # (SGProcessingManager/generated) which itself includes nlohmann/json.hpp,
+    # so every consumer of processing_service needs ProcessingBase's interface
+    # include paths and nlohmann_json — these must propagate, not stay PRIVATE.
+    ProcessingBase
+    PRIVATE
+    hexutil
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
     ipfs-bitswap-cpp
     rapidjson
     sha
-    outcome
 )
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})

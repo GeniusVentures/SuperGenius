@@ -36,7 +36,10 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
 
     // CRDT-reconciliation timeout after heal — generous, to allow CRDT merge across the
     // two temporarily-diverged sub-clusters.
-    static constexpr std::chrono::milliseconds kPartitionHealConvergenceTimeout{ 60000 };
+    // Post-heal convergence is the same all-11-node certificate fan-out the single-burn
+    // test waits on, so it needs that budget, not a smaller local one.
+    static constexpr std::chrono::milliseconds kPartitionHealConvergenceTimeout{
+        BridgeRaceE2ETest::kRaceMintTimeout };
     // Bounded interval each sub-group's watcher is allowed to poll independently while
     // still partitioned, before the heal is triggered.
     static constexpr std::chrono::milliseconds kPrePartitionHealWindow{ 12000 };

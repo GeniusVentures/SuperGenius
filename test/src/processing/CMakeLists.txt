@@ -159,8 +159,13 @@ set_tests_properties(elm_e2e_test PROPERTIES TIMEOUT 1800)
 # files were found to be unreadable by current tooling (a pre-Phase-16 manifest-format backward
 # compatibility regression, unrelated to this phase -- see 19-CONTEXT.md D-01-REVISED) and a fresh
 # 2-machine capture was taken instead.
+# Phase 19 (VALD-02): the Vald02* TEST cases read a real cross-machine .cap fixture pair.
+# The fixtures now live IN this repo under fixtures/ (tracked via Git LFS, see .gitattributes)
+# instead of reaching out of the SuperGenius submodule into the outer repo's .planning tree —
+# the old "../../../../.planning/..." path only worked in a checkout that had that planning
+# workspace present and LFS-pulled, breaking standalone SuperGenius builds and CI.
 target_compile_definitions(processing_validation_core_test PRIVATE
-    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../../../.planning/workstreams/sgproc-render/phases/19-validation-re-verification/captures"
+    VALD02_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
 addtest(processing_result_durability_test

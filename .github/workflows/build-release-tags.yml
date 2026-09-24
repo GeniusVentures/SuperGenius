@@ -15,6 +15,64 @@ on:
         description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
         required: false
         type: string
+      # Names must be build_<target>-<abi>_<build-type>: the skip step looks
+      # them up dynamically instead of enumerating every combination.
+      build_Android-arm64-v8a_Release:
+        description: "Build Android arm64-v8a Release"
+        default: true
+        type: boolean
+      build_Android-arm64-v8a_Debug:
+        description: "Build Android arm64-v8a Debug"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Release:
+        description: "Build Android armeabi-v7a Release"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Debug:
+        description: "Build Android armeabi-v7a Debug"
+        default: true
+        type: boolean
+      build_iOS_Release:
+        description: "Build iOS Release"
+        default: true
+        type: boolean
+      build_iOS_Debug:
+        description: "Build iOS Debug"
+        default: true
+        type: boolean
+      build_OSX_Release:
+        description: "Build OSX Release"
+        default: true
+        type: boolean
+      build_OSX_Debug:
+        description: "Build OSX Debug"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Release:
+        description: "Build Linux x86_64 Release"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Debug:
+        description: "Build Linux x86_64 Debug"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Release:
+        description: "Build Linux aarch64 Release"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Debug:
+        description: "Build Linux aarch64 Debug"
+        default: true
+        type: boolean
+      build_Windows_Release:
+        description: "Build Windows Release"
+        default: true
+        type: boolean
+      build_Windows_Debug:
+        description: "Build Windows Debug"
+        default: true
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -140,22 +198,22 @@ jobs:
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Windows
             runner_key: windows
           - target: OSX
@@ -184,6 +242,13 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      # Shell-agnostic body so this works on both bash and pwsh runners.
+      - name: Skip build disabled by workflow_dispatch input
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs[format('build_{0}{1}_{2}', matrix.target, matrix.abi && format('-{0}', matrix.abi) || '', matrix.build-type)] }}
+        run: |
+          echo "Skipping build for ${{ matrix.target }}${{ matrix.abi && format(' {0}', matrix.abi) || '' }} ${{ matrix.build-type }}"
+          exit 78
+
       - name: Configure bash on Windows (use Git Bash, not WSL)
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
         run: |
@@ -380,19 +445,20 @@ jobs:
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
 
-          # Refresh apt indices first, for two reasons:
-          #  1. GitHub-hosted runners use mirror+file:/etc/apt/apt-mirrors.txt
-          #     (Azure mirrors) whose cached lists can reference superseded
-          #     package versions (e.g. libgcrypt20-dev 1.10.3-2ubuntu0.1, a
-          #     dep of libsecret-1-dev) that 404 until the index is refreshed.
-          #  2. Debian 11 (bullseye) LTS ended 2026-08-31 and debian-security
-          #     stopped refreshing, so that suite's Release file is permanently
-          #     expired and a plain `apt-get update` exits 100 inside the
-          #     bullseye build container. Check-Valid-Until=false keeps the
-          #     frozen repos usable; it is a no-op where indices are fresh
-          #     (e.g. the Android jobs on Ubuntu hosts).
-          sudo apt-get -o Acquire::Check-Valid-Until=false update
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          # Native Linux builds run in the AlmaLinux 8 CI image (glibc 2.28
+          # floor, replacing the EOL Debian Bullseye container). The image
+          # ships clang, cmake, ninja, Vulkan headers, and the perl modules
+          # OpenSSL's Configure needs, so the dnf branch is a guarded safety
+          # net that avoids repo traffic when the image already provides
+          # everything; Ubuntu runners (used by the Android builds, which run
+          # without a container) still need apt.
+          if command -v dnf >/dev/null 2>&1; then
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
+            fi
+          else
+            sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
@@ -440,6 +506,16 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
           Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
           Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
+
+          # Cap compiler concurrency on the self-hosted SG-WIN11 box: 24
+          # cl.exe instances compiling zkLLVM/crypto3 headers exhaust its
+          # 32 GB and page to disk (observed 2026-09: builds crawling at
+          # sub-1GHz + hard paging; RDP barely updating). The bare `-j` in
+          # the build step honours this env cap. Hosted Windows runners
+          # (8 vCPU, fleet RAM) keep unbounded parallelism.
+          if ("${{ runner.environment }}" -eq "self-hosted") {
+            Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_BUILD_PARALLEL_LEVEL=8"
+          }
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
@@ -550,7 +626,14 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        # Pin clang explicitly rather than relying on the /usr/bin/cc and
+        # /usr/bin/c++ update-alternatives symlinks: on AlmaLinux 8
+        # /usr/bin/c++ is a real file owned by gcc-c++ (not an alternatives
+        # symlink like Debian's), so the update-alternatives takeover fails
+        # silently and CMake falls back to g++ 8.5, which cannot compile the
+        # zkLLVM crypto3 constexpr code in ProofSystem (run 35377550250,
+        # divide.hpp:347 "is not a constant expression" on all Linux jobs).
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}

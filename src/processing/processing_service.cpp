@@ -6,6 +6,7 @@
 #include <Generators.hpp>
 #include <utility>
 #include <thread>
+#include <vector>
 
 namespace sgns::processing
 {
@@ -89,6 +90,27 @@ namespace sgns::processing
         if ( io_thread.joinable() )
         {
             io_thread.join();
+        }
+
+        // Drain engine subtask threads before destroying the nodes that own
+        // them, joining outside m_mutexNodes so engine callbacks that re-enter
+        // this service cannot deadlock against the drain.
+        {
+            std::vector<std::shared_ptr<ProcessingNode>> nodesToDrain;
+            {
+                std::scoped_lock lock( m_mutexNodes );
+                for ( auto &[id, node] : m_processingNodes )
+                {
+                    nodesToDrain.push_back( node );
+                }
+            }
+            for ( auto &node : nodesToDrain )
+            {
+                if ( node )
+                {
+                    node->StopEngine();
+                }
+            }
         }
 
         {

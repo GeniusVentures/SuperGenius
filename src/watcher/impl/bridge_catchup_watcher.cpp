@@ -103,9 +103,11 @@ namespace sgns::evmwatcher
             return;
         }
 
-        size_t total_backfilled = 0;
-        size_t total_skipped    = 0;
-        size_t chains_scanned   = 0;
+        // One "skipped" bucket hid rejected mints; split by mint state.
+        size_t total_confirmed = 0;
+        size_t total_in_flight = 0;
+        size_t total_retry     = 0;
+        size_t chains_scanned  = 0;
 
         for ( const auto &chain_entry : chains )
         {
@@ -241,6 +243,11 @@ namespace sgns::evmwatcher
             // ── Shared tx_hash dedup across v1 + v2 ──────────────────────
             std::set<std::string> seen_tx_hashes;
 
+            // Lowest block holding a burn without a confirmed mint. The cursor is clamped
+            // to this so an unconfirmed burn is re-presented every poll instead of being
+            // left behind and lost.
+            uint64_t retry_floor = std::numeric_limits<uint64_t>::max();
+
             // ── Helper: process one batch of logs ─────────────────────────
             auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) -> bool
             {
@@ -256,7 +263,8 @@ namespace sgns::evmwatcher
 
                     if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
                     {
-                        ++total_skipped;
+                        // Already presented under its own outcome earlier in this scan, so it
+                        // has already contributed any cursor hold-back it needs.
                         logger->debug( "CatchUpScan: burn tx {} already seen this scan — skipping", tx_hash_hex );
                         continue;
                     }
@@ -268,36 +276,47 @@ namespace sgns::evmwatcher
 
                     if ( !decoded.has_value() )
                     {
-                        ++total_skipped;
+                        // Deliberately does NOT hold the cursor back: a permanently
+                        // undecodable log would otherwise wedge this chain forever.
                         logger->warn( "CatchUpScan: failed to decode log for tx {} — skipping", tx_hash_hex );
                         continue;
                     }
 
+                    // Only a durably confirmed mint lets the cursor advance past this burn.
+                    // Anything else pins retry_floor here so the next poll re-presents it;
+                    // a throwing processor is just another burn that did not settle.
+                    auto outcome = BurnOutcome::Retry;
                     try
                     {
-                        const bool processed = burn_processor_( decoded.value(), tx_hash_hex, chain_id_str );
-
-                        if ( processed )
-                        {
-                            ++total_backfilled;
-                            logger->info( "CatchUpScan: backfilled historical burn {} on chain {}",
-                                          tx_hash_hex,
-                                          chain_entry.chain_name );
-                        }
-                        else
-                        {
-                            logger->debug( "CatchUpScan: burn processor returned false for tx {} — "
-                                           "likely already processed",
-                                           tx_hash_hex );
-                            ++total_skipped;
-                        }
+                        outcome = burn_processor_( decoded.value(), tx_hash_hex, chain_id_str );
                     }
                     catch ( const std::exception &e )
                     {
-                        logger->debug( "CatchUpScan: burn processor threw for tx {}: {} — skipping",
-                                       tx_hash_hex,
-                                       e.what() );
-                        ++total_skipped;
+                        logger->error( "CatchUpScan: burn processor threw for tx {}: {}", tx_hash_hex, e.what() );
+                    }
+
+                    switch ( outcome )
+                    {
+                        case BurnOutcome::Processed:
+                            ++total_confirmed;
+                            logger->info( "CatchUpScan: backfilled historical burn {} on chain {}",
+                                          tx_hash_hex,
+                                          chain_entry.chain_name );
+                            break;
+
+                        case BurnOutcome::InFlight:
+                            ++total_in_flight;
+                            retry_floor = std::min( retry_floor, rpc_log.block_number );
+                            break;
+
+                        case BurnOutcome::Retry:
+                            ++total_retry;
+                            retry_floor = std::min( retry_floor, rpc_log.block_number );
+                            logger->warn( "CatchUpScan: burn {} on chain {} has no confirmed mint — "
+                                          "retrying next poll",
+                                          tx_hash_hex,
+                                          chain_entry.chain_name );
+                            break;
                     }
                 }
                 return true;
@@ -464,19 +483,29 @@ namespace sgns::evmwatcher
             // from_block points at the next unscanned chunk's start
             // (last scanned chunk_to + 1) — do NOT skip to current_block + 1,
             // or unscanned burns would be permanently lost (CR-01).
+            // Clamp to the oldest burn still lacking a confirmed mint (CR-03): the cursor
+            // means "confirmed-minted up to here", not merely "scanned up to here".
+            // Newer burns in this chain were still scanned and presented this poll, so
+            // holding the cursor costs a re-scan, not forward progress.
             {
                 std::lock_guard lock( mutex_ );
-                last_block_per_chain_[chain_entry.chain_id] = from_block;
+                last_block_per_chain_[chain_entry.chain_id] = std::min( from_block, retry_floor );
+            }
+            if ( retry_floor != std::numeric_limits<uint64_t>::max() )
+            {
+                logger->info( "CatchUpScan: chain {} cursor held at {} pending mint confirmation",
+                              chain_entry.chain_name,
+                              retry_floor );
             }
         }
 
         if ( chains_scanned > 0 )
         {
-            logger->info( "CatchUpScan: scanned {} chains — {} historical burns backfilled, "
-                          "{} skipped (already processed)",
+            logger->info( "CatchUpScan: scanned {} chains — {} confirmed, {} in flight, {} pending retry",
                           chains_scanned,
-                          total_backfilled,
-                          total_skipped );
+                          total_confirmed,
+                          total_in_flight,
+                          total_retry );
         }
     }
 

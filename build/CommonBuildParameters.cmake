@@ -92,7 +92,7 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 set(MNN_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib/cmake/MNN")
 find_package(MNN CONFIG REQUIRED)
 set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-message(STATIS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
+message(STATUS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
 include_directories(${MNN_INCLUDE_DIR})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_DEBUG)
@@ -290,6 +290,33 @@ if(APPLE)
         target_link_libraries(Vulkan::Vulkan INTERFACE "-framework AppKit")
     else()
         target_link_libraries(Vulkan::Vulkan INTERFACE "-framework UIKit")
+    endif()
+endif()
+
+# Resolve the Vulkan runtime DLL that matches the loader we just linked.
+# The thirdparty Vulkan-Loader installs vulkan-1.dll (runtime) alongside
+# vulkan-1.lib (import lib, found above). Every exe that links it — directly
+# or via SGProcessors' MNN::MNN + Vulkan::Vulkan PUBLIC deps, i.e. the whole
+# processing/node test closure — needs the DLL next to the exe or the Windows
+# loader kills the process with 0xc0000135 before main() runs. CI runners
+# have no system Vulkan runtime, so the vendored one must be deployed
+# (addtest in cmake/functions.cmake does the copy per test executable).
+if(WIN32)
+    find_file(VULKAN_RUNTIME_DLL NAMES vulkan-1.dll
+        PATHS "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/bin"
+              "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib"
+        NO_DEFAULT_PATH)
+
+    if(NOT VULKAN_RUNTIME_DLL)
+        # Only fatal when we actually link the thirdparty loader; a system
+        # Vulkan SDK brings its own runtime on PATH.
+        string(FIND "${Vulkan_LIBRARY}" "${_THIRDPARTY_BUILD_DIR}" _SGNS_VK_LOADER_IS_VENDORED)
+        if(_SGNS_VK_LOADER_IS_VENDORED EQUAL 0)
+            message(FATAL_ERROR "vulkan-1.dll not found in "
+                "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader (searched bin/ and lib/). "
+                "Executables link ${Vulkan_LIBRARY} and will fail to start with "
+                "0xc0000135 without the matching runtime DLL.")
+        endif()
     endif()
 endif()
 
