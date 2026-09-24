@@ -148,7 +148,7 @@ namespace sgns
         const auto &managerCorrupted = rCorrupted.value();
 
         auto        pCorrect       = managerCorrect->GetProcessingData();
-        const auto &passesCorrect  = pCorrect.get_passes();
+        const auto &passesCorrect  = pCorrect.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passesCorrect.size(), 1 );
         ASSERT_TRUE( passesCorrect[0].get_model().has_value() );
         const auto modelCorrect      = passesCorrect[0].get_model().value();
@@ -156,7 +156,7 @@ namespace sgns
         ASSERT_GE( inputNodesCorrect.size(), 1 );
 
         auto        pCorrupted      = managerCorrupted->GetProcessingData();
-        const auto &passesCorrupted = pCorrupted.get_passes();
+        const auto &passesCorrupted = pCorrupted.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passesCorrupted.size(), 1 );
         ASSERT_TRUE( passesCorrupted[0].get_model().has_value() );
         const auto modelCorrupted      = passesCorrupted[0].get_model().value();

@@ -413,7 +413,7 @@ namespace sgns
                                      << r.error().message();
 
         const auto &manager = r.value();
-        auto        pass    = manager->GetProcessingData().get_passes()[0];
+        auto        pass    = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} )[0];
 
         bool                                       called = false;
         sgns::sgprocessing::CanExecuteResult       result;
@@ -508,7 +508,7 @@ namespace sgns
             << r.error().message();
 
         const auto &manager = r.value();
-        auto        pass    = manager->GetProcessingData().get_passes()[0];
+        auto        pass    = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} )[0];
 
         bool                                       called = false;
         sgns::sgprocessing::CanExecuteResult       result;
@@ -603,7 +603,7 @@ namespace sgns
                                      << r.error().message();
 
         const auto &manager = r.value();
-        auto        pass    = manager->GetProcessingData().get_passes()[0];
+        auto        pass    = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} )[0];
 
         bool                                       called = false;
         sgns::sgprocessing::CanExecuteResult       result;

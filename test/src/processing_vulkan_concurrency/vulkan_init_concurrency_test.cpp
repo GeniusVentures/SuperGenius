@@ -120,7 +120,7 @@ namespace sgns
                 auto manager = mgr_result.value();
 
                 auto processing_data = manager->GetProcessingData();
-                auto passes = processing_data.get_passes();
+                auto passes = processing_data.get_passes().value_or( std::vector<sgns::Pass>{} );
                 if ( passes.empty() ) return;
                 // Pass::get_model() returns boost::optional<ModelConfig> BY VALUE — binding
                 // get_input_nodes() straight off the temporary leaves input_nodes dangling
@@ -149,7 +149,7 @@ namespace sgns
                 auto manager = mgr_result.value();
 
                 auto processing_data = manager->GetProcessingData();
-                auto passes = processing_data.get_passes();
+                auto passes = processing_data.get_passes().value_or( std::vector<sgns::Pass>{} );
                 if ( passes.empty() ) return;
                 // Same dangling-reference hazard as the string thread above: get_model()
                 // returns the optional by value, so it must outlive input_nodes.

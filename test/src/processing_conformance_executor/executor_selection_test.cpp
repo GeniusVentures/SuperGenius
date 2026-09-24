@@ -76,7 +76,7 @@ namespace sgns
             << "Failed to create ProcessingManager: " << manager_result.error().message();
 
         const auto &manager  = manager_result.value();
-        const auto  passes   = manager->GetProcessingData().get_passes();
+        const auto  passes   = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
 
@@ -151,8 +151,8 @@ namespace sgns
         ASSERT_TRUE( r2.has_value() );
 
         // Both should produce the same pass type and model format
-        const auto passes1 = r1.value()->GetProcessingData().get_passes();
-        const auto passes2 = r2.value()->GetProcessingData().get_passes();
+        const auto passes1 = r1.value()->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
+        const auto passes2 = r2.value()->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
 
         ASSERT_EQ( passes1.size(), passes2.size() );
         ASSERT_EQ( passes1[0].get_type(), passes2[0].get_type() );
@@ -263,7 +263,7 @@ namespace sgns
         ASSERT_TRUE( manager_result.has_value() )
             << "Multi-pass job should succeed: " << manager_result.error().message();
 
-        const auto passes = manager_result.value()->GetProcessingData().get_passes();
+        const auto passes = manager_result.value()->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 2 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
         ASSERT_EQ( passes[1].get_type(), sgns::PassType::RENDER );
@@ -322,7 +322,7 @@ namespace sgns
         // The key is it doesn't crash
         if ( manager_result.has_value() )
         {
-            const auto passes = manager_result.value()->GetProcessingData().get_passes();
+            const auto passes = manager_result.value()->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
             ASSERT_EQ( passes.size(), 1 );
             ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
             std::cout << "ExecutorFactoryNotRegistered: accepted minimal pass (no model)" << std::endl;

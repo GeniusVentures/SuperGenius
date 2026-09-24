@@ -156,7 +156,7 @@ namespace sgns
         ASSERT_EQ( processing.get_gnus_spec_version(), 1.0 );
 
         // Test inputs array - should have one string input
-        const auto &inputs = processing.get_inputs();
+        const auto &inputs = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 ) << "Should have exactly 1 input";
         ASSERT_EQ( inputs[0].get_name(), "inputText" );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::STRING );
@@ -168,7 +168,7 @@ namespace sgns
         ASSERT_FALSE( inputs[0].get_dimensions().has_value() ) << "String input should not have dimensions";
 
         // Test outputs array
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "textEmbedding" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
@@ -195,7 +195,7 @@ namespace sgns
         ASSERT_EQ( parameters[3].get_type(), sgns::ParameterType::INT );
 
         // Test passes array
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "text_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -260,7 +260,7 @@ namespace sgns
 
         // Get the processing data to access model nodes
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -312,7 +312,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE3_D );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -338,7 +338,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -384,7 +384,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE1_D );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -409,7 +409,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -510,7 +510,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::BOOL );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -535,7 +535,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -624,7 +624,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::BUFFER );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -649,7 +649,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -738,7 +738,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::FLOAT );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -761,7 +761,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -850,7 +850,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::INT );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -873,7 +873,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -962,7 +962,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::MAT2 );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -987,7 +987,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1076,7 +1076,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::MAT3 );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -1101,7 +1101,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1190,7 +1190,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::MAT4 );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -1215,7 +1215,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1300,7 +1300,7 @@ namespace sgns
         ASSERT_TRUE( result ) << result.error().message();
 
         auto manager = result.value();
-        auto inputs  = manager->GetProcessingData().get_inputs();
+        auto inputs  = manager->GetProcessingData().get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 ) << "Expected 1 input";
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::VEC2 );
     }
@@ -1316,7 +1316,7 @@ namespace sgns
         auto manager = result.value();
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1395,7 +1395,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TENSOR );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -1420,7 +1420,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1509,7 +1509,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE_CUBE );
         ASSERT_TRUE( inputs[0].get_dimensions().has_value() );
@@ -1533,7 +1533,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1618,7 +1618,7 @@ namespace sgns
         ASSERT_TRUE( result ) << result.error().message();
 
         auto manager = result.value();
-        auto inputs  = manager->GetProcessingData().get_inputs();
+        auto inputs  = manager->GetProcessingData().get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 ) << "Expected 1 input";
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::VEC3 );
     }
@@ -1634,7 +1634,7 @@ namespace sgns
         auto manager = result.value();
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1709,7 +1709,7 @@ namespace sgns
         ASSERT_TRUE( result ) << result.error().message();
 
         auto manager = result.value();
-        auto inputs  = manager->GetProcessingData().get_inputs();
+        auto inputs  = manager->GetProcessingData().get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 ) << "Expected 1 input";
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::VEC4 );
     }
@@ -1725,7 +1725,7 @@ namespace sgns
         auto manager = result.value();
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1808,7 +1808,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_name(), "inputAudio" );
         // Audio input type is schema-level — verify the input is valid
@@ -1821,12 +1821,12 @@ namespace sgns
         ASSERT_TRUE( inputs[0].get_format().has_value() );
         ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
 
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "audioOutput" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
 
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "audio_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -1851,7 +1851,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1899,7 +1899,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_name(), "inputImage" );
         // Image input type is schema-level — verify the input is valid
@@ -1912,12 +1912,12 @@ namespace sgns
         ASSERT_TRUE( inputs[0].get_format().has_value() );
         ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
 
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "imageOutput" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
 
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "image_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -1942,7 +1942,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -1990,7 +1990,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         // ML input type is schema-level — verify the input is valid
         ASSERT_TRUE( inputs[0].get_source_uri_param().find( "ml_input.raw" ) != std::string::npos );
@@ -2002,12 +2002,12 @@ namespace sgns
         ASSERT_TRUE( inputs[0].get_format().has_value() );
         ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
 
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "mlOutput" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
 
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "ml_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -2032,7 +2032,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -2080,17 +2080,17 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_name(), "inputText" );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::STRING );
 
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "textEmbedding" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
 
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "string_conformance_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -2116,7 +2116,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );
@@ -2164,7 +2164,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &inputs     = processing.get_inputs();
+        const auto &inputs     = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         // Volume input type is schema-level — verify the input is valid
         ASSERT_TRUE( inputs[0].get_source_uri_param().find( "volume_input.raw" ) != std::string::npos );
@@ -2177,12 +2177,12 @@ namespace sgns
         ASSERT_TRUE( inputs[0].get_format().has_value() );
         ASSERT_EQ( inputs[0].get_format().value(), sgns::InputFormat::FLOAT32 );
 
-        const auto &outputs = processing.get_outputs();
+        const auto &outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "volumeOutput" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TENSOR );
 
-        const auto &passes = processing.get_passes();
+        const auto &passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_name(), "volume_inference" );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
@@ -2207,7 +2207,7 @@ namespace sgns
         ASSERT_NE( manager, nullptr ) << "ProcessingManager is null";
 
         auto        processing = manager->GetProcessingData();
-        const auto &passes     = processing.get_passes();
+        const auto &passes     = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         ASSERT_TRUE( passes[0].get_model().has_value() );

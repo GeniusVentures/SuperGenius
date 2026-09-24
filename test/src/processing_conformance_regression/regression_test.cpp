@@ -37,7 +37,7 @@ namespace sgns
             << manager_result.error().message();
 
         const auto &manager  = manager_result.value();
-        const auto  passes   = manager->GetProcessingData().get_passes();
+        const auto  passes   = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 2 ) << "Both passes should be present";
 
         // Both passes should have type INFERENCE
@@ -64,7 +64,7 @@ namespace sgns
             << manager_result.error().message();
 
         const auto &manager = manager_result.value();
-        const auto  passes  = manager->GetProcessingData().get_passes();
+        const auto  passes  = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::RENDER );
 
@@ -91,7 +91,7 @@ namespace sgns
 
         const auto &manager = manager_result.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_TRUE( passes[0].get_model().has_value() );
 
@@ -178,7 +178,7 @@ namespace sgns
             << manager_result.error().message();
 
         const auto &manager = manager_result.value();
-        const auto  passes  = manager->GetProcessingData().get_passes();
+        const auto  passes  = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::RENDER );
 
@@ -197,7 +197,7 @@ namespace sgns
 
         const auto &manager = manager_result.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
 
         sgns::ModelNode model_node;

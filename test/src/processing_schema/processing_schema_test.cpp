@@ -66,8 +66,9 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         ASSERT_EQ( tags[1], "enhancement" );
         ASSERT_EQ( tags[2], "test" );
 
-        // Test inputs array
-        const auto &inputs = processing.get_inputs();
+        // Test inputs array (elmbridge 01-01 D-04: optional at schema level;
+        // value_or shim per fb7b744 convention — this fixture always has inputs)
+        const auto inputs = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( inputs.size(), 1 );
         ASSERT_EQ( inputs[0].get_name(), "inputImage" );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE2_D );
@@ -76,8 +77,8 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
             ASSERT_EQ( *inputs[0].get_description(), "Input image to be enhanced" );
         }
 
-        // Test outputs array
-        const auto &outputs = processing.get_outputs();
+        // Test outputs array (elmbridge 01-01 D-04 shim — fixture always has outputs)
+        const auto outputs = processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} );
         ASSERT_EQ( outputs.size(), 1 );
         ASSERT_EQ( outputs[0].get_name(), "enhancedImage" );
         ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TEXTURE2_D );
@@ -104,8 +105,8 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         {
             ASSERT_EQ( *parameters[1].get_description(), "Strength of the enhancement effect" );
         }
-        // Test passes array
-        const auto &passes = processing.get_passes();
+        // Test passes array (elmbridge 01-01 D-04 shim — fixture always has passes)
+        const auto passes = processing.get_passes().value_or( std::vector<sgns::Pass>{} );
         std::cout << "Passes size: " << passes.size() << std::endl;
         ASSERT_EQ( passes.size(), 3 );
 
@@ -142,11 +143,11 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         std::cout << "Version: " << processing.get_version() << std::endl;
         std::cout << "SpecVersion: " << processing.get_gnus_spec_version() << std::endl;
         std::cout << "Author: " << ( processing.get_author() ? *processing.get_author() : "N/A" ) << std::endl;
-        std::cout << "Inputs: " << processing.get_inputs().size() << std::endl;
-        std::cout << "Outputs: " << processing.get_outputs().size() << std::endl;
+        std::cout << "Inputs: " << processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} ).size() << std::endl;
+        std::cout << "Outputs: " << processing.get_outputs().value_or( std::vector<sgns::IoDeclaration>{} ).size() << std::endl;
         std::cout << "Parameters: " << ( processing.get_parameters() ? processing.get_parameters()->size() : 0 )
                   << std::endl;
-        std::cout << "Passes: " << processing.get_passes().size() << std::endl;
+        std::cout << "Passes: " << processing.get_passes().value_or( std::vector<sgns::Pass>{} ).size() << std::endl;
     }
 
     TEST_F( ProcessingSchemaTest, BadGeneratedCodeTest )
@@ -174,7 +175,9 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
             sgns::from_json( data, processing );
 
             // If parsing succeeds, check if inputs is empty (which would be wrong)
-            const auto &inputs = processing.get_inputs();
+            // (elmbridge 01-01 D-04: inputs is optional now — missing field yields
+            // an unengaged optional, the pre-existing acceptance branch)
+            const auto inputs = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
             if ( inputs.empty() )
             {
                 std::cout << "Generated code parsed missing required field as empty array" << std::endl;
@@ -225,7 +228,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         sgns::SgnsProcessing processing;
         sgns::from_json( data, processing );
         ASSERT_EQ( processing.get_name(), "posenet-inference" );
-        auto inputs = processing.get_inputs();
+        auto inputs = processing.get_inputs().value_or( std::vector<sgns::IoDeclaration>{} );
         for (auto& input : inputs)
         {
             std::cout << input.get_name() << std::endl;

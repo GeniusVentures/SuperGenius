@@ -32,7 +32,7 @@ namespace sgns
             << "Valid INFERENCE pass should succeed: " << manager_result.error().message();
 
         const auto &manager  = manager_result.value();
-        const auto  passes   = manager->GetProcessingData().get_passes();
+        const auto  passes   = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::INFERENCE );
 
@@ -49,7 +49,7 @@ namespace sgns
             << "Valid RENDER pass should succeed: " << manager_result.error().message();
 
         const auto &manager = manager_result.value();
-        const auto  passes  = manager->GetProcessingData().get_passes();
+        const auto  passes  = manager->GetProcessingData().get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_EQ( passes[0].get_type(), sgns::PassType::RENDER );
 

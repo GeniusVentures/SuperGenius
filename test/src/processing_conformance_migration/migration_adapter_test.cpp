@@ -28,7 +28,7 @@ namespace sgns
 
         const auto &manager = r.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_TRUE( passes[0].get_model().has_value() );
         const auto model       = passes[0].get_model().value();
@@ -63,7 +63,7 @@ namespace sgns
 
         const auto &manager = r.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_TRUE( passes[0].get_model().has_value() );
         const auto model       = passes[0].get_model().value();
@@ -96,7 +96,7 @@ namespace sgns
 
         const auto &manager = r.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_TRUE( passes[0].get_model().has_value() );
         const auto model       = passes[0].get_model().value();
@@ -131,7 +131,7 @@ namespace sgns
 
         const auto &manager = r.value();
         auto        p = manager->GetProcessingData();
-        const auto &passes = p.get_passes();
+        const auto &passes = p.get_passes().value_or( std::vector<sgns::Pass>{} );
         ASSERT_EQ( passes.size(), 1 );
         ASSERT_TRUE( passes[0].get_model().has_value() );
         const auto model       = passes[0].get_model().value();
