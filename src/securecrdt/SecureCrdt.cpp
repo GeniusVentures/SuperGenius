@@ -43,6 +43,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
             return "candidate resource limit exceeded";
         case Error::DUPLICATE_CANDIDATE_APPROVAL:
             return "candidate already has an approval from this signer";
+        case Error::CANDIDATE_AUTHORIZATION_PENDING:
+            return "candidate authorization is waiting for local trust prerequisites";
     }
     return "unknown SecureCrdt::Error";
 }
@@ -618,16 +620,22 @@ namespace sgns::securecrdt
         return *record;
     }
 
-    std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterCandidateApproval(
+    sgns::crdt::CRDTDataFilter::ElementFilterResult SecureCrdt::FilterCandidateApproval(
         const sgns::crdt::pb::Element &element )
     {
+        using FilterResult = sgns::crdt::CRDTDataFilter::ElementFilterResult;
         const std::vector<uint8_t> bytes( element.value().begin(), element.value().end() );
         auto validated = ValidateCandidateApproval( sgns::crdt::HierarchicalKey( element.key() ), bytes, true );
         if ( validated.has_error() )
         {
-            return std::vector<sgns::crdt::pb::Element>{};
+            // Genesis may arrive after this approval, or its asynchronous durable
+            // activation may still be pending. Revalidate the same delta once
+            // authorization is available instead of permanently discarding it.
+            return validated.error() == Error::CANDIDATE_AUTHORIZATION_PENDING
+                       ? FilterResult::Stall()
+                       : FilterResult::Reject();
         }
-        return std::nullopt;
+        return FilterResult::Accept();
     }
 
     void SecureCrdt::OnCandidateApproval( const std::string                                &domain,
@@ -690,8 +698,7 @@ namespace sgns::securecrdt
                 {
                     if ( auto strong = weak_self.lock() )
                     {
-                        return sgns::crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
-                            strong->FilterCandidateApproval( element ) );
+                        return strong->FilterCandidateApproval( element );
                     }
                     // Legacy contract returned an engaged (empty) vector here: strip.
                     return sgns::crdt::CRDTDataFilter::ElementFilterResult::Reject();

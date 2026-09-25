@@ -23,6 +23,7 @@
 
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
+#include "crdt/crdt_data_filter.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/proto/delta.pb.h"
@@ -61,6 +62,7 @@ namespace sgns::securecrdt
             UNAUTHORIZED_CANDIDATE_SIGNER,
             CANDIDATE_LIMIT_EXCEEDED,
             DUPLICATE_CANDIDATE_APPROVAL,
+            CANDIDATE_AUTHORIZATION_PENDING, ///< Local trust prerequisites are not durably confirmed yet.
         };
 
         using CandidateCallback = std::function<void( const CandidateId &, const CandidateApprovalRecord & )>;
@@ -192,7 +194,7 @@ namespace sgns::securecrdt
         outcome::result<CandidateApprovalRecord> ValidateCandidateApproval( const sgns::crdt::HierarchicalKey &key,
                                                                             const std::vector<uint8_t>        &bytes,
                                                                             bool check_duplicate );
-        std::optional<std::vector<sgns::crdt::pb::Element>> FilterCandidateApproval(
+        sgns::crdt::CRDTDataFilter::ElementFilterResult FilterCandidateApproval(
             const sgns::crdt::pb::Element &element );
         void OnCandidateApproval( const std::string &domain, const std::pair<std::string, sgns::base::Buffer> &data );
 

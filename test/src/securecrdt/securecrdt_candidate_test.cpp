@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <limits>
 #include <string>
 #include <vector>
@@ -79,7 +80,14 @@ protected:
             CandidateDomainEntry{ "trusted-peer",
                                   CandidateKind::TrustPolicy,
                                   [this]() -> outcome::result<CandidateAuthorizationSnapshot>
-                                  { return authorization_; },
+                                  {
+                                      if ( !authorization_ready_.load() )
+                                      {
+                                          pending_authorization_calls_.fetch_add( 1 );
+                                          return SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING;
+                                      }
+                                      return authorization_;
+                                  },
                                   &owner_token_ } ) );
         ASSERT_TRUE( secure_crdt_->RegisterFilters() );
     }
@@ -116,6 +124,8 @@ protected:
     }
 
     boost::filesystem::path                                     path_;
+    std::atomic<bool>                                           authorization_ready_{ true };
+    std::atomic<size_t>                                         pending_authorization_calls_{ 0 };
     int                                                         owner_token_ = 0;
     CandidateAuthorizationSnapshot                              authorization_;
     std::vector<std::shared_ptr<sgns::GeniusAccount>>           signers_;
@@ -164,6 +174,79 @@ TEST_F( SecureCrdtCandidateAuthorizationTest, CallbackSurfacesAcceptedRecordWith
     const auto approvals = secure_crdt_->ReadCandidateApprovals( *id );
     ASSERT_TRUE( approvals.has_value() );
     EXPECT_EQ( approvals.value().size(), 1U );
+}
+
+TEST_F( SecureCrdtCandidateAuthorizationTest, PendingRemoteApprovalsRetrySameDeltaAfterGenesisConfirmation )
+{
+    constexpr const char *topic = "securecrdt_test_topic";
+    authorization_ready_.store( false );
+    ASSERT_TRUE( node_->db->AddBroadcastTopic( topic ).has_value() );
+
+    auto sender = sgns::test::securecrdt::MakeSecureCrdtTestNode( "securecrdt_candidate_sender" );
+    ASSERT_NE( sender, nullptr );
+    ASSERT_TRUE( sender->db->AddBroadcastTopic( topic ).has_value() );
+    sender->db->AddListenTopic( topic );
+    sender->pubsub->AddPeers( { node_->pubsub->GetInterfaceAddress() } );
+
+    auto invalid_signature = SignedRecord( 1, { 'i' } );
+    ASSERT_FALSE( invalid_signature.signature.empty() );
+    invalid_signature.signature.front() ^= 0xff;
+    auto stale                        = SignedRecord( 0, { 's' } );
+    stale.core.expected_previous_hash = HASH_B;
+    const auto stale_bytes            = stale.core.CanonicalBytes();
+    ASSERT_TRUE( stale_bytes.has_value() );
+    stale.signature = signers_[0]->Sign( *stale_bytes );
+
+    const std::vector<CandidateApprovalRecord> records = {
+        SignedRecord( 0 ), SignedRecord( 2, { 'o' } ), invalid_signature, stale
+    };
+    std::vector<sgns::crdt::GlobalDB::DataPair> data;
+    for ( const auto &record : records )
+    {
+        const auto id    = CandidateId::FromCore( record.core );
+        const auto bytes = record.CanonicalBytes();
+        ASSERT_TRUE( id.has_value() );
+        ASSERT_TRUE( bytes.has_value() );
+        data.emplace_back( CandidateKey{ *id, record.signer }.ToHierarchicalKey(), sgns::base::Buffer( *bytes ) );
+    }
+
+    // Bypass local submission checks to exercise the incoming filter with one
+    // valid approval, an outsider, a bad signature and stale authorization.
+    const auto published = sender->db->Put( data, { topic } );
+    ASSERT_TRUE( published.has_value() );
+    ASSERT_TRUE( waitForCondition(
+        [&]
+        {
+            // Only rebroadcast this existing CID while the peers connect.
+            EXPECT_TRUE( sender->db->RequestHeadBroadcast( { topic } ).has_value() );
+            const auto status = node_->db->GetCIDJobStatus( published.value() );
+            return pending_authorization_calls_.load() >= records.size() && status.has_value() &&
+                   status.value() == sgns::crdt::CrdtDatastore::JobStatus::COMPLETED;
+        },
+        // CI can exhaust a 20-second fetch budget before a root retry succeeds.
+        std::chrono::seconds( 60 ),
+        nullptr,
+        std::chrono::milliseconds( 250 ) ) )
+        << "Incoming approvals were not filtered while genesis authorization was pending";
+    for ( const auto &entry : data )
+    {
+        ASSERT_TRUE( node_->db->Get( entry.first ).has_error() );
+    }
+
+    // The same stored DAG delta must be revalidated after genesis is available.
+    // No new publication or head-broadcast request occurs after this point.
+    authorization_ready_.store( true );
+    ASSERT_TRUE( waitForCondition( [&] { return node_->db->Get( data.front().first ).has_value(); },
+                                  std::chrono::seconds( 25 ) ) )
+        << "The valid approval was lost instead of retried after genesis confirmation";
+    const auto accepted = node_->db->Get( data.front().first );
+    ASSERT_TRUE( accepted.has_value() );
+    EXPECT_EQ( accepted.value().toVector(), data.front().second.toVector() );
+    for ( size_t index = 1; index < data.size(); ++index )
+    {
+        EXPECT_TRUE( node_->db->Get( data[index].first ).has_error() )
+            << "Retry admitted an unauthorized, incorrectly signed or stale approval at index " << index;
+    }
 }
 
 TEST_F( SecureCrdtCandidateAuthorizationTest, LimitKeepsExistingCandidateApprovalsAdmissibleAtCreationCap )

@@ -239,7 +239,13 @@ namespace sgns::trustedpeer
                     {
                         return outcome::failure( Error::NOT_CONFIRMED );
                     }
-                    return self->ResolvePolicyAuthorization();
+                    auto authorization = self->ResolvePolicyAuthorization();
+                    if ( authorization.has_error() && authorization.error() == Error::NOT_CONFIRMED )
+                    {
+                        return outcome::failure(
+                            sgns::securecrdt::SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING );
+                    }
+                    return authorization;
                 },
                 &registry_token_ } );
         if ( !genesis_registered || !policy_registered )

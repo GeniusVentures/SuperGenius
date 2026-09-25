@@ -54,6 +54,8 @@ namespace sgns::securecrdt
         std::vector<std::string> authorized_signers;
     };
 
+    /// Return SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING when local trust
+    /// prerequisites are missing, so incoming approvals can be retried safely.
     using CandidateAuthorizationSource = std::function<outcome::result<CandidateAuthorizationSnapshot>()>;
 
     struct CandidateDomainEntry

@@ -184,7 +184,14 @@ namespace sgns::account
                 {
                     auto self = weak_self.lock();
                     if ( !self ) return outcome::failure( sgns::trustedpeer::TrustedPeerRegistry::Error::NOT_CONFIRMED );
-                    return self->ResolveBurnAuthorization();
+                    auto authorization = self->ResolveBurnAuthorization();
+                    if ( authorization.has_error() &&
+                         authorization.error() == sgns::trustedpeer::TrustedPeerRegistry::Error::NOT_CONFIRMED )
+                    {
+                        return outcome::failure(
+                            sgns::securecrdt::SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING );
+                    }
+                    return authorization;
                 },
                 &registry_token_ } );
     }

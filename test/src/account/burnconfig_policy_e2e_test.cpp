@@ -245,6 +245,20 @@ namespace
 
 TEST_F( BurnConfigPolicyE2ETest, GenesisWaitsForTrustedPeerConfirmationAndExactBurnQuorum )
 {
+    // Both production domains must defer incoming approvals until their shared
+    // genesis prerequisite is durable; genesis itself must remain admissible.
+    for ( const auto *domain : { "trusted-peer", "burn-config" } )
+    {
+        const auto entry = secure_crdt_->Registry().ResolveCandidateDomain( domain );
+        ASSERT_TRUE( entry.has_value() );
+        const auto authorization = entry->authorization_source();
+        ASSERT_TRUE( authorization.has_error() );
+        EXPECT_EQ( authorization.error(), securecrdt::SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING );
+    }
+    const auto genesis_entry = secure_crdt_->Registry().ResolveCandidateDomain( "trusted-peer-genesis" );
+    ASSERT_TRUE( genesis_entry.has_value() );
+    EXPECT_TRUE( genesis_entry->authorization_source().has_value() );
+
     const auto pre_ready_escrow = StoreEscrow( 10000 );
     const auto transaction_count = manager_->CountTransactions();
     auto pre_ready = manager_->PayEscrow( pre_ready_escrow, SGProcessing::TaskResult{}, nullptr );
@@ -255,6 +269,12 @@ TEST_F( BurnConfigPolicyE2ETest, GenesisWaitsForTrustedPeerConfirmationAndExactB
     EXPECT_TRUE( burn_->ListPendingBurnCandidates().has_error() );
     EXPECT_TRUE( burn_->OnTrustedPeerGenesisConfirmed().has_error() );
     ASSERT_TRUE( tpr_->SubmitReviewedGenesisApproval().has_value() );
+    for ( const auto *domain : { "trusted-peer", "burn-config" } )
+    {
+        const auto entry = secure_crdt_->Registry().ResolveCandidateDomain( domain );
+        ASSERT_TRUE( entry.has_value() );
+        EXPECT_TRUE( entry->authorization_source().has_value() );
+    }
     auto genesis = burn_->OnTrustedPeerGenesisConfirmed();
     ASSERT_TRUE( genesis.has_value() );
     EXPECT_FALSE( burn_->IsEconomicallyReady() );
