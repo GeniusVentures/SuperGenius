@@ -141,9 +141,9 @@ private:
 class PublicChainInputValidatorTestAccess
 {
 public:
-    static bool Verify( const PublicChainInputValidator          &validator,
-                        const std::shared_ptr<GeniusTransaction> &tx,
-                        const std::string                        &source_reference )
+    static bool Verify( const PublicChainInputValidator &validator,
+                        const GeniusTransaction         &tx,
+                        const std::string               &source_reference )
     {
         return validator.VerifyPublicChainSmartContract( tx, source_reference );
     }
@@ -296,7 +296,7 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
     auto mint = std::make_shared<MintTransaction>(
         MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
 
-    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "A v2 (BridgeOutInitiated) burn receipt must pass witness validation";
 
     // 3. Negative control: a topic0 that is NOT in accepted_topic0_hashes is
@@ -307,7 +307,7 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
             return std::make_unique<FixedReceiptTransport>(
                 BuildValidReceiptJson( source_ref, kSepoliaContract, bogus_topic0 ) );
         } );
-    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "A receipt with an unknown topic0 must still be rejected";
 }
 
@@ -339,7 +339,7 @@ TEST( BridgeE2EChainlistTest, RuntimeFetchWiresEndpointsThatReachQuorum )
     auto mint = std::make_shared<MintTransaction>(
         MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
 
-    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "Runtime-fetched endpoints must reach the 75-weight quorum with no manual override";
 }
 
@@ -478,7 +478,7 @@ TEST( BridgeE2EChainlistTest, V2ReceiptPassesPastStaleV1OnlyOperatorEndpoint )
     auto mint = std::make_shared<MintTransaction>(
         MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
 
-    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "A v2 receipt must reach quorum on v1+v2 endpoints, skipping the stale v1-only endpoint";
 }
 
@@ -540,7 +540,7 @@ TEST( BridgeE2EChainlistTest, DuplicateUrlFetchedUpgradesExistingEndpointMetadat
     auto mint = std::make_shared<MintTransaction>(
         MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
 
-    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "The upgraded (v1+v2) high-weight endpoint must let a v2 receipt reach quorum";
 }
 
@@ -598,7 +598,7 @@ TEST( BridgeE2EChainlistTest, FetchedTopicSetUpgradesAllExistingEndpointsNotOnly
     auto mint = std::make_shared<MintTransaction>(
         MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
 
-    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, *mint, source_ref ) )
         << "The fetched {v1,v2} set must upgrade the non-duplicate private endpoint so a "
         << "v2 receipt reaches quorum (50 private + 25 public)";
 }

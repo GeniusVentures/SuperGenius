@@ -763,9 +763,9 @@ namespace
 
         sgns::IInputValidator::WitnessVerdict ValidateWitness(
             const sgns::ConsensusSubject &,
-            const std::shared_ptr<sgns::GeniusTransaction> &,
+            const sgns::GeniusTransaction &,
             const sgns::UTXOTxParameters &,
-            const std::shared_ptr<sgns::Blockchain> & ) const override
+            const sgns::Blockchain & ) const override
         {
             return verdict_;
         }
@@ -803,7 +803,7 @@ TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInval
     transaction->MakeSignature( *account_ );
     ASSERT_TRUE( transaction );
 
-    auto commitment = manager_->BuildUTXOTransitionCommitment( transaction );
+    auto commitment = manager_->BuildUTXOTransitionCommitment( *transaction );
     ASSERT_TRUE( commitment.has_value() );
     auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
                                                                transaction->GetNonce(),
@@ -814,14 +814,65 @@ TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInval
     ASSERT_TRUE( subject.has_value() );
 
     {
-        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), *transaction );
         EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::PENDING );
     }
     {
         validator.verdict_ = sgns::IInputValidator::WitnessVerdict::kInvalid;
-        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), transaction );
+        const auto result = manager_->ValidateWitnessForConsensus( subject.value(), *transaction );
         EXPECT_EQ( result, sgns::TransactionManager::WitnessValidationResult::INVALID );
     }
 
     sgns::IInputValidator::UnregisterIf( "witness-pending-chain", &validator );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, ConflictingSpendOfConsumedInputIsRejected )
+{
+    using Status = sgns::TransactionManager::TransactionStatus;
+    auto         apply = [this]( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+    {
+        return sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState( *manager_,
+                                                                                           transaction,
+                                                                                           Status::CONFIRMED );
+    };
+
+    auto mint = MakeTransaction( 0 );
+    ASSERT_FALSE( apply( mint ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
+
+    const auto mint_outpoint = sgns::base::Hash256::fromReadableString( mint->GetHash() );
+    ASSERT_TRUE( mint_outpoint.has_value() );
+
+    const std::string dest_a = "0x" + std::string( 64, 'a' );
+    const std::string dest_b = "0x" + std::string( 64, 'b' );
+
+    auto make_transfer = [&]( const std::string &destination )
+    {
+        sgns::InputUTXOInfo input;
+        input.txid_hash_  = mint_outpoint.value();
+        input.output_idx_ = 0;
+        input.signature_  = account_->Sign( input.SerializeForSigning() );
+        auto dag          = MakeDAG( account_->ReserveNextNonce(), mint->GetHash() );
+        auto transfer     = std::make_shared<sgns::TransferTransaction>(
+            sgns::TransferTransaction::New( std::vector{ std::move( input ) },
+                                            { sgns::OutputDestInfo{ 1, destination, kTokenId } },
+                                            std::move( dag ) ) );
+        transfer->MakeSignature( *account_ );
+        return transfer;
+    };
+
+    auto first = make_transfer( dest_a );
+    ASSERT_FALSE( apply( first ).has_error() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_a ), 1U );
+
+    // A conflicting transfer of the same input must be rejected without crediting its destination
+    auto second = make_transfer( dest_b );
+    EXPECT_TRUE( apply( second ).has_error() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_b ), 0U );
+
+    // Startup-style replay of the applied transfer finds its outputs already present and stays
+    // idempotent instead of being mistaken for a double spend
+    RecreateManager();
+    ASSERT_FALSE( apply( first ).has_error() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_a ), 1U );
 }

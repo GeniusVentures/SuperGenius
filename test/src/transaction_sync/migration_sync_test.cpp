@@ -15,6 +15,7 @@
 #include "account/MigrationInputValidator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -122,10 +123,11 @@ protected:
         // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
-                                           nodeTypeOverride.value_or( is_full_node ? "Full" : "Light" ),
-                                           /*is_processor=*/false,
-                                           /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                               nodeTypeOverride.value_or( is_full_node ? "Full" : "Light" ),
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               key_hex );
 
         auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
         return instance;
@@ -151,10 +153,11 @@ protected:
         // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                      /*node_type=*/"Full",
-                                      /*is_processor=*/false,
-                                      /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               FULL_NODE_KEY );
         auto instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
@@ -176,12 +179,8 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
 
-    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "Full node not synced" );
-    test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  readiness_message );
+    sgns::test::MakeNodeReadyWithLocalTrust( full_node, std::chrono::seconds( 100 ) );
+    sgns::test::MakeNodeReadyWithLocalTrust( node, std::chrono::seconds( 100 ) );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
 }
@@ -259,12 +258,8 @@ TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
     ASSERT_NE( client, nullptr );
     client->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "Full node not synced" );
-    test::assertWaitForCondition( [client] { return client->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "client node not ready" );
+    sgns::test::MakeNodeReadyWithLocalTrust( full_node, std::chrono::seconds( 100 ) );
+    sgns::test::MakeNodeReadyWithLocalTrust( client, std::chrono::seconds( 100 ) );
 
     // New() returns before the asynchronous migration finishes, so the mints below overlap it.
     // Reuses the node10 fixture; RemovePrefixedSubdirs drops previously-migrated DBs and preserves
@@ -284,9 +279,7 @@ TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
         (void) client->MintTokens( 100, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     }
 
-    test::assertWaitForCondition( [archive] { return archive->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "archive node did not finish migrating" );
+    sgns::test::MakeNodeReadyWithLocalTrust( archive, std::chrono::seconds( 100 ) );
 
     ASSERT_EQ( archive->GetNodeType(), GeniusNode::NodeType::Archive );
 

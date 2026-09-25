@@ -48,6 +48,17 @@ function(addtest_part test_name)
     target_link_libraries(${test_name}
         GTest::gtest
     )
+    # MSVC Debug defaults to /INCREMENTAL, leaving every test exe a .ilk next to
+    # its full debug PDB. With ~60 WHOLEARCHIVE test binaries those incremental
+    # databases exhausted the hosted CI runner's disk (LNK1116 error code 112 =
+    # ERROR_DISK_FULL, followed by LNK1140). Ninja relinks fully anyway, so
+    # incremental linking buys nothing here. target_link_options land after
+    # CMake's per-config defaults and link.exe honors the last switch, so this
+    # reliably overrides /INCREMENTAL. Lives in addtest_part (not addtest) so the
+    # one test that wires its own add_executable + addtest_part is covered too.
+    if(MSVC)
+        target_link_options(${test_name} PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+    endif()
 endfunction()
 
 function(addfuzztarget target_name)
