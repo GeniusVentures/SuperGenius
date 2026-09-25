@@ -43,6 +43,7 @@
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
 
+#include <ProofSystem/EthereumKeyGenerator.hpp>
 #include "account/ChainContractPair.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
@@ -372,6 +373,41 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         spdlog::info( "catchup_e2e: Anvil fork block = {}", s_fork_block );
     }
 
+    // PRE-NODE BURN SEEDING: derive the SGNS destination from the private key
+    // and send kNumCatchupBurns real bridgeOut() burns to the local Anvil fork
+    // BEFORE creating any node. The node's async init fires the catch-up scan on
+    // the io_context thread — if burns are seeded after node creation, the scan
+    // races ahead and misses them.
+    {
+        ethereum::EthereumKeyGenerator key_gen( kAnvilAccountHexKeys[0] );
+        const std::string              sgns_dest = key_gen.GetEntirePubValue();
+        spdlog::info( "catchup_e2e: derived SGNS destination {} from private key", sgns_dest.substr( 0, 16 ) );
+
+        // The burns above pay the source key's OWN public point. Seed the receiving
+        // account with that exact key so node_main (created FromPublicKey below)
+        // owns the burn recipient and the minted funds are spendable by it.
+        // NewFromPrivateKey's legacy derivation produces a different address and
+        // would never see these mints.
+        s_receiving_address = sgns::test::anvil::SeedAccountWithExactKey( kAnvilAccountHexKeys[0] );
+        ASSERT_FALSE( s_receiving_address.empty() )
+            << "Could not seed the receiving account with the exact burn-recipient key";
+        ASSERT_EQ( s_receiving_address, sgns_dest )
+            << "Seeded receiving account must own the burn destination";
+
+        spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
+        for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
+        {
+            const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                              static_cast<uint64_t>( kMintAmount ),
+                                                                              sgns_dest );
+            ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
+            s_pre_node_burn_hashes.push_back( tx_hash );
+            spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
+        }
+        ASSERT_EQ( s_pre_node_burn_hashes.size(), kNumCatchupBurns )
+            << "Did not seed the expected number of pre-node burns";
+    }
+
     // Per-node BaseWritePath from binary location (Plan 04.1-01 pattern), distinct subdirs.
     const std::string binary_path = boost::dll::program_location().parent_path().string();
     s_configs[0].BaseWritePath    = binary_path + kNode1Dir;
@@ -394,6 +430,66 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) + kAnvilRpcUrl +
                R"("],"status":"active"}])";
     };
+
+    // Create the Light nodes FIRST and register them as genesis validators before the
+    // Full node exists. A node starts initializing its blockchain inside New(), and
+    // EnsureValidatorRegistry() runs at blockchain construction — registering the
+    // genesis validator set AFTER construction races the async init and deadlocks the
+    // deferred blockchain start, so every address is derived up front here. The burn
+    // seeding happened BEFORE this point so the catch-up scan discovers the burns
+    // when it fires at READY. Each node carries a self-contained local trust policy
+    // (thresholds 1/1) so MakeNodeReadyWithLocalTrust can drive it to READY without
+    // a genesis ceremony.
+    const char *kWNodeType[] = { "Full", "Light", "Light" };
+
+    const std::string proc1_address =
+        sgns::test::TrustAddressFromPrivateKey( s_configs[1].BaseWritePath, kAnvilAccountHexKeys[1] );
+    ASSERT_FALSE( proc1_address.empty() ) << "Could not derive node_proc1 trust address";
+    const std::string proc2_address =
+        sgns::test::TrustAddressFromPrivateKey( s_configs[2].BaseWritePath, kAnvilAccountHexKeys[2] );
+    ASSERT_FALSE( proc2_address.empty() ) << "Could not derive node_proc2 trust address";
+
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { proc1_address, proc2_address } );
+    // node_main is loaded from the pre-seeded storage (see SeedAccountWithExactKey
+    // above) so its address IS the burn destination; the authorized-full-node and
+    // trust-policy entries must use that exact address, not the KDF address
+    // NewFromPrivateKey(kAnvilAccountHexKeys[0]) would derive.
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( s_receiving_address );
+    spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
+                  s_receiving_address.substr( 0, 16 ) );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig( s_configs[1].BaseWritePath,
+                                           kWNodeType[1],
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/true,
+                                           kAnvilAccountHexKeys[1] );
+    node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
+    ASSERT_NE( node_proc1, nullptr ) << "Failed to create node_proc1";
+    node_proc1->SetChainlistFetcher( chainlist_fetcher );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::test::WriteLocalTrustSgnsConfig( s_configs[2].BaseWritePath,
+                                           kWNodeType[2],
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/true,
+                                           kAnvilAccountHexKeys[2] );
+    node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
+    ASSERT_NE( node_proc2, nullptr ) << "Failed to create node_proc2";
+    node_proc2->SetChainlistFetcher( chainlist_fetcher );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::test::WriteTrustedSgnsConfig( s_configs[0].BaseWritePath,
+                                        kWNodeType[0],
+                                        /*is_processor=*/false,
+                                        /*rpc_catchup=*/true,
+                                        { s_receiving_address },
+                                        s_receiving_address,
+                                        /*membership_threshold=*/1,
+                                        /*burn_threshold=*/1 );
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
+    ASSERT_NE( node_main, nullptr ) << "Failed to create node_main";
+    node_main->SetChainlistFetcher( chainlist_fetcher );
 
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
     node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
