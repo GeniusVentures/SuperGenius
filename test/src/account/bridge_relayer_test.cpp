@@ -707,6 +707,36 @@ TEST( BridgeRelayerTest, V1DestinationIsBareHexMatchingGetAddressFormat )
         << "v1 destination must equal the input public key (GetAddress format)";
 }
 
+TEST( BridgeRelayerTest, V2DestinationMatchesGetAddressOrdering )
+{
+    // @regression v2 BridgeOutInitiated carries an X-only bytes32 (canonical
+    //             big-endian) plus a Y-parity flag. ParseBurnEventValues must
+    //             return the DecompressXOnlyPubkey output verbatim — canonical
+    //             big-endian X||Y, matching GetAddress(). It previously
+    //             byte-reversed each 32-byte half, a compensation for the old
+    //             evmrelay contract-order output that stranded every v2 mint
+    //             on reverse(X)||reverse(Y) — a recipient no node owns — after
+    //             the submodule's "preserve bridge destination byte order" bump.
+    const auto contract_x = ParseContractOrderX( kKnownXBigEndianHex );
+
+    std::vector<eth::abi::AbiValue> values;
+    values.push_back( eth::codec::Address{} );             // [0] sender
+    values.push_back( intx::uint256( 1 ) );                // [1] id
+    values.push_back( intx::uint256( 1 ) );                // [2] amount
+    values.push_back( intx::uint256( 11155111 ) );         // [3] srcChainID
+    values.push_back( intx::uint256( 8453 ) );             // [4] destChainID
+    values.push_back( contract_x );                        // [5] sgnsDestination (v2 X-only)
+    values.push_back( kKnownEvenYOdd );                    // [6] destinationYOdd
+
+    auto result = BridgeRelayer::ParseBurnEventValues( values );
+    ASSERT_TRUE( result.has_value() ) << "v2 values must parse successfully";
+    EXPECT_EQ( result.value().destination.size(), 128U )
+        << "v2 destination must be bare 128-char hex (no \"0x\" prefix)";
+    EXPECT_EQ( result.value().destination, kKnownDestinationHex )
+        << "v2 destination must equal DecompressXOnlyPubkey output verbatim "
+           "(canonical big-endian X||Y, GetAddress format)";
+}
+
 TEST( BridgeRelayerTest, V1DestinationRejectsEmptyPayload )
 {
     // @regression An empty v1 sgnsDestination must be rejected, not silently
