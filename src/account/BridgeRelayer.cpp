@@ -296,26 +296,19 @@ namespace sgns
                 BridgeRelayerLogger()->error( "ParseBurnEventValues: X-only decompression failed" );
                 return outcome::failure( std::errc::invalid_argument );
             }
-            // DecompressXOnlyPubkey renders both halves in CONTRACT byte order
-            // (little-endian) because its input X is contract order. GetAddress()
-            // and the v1 event payload are big-endian, so byte-reverse each
-            // 32-byte half before handing the destination to MintFunds —
-            // otherwise the mint credits a recipient no node owns.
+            // DecompressXOnlyPubkey (since the evmrelay "preserve bridge
+            // destination byte order" bump) treats its bytes32 input as canonical
+            // big-endian and returns big-endian X||Y — the exact ordering of
+            // GetAddress() and the v1 event payload. Use it verbatim; reversing
+            // the halves here (the old compensation for contract-order output)
+            // credits a recipient no node owns.
             if ( dest_opt->size() != 2 * kSgnsCoordinateHexChars )
             {
                 BridgeRelayerLogger()->error( "ParseBurnEventValues: decompressed destination has unexpected length {}",
                                               dest_opt->size() );
                 return outcome::failure( std::errc::invalid_argument );
             }
-            destination.reserve( dest_opt->size() );
-            for ( const auto half : { 0u, 1u } )
-            {
-                const auto begin = half * kSgnsCoordinateHexChars;
-                for ( unsigned int i = kSgnsCoordinateHexChars; i >= 2; i -= 2 )
-                {
-                    destination += dest_opt->substr( begin + i - 2, 2 );
-                }
-            }
+            destination = *dest_opt;
         }
         else
         {
