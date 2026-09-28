@@ -127,7 +127,7 @@ Last activity: 2026-09-03 — Milestone v3.0 completed and archived
 
 ### Pending Todos
 
-None yet.
+- 3 pending — see `.planning/todos/pending/`
 
 ### Blockers/Concerns
 

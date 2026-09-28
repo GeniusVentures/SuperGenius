@@ -3,6 +3,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/genius_node_test_access.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
@@ -49,11 +50,10 @@ namespace
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
-        // New() starts database initialization asynchronously. Let it finish before
-        // releasing the last node reference at the end of these short config tests.
-        test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                      std::chrono::seconds( 50 ),
-                                      "network-config test node did not finish initialization" );
+        // New() starts database initialization asynchronously. Let it finish (through the
+        // local trust setup) before releasing the last node reference at the end of these
+        // short config tests.
+        sgns::test::MakeNodeReadyWithLocalTrust( node );
     }
 } // namespace
 
@@ -66,10 +66,7 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
     auto       base       = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                       /*node_type=*/"Full",
-                                       /*is_processor=*/true,
-                                       /*rpc_catchup=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -93,10 +90,7 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     auto       base       = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/20000, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                       /*node_type=*/"Full",
-                                       /*is_processor=*/true,
-                                       /*rpc_catchup=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -114,10 +108,7 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
     auto       base       = MakeTempDir( "ncp_ephemeral_port" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                       /*node_type=*/"Full",
-                                       /*is_processor=*/true,
-                                       /*rpc_catchup=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -146,10 +137,11 @@ namespace
         auto       base       = MakeTempDir( dir );
         const auto dev_config = MakeDevConfig( base );
         WriteNetworkConfigWithMultiplier( dev_config.BaseWritePath, multiplier_literal );
-        sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
-                                           /*node_type=*/"Full",
-                                           /*is_processor=*/false,
-                                           /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               TEST_PRIVATE_KEY );
 
         auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
         EXPECT_NE( node, nullptr );

@@ -19,6 +19,7 @@ decisions:
   - "Migrated only the genesis-path VerifyUpdate signature check to multisig::VerifyPayloadSignature; left the two non-genesis certificate-path GeniusAccount::VerifySignature calls (ValidatorRegistry.cpp:1572, 1698) untouched, per D-02/D-03's narrow scope."
   - "Linked multisig directly into blockchain_genesis (not via securecrdt), per D-06."
   - "Did not add new test infrastructure for VerifyUpdate's reject-signature path — it is private/non-static with no existing harness; documented as a pre-existing gap rather than fabricating coverage."
+requirements-completed: [MIG-05, MIG-06]
 metrics:
   duration: "~1.5 hours (dominated by build configuration + 7 multi_account_test reps at ~2 min each)"
   completed: 2026-07-27

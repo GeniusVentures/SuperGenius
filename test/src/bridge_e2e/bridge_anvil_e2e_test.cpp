@@ -31,6 +31,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
@@ -328,10 +329,30 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath,
-                                           ( i == 0u ) ? "Full" : "Light",
-                                           /*is_processor=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( s_configs[i].BaseWritePath,
+                                               ( i == 0u ) ? "Full" : "Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/true,
+                                               kAnvilAccountHexKeys[i] );
     }
+
+    // Derive node addresses and register the genesis validator set BEFORE
+    // constructing any node: EnsureValidatorRegistry() runs at blockchain
+    // construction and only the already-authorized full node writes the genesis
+    // registry — setting it afterwards races the async init and deadlocks the
+    // deferred blockchain start.
+    std::array<std::string, kNodeCount> node_addresses;
+    for ( unsigned int i = 0u; i < kNodeCount; ++i )
+    {
+        node_addresses[i] =
+            sgns::test::TrustAddressFromPrivateKey( s_configs[i].BaseWritePath, kAnvilAccountHexKeys[i] );
+        ASSERT_FALSE( node_addresses[i].empty() );
+    }
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_addresses[0] );
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { node_addresses[1], node_addresses[2] } );
+    spdlog::info( "bridge_anvil: authorized full node = {}, +{} additional genesis validators",
+                  node_addresses[0].substr( 0, 16 ),
+                  kNodeCount - 1u );
 
     // Inject a chainlist fetcher that returns only the Anvil RPC endpoint, so
     // ChainRpcEndpointProvider::Initialize() queries the local fork instead of
@@ -367,11 +388,11 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
                   s_nodes[0]->GetAddress().substr( 0, 16 ),
                   kNodeCount - 1u );
 
-    // Bootstrap the PubSub mesh BEFORE waiting on READY. Reaching READY requires
-    // discovering the validator registry head over the network, so a peerless node
-    // stays in INITIALIZING_BLOCKCHAIN forever ("registry not initialized"). Nodes are
-    // written with auto_dht=false, so explicit AddPeers is the only peer source here.
-    spdlog::info( "bridge_anvil: bootstrapping PubSub mesh for {} processor nodes", kNodeCount - 1u );
+    // Wait for full node READY (reviewed local trust genesis + account-creation blocks).
+    sgns::test::MakeNodeReadyWithLocalTrust( s_nodes[0] );
+
+    spdlog::info( "bridge_anvil: full node [0] READY, bootstrapping PubSub mesh for {} processor nodes",
+                  kNodeCount - 1u );
 
     for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {
@@ -396,21 +417,10 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     spdlog::info( "bridge_anvil: full node [0] READY" );
 
     // Wait for all processor nodes to sync and reach READY.
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            for ( unsigned int i = 1u; i < kNodeCount; ++i )
-            {
-                if ( s_nodes[i]->GetState() != GeniusNode::NodeState::READY )
-                {
-                    return false;
-                }
-            }
-            return true;
-        },
-        kNodeReadyTimeout,
-        "processor nodes READY",
-        nullptr );
+    for ( unsigned int i = 1u; i < kNodeCount; ++i )
+    {
+        sgns::test::MakeNodeReadyWithLocalTrust( s_nodes[i] );
+    }
 
     spdlog::info( "bridge_anvil: {}-node cluster ready", kNodeCount );
 

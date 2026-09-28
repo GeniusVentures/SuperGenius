@@ -25,6 +25,7 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "account/GeniusAccount.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/remove_all.hpp"
@@ -129,10 +130,11 @@ protected:
                          } );
 
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                           isFullNode ? "Full" : "Light",
-                                           /*is_processor=*/false,
-                                           /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath,
+                                               isFullNode ? "Full" : "Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               key );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         // New starts PubSub synchronously in the constructor
@@ -257,12 +259,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     // covered by the READY poll below (no fixed sleep needed).
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
-    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_full not ready" );
-    test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_regular_1 not ready" );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_full );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_regular_1 );
 
     std::cout << "All nodes are ready and synchronized!" << std::endl;
 
@@ -302,15 +300,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     uint64_t mint_amount = 10000000000ULL;
 
-    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "full node not ready" );
-    test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "regular node 1 not ready" );
-    test::assertWaitForCondition( [&]() { return node_regular_2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "regular node 2 not ready" );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_full );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_regular_1 );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_regular_2 );
 
     auto balance_regular_1_before = node_regular_1->GetBalance();
     auto balance_regular_2_before = node_regular_2->GetBalance();

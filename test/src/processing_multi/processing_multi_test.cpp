@@ -23,11 +23,13 @@
 #include <boost/asio.hpp>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "FileManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
 class ProcessingMultiTest : public ::testing::Test
@@ -68,18 +70,32 @@ protected:
         // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_main ) );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG2.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/true,
+                                               /*rpc_catchup=*/false,
+                                               "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG3.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/true,
+                                               /*rpc_catchup=*/false,
+                                               "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
@@ -92,6 +108,9 @@ protected:
 
         bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
         node_proc1->AddPeers( bootstrappers );
+
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 ) );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 ) );
 
         // bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
         // node_proc2->AddPeers( bootstrappers );

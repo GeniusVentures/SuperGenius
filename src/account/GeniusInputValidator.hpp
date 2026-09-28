@@ -44,10 +44,10 @@ namespace sgns
          * @return True when the witness and transaction UTXO parameters are consistent.
          */
         IInputValidator::WitnessVerdict ValidateWitness(
-            const ConsensusSubject                   &subject,
-            const std::shared_ptr<GeniusTransaction> &tx,
-            const UTXOTxParameters                   &params,
-            const std::shared_ptr<Blockchain>        &blockchain ) const override;
+            const ConsensusSubject  &subject,
+            const GeniusTransaction &tx,
+            const UTXOTxParameters  &params,
+            const Blockchain        &blockchain ) const override;
 
         /**
          * @brief Genius-native validation requires consensus UTXO context.

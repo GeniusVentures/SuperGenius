@@ -32,7 +32,7 @@
 
 namespace sgns
 {
-    class AccountMessenger : public std::enable_shared_from_this<AccountMessenger>
+    class AccountMessenger
     {
     public:
         /**
@@ -304,6 +304,8 @@ namespace sgns
 
         void                                             WorkerLoop();
         void                                             EnqueueTask( RequestTask task );
+        void                                             AbandonTask( std::unique_lock<std::mutex> &lock,
+                                                                  RequestTask                                 task );
         outcome::result<uint64_t>                        PerformNonceRequest( std::chrono::milliseconds timeout,
                                                                               std::chrono::milliseconds silent_time );
         outcome::result<std::set<std::string>>           PerformBlockRequest( std::chrono::milliseconds timeout,

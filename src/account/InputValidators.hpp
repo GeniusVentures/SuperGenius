@@ -83,10 +83,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service used to resolve producer certificates when required.
          * @return True when the witness proves that @p params are valid for @p tx.
          */
-        virtual WitnessVerdict ValidateWitness( const ConsensusSubject                     &subject,
-                                                const std::shared_ptr<GeniusTransaction> &tx,
-                                                const UTXOTxParameters                     &params,
-                                                const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
+        virtual WitnessVerdict ValidateWitness( const ConsensusSubject  &subject,
+                                                const GeniusTransaction &tx,
+                                                const UTXOTxParameters  &params,
+                                                const Blockchain        &blockchain ) const = 0;
 
         /**
          * @brief Indicates whether this validator requires consensus-provided UTXO data.

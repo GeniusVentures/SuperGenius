@@ -36,6 +36,9 @@ namespace sgns::crdt
         virtual bool                        IsCIDInCache( const CID &cid ) const = 0;
         virtual outcome::result<void>       DeleteCIDBlock( const CID &cid )     = 0;
         virtual void                        Stop()                               = 0;
+        /// Stops the underlying graphsync server. Runs only after CRDT workers
+        /// have exited (see CrdtDatastore::StopSyncerAfterWorkerDrain).
+        virtual void                        StopSync()                           = 0;
         virtual IPFS::outcome::result<void> markResolved( const CID &cid )       = 0;
         virtual IPFS::outcome::result<bool> isResolved( const CID &cid ) const   = 0;
     };

@@ -1,26 +1,43 @@
 /**
  * @file       bridge_race_fault_rpc_test.cpp
- * @brief      Phase 8 D-08/D-09: RPC-endpoint disagreement still reaches correct quorum.
+ * @brief      Phase 8 D-08/D-09 rewritten for the cumulative slot-quorum model.
  * @date       2026-07-17
- * @author     Henrique A. Klein (hklein@gnus.ai)
+ * @author     Henrique A Klein (hklein@gnus.ai)
  *
- * Extends the Phase 5 Mock RPC Transport (via BuildDivergentSlotConfigs(), additive-only)
- * to prove the existing >75% weighted RPC quorum still reaches the correct mint decision
- * when the 3 configured quorum slots (1 DIRECT + 2 PUBLIC) genuinely disagree — one
- * returns wrong logs, one times out, one succeeds — rather than all 3 resolving to the
- * same real Anvil transport as every other test in this suite does. Every slot is served
- * by a MockRpcTransport here; only the DIRECT slot's URL string stays the real Anvil one,
- * for the reason documented on ConfigureDivergentQuorum().
+ * Quorum semantics under test (ValidatorRegistry::EvaluateSlotQuorum, D-02/D-03/D-06):
+ * a bridge mint's certificate only confirms when the cumulative slot sum STRICTLY
+ * exceeds ceil(3/4 * total voting reputation), where
+ *   - slot 0 (DIRECT) contributes at most 1/2 of a voter's weight,
+ *   - each PUBLIC slot group (>= 2 voters reporting the same slot hash) 1/4,
+ *   - and a vote's slot hashes are sha256(endpoint URL) for the endpoints whose
+ *     receipt verified THIS claim (weight >= 50 classifies as DIRECT).
+ * Cross-SLOT disagreement is therefore tolerated by design (each slot group is
+ * independent), while a missing slot permanently caps the reachable sum: with
+ * DIRECT absent the ceiling is 1/4+1/4 = 1/2 < 3/4, and evidence-level weight
+ * (GatherVerificationEvidence's >= 75 of endpoint consensus_weight) can NEVER
+ * substitute for the tally-level slot math.
  *
- * Two disagreement configurations are exercised:
- *  1. DIRECT succeeds alone (weight=100) while both PUBLIC slots disagree with each other
- *     and with DIRECT — quorum met via the DIRECT weight-100 shortcut.
- *  2. DIRECT disagrees (kWrongLogs) while both PUBLIC slots succeed and agree with each
- *     other — quorum met via PUBLIC-pair agreement (REQ-SLOT-03 dedup path), not the
- *     DIRECT shortcut.
+ * The pre-slot-model version of this suite asserted the opposite ("DIRECT
+ * weight-100 shortcut" / "PUBLIC pair 40+40 >= 75 reaches quorum alone") — both
+ * scenarios are structurally unreachable under the slot tally, which only
+ * passed historically because votes carried no slot hashes and the tally fell
+ * back to the single-pool model (before the #364 evidence binding).
+ *
+ * Two scenarios are exercised:
+ *  1. POSITIVE: three DISTINCT slot identities (real-Anvil DIRECT + two mock
+ *     PUBLIC URLs), every slot confirming — the slot groups disagree with each
+ *     other by construction, yet 1/2+1/4+1/4 = 100% > 3/4 reaches quorum and
+ *     the contested burn mints exactly once.
+ *  2. NEGATIVE: the DIRECT slot times out while both PUBLIC slots confirm.
+ *     Evidence stays valid (40+40=80 >= 75) and every node votes approve, but
+ *     the reachable slot sum is capped at 1/2 — the mint MUST fail closed: no
+ *     balance ever appears, and the node stays READY (liveness, not crash).
  */
 
 #include "bridge_race_fixture.hpp"
+
+#include <chrono>
+#include <thread>
 
 #include "src/mock/mock_rpc_config.hpp"
 #include "src/mock/mock_rpc_transport.hpp"
@@ -41,13 +58,19 @@ namespace
     /// @brief Per-PUBLIC-slot consensus weight.
     ///
     /// Must sit below PublicChainInputValidator's kDirectApiWeightThreshold (50) so both
-    /// slots stay PUBLIC, yet high enough that an agreeing pair alone clears
-    /// kRequiredConsensusWeight (75) — 40+40=80. GatherVerificationEvidence decides
-    /// `valid` purely from summed weight of the endpoints that confirmed the claim
-    /// (successful_public only populates evidence slots, it never adds weight), so the
-    /// weight-0 PUBLIC slots this replaced made the PUBLIC-pair scenario below
-    /// unreachable by construction: with DIRECT disagreeing, quorum was always 0/100.
+    /// slots stay PUBLIC (populating slot hashes 1/2, never slot 0), yet sum to
+    /// 40+40=80 >= kRequiredConsensusWeight (75) — that is the POINT of the
+    /// negative case below: evidence gathering succeeds and every node votes
+    /// approve, while the slot tally remains structurally short of quorum.
     constexpr uint8_t kPublicSlotWeight = 40;
+
+    /// @brief How long the negative case observes a fail-closed mint.
+    ///
+    /// The watcher polls every 15s and consensus rounds cycle in ~1s, so 30s
+    /// spans two full discovery/verification cycles. The quorum ceiling in that
+    /// scenario is structural (1/2 < 3/4), so the window only guards against a
+    /// mint arriving LATE through some path that bypasses the slot tally.
+    constexpr auto kFailCloseObservationWindow = std::chrono::seconds( 30 );
 
     /// @brief Install the 3-slot divergent TransportFactory on one node's
     ///        PublicChainInputValidator and configure the matching WeightedRpcEndpoint
@@ -70,9 +93,9 @@ namespace
                                    sgns::test::MockBehavior            public2_behavior )
     {
         const auto configs = sgns::test::BuildDivergentSlotConfigs( direct_behavior,
-                                                                     public1_behavior,
-                                                                     public2_behavior,
-                                                                     direct_url );
+                                                                    public1_behavior,
+                                                                    public2_behavior,
+                                                                    direct_url );
 
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
@@ -119,12 +142,12 @@ namespace
     }
 } // namespace
 
-TEST_F( BridgeRaceE2ETest, RpcDisagreementStillReachesCorrectQuorum )
+TEST_F( BridgeRaceE2ETest, AllSlotsDistinctStillReachesQuorum )
 {
-    const std::string dest_addr     = DeriveLightDestination( 2u );
+    const std::string dest_addr       = DeriveLightDestination( 2u );
     const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
 
-    spdlog::info( "bridge_race fault_rpc (DIRECT-succeeds-alone): dest={} initial_balance={}",
+    spdlog::info( "bridge_race fault_rpc (all-slots-distinct): dest={} initial_balance={}",
                   dest_addr.substr( 0, 16 ),
                   initial_balance );
 
@@ -134,50 +157,15 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementStillReachesCorrectQuorum )
         s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
     ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
 
-    // Case 1: DIRECT succeeds, one PUBLIC returns wrong logs, one PUBLIC times out.
-    // DIRECT alone (weight=100) is sufficient for quorum under this disagreement.
+    // All three slots confirm, each under a DISTINCT slot identity: slot 0 hashes the
+    // real Anvil URL (mock-served), slots 1/2 the mock://publicN URLs. The slot groups
+    // disagree with each other by construction — the cumulative model does not care,
+    // because each group is tallied independently: 1/2 + 1/4 + 1/4 = 100% > 3/4.
     for ( const auto &node : s_nodes )
     {
         ConfigureDivergentQuorum( node,
                                   s_anvil.RpcUrl(),
                                   sgns::test::MockBehavior::kSuccess,
-                                  sgns::test::MockBehavior::kWrongLogs,
-                                  sgns::test::MockBehavior::kTimeout );
-        ASSERT_FALSE( ::testing::Test::HasFatalFailure() );
-    }
-
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetBalance( dest_addr ) >= initial_balance + kMintAmount; },
-        BridgeRaceE2ETest::kRaceNodeReadyTimeout,
-        "node 0 must mint via DIRECT-succeeds-alone quorum despite PUBLIC-slot disagreement",
-        nullptr );
-
-    EXPECT_EQ( s_nodes[0]->GetBalance( dest_addr ), initial_balance + kMintAmount )
-        << "Mint must be exactly-once even under RPC-slot disagreement";
-}
-
-TEST_F( BridgeRaceE2ETest, RpcDisagreementPublicPairQuorumStillCorrect )
-{
-    const std::string dest_addr     = DeriveLightDestination( 3u );
-    const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
-
-    spdlog::info( "bridge_race fault_rpc (PUBLIC-pair-agrees-alone): dest={} initial_balance={}",
-                  dest_addr.substr( 0, 16 ),
-                  initial_balance );
-
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
-    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
-
-    // Case 2: DIRECT disagrees (kWrongLogs), both PUBLIC slots succeed and agree with
-    // each other — quorum must be reached via PUBLIC-pair agreement, exercising the
-    // WeightedRpcEndpoint dedup-based quorum path rather than the DIRECT weight-100
-    // shortcut.
-    for ( const auto &node : s_nodes )
-    {
-        ConfigureDivergentQuorum( node,
-                                  s_anvil.RpcUrl(),
-                                  sgns::test::MockBehavior::kWrongLogs,
                                   sgns::test::MockBehavior::kSuccess,
                                   sgns::test::MockBehavior::kSuccess );
         ASSERT_FALSE( ::testing::Test::HasFatalFailure() );
@@ -186,9 +174,51 @@ TEST_F( BridgeRaceE2ETest, RpcDisagreementPublicPairQuorumStillCorrect )
     EXPECT_WAIT_FOR_CONDITION(
         [&]() { return s_nodes[0]->GetBalance( dest_addr ) >= initial_balance + kMintAmount; },
         BridgeRaceE2ETest::kRaceNodeReadyTimeout,
-        "node 0 must mint via PUBLIC-pair-agrees-alone quorum despite DIRECT-slot disagreement",
+        "node 0 must mint via 1/2+1/4+1/4 slot sum despite the three slot identities disagreeing",
         nullptr );
 
     EXPECT_EQ( s_nodes[0]->GetBalance( dest_addr ), initial_balance + kMintAmount )
-        << "Mint must be exactly-once even under RPC-slot disagreement";
+        << "Mint must be exactly-once across distinct slot identities";
+}
+
+TEST_F( BridgeRaceE2ETest, DirectSlotFailureFailClosesMint )
+{
+    const std::string dest_addr       = DeriveLightDestination( 4u );
+    const uint64_t    initial_balance = s_nodes[0]->GetBalance( dest_addr );
+
+    spdlog::info( "bridge_race fault_rpc (DIRECT-slot-failure fail-close): dest={} initial_balance={}",
+                  dest_addr.substr( 0, 16 ),
+                  initial_balance );
+
+    // Same real-burn seeding as the positive case: discovery runs on a REAL transport
+    // against Anvil and is expected to succeed — the fault injected below must gate the
+    // mint at consensus, not at discovery.
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
+    ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
+
+    // The DIRECT slot times out; both PUBLIC slots confirm and agree (their receipts
+    // are identical — distinct slot hashes, same verified claim). Evidence gathering
+    // still succeeds (40+40=80 >= 75) so every node votes approve with slots 1/2
+    // populated, but slot 0 is never filled: the reachable slot sum is capped at
+    // 1/4+1/4 = 1/2 of voting reputation, strictly below the 3/4 quorum threshold.
+    // No number of approving votes can close that gap — the mint must fail closed.
+    for ( const auto &node : s_nodes )
+    {
+        ConfigureDivergentQuorum( node,
+                                  s_anvil.RpcUrl(),
+                                  sgns::test::MockBehavior::kTimeout,
+                                  sgns::test::MockBehavior::kSuccess,
+                                  sgns::test::MockBehavior::kSuccess );
+        ASSERT_FALSE( ::testing::Test::HasFatalFailure() );
+    }
+
+    // Actually elapse the observation window (a wait-for-false would return instantly):
+    // the balance must not move through two full watcher/consensus cycles.
+    std::this_thread::sleep_for( kFailCloseObservationWindow );
+
+    EXPECT_EQ( s_nodes[0]->GetBalance( dest_addr ), initial_balance )
+        << "Mint without a DIRECT slot must fail closed (1/2 slot ceiling < 3/4 quorum)";
+    EXPECT_EQ( s_nodes[0]->GetState(), GeniusNode::NodeState::READY )
+        << "Fail-close is a consensus gate, not a node failure — node 0 must stay READY";
 }

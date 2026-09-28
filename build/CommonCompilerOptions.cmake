@@ -20,6 +20,53 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(USE_CCACHE "Use ccache as compiler launcher when it is available" ON)
+
+# Ninja defaults to nproc+2 jobs; each of our TUs peaks at 1.2-1.8 GB and every
+# test link writes a ~700 MB debug binary, so on RAM-poor hosts a full build
+# swaps and steps run 2-30x slower than in isolation. Size the pools from RAM.
+cmake_host_system_information(RESULT _ram_mib QUERY TOTAL_PHYSICAL_MEMORY)
+cmake_host_system_information(RESULT _cores QUERY NUMBER_OF_LOGICAL_CORES)
+math(EXPR _compile_jobs "${_ram_mib} / 2048")
+if(_compile_jobs GREATER _cores)
+    set(_compile_jobs ${_cores})
+endif()
+if(_compile_jobs LESS 1)
+    set(_compile_jobs 1)
+endif()
+
+if(CMAKE_GENERATOR MATCHES "Ninja")
+    set_property(GLOBAL PROPERTY JOB_POOLS compile_pool=${_compile_jobs} link_pool=2)
+    set(CMAKE_JOB_POOL_COMPILE compile_pool)
+    set(CMAKE_JOB_POOL_LINK link_pool)
+    message(STATUS "Ninja job pools: compile=${_compile_jobs} link=2")
+elseif(CMAKE_GENERATOR MATCHES "Visual Studio")
+    # MSBuild has no job pools. With UseMultiToolTask and
+    # EnforceProcessCountAcrossBuilds (set in build/Windows/CMakeLists.txt)
+    # MultiProcMaxCount is a global cl.exe cap across all parallel projects;
+    # it defaults to the core count. Link concurrency stays bound only by /m.
+    if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)MultiProcMaxCount=")
+        list(APPEND CMAKE_VS_GLOBALS MultiProcMaxCount=${_compile_jobs})
+    endif()
+    message(STATUS "MSBuild MultiProcMaxCount=${_compile_jobs}")
+endif()
+
+option(USE_LLD "Use LLVM lld-link instead of link.exe (Visual Studio generators)" OFF)
+set(_DIRECTORY_BUILD_PROPS "")
+
+if(USE_LLD AND CMAKE_GENERATOR MATCHES "Visual Studio")
+    find_program(LLD_LINK_EXE lld-link)
+    if(LLD_LINK_EXE)
+        # link.exe beats lld-link on a single isolated link, but under MSBuild
+        # -m several links run concurrently and lld-link's smaller memory
+        # footprint wins: full test relink measured 4m14s vs 9m08s.
+        get_filename_component(LLD_LINK_DIR "${LLD_LINK_EXE}" DIRECTORY)
+        string(APPEND _DIRECTORY_BUILD_PROPS "    <LinkToolPath>${LLD_LINK_DIR}</LinkToolPath>\n    <LinkToolExe>lld-link.exe</LinkToolExe>\n")
+        message(STATUS "Using lld-link: ${LLD_LINK_EXE}")
+    else()
+        message(STATUS "USE_LLD requested but lld-link not found, using link.exe")
+    endif()
+endif()
+
 if(USE_CCACHE AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
@@ -29,6 +76,15 @@ if(USE_CCACHE AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
     else()
         message(STATUS "ccache not found, compiling without a compiler launcher")
     endif()
+endif()
+
+if(_DIRECTORY_BUILD_PROPS AND CMAKE_GENERATOR MATCHES "Visual Studio")
+    file(WRITE "${CMAKE_BINARY_DIR}/Directory.Build.props" "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">
+  <PropertyGroup>
+${_DIRECTORY_BUILD_PROPS}  </PropertyGroup>
+</Project>
+")
 endif()
 
 if (DEFINED SANITIZE_CODE)

@@ -32,7 +32,7 @@ namespace sgns
     /**
      * @brief   Executes a sequence of migration steps to update a CRDT store.
      */
-    class MigrationManager : public std::enable_shared_from_this<MigrationManager>
+    class MigrationManager
     {
     public:
         enum class Error : uint8_t

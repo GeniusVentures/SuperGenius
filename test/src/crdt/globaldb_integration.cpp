@@ -84,10 +84,8 @@ public:
         struct TestNode
         {
             std::string                                      basePath;
-            std::shared_ptr<boost::asio::io_context>         io;
             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub;
             std::shared_ptr<sgns::crdt::GlobalDB>            db;
-            std::thread                                      ioThread;
 
             TestNode()                                  = default;
             TestNode( const TestNode & )                = delete;
@@ -111,11 +109,10 @@ public:
             const auto startError = pubsub->Start( 0, {}, listenIp, {} ).get();
             ASSERT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
 
-            auto io        = std::make_shared<boost::asio::io_context>();
-            // Scheduler backend must share the pubsub host's io_context: graphsync
-            // writes yamux streams, and a scheduler on the private io (run on its own
-            // thread below) races WriteQueue cross-thread — the Debug-only
-            // `item.unsent > 0` assertion. Same fix as 405513df5/ce91566ed.
+            // GraphSync writes to libp2p streams from its scheduler thread, and libp2p
+            // is single-threaded per host, so the scheduler has to run on the host's
+            // io_context. A private one here races yamux's WriteQueue.
+            auto io        = pubsub->GetAsioContext();
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
                 std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
@@ -137,9 +134,7 @@ public:
             auto db = std::move( globaldb_ret.value() );
 
             db->Start();
-            std::thread t( [io]() { io->run(); } );
-            TestNode    node{ basePath, io, pubsub, db, std::move( t ) };
-            nodes_.push_back( std::move( node ) );
+            nodes_.push_back( TestNode{ basePath, pubsub, db } );
         }
 
         void connectNodes()
@@ -189,17 +184,8 @@ public:
                 {
                     node.db->ShutdownNow();
                 }
-                if ( node.io )
-                {
-                    node.io->stop();
-                }
-                if ( node.ioThread.joinable() )
-                {
-                    node.ioThread.join();
-                }
-                node.pubsub->Stop();
                 node.db.reset();
-                node.io.reset();
+                node.pubsub->Stop();
             }
 
             nodes_.clear();

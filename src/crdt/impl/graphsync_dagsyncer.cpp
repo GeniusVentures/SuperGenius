@@ -15,6 +15,16 @@ namespace
 {
     std::mutex              g_request_wait_mutex;
     std::condition_variable g_request_wait_cv;
+    // Longer than graphsync's own 3-minute activity sweep is pointless; shorter
+    // keeps a single dead peer from stalling replication for minutes.
+    constexpr auto kInProgressRequestTimeout = std::chrono::seconds( 120 );
+    // Hard wall-clock budget for one getNode across ALL route peers. getNode runs
+    // synchronously on the (single) CRDT DAG worker via FetchNodes, so a CID whose
+    // peers never deliver would otherwise pin every CRDT operation - consensus
+    // publishes, registrations, certificates - for kInProgressRequestTimeout per
+    // peer (120s x N). Expiring here fails the fetch; the datastore's failed-root
+    // retry ladder reschedules it with backoff while the worker keeps serving.
+    constexpr auto kTotalFetchTimeout = std::chrono::seconds( 20 );
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
@@ -216,8 +226,18 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto route_keys, GetRouteKeys( cid ) );
 
+        const auto fetch_deadline = std::chrono::steady_clock::now() + kTotalFetchTimeout;
+
         for ( const auto peer_key : route_keys )
         {
+            if ( std::chrono::steady_clock::now() >= fetch_deadline )
+            {
+                logger_->error( "Fetch for CID {} abandoned: total budget of {}s exhausted across route peers",
+                                cid.toString().value(),
+                                std::chrono::duration_cast<std::chrono::seconds>( kTotalFetchTimeout ).count() );
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
+            }
+
             BOOST_OUTCOME_TRY( auto peerEntry, GetPeerById( peer_key ) );
             auto &peerID  = peerEntry.first;
             auto &address = peerEntry.second;
@@ -370,6 +390,37 @@ namespace sgns::crdt
                         // Still in progress, keep waiting
                         ++in_progress_checks;
                         const auto now = std::chrono::steady_clock::now();
+                        // A response that never delivers its blocks stays IN_PROGRESS
+                        // indefinitely and would pin this (single) CRDT worker. Give up
+                        // on the peer and let the route failover / root retry handle it.
+                        if ( now - request_start_time >= kInProgressRequestTimeout )
+                        {
+                            logger_->error( "Request for CID {} from peer {} still IN_PROGRESS after {}s - giving up on peer",
+                                            cid.toString().value(),
+                                            peerID.toBase58(),
+                                            std::chrono::duration_cast<std::chrono::seconds>( now - request_start_time )
+                                                .count() );
+                            RecordCIDFailure( peerID, cid );
+                            ClearRequestStatus( cid );
+                            try_next_peer = true;
+                            break;
+                        }
+                        if ( now >= fetch_deadline )
+                        {
+                            // The whole-fetch budget is the binding bound: fail with
+                            // the same per-peer accounting so the retry ladder owns
+                            // the re-attempt, and stop walking further peers.
+                            logger_->error( "Fetch for CID {} exceeded the total {}s budget (last peer {}) - "
+                                            "giving up, root retry will reschedule",
+                                            cid.toString().value(),
+                                            std::chrono::duration_cast<std::chrono::seconds>( kTotalFetchTimeout )
+                                                .count(),
+                                            peerID.toBase58() );
+                            RecordCIDFailure( peerID, cid );
+                            ClearRequestStatus( cid );
+                            try_next_peer = true;
+                            break;
+                        }
                         if ( now >= next_in_progress_log_at )
                         {
                             const auto elapsed_seconds =
@@ -1082,9 +1133,13 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::IsConnectionFailureStatus( ResponseStatusCode code )
     {
+        // RS_TIMEOUT is deliberately excluded: a timeout means the peer was slow
+        // to answer (e.g. busy serving other requests), not that it is
+        // unconnectable. Blacklisting on timeout excludes the peer for an
+        // escalating backoff (up to 30 min) — fatal when it is the only route
+        // for a CID. Slow peers are handled by the CID-specific failure count.
         return code == ipfs_lite::ipfs::graphsync::RS_NO_PEERS ||
                code == ipfs_lite::ipfs::graphsync::RS_CANNOT_CONNECT ||
-               code == ipfs_lite::ipfs::graphsync::RS_TIMEOUT ||
                code == ipfs_lite::ipfs::graphsync::RS_CONNECTION_ERROR;
     }
 
