@@ -41,7 +41,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/RegistrationTransaction.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/proto/delta.pb.h"
