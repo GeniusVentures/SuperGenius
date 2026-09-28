@@ -134,6 +134,7 @@ target_link_libraries(elm_e2e_test
     SGProcessingProto
     genius_node_test
     json_secure_storage
+    ipfs-bitswap-cpp
 )
 
 if(MSVC)

@@ -7228,7 +7228,13 @@ namespace sgns
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
                 }
-                return outcome::success();
+                // Fall through to the function-wide notification below — the
+                // early `return` here starved AsyncWaitForTransactionOutgoing
+                // of its CONFIRMED signal: escrow payout waits always ended
+                // in a spurious 30s "timed out" even though consensus
+                // confirmed the transaction within seconds (04-05 bring-up,
+                // run18 evidence: confirmed 22:06:06, wait fired 22:06:32).
+                break;
             }
 
             break;

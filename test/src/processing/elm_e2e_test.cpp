@@ -24,16 +24,23 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <gtest/gtest.h>
+#include <libp2p/multi/content_identifier_codec.hpp>
 #include <nlohmann/json.hpp>
 
+#include <bitswap.hpp>
+
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "account/GeniusNode.hpp"
@@ -55,6 +62,68 @@ using namespace sgns;
 namespace fs = std::filesystem;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
+
+// TEMP-DIAG (04-05): print a native stack for REAL access violations only
+// (0xC0000005) — C++ exceptions (0xE06D7363) and OutputDebugString
+// (0x40010006) pass through untouched. Removed once the model-fetch-completion
+// flake is fixed.
+#if defined( _WIN32 )
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <dbghelp.h>
+
+namespace
+{
+    LONG CrashHandler( EXCEPTION_POINTERS *info )
+    {
+        if ( info->ExceptionRecord->ExceptionCode != 0xC0000005 )
+        {
+            return EXCEPTION_CONTINUE_SEARCH;
+        }
+        HANDLE process = GetCurrentProcess();
+        SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS );
+        SymInitialize( process, nullptr, TRUE );
+
+        void *frames[62];
+        WORD  count  = CaptureStackBackTrace( 0, 62, frames, nullptr );
+        fprintf( stderr, "\n===== AV CRASH at %p (rw=%lu va=%p) =====\n",
+                 info->ExceptionRecord->ExceptionAddress,
+                 static_cast<unsigned long>( info->ExceptionRecord->ExceptionInformation[0] ),
+                 reinterpret_cast<void *>( info->ExceptionRecord->ExceptionInformation[1] ) );
+        for ( WORD i = 0; i < count; ++i )
+        {
+            char                 symbolBuffer[sizeof( SYMBOL_INFO ) + 256] = {};
+            SYMBOL_INFO         *symbol       = reinterpret_cast<SYMBOL_INFO *>( symbolBuffer );
+            symbol->SizeOfStruct               = sizeof( SYMBOL_INFO );
+            symbol->MaxNameLen                 = 255;
+            DWORD64             displacement   = 0;
+            std::string         name           = "??";
+            if ( SymFromAddr( process, reinterpret_cast<DWORD64>( frames[i] ), &displacement, symbol ) )
+            {
+                name = std::string( symbol->Name, symbol->NameLen );
+            }
+            else
+            {
+                char buf[32];
+                snprintf( buf, sizeof( buf ), "%p", frames[i] );
+                name = buf;
+            }
+            fprintf( stderr, "  [%02u] %s+0x%llx\n", i, name.c_str(),
+                     static_cast<unsigned long long>( displacement ) );
+        }
+        fflush( stderr );
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    const bool crashHandlerInstalled = []()
+    {
+        AddVectoredExceptionHandler( 1, CrashHandler );
+        return true;
+    }();
+    [[maybe_unused]] const bool *crashHandlerInstalledGuard = &crashHandlerInstalled;
+} // namespace
+#endif
 
 namespace
 {
@@ -96,6 +165,15 @@ namespace
         std::string manifestSha256; // sha256 of the manifest bytes (declared hash)
     };
 
+    // Weak hook to the live fixture node (set by ElmE2eNode's constructor):
+    // Publish uses it to register the node as seed provider for every CID it
+    // publishes (single-node transport — no DHT, provider registry only).
+    std::weak_ptr<sgns::GeniusNode> &E2eNodeHook()
+    {
+        static std::weak_ptr<sgns::GeniusNode> hook;
+        return hook;
+    }
+
     // ONE long-lived io_context + runner for ALL publishes in the process:
     // per-publish contexts get destroyed while bitswap/DHT callbacks still
     // reference them (observed as a later access violation + node deadlock —
@@ -131,12 +209,39 @@ namespace
                 []( const FileManager::ResultType & ) {},
                 location );
 
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 180 );
-            while ( location->empty() && std::chrono::steady_clock::now() < deadline )
+            // Wait-condition idiom (no bare sleep): bounded poll on the
+            // location slot with a description naming the published file.
+            test::assertWaitForCondition( [ &location ] { return !location->empty(); },
+                                          std::chrono::milliseconds( 180000 ),
+                                          "ipfs publish never returned a location for " + fileName );
+            if ( location->empty() )
             {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+                return std::string();
             }
-            return location->empty() ? std::string() : *location;
+            // Single-node seed-provider registration (D-09 transport): the
+            // node's DHT is NOT started in this fixture (auto_dht=false), so
+            // DHT provider discovery would spin empty ("Empty provider
+            // list") until the TTL kills the task. Registering THIS node as
+            // a seed provider makes bitswap->GetProviders authoritative and
+            // StartFindingPeers serves the block locally. The location now
+            // carries the file path (ipfs://<cid>/<filename>) — the CID is
+            // the segment between the scheme and the first '/'.
+            if ( auto node = E2eNodeHook().lock(); node && node->GetBitswap() && location->rfind( "ipfs://", 0 ) == 0 )
+            {
+                const std::string afterScheme = location->substr( 7 );
+                const auto        slash        = afterScheme.find( '/' );
+                const std::string cidStr = slash == std::string::npos ? afterScheme : afterScheme.substr( 0, slash );
+                auto              cid     = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                if ( cid )
+                {
+                    node->GetBitswap()->AddProvider( cid.value(), node->GetPubSub()->GetHost()->getPeerInfo() );
+                }
+            }
+            // The saver reports a complete fetchable location including the
+            // path component (ipfs://<cid>/<filename>) — IPFSLoader's
+            // parseIPFSUrl requires exactly that shape (bring-up finding:
+            // bare ipfs://<cid> failed as "Invalid URL"). Use it verbatim.
+            return *location;
         }
     };
 
@@ -177,6 +282,28 @@ namespace
                                                /*node_type=*/"Full",
                                                /*is_processor=*/true,
                                                /*rpc_catchup=*/false );
+            // Diagnosability (04-05): raise the queue/engine/CRDT loggers to
+            // debug in the node's file sink (sgnslog*.log) so bring-up
+            // failures leave grab/lock/sync evidence on disk even when the
+            // console stream is lost to redirection fragmentation.
+            {
+                std::ofstream logCfg( ( path / "log_config.json" ).string() );
+                logCfg << R"({"loggers":{)"
+                       R"("ProcessingEngine":"debug",)"
+                       R"("ProcessingSubTaskQueueManager":"debug",)"
+                       R"("SubTaskQueueAccessorImpl":"debug",)"
+                       R"("TaskQueueImpl":"debug",)"
+                       R"("SGProcessor":"debug",)"
+                       R"("SGProcessingManager":"debug",)"
+                       R"("Bitswap":"debug",)"
+                       R"("IPFSCommon":"debug",)"
+                       R"("IPFSLoader":"debug",)"
+                       R"("IPFSSaver":"info",)"
+                       R"("FileManager":"debug",)"
+                       R"("TransactionManager":"debug",)"
+                       R"("SuperGeniusNode":"debug")"
+                       R"(}})";
+            }
             sgns::GeniusAccount::SetSecureStorageFactory(
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage> {
                     return std::make_shared<MemorySecureStorage>( identifier );
@@ -186,6 +313,7 @@ namespace
                 sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
             node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
+            E2eNodeHook() = node_;
             assert( node_ != nullptr );
             test::assertWaitForCondition( [&] { return node_->GetState() == sgns::GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 4000000 ),
@@ -319,7 +447,12 @@ TEST_F( ElmE2eNode, EmptyCacheTwoWorkItemE2E )
     // Rebuild the job JSON with the REAL prompt uris (the helper stamps
     // placeholders; patch them here to keep the helper simple).
     std::string jobJson = BuildE2eJobJson( fixture, /*fundingHours=*/1.0, 2 );
-    jobJson             = nlohmann::json::parse( jobJson ).dump(); // round-trip sanity
+    {
+        auto j = nlohmann::json::parse( jobJson );
+        j["elms"][0]["input_uri"] = prompt1;
+        j["elms"][1]["input_uri"] = prompt2;
+        jobJson                   = j.dump();
+    }
 
     ASSERT_TRUE(
         node_->MintTokens( 50000000000, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", sgns::GeniusNode::TIMEOUT_MINT )
@@ -329,23 +462,50 @@ TEST_F( ElmE2eNode, EmptyCacheTwoWorkItemE2E )
     auto submit = node_->ProcessImage( jobJson );
     ASSERT_TRUE( submit.has_value() ) << "E2E submit failed, error code "
                                       << static_cast<int>( submit.error().value() );
-    const std::string taskId = submit.value();
+    // ProcessImage returns the ESCROW TX HASH; task results are keyed by the
+    // task uuid (bring-up finding: GetTaskResult polled the wrong id and
+    // timed out against a green pipeline). Resolve via GetMyTaskIds — the
+    // newest tracked id is this submission's uuid.
+    const std::string escrowTxId = submit.value();
+    std::string        taskId;
+    test::assertWaitForCondition(
+        [&] {
+            const auto ids = node_->GetMyTaskIds( 1, 0 );
+            if ( !ids.empty() && !ids.front().empty() )
+            {
+                taskId = ids.front();
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 10000 ),
+        "submitted task id never appeared in GetMyTaskIds" );
+    ASSERT_FALSE( taskId.empty() );
+    (void) escrowTxId;
 
     // Wait for completion: GetTaskResult returns a result with both subtask
     // results (model download is the long pole — generous bound).
     SGProcessing::TaskResult taskResult;
+    bool                       gotResult = false;
     test::assertWaitForCondition(
         [&] {
             auto result = node_->GetTaskResult( taskId );
             if ( result.has_value() && result.value().subtask_results_size() == 2 )
             {
                 taskResult = result.value();
+                gotResult  = true;
                 return true;
             }
             return false;
         },
         std::chrono::milliseconds( 900000 ),
         "E2E task never completed with 2 results" );
+    // assertWaitForCondition records FATAL but returns — guard the access
+    // (same SEH-on-OOB hazard as leg 2's bring-up finding).
+    if ( !gotResult )
+    {
+        return;
+    }
 
     // Per-result assertions.
     std::map<std::string, nlohmann::json> envelopes;
@@ -357,24 +517,52 @@ TEST_F( ElmE2eNode, EmptyCacheTwoWorkItemE2E )
         EXPECT_EQ( result.ipfs_results_data_id().substr( 0, 7 ), "ipfs://" );
 
         // Fetch the artifact and parse the envelope.
+        // Bring-up fix (04-05): the bitswap completion is posted onto this
+        // ioc from the node's threads — a bare run() can drain and return
+        // before that post arrives (same race fixed at the worker's save
+        // branch). Drain under a work guard; cv-bounded wait.
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<char> collected;
-        bool ok = false;
+        auto done       = std::make_shared<std::atomic_bool>( false );
+        auto waitState  = std::make_shared<std::pair<std::mutex, std::condition_variable>>();
         FileManager::GetInstance().LoadASync(
             result.ipfs_results_data_id(),
             false,
             false,
             ioc,
-            [ &collected, &ok ]( FileManager::ResultType buffers ) {
+            [ &collected, done, waitState ]( FileManager::ResultType buffers ) {
                 if ( buffers && !buffers.value()->second.empty() )
                 {
                     collected = buffers.value()->second.front();
-                    ok        = true;
                 }
+                done->store( true );
+                {
+                    std::lock_guard<std::mutex> lock( waitState->first );
+                }
+                waitState->second.notify_all();
             },
             "file" );
-        ioc->run();
-        ASSERT_TRUE( ok ) << "envelope artifact fetch failed";
+        {
+            auto guard = boost::asio::make_work_guard( *ioc );
+            std::thread drainer( [ioc, done]()
+            {
+                while ( !done->load() )
+                {
+                    ioc->reset();
+                    ioc->run();
+                }
+            } );
+            std::unique_lock<std::mutex> lock( waitState->first );
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 120 );
+            ASSERT_TRUE( waitState->second.wait_until( lock, deadline, [&] { return done->load(); } ) )
+                << "envelope artifact fetch timed out";
+            guard.reset();
+            if ( drainer.joinable() )
+            {
+                drainer.join();
+            }
+        }
+        ASSERT_FALSE( collected.empty() ) << "envelope artifact fetch failed";
         const auto envelope = nlohmann::json::parse( collected.begin(), collected.end() );
 
         const std::string wid = envelope.at( "work_item_id" ).get<std::string>();
@@ -433,7 +621,13 @@ TEST_F( ElmE2eNode, EmptyCacheTwoWorkItemE2E )
                                                  envelope.at( "finish_time_usec" ).get<int64_t>() } );
         }
         const auto    split   = ElmWindowsToShares( windows, 300 );
-        const uint64_t refund = split.refundMinions;
+        // Mirror the chain's post-burn escrow math (BuildPayoutOutputs): the
+        // splittable pool is escrow − burn(1% default basis points), and
+        // refundMinions is computed on THAT pool — recomputing on the full
+        // 300 overstates the refund by the burn and fails the poll.
+        const uint64_t burnBasisPoints = 100; // TransactionManager::BURN_BASIS_POINTS_DEFAULT
+        const uint64_t burn            = 300 * burnBasisPoints / 10000;
+        const uint64_t refund          = ElmWindowsToShares( windows, 300 - burn ).refundMinions;
         EXPECT_GT( refund, 0u ) << "D-05: measured windows are far below the 1h budget — refund must be non-trivial";
         // The escrow source (this node's own address) receives the refund:
         // balance recovery of at least refund minions post-payout.
@@ -460,35 +654,73 @@ TEST_F( ElmE2eNode, OvertimeLegCancelledNoReGrab )
 
     const auto fixture = PublishStagedBundle( modelDir );
     ASSERT_FALSE( fixture.manifestUri.empty() );
+    std::fprintf( stderr, "[ELMDBG] leg2: bundle published\n" );
+
+    // Publish the REAL prompt uri and patch the job JSON (the helper stamps
+    // a placeholder input_uri; the worker's input fetch needs a resolvable
+    // ipfs:// uri or the subtask errors out with "Could not get input").
+    const std::string promptUri = PublishPrompt( "Hello, overtime.", "prompt-overtime.txt" );
+    ASSERT_FALSE( promptUri.empty() );
 
     // Tiny-but-fundable funding: 0.005h = 18s deadline, 5 milli-hours -> 1
     // minion escrow (0.001h would price at 0 minions and reject
     // PROCESS_COST_ERROR before any deadline could matter — the Phase 1
     // cost matrix's sub-4-milli-hour row). 18s reliably precedes a cold
     // ~557MB model download + generation.
-    const std::string jobJson = BuildE2eJobJson( fixture, /*fundingHours=*/0.005, 1 );
+    const std::string jobJson = [&] {
+        auto j = nlohmann::json::parse( BuildE2eJobJson( fixture, /*fundingHours=*/0.005, 1 ) );
+        j["elms"][0]["input_uri"] = promptUri;
+        return j.dump();
+    }();
+    std::fprintf( stderr, "[ELMDBG] leg2: job json built (%zu bytes)\n", jobJson.size() );
 
     ASSERT_TRUE(
         node_->MintTokens( 50000000000, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", sgns::GeniusNode::TIMEOUT_MINT )
             .has_value() );
+    std::fprintf( stderr, "[ELMDBG] leg2: mint ok\n" );
 
     auto submit = node_->ProcessImage( jobJson );
+    std::fprintf( stderr, "[ELMDBG] leg2: submit returned %s\n",
+                  submit.has_value() ? "ok" : ( "err:" + std::to_string( static_cast<int>( submit.error().value() ) ) ).c_str() );
     ASSERT_TRUE( submit.has_value() );
-    const std::string taskId = submit.value();
+    // Same id semantics as leg 1: escrow hash vs task uuid (GetMyTaskIds).
+    std::string taskId;
+    test::assertWaitForCondition(
+        [&] {
+            const auto ids = node_->GetMyTaskIds( 1, 0 );
+            if ( !ids.empty() && !ids.front().empty() )
+            {
+                taskId = ids.front();
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 10000 ),
+        "[leg2] submitted task id never appeared in GetMyTaskIds" );
+    ASSERT_FALSE( taskId.empty() );
 
     SGProcessing::TaskResult taskResult;
+    bool                       gotResult = false;
     test::assertWaitForCondition(
         [&] {
             auto result = node_->GetTaskResult( taskId );
             if ( result.has_value() && result.value().subtask_results_size() == 1 )
             {
                 taskResult = result.value();
+                gotResult  = true;
                 return true;
             }
             return false;
         },
         std::chrono::milliseconds( 900000 ),
         "overtime task never reached a terminal result" );
+    // assertWaitForCondition records a FATAL gtest failure on timeout but
+    // RETURNS — guard the result access so a timeout fails the test instead
+    // of crashing on an unset TaskResult (SEH on OOB observed bring-up).
+    if ( !gotResult )
+    {
+        return;
+    }
 
     // The terminal envelope is CANCELLED (deadline fired via the cancel token).
     const auto &result = taskResult.subtask_results( 0 );

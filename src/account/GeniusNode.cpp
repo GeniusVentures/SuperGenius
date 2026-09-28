@@ -5,8 +5,11 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <future>
+#include <mutex>
 #include <stdexcept>
 #include <thread>
 #include <memory>
@@ -3105,26 +3108,63 @@ namespace sgns
                         }
                         std::vector<uint8_t> envelopeBytes;
                         {
-                            auto             freshContext = std::make_shared<boost::asio::io_context>();
+                            // Bring-up fix (04-05): same completion-post race as
+                            // the worker's fetch sites — the bitswap completion
+                            // is posted onto this context from the node's
+                            // threads AFTER a bare run() can drain and return;
+                            // the scope then destroys the context while the
+                            // late post is in flight (UAF; suspected teardown
+                            // 0xC0000005) and the fetch reports empty
+                            // ("no window" — even-split fallback). Drain on a
+                            // helper thread under a work guard with a bounded
+                            // cv wait, mirroring ElmArtifactFetcher.
+                            auto freshContext = std::make_shared<boost::asio::io_context>();
                             std::vector<char> collected;
-                            bool             fetchSucceeded = false;
+                            auto done          = std::make_shared<std::atomic_bool>( false );
+                            auto waitState     = std::make_shared<std::pair<std::mutex, std::condition_variable>>();
                             FileManager::GetInstance().LoadASync(
                                 artifactUri,
                                 false,
                                 false,
                                 freshContext,
-                                [ &collected, &fetchSucceeded ]( FileManager::ResultType buffers )
+                                [ &collected, done, waitState ]( FileManager::ResultType buffers )
                                 {
                                     if ( buffers && !buffers.value()->second.empty() )
                                     {
                                         collected.insert( collected.end(),
                                                           buffers.value()->second.front().begin(),
                                                           buffers.value()->second.front().end() );
-                                        fetchSucceeded = true;
                                     }
+                                    done->store( true );
+                                    {
+                                        std::lock_guard<std::mutex> lock( waitState->first );
+                                    }
+                                    waitState->second.notify_all();
                                 },
                                 "file" );
-                            freshContext->run();
+                            {
+                                auto guard = boost::asio::make_work_guard( *freshContext );
+                                std::thread drainer( [freshContext, done]()
+                                {
+                                    while ( !done->load() )
+                                    {
+                                        freshContext->reset();
+                                        freshContext->run();
+                                    }
+                                } );
+                                std::unique_lock<std::mutex> lock( waitState->first );
+                                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 30 );
+                                if ( !waitState->second.wait_until( lock, deadline, [&] { return done->load(); } ) )
+                                {
+                                    done->store( true ); // release the drainer
+                                }
+                                guard.reset();
+                                if ( drainer.joinable() )
+                                {
+                                    drainer.join();
+                                }
+                            }
+                            const bool fetchSucceeded = !collected.empty() && done->load();
                             if ( !fetchSucceeded )
                             {
                                 node_logger_->warn(
@@ -3522,9 +3562,15 @@ namespace sgns
 
         sgns::crdt::HierarchicalKey key( escrow_path + "/elm_rate" );
 
+        // Dump ONCE into a named local — two rateRecord.dump() calls return
+        // two different temporaries; a vector range-built from iterators of
+        // DIFFERENT objects computes a garbage distance and intermittently
+        // throws std::length_error ("vector too long") depending on where
+        // the temporaries land in memory (04-05 bring-up root cause).
+        const std::string dumped = rateRecord.dump();
         BOOST_OUTCOME_TRY( crdt_transaction->Put(
             std::move( key ),
-            sgns::base::Buffer( std::vector<uint8_t>( rateRecord.dump().begin(), rateRecord.dump().end() ) ) ) );
+            sgns::base::Buffer( std::vector<uint8_t>( dumped.begin(), dumped.end() ) ) ) );
 
         return crdt_transaction;
     }

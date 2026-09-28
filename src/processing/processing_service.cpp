@@ -377,6 +377,49 @@ namespace sgns::processing
 
             auto weakSelf = weak_from_this();
 
+            // Phase 04-05 (E2E bring-up): ELM jobs scale the node TTL to the
+            // derived lock timeout (deadline + 60s grace) at THIS site too —
+            // the single-node E2E accepts its own channel through here, and
+            // the hardcoded 2-minute TTL killed mid-download. Mirrors the
+            // derivation at the CreateSubTaskQueue site below; non-ELM jobs
+            // keep the 2-minute default (derived == zero => default stands).
+            std::chrono::seconds nodeTtl( std::chrono::minutes( 2 ) );
+            {
+                std::scoped_lock lockPending( m_mutexNodes, m_mutexPendingCreation );
+                if ( m_pendingTask.has_value() && !m_pendingTask.value().json_data().empty() )
+                {
+                    try
+                    {
+                        auto taskJson = nlohmann::json::parse( m_pendingTask.value().json_data() );
+                        sgns::SgnsProcessing parsed;
+                        sgns::from_json( taskJson, parsed );
+                        const auto jobTypeOpt = parsed.get_job_type();
+                        if ( jobTypeOpt && jobTypeOpt.value() == sgns::JobType::ELM_PROCESSING )
+                        {
+                            double hours = 1.0; // D-04 default
+                            if ( parsed.get_funding() )
+                            {
+                                hours = parsed.get_funding()->get_maximum_processing_hours().value_or( 1.0 );
+                            }
+                            if ( hours <= 0.0 || hours > sgns::processing::kMaxProcessingHoursCap )
+                            {
+                                hours = 1.0;
+                            }
+                            nodeTtl = std::chrono::duration_cast<std::chrono::seconds>(
+                                sgns::processing::DeriveElmClocks( hours ).lockTimeout );
+                            m_logger->debug( "[{}] ELM job: node TTL scaled to {} s from {}h",
+                                             node_address_,
+                                             nodeTtl.count(),
+                                             hours );
+                        }
+                    }
+                    catch ( const std::exception & )
+                    {
+                        // Not an ELM derivation source; default TTL stands.
+                    }
+                }
+            }
+
             auto node = ProcessingNode::New(
                 m_gossipPubSub,
                 m_subTaskResultStorage,
@@ -403,7 +446,10 @@ namespace sgns::processing
                     }
                 },
                 node_address_,
-                channelId );
+                channelId,
+                {} /*subTasks — attached via AttachTo/CreateSubTaskQueue elsewhere*/,
+                std::chrono::milliseconds( 2000 ),
+                nodeTtl );
 
             if ( node != nullptr )
             {
@@ -692,6 +738,14 @@ namespace sgns::processing
     {
         std::string                      subTaskQueueId;
         std::list<SGProcessing::SubTask> subTasks;
+        // Phase 04-05 (E2E bring-up fix): capture the pending task BEFORE the
+        // clear below — the ELM lock-timeout derivation + node-TTL scaling a
+        // few dozen lines down read m_pendingTask, which the clear used to
+        // empty first, silently killing the Phase 01-03 FUND-02 wiring
+        // (derived lock timeout was ALWAYS zero after the intent-negotiation
+        // reshuffle; observed as the 15s-default lock + 2-minute TTL in the
+        // single-node E2E).
+        std::optional<SGProcessing::Task> pendingTaskCopy;
 
         {
             std::lock_guard lockCreation( m_mutexPendingCreation );
@@ -703,8 +757,12 @@ namespace sgns::processing
                 return;
             }
 
-            subTaskQueueId = m_pendingSubTaskQueueId;
-            subTasks       = m_pendingSubTasks;
+            subTaskQueueId    = m_pendingSubTaskQueueId;
+            subTasks          = m_pendingSubTasks;
+            if ( m_pendingTask.has_value() )
+            {
+                pendingTaskCopy = m_pendingTask.value();
+            }
 
             // Check if we still have the lowest address
             if ( !HasLowestAddress() )
@@ -763,11 +821,11 @@ namespace sgns::processing
         // BEFORE CreateSubTaskQueue. Non-ELM / malformed json => zero duration
         // ("not derived") => no SetProcessingTimeout call => 15s default (SC-5).
         std::chrono::system_clock::duration derivedTimeout( std::chrono::seconds( 0 ) );
-        if ( m_pendingTask.has_value() && !m_pendingTask.value().json_data().empty() )
+        if ( pendingTaskCopy.has_value() && !pendingTaskCopy.value().json_data().empty() )
         {
             try
             {
-                auto taskJson = nlohmann::json::parse( m_pendingTask.value().json_data() );
+                auto taskJson = nlohmann::json::parse( pendingTaskCopy.value().json_data() );
                 sgns::SgnsProcessing parsed;
                 sgns::from_json( taskJson, parsed );
                 const auto jobTypeOpt = parsed.get_job_type();
@@ -798,6 +856,7 @@ namespace sgns::processing
             }
         }
         m_pendingTask.reset();
+        (void) pendingTaskCopy; // consumed above (derivation read the copy)
 
         auto node = ProcessingNode::New(
             m_gossipPubSub,
@@ -828,7 +887,16 @@ namespace sgns::processing
             subTaskQueueId,
             subTasks,
             std::chrono::milliseconds( 2000 ),
-            std::chrono::minutes( 2 ),
+            // Phase 04-05 (E2E bring-up): ELM jobs scale the node TTL to the
+            // derived lock timeout (deadline + 60s grace) so a cold ~557MB
+            // model download + generation + publication fits inside the
+            // node's lifetime. The hardcoded 2 minutes predates ELM and was
+            // killing mid-download ("TTL expired ... Self-destructing" at
+            // exactly 120s). Non-ELM jobs: derivedTimeout is zero => the
+            // legacy 2-minute TTL stands unchanged (byte-identical path).
+            derivedTimeout.count() > 0
+                ? std::chrono::duration_cast<std::chrono::seconds>( derivedTimeout )
+                : std::chrono::minutes( 2 ),
             derivedTimeout );
 
         if ( node != nullptr )

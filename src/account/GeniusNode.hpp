@@ -773,6 +773,17 @@ namespace sgns
         }
 
         /**
+         * @brief Returns the node's bitswap instance (read-only access for
+         *        provider registration; e.g. single-node tests registering
+         *        the local node as seed provider for published CIDs).
+         * @return Shared bitswap instance; null before InitContentExchange.
+         */
+        std::shared_ptr<ipfs_bitswap::Bitswap> GetBitswap() const
+        {
+            return bitswap_;
+        }
+
+        /**
          * @brief Returns the shared GraphSync network used by the node's GlobalDBs.
          * @return Shared graphsync Network instance; inbound graphsync for this
          *         host is dispatched through its registered protocol handler.
