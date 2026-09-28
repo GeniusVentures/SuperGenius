@@ -40,6 +40,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/offline_chainlist.hpp"
+#include "testutil/local_trust_setup.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -215,10 +216,14 @@ public:
 
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
-                                           /*node_type=*/"Full",
-                                           /*is_processor=*/true,
-                                           /*rpc_catchup=*/false );
+        // Post-develop-merge (2026-09-28): trust fail-closed gate requires an
+        // explicit trust policy — single-node local trust (self as sole
+        // trusted peer + bootstrapper, thresholds 1/1).
+        sgns::test::WriteLocalTrustSgnsConfig( path,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/true,
+                                               /*rpc_catchup=*/false,
+                                               /*private_key_hex=*/"90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" );
 
         sgns::GeniusAccount::SetSecureStorageFactory(
             []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage> {
@@ -231,9 +236,13 @@ public:
         node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
-        test::assertWaitForCondition( [&] { return node_->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 4000000 ),
-                                      "node not synced" );
+        sgns::test::MakeNodeReadyWithLocalTrust( node_ );
+        if ( node_->GetState() != sgns::GeniusNode::NodeState::READY )
+        {
+            std::fprintf( stderr,
+                          "[ELMDBG] ElmSubmitNode boot failed post-trust-migration; state=%d\n",
+                          static_cast<int>( node_->GetState() ) );
+        }
     }
 
     std::shared_ptr<sgns::GeniusNode> node_;

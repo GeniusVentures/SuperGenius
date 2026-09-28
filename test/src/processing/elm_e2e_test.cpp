@@ -56,6 +56,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/offline_chainlist.hpp"
+#include "testutil/local_trust_setup.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -278,10 +279,16 @@ namespace
             }
             boost::filesystem::create_directories( path );
             sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
-                                               /*node_type=*/"Full",
-                                               /*is_processor=*/true,
-                                               /*rpc_catchup=*/false );
+            // Post-develop-merge (2026-09-28): the trust fail-closed gate
+            // (FATAL_TRUST_MISMATCH when no trust policy exists — 674db31cf)
+            // blocks the legacy WriteSgnsConfig boot. Single-node local
+            // trust: this node's own account is the sole trusted peer +
+            // bootstrapper, thresholds 1/1 (the account_management pattern).
+            sgns::test::WriteLocalTrustSgnsConfig( path,
+                                                   /*node_type=*/"Full",
+                                                   /*is_processor=*/true,
+                                                   /*rpc_catchup=*/false,
+                                                   /*private_key_hex=*/"90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" );
             // Diagnosability (04-05): raise the queue/engine/CRDT loggers to
             // debug in the node's file sink (sgnslog*.log) so bring-up
             // failures leave grab/lock/sync evidence on disk even when the
@@ -315,9 +322,19 @@ namespace
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
             E2eNodeHook() = node_;
             assert( node_ != nullptr );
-            test::assertWaitForCondition( [&] { return node_->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 4000000 ),
-                                          "node not synced" );
+            // Trust-lifecycle boot (develop merge): drive through
+            // WAITING_FOR_TRUST_GENESIS via the local genesis approval
+            // instead of the removed direct-READY path. (No ASSERT in the
+            // constructor — gtest ctor failures are fatal-by-return; the
+            // helper's internal ASSERT_NO_FATAL_FAILURE records any boot
+            // failure and the first test body's READY check trips on it.)
+            sgns::test::MakeNodeReadyWithLocalTrust( node_ );
+            if ( node_->GetState() != sgns::GeniusNode::NodeState::READY )
+            {
+                std::fprintf( stderr,
+                              "[ELMDBG] node boot failed post-trust-migration; state=%d\n",
+                              static_cast<int>( node_->GetState() ) );
+            }
         }
 
         std::shared_ptr<sgns::GeniusNode> node_;
