@@ -82,6 +82,27 @@ namespace
         {
             return EXCEPTION_CONTINUE_SEARCH;
         }
+        // MiniDumpWriteDump first (crash-loop safe, no symbol machinery
+        // needed): TEMP-DIAG round 2 — the nearest-export stacks below
+        // cannot pinpoint the freed object; a full dump can be analyzed
+        // offline (windbg/cdb: `!analyze -v`, `heap -p -a <va>`).
+        {
+            char dumpPath[MAX_PATH] = {};
+            snprintf( dumpPath, sizeof( dumpPath ), "%s\\elm_e2e_crash_%lu.dmp",
+                      getenv( "TEMP" ) ? getenv( "TEMP" ) : ".",
+                      static_cast<unsigned long>( GetCurrentProcessId() ) );
+            HANDLE file = CreateFileA( dumpPath, GENERIC_WRITE, 0, nullptr,
+                                       CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
+            if ( file != INVALID_HANDLE_VALUE )
+            {
+                MINIDUMP_EXCEPTION_INFORMATION mei{ GetCurrentThreadId(), info, FALSE };
+                MiniDumpWriteDump( GetCurrentProcess(), GetCurrentProcessId(), file,
+                                   MiniDumpWithFullMemory, &mei, nullptr, nullptr );
+                CloseHandle( file );
+                fprintf( stderr, "===== minidump written: %s =====\n", dumpPath );
+                fflush( stderr );
+            }
+        }
         HANDLE process = GetCurrentProcess();
         SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS );
         SymInitialize( process, nullptr, TRUE );
