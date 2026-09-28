@@ -366,8 +366,8 @@ public:
                                        io_,
                                        account_,
                                        blockchain_,
-                                       false, // full_node
-                                       0,     // subnet_id
+                                       NodeType::Light, // node_type
+                                       0,               // subnet_id
                                        kTimestampTolerance,
                                        kMutabilityWindow );
         assert( tm_ != nullptr );

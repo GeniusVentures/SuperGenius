@@ -7,7 +7,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransactionV2.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/UTXOMerkle.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -915,7 +915,7 @@ namespace
             peer.blockchain = sgns::Blockchain::New( peer.db, peer.account, peer.pubsub, []( outcome::result<void> ) {} );
             EXPECT_TRUE( peer.blockchain );
             if ( !peer.blockchain ) return peer;
-            peer.transactions = sgns::TransactionManager::New( peer.db, peer.io, peer.account, peer.blockchain, false );
+            peer.transactions = sgns::TransactionManager::New( peer.db, peer.io, peer.account, peer.blockchain, sgns::NodeType::Light );
             EXPECT_TRUE( peer.transactions );
             peer.consensus = sgns::MultiNodeFinalityFaultTestAccess::Manager( peer.blockchain );
             EXPECT_TRUE( peer.consensus );

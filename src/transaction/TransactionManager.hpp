@@ -34,6 +34,7 @@
 #include "base/buffer.hpp"
 
 #include "blockchain/Blockchain.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
@@ -45,7 +46,8 @@ namespace sgns::account
 
 namespace sgns
 {
-    class TransactionConsensusHandler;
+    class MintTransactionV2;
+
 
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
@@ -178,6 +180,54 @@ namespace sgns
         outcome::result<std::string> TransferFunds( uint64_t amount, std::string destination, TokenID token_id );
 
         /**
+         * @brief Creates and enqueues a child-wallet registration transaction (caller-supplied sequence).
+         */
+        outcome::result<std::string> RegisterChild( std::string                         main_address,
+                                                    SGTransaction::RegistrationMetadata metadata,
+                                                    uint64_t                            sequence );
+        /**
+         * @brief Creates and enqueues a child-wallet registration transaction with auto-derived sequence.
+         */
+        outcome::result<std::string> RegisterChild( std::string                         main_address,
+                                                    SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this account (D-60/D-62/CONS-02).
+         */
+        outcome::result<std::string> RecoverFromChild( std::string child_address,
+                                                       uint64_t    amount,
+                                                       TokenID     token_id );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35, caller-supplied sequence).
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37, caller-supplied sequence).
+         */
+        outcome::result<std::string> ReplaceMain( std::string                         new_main_address,
+                                                  SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         */
+        outcome::result<std::string> ReplaceMain( std::string                         new_main_address,
+                                                  SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a main-initiated Revoke transaction (D-36).
+         */
+        outcome::result<std::string> RevokeChild( std::string child_address );
+
+        /**
          * @brief Creates and enqueues a mint transaction.
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.
@@ -289,6 +339,18 @@ namespace sgns
             const GeniusTransaction &element ) const;
 
         /**
+         * @brief Finds one tracked transaction in @p element's nonce slot (first by map
+         *        iteration) other than @p element itself.
+         * @return The conflicting transaction, or an error when none is tracked.
+         */
+        outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
+            const GeniusTransaction &element ) const;
+
+        /** @brief BestHash tie-break: true when @p new_tx outranks @p existing_tx. */
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
+                                       const GeniusTransaction &new_tx ) const;
+
+        /**
          * @brief Idempotent stop. Sets the stopped flag and wakes the tick loop.
          */
         void Stop();
@@ -353,6 +415,9 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class RegistrationE2ETestAccess;
+        friend class RegTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
         void EnqueueTransaction( TransactionPair element );
@@ -421,6 +486,7 @@ namespace sgns
             std::shared_ptr<GeniusTransaction> tx;
             TransactionStatus                  status;
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+            bool                               effects_applied = false; ///< Parse effects durably applied (TRACK-01 ordering)
         };
 
         struct AccountUTXOState
@@ -446,9 +512,12 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
+        /** @brief FillDAGStruct variant scoped to @p source_address (child-recovery chains). */
+        SGTransaction::DAGStruct FillDAGStructForAddress( const std::string &source_address );
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
@@ -564,9 +633,6 @@ namespace sgns
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
-        /// @brief Verifies a transaction's signature, accepting the legacy DAG form.
-        bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
-
         /**
          * @brief Erases the tracking entry for @p tx_hash iff it is still VERIFYING.
          * @return true when an entry was erased.
@@ -678,6 +744,31 @@ namespace sgns
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
+        /**
+         * @brief No-op parser for "registration" tx type.
+         *
+         * Registration transactions carry no UTXO parameters and are already fully
+         * handled (signature/sequence/monotonicity validation, CRDT persistence) by
+         * FilterRegistration/RegElementCallback. This entry exists solely to satisfy
+         * transaction_parsers' membership check.
+         */
+        outcome::result<void> ParseRegistrationTransaction( const GeniusTransaction &tx );
+        /// @brief No-op reverter for "registration" tx type — see ParseRegistrationTransaction.
+        outcome::result<void> RevertRegistrationTransaction( const GeniusTransaction &tx );
+        /**
+         * @brief Applies a confirmed RevokeTx: rewrites the child's reg/ record with
+         *        detach_flag=true under the revoke's hash.
+         */
+        outcome::result<void> ParseRevokeTransaction( const GeniusTransaction &tx );
+        /// @brief No-op reverter for "revoke" tx type — leaving the target Detached is fail-safe.
+        outcome::result<void> RevertRevokeTransaction( const GeniusTransaction &tx );
+
+        /**
+         * @brief reg/ new-element callback: discovers registrations naming this node as
+         *        main and follows the child's channel (D-49).
+         */
+        void RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
+
         static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers;
 
@@ -704,6 +795,16 @@ namespace sgns
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
+
+        /**
+         * @brief CRDT element filter for incoming child-wallet registrations.
+         *
+         * Gates reg/ elements on deserialization, child signature, main-address shape,
+         * sequence monotonicity (D-46) and supersedes_sequence fork prevention (D-38).
+         *
+         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         */
+        std::optional<std::vector<crdt::pb::Element>> FilterRegistration( const crdt::pb::Element &element );
 
         static uint64_t GetCurrentTimestamp();
 
@@ -777,6 +878,22 @@ namespace sgns
         bool KeyExistsInDB( const std::string &key ) const;
 
         /**
+         * @brief Verifies that an already validated certificate certifies @p transaction itself.
+         *
+         * Callers must locate the record through the transaction-derived canonical
+         * slot first. This supplies the second, exact-subject check required for
+         * shared slots, so a competing transaction cannot inherit finality.
+         */
+        static bool CertificateMatchesTransaction( const ConsensusCertificate &certificate,
+                                                   const GeniusTransaction    &transaction );
+        /**
+         * @brief Loads the transaction's validated certificate from the canonical-slot record.
+         *
+         * Callers must still pass the result through CertificateMatchesTransaction.
+         */
+        outcome::result<ConsensusCertificate> GetTransactionCertificate( const GeniusTransaction &transaction ) const;
+
+        /**
          * @brief Obtains the public-chain input validator for RPC endpoint wiring.
          * @return Mutable reference to the PublicChainInputValidator.
          */
@@ -806,6 +923,31 @@ namespace sgns
         outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
             const std::string &main_address );
 
+        /// Consensus witness verdicts, evaluated by TransactionConsensusHandler.
+        using WitnessValidationResult = TransactionConsensusHandler::WitnessValidationResult;
+        /// Replay-protection evaluation outcome, produced by TransactionConsensusHandler.
+        using ReplayProtectionResult  = TransactionConsensusHandler::ReplayProtectionResult;
+
+        /// @brief Builds the consumed/produced Merkle commitment a nonce subject carries.
+        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
+
+        /// @brief Validates the UTXO witness carried by a nonce consensus subject.
+        WitnessValidationResult ValidateWitnessForConsensus( const ConsensusSubject  &subject,
+                                                             const GeniusTransaction &tx ) const;
+
+        /// @brief Evaluates previous-hash/nonce replay protection for a transaction.
+        ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        /** @brief Whole-transaction signature / authorization check. */
+        bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+        /** @brief Parent-child registration authority check (transfers from certified children, revokes). */
+        bool CheckParentChildAuthority( const GeniusTransaction &tx ) const;
+        /** @brief Replay-protection check expressed as a plain boolean. */
+        bool CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
+        void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
+
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
@@ -822,6 +964,24 @@ namespace sgns
 
         /// @brief Consensus-facing half of this manager; see TransactionConsensusHandler.
         std::unique_ptr<TransactionConsensusHandler> consensus_m_;
+
+        outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
+        void                  ReleaseBridgeMintReservation( const GeniusTransaction &tx );
+        bool                  EnterFinalityFaultBarrier();
+
+        bool                  fail_bridge_executed_marker_write_for_test_ = false;
+        std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
+
+        struct FinalityFaultBarrier
+        {
+            bool armed    = false;
+            bool entered  = false;
+            bool released = false;
+        };
+        mutable std::mutex      fault_test_mutex_;
+        std::condition_variable fault_test_cv_;
+        uint64_t                mint_effects_for_test_ = 0;
+        FinalityFaultBarrier    mint_effects_barrier_;
     };
 }
 

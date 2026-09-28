@@ -36,6 +36,8 @@ namespace sgns
         {
             VALID,
             DRIFT,
+            PENDING, ///< A producer dependency (transaction or certificate) has not
+                     /// CRDT-synced yet: retryable, not evidence of invalidity.
             INVALID
         };
 
@@ -78,8 +80,21 @@ namespace sgns
          */
         void OnProposalTimeoutCleanup( const std::string &tx_hash );
 
+        /// @brief Result of replay-protection evaluation for a consensus subject.
+        struct ReplayProtectionResult
+        {
+            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
+        };
+
         /// @brief Builds the consumed/produced Merkle commitment a nonce subject carries.
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
+
+        /// @brief Evaluates previous-hash/nonce replay protection for a transaction.
+        ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        /// @brief Validates the UTXO witness carried by a nonce consensus subject.
+        WitnessValidationResult ValidateWitnessForConsensus( const ConsensusSubject  &subject,
+                                                             const GeniusTransaction &tx ) const;
 
         /// @brief Builds the Merkle inclusion proofs backing a transition commitment.
         std::optional<UTXOWitness> BuildUTXOWitness( const GeniusTransaction &tx ) const;
@@ -93,18 +108,10 @@ namespace sgns
         }
 
     private:
-        struct ReplayProtectionResult
-        {
-            ConsensusManager::ValidationResult validation_ = ConsensusManager::ValidationResult::Approve();
-        };
-
         ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        ReplayProtectionResult             EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
-        WitnessValidationResult            ValidateWitnessForConsensus( const ConsensusSubject  &subject,
-                                                                        const GeniusTransaction &tx ) const;
 
         TransactionManager &owner_;
         base::Logger        logger_;

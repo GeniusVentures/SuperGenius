@@ -24,6 +24,8 @@
 #include "account/MintTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/MigrationTransaction.hpp"
+#include "account/RegistrationTransaction.hpp"
+#include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOMerkle.hpp"
 #include "account/BurnConfig.hpp"
@@ -34,6 +36,7 @@
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
+#include "storage/database_error.hpp"
 
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
@@ -94,7 +97,12 @@ namespace sgns
             { "mint-v2", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "migration", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "escrow-hold",
-              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
+              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
+            { "registration",
+              { &TransactionManager::ParseRegistrationTransaction,
+                &TransactionManager::RevertRegistrationTransaction } },
+            { "revoke",
+              { &TransactionManager::ParseRevokeTransaction, &TransactionManager::RevertRevokeTransaction } } };
 
     std::shared_ptr<TransactionManager> TransactionManager::New(
         std::shared_ptr<crdt::GlobalDB>          processing_db,
@@ -185,14 +193,14 @@ namespace sgns
 
             const bool tx_filter_registered = instance->globaldb_m->RegisterElementFilter(
                 tx_pattern,
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return strong->FilterTransaction( element );
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterTransaction( element ) );
                     }
-                    return std::nullopt;
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
             if ( !tx_filter_registered )
             {
@@ -201,19 +209,49 @@ namespace sgns
 
             const bool proof_filter_registered = instance->globaldb_m->RegisterElementFilter(
                 proof_pattern,
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return strong->FilterProof( element );
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterProof( element ) );
                     }
-                    return std::nullopt;
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
             if ( !proof_filter_registered )
             {
                 instance->m_logger->error( "Failed to register proof element filter for pattern {}", proof_pattern );
             }
+
+            // Register the reg/ element filter for child-wallet registrations
+            const std::string reg_pattern = "^/?" + blockchain_base + "reg/[^/]+";
+            const bool reg_filter_registered = instance->globaldb_m->RegisterElementFilter(
+                reg_pattern,
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
+                            strong->FilterRegistration( element ) );
+                    }
+                    return crdt::CRDTDataFilter::ElementFilterResult::Accept();
+                } );
+            if ( !reg_filter_registered )
+            {
+                instance->m_logger->error( "Failed to register registration element filter for pattern {}",
+                                           reg_pattern );
+            }
+
+            (void) instance->globaldb_m->RegisterNewElementCallback(
+                reg_pattern,
+                [weak_ptr( std::weak_ptr<TransactionManager>(
+                    instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->RegElementCallback( std::move( new_data ), cid );
+                    }
+                } );
 
             instance->globaldb_m->RegisterNewElementCallback(
                 tx_pattern,
@@ -339,13 +377,18 @@ namespace sgns
             }
         }
 
-        // Detach from consensus. All four are keyed on NONCE_SUBJECT_TYPE.
+        // Detach from consensus. All are keyed on NONCE_SUBJECT_TYPE.
+        // NOTE: the slot-key handler is deliberately NOT unregistered: its registry
+        // is process-global (ConsensusManager::slot_key_handlers_ is static), so
+        // removing it here would strip every other peer in the process — and a
+        // restarted peer's RecoverActiveVotes (ConsensusManager::New, which runs
+        // before this manager re-registers) would then decode durable nonce slots
+        // through the ComputeSubjectId fallback and reject its own active votes.
         if ( blockchain_ )
         {
             blockchain_->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
             blockchain_->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
             blockchain_->UnregisterProposalCleanupHandler( NONCE_SUBJECT_TYPE );
-            blockchain_->UnregisterSlotKeyHandler( NONCE_SUBJECT_TYPE );
         }
 
         // Detach from the account while it is still guaranteed alive: GeniusNode calls
@@ -607,6 +650,251 @@ namespace sgns
         return transfer_transaction->GetHash();
     }
 
+    outcome::result<std::string> TransactionManager::RecoverFromChild( std::string child_address,
+                                                                       uint64_t    amount,
+                                                                       TokenID     token_id )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::vector<InputUTXOInfo> inputs;
+        uint64_t                   selected_amount = 0;
+
+        for ( const auto &utxo : account_m->GetUTXOManager().GetUnconsumedUTXOs( child_address ) )
+        {
+            if ( !( utxo.GetTokenID() == token_id ) )
+            {
+                continue;
+            }
+
+            InputUTXOInfo input;
+            input.txid_hash_  = utxo.GetTxID();
+            input.output_idx_ = utxo.GetOutputIdx();
+            input.signature_  = account_m->Sign( input.SerializeForSigning() );
+
+            inputs.push_back( std::move( input ) );
+            selected_amount += utxo.GetAmount();
+
+            if ( selected_amount >= amount )
+            {
+                break;
+            }
+        }
+
+        if ( selected_amount < amount )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::vector<OutputDestInfo> outputs;
+        outputs.push_back( { amount, account_m->GetAddress(), token_id } );
+        if ( selected_amount > amount )
+        {
+            outputs.push_back( { selected_amount - amount, child_address, token_id } );
+        }
+
+        auto recover_transaction = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( inputs, outputs, FillDAGStructForAddress( child_address ) ) );
+
+        recover_transaction->MakeSignature( *account_m );
+
+        account_m->GetUTXOManager().ReserveUTXOs( inputs, recover_transaction->GetHash() );
+
+        EnqueueTransaction( std::make_pair( recover_transaction, std::nullopt ) );
+
+        return recover_transaction->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata,
+        uint64_t                            sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( main_address ), sequence, std::move( metadata ), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // Auto-derive sequence: read reg/{child_addr} from CRDT, use stored + 1 (or 1 if none)
+        uint64_t    sequence      = 1;
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( existing_data.has_value() )
+        {
+            auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+            if ( !maybe_existing.has_error() )
+            {
+                auto existing = maybe_existing.value();
+                if ( existing->GetType() == "registration" )
+                {
+                    auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing );
+                    if ( existing_reg )
+                    {
+                        sequence = existing_reg->GetSequence() + 1;
+                    }
+                }
+            }
+        }
+
+        return RegisterChild( std::move( main_address ), std::move( metadata ), sequence );
+    }
+
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t                            supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        static const std::string kZeroAddress( 128, '0' );
+
+        auto tx = std::make_shared<RegistrationTransaction>( RegistrationTransaction::New( kZeroAddress,
+                                                                                            sequence,
+                                                                                            std::move( metadata ),
+                                                                                            FillDAGStruct(),
+                                                                                            /*detach_flag=*/true,
+                                                                                            supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return DetachChild( std::move( metadata ), existing_reg->GetSequence() + 1, existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t                            supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( new_main_address ),
+                                          sequence,
+                                          std::move( metadata ),
+                                          FillDAGStruct(),
+                                          /*detach_flag=*/false,
+                                          supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return ReplaceMain( std::move( new_main_address ),
+                            std::move( metadata ),
+                            existing_reg->GetSequence() + 1,
+                            existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::RevokeChild( std::string child_address )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + child_address;
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg || existing_reg->GetDetachFlag() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto tx = std::make_shared<RevokeTransaction>(
+            RevokeTransaction::New( child_address, existing_reg->GetSequence(), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
@@ -616,6 +904,10 @@ namespace sgns
         if ( stopped_.load() || GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
+        }
+        if ( destination.empty() )
+        {
+            destination = account_m->GetAddress();
         }
         if ( chainid.empty() )
         {
@@ -693,10 +985,29 @@ namespace sgns
         source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
-        // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
-        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs,
-                                                  transaction_hash,
-                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+        // Reserve the burn UTXO — transitions READY → RESERVED (D-18). The claim is
+        // the ATOMIC serialization point against duplicate burns: the reserved/
+        // consumed/marker checks above are only early exits, and two concurrent
+        // MintFunds calls for the same burn event (relayer redelivery on reorg or
+        // reconnect racing an RPC mint) could both pass them before either
+        // reserved. ReserveUTXOs was additionally silent when the SAME id — the
+        // burn hash is the reservation id — already held the reservation, so the
+        // duplicate read as a successful claim and both mints applied effects.
+        const auto claim = account_m->GetUTXOManager().TryReserveOutpoint(
+            source_input_hash,
+            0,
+            transaction_hash,
+            sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+        if ( claim != sgns::UTXOManager::OutpointClaim::kClaimed )
+        {
+            m_logger->warn( "{}: Bridge burn not claimable (claim={}), rejecting duplicate mint for chain={} "
+                            "tx_hash={}",
+                            __func__,
+                            static_cast<int>( claim ),
+                            chainid,
+                            transaction_hash );
+            return outcome::failure( std::errc::already_connected );
+        }
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
@@ -1231,6 +1542,93 @@ namespace sgns
         return dag;
     }
 
+    SGTransaction::DAGStruct TransactionManager::FillDAGStructForAddress( const std::string &source_address )
+    {
+        SGTransaction::DAGStruct dag;
+        auto                     timestamp = std::chrono::system_clock::now();
+
+        auto           peer_nonce_result = account_m->GetPeerNonce( source_address );
+        const uint64_t nonce             = peer_nonce_result.has_value() ? ( peer_nonce_result.value() + 1 ) : 0;
+
+        const auto previous_hash = [&]() -> std::string
+        {
+            if ( nonce == 0 )
+            {
+                return "";
+            }
+
+            const auto previous_nonce = nonce - 1;
+            {
+                std::shared_lock tx_lock( tx_mutex_m );
+                for ( const auto &[_, tracked] : tx_processed_m )
+                {
+                    if ( tracked.tx && tracked.tx->GetSrcAddress() == source_address &&
+                         tracked.cached_nonce == previous_nonce && tracked.status != TransactionStatus::FAILED &&
+                         tracked.status != TransactionStatus::INVALID )
+                    {
+                        return tracked.tx->GetHash();
+                    }
+                }
+            }
+
+            std::string selected_hash;
+            for ( auto network_id : GetMonitoredNetworkIDs() )
+            {
+                const std::string query_path = GetBlockChainBase( network_id ) + "tx";
+                auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
+                if ( !tx_list.has_value() )
+                {
+                    continue;
+                }
+
+                for ( const auto &[_, value] : tx_list.value() )
+                {
+                    auto tx_result = DeSerializeTransaction( value );
+                    if ( !tx_result.has_value() || !tx_result.value() )
+                    {
+                        continue;
+                    }
+
+                    const auto &candidate = tx_result.value();
+                    if ( candidate->GetSrcAddress() != source_address || candidate->GetNonce() != previous_nonce )
+                    {
+                        continue;
+                    }
+
+                    auto candidate_certificate = GetTransactionCertificate( *candidate );
+                    if ( candidate_certificate.has_error() ||
+                         !CertificateMatchesTransaction( candidate_certificate.value(), *candidate ) )
+                    {
+                        continue;
+                    }
+
+                    if ( selected_hash.empty() ||
+                         Blockchain::BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                    {
+                        selected_hash = candidate->GetHash();
+                    }
+                }
+            }
+
+            if ( !selected_hash.empty() )
+            {
+                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions (address {})",
+                                 selected_hash,
+                                 nonce,
+                                 source_address );
+            }
+            return selected_hash;
+        }();
+
+        dag.set_previous_hash( previous_hash );
+        dag.set_nonce( nonce );
+        dag.set_source_addr( source_address );
+        dag.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
+
+        return dag;
+    }
+
     std::string TransactionManager::GetOutgoingPreviousHash( uint64_t nonce ) const
     {
         if ( nonce == 0 )
@@ -1250,11 +1648,64 @@ namespace sgns
             return persisted_hash;
         }
 
+        auto registration_hash = GetRegisteredOutgoingPreviousHash( nonce );
+        if ( !registration_hash.empty() )
+        {
+            return registration_hash;
+        }
+
         return QueryOutgoingPreviousHashFromCRDT( nonce );
+    }
+
+    std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+        // (SendTransactionItem routes them there), so a nonce chain that passes
+        // through a registration (e.g. RegisterChild then a mint) cannot resolve
+        // its predecessor through the tx/ namespace. Resolve the registration
+        // through its canonical slot certificate: the cert embeds the exact
+        // certified transaction hash, which binds the chain link the same way
+        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        if ( nonce == 0 || !globaldb_m )
+        {
+            return "";
+        }
+
+        const std::string slot_key = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
+        auto certificate_result = blockchain_->GetCertificateBySlot( slot_key );
+        if ( certificate_result.has_error() )
+        {
+            return "";
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
+            certificate_result.value().proposal().subject() );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET ||
+             nonce_subject.value().nonce() != ( nonce - 1 ) ||
+             certificate_result.value().proposal().subject().account_id() != account_m->GetAddress() )
+        {
+            return "";
+        }
+
+        auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
+        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        {
+            return "";
+        }
+
+        return embedded.value()->GetHash();
     }
 
     std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
     {
+        // Candidate heads for the previous nonce: a CONFIRMED (certificate-backed)
+        // entry always wins over an in-flight one, and ties inside a tier resolve by
+        // BestHash. unordered_map iteration order must never decide which hash the
+        // next transaction chains onto — a doomed same-nonce competitor tracked as
+        // non-terminal used to win that lottery and chain the next transaction onto
+        // a predecessor that can never be certified.
+        std::vector<std::pair<std::string, bool>> candidates; // {hash, confirmed}
         {
             std::shared_lock tx_lock( tx_mutex_m );
             for ( const auto &[_, tracked] : tx_processed_m )
@@ -1275,10 +1726,75 @@ namespace sgns
                 {
                     continue;
                 }
-                return tracked.tx->GetHash();
+                candidates.emplace_back( tracked.tx->GetHash(),
+                                         tracked.status == TransactionStatus::CONFIRMED );
             }
         }
-        return "";
+
+        if ( candidates.empty() )
+        {
+            return "";
+        }
+
+        const std::string *selected           = nullptr;
+        bool               selected_confirmed = false;
+
+        for ( const auto &[hash, confirmed] : candidates )
+        {
+            if ( !selected || ( confirmed && !selected_confirmed ) )
+            {
+                selected           = &hash;
+                selected_confirmed = confirmed;
+            }
+            else if ( confirmed == selected_confirmed && Blockchain::BestHash( *selected, hash ) == hash )
+            {
+                selected = &hash;
+            }
+        }
+
+        m_logger->debug( "Recovered previous hash {} for nonce {} from tracked head (confirmed={})",
+                         *selected,
+                         nonce,
+                         selected_confirmed );
+        return *selected;
+    }
+
+    bool TransactionManager::CertificateMatchesTransaction( const ConsensusCertificate &certificate,
+                                                            const GeniusTransaction    &transaction )
+    {
+        const auto &subject       = certificate.proposal().subject();
+        auto        nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() ||
+             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
+        {
+            return false;
+        }
+
+        // A shared slot establishes that something won its consensus round. The
+        // explicit nonce payload and independently decoded embedded transaction
+        // establish that this transaction was that winner.
+        if ( !transaction.CheckHash() || subject.account_id() != transaction.GetSrcAddress() ||
+             nonce_subject.value().nonce() != transaction.GetNonce() ||
+             nonce_subject.value().tx_hash() != transaction.GetHash() )
+        {
+            return false;
+        }
+
+        auto embedded_transaction = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
+        return embedded_transaction.has_value() && embedded_transaction.value() &&
+               embedded_transaction.value()->CheckHash() &&
+               embedded_transaction.value()->GetHash() == transaction.GetHash() &&
+               embedded_transaction.value()->GetSlotID() == transaction.GetSlotID();
+    }
+
+    outcome::result<ConsensusCertificate> TransactionManager::GetTransactionCertificate(
+        const GeniusTransaction &transaction ) const
+    {
+        // The canonical slot record is the only certificate authority: v3.0
+        // writes nothing else, and no consensus version was deployed before it,
+        // so there are no legacy records to fall back to. The exact-transaction
+        // binding is enforced by CertificateMatchesTransaction at call sites.
+        return blockchain_->GetCertificateBySlot( transaction.GetSlotID() );
     }
 
     std::string TransactionManager::GetPersistedOutgoingPreviousHash( uint64_t nonce ) const
@@ -1295,13 +1811,32 @@ namespace sgns
         }
 
         const auto &persisted_hash = persisted_hash_result.value();
-        if ( persisted_hash.empty() || !blockchain_->CheckCertificate( persisted_hash ) )
+        if ( persisted_hash.empty() )
         {
             return "";
         }
 
-        m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head", persisted_hash, nonce );
-        return persisted_hash;
+        auto persisted_transaction_result = FetchTransaction( *globaldb_m, GetTransactionPath( persisted_hash ) );
+        if ( persisted_transaction_result.has_value() && persisted_transaction_result.value() &&
+             persisted_transaction_result.value()->GetHash() == persisted_hash )
+        {
+            const auto &persisted_transaction = *persisted_transaction_result.value();
+            auto        certificate_result    = GetTransactionCertificate( persisted_transaction );
+            if ( certificate_result.has_value() &&
+                 CertificateMatchesTransaction( certificate_result.value(), persisted_transaction ) )
+            {
+                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head", persisted_hash, nonce );
+                return persisted_hash;
+            }
+        }
+
+        // No by-hash certificate recovery: v3.0 writes certificates only at
+        // /cert/<canonical-slot>, so a head hash alone can no longer resolve its
+        // certificate (no consensus version was ever deployed; there are no
+        // legacy /cert/<subject_hash> records to serve). Certificate-only
+        // delivery reconstructs and stores the embedded transaction, after which
+        // the slot-authoritative path above resolves it.
+        return "";
     }
 
     std::string TransactionManager::QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const
@@ -1338,7 +1873,9 @@ namespace sgns
                     continue;
                 }
 
-                if ( !blockchain_->CheckCertificate( candidate->GetHash() ) )
+                auto certificate_result = GetTransactionCertificate( *candidate );
+                if ( certificate_result.has_error() ||
+                     !CertificateMatchesTransaction( certificate_result.value(), *candidate ) )
                 {
                     continue;
                 }
@@ -1443,7 +1980,26 @@ namespace sgns
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
 
-            auto                   transaction_path = GetTransactionPath( *transaction );
+            std::string transaction_path;
+            if ( transaction->GetType() == "registration" )
+            {
+                // Registration transactions persist at reg/{src_addr}, not tx/{hash}:
+                // the reg/ record is the child's current chain head that discovery
+                // (GetRegistrationsForMain) and lifecycle checks read.
+                auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( transaction );
+                if ( !reg_tx )
+                {
+                    m_logger->error( "SendTransactionItem: dynamic_pointer_cast<RegistrationTransaction> returned "
+                                     "null" );
+                    return outcome::failure(
+                        boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+                }
+                transaction_path = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            }
+            else
+            {
+                transaction_path = GetTransactionPath( *transaction );
+            }
             crdt::HierarchicalKey  tx_key( transaction_path );
             crdt::GlobalDB::Buffer data_transaction;
 
@@ -1620,6 +2176,8 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "registration", &RegistrationTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "revoke", &RevokeTransaction::DeSerializeByteVector );
             return true;
         }();
         (void) registered;
@@ -1667,6 +2225,20 @@ namespace sgns
                 std::string bytes;
                 embedded.escrow_release().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRegistration:
+            {
+                std::string bytes;
+                embedded.registration().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "registration" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRevoke:
+            {
+                std::string bytes;
+                embedded.revoke().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "revoke" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::TRANSACTION_NOT_SET:
@@ -1873,12 +2445,18 @@ namespace sgns
 
         m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", tx_key );
 
-        auto next_tx_state = TransactionStatus::VERIFYING;
+        auto next_tx_state      = TransactionStatus::VERIFYING;
+        auto certificate_result = GetTransactionCertificate( *transaction );
 
-        if ( blockchain_->CheckCertificate( transaction->GetHash() ) )
+        if ( certificate_result.has_value() &&
+             CertificateMatchesTransaction( certificate_result.value(), *transaction ) )
         {
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
+        }
+        if ( fetch_and_process_before_state_change_hook_for_test_ )
+        {
+            fetch_and_process_before_state_change_hook_for_test_();
         }
         BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
 
@@ -1991,15 +2569,61 @@ namespace sgns
 
         if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
-            auto params = mint_tx_v2->GetUTXOParameters();
-            BOOST_OUTCOME_TRY( PutProducedUTXOs( *mint_tx_v2 ) );
+            auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
+            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
 
-            if ( !params.first.empty() )
+            // Inputs BEFORE outputs, with two discriminators:
+            //  - A genuinely-consumed burn input (CONSUMED with real, non-zero
+            //    metadata) is positive proof a sibling mint of the same burn
+            //    applied its effects — creating this transaction's outputs anyway
+            //    minted one verified burn twice, so refuse BEFORE any output
+            //    exists. ConsumeUTXOs synthesizes a zero-amount CONSUMED tombstone
+            //    for outpoints it cannot find (and a durability retry leaves
+            //    exactly that behind) — that is the benign rebuild path, not a
+            //    sibling spend.
+            //  - Outputs of THIS transaction already present means its effects
+            //    applied once: idempotent redelivery succeeds without re-applying.
+            const bool already_applied =
+                !outputs.empty() &&
+                account_m->GetUTXOManager().GetUnconsumedUTXO( hash, 0 ).has_value();
+            if ( !already_applied )
             {
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( params.first,
-                                                              mint_tx_v2->GetSrcAddress(),
-                                                              sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                if ( !inputs.empty() )
+                {
+                    for ( const auto &input : inputs )
+                    {
+                        if ( account_m->GetUTXOManager().IsOutPointGenuinelyConsumed( input.txid_hash_,
+                                                                                     input.output_idx_ ) )
+                        {
+                            m_logger->error( "Mint-v2 {} burn input already consumed by a sibling mint — "
+                                             "duplicate burn, refusing to apply effects",
+                                             mint_tx_v2->GetHash() );
+                            return outcome::failure( std::errc::already_connected );
+                        }
+                    }
+                    BOOST_OUTCOME_TRY(
+                        auto consumed,
+                        account_m->GetUTXOManager().ConsumeUTXOs( inputs,
+                                                                  mint_tx_v2->GetSrcAddress(),
+                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                    if ( !consumed )
+                    {
+                        m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
+                                        "metadata); burn outpoint metadata may have been rebuilt with zero amount",
+                                        mint_tx_v2->GetHash() );
+                    }
+                }
+
+                for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+                {
+                    GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
+                }
+            }
+            else
+            {
+                m_logger->debug( "Mint-v2 {} outputs already present; idempotent redelivery",
+                                 mint_tx_v2->GetHash() );
             }
 
             m_logger->info( "Created tokens (mint-v2), amount {} balance {}",
@@ -2023,6 +2647,116 @@ namespace sgns
                         account_m->GetUTXOManager().GetBalance() );
 
         return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRegistrationTransaction( const GeniusTransaction & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Registration
+        // transactions carry no UTXO parameters and are already fully handled (signature/
+        // sequence/monotonicity validation, CRDT persistence) by FilterRegistration/
+        // RegElementCallback. This entry exists solely to satisfy transaction_parsers'
+        // membership check in CheckTransactionWellFormed/ParseTransaction/RevertTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRegistrationTransaction( const GeniusTransaction & /*tx*/ )
+    {
+        // No-op — see ParseRegistrationTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRevokeTransaction( const GeniusTransaction &tx )
+    {
+        auto revoke_tx = dynamic_cast<const RevokeTransaction *>( &tx );
+        if ( !revoke_tx )
+        {
+            m_logger->error( "ParseRevokeTransaction: dynamic_cast<RevokeTransaction> failed" );
+            return std::errc::invalid_argument;
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            m_logger->warn( "ParseRevokeTransaction: no reg/ record found for child {} — nothing to update",
+                            revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+        {
+            m_logger->warn( "ParseRevokeTransaction: reg/ record for child {} is missing or not a registration — "
+                            "nothing to update",
+                            revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+        if ( !existing_reg )
+        {
+            m_logger->warn( "ParseRevokeTransaction: reg/ record for child {} did not cast to RegistrationTransaction",
+                            revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        SGTransaction::DAGStruct updated_dag;
+        updated_dag.set_type( "registration" );
+        updated_dag.set_source_addr( revoke_tx->GetChildAddress() );
+
+        auto updated_reg = RegistrationTransaction::New( existing_reg->GetMainAddress(),
+                                                          existing_reg->GetSequence(),
+                                                          existing_reg->GetMetadata(),
+                                                          updated_dag,
+                                                          /*detach_flag=*/true,
+                                                          existing_reg->GetSupersedesSequence() );
+
+        auto put_result = globaldb_m->PutLocal( crdt::HierarchicalKey( reg_key ),
+                                                base::Buffer( updated_reg.SerializeByteVector() ),
+                                                revoke_tx->GetHash() );
+        if ( put_result.has_error() )
+        {
+            m_logger->error( "ParseRevokeTransaction: failed to write updated reg/ record for child {}",
+                             revoke_tx->GetChildAddress() );
+            return put_result.error();
+        }
+
+        m_logger->info( "ParseRevokeTransaction: applied revoke — reg/{} detach_flag set to true",
+                        revoke_tx->GetChildAddress() );
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRevokeTransaction( const GeniusTransaction & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Reverting a Revoke
+        // would require snapshotting the prior reg/ state, which is not currently tracked; leaving
+        // the target Detached is the conservative, fail-safe default.
+        return outcome::success();
+    }
+
+    void TransactionManager::RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid )
+    {
+        (void) cid;
+        // Deserialize the element value to check main_address
+        auto maybe_tx = DeSerializeTransaction( new_data.second );
+        if ( maybe_tx.has_error() || maybe_tx.value()->GetType() != "registration" )
+        {
+            return;
+        }
+        auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_tx.value() );
+        if ( !reg_tx )
+        {
+            return;
+        }
+
+        // D-49: if this registration names the local node as main, follow the child
+        if ( reg_tx->GetMainAddress() == account_m->GetAddress() )
+        {
+            m_logger->info( "Discovered new child registration: child={}, main={}, following child channel",
+                            reg_tx->GetSrcAddress().substr( 0, 16 ),
+                            reg_tx->GetMainAddress().substr( 0, 16 ) );
+            globaldb_m->AddListenTopic( reg_tx->GetSrcAddress() );
+        }
     }
 
     outcome::result<void> TransactionManager::ParseEscrowTransaction( const GeniusTransaction &tx )
@@ -2774,12 +3508,9 @@ namespace sgns
                 return std::optional<std::shared_ptr<GeniusTransaction>>{ transaction.value() };
             }
 
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Ignoring CRDT transaction with mismatched or invalid hash at {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                transaction_key );
+            m_logger->warn( "{}: Ignoring CRDT transaction with mismatched or invalid hash at {}",
+                            __func__,
+                            transaction_key );
         }
 
         return std::optional<std::shared_ptr<GeniusTransaction>>{};
@@ -3046,6 +3777,224 @@ namespace sgns
         return maybe_tombstones;
     }
 
+    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterRegistration(
+        const crdt::pb::Element &element )
+    {
+        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+        bool                                          should_delete = true;
+        do
+        {
+            // Gate (a): deserialization failure
+            auto maybe_new_tx = DeSerializeTransaction( element.value() );
+            if ( maybe_new_tx.has_error() )
+            {
+                m_logger->error( "Failed to deserialize registration {}", element.key() );
+                break;
+            }
+            auto new_tx = maybe_new_tx.value();
+            if ( new_tx->GetType() != "registration" )
+            {
+                break;
+            }
+            auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( new_tx );
+            if ( !reg_tx )
+            {
+                break;
+            }
+
+            // Gate (b): invalid child signature
+            if ( !CheckTransactionAuthorization( *reg_tx ) )
+            {
+                m_logger->error( "Invalid signature on registration {}", element.key() );
+                break;
+            }
+
+            // Gate (c): malformed main_address (not 128 hex chars)
+            if ( reg_tx->GetMainAddress().size() != 128 )
+            {
+                m_logger->error( "Malformed main_address in registration {}", element.key() );
+                break;
+            }
+
+            // Gate (d): sequence monotonicity — reject zero sequences and
+            // non-monotonic (incoming <= stored) sequences per D-46.
+            if ( reg_tx->GetSequence() == 0 )
+            {
+                m_logger->error( "Zero sequence in registration {}", element.key() );
+                break;
+            }
+            std::shared_ptr<RegistrationTransaction> existing_reg;
+            std::string                              reg_key = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            auto existing_data = globaldb_m->Get( reg_key );
+            if ( existing_data.has_value() )
+            {
+                auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+                if ( !maybe_existing_tx.has_error() )
+                {
+                    auto existing_tx = maybe_existing_tx.value();
+                    if ( existing_tx->GetType() == "registration" )
+                    {
+                        existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing_tx );
+                        if ( existing_reg && reg_tx->GetSequence() <= existing_reg->GetSequence() )
+                        {
+                            m_logger->error( "Non-monotonic sequence in registration {}: incoming={}, stored={}",
+                                             element.key(),
+                                             reg_tx->GetSequence(),
+                                             existing_reg->GetSequence() );
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Gate 3b (e): supersedes_sequence fork-prevention (D-38) — a lifecycle-change
+            // RegistrationTx (Detach/Replace-Main) whose supersedes_sequence is non-zero must
+            // match the currently-stored record's sequence, or is rejected as a fork attempt.
+            if ( reg_tx->GetSupersedesSequence() != 0 )
+            {
+                if ( !existing_reg || reg_tx->GetSupersedesSequence() != existing_reg->GetSequence() )
+                {
+                    m_logger->error( "Forked supersedes_sequence in registration {}: incoming={}, stored={}",
+                                     element.key(),
+                                     reg_tx->GetSupersedesSequence(),
+                                     existing_reg ? existing_reg->GetSequence() : 0 );
+                    break;
+                }
+            }
+
+            should_delete = false;
+        } while ( 0 );
+
+        if ( should_delete )
+        {
+            // No cascade-delete — reg/ has no paired namespace (D-13)
+            maybe_tombstones = std::vector<crdt::pb::Element>{};
+        }
+        return maybe_tombstones;
+    }
+
+    bool TransactionManager::CheckParentChildAuthority( const GeniusTransaction &tx ) const
+    {
+        m_logger->debug( "{}: Checking parent-child authority tx={}", __func__, tx.GetHash() );
+
+        if ( tx.GetType() == "transfer" )
+        {
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( !certified_main.has_value() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            if ( tx.CheckSignature() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            auto params = tx.GetUTXOParametersOpt();
+            if ( !params.has_value() || params->second.empty() )
+            {
+                m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+                return false;
+            }
+            if ( params->second.front().dest_address == *certified_main )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+            return false;
+        }
+
+        if ( tx.GetType() == "revoke" )
+        {
+            // Note: CheckTransactionAuthorization already ran (ValidateTransactionForConsensus
+            // order) and verified main's signature over the whole RevokeTx via ordinary
+            // tx.CheckSignature() — main is the tx's own signer, so no additional
+            // signature re-verification is needed here.
+            auto revoke_tx = dynamic_cast<const RevokeTransaction *>( &tx );
+            if ( !revoke_tx )
+            {
+                m_logger->error( "{}: Parent-child authority failed — not a RevokeTransaction tx={}",
+                                 __func__,
+                                 tx.GetHash() );
+                return false;
+            }
+
+            std::string reg_key       = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+            auto        existing_data = globaldb_m->Get( reg_key );
+            if ( !existing_data.has_value() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — no reg/ record for child {} tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 tx.GetHash() );
+                return false;
+            }
+
+            auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+            if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+            {
+                m_logger->error( "{}: Parent-child authority failed — reg/ record for child {} is missing or not a "
+                                 "registration tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 tx.GetHash() );
+                return false;
+            }
+
+            auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+            if ( !existing_reg )
+            {
+                m_logger->error( "{}: Parent-child authority failed — reg/ record for child {} did not cast to "
+                                 "RegistrationTransaction tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 tx.GetHash() );
+                return false;
+            }
+
+            if ( existing_reg->GetDetachFlag() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — child {} already detached/revoked tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 tx.GetHash() );
+                return false;
+            }
+            if ( existing_reg->GetMainAddress() != tx.GetSrcAddress() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — signer is not the certified main for child {} "
+                                 "tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 tx.GetHash() );
+                return false;
+            }
+            if ( revoke_tx->GetRegistrationSequence() != existing_reg->GetSequence() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — sequence mismatch for child {}: revoke={}, "
+                                 "stored={} tx={}",
+                                 __func__,
+                                 revoke_tx->GetChildAddress(),
+                                 revoke_tx->GetRegistrationSequence(),
+                                 existing_reg->GetSequence(),
+                                 tx.GetHash() );
+                return false;
+            }
+
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+
+        m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+        return true;
+    }
+
+    bool TransactionManager::CheckTransactionReplayProtection( const GeniusTransaction &tx ) const
+    {
+        return EvaluateTransactionReplayProtection( tx ).validation.check == ConsensusManager::Check::Approve;
+    }
+
     uint64_t TransactionManager::GetCurrentTimestamp()
     {
         // Get current time in milliseconds since epoch
@@ -3222,8 +4171,10 @@ namespace sgns
 
         m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", key );
 
-        auto next_tx_state = TransactionStatus::VERIFYING;
-        auto has_cert      = blockchain_->CheckCertificate( new_tx->GetHash() );
+        auto next_tx_state      = TransactionStatus::VERIFYING;
+        auto certificate_result = GetTransactionCertificate( *new_tx );
+        auto has_cert           = certificate_result.has_value() &&
+                        CertificateMatchesTransaction( certificate_result.value(), *new_tx );
 
         if ( has_cert )
         {
@@ -3426,6 +4377,49 @@ namespace sgns
         return conflicts;
     }
 
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransaction(
+        const GeniusTransaction &element ) const
+    {
+        // Scan the tracked set directly instead of GetTransactionByNonceAndAddress:
+        // when several records share the address+nonce (a contested slot after the
+        // winner's certificate arrives, with both the winner and the loser tracked
+        // locally), the single-result lookup can return the element itself and the
+        // hash inequality below then reports "no conflict" — iteration order of the
+        // tracked map decided node-by-node whether the loser ever failed. Every
+        // entry that is not the element itself is a conflict.
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
+        {
+            if ( !tracked.tx )
+            {
+                continue;
+            }
+            if ( tracked.tx->GetNonce() != element.GetNonce() ||
+                 tracked.tx->GetSrcAddress() != element.GetSrcAddress() )
+            {
+                continue;
+            }
+            if ( tracked.tx->GetHash() == element.GetHash() )
+            {
+                continue;
+            }
+            return tracked.tx;
+        }
+
+        return outcome::failure( std::errc::no_such_file_or_directory );
+    }
+
+    bool TransactionManager::ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
+                                                       const GeniusTransaction &new_tx ) const
+    {
+        m_logger->debug( "{}: Checking if new transaction {} should replace existing one {}",
+                         __func__,
+                         new_tx.GetHash(),
+                         existing_tx.GetHash() );
+
+        return Blockchain::BestHash( existing_tx.GetHash(), new_tx.GetHash() ) == new_tx.GetHash();
+    }
+
     bool TransactionManager::HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const
     {
         if ( !candidate_tx.HasUTXOParameters() )
@@ -3481,8 +4475,104 @@ namespace sgns
             m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
             return true;
         }
+        if ( tx.GetType() == "transfer" )
+        {
+            // Certified-main branch (CONS-02): a transfer sourced from a certified
+            // child is authorized when signed by the certified main — the CRDT
+            // registration record delegates the child's spend authority.
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( certified_main.has_value() && tx.CheckSignatureAgainst( *certified_main ) )
+            {
+                m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+        }
         m_logger->error( "{}: Authorization failed tx={}", __func__, tx.GetHash() );
         return false;
+    }
+
+    std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
+        const GeniusTransaction &tx ) const
+    {
+        return consensus_m_->BuildUTXOTransitionCommitment( tx );
+    }
+
+    TransactionManager::WitnessValidationResult TransactionManager::ValidateWitnessForConsensus(
+        const ConsensusSubject &subject, const GeniusTransaction &tx ) const
+    {
+        return consensus_m_->ValidateWitnessForConsensus( subject, tx );
+    }
+
+    TransactionManager::ReplayProtectionResult TransactionManager::EvaluateTransactionReplayProtection(
+        const GeniusTransaction &tx ) const
+    {
+        return consensus_m_->EvaluateTransactionReplayProtection( tx );
+    }
+
+    void TransactionManager::SetBridgeExecutedMarkerWriteFailureForTest( bool fail )
+    {
+        fail_bridge_executed_marker_write_for_test_ = fail;
+    }
+
+    void TransactionManager::SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook )
+    {
+        fetch_and_process_before_state_change_hook_for_test_ = std::move( hook );
+    }
+
+    outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
+    {
+        if ( fail_bridge_executed_marker_write_for_test_ )
+        {
+            return outcome::failure( std::errc::io_error );
+        }
+
+        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::no_such_file_or_directory );
+        }
+
+        const std::string reservation_key = mint_tx.GetChainId() + std::string( kBridgeKeySeparator ) +
+                                            mint_tx.dag_st.uncle_hash();
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( "1" );
+        BOOST_OUTCOME_TRY( datastore->put( key_buffer, value_buffer ) );
+        return outcome::success();
+    }
+
+    void TransactionManager::ReleaseBridgeMintReservation( const GeniusTransaction &tx )
+    {
+        if ( tx.GetType() != "mint-v2" )
+        {
+            return;
+        }
+        // MintFunds reserves under the burn hash it was handed, and that same string becomes
+        // dag_st.uncle_hash() via FillDAGStruct -- so this is the reservation id, byte for byte.
+        // RollbackUTXOs only clears RESERVED entries whose id matches, so it is a no-op once
+        // the outpoint has been consumed by a mint that won.
+        auto params_opt = tx.GetUTXOParametersOpt(); // always engaged for mint-v2
+        account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
+                                                   tx.dag_st.uncle_hash(),
+                                                   UTXOManager::UTXOType::UTXO_BRIDGE );
+    }
+
+    bool TransactionManager::EnterFinalityFaultBarrier()
+    {
+        std::unique_lock lock( fault_test_mutex_ );
+        if ( !mint_effects_barrier_.armed )
+        {
+            return !stopped_.load();
+        }
+        mint_effects_barrier_.entered = true;
+        fault_test_cv_.notify_all();
+        (void) fault_test_cv_.wait_for(
+            lock, std::chrono::seconds( 30 ), [&] {
+                return mint_effects_barrier_.released || !mint_effects_barrier_.armed || stopped_.load();
+            } );
+        mint_effects_barrier_.entered = false;
+        return !stopped_.load();
     }
 
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
@@ -3566,63 +4656,142 @@ namespace sgns
             break;
             case TransactionStatus::CONFIRMED:
             {
-                std::unique_lock tx_lock( tx_mutex_m );
-                auto             it = tx_processed_m.find( key );
-                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                if ( auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
                 {
-                    m_logger->error( "{}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
-                                     FUNC,
-                                     tx->GetHash() );
-                    break;
-                }
-                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
-
-                // Clear bridge mint reservation and persist executed state
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    if ( mint_tx )
+                    bool apply_effects = false;
                     {
-                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) +
-                                                            tx->dag_st.uncle_hash();
-                        // Persist executed state to RocksDB — survives restart
-                        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
-                        if ( datastore )
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        auto             it = tx_processed_m.find( key );
+                        if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                         {
-                            crdt::GlobalDB::Buffer key_buffer;
-                            key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
-                            crdt::GlobalDB::Buffer value_buffer;
-                            value_buffer.put( "1" );
-                            auto put_result = datastore->put( key_buffer, value_buffer );
-                            if ( put_result.has_error() )
-                            {
-                                m_logger->error( "{}: Failed to persist executed bridge mint for {}",
-                                                 FUNC,
-                                                 reservation_key );
-                            }
+                            // Marker and effects were already durable on a prior delivery.
+                            return outcome::success();
+                        }
+                        if ( it != tx_processed_m.end() )
+                        {
+                            // A prior attempt already applied the parse effects and is
+                            // retrying only the marker write; re-parsing would re-apply
+                            // the mint effects (double-count and UTXO metadata clobber).
+                            apply_effects = !it->second.effects_applied;
+                        }
+                        else
+                        {
+                            apply_effects = true;
+                        }
+                        // Keep failed certificate work explicitly retryable until every local
+                        // persistence boundary has succeeded. The effects_applied flag is
+                        // reserved for THIS invocation up front: a certificate is durable
+                        // as two CRDT records (canonical slot + subject-hash index) and a
+                        // concurrent redelivery of the sibling record must observe the
+                        // reservation and skip straight to the idempotent marker write
+                        // instead of racing a second ParseTransaction.
+                        tx_processed_m[key] =
+                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                    }
+
+                    if ( apply_effects )
+                    {
+                        auto parse_result = ParseTransaction( *tx );
+                        if ( parse_result.has_error() )
+                        {
+                            // Release the reservation so a certificate-work retry re-applies
+                            // the effects; nothing was durably changed for this entry yet.
+                            std::unique_lock tx_lock( tx_mutex_m );
+                            tx_processed_m[key] =
+                                TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                            return parse_result;
                         }
                     }
+                    if ( !EnterFinalityFaultBarrier() )
+                    {
+                        return outcome::failure( std::errc::operation_canceled );
+                    }
+                    BOOST_OUTCOME_TRY( PersistBridgeExecutedMarker( *mint_tx ) );
+                    if ( apply_effects )
+                    {
+                        // Counted only after the effects AND the bridge marker are durable:
+                        // observers gating on this counter (e.g. the finality-fault harness
+                        // "Mint consumers" wait) may assert marker presence immediately
+                        // after the gate passes.
+                        std::lock_guard lock( fault_test_mutex_ );
+                        ++mint_effects_for_test_;
+                    }
+
+                    {
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce(), true };
+                    }
+
+                    metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
+                    m_logger->info( "{}: Tracking entry confirmed tx={}", FUNC, tx->GetHash() );
+                    account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
+                    {
+                        std::lock_guard missing_lock( missing_tx_mutex_ );
+                        missing_tx_hashes_.erase( tx->GetHash() );
+                    }
+                    break;
+                }
+
+                // Same ordering the mint branch enforces: effects BEFORE the
+                // CONFIRMED record. Writing CONFIRMED first stranded
+                // CONFIRMED-without-effects on a parse failure, and redelivery
+                // short-circuited on the existing CONFIRMED entry so the effects
+                // were never applied. effects_applied reserves the parse for THIS
+                // invocation (concurrent redelivery skips straight to the
+                // idempotent confirm) and keeps a failed attempt retryable.
+                bool apply_effects = false;
+                {
+                    std::unique_lock tx_lock( tx_mutex_m );
+                    auto             it = tx_processed_m.find( key );
+                    if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                    {
+                        if ( it->second.effects_applied )
+                        {
+                            // Effects were already durable on a prior delivery.
+                            return outcome::success();
+                        }
+                        // A pre-ordering-fix strand: CONFIRMED recorded but the parse
+                        // never succeeded. Fall through and apply the effects now.
+                        m_logger->warn( "{}: Re-applying effects for already-CONFIRMED transaction {}",
+                                        FUNC,
+                                        tx->GetHash() );
+                    }
+                    apply_effects = it == tx_processed_m.end() || !it->second.effects_applied;
+                    tx_processed_m[key] =
+                        TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                }
+
+                if ( apply_effects )
+                {
+                    auto parse_result = ParseTransaction( *tx );
+                    if ( parse_result.has_error() )
+                    {
+                        // Nothing durably changed for this entry yet; keep it
+                        // retryable instead of stranding CONFIRMED-without-effects.
+                        std::unique_lock tx_lock( tx_mutex_m );
+                        tx_processed_m[key] =
+                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                        // Wake observers even when applying its account-side effects fails.
+                        NotifyTransactionStatusChanged( tx->GetHash() );
+                        return parse_result;
+                    }
+                }
+
+                {
+                    std::unique_lock tx_lock( tx_mutex_m );
+                    tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce(), true };
                 }
 
                 // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
                 metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
                 m_logger->info( "{}: Tracking entry confirmed tx={}", FUNC, tx->GetHash() );
 
-                m_logger->debug( "{}: Set status of CONFIRMED to transaction {}", FUNC, tx->GetHash() );
-                auto parse_result = ParseTransaction( *tx );
-                if ( parse_result.has_error() )
-                {
-                    // The tracked state was already promoted. Wake observers even when
-                    // applying its account-side effects fails.
-                    tx_lock.unlock();
-                    NotifyTransactionStatusChanged( tx->GetHash() );
-                    return outcome::failure( parse_result.error() );
-                }
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
                 }
+                break;
             }
 
             break;
@@ -3642,6 +4811,10 @@ namespace sgns
                 if ( tx->GetSrcAddress() == account_m->GetAddress() )
                 {
                     account_m->ReleaseNonce( tx->GetNonce() );
+                    // An inconclusive expiry leaves no confirmed mint, so the burn has to
+                    // become re-mintable: without this the outpoint stays RESERVED forever
+                    // and the bridge catch-up cursor stalls on it permanently.
+                    ReleaseBridgeMintReservation( *tx );
                 }
                 m_logger->info( "{}: Tracking entry unconfirmed after inconclusive expiry tx={}", FUNC, tx->GetHash() );
             }

@@ -63,19 +63,26 @@ namespace sgns
         const ConsensusCertificate &certificate )
     {
         logger_->debug( "{}: Consensus certificate arrived for transaction {}", __func__, tx_hash );
-        auto tx                             = owner_.GetTransactionByHash( tx_hash );
-        bool reconstructed_from_certificate = false;
+        auto tx = owner_.GetTransactionByHash( tx_hash );
+        if ( !tx )
+        {
+            BOOST_OUTCOME_TRY( auto crdt_transaction, owner_.FetchExactTransactionFromCRDT( tx_hash ) );
+            if ( crdt_transaction.has_value() )
+            {
+                tx = crdt_transaction.value();
+            }
+        }
+
         if ( !tx )
         {
             // CONFLICT-01 / NONCE-01: Standalone validator without local transaction state.
-            // Deserialize from the certificate's embedded proposal (Phase 1 transaction).
+            // Fall back only to the certificate's exact embedded proposal.
             auto nonce_subject_result = ConsensusManager::DecodeNonceSubject( certificate.proposal().subject() );
             if ( nonce_subject_result.has_error() )
             {
-                logger_->warn( "{}: Certificate for hash {} has no decodable NonceSubject, "
-                                "accepting",
-                                __func__,
-                                tx_hash );
+                logger_->warn( "{}: Certificate for hash {} has no decodable NonceSubject, accepting",
+                               __func__,
+                               tx_hash );
                 // METRICS-01: Certificate fallback deserialization failure
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
@@ -85,19 +92,18 @@ namespace sgns
             if ( nonce_subject.transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
             {
                 logger_->warn( "{}: Certificate for hash {} has no embedded transaction "
-                                "(pre-Phase-1 certificate), accepting",
-                                __func__,
-                                tx_hash );
+                               "(pre-Phase-1 certificate), accepting",
+                               __func__,
+                               tx_hash );
                 return ConsensusManager::Check::Approve;
             }
 
             auto tx_result = TransactionManager::DeSerializeEmbeddedTransaction( nonce_subject.transaction() );
             if ( tx_result.has_error() )
             {
-                logger_->warn( "{}: Failed to deserialize tx from certificate for hash {}, "
-                                "accepting certificate",
-                                __func__,
-                                tx_hash );
+                logger_->warn( "{}: Failed to deserialize tx from certificate for hash {}, accepting certificate",
+                               __func__,
+                               tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
@@ -107,76 +113,162 @@ namespace sgns
             if ( tx->GetHash() != tx_hash || !tx->CheckHash() )
             {
                 logger_->warn( "{}: Certificate-embedded tx hash mismatch for {}, "
-                                "accepting certificate without processing embedded data",
-                                __func__,
-                                tx_hash );
+                               "accepting certificate without processing embedded data",
+                               __func__,
+                               tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
-            reconstructed_from_certificate = true;
-        }
 
-        auto conflicting_txs = owner_.GetConflictingTransactions( *tx );
-        for ( const auto &conflict : conflicting_txs )
-        {
-            auto tracked = owner_.GetTrackedTxByHash( conflict->GetHash() );
-            if ( tracked.has_value() && tracked->status == TransactionStatus::CONFIRMED )
+            if ( !TransactionManager::CertificateMatchesTransaction( certificate, *tx ) )
             {
-                logger_->critical( "{}: Conflicting transaction {} is already CONFIRMED while processing "
-                                    "certificate winner {}; refusing contradictory finality",
-                                    __func__,
-                                    conflict->GetHash(),
-                                    tx_hash );
-                return ConsensusManager::Check::Stalled;
+                logger_->warn( "{}: Certificate does not bind to embedded transaction {}, accepting without "
+                               "processing",
+                               __func__,
+                               tx_hash );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
+                return ConsensusManager::Check::Approve;
             }
-        }
 
-        for ( const auto &conflict : conflicting_txs )
-        {
-            auto tracked = owner_.GetTrackedTxByHash( conflict->GetHash() );
-            if ( tracked.has_value() && tracked->status == TransactionStatus::FAILED )
+            auto result = owner_.ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+            if ( result.has_error() )
             {
-                continue;
-            }
-            logger_->warn( "{}: Failing transaction {} superseded by certified transaction {}",
-                            __func__,
-                            conflict->GetHash(),
-                            tx_hash );
-            if ( auto result = owner_.ChangeTransactionState( conflict, TransactionStatus::FAILED );
-                 result.has_error() )
-            {
-                logger_->error( "{}: Failed to mark superseded transaction {} as FAILED: {}",
-                                 __func__,
-                                 conflict->GetHash(),
-                                 result.error().message() );
+                logger_->error( "{}: Failed to confirm certificate-deserialized tx for hash {}: {}",
+                                __func__,
+                                tx_hash,
+                                result.error().message() );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return outcome::failure( result.error() );
             }
-        }
 
-        if ( auto result = owner_.ChangeTransactionState( tx, TransactionStatus::CONFIRMED ); result.has_error() )
-        {
-            logger_->error( "{}: Failed to confirm certified transaction {}: {}",
-                             __func__,
-                             tx_hash,
-                             result.error().message() );
-            if ( reconstructed_from_certificate )
-            {
-                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-            }
-            return outcome::failure( result.error() );
-        }
-
-        if ( reconstructed_from_certificate )
-        {
+            // METRICS-01: Certificate fallback deserialization and confirmation succeeded
             metrics_cert_fallback_success_.fetch_add( 1, std::memory_order_relaxed );
+
             logger_->info( "{}: Standalone validator confirmed tx {} from certificate proposal_id={}",
-                            __func__,
-                            tx_hash,
-                            certificate.proposal_id() );
+                           __func__,
+                           tx_hash,
+                           certificate.proposal_id() );
         }
         else
         {
+            if ( !TransactionManager::CertificateMatchesTransaction( certificate, *tx ) )
+            {
+                logger_->warn( "{}: Certificate does not bind to transaction {}, accepting without confirmation",
+                               __func__,
+                               tx_hash );
+                return ConsensusManager::Check::Approve;
+            }
+
+            // TRACK-01: Confirm via ChangeTransactionState lifecycle (promote temp embedded-tx entry)
+            {
+                auto result = owner_.ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+                if ( result.has_error() )
+                {
+                    logger_->error( "{}: Failed to change transaction state to CONFIRMED for hash {}: {}",
+                                    __func__,
+                                    tx_hash,
+                                    result.error().message() );
+                    return outcome::failure( result.error() );
+                }
+            }
             logger_->debug( "{}: Transaction {} confirmed by consensus", __func__, tx_hash );
+
+            logger_->debug( "{}: Checking for conflicting transaction with {}", __func__, tx_hash );
+
+            auto conflicting_tx = owner_.GetConflictingTransaction( *tx );
+
+            if ( conflicting_tx.has_value() )
+            {
+                logger_->warn( "{}: Found conflicting transaction: {}", __func__, conflicting_tx.value()->GetHash() );
+                std::unique_lock tx_lock( owner_.tx_mutex_m );
+                auto             it = owner_.tx_processed_m.find(
+                    TransactionManager::GetTransactionPath( conflicting_tx.value()->GetHash() ) );
+                if ( it == owner_.tx_processed_m.end() )
+                {
+                    // The conflicting entry may live under a different network's key
+                    // namespace; resolve by value scan before dereferencing.
+                    it = std::find_if( owner_.tx_processed_m.begin(),
+                                       owner_.tx_processed_m.end(),
+                                       [&conflicting_tx]( const auto &kv ) {
+                                           return kv.second.tx &&
+                                                  kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
+                                       } );
+                }
+                if ( it == owner_.tx_processed_m.end() )
+                {
+                    // Nothing locally tracked to arbitrate against; the incoming
+                    // transaction was already confirmed above.
+                    tx_lock.unlock();
+                    return ConsensusManager::Check::Approve;
+                }
+
+                if ( it->second.status == TransactionStatus::CONFIRMED )
+                {
+                    logger_->error( "{}: Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure "
+                                    "what to do",
+                                    __func__,
+                                    conflicting_tx.value()->GetHash(),
+                                    tx_hash );
+                    tx_lock.unlock();
+                    // The incoming transaction carries a validated quorum certificate
+                    // (this handler only runs after ValidateCertificate and
+                    // CertificateMatchesTransaction); the conflict outranks it only if
+                    // it is final by the same standard. CheckTransactionValidity
+                    // promotes locally tracked transactions to CONFIRMED on signature
+                    // validity alone — letting that promotion win the BestHash
+                    // tie-break reverted a certified winner's already-applied effects
+                    // and DeleteTransaction'd it from the CRDT while every peer
+                    // confirmed it: permanent divergence on exactly this node.
+                    auto conflict_certificate = owner_.GetTransactionCertificate( *conflicting_tx.value() );
+                    const bool conflict_is_certified =
+                        conflict_certificate.has_value() &&
+                        TransactionManager::CertificateMatchesTransaction( conflict_certificate.value(),
+                                                                           *conflicting_tx.value() );
+                    if ( !conflict_is_certified || owner_.ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
+                    {
+                        auto result = owner_.ChangeTransactionState( conflicting_tx.value(),
+                                                                     TransactionStatus::FAILED );
+                        if ( result.has_error() )
+                        {
+                            logger_->error( "{}: Failed to change conflicting transaction state to FAILED for "
+                                            "current tx {}: {}",
+                                            __func__,
+                                            conflicting_tx.value()->GetHash(),
+                                            result.error().message() );
+                        }
+                    }
+                    else
+                    {
+                        auto result = owner_.ChangeTransactionState( tx, TransactionStatus::FAILED );
+                        if ( result.has_error() )
+                        {
+                            logger_->error( "{}: Failed to change transaction state to FAILED for new tx {}: {}",
+                                            __func__,
+                                            tx_hash,
+                                            result.error().message() );
+                            return outcome::failure( result.error() );
+                        }
+                        return outcome::failure( result.error() );
+                    }
+                }
+                else
+                {
+                    logger_->warn( "{}: Setting conflicting transaction {} to FAILED since the new one {} is "
+                                   "confirmed:",
+                                   __func__,
+                                   conflicting_tx.value()->GetHash(),
+                                   tx_hash );
+                    tx_lock.unlock();
+                    auto result = owner_.ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
+                    if ( result.has_error() )
+                    {
+                        logger_->error( "{}: Failed to change transaction state to FAILED for hash {}: {}",
+                                        __func__,
+                                        tx_hash,
+                                        result.error().message() );
+                    }
+                }
+            }
         }
 
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
@@ -434,11 +526,16 @@ namespace sgns
             logger_->error( "{}: Timestamp check failed tx={}", __func__, tx.GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
+        if ( !owner_.CheckParentChildAuthority( tx ) )
+        {
+            logger_->error( "{}: Parent-child authority check failed tx={}", __func__, tx.GetHash() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
         auto replay_result = EvaluateTransactionReplayProtection( tx );
-        if ( replay_result.validation_.check != ConsensusManager::Check::Approve )
+        if ( replay_result.validation.check != ConsensusManager::Check::Approve )
         {
             logger_->error( "{}: Replay protection failed tx={}", __func__, tx.GetHash() );
-            return replay_result.validation_;
+            return replay_result.validation;
         }
         //TODO - Deal with checking the Mint
         if ( !CheckTransactionTypeRules( tx ) )
@@ -535,8 +632,88 @@ namespace sgns
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
-            auto previous_cert_result = owner_.blockchain_->GetCertificateBySubjectHash( previous_hash );
-            if ( previous_cert_result.has_error() )
+            auto previous_transaction_result = TransactionManager::FetchTransaction(
+                *owner_.globaldb_m, TransactionManager::GetTransactionPath( previous_hash ) );
+            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                 previous_transaction_result.value()->GetHash() != previous_hash )
+            {
+                // Registration transactions persist at reg/{src_addr}, not tx/{hash}
+                // (SendTransactionItem routes them there), so any nonce chain that
+                // passes through a registration (a re-registration, or an ordinary
+                // transfer/mint after RegisterChild) cannot resolve its predecessor
+                // through the tx/ namespace. The stored reg/ record is the child's
+                // current chain head — but a revoke rewrites it locally (detach_flag)
+                // under a fresh hash, so the stored record may no longer match the
+                // ORIGINAL registration the sender chains to. The immutable
+                // certificate at the predecessor's slot still embeds the original
+                // transaction: resolve through it.
+                const std::string reg_key = TransactionManager::GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
+                auto              reg_data = owner_.globaldb_m->Get( reg_key );
+                if ( reg_data.has_value() )
+                {
+                    auto stored_reg = TransactionManager::DeSerializeTransaction( reg_data.value() );
+                    if ( !stored_reg.has_error() && stored_reg.value() &&
+                         stored_reg.value()->GetHash() == previous_hash )
+                    {
+                        previous_transaction_result = stored_reg;
+                    }
+                }
+                if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                     previous_transaction_result.value()->GetHash() != previous_hash )
+                {
+                    const std::string prev_slot = tx.GetSrcAddress() + ":" + std::to_string( tx.GetNonce() - 1 );
+                    auto              prev_cert = owner_.blockchain_->GetCertificateBySlot( prev_slot );
+                    if ( prev_cert.has_value() )
+                    {
+                        auto prev_subject = ConsensusManager::DecodeNonceSubject(
+                            prev_cert.value().proposal().subject() );
+                        if ( !prev_subject.has_error() &&
+                             prev_subject.value().tx_hash() == previous_hash &&
+                             prev_cert.value().proposal().subject().account_id() == tx.GetSrcAddress() )
+                        {
+                            auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
+                                prev_subject.value().transaction() );
+                            if ( embedded.has_value() && embedded.value() &&
+                                 embedded.value()->GetHash() == previous_hash )
+                            {
+                                previous_transaction_result = embedded;
+                            }
+                        }
+                    }
+                }
+            }
+            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
+                 previous_transaction_result.value()->GetHash() != previous_hash )
+            {
+                // Invalid is not missing: when this node already holds the finalized
+                // predecessor of the sender's chain for this nonce and it is not the
+                // claimed previous hash, the reference can never resolve — reject
+                // instead of parking the proposal behind a dependency that will never
+                // fire (develop's local-account-head check). A node that does not know
+                // the sender's head yet still pends so a late CRDT sync can satisfy it.
+                if ( tx.GetSrcAddress() == owner_.account_m->GetAddress() )
+                {
+                    auto expected_previous = owner_.account_m->GetLocalConfirmedTxHash( tx.GetNonce() - 1 );
+                    if ( expected_previous.has_value() && expected_previous.value() != previous_hash )
+                    {
+                        logger_->error( "{}: Previous hash mismatch tx={} claimed={} expected={}",
+                                        __func__,
+                                        tx.GetHash(),
+                                        previous_hash.substr( 0, 8 ),
+                                        expected_previous.value().substr( 0, 8 ) );
+                        return { ConsensusManager::ValidationResult::Reject() };
+                    }
+                }
+                logger_->error( "{}: Missing previous transaction for hash {}", __func__, previous_hash );
+                return { ConsensusManager::ValidationResult::Pending(
+                    { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
+            }
+
+            auto previous_cert_result = owner_.blockchain_->GetCertificateBySlot(
+                previous_transaction_result.value()->GetSlotID() );
+            if ( previous_cert_result.has_error() ||
+                 !TransactionManager::CertificateMatchesTransaction( previous_cert_result.value(),
+                                                                     *previous_transaction_result.value() ) )
             {
                 logger_->error( "{}: Missing previous certificate for hash {}", __func__, previous_hash );
                 return { ConsensusManager::ValidationResult::Pending(
@@ -712,13 +889,26 @@ namespace sgns
             logger_->error( "{}: Missing UTXO params payload tx={}", __func__, tx.GetHash() );
             return WitnessValidationResult::INVALID;
         }
-        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), *owner_.blockchain_ );
+        const auto witness_verdict = validator.ValidateWitness( subject, tx, params_opt.value(), *owner_.blockchain_ );
         logger_->debug( "{}: Validator witness result tx={} chain_id={} result={}",
                          __func__,
                          tx.GetHash(),
                          chain_id,
-                         witness_ok );
-        return witness_ok ? WitnessValidationResult::VALID : WitnessValidationResult::INVALID;
+                         static_cast<int>( witness_verdict ) );
+        switch ( witness_verdict )
+        {
+        case IInputValidator::WitnessVerdict::kValid:
+            return WitnessValidationResult::VALID;
+        case IInputValidator::WitnessVerdict::kNotSynced:
+            // Cross-delta arrival order is unordered: a producer's transaction or
+            // certificate legitimately arrives after the spending subject. Retry,
+            // do not reject — rejecting here turned a transient gap into a
+            // validation failure for certificate-first delivery.
+            return WitnessValidationResult::PENDING;
+        case IInputValidator::WitnessVerdict::kInvalid:
+        default:
+            return WitnessValidationResult::INVALID;
+        }
     }
 
     std::optional<UTXOTransitionCommitment> TransactionConsensusHandler::BuildUTXOTransitionCommitment(
