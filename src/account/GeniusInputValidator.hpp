@@ -58,17 +58,20 @@ namespace sgns
             return true;
         }
 
-        static bool Register()
-        {
-            static GeniusInputValidator instance;
-            IInputValidator::Register( "supergenius", &instance );
-            IInputValidator::Register( "supergenius_chain", &instance );
-            IInputValidator::Register( "", &instance );
-            return true;
-        }
+        /**
+         * @brief Registers the shared instance for the Genius chain IDs.
+         * @return      True when the registration ran.
+         *
+         * Defined out-of-line and triggered before main() by a static
+         * initializer in TransactionManager.cpp. It must NOT be triggered from
+         * a static initializer in this (exported) header: that constructs a
+         * GeniusInputValidator in every including TU, which bakes the vftable
+         * (with signature-mangled virtuals) into downstream objects and breaks
+         * their link whenever a virtual's signature changes (GeniusWallet
+         * LNK2001 on ValidateWitness, 2026-09-25).
+         */
+        static bool Register();
     };
-
-    static inline bool kGeniusValidatorRegistered = GeniusInputValidator::Register();
 } // namespace sgns
 
 #endif // SGNS_GENIUS_INPUT_VALIDATOR_HPP

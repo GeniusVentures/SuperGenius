@@ -110,6 +110,15 @@ namespace sgns
         return logger;
     }
 
+    bool GeniusInputValidator::Register()
+    {
+        static GeniusInputValidator instance;
+        IInputValidator::Register( "supergenius", &instance );
+        IInputValidator::Register( "supergenius_chain", &instance );
+        IInputValidator::Register( "", &instance );
+        return true;
+    }
+
     bool GeniusInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
                                                        const std::string      &address,
                                                        const UTXOManager      &utxo_manager ) const
