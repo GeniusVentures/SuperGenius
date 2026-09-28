@@ -119,6 +119,14 @@ namespace sgns
             manager->RecoverPendingCertificateWork();
         }
 
+        /// Parks the manager's round timer (the periodic dispatcher that
+        /// replays durable certificate work) for tests that drive certificate
+        /// ingress explicitly and must not race timer-thread dispatch.
+        static void ParkRoundTimer( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->ConfigureRoundDuration( std::chrono::hours( 1 ) );
+        }
+
         static bool HasCertificateWorkState( const std::shared_ptr<ConsensusManager> &manager,
                                              const std::string                       &key,
                                              crdt::CRDTWorkJournal::State             state )
@@ -1093,9 +1101,25 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
 
+    // Park the round timer before any durable certificate exists: its periodic
+    // RecoverPendingCertificateWork (>=500ms cadence) dispatches durable slot
+    // certificates into the TransactionManager handler on the timer thread,
+    // racing this test's barrier choreography and consuming the one-shot
+    // fail-next-store/hook sequence reserved for the ingress threads (observed
+    // as a 600s ctest timeout on loaded runners; OSX Debug CI, 2026-09-28).
+    // The certificate is built above under default timing, and every test
+    // constructs a fresh manager, so this park is test-local.
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    CertificateFallbackTestAccess::ParkRoundTimer( manager );
+
     const auto             marker_key = std::string( "/bridge/executed/source-chain:" ) + winner->dag_st.uncle_hash();
     crdt::GlobalDB::Buffer marker_key_buffer;
     marker_key_buffer.put( marker_key );
+
+    // Bound every barrier wait: a missed rendezvous must fail the test with a
+    // diagnosis within this budget instead of hanging until the ctest timeout.
+    constexpr auto kBarrierTimeout = std::chrono::seconds( 30 );
 
     auto                                                   &utxo_manager = account_->GetUTXOManager();
     std::mutex                                              barrier_mutex;
@@ -1104,6 +1128,7 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     bool                                                    release_crdt        = false;
     bool                                                    first_store_entered = false;
     bool                                                    release_first_store = false;
+    bool                                                    barrier_stalled     = false;
     std::size_t                                             hook_calls          = 0;
     std::optional<outcome::result<ConsensusManager::Check>> first_result;
     std::optional<outcome::result<void>>                    crdt_result;
@@ -1117,7 +1142,10 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
             std::unique_lock lock( barrier_mutex );
             crdt_ready = true;
             barrier_cv.notify_all();
-            barrier_cv.wait( lock, [&] { return release_crdt; } );
+            if ( !barrier_cv.wait_for( lock, kBarrierTimeout, [&] { return release_crdt; } ) )
+            {
+                barrier_stalled = true;
+            }
         } );
     CertificateFallbackTestAccess::SetPutUTXOBeforeStoreHook(
         utxo_manager,
@@ -1130,8 +1158,28 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
             }
             first_store_entered = true;
             barrier_cv.notify_all();
-            barrier_cv.wait( lock, [&] { return release_first_store; } );
+            if ( !barrier_cv.wait_for( lock, kBarrierTimeout, [&] { return release_first_store; } ) )
+            {
+                barrier_stalled = true;
+            }
         } );
+
+    /// Waits for @p what on the barrier, releasing both gates on timeout so
+    /// the worker threads drain and the joins below complete. Returns false
+    /// (and records the failure) instead of blocking until the ctest timeout.
+    auto wait_for_barrier = [&]( auto predicate, const char *what ) -> bool
+    {
+        std::unique_lock lock( barrier_mutex );
+        if ( barrier_cv.wait_for( lock, kBarrierTimeout, predicate ) )
+        {
+            return true;
+        }
+        release_crdt        = true;
+        release_first_store = true;
+        barrier_cv.notify_all();
+        ADD_FAILURE() << "certificate ingress barrier stalled waiting for " << what;
+        return false;
+    };
 
     std::thread crdt_ingress(
         [&]
@@ -1144,10 +1192,7 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
                 std::move( serialized ) );
         } );
 
-    {
-        std::unique_lock lock( barrier_mutex );
-        barrier_cv.wait( lock, [&] { return crdt_ready; } );
-    }
+    (void) wait_for_barrier( [&] { return crdt_ready; }, "CRDT ingress hook" );
 
     std::thread first_ingress(
         [&]
@@ -1157,10 +1202,7 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
                                                                                   certificate.value() );
         } );
 
-    {
-        std::unique_lock lock( barrier_mutex );
-        barrier_cv.wait( lock, [&] { return first_store_entered; } );
-    }
+    (void) wait_for_barrier( [&] { return first_store_entered; }, "certificate ingress PutUTXO hook" );
 
     {
         std::lock_guard lock( barrier_mutex );
@@ -1182,6 +1224,7 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     barrier_cv.notify_all();
     first_ingress.join();
     crdt_ingress.join();
+    EXPECT_FALSE( barrier_stalled ) << "a barrier wait timed out; rendezvous was missed";
     CertificateFallbackTestAccess::SetPutUTXOBeforeStoreHook( utxo_manager, {} );
     CertificateFallbackTestAccess::SetFetchAndProcessBeforeStateChangeHook( *tm_, {} );
 
