@@ -665,11 +665,20 @@ TEST_F( ElmE2eNode, OvertimeLegCancelledNoReGrab )
     // Tiny-but-fundable funding: 0.005h = 18s deadline, 5 milli-hours -> 1
     // minion escrow (0.001h would price at 0 minions and reject
     // PROCESS_COST_ERROR before any deadline could matter — the Phase 1
-    // cost matrix's sub-4-milli-hour row). 18s reliably precedes a cold
-    // ~557MB model download + generation.
+    // cost matrix's sub-4-milli-hour row). Single-node bring-up finding:
+    // the cold ~557MB "download" hits the node's OWN local store (it
+    // published the blocks — seed-provider registry, no network), and
+    // 64-token generation finishes in ~4s, so a 64-token cap completes
+    // legitimately (finish_reason=max_tokens, run2 evidence) BEFORE the
+    // 18s deadline can fire. To exercise the deadline path the work must
+    // still be RUNNING at expiry: a large max_output_tokens (2048) keeps
+    // generation alive well past 18s, so the ProcessElmWorkItem deadline
+    // timer fires Cancel() and the per-token external-cancel poll
+    // (ElmStopStringStreamBuf) converts it into finish_reason=cancelled.
     const std::string jobJson = [&] {
         auto j = nlohmann::json::parse( BuildE2eJobJson( fixture, /*fundingHours=*/0.005, 1 ) );
-        j["elms"][0]["input_uri"] = promptUri;
+        j["elms"][0]["input_uri"]       = promptUri;
+        j["elms"][0]["generation"]["max_output_tokens"] = 2048;
         return j.dump();
     }();
     std::fprintf( stderr, "[ELMDBG] leg2: job json built (%zu bytes)\n", jobJson.size() );
@@ -725,24 +734,54 @@ TEST_F( ElmE2eNode, OvertimeLegCancelledNoReGrab )
     // The terminal envelope is CANCELLED (deadline fired via the cancel token).
     const auto &result = taskResult.subtask_results( 0 );
     ASSERT_FALSE( result.ipfs_results_data_id().empty() );
-    auto ioc = std::make_shared<boost::asio::io_context>();
+    // Bring-up fix (04-05): port leg 1's drainer pattern — the artifact
+    // fetch completion is posted onto this ioc from the node's threads, and
+    // the bare run() at this site drained and returned before that post
+    // arrived (run2: "Value of: ok" failure with the pipeline green —
+    // envelope published, ProcessingDone settled, only the test's fetch
+    // missed). Drain under a work guard; cv-bounded wait.
+    auto ioc         = std::make_shared<boost::asio::io_context>();
     std::vector<char> collected;
-    bool ok = false;
+    auto done        = std::make_shared<std::atomic_bool>( false );
+    auto waitState   = std::make_shared<std::pair<std::mutex, std::condition_variable>>();
     FileManager::GetInstance().LoadASync(
         result.ipfs_results_data_id(),
         false,
         false,
         ioc,
-        [ &collected, &ok ]( FileManager::ResultType buffers ) {
+        [ &collected, done, waitState ]( FileManager::ResultType buffers ) {
             if ( buffers && !buffers.value()->second.empty() )
             {
                 collected = buffers.value()->second.front();
-                ok        = true;
             }
+            done->store( true );
+            {
+                std::lock_guard<std::mutex> lock( waitState->first );
+            }
+            waitState->second.notify_all();
         },
         "file" );
-    ioc->run();
-    ASSERT_TRUE( ok );
+    {
+        auto guard   = boost::asio::make_work_guard( *ioc );
+        std::thread drainer( [ioc, done]()
+        {
+            while ( !done->load() )
+            {
+                ioc->reset();
+                ioc->run();
+            }
+        } );
+        std::unique_lock<std::mutex> lock( waitState->first );
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 120 );
+        ASSERT_TRUE( waitState->second.wait_until( lock, deadline, [&] { return done->load(); } ) )
+            << "envelope artifact fetch timed out";
+        guard.reset();
+        if ( drainer.joinable() )
+        {
+            drainer.join();
+        }
+    }
+    ASSERT_FALSE( collected.empty() ) << "cancelled envelope artifact fetch failed";
     const auto envelope = nlohmann::json::parse( collected.begin(), collected.end() );
     EXPECT_EQ( envelope.at( "finish_reason" ).get<std::string>(), "cancelled" );
 
