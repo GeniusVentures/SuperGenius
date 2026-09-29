@@ -18,7 +18,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusTransaction.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/TokenID.hpp"
 #include "account/UTXOManager.hpp"
 #include "account/UTXOMerkle.hpp"

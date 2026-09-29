@@ -17,7 +17,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/GeniusSigner.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/TrustStartupController.hpp"
 #include "account/TransferTransaction.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
