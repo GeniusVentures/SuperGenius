@@ -200,11 +200,19 @@ TEST_F( ProcessingCoreGatingTest, DefaultArgumentsKeepPublicConstruction )
     auto queue = std::make_shared<FakeTaskQueue>();
     ASSERT_NE( queue, nullptr );
 
-    auto core_defaulted = sgns::processing::ProcessingCoreImpl::New( queue, 1, sgns::TokenID{} );
+    // Payout args are validated members of New's contract (non-empty address,
+    // cut within DEVELOPER_CUT_SCALE); any valid pair works for this scene.
+    auto core_defaulted
+        = sgns::processing::ProcessingCoreImpl::New( queue, 1, sgns::TokenID{}, "test-dev-payout-address", 0 );
     ASSERT_NE( core_defaulted, nullptr );
     EXPECT_FLOAT_EQ( core_defaulted->GetProgress(), 0.0f );
 
-    auto core_public = sgns::processing::ProcessingCoreImpl::New( queue, 1, sgns::TokenID{}, "" );
+    auto core_public = sgns::processing::ProcessingCoreImpl::New( queue,
+                                                                  1,
+                                                                  sgns::TokenID{},
+                                                                  "test-dev-payout-address",
+                                                                  0,
+                                                                  "" );
     ASSERT_NE( core_public, nullptr );
     EXPECT_FLOAT_EQ( core_public->GetProgress(), 0.0f );
 }
