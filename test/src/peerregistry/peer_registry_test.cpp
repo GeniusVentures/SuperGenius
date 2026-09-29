@@ -72,7 +72,7 @@ namespace
                 registry_->Unregister();
                 registry_.reset();
             }
-            sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( kHandmadeKey, &handmade_token_ );
+            secure_crdt_->Registry().UnregisterIf( kHandmadeKey, &handmade_token_ );
             secure_crdt_.reset();
             node_.reset();
         }
@@ -90,7 +90,7 @@ namespace
         ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
         registry_ = new_result.value();
 
-        const auto resolved = sgns::securecrdt::SecureCrdtRegistry::Resolve( kRegistryBaseKey );
+        const auto resolved = secure_crdt_->Registry().Resolve( kRegistryBaseKey );
         ASSERT_TRUE( resolved.has_value() );
         EXPECT_TRUE( resolved->peer_registry != nullptr ) << "policy entry must record its PeerRegistry authority";
 
@@ -116,8 +116,8 @@ namespace
         ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
         registry_ = new_result.value();
 
-        const auto base_entry  = sgns::securecrdt::SecureCrdtRegistry::Resolve( kRegistryBaseKey );
-        const auto child_entry = sgns::securecrdt::SecureCrdtRegistry::Resolve(
+        const auto base_entry  = secure_crdt_->Registry().Resolve( kRegistryBaseKey );
+        const auto child_entry = secure_crdt_->Registry().Resolve(
             kRegistryBaseKey + "/sig/" + kBootstrapperAddress );
         ASSERT_TRUE( base_entry.has_value() );
         ASSERT_TRUE( child_entry.has_value() );
@@ -140,9 +140,9 @@ namespace
         { return std::make_shared<TestSignedData>(); };
         entry.owner_token   = &handmade_token_;
         entry.peer_registry = registry_; // shared_ptr upcasts to the PeerRegistry base
-        sgns::securecrdt::SecureCrdtRegistry::Register( kHandmadeKey, entry );
+        secure_crdt_->Registry().Register( kHandmadeKey, entry );
 
-        const auto resolved = sgns::securecrdt::SecureCrdtRegistry::Resolve( kHandmadeKey );
+        const auto resolved = secure_crdt_->Registry().Resolve( kHandmadeKey );
         ASSERT_TRUE( resolved.has_value() );
         ASSERT_TRUE( resolved->signer_set_source );
 
@@ -161,12 +161,12 @@ namespace
         auto new_result = TrustedPeerRegistry::New( secure_crdt_, kGenesisPeers, kBootstrapperAddress, /*threshold=*/2 );
         ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
         registry_ = new_result.value();
-        ASSERT_TRUE( sgns::securecrdt::SecureCrdtRegistry::Resolve( kRegistryBaseKey ).has_value() );
+        ASSERT_TRUE( secure_crdt_->Registry().Resolve( kRegistryBaseKey ).has_value() );
 
         registry_->Unregister();
 
-        EXPECT_FALSE( sgns::securecrdt::SecureCrdtRegistry::Resolve( kRegistryBaseKey ).has_value() );
-        EXPECT_FALSE( sgns::securecrdt::SecureCrdtRegistry::Resolve(
+        EXPECT_FALSE( secure_crdt_->Registry().Resolve( kRegistryBaseKey ).has_value() );
+        EXPECT_FALSE( secure_crdt_->Registry().Resolve(
                           kRegistryBaseKey + "/sig/" + kBootstrapperAddress )
                           .has_value() );
     }

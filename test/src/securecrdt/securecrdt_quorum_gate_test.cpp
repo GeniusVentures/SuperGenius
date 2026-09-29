@@ -90,7 +90,7 @@ namespace
                                               { return SignerSetSnapshot{ signer_set_static(), 2 }; },
                                               []() -> std::shared_ptr<ISignedCRDTData>
                                               { return std::make_shared<TestSignedData>(); },
-                                              std::regex(), &token_ } ) );
+                                              std::regex(), &token_, nullptr } ) );
 
             ASSERT_TRUE( secure_crdt_->Registry().Register( "gnus-test-secure-malformed",
                                           SecureCrdtRegistryEntry{
@@ -99,7 +99,7 @@ namespace
                                               { return SignerSetSnapshot{ signer_set_static(), 2 }; },
                                               []() -> std::shared_ptr<ISignedCRDTData>
                                               { return std::make_shared<TestSignedData>(); },
-                                              std::regex(), &token_ } ) );
+                                              std::regex(), &token_, nullptr } ) );
         }
 
         void TearDown() override
@@ -307,7 +307,8 @@ TEST_F( SecureCrdtQuorumGateTest, InProcessNodesKeepSameKeyPoliciesAndQuorumInde
             { return SignerSetSnapshot{ { signer }, 1 }; },
             []() -> std::shared_ptr<ISignedCRDTData> { return std::make_shared<TestSignedData>(); },
             std::regex(),
-            &token_a } ) );
+            &token_a,
+            nullptr } ) );
     ASSERT_TRUE( secure_crdt_b->Registry().Register(
         shared_key,
         SecureCrdtRegistryEntry{
@@ -316,7 +317,8 @@ TEST_F( SecureCrdtQuorumGateTest, InProcessNodesKeepSameKeyPoliciesAndQuorumInde
             { return SignerSetSnapshot{ { signer }, 1 }; },
             []() -> std::shared_ptr<ISignedCRDTData> { return std::make_shared<TestSignedData>(); },
             std::regex(),
-            &token_b } ) );
+            &token_b,
+            nullptr } ) );
 
     ASSERT_FALSE( secure_crdt_->ProposeValue( base_key, payload_a ).has_error() );
     ASSERT_FALSE( secure_crdt_b->ProposeValue( base_key, payload_b ).has_error() );
