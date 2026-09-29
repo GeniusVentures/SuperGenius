@@ -486,10 +486,13 @@ namespace sgns
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
-        elements_to_delete.reserve( deleted_data_queue_.size() );
-        elements_to_process.reserve( new_data_queue_.size() );
         {
             std::lock_guard lock( cv_mutex_ );
+            // Reserve under the same mutex the callbacks push with: the queue sizes
+            // must not be read while a push may be in flight (std::queue is not
+            // thread-safe for concurrent size()/push()).
+            elements_to_delete.reserve( deleted_data_queue_.size() );
+            elements_to_process.reserve( new_data_queue_.size() );
             while ( !deleted_data_queue_.empty() )
             {
                 elements_to_delete.push_back( std::move( deleted_data_queue_.front() ) );
@@ -1913,6 +1916,17 @@ namespace sgns
             chain_id = "public";
         }
 
+        // The IInputValidator registry is process-global: with several nodes in one
+        // process only the first one claims a chain id, and the losers would validate
+        // through a peer's instance. The per-claim evidence would then land in that
+        // peer's store and every local vote would abstain from all RPC slots, which
+        // deadlocks bridge-mint slot quorum. Our own validator wins whenever it has
+        // endpoints wired for the chain.
+        if ( public_chain_input_validator_.GetFirstRpcUrl( chain_id ).has_value() )
+        {
+            return { std::move( chain_id ), public_chain_input_validator_ };
+        }
+
         if ( const auto *registered_validator = IInputValidator::Get( chain_id ) )
         {
             return { std::move( chain_id ), *registered_validator };
@@ -1957,6 +1971,49 @@ namespace sgns
                              expected_next_nonce );
         }
         std::unordered_set<std::string> topicSet{ full_node_topic_m, account_m->GetAddress() };
+
+        // SIZE-01: Pre-publish validation. Reject oversized transactions (>64KB) and
+        // transactions whose UTXO commitment/witness cannot be built BEFORE any CRDT
+        // Put/Commit or proposal side effect, so a batch is never partially published
+        // (committed to the CRDT, proposal in flight) when one of its transactions
+        // fails validation.
+        for ( const auto &[transaction, maybe_proof] : transaction_batch )
+        {
+            (void) maybe_proof;
+            auto preflight_embedded_tx = transaction->SerializeToEmbeddedTransaction();
+            if ( preflight_embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
+            {
+                m_logger->error( "{}: Transaction exceeds PubSub size limit tx={} size={} max={}",
+                                 __func__,
+                                 transaction->GetHash(),
+                                 preflight_embedded_tx.ByteSizeLong(),
+                                 MAX_PUBSUB_TX_BYTES );
+                return outcome::failure( std::errc::message_size );
+            }
+
+            if ( transaction->HasUTXOParameters() )
+            {
+                if ( !BuildUTXOTransitionCommitment( *transaction ).has_value() )
+                {
+                    m_logger->error( "{}: Missing required UTXO commitment for tx={} type={}",
+                                     __func__,
+                                     transaction->GetHash(),
+                                     transaction->GetType() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+
+                const auto &[preflight_chain, preflight_validator] = SelectInputValidator( *transaction );
+                if ( preflight_validator.RequiresConsensusUTXOData() &&
+                     !consensus_m_->BuildUTXOWitness( *transaction ).has_value() )
+                {
+                    m_logger->error( "{}: Missing required UTXO witness for tx={} type={}",
+                                     __func__,
+                                     transaction->GetHash(),
+                                     transaction->GetType() );
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+            }
+        }
 
         std::vector<std::shared_ptr<GeniusTransaction>> transactions_sent;
         transactions_sent.reserve( transaction_batch.size() );
