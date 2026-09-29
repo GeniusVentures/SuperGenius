@@ -23,6 +23,28 @@ using namespace sgns;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
+namespace sgns
+{
+    /**
+     * @brief Friend accessor for private GeniusNode state needed by account
+     *        management tests. Mirrors MultiAccountTestAccess in
+     *        child_tokens_test.cpp.
+     */
+    class AccountManagementTestAccess
+    {
+    public:
+        /// @brief Seeds the node's price cache so cost calculations never
+        ///        depend on the external CoinGecko API (rate-limited from CI
+        ///        runner IPs since 2026-09-29, breaking SetPayoutAddress with
+        ///        "The processing cost could not be calculated"). A seeded
+        ///        entry stays valid for m_cacheValidityDuration (1 minute).
+        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
+        {
+            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
+        }
+    };
+} // namespace sgns
+
 namespace
 {
     std::shared_ptr<GeniusAccount> WriteTrustedNodeConfig( const boost::filesystem::path &path,
@@ -330,6 +352,10 @@ TEST_F( AccountManagement, SetPayoutAddress )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
+    // Seed the price cache before any cost calculation: the external price API
+    // is rate-limited from CI runners, and ProcessImage fails outright when
+    // GetGNUSPrice cannot resolve a price.
+    sgns::AccountManagementTestAccess::SetGNUSPrice( node_requester, 1.0 );
     auto        cost      = node_requester->GetProcessCost( *procmgr.value() );
     // Assets live in the source tree. Deriving this from the binary location broke
     // whenever the build layout changed (multi-config or ABI subdirectory).
