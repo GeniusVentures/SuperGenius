@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "account/GeniusAccount.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
 #include "crdt/crdt_options.hpp"
@@ -356,7 +356,7 @@ namespace
                                                                 peer.io,
                                                                 peer.account,
                                                                 peer.blockchain,
-                                                                false,
+                                                                sgns::NodeType::Light,
                                                                 0,
                                                                 std::chrono::milliseconds( 300000 ),
                                                                 std::chrono::milliseconds( 600000 ) );
