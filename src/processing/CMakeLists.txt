@@ -21,6 +21,12 @@ add_library(processing_service
 
 set_target_properties(processing_service PROPERTIES UNITY_BUILD ON)
 
+# MSVC Debug: the unity blob exceeds the COFF section limit without /bigobj
+# (C1128; same remedy as genius_node / api_transport / genius_prover).
+if( MSVC )
+    target_compile_options(processing_service PRIVATE /bigobj)
+endif()
+
 add_proto_library(SGProcessingProto proto/SGProcessing.proto)
 
 target_include_directories(processing_service PRIVATE ${GSL_INCLUDE_DIR})
