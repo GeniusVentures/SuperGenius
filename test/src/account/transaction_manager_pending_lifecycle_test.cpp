@@ -81,7 +81,7 @@ namespace sgns
         static bool SelectsGeniusValidator( TransactionManager                      &manager,
                                             const std::shared_ptr<GeniusTransaction> &tx )
         {
-            const auto selection    = manager.SelectInputValidator( tx );
+            const auto selection    = manager.SelectInputValidator( *tx );
             const auto *chosen      = &selection.validator;
             const bool  is_genius   = chosen == &manager.genius_input_validator_;
             const bool  is_registry = chosen == IInputValidator::Get( "supergenius" )
