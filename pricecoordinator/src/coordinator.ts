@@ -82,7 +82,7 @@ export class PriceCoordinator extends DurableObject<Env> {
       return envelopeResponse(currency, usable, ids, now, false);
     }
 
-    let waiter: Promise<Map<string, PriceRow>>;
+    let waiter: Promise<Map<string, PriceRow>> | null = null;
     if (nowMs >= this.holdOffUntil) {
       this.collecting ??= { ids: new Set(), waiters: [] };
       // Cap overflow: excess ids simply aren't refreshed this round (simplest
@@ -96,12 +96,23 @@ export class PriceCoordinator extends DurableObject<Env> {
           this.collecting!.waiters.push({ ids: joinedIds, resolve, reject });
         });
         this.scheduleFlush();
-      } else {
-        waiter = Promise.resolve(new Map<string, PriceRow>());
       }
-    } else {
-      // Landmine 9: hold-off — do not join a fetch; fall to stale/error path.
-      waiter = Promise.resolve(new Map<string, PriceRow>());
+    }
+
+    if (waiter === null) {
+      // Landmine 9: hold-off (or a full batch budget) — do not fetch. This is
+      // the stale-serve path (D-07): usable rows → stale envelope with
+      // source "coingecko-cache"; nothing usable → structured 502.
+      const usable = usableRows(rows, now);
+      const anyUsable = ids.some((id) => usable.has(id));
+      if (anyUsable) {
+        return envelopeResponse(currency, usable, ids, now, true);
+      }
+      return doError(
+        502,
+        "upstream_error",
+        "upstream unavailable (hold-off active after 429/403)",
+      );
     }
 
     // --- END PROLOGUE (first await below) ---
