@@ -29,7 +29,7 @@ describe("GET /v1/prices happy path (SRVC-01)", () => {
     network.use(http.get(UPSTREAM, () => mockUpstream({ bitcoin: { usd: 61234.12 } })));
     const res = await call("/v1/prices?ids=bitcoin&vs=usd");
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(
       ["age", "currency", "fetchedAt", "prices", "source", "stale"].sort(),
     );
@@ -44,7 +44,7 @@ describe("GET /v1/prices happy path (SRVC-01)", () => {
     network.use(http.get(UPSTREAM, () => mockUpstream({ bitcoin: { usd: 1 } })));
     const res = await call("/v1/prices?ids=bitcoin,unknown-token&vs=usd");
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown> & { prices: Record<string, number> };
     expect(Object.keys(body.prices)).toEqual(["bitcoin"]);
   });
 });

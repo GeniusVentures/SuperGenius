@@ -6,19 +6,21 @@
 //                                             the outboundService egress guard
 //   4. hermeticity canary                  → unmocked upstream fetch is blocked
 //                                             (599 egress_blocked) — zero egress
+// Since plan 01-02 the router serves only GET /v1/prices; GET / is 404 JSON.
 import { SELF, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import worker from "../src/index";
 import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
 import { network } from "./server";
 
-it("integration style: SELF.fetch returns 200 'ok'", async () => {
+it("integration style: SELF.fetch reaches the worker (GET / → 404 JSON not_found)", async () => {
   const res = await SELF.fetch("https://token.gnus.ai/");
-  expect(res.status).toBe(200);
-  expect(await res.text()).toBe("ok");
+  expect(res.status).toBe(404);
+  const body = (await res.json()) as { error: { code: string } };
+  expect(body.error.code).toBe("not_found");
 });
 
-it("unit style: worker.fetch returns 200 'ok'", async () => {
+it("unit style: worker.fetch reaches the worker (GET / → 404 JSON not_found)", async () => {
   const ctx = createExecutionContext();
   const res = await worker.fetch(
     new Request("https://token.gnus.ai/"),
@@ -26,8 +28,9 @@ it("unit style: worker.fetch returns 200 'ok'", async () => {
     ctx,
   );
   await waitOnExecutionContext(ctx);
-  expect(res.status).toBe(200);
-  expect(await res.text()).toBe("ok");
+  expect(res.status).toBe(404);
+  const body = (await res.json()) as { error: { code: string } };
+  expect(body.error.code).toBe("not_found");
 });
 
 it("MSW-mocked CoinGecko fetch succeeds ahead of the egress guard", async () => {
