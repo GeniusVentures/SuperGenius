@@ -5,6 +5,7 @@
     "types": ["@cloudflare/workers-types"],
     "strict": true,
     "noEmit": true,
+    "target": "esnext",
     "lib": ["esnext"],
     "skipLibCheck": true
   },

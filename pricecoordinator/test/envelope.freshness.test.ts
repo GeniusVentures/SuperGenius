@@ -132,8 +132,8 @@ describe("nowSec / parseSec (Landmine 10 — seconds, never ms)", () => {
     expect(nowSec()).toBe(Math.floor(Date.parse("2026-09-30T00:00:00Z") / 1000));
   });
 
-  it("parseSec floors fractional seconds", () => {
-    expect(parseSec(1790719234.9)).toBe(1790719234);
+  it("parseSec floors milliseconds to whole epoch seconds", () => {
+    expect(parseSec(1_790_719_234_900.9)).toBe(1_790_719_234);
   });
 });
 
