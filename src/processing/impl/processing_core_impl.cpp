@@ -86,7 +86,7 @@ namespace sgns::processing
                 libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
                     libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
                 libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
-                di::bind<libp2p::network::ConnectionGater>().TEMPLATE_TO( gater )[di::override] );
+                di::bind<libp2p::network::ConnectionGater>().to( gater )[di::override] );
             return MakeContextFromInjector( std::move( injector ) );
         }
 
@@ -94,7 +94,7 @@ namespace sgns::processing
             libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
                 libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
             libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
-            di::bind<libp2p::network::ConnectionGater>().TEMPLATE_TO( gater )[di::override],
+            di::bind<libp2p::network::ConnectionGater>().to( gater )[di::override],
             libp2p::injector::usePrivateNetwork( network_key ) );
         return MakeContextFromInjector( std::move( injector ) );
     }
