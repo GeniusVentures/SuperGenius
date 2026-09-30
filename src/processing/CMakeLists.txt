@@ -75,4 +75,10 @@ target_link_libraries(processing_service
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
+# MSVC unity build folds the whole target into one TU; Debug emits too many
+# sections for the object format (C1128). Same guard the account targets use.
+if(MSVC AND NOT CLANG)
+    target_compile_options(processing_service PRIVATE /bigobj)
+endif()
+
 supergenius_install(processing_service)
