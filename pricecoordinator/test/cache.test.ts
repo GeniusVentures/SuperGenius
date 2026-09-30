@@ -4,7 +4,7 @@
 // flushes, MSW call-counts for assertions. Test-unique id sets throughout.
 // NO TTL-expiry tests via fake timers (KF-3: miniflare cache uses its own
 // timers) — the header + hit/miss behavior is the proof.
-import { SELF, reset, abortAllDurableObjects } from "cloudflare:test";
+import { SELF, reset } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { network } from "./server";
@@ -37,8 +37,12 @@ beforeEach(() => {
 afterEach(async () => {
   vi.useRealTimers();
   await reset();
-  await abortAllDurableObjects();
   network.resetHandlers();
+  // NOTE (plugin 1.2.4): abortAllDurableObjects() here races miniflare's
+  // internal cache-entry DOs and emits uncaught-exception noise (exit != 0
+  // despite green assertions) — REMOVED. Isolation is preserved without it:
+  // reset() wipes DO storage per-test, and every test uses unique ids, so no
+  // test can observe another's in-memory DO state (hold-off, batch window).
 });
 
 describe("cache round-trip (SRVC-04)", () => {

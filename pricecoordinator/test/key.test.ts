@@ -8,7 +8,7 @@
 // the no-leak assertion on real response bodies.
 // Timeout is likewise a direct fetchUpstream unit test: fake timers don't
 // cross the DO RPC boundary (established empirically in plan 01-03).
-import { SELF, env, reset, abortAllDurableObjects } from "cloudflare:test";
+import { SELF, env, reset } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { network } from "./server";
@@ -20,8 +20,7 @@ const UPSTREAM = "https://api.coingecko.com/api/v3/simple/price";
 
 afterEach(async () => {
   vi.useRealTimers();
-  await reset();
-  await abortAllDurableObjects();
+  await reset(); // storage reset suffices — no DO-memory assertions here
   network.resetHandlers();
 });
 

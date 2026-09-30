@@ -3,7 +3,7 @@
 // handlers are then swapped via network.use (afterEach resets). Time bands are
 // driven by Date-only fake timers (empirical finding — see plan summary); the
 // forced-failure requests traverse real 15ms batch flushes.
-import { SELF, reset, abortAllDurableObjects } from "cloudflare:test";
+import { SELF, reset } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { network } from "./server";
@@ -17,8 +17,9 @@ let upstreamCalls = 0;
 afterEach(async () => {
   vi.useRealTimers();
   await reset();
-  await abortAllDurableObjects();
   network.resetHandlers();
+  // abortAllDurableObjects() intentionally NOT called per-test (see
+  // coalescing file note) — unique ids + reset() give full isolation.
 });
 
 function okHandler(prices: Record<string, Record<string, number>>) {

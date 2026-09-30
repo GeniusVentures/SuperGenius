@@ -20,14 +20,16 @@ const UPSTREAM = "https://api.coingecko.com/api/v3/simple/price";
 
 let upstreamCalls = 0;
 
-// NOTE: abortAllDurableObjects is also used by afterEach — but here it is the
-// assertion-bearing teardown (state torn down BETWEEN requests, mid-test).
+// NOTE: abortAllDurableObjects is the assertion-bearing teardown here (state
+// torn down BETWEEN requests, mid-test). The per-test afterEach deliberately
+// omits it — on plugin 1.2.4 it races miniflare's cache-entry DOs — and this
+// file's mid-test usage is followed by requests on fresh keys, which avoids
+// the race surface.
 const doTeardown = () => abortAllDurableObjects();
 
 afterEach(async () => {
   vi.useRealTimers();
   await reset();
-  await abortAllDurableObjects();
   network.resetHandlers();
 });
 
@@ -47,6 +49,10 @@ describe("DO state survives eviction (SRVC-03, criterion 5)", () => {
     const r1 = await SELF.fetch(`${BASE}?ids=bitcoin,ethereum&vs=usd`);
     expect(r1.status).toBe(200);
     expect(upstreamCalls).toBe(1);
+
+    // Let the priming request's deferred ctx.waitUntil cache-put settle
+    // before tearing DO memory down (abort-vs-cache-DO race — plugin 1.2.4).
+    await new Promise((r) => setTimeout(r, 250));
 
     // Forcible teardown under REAL timers: in-memory state discarded,
     // durable storage preserved (see file header for the 1.2.4 deviation).
@@ -77,6 +83,7 @@ describe("DO state survives eviction (SRVC-03, criterion 5)", () => {
     await SELF.fetch(`${BASE}?ids=bitcoin,ethereum&vs=usd`);
     expect(upstreamCalls).toBe(1);
 
+    await new Promise((r) => setTimeout(r, 250)); // settle the cache-put
     await doTeardown();
 
     // Past the freshness window (45s cache TTL long gone): cold DO refetches.

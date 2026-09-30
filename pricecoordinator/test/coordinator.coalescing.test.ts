@@ -8,7 +8,7 @@
 // directly — the 15ms delay is real but bounded and not a sleep-based
 // assertion), and time bands are driven by vi.setSystemTime (Date-only).
 // The coalescing proof remains the MSW closure call count — not timing.
-import { SELF, reset, abortAllDurableObjects } from "cloudflare:test";
+import { SELF, reset } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { network } from "./server";
@@ -41,10 +41,14 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  // KF-8 / Landmine 16: real timers FIRST, then storage/DO teardown, then MSW.
+  // KF-8 / Landmine 16: real timers FIRST, then storage reset, then MSW.
+  // abortAllDurableObjects() removed from per-test teardown: on plugin 1.2.4
+  // it races miniflare's internal cache-entry DOs (uncaught-exception noise,
+  // nonzero exit despite green assertions). Isolation holds without it —
+  // reset() wipes DO storage and every test uses unique ids/currencies, so
+  // no test can observe another's in-memory DO state (hold-off, batch).
   vi.useRealTimers();
   await reset();
-  await abortAllDurableObjects();
   network.resetHandlers();
 });
 

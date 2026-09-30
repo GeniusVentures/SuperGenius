@@ -2,7 +2,7 @@
 // Since 01-03 the worker routes through the PriceCoordinator DO: happy-path
 // and upstream-failure cases use SELF (full worker path incl. the DO); the
 // 4xx table stays unit-style (those paths short-circuit before the DO).
-import { SELF, createExecutionContext, waitOnExecutionContext, reset, abortAllDurableObjects } from "cloudflare:test";
+import { SELF, createExecutionContext, waitOnExecutionContext, reset } from "cloudflare:test";
 import worker, { type Env } from "../src/index";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,8 +12,7 @@ const BASE = "https://token.gnus.ai";
 const UPSTREAM = "https://api.coingecko.com/api/v3/simple/price";
 
 afterEach(async () => {
-  await reset();
-  await abortAllDurableObjects();
+  await reset(); // storage reset suffices — no DO-memory assertions here
   network.resetHandlers();
 });
 
