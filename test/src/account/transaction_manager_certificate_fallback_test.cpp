@@ -122,10 +122,13 @@ namespace sgns
 
         /// Parks the manager's round timer (the periodic dispatcher that
         /// replays durable certificate work) for tests that drive certificate
-        /// ingress explicitly and must not race timer-thread dispatch.
+        /// ingress explicitly and must not race timer-thread dispatch. The
+        /// handshake variant is required: stretching the round duration alone
+        /// leaves one in-flight tick that can still dispatch work made durable
+        /// immediately afterwards (OSX Debug CI, 2026-09-28/30).
         static void ParkRoundTimer( const std::shared_ptr<ConsensusManager> &manager )
         {
-            manager->ConfigureRoundDuration( std::chrono::hours( 1 ) );
+            manager->ParkRoundTimerForTest();
         }
 
         static bool HasCertificateWorkState( const std::shared_ptr<ConsensusManager> &manager,
@@ -1102,14 +1105,17 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     const auto certificate = BuildSignedCertificate( winner );
     ASSERT_TRUE( certificate.has_value() );
 
-    // Park the round timer before any durable certificate exists: its periodic
-    // RecoverPendingCertificateWork (>=500ms cadence) dispatches durable slot
-    // certificates into the TransactionManager handler on the timer thread,
-    // racing this test's barrier choreography and consuming the one-shot
-    // fail-next-store/hook sequence reserved for the ingress threads (observed
-    // as a 600s ctest timeout on loaded runners; OSX Debug CI, 2026-09-28).
-    // The certificate is built above under default timing, and every test
-    // constructs a fresh manager, so this park is test-local.
+    // Park the round timer (handshake) before any durable certificate exists:
+    // a residual timer tick dispatches durable slot certificates into the
+    // TransactionManager handler on the timer thread via
+    // RecoverPendingCertificateWork, racing this test's barrier choreography
+    // and consuming the one-shot fail-next-store/hook sequence reserved for
+    // the ingress threads. Observed as a 600s ctest timeout (2026-09-28) and,
+    // with bounded barriers, as a fast stall whose log shows the dispatch
+    // ("Failed to process certificate proposal_id=...") firing before the
+    // ingress threads start (OSX Debug CI, 2026-09-30). The certificate is
+    // built above under default timing, and every test constructs a fresh
+    // manager, so this park is test-local.
     const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
     ASSERT_TRUE( manager );
     CertificateFallbackTestAccess::ParkRoundTimer( manager );

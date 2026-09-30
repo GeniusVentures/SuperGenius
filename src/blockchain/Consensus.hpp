@@ -668,6 +668,19 @@ namespace sgns
          */
         void ConfigureRoundDuration( std::chrono::milliseconds duration );
         /**
+         * @brief Parks the round timer and waits for it to acknowledge.
+         *
+         * Unlike ConfigureRoundDuration, which only stretches the NEXT
+         * interval, this holds the timer thread at its loop top: a tick
+         * already in flight when the flag is set still finishes, and the
+         * acknowledge handshake guarantees that once this returns, no tick
+         * will dispatch certificate work (RecoverPendingCertificateWork,
+         * ProcessCertificates) until the manager is closed. Tests that own
+         * certificate ingress exclusively must use this, not a duration
+         * stretch, to close the residual-tick window.
+         */
+        void ParkRoundTimerForTest();
+        /**
          * @brief Sets allowable round skew tolerance.
          * @param[in] skew Allowed round skew.
          */
@@ -1246,6 +1259,8 @@ namespace sgns
         bool                      certificate_filter_registered_   = false; ///< Owns the CRDT certificate filter.
         bool                      certificate_callback_registered_ = false; ///< Owns the CRDT certificate callback.
         std::atomic<bool>         stop_timer_{ false };                     ///< Signals the round timer thread to stop.
+        std::atomic<bool>         timer_parked_for_test_{ false }; ///< Test seam: holds the round timer at its loop top.
+        bool                      timer_parked_ack_ = false;       ///< Park acknowledgement, guarded by `timer_mutex_`.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.

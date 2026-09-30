@@ -384,6 +384,23 @@ namespace sgns
                     {
                         return;
                     }
+
+                    // Test-seam park gate: acknowledge and hold here (before any
+                    // tick work) until unparked or stopping. See
+                    // ParkRoundTimerForTest for why a duration stretch alone is
+                    // not sufficient.
+                    if ( self->timer_parked_for_test_.load() )
+                    {
+                        self->timer_parked_ack_ = true;
+                        self->timer_cv_.notify_all();
+                        self->timer_cv_.wait( lock, [self]() {
+                            return self->stop_timer_.load() || !self->timer_parked_for_test_.load();
+                        } );
+                        if ( self->stop_timer_.load() )
+                        {
+                            return;
+                        }
+                    }
                     lock.unlock();
 
                     std::function<void()> timer_work_hook;
@@ -642,6 +659,21 @@ namespace sgns
             return;
         }
         round_duration_ms_.store( duration.count(), std::memory_order_relaxed );
+    }
+
+    void ConsensusManager::ParkRoundTimerForTest()
+    {
+        std::unique_lock lock( timer_mutex_ );
+        timer_parked_ack_ = false;
+        timer_parked_for_test_.store( true );
+        timer_cv_.notify_all();
+        // Wait until the timer thread acknowledges at its loop top. Bounded so
+        // an already-stopped manager (never acking) cannot hang the caller;
+        // the residual interval sleep is <= round_duration/2, so a live timer
+        // acks well within the bound.
+        timer_cv_.wait_for( lock,
+                            std::chrono::seconds( 5 ),
+                            [this]() { return timer_parked_ack_ || stop_timer_.load(); } );
     }
 
     void ConsensusManager::ConfigureRoundSkew( std::chrono::milliseconds skew )
