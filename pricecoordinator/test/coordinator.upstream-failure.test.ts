@@ -55,7 +55,7 @@ describe("upstream failure with usable rows → stale-serve (D-07)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await seedAndAge("bitcoin", FRESH_SEC + 1);
     network.use(failHandler(429));
-    const res = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const res = await SELF.fetch(`${BASE}?ids=bitcoin,sfx-u1&vs=usd`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { stale: boolean; source: string; prices: Record<string, number> };
     expect(body.stale).toBe(true);
@@ -67,7 +67,7 @@ describe("upstream failure with usable rows → stale-serve (D-07)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await seedAndAge("bitcoin", FRESH_SEC + 1);
     network.use(failHandler(500));
-    const res = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const res = await SELF.fetch(`${BASE}?ids=bitcoin,sfx-u1&vs=usd`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { stale: boolean; source: string };
     expect(body.stale).toBe(true);
@@ -78,7 +78,7 @@ describe("upstream failure with usable rows → stale-serve (D-07)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await seedAndAge("bitcoin", FRESH_SEC + 1);
     network.use(failHandler(403, "<html>Forbidden</html>"));
-    const res = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const res = await SELF.fetch(`${BASE}?ids=bitcoin,sfx-u1&vs=usd`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { source: string };
     expect(body.source).toBe("coingecko-cache");
@@ -114,7 +114,7 @@ describe(">5min rows are never served (D-12 unavailable band)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await seedAndAge("bitcoin", 301);
     network.use(failHandler(429));
-    const res = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const res = await SELF.fetch(`${BASE}?ids=bitcoin,sfx-u1&vs=usd`);
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("upstream_error");
@@ -125,19 +125,23 @@ describe("hold-off after 429 (Landmine 9)", () => {
   it("second request during the 60s hold-off makes ZERO upstream calls and serves stale", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await seedAndAge("bitcoin", FRESH_SEC + 1);
-    // First failing request: ages rows into stale band, triggers 429 + hold-off.
+    // First failing request carries a unique id → different canonical key
+    // from the seed → cache-miss → reaches the DO → 429 → stale + hold-off.
     network.use(failHandler(429));
-    const r1 = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const r1 = await SELF.fetch(`${BASE}?ids=bitcoin,ho-x&vs=usd`);
     expect(r1.status).toBe(200); // stale-serve
     const callsAfterFirst = upstreamCalls;
 
-    // Second request DURING hold-off (only 1s later): must not call upstream.
+    // Second request DURING hold-off (1s later), same key as r1: r1's stale
+    // 200 was NOT cached (fresh-only admission) → this re-reaches the DO,
+    // which must make ZERO upstream calls (hold-off) and re-serve SQL rows.
     vi.setSystemTime(new Date(Date.now() + 1000));
-    const r2 = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const r2 = await SELF.fetch(`${BASE}?ids=bitcoin,ho-x&vs=usd`);
     expect(upstreamCalls).toBe(callsAfterFirst); // ZERO new upstream calls
     expect(r2.status).toBe(200);
-    const body = (await r2.json()) as { stale: boolean; source: string };
+    const body = (await r2.json()) as { stale: boolean; source: string; prices: Record<string, number> };
     expect(body.stale).toBe(true);
     expect(body.source).toBe("coingecko-cache");
+    expect(body.prices.bitcoin).toBe(50000);
   });
 });

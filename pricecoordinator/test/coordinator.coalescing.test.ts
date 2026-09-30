@@ -106,10 +106,13 @@ describe("freshness gates (D-12, D-06a fresh-from-SQL)", () => {
     expect(r1.status).toBe(200);
     expect(upstreamCalls).toBe(1);
 
+    // KF-3 caveat: the cache TTL runs on miniflare's REAL clock — fake time
+    // cannot expire it — so the verification request adds a UNIQUE id:
+    // different canonical key → cache-miss → the DO is reached.
     vi.setSystemTime(new Date(Date.now() + (FRESH_SEC + 5) * 1000));
-    const r2 = await SELF.fetch(`${BASE}?ids=bitcoin&vs=usd`);
+    const r2 = await SELF.fetch(`${BASE}?ids=bitcoin,rw1-x&vs=usd`);
     expect(r2.status).toBe(200);
-    expect(upstreamCalls).toBe(2); // refetched
+    expect(upstreamCalls).toBe(2); // refetched (bitcoin expired + rw1-x new)
   });
 });
 
