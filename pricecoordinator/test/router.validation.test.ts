@@ -1,33 +1,37 @@
-// Plan 01-02 Task 2 — router contract (SRVC-01, SRVC-08, D-08) via unit-style
-// worker.fetch with MSW-mocked upstream (interim direct-upstream wiring).
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+// Plan 01-02 Task 2 — router contract (SRVC-01, SRVC-08, D-08).
+// Since 01-03 the worker routes through the PriceCoordinator DO: happy-path
+// and upstream-failure cases use SELF (full worker path incl. the DO); the
+// 4xx table stays unit-style (those paths short-circuit before the DO).
+import { SELF, createExecutionContext, waitOnExecutionContext, reset, abortAllDurableObjects } from "cloudflare:test";
 import worker, { type Env } from "../src/index";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { network } from "./server";
 
 const BASE = "https://token.gnus.ai";
 const UPSTREAM = "https://api.coingecko.com/api/v3/simple/price";
 
-async function call(path: string, envOverride?: Partial<Env>, method = "GET") {
+afterEach(async () => {
+  await reset();
+  await abortAllDurableObjects();
+  network.resetHandlers();
+});
+
+async function call(path: string, method = "GET") {
   const ctx = createExecutionContext();
   const res = await worker.fetch(
     new Request(`${BASE}${path}`, { method }),
-    { ...(envOverride ?? {}) } as unknown as Env,
+    {} as unknown as Env, // 4xx paths never touch the DO binding
     ctx,
   );
   await waitOnExecutionContext(ctx);
   return res;
 }
 
-function mockUpstream(prices: Record<string, Record<string, number>>) {
-  return HttpResponse.json(prices);
-}
-
 describe("GET /v1/prices happy path (SRVC-01)", () => {
   it("returns the six-key envelope with source 'coingecko', stale false", async () => {
-    network.use(http.get(UPSTREAM, () => mockUpstream({ bitcoin: { usd: 61234.12 } })));
-    const res = await call("/v1/prices?ids=bitcoin&vs=usd");
+    network.use(http.get(UPSTREAM, () => HttpResponse.json({ bitcoin: { usd: 61234.12 } })));
+    const res = await SELF.fetch(`${BASE}/v1/prices?ids=bitcoin&vs=usd`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(
@@ -41,8 +45,8 @@ describe("GET /v1/prices happy path (SRVC-01)", () => {
   });
 
   it("partial upstream coverage omits ids without error (D-09)", async () => {
-    network.use(http.get(UPSTREAM, () => mockUpstream({ bitcoin: { usd: 1 } })));
-    const res = await call("/v1/prices?ids=bitcoin,unknown-token&vs=usd");
+    network.use(http.get(UPSTREAM, () => HttpResponse.json({ bitcoin: { usd: 1 } })));
+    const res = await SELF.fetch(`${BASE}/v1/prices?ids=bitcoin,unknown-token&vs=usd`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown> & { prices: Record<string, number> };
     expect(Object.keys(body.prices)).toEqual(["bitcoin"]);
@@ -69,7 +73,7 @@ describe("4xx table (SRVC-08, D-08) — never 500", () => {
   }
 
   it("POST /v1/prices → 405 method_not_allowed", async () => {
-    const res = await call("/v1/prices?ids=bitcoin&vs=usd", undefined, "POST");
+    const res = await call("/v1/prices?ids=bitcoin&vs=usd", "POST");
     expect(res.status).toBe(405);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("method_not_allowed");
@@ -86,7 +90,7 @@ describe("upstream failure → structured 502 (D-08)", () => {
         }),
       ),
     );
-    const res = await call("/v1/prices?ids=bitcoin&vs=usd");
+    const res = await SELF.fetch(`${BASE}/v1/prices?ids=bitcoin&vs=usd`);
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: { code: string; upstreamStatus?: number } };
     expect(body.error.code).toBe("upstream_error");

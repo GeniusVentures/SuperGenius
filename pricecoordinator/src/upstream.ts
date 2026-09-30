@@ -36,12 +36,11 @@ export async function fetchUpstream(
   // No Accept-Encoding header — identity default (diagnosis forward-compat).
 
   // JS-level timeout so vitest fake timers can drive it (KF-11). Never
-  // AbortSignal.timeout() — native, not fake-timer-controllable.
+  // AbortSignal.timeout() — native, not fake-timer-controllable. Reasonless
+  // abort (standard AbortError) — a custom reason object surfaces as an
+  // unhandled rejection through the abort machinery.
   const ctrl = new AbortController();
-  const timer = setTimeout(
-    () => ctrl.abort(new UpstreamError("upstream timeout")),
-    UPSTREAM_TIMEOUT_MS,
-  );
+  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(url, { headers, signal: ctrl.signal });

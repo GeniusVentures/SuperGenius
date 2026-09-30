@@ -1,11 +1,11 @@
 // Worker entrypoint — real router (plan 01-02, SRVC-01/SRVC-08, D-08).
-// The PriceCoordinator DO class MUST be re-exported: wrangler's `main` must
-// export every Durable Object class named in wrangler.jsonc.
+// Plan 01-03: the DO call site routes through the PriceCoordinator Durable
+// Object — one instance per currency via idFromName (D-05) — which owns
+// coalescing, SQL persistence, freshness gates, stale-serve, and hold-off.
 export { PriceCoordinator } from "./coordinator";
 
-import { buildEnvelope, nowSec } from "./envelope";
 import { parsePricesRequest } from "./validate";
-import { fetchUpstream, UpstreamError } from "./upstream";
+import { UpstreamError } from "./upstream";
 
 export interface Env {
   PRICE_COORDINATOR: DurableObjectNamespace;
@@ -30,21 +30,24 @@ function errorResponse(
  * THE DO call site — one seam function so plan 01-04 can wrap it with the
  * caches.default read-through without touching the router.
  *
- * interim: direct upstream; replaced by PriceCoordinator DO in plan 01-03
- * (DO fetch + stale-serve + hold-off). Until then this keeps the router/
- * envelope layer fully testable end-to-end.
+ * Routes to the PriceCoordinator DO instance for the request's currency
+ * (idFromName — D-05). The DO request is a synthetic URL carrying the
+ * validated ids/currency as query params (the DO re-validates cheaply).
+ * The DO's Response (200 envelope, stale envelope, or D-08 error) is
+ * relayed verbatim.
  */
 async function fetchFromCoordinator(
   env: Env,
   ids: string[],
   currency: string,
 ): Promise<Response> {
-  const rows = await fetchUpstream(ids, currency, env);
-  const envelope = buildEnvelope(currency, rows, ids, nowSec(), false);
-  return new Response(JSON.stringify(envelope), {
-    status: 200,
-    headers: JSON_HEADERS,
-  });
+  const stub = env.PRICE_COORDINATOR.get(
+    env.PRICE_COORDINATOR.idFromName(currency.toUpperCase()),
+  );
+  const doUrl = new URL("https://do/prices");
+  doUrl.searchParams.set("ids", ids.join(","));
+  doUrl.searchParams.set("vs", currency);
+  return stub.fetch(doUrl.toString());
 }
 
 export default {
