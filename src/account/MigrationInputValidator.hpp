@@ -33,18 +33,16 @@ namespace sgns
 
         /**
          * @brief       Registers this validator in the global registry for the "migration" chain ID.
-         * @return      true when the registration is done. This is used to ensure that the static instance is initialized and registered before main() starts.
+         * @return      true when the registration is done.
+         *
+         * Defined out-of-line and triggered before main() by a static initializer
+         * in TransactionManager.cpp. No static initializer in this header: it
+         * would construct a MigrationInputValidator in every including TU and
+         * bake the vftable (with signature-mangled virtuals) into those objects,
+         * breaking downstream links whenever a virtual's signature changes.
          */
-        static bool Register()
-        {
-            static MigrationInputValidator instance;
-            IInputValidator::Register( "migration", &instance );
-            return true;
-        }
+        static bool Register();
     };
-
-    /// @brief Static instance to trigger registration of the MigrationInputValidator before main() starts.
-    static inline bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
 } // namespace sgns
 
 #endif // SGNS_MIGRATION_INPUT_VALIDATOR_HPP
