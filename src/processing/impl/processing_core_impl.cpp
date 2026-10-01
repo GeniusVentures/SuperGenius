@@ -86,12 +86,7 @@ namespace sgns::processing
         namespace di = boost::di;
         using namespace libp2p;
 
-        // Identical binding set the gossip host applies (MakeCustomHostInjector):
-        // explicit crypto providers -- the injector's default crypto wiring has
-        // never been exercised on Windows and corrupts the heap there in
-        // Release builds (0xc0000374) -- plus Noise-only security (the
-        // unauthenticated transport adaptor is never offered in any mode,
-        // D-11) and the connection gater.
+        // Use the same explicit crypto provider bindings as the gossip host.
         auto csprng             = std::make_shared<libp2p::crypto::random::BoostRandomGenerator>();
         auto ed25519_provider   = std::make_shared<libp2p::crypto::ed25519::Ed25519ProviderImpl>();
         auto rsa_provider       = std::make_shared<libp2p::crypto::rsa::RsaProviderImpl>();

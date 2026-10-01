@@ -202,10 +202,8 @@ TEST_F( ProcessingCoreGatingTest, EmptyKeyBuildsPublicHost )
     // The shared-config composition materializes one host instance per injector.
     EXPECT_EQ( context.make_host(), host );
 
-    // Explicit teardown (mirrors GossipPubSub::Stop ordering): stop the host
-    // and its io_context BEFORE the injector-held singletons destroy. Letting
-    // the injector tear a live host down by destruction order alone corrupts
-    // the heap on Windows (0xc0000374).
+    // Stop the host and its io_context before releasing the composition,
+    // matching GossipPubSub::Stop ordering.
     host->stop();
     context.io_context->stop();
 }
@@ -224,7 +222,7 @@ TEST_F( ProcessingCoreGatingTest, ValidKeyBuildsPnetHost )
     ASSERT_NE( host, nullptr );
     EXPECT_FALSE( host->getId().toBase58().empty() );
 
-    // Same explicit teardown as EmptyKeyBuildsPublicHost (Windows heap guard).
+    // Same explicit teardown as EmptyKeyBuildsPublicHost.
     host->stop();
     context.io_context->stop();
 }
