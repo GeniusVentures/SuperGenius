@@ -14,6 +14,8 @@
 #include <coinprices/PriceQuote.hpp>
 #include <coinprices/PriceRetryPolicy.hpp>
 #include <coinprices/PriceFreshness.hpp>
+#include <coinprices/PriceHttpClientSource.hpp>
+#include <coinprices/PriceResponseParsers.hpp>
 #include <HTTPTypes.hpp>
 
 #include <algorithm>
@@ -656,4 +658,182 @@ TEST_F( LocalPriceManagerTest, NothingServableSurfacesLastTierFailure )
     ASSERT_FALSE( result );
     EXPECT_EQ( result.error().code, sgns::PriceFetchError::HttpStatus );
     EXPECT_EQ( result.error().httpStatus, unsigned{ 502 } ); // last tier failure surfaced
+}
+
+// ---- D-16 byte-real envelope-fixture parse tests (03-04 Task 1) ----
+
+namespace
+{
+    // Fixture provenance: Phase 1 pricecoordinator/test/envelope.freshness.test.ts
+    // ("prices preserve the design-reference numeric shape exactly" — NOW =
+    // 1_790_719_234, NOW-17 fetchedAt, source "coingecko", stale false),
+    // extended with the ethereum row of the same suite's ok-handler shape.
+    const char *kEnvelopeFresh =
+        R"({"currency":"usd","prices":{"bitcoin":61234.12,"ethereum":3421.77},"fetchedAt":1790719217,"age":17,"source":"coingecko","stale":false})";
+
+    // Fixture provenance: Phase 1 pricecoordinator/test/
+    // coordinator.upstream-failure.test.ts ("429 with 61s-old rows → 200,
+    // stale true, source coingecko-cache" — bitcoin 50000, aged FRESH_SEC+1).
+    const char *kEnvelopeStaleServe =
+        R"({"currency":"usd","prices":{"bitcoin":50000},"fetchedAt":1790719173,"age":61,"source":"coingecko-cache","stale":true})";
+} // namespace
+
+TEST( EnvelopeParseTest, EnvelopeFreshFixtureParses )
+{
+    auto result = sgns::ParseGnusPriceEnvelope( kEnvelopeFresh, { "bitcoin", "ethereum" }, "usd" );
+    ASSERT_TRUE( result );
+    ASSERT_EQ( result.value().size(), size_t{ 2 } );
+    for ( const auto &quote : result.value() )
+    {
+        EXPECT_EQ( quote.currency, "usd" );
+        // Counterintuitive but contractual: the envelope source names the
+        // producing upstream — "coingecko" → PriceSource::CoinGecko even on
+        // a token.gnus.ai-tier envelope (Phase-1 D-06).
+        EXPECT_EQ( quote.source, sgns::PriceSource::CoinGecko );
+        EXPECT_FALSE( quote.stale );
+        // Seconds→time_point→seconds round-trip proves unit correctness
+        // (PITFALLS #15 guard).
+        EXPECT_EQ( quote.FetchedAtEpochSeconds(), int64_t{ 1790719217 } );
+    }
+    EXPECT_EQ( result.value()[0].asset, "bitcoin" );
+    EXPECT_DOUBLE_EQ( result.value()[0].price, 61234.12 );
+    EXPECT_EQ( result.value()[1].asset, "ethereum" );
+    EXPECT_DOUBLE_EQ( result.value()[1].price, 3421.77 );
+}
+
+TEST( EnvelopeParseTest, EnvelopeStaleServeFixtureParses )
+{
+    auto result = sgns::ParseGnusPriceEnvelope( kEnvelopeStaleServe, { "bitcoin" }, "usd" );
+    ASSERT_TRUE( result );
+    ASSERT_EQ( result.value().size(), size_t{ 1 } );
+    EXPECT_EQ( result.value()[0].source, sgns::PriceSource::GnusPriceService );
+    EXPECT_TRUE( result.value()[0].stale );
+    EXPECT_DOUBLE_EQ( result.value()[0].price, 50000.0 );
+    EXPECT_EQ( result.value()[0].FetchedAtEpochSeconds(), int64_t{ 1790719173 } );
+}
+
+TEST( EnvelopeParseTest, EnvelopePartialPricesAbsentIdsAreNotErrors )
+{
+    // kEnvelopeFresh lacks sfx-u1 (the blocked-id shape from the Phase-1
+    // upstream-failure suite) — partial coverage, not an error (D-09).
+    auto result = sgns::ParseGnusPriceEnvelope( kEnvelopeFresh, { "bitcoin", "sfx-u1" }, "usd" );
+    ASSERT_TRUE( result );
+    EXPECT_EQ( result.value().size(), size_t{ 1 } );
+    EXPECT_EQ( result.value()[0].asset, "bitcoin" );
+}
+
+TEST( EnvelopeParseTest, EnvelopeMalformedBodyIsJsonParseError )
+{
+    auto result = sgns::ParseGnusPriceEnvelope( "{not json", { "bitcoin" }, "usd" );
+    ASSERT_FALSE( result );
+    EXPECT_EQ( result.error().code, sgns::PriceFetchError::JsonParseError );
+}
+
+TEST( EnvelopeParseTest, EnvelopeEmptyPricesIsNoDataFound )
+{
+    const char *empty = R"({"currency":"usd","prices":{},"fetchedAt":1790719217,"age":17,"source":"coingecko","stale":false})";
+    auto result = sgns::ParseGnusPriceEnvelope( empty, { "bitcoin" }, "usd" );
+    ASSERT_FALSE( result );
+    EXPECT_EQ( result.error().code, sgns::PriceFetchError::NoDataFound );
+}
+
+TEST( EnvelopeParseTest, EnvelopeWrongSourceStringIsJsonParseError )
+{
+    // Only two source kinds exist (Phase-1 D-06) — an unknown source string
+    // is malformed, not silently mapped.
+    const char *binance =
+        R"({"currency":"usd","prices":{"bitcoin":1},"fetchedAt":1790719217,"age":17,"source":"binance","stale":false})";
+    auto result = sgns::ParseGnusPriceEnvelope( binance, { "bitcoin" }, "usd" );
+    ASSERT_FALSE( result );
+    EXPECT_EQ( result.error().code, sgns::PriceFetchError::JsonParseError );
+}
+
+// ---- Retry classification + hold-off-skip matrix completion (03-04 Task 2) ----
+
+TEST( RetryClassificationTest, RetryClassificationPolicyTruthTable )
+{
+    using E = sgns::PriceFetchError;
+    using C = sgns::http::ClientError;
+    sgns::RetryConfig config; // defaults: 3 attempts
+
+    // Transient classes: IsTransient true, ShouldRetry retries mid-schedule.
+    for ( const auto cls : { C::TIMEOUT, C::CONNECT_FAILED, C::RESOLVE_FAILED } )
+    {
+        const sgns::PriceFetchFailure failure{ E::NetworkError, 0, cls };
+        EXPECT_TRUE( sgns::IsTransient( failure ) );
+        EXPECT_EQ( sgns::ShouldRetry( failure, 1, config ), sgns::RetryDecision::Retry );
+    }
+    // Permanent classes: never retried — GiveUp AT ATTEMPT 1 (D-14 core claim).
+    for ( const auto cls :
+          { C::TLS_HANDSHAKE_FAILED, C::TLS_CA_LOAD_FAILED, C::WRITE_FAILED, C::READ_INTERRUPTED, C::NO_HEADER } )
+    {
+        const sgns::PriceFetchFailure failure{ E::NetworkError, 0, cls };
+        EXPECT_FALSE( sgns::IsTransient( failure ) );
+        EXPECT_EQ( sgns::ShouldRetry( failure, 1, config ), sgns::RetryDecision::GiveUp );
+    }
+    // Unclassified {NetworkError, 0}: strict — not transient.
+    const sgns::PriceFetchFailure unclassified{ E::NetworkError, 0 };
+    EXPECT_FALSE( sgns::IsTransient( unclassified ) );
+}
+
+TEST_F( LocalPriceManagerTest, RateLimited429EscalatesWithoutRetryingTier1 )
+{
+    tier1_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::RateLimitExceeded, 429 } ) );
+    tier2_->SetSyntheticSuccess();
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "a" }, "usd" );
+    ASSERT_TRUE( result );
+    EXPECT_EQ( tier1_->CallCount(), 1 ); // 429 = immediate escalation, never re-queried
+    ASSERT_EQ( tier2_->CallCount(), 1 );
+    EXPECT_EQ( tier2_->Calls()[0].ids, ( std::vector<std::string>{ "a" } ) ); // full miss-set
+}
+
+TEST_F( LocalPriceManagerTest, HeldOffTier1IsSkippedEntirely )
+{
+    // D-12 documented at manager level: a held-off real PriceHttpClient
+    // returns {RateLimitExceeded, 429} with ZERO network — the manager-side
+    // consequence is immediate escalation. Behaviorally parallel to the 429
+    // case by design (deliberate documentation-of-intent coverage); the real
+    // hold-off mechanics (IsHeldOff skipping the network) remain facade-
+    // tested in HeldOffTierSkipsNetworkEntirely.
+    tier1_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::RateLimitExceeded, 429 } ) );
+    tier2_->SetSyntheticSuccess();
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "a" }, "usd" );
+    ASSERT_TRUE( result );
+    EXPECT_EQ( tier1_->CallCount(), 1 ); // the single scripted response, no observable extra traffic
+    ASSERT_EQ( tier2_->CallCount(), 1 );
+    EXPECT_EQ( tier2_->Calls()[0].ids, ( std::vector<std::string>{ "a" } ) );
+}
+
+TEST_F( LocalPriceManagerTest, EmptyIdsAcrossBothTiersIsStillEmptyInput )
+{
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( {}, "usd" );
+    ASSERT_FALSE( result );
+    EXPECT_EQ( result.error().code, sgns::PriceFetchError::EmptyInput );
+    EXPECT_EQ( tier1_->CallCount(), 0 );
+    EXPECT_EQ( tier2_->CallCount(), 0 ); // facade parity at the manager layer
+}
+
+TEST( ProductionAdapterTest, ProductionAdapterCompilesForBothFormats )
+{
+    // Compile-time proof that both production tiers are constructible over
+    // the manager's ioc shape. stub.invalid: the adapter performs NO I/O at
+    // construction and the URL is never used (keeps the hermeticity grep
+    // clean of real hostnames); nothing is called — zero network.
+    auto ioc = std::make_shared<boost::asio::io_context>();
+    sgns::PriceHttpClientSource coingecko( ioc, "stub.invalid" );
+    sgns::PriceHttpClientSource gnusEnvelope( ioc,
+                                              "stub.invalid",
+                                              sgns::RetryConfig{},
+                                              std::chrono::seconds( 60 ),
+                                              [] { return std::chrono::system_clock::now(); },
+                                              std::chrono::milliseconds( 5000 ),
+                                              sgns::ResponseFormat::GnusEnvelope );
+    (void) coingecko;
+    (void) gnusEnvelope;
 }
