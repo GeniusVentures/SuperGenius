@@ -181,6 +181,19 @@ namespace sgns
         utxo_outpoints_[outpoint] = entry;
         address_outpoints_[address].push_back( outpoint );
 
+        // The before-store hook must fire before the fail-next fault so both test
+        // seams compose on one call: the hook parks the caller while it owns
+        // utxos_mutex_, then the one-shot fault fails that exact store. Invoking
+        // the hook only inside StoreUTXOsLocked would let the fail branch
+        // short-circuit past it, consuming the fault without ever reaching the
+        // hook (deterministic barrier stall in
+        // transaction_manager_certificate_fallback_test). Restores the CR-01
+        // ordering that CR-03's StoreUTXOsLocked refactor inadvertently dropped.
+        if ( put_utxo_before_store_hook_for_test_ )
+        {
+            put_utxo_before_store_hook_for_test_();
+        }
+
         outcome::result<void> store_result = outcome::success();
         if ( fail_next_put_utxo_store_for_test_ )
         {
@@ -189,7 +202,7 @@ namespace sgns
         }
         else
         {
-            store_result = StoreUTXOsLocked( address, put_utxo_before_store_hook_for_test_ );
+            store_result = StoreUTXOsLocked( address );
         }
         if ( store_result.has_error() )
         {

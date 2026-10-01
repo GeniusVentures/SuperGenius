@@ -1211,12 +1211,6 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
 
     (void) wait_for_barrier( [&] { return first_store_entered; }, "certificate ingress PutUTXO hook" );
 
-    {
-        std::lock_guard lock( barrier_mutex );
-        release_crdt = true;
-    }
-    barrier_cv.notify_all();
-
     // While the first insertion is still awaiting its durable snapshot, no
     // normal CRDT confirmation may create bridge completion evidence or a terminal state.
     EXPECT_TRUE( db_->GetDataStore()->get( marker_key_buffer ).has_error() );
@@ -1224,12 +1218,28 @@ TEST_F( CertificateFallbackTest, ConcurrentCertificateIngressWaitsForDurableUtxo
     ASSERT_TRUE( in_flight.has_value() );
     EXPECT_NE( in_flight->status, TransactionManager::TransactionStatus::CONFIRMED );
 
+    // Release the failing certificate ingress FIRST and join it before
+    // releasing the CRDT path. ChangeTransactionState's CONFIRMED case reads
+    // the effects_applied reservation when the CRDT path enters its decision
+    // block; EnterFinalityFaultBarrier orders only the marker write, not that
+    // decision. Releasing the CRDT path while the reservation still reads
+    // effects_applied=true makes it skip ParseTransaction and confirm with
+    // zero outputs (observed as a 0-UTXO flake at the final size assertion).
+    // Letting the failed ingress finish first downgrades the reservation to
+    // effects_applied=false, so the CRDT path deterministically observes the
+    // retryable state and applies the effects itself.
     {
         std::lock_guard lock( barrier_mutex );
         release_first_store = true;
     }
     barrier_cv.notify_all();
     first_ingress.join();
+
+    {
+        std::lock_guard lock( barrier_mutex );
+        release_crdt = true;
+    }
+    barrier_cv.notify_all();
     crdt_ingress.join();
     EXPECT_FALSE( barrier_stalled ) << "a barrier wait timed out; rendezvous was missed";
     CertificateFallbackTestAccess::SetPutUTXOBeforeStoreHook( utxo_manager, {} );
