@@ -147,6 +147,45 @@ protected:
     }
 };
 
+/// Composition only: the injector materializes the io_context and the lazy
+/// host factory without ever creating a Host. Kept as the first, minimal case
+/// so a crash localizes to composition vs host materialization.
+TEST_F( ProcessingCoreGatingTest, EmptyKeyComposesPublicInjector )
+{
+    auto context = sgns::processing::ProcessingCoreImpl::MakeGatedHostInjector( "", MakeGater(), MakeKademliaConfig() );
+
+    ASSERT_NE( context.io_context, nullptr );
+    ASSERT_TRUE( context.make_host );
+}
+
+/// The lazy injector must own its gater after the caller releases the supplied
+/// shared_ptr, in both public and private-network compositions.
+TEST_F( ProcessingCoreGatingTest, LazyHostContextOwnsConnectionGater )
+{
+    for ( const auto &network_key : { std::string{}, std::string( SWARM_KEY_PNET ) } )
+    {
+        SCOPED_TRACE( network_key.empty() ? "public" : "private" );
+        std::weak_ptr<sgns::ipfs_pubsub::DenyListConnectionGater> observed_gater;
+        {
+            auto gater     = MakeGater();
+            observed_gater = gater;
+            auto context  = sgns::processing::ProcessingCoreImpl::MakeGatedHostInjector(
+                network_key, gater, MakeKademliaConfig() );
+            gater.reset();
+
+            // Check ownership before materialization, so a dangling binding
+            // fails deterministically without dereferencing freed memory.
+            ASSERT_FALSE( observed_gater.expired() );
+            auto host = context.make_host();
+            ASSERT_NE( host, nullptr );
+            EXPECT_FALSE( host->getId().toBase58().empty() );
+            host->stop();
+            context.io_context->stop();
+        }
+        EXPECT_TRUE( observed_gater.expired() );
+    }
+}
+
 /// Empty network key: the composition stays public (no pnet binding) and still
 /// builds a working host with the gated binding set (Noise-only + gater).
 TEST_F( ProcessingCoreGatingTest, EmptyKeyBuildsPublicHost )

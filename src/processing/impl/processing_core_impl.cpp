@@ -6,6 +6,17 @@
 
 #include <boost/di/extension/scopes/shared.hpp>
 #include <libp2p/security/noise.hpp>
+// Concrete crypto providers for the explicit binding set below (the same
+// includes GossipPubSub's host composition uses).
+#include <libp2p/crypto/crypto_provider/crypto_provider_impl.hpp>
+#include <libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp>
+#include <libp2p/crypto/ed25519_provider/ed25519_provider_impl.hpp>
+#include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
+#include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
+#include <libp2p/crypto/key_validator/key_validator_impl.hpp>
+#include <libp2p/crypto/random_generator/boost_generator.hpp>
+#include <libp2p/crypto/rsa_provider/rsa_provider_impl.hpp>
+#include <libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp>
 
 #include "base/logger.hpp"
 #include "FileManager.hpp"
@@ -76,25 +87,61 @@ namespace sgns::processing
         using namespace libp2p;
 
         // Identical binding set the gossip host applies (MakeCustomHostInjector):
-        // Noise-only security - the unauthenticated transport adaptor is never
-        // offered in any mode (D-11) - plus the connection gater.
+        // explicit crypto providers -- the injector's default crypto wiring has
+        // never been exercised on Windows and corrupts the heap there in
+        // Release builds (0xc0000374) -- plus Noise-only security (the
+        // unauthenticated transport adaptor is never offered in any mode,
+        // D-11) and the connection gater.
+        auto csprng             = std::make_shared<libp2p::crypto::random::BoostRandomGenerator>();
+        auto ed25519_provider   = std::make_shared<libp2p::crypto::ed25519::Ed25519ProviderImpl>();
+        auto rsa_provider       = std::make_shared<libp2p::crypto::rsa::RsaProviderImpl>();
+        auto ecdsa_provider     = std::make_shared<libp2p::crypto::ecdsa::EcdsaProviderImpl>();
+        auto secp256k1_provider = std::make_shared<libp2p::crypto::secp256k1::Secp256k1ProviderImpl>();
+        auto hmac_provider      = std::make_shared<libp2p::crypto::hmac::HmacProviderImpl>();
+        std::shared_ptr<libp2p::crypto::CryptoProvider> crypto_provider = std::make_shared<libp2p::crypto::CryptoProviderImpl>(
+            csprng,
+            ed25519_provider,
+            rsa_provider,
+            ecdsa_provider,
+            secp256k1_provider,
+            hmac_provider );
+        auto validator = std::make_shared<libp2p::crypto::validator::KeyValidatorImpl>( crypto_provider );
+        auto key_pair  = crypto_provider->generateKeys( libp2p::crypto::Key::Type::Ed25519 ).value();
+
+        // Bind a shared_ptr value: Boost.DI retains a const lvalue reference
+        // passed to .to(gater), but this lazy injector outlives the caller's
+        // shared_ptr (including temporaries passed by the construction tests).
         // usePrivateNetwork validates the key EAGERLY and throws PskValidationError
         // (a std::exception) on invalid key material before anything assembles.
         if ( network_key.empty() )
         {
             auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+                di::bind<libp2p::crypto::CryptoProvider>().to( crypto_provider )[di::override],
+                di::bind<libp2p::crypto::KeyPair>().to( std::move( key_pair ) )[di::override],
+                di::bind<libp2p::crypto::random::CSPRNG>().to( csprng )[di::override],
+                di::bind<libp2p::crypto::marshaller::KeyMarshaller>()
+                    .to<libp2p::crypto::marshaller::KeyMarshallerImpl>()[di::override],
+                di::bind<libp2p::crypto::validator::KeyValidator>().to( validator )[di::override],
                 libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
                     libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
                 libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
-                di::bind<libp2p::network::ConnectionGater>().to( gater )[di::override] );
+                di::bind<libp2p::network::ConnectionGater>()
+                    .to( std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater>( gater ) )[di::override] );
             return MakeContextFromInjector( std::move( injector ) );
         }
 
         auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+            di::bind<libp2p::crypto::CryptoProvider>().to( crypto_provider )[di::override],
+            di::bind<libp2p::crypto::KeyPair>().to( std::move( key_pair ) )[di::override],
+            di::bind<libp2p::crypto::random::CSPRNG>().to( csprng )[di::override],
+            di::bind<libp2p::crypto::marshaller::KeyMarshaller>()
+                .to<libp2p::crypto::marshaller::KeyMarshallerImpl>()[di::override],
+            di::bind<libp2p::crypto::validator::KeyValidator>().to( validator )[di::override],
             libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
                 libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
             libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
-            di::bind<libp2p::network::ConnectionGater>().to( gater )[di::override],
+            di::bind<libp2p::network::ConnectionGater>()
+                .to( std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater>( gater ) )[di::override],
             libp2p::injector::usePrivateNetwork( network_key ) );
         return MakeContextFromInjector( std::move( injector ) );
     }
