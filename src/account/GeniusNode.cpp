@@ -1753,8 +1753,8 @@ namespace sgns
 
     bool GeniusNode::InitUPNP()
     {
-        upnp::UPNP upnp;
-        if ( !upnp.GetIGD() )
+        auto upnp = upnp::UPNP::New();
+        if ( !upnp->GetIGD() )
         {
             return true;
         }
@@ -1762,8 +1762,8 @@ namespace sgns
         bool ret = false;
         do
         {
-            std::string wanip = upnp.GetWanIP();
-            std::string lanip = upnp.GetLocalIP();
+            std::string wanip = upnp->GetWanIP();
+            std::string lanip = upnp->GetLocalIP();
             node_logger_->info( "Wan IP: {}", wanip );
             node_logger_->info( "Lan IP: {}", lanip );
 
@@ -1773,12 +1773,12 @@ namespace sgns
             for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
             {
                 uint16_t candidate_port = pubsubport_ + i;
-                if ( upnp.CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
                 {
                     if ( owner == lanip )
                     {
                         node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if ( upnp.OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
                             ret         = true;
                             pubsubport_ = candidate_port;
@@ -1794,7 +1794,7 @@ namespace sgns
                     continue;
                 }
 
-                if ( upnp.OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                 {
                     node_logger_->info( "Successfully opened port {}", candidate_port );
                     ret         = true;
@@ -2286,16 +2286,16 @@ namespace sgns
         upnp_thread = std::thread(
             [this, pubsubport]()
             {
-                auto       next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
-                upnp::UPNP upnp;
+                auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+                auto upnp              = upnp::UPNP::New();
 
                 while ( !stop_upnp )
                 {
                     if ( std::chrono::steady_clock::now() >= next_refresh_time )
                     {
-                        if ( upnp.GetIGD() )
+                        if ( upnp->GetIGD() )
                         {
-                            if ( upnp.OpenPort( pubsubport, pubsubport, "TCP", 3600 ) )
+                            if ( upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 ) )
                             {
                                 GeniusNodeLogger()->info( "Open Ports Success pubsub: {} ", pubsubport );
                             }
