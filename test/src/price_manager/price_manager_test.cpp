@@ -250,6 +250,9 @@ TEST_F( LocalPriceManagerTest, L1ExpiryRefetchesFromTier )
         auto second = manager.GetQuotes( { "genius-ai" }, "usd" );
         ASSERT_TRUE( second );
         EXPECT_EQ( tier1_->CallCount(), 1 ); // stale entry refetches (LPM-01)
+        ASSERT_EQ( second.value().size(), size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( second.value()[0].price, 0.21 ); // the refreshed value is served
+        EXPECT_EQ( second.value()[0].source, sgns::PriceSource::CoinGecko ); // fresh from the tier
     }
 }
 
@@ -416,18 +419,44 @@ TEST_F( LocalPriceManagerTest, EachWaiterReceivesItsSubsetWithCorrectSource )
     tier1_->SetSyntheticSuccess();
     auto manager = MakeManager( std::chrono::milliseconds( 1000 ) );
 
-    std::thread t1( [&]() { (void) manager.GetQuotes( { "a", "b" }, "usd" ); } );
-    std::thread t2( [&]() { (void) manager.GetQuotes( { "b", "c" }, "usd" ); } );
+    // Hold each waiter's result: the case asserts per-waiter subsets AND the
+    // tier-source serving rule (quotes served straight after a fetch keep
+    // the TIER's source — only cache service rewrites to LocalCache).
+    // (PriceResult is not default-constructible — each thread assigns into
+    // an optional slot.)
+    std::optional<sgns::PriceResult<std::vector<sgns::PriceQuote>>> r1;
+    std::optional<sgns::PriceResult<std::vector<sgns::PriceQuote>>> r2;
+    std::thread t1( [&]() { r1 = manager.GetQuotes( { "a", "b" }, "usd" ); } );
+    std::thread t2( [&]() { r2 = manager.GetQuotes( { "b", "c" }, "usd" ); } );
     t1.join();
     t2.join();
 
     ASSERT_EQ( tier1_->CallCount(), 1 );
-    // Quotes served straight after a fetch keep the TIER's source per the
-    // serving-source rule (only cache service rewrites to LocalCache).
     const auto calls = tier1_->Calls();
     std::set<std::string> received( calls[0].ids.begin(), calls[0].ids.end() );
     const std::set<std::string> expected{ "a", "b", "c" };
     EXPECT_EQ( received, expected );
+
+    // Waiter 1 receives exactly {a, b}; waiter 2 exactly {b, c}.
+    ASSERT_TRUE( r1.has_value() );
+    ASSERT_TRUE( r1.value() );
+    ASSERT_EQ( r1.value().value().size(), size_t{ 2 } );
+    ASSERT_TRUE( r2.has_value() );
+    ASSERT_TRUE( r2.value() );
+    ASSERT_EQ( r2.value().value().size(), size_t{ 2 } );
+    std::set<std::string> w1, w2;
+    for ( const auto &quote : r1.value().value() )
+    {
+        w1.insert( quote.asset );
+        EXPECT_EQ( quote.source, sgns::PriceSource::CoinGecko ); // tier source preserved
+    }
+    for ( const auto &quote : r2.value().value() )
+    {
+        w2.insert( quote.asset );
+        EXPECT_EQ( quote.source, sgns::PriceSource::CoinGecko );
+    }
+    EXPECT_EQ( w1, ( std::set<std::string>{ "a", "b" } ) );
+    EXPECT_EQ( w2, ( std::set<std::string>{ "b", "c" } ) );
 }
 
 TEST_F( LocalPriceManagerTest, MultiIdRequestIsOneBatch )
