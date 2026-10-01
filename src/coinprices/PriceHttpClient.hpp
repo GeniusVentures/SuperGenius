@@ -2,6 +2,7 @@
 
 #include "PriceFetchError.hpp"
 #include "PriceQuote.hpp"
+#include "PriceResponseParsers.hpp"
 #include "PriceRetryPolicy.hpp"
 
 #include "boost/asio.hpp"
@@ -33,11 +34,16 @@ namespace sgns
         /// @param clock Injectable clock for hermetic hold-off tests
         /// @param requestTimeout Per-request connect/handshake/read timeout
         /// (LPM-06 default 5000ms; tests may shorten to force timeouts)
+        /// @param responseFormat Wire format this instance speaks (03-03):
+        /// CoinGeckoSimplePrice (tier 1, default) or GnusEnvelope (tier 2 —
+        /// same retry/hold-off/status machinery, different target builder
+        /// and parser)
         PriceHttpClient( std::string                         baseUrl,
                          RetryConfig                          retryConfig          = {},
                          std::chrono::seconds                holdOffDuration      = std::chrono::seconds( 60 ),
                          RateLimitHoldOff::Clock              clock                = [] { return std::chrono::system_clock::now(); },
-                         std::chrono::milliseconds           requestTimeout      = std::chrono::milliseconds( 5000 ) );
+                         std::chrono::milliseconds           requestTimeout      = std::chrono::milliseconds( 5000 ),
+                         ResponseFormat                       responseFormat       = ResponseFormat::CoinGeckoSimplePrice );
 
         /// @brief Fetch current prices for the given CoinGecko ids.
         /// @param ioc Caller-supplied io_context (D-09 — the caller owns the
@@ -67,6 +73,7 @@ namespace sgns
         std::chrono::seconds holdOffDuration_;
         RateLimitHoldOff     holdOff_;
         std::chrono::milliseconds requestTimeout_;
+        ResponseFormat       responseFormat_;
         std::atomic<int>     attemptsLastFetch_{ 0 };
         base::Logger         m_logger = sgns::base::createLogger( "PriceHttpClient" );
     };

@@ -33,7 +33,16 @@ namespace sgns
         {
             return false;
         }
-        return error.code == PriceFetchError::NetworkError;
+        if ( error.code != PriceFetchError::NetworkError )
+        {
+            return false;
+        }
+        // D-14 — strict transport gating: TLS-handshake/CA-load/write
+        // failures stop being blindly retried; only TIMEOUT/CONNECT_FAILED/
+        // RESOLVE_FAILED (per IsTransientTransport) are transient. An
+        // UNCLASSIFIED {NetworkError, 0} is NOT transient — every facade
+        // path populates the field.
+        return error.transportError && IsTransientTransport( *error.transportError );
     }
 
     RetryDecision ShouldRetry( const PriceFetchFailure &error, int attempt, const RetryConfig &config )

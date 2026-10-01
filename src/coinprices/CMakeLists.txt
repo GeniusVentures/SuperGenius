@@ -2,6 +2,7 @@ add_library(coinprices
     coinprices.cpp
     PriceRetryPolicy.cpp
     PriceHttpClient.cpp
+    PriceResponseParsers.cpp
     LocalPriceManager.cpp
 )
 

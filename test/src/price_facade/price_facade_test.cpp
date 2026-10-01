@@ -10,6 +10,7 @@
 #include <coinprices/PriceQuote.hpp>
 #include <coinprices/PriceFetchError.hpp>
 #include <coinprices/PriceRetryPolicy.hpp>
+#include <HTTPTypes.hpp>
 
 namespace
 {
@@ -177,10 +178,20 @@ TEST_F( PriceFacadeTest, UserAgentIsTheCoinGeckoFriendlyOne )
 TEST( PriceRetryPolicyTest, IsTransientTruthTable )
 {
     using E = sgns::PriceFetchError;
+    using C = sgns::http::ClientError;
     const std::vector<std::pair<sgns::PriceFetchFailure, bool>> cases = {
-        { { E::NetworkError, 0 }, true },           // timeout
-        { { E::NetworkError, 0 }, true },           // connection reset
-        { { E::NetworkError, 0 }, true },           // DNS failure
+        // D-14: {NetworkError, 0} rows carry transport classifications —
+        // strict gating delegates to IsTransientTransport.
+        { { E::NetworkError, 0, C::TIMEOUT }, true },
+        { { E::NetworkError, 0, C::CONNECT_FAILED }, true },
+        { { E::NetworkError, 0, C::RESOLVE_FAILED }, true },
+        // Permanent transport classes are never transient (D-14 core claim).
+        { { E::NetworkError, 0, C::TLS_HANDSHAKE_FAILED }, false },
+        { { E::NetworkError, 0, C::TLS_CA_LOAD_FAILED }, false },
+        { { E::NetworkError, 0, C::WRITE_FAILED }, false },
+        { { E::NetworkError, 0, C::READ_INTERRUPTED }, false },
+        // Unclassified {NetworkError, 0} is NOT transient (strict).
+        { { E::NetworkError, 0 }, false },
         { { E::Blocked, 403 }, false },
         { { E::RateLimitExceeded, 429 }, false },
         { { E::HttpStatus, 404 }, false },
@@ -199,7 +210,7 @@ TEST( PriceRetryPolicyTest, IsTransientTruthTable )
 TEST( PriceRetryPolicyTest, ShouldRetryCapsAtThreeForTransient )
 {
     sgns::RetryConfig config; // defaults: 3 attempts
-    const sgns::PriceFetchFailure transient{ sgns::PriceFetchError::NetworkError, 0 };
+    const sgns::PriceFetchFailure transient{ sgns::PriceFetchError::NetworkError, 0, sgns::http::ClientError::TIMEOUT };
     EXPECT_EQ( sgns::ShouldRetry( transient, 1, config ), sgns::RetryDecision::Retry );
     EXPECT_EQ( sgns::ShouldRetry( transient, 2, config ), sgns::RetryDecision::Retry );
     EXPECT_EQ( sgns::ShouldRetry( transient, 3, config ), sgns::RetryDecision::GiveUp ); // no 4th

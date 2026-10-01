@@ -1,8 +1,11 @@
 #pragma once
 
+#include <HTTPTypes.hpp>
+
 #include <fmt/format.h>
 #include <libp2p/outcome/outcome.hpp>
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -36,10 +39,16 @@ namespace sgns
     /// it, so tests and logs assert the numeric status without string-matching.
     /// @brief httpStatus == 0 means no HTTP response was received at all
     /// (pure transport failure).
+    /// @brief Existing two-field braced initializers ({code, status}) keep
+    /// compiling — transportError is a defaulted member (aggregate init).
     struct PriceFetchFailure
     {
         PriceFetchError code       = PriceFetchError::NetworkError;
         unsigned        httpStatus = 0;
+
+        /// @brief Transport classification when code == NetworkError (D-14);
+        /// nullopt = unclassified.
+        std::optional<http::ClientError> transportError;
 
         /// @brief Human-readable failure text; embeds the numeric status when
         /// one exists. The facade logs this verbatim (criterion 1: the log

@@ -34,13 +34,15 @@ namespace sgns
                                RetryConfig                              retryConfig     = {},
                                std::chrono::seconds                     holdOffDuration = std::chrono::seconds( 60 ),
                                RateLimitHoldOff::Clock                  clock = [] { return std::chrono::system_clock::now(); },
-                               std::chrono::milliseconds                requestTimeout = std::chrono::milliseconds( 5000 ) )
+                               std::chrono::milliseconds                requestTimeout = std::chrono::milliseconds( 5000 ),
+                               ResponseFormat                           responseFormat = ResponseFormat::CoinGeckoSimplePrice )
             : ioc_( std::move( ioc ) ),
               client_( std::move( baseUrl ),
                        std::move( retryConfig ),
                        holdOffDuration,
                        std::move( clock ),
-                       requestTimeout )
+                       requestTimeout,
+                       responseFormat )
         {
         }
 

@@ -31,12 +31,14 @@ namespace sgns
                                       RetryConfig               retryConfig,
                                       std::chrono::seconds      holdOffDuration,
                                       RateLimitHoldOff::Clock   clock,
-                                      std::chrono::milliseconds requestTimeout )
+                                      std::chrono::milliseconds requestTimeout,
+                                      ResponseFormat            responseFormat )
         : baseUrl_( std::move( baseUrl ) ),
           retryConfig_( retryConfig ),
           holdOffDuration_( holdOffDuration ),
           holdOff_( std::move( clock ) ),
-          requestTimeout_( requestTimeout )
+          requestTimeout_( requestTimeout ),
+          responseFormat_( responseFormat )
     {
     }
 
@@ -85,7 +87,17 @@ namespace sgns
             }
             idsJoined += tokenIds[i];
         }
-        const std::string target = "/api/v3/simple/price?ids=" + idsJoined + "&vs_currencies=" + currency;
+        // Target builder per tier (03-03): CoinGecko direct vs the
+        // token.gnus.ai envelope endpoint (note `vs=`, not `vs_currencies=`).
+        std::string target;
+        if ( responseFormat_ == ResponseFormat::GnusEnvelope )
+        {
+            target = "/v1/prices?ids=" + idsJoined + "&vs=" + currency;
+        }
+        else
+        {
+            target = "/api/v3/simple/price?ids=" + idsJoined + "&vs_currencies=" + currency;
+        }
 
         http::RequestOptions options;
         options.userAgent        = kUserAgent;
@@ -113,15 +125,15 @@ namespace sgns
             if ( !result )
             {
                 // Transport failure — classify transiency before mapping
-                const auto transportError = result.error();
-                lastFailure              = PriceFetchFailure{ PriceFetchError::NetworkError, 0 };
+                // (D-14): the classification is carried on the failure so
+                // IsTransient gates the retry decision strictly.
+                const auto transportClass = static_cast<http::ClientError>( result.error().value() );
+                lastFailure              = PriceFetchFailure{ PriceFetchError::NetworkError, 0, transportClass };
                 m_logger->warn( "Price fetch attempt {}/{} failed: transport {} ({})",
                                 attempt,
                                 retryConfig_.maxAttempts,
-                                transportError.message(),
-                                IsTransientTransport( static_cast<http::ClientError>( transportError.value() ) )
-                                    ? "transient"
-                                    : "permanent" );
+                                result.error().message(),
+                                IsTransientTransport( transportClass ) ? "transient" : "permanent" );
                 if ( ShouldRetry( lastFailure, attempt, retryConfig_ ) == RetryDecision::Retry )
                 {
                     std::this_thread::sleep_for( retryConfig_.backoffBeforeRetry[attempt - 1] );
@@ -151,43 +163,29 @@ namespace sgns
             }
 
             // Single parse branch — only ever reached on status == 200.
-            rapidjson::Document document;
-            document.Parse( response.body.c_str() );
-            if ( document.HasParseError() )
+            // Parsing is delegated to the tier parsers (03-03): the parser
+            // returns status 0; the facade wraps its JsonParseError with the
+            // observed response status for facade-parity error reporting.
+            // (PriceResult is not default-constructible — assign through a
+            // success-typed placeholder rather than default-initializing.)
+            PriceResult<std::vector<PriceQuote>> parsed =
+                responseFormat_ == ResponseFormat::GnusEnvelope
+                    ? ParseGnusPriceEnvelope( response.body, tokenIds, currency )
+                    : ParseCoinGeckoSimplePrice( response.body,
+                                                 tokenIds,
+                                                 currency,
+                                                 std::chrono::system_clock::now() );
+            if ( !parsed )
             {
-                m_logger->error( "JSON parse error on 200 body: {}", fmt::underlying( document.GetParseError() ) );
-                return outcome::failure(
-                    PriceFetchFailure{ PriceFetchError::JsonParseError, response.status } );
-            }
-
-            const auto                fetchTime = std::chrono::system_clock::now();
-            std::vector<PriceQuote>   quotes;
-            for ( const auto &id : tokenIds )
-            {
-                // IsNumber covers int and double literals — CoinGecko may
-                // serialize whole-number prices without a decimal point
-                if ( document.IsObject() && document.HasMember( id.c_str() ) && document[id.c_str()].IsObject()
-                     && document[id.c_str()].HasMember( currency.c_str() )
-                     && document[id.c_str()][currency.c_str()].IsNumber() )
+                if ( parsed.error().code == PriceFetchError::JsonParseError )
                 {
-                    PriceQuote quote;
-                    quote.asset     = id;
-                    quote.currency  = currency;
-                    quote.price     = document[id.c_str()][currency.c_str()].GetDouble();
-                    quote.timestamp = fetchTime; // D-14: fetch time
-                    quote.source    = PriceSource::CoinGecko;
-                    quote.stale     = false;
-                    quotes.push_back( std::move( quote ) );
+                    m_logger->error( "JSON parse error on 200 body" );
+                    return outcome::failure(
+                        PriceFetchFailure{ PriceFetchError::JsonParseError, response.status } );
                 }
-                // Unknown ids stay absent — partial coverage, not an error
+                return outcome::failure( parsed.error() );
             }
-
-            if ( quotes.empty() )
-            {
-                return outcome::failure(
-                    PriceFetchFailure{ PriceFetchError::NoDataFound, response.status } );
-            }
-            return outcome::success( std::move( quotes ) );
+            return outcome::success( std::move( parsed.value() ) );
         }
 
         return outcome::failure( lastFailure );

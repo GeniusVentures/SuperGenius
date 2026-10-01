@@ -12,7 +12,11 @@
 #include <coinprices/LocalPriceManager.hpp>
 #include <coinprices/PriceFetchError.hpp>
 #include <coinprices/PriceQuote.hpp>
+#include <coinprices/PriceRetryPolicy.hpp>
+#include <coinprices/PriceFreshness.hpp>
+#include <HTTPTypes.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -495,4 +499,161 @@ TEST_F( LocalPriceManagerTest, FirstCallerPaysTheWindowCost )
     ASSERT_TRUE( result );
     ASSERT_EQ( result.value().size(), size_t{ 1 } );
     EXPECT_EQ( tier1_->CallCount(), 1 );
+}
+
+// ---- Fallback-chain cases (03-03 Task 3; LPM-04, FRESH-01/02) ----
+
+namespace
+{
+    sgns::PriceFetchFailure TimeoutFailure()
+    {
+        return sgns::PriceFetchFailure{ sgns::PriceFetchError::NetworkError, 0,
+                                        sgns::http::ClientError::TIMEOUT };
+    }
+} // namespace
+
+TEST_F( LocalPriceManagerTest, Tier1WholesaleFailureEscalatesFullMissSetToTier2 )
+{
+    tier1_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::Blocked, 403 } ) );
+    tier2_->SetSyntheticSuccess();
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "a", "b" }, "usd" );
+    ASSERT_TRUE( result );
+    EXPECT_EQ( tier1_->CallCount(), 1 );
+    ASSERT_EQ( tier2_->CallCount(), 1 ); // full miss-set escalates (D-09)
+    EXPECT_EQ( tier2_->Calls()[0].ids, ( std::vector<std::string>{ "a", "b" } ) );
+}
+
+TEST_F( LocalPriceManagerTest, Tier1PartialSuccessGapChasesOnlyMissingIds )
+{
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "a", 1.0 ) } ) );
+    tier2_->SetSyntheticSuccess();
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "a", "b" }, "usd" );
+    ASSERT_TRUE( result );
+    ASSERT_EQ( tier2_->CallCount(), 1 );
+    EXPECT_EQ( tier2_->Calls()[0].ids, ( std::vector<std::string>{ "b" } ) ); // gap-chase only the gap
+    // completed id a never re-fetched at tier 2
+    const auto tier2Ids = tier2_->Calls()[0].ids;
+    EXPECT_EQ( std::find( tier2Ids.begin(), tier2Ids.end(), "a" ), tier2Ids.end() );
+}
+
+TEST_F( LocalPriceManagerTest, BothTiersFailStaleEntryServesLastKnownGood )
+{
+    {
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "x", 0.42 ) } ) );
+        auto manager = MakeManager();
+        auto primed  = manager.GetQuotes( { "x" }, "usd" );
+        ASSERT_TRUE( primed );
+        const auto storedTimestamp = primed.value()[0].timestamp;
+
+        now_ += std::chrono::seconds( 120 ); // StaleButUsable band
+        tier1_->SetResult( outcome::failure( TimeoutFailure() ) );
+        tier2_->SetResult( outcome::failure( TimeoutFailure() ) );
+
+        auto result = manager.GetQuotes( { "x" }, "usd" );
+        ASSERT_TRUE( result ); // SUCCESS — LKG serve (D-10)
+        ASSERT_EQ( result.value().size(), size_t{ 1 } );
+        EXPECT_EQ( result.value()[0].source, sgns::PriceSource::LocalCache );
+        EXPECT_TRUE( result.value()[0].stale );
+        EXPECT_DOUBLE_EQ( result.value()[0].price, 0.42 );
+        EXPECT_EQ( result.value()[0].timestamp, storedTimestamp ); // D-11: unchanged
+    }
+}
+
+TEST_F( LocalPriceManagerTest, BothTiersFailOverFiveMinutesIsUnavailable )
+{
+    {
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "x", 0.42 ) } ) );
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "x" }, "usd" ) );
+
+        now_ += std::chrono::seconds( 301 ); // Unavailable band
+        tier1_->SetResult( outcome::failure( TimeoutFailure() ) );
+        tier2_->SetResult( outcome::failure( TimeoutFailure() ) );
+
+        auto result = manager.GetQuotes( { "x" }, "usd" );
+        ASSERT_FALSE( result ); // never served from the unavailable band (FRESH-02)
+    }
+}
+
+TEST_F( LocalPriceManagerTest, ExactlyThreeHundredSecondsStillServesLastKnownGood )
+{
+    {
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "x", 0.42 ) } ) );
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "x" }, "usd" ) );
+
+        now_ += std::chrono::seconds( 300 ); // exactly the boundary: closed-on-stale (D-16)
+        tier1_->SetResult( outcome::failure( TimeoutFailure() ) );
+        tier2_->SetResult( outcome::failure( TimeoutFailure() ) );
+
+        auto result = manager.GetQuotes( { "x" }, "usd" );
+        ASSERT_TRUE( result );
+        ASSERT_EQ( result.value().size(), size_t{ 1 } );
+        EXPECT_TRUE( result.value()[0].stale );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, MixedFreshImmediateAndStaleLkgAssembly )
+{
+    {
+        // Staggered priming: s enters L1 first, ages into StaleButUsable;
+        // then f enters L1 fresh.
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "s", 2.0 ) } ) );
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "s" }, "usd" ) );
+        now_ += std::chrono::seconds( 120 ); // s ages into StaleButUsable
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "f", 1.0 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "f" }, "usd" ) );
+
+        tier1_->Reset();
+        tier2_->Reset();
+        tier1_->SetResult( outcome::failure( TimeoutFailure() ) );
+        tier2_->SetResult( outcome::failure( TimeoutFailure() ) );
+
+        // One assembly, both service modes: f fresh-immediate rides along
+        // (D-06), s serves as LKG (D-10).
+        auto result = manager.GetQuotes( { "f", "s" }, "usd" );
+        ASSERT_TRUE( result );
+        ASSERT_EQ( result.value().size(), size_t{ 2 } );
+        for ( const auto &quote : result.value() )
+        {
+            EXPECT_EQ( quote.source, sgns::PriceSource::LocalCache );
+            if ( quote.asset == "f" )
+            {
+                EXPECT_FALSE( quote.stale );
+            }
+            if ( quote.asset == "s" )
+            {
+                EXPECT_TRUE( quote.stale );
+            }
+        }
+    }
+}
+
+TEST_F( LocalPriceManagerTest, Blocked403NeverRetriesTier1AndGoesStraightToTier2 )
+{
+    tier1_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::Blocked, 403 } ) );
+    tier2_->SetSyntheticSuccess();
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "a" }, "usd" );
+    ASSERT_TRUE( result );
+    EXPECT_EQ( tier1_->CallCount(), 1 ); // 403 escalates immediately, never re-queried
+    EXPECT_EQ( tier2_->CallCount(), 1 );
+}
+
+TEST_F( LocalPriceManagerTest, NothingServableSurfacesLastTierFailure )
+{
+    tier1_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::HttpStatus, 502 } ) );
+    tier2_->SetResult( outcome::failure( sgns::PriceFetchFailure{ sgns::PriceFetchError::HttpStatus, 502 } ) );
+    auto manager = MakeManager();
+
+    auto result = manager.GetQuotes( { "z" }, "usd" );
+    ASSERT_FALSE( result );
+    EXPECT_EQ( result.error().code, sgns::PriceFetchError::HttpStatus );
+    EXPECT_EQ( result.error().httpStatus, unsigned{ 502 } ); // last tier failure surfaced
 }

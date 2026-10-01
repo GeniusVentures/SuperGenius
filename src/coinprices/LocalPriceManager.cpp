@@ -11,6 +11,8 @@
 
 #include <cassert>
 #include <future>
+#include <optional>
+#include <set>
 #include <utility>
 
 namespace sgns
@@ -175,28 +177,70 @@ namespace sgns
             return;
         }
 
-        // Inline single-tier walk for this plan (03-03 adds tier 2 + LKG
-        // assembly). Blocking the manager's dedicated thread is the accepted
-        // D-03/D-04 design: the thread is private, nothing else runs there.
-        auto tierResult = coinGeckoTier_->FetchPrices( missIds, currency );
+        // The fallback chain walk (LPM-04, D-09), inline on the strand:
+        // a FAILED tier leaves `remaining` untouched (wholesale escalation
+        // of the full miss-set); a successful-but-partial tier shrinks it by
+        // exactly the ids it returned (gap-chase); completed ids are never
+        // re-added because they left `remaining`.
+        std::set<std::string>            remaining( batch.ids.begin(), batch.ids.end() );
+        std::optional<PriceFetchFailure> lastTierFailure;
+        std::vector<PriceQuote>          fetched; // quotes returned by the walk — served with TIER source
 
-        if ( tierResult )
+        // Tier 1 — CoinGecko direct. Always has ids at entry (the batch
+        // exists because a miss joined it).
         {
-            StoreInL1( tierResult.value() );
-        }
-        else
-        {
-            m_logger->warn( "tier 1 (CoinGecko) failed: {}", tierResult.error().Message() );
+            auto r1 = coinGeckoTier_->FetchPrices( std::vector<std::string>( remaining.begin(), remaining.end() ),
+                                                   currency );
+            if ( r1 )
+            {
+                StoreInL1( r1.value() );
+                fetched.insert( fetched.end(), r1.value().begin(), r1.value().end() );
+                for ( const auto &quote : r1.value() )
+                {
+                    remaining.erase( quote.asset );
+                }
+                m_logger->debug( "tier 1 (CoinGecko) served {} id(s)", r1.value().size() );
+            }
+            else
+            {
+                m_logger->warn( "tier 1 (CoinGecko) failed: {}", r1.error().Message() );
+                lastTierFailure = r1.error();
+            }
         }
 
-        // Per-waiter resolution per the serving-source rule: immediate
-        // LocalCache copies + the tier's returned quotes for the waiter's
-        // requested ids SERVED WITH THE TIER'S SOURCE AS RECEIVED (no
-        // rewrite — fetch provenance preserved).
-        const std::vector<PriceQuote> &fetched = tierResult ? tierResult.value() : std::vector<PriceQuote>{};
+        // Tier 2 — token.gnus.ai: ONLY for ids tier 1 did not serve.
+        if ( !remaining.empty() )
+        {
+            auto r2 = gnusServiceTier_->FetchPrices( std::vector<std::string>( remaining.begin(), remaining.end() ),
+                                                     currency );
+            if ( r2 )
+            {
+                StoreInL1( r2.value() );
+                fetched.insert( fetched.end(), r2.value().begin(), r2.value().end() );
+                for ( const auto &quote : r2.value() )
+                {
+                    remaining.erase( quote.asset );
+                }
+                m_logger->debug( "tier 2 (token.gnus.ai) served {} id(s)", r2.value().size() );
+            }
+            else
+            {
+                m_logger->warn( "tier 2 (token.gnus.ai) failed: {}", r2.error().Message() );
+                lastTierFailure = r2.error();
+            }
+        }
+
+        // Per-waiter resolution per the serving-source rule, extended with
+        // band-aware L1 lookups (D-10/D-11) for requested ids neither the
+        // immediate set nor either tier covered — exactly the ids both
+        // network tiers failed to refresh (last-known-good territory).
+        const auto now = now_();
+        int resolvedFresh = 0, resolvedStale = 0, resolvedFailed = 0;
         for ( auto &waiter : batch.waiters )
         {
             std::vector<PriceQuote> assembled = std::move( waiter.immediate );
+            // The walk's returned quotes serve with the TIER's source as
+            // received (no rewrite — fetch provenance preserved).
             for ( const auto &quote : fetched )
             {
                 for ( const auto &id : waiter.requestedIds )
@@ -208,33 +252,97 @@ namespace sgns
                     }
                 }
             }
+            for ( const auto &id : waiter.requestedIds )
+            {
+                bool covered = false;
+                for ( const auto &quote : assembled )
+                {
+                    if ( quote.asset == id )
+                    {
+                        covered = true;
+                        break;
+                    }
+                }
+                if ( covered )
+                {
+                    continue; // fresh-immediate or tier-returned — nothing to look up
+                }
+
+                const auto currencyIt = cache_.find( currency );
+                if ( currencyIt == cache_.end() )
+                {
+                    continue;
+                }
+                const auto idIt = currencyIt->second.find( id );
+                if ( idIt == currencyIt->second.end() )
+                {
+                    continue;
+                }
+                const auto band = ClassifyFreshness( idIt->second.timestamp, now );
+                if ( band == FreshnessBand::Fresh )
+                {
+                    // Rare but reachable: an overlapping earlier batch
+                    // refreshed the entry after this request classified it
+                    // a miss.
+                    PriceQuote served = idIt->second;
+                    served.source     = PriceSource::LocalCache;
+                    assembled.push_back( std::move( served ) );
+                }
+                else if ( band == FreshnessBand::StaleButUsable )
+                {
+                    // LKG serve (D-10): only reachable when both tiers
+                    // failed to refresh the id — a tier success would have
+                    // stored a fresh entry (structural FRESH-02 compliance).
+                    // stale=true, timestamp UNTOUCHED (D-11).
+                    PriceQuote served = idIt->second;
+                    served.source     = PriceSource::LocalCache;
+                    served.stale      = true;
+                    assembled.push_back( std::move( served ) );
+                }
+                // Unavailable band: never served (FRESH-02) — skip.
+            }
 
             if ( assembled.empty() )
             {
-                // Nothing servable for this waiter: surface the tier failure,
-                // or NoDataFound when the tier succeeded but returned nothing
-                // for the requested ids.
-                if ( tierResult )
+                // Nothing servable for this waiter: surface the last tier
+                // failure, or NoDataFound when the tiers succeeded but
+                // returned nothing for the requested ids.
+                if ( lastTierFailure.has_value() )
+                {
+                    waiter.done.set_value( outcome::failure( *lastTierFailure ) );
+                }
+                else
                 {
                     waiter.done.set_value(
                         outcome::failure( PriceFetchFailure{ PriceFetchError::NoDataFound, 0 } ) );
                 }
-                else
-                {
-                    waiter.done.set_value( outcome::failure( tierResult.error() ) );
-                }
+                ++resolvedFailed;
                 continue;
             }
 
-            // A non-empty immediate set with a failed tier still resolves
+            // A non-empty immediate set with failed tiers still resolves
             // SUCCESS with the partial data (GetCoinprice's
             // continue-with-what-we-have).
+            if ( lastTierFailure.has_value() )
+            {
+                ++resolvedStale; // partial success over a failed walk
+            }
+            else
+            {
+                ++resolvedFresh;
+            }
             waiter.done.set_value( outcome::success( std::move( assembled ) ) );
         }
-        m_logger->debug( "Dispatched batch of {} id(s) to tier 1 for {} waiter(s) (currency {})",
-                         missIds.size(),
-                         batch.waiters.size(),
-                         currency );
+        // Chain trace (RESEARCH §8.7): the serving tier is otherwise
+        // indistinguishable when envelope quotes carry source=CoinGecko.
+        m_logger->info( "Dispatched batch of {} id(s), {} waiter(s): {}/{} unresolved after tiers, {} fresh / {} stale-or-partial / {} failed",
+                        missIds.size(),
+                        batch.waiters.size(),
+                        remaining.size(),
+                        missIds.size(),
+                        resolvedFresh,
+                        resolvedStale,
+                        resolvedFailed );
     }
 
     void LocalPriceManager::StoreInL1( const std::vector<PriceQuote> &quotes )
