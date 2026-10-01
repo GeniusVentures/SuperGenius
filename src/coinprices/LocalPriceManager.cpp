@@ -44,7 +44,24 @@ namespace sgns
         // (the HttpStubServer uses stop() only because it has no waiters).
         boost::asio::post( strand_, [this]() {
             m_logger->info( "LocalPriceManager shutting down" );
-            // 03-02 extends: cancel window timers, resolve parked waiters
+            // Resolve parked waiters BEFORE reset/join: this is what keeps
+            // blocked GetQuotes callers from hanging at shutdown
+            // (RESEARCH §1 landmine 1). Cancel each open window's timer and
+            // fail its waiters — the walk can no longer run for them.
+            for ( auto &[currency, window] : windows_ )
+            {
+                if ( window.timer )
+                {
+                    boost::system::error_code ec;
+                    window.timer->cancel( ec );
+                }
+                for ( auto &waiter : window.waiters )
+                {
+                    waiter.done.set_value(
+                        outcome::failure( PriceFetchFailure{ PriceFetchError::NetworkError, 0 } ) );
+                }
+            }
+            windows_.clear();
         } );
         work_->reset();
         thread_.join();
@@ -113,11 +130,55 @@ namespace sgns
             return;
         }
 
-        // Single-tier inline walk for this plan (03-02 batches behind the
-        // coalescing window; 03-03 adds tier 2 + LKG assembly). Blocking the
-        // manager's dedicated thread is the accepted D-03/D-04 design: the
-        // thread is private, nothing else runs there.
-        auto tierResult = coinGeckoTier_->FetchPrices( misses, currency );
+        // D-05: misses join the currency's pending window; the first miss
+        // arms the ~50ms coalescing timer. Ids already fetched in the
+        // current walk are NOT re-added because dispatch removes the window
+        // from windows_ BEFORE walking (a new miss creates a fresh window —
+        // D-07).
+        PendingWindow &window = windows_[currency];
+        if ( window.timer == nullptr )
+        {
+            window.timer = std::make_unique<boost::asio::steady_timer>( *ioc_ );
+            window.timer->expires_after( coalescingWindow_ );
+            // The timer is constructed from *ioc_, NOT from the strand — a
+            // bare lambda would therefore NOT be strand-bound;
+            // bind_executor( strand_, ... ) puts the callback on the strand
+            // explicitly. The load-bearing safety invariant is that exactly
+            // ONE thread runs ioc_: single runner thread + strand together
+            // serialize all window state. A second runner thread on ioc_ —
+            // not strand membership — is what would break the
+            // timer-to-dispatch serialization.
+            window.timer->async_wait( boost::asio::bind_executor(
+                strand_, [this, currency]( const boost::system::error_code & ) { DispatchBatchOnStrand( currency ); } ) );
+        }
+        window.ids.insert( misses.begin(), misses.end() ); // set union (D-05)
+        window.waiters.push_back( PendingWaiter{ ids, std::move( immediate ), std::move( done ) } );
+        // The caller (including the FIRST caller — D-05's accepted cost)
+        // blocks on its future until the window fires and the walk lands.
+    }
+
+    void LocalPriceManager::DispatchBatchOnStrand( const std::string &currency )
+    {
+        auto windowIt = windows_.find( currency );
+        if ( windowIt == windows_.end() )
+        {
+            return; // already dispatched (or shutdown cleared it)
+        }
+        // The window closes the moment dispatch begins: requests arriving
+        // during the walk land in a NEW window (D-05/D-07).
+        PendingWindow batch = std::move( windowIt->second );
+        windows_.erase( windowIt );
+
+        const std::vector<std::string> missIds( batch.ids.begin(), batch.ids.end() );
+        if ( missIds.empty() )
+        {
+            return;
+        }
+
+        // Inline single-tier walk for this plan (03-03 adds tier 2 + LKG
+        // assembly). Blocking the manager's dedicated thread is the accepted
+        // D-03/D-04 design: the thread is private, nothing else runs there.
+        auto tierResult = coinGeckoTier_->FetchPrices( missIds, currency );
 
         if ( tierResult )
         {
@@ -128,44 +189,52 @@ namespace sgns
             m_logger->warn( "tier 1 (CoinGecko) failed: {}", tierResult.error().Message() );
         }
 
-        // Per-waiter assembly per the serving-source rule: immediate
-        // LocalCache copies + the tier's returned quotes for this waiter's
+        // Per-waiter resolution per the serving-source rule: immediate
+        // LocalCache copies + the tier's returned quotes for the waiter's
         // requested ids SERVED WITH THE TIER'S SOURCE AS RECEIVED (no
         // rewrite — fetch provenance preserved).
-        std::vector<PriceQuote> assembled = std::move( immediate );
-        for ( const auto &quote : tierResult ? tierResult.value() : std::vector<PriceQuote>{} )
+        const std::vector<PriceQuote> &fetched = tierResult ? tierResult.value() : std::vector<PriceQuote>{};
+        for ( auto &waiter : batch.waiters )
         {
-            for ( const auto &id : ids )
+            std::vector<PriceQuote> assembled = std::move( waiter.immediate );
+            for ( const auto &quote : fetched )
             {
-                if ( quote.asset == id )
+                for ( const auto &id : waiter.requestedIds )
                 {
-                    assembled.push_back( quote );
-                    break;
+                    if ( quote.asset == id )
+                    {
+                        assembled.push_back( quote );
+                        break;
+                    }
                 }
             }
-        }
 
-        if ( assembled.empty() )
-        {
-            // Nothing servable: surface the tier failure, or NoDataFound when
-            // the tier succeeded but returned nothing for the requested ids.
-            if ( tierResult )
+            if ( assembled.empty() )
             {
-                done.set_value( outcome::failure( PriceFetchFailure{ PriceFetchError::NoDataFound, 0 } ) );
+                // Nothing servable for this waiter: surface the tier failure,
+                // or NoDataFound when the tier succeeded but returned nothing
+                // for the requested ids.
+                if ( tierResult )
+                {
+                    waiter.done.set_value(
+                        outcome::failure( PriceFetchFailure{ PriceFetchError::NoDataFound, 0 } ) );
+                }
+                else
+                {
+                    waiter.done.set_value( outcome::failure( tierResult.error() ) );
+                }
+                continue;
             }
-            else
-            {
-                done.set_value( outcome::failure( tierResult.error() ) );
-            }
-            return;
-        }
 
-        // A non-empty immediate set with a failed tier still resolves SUCCESS
-        // with the partial data (GetCoinprice's continue-with-what-we-have).
-        m_logger->debug( "GetQuotes dispatched to tier 1 for {} miss(es), assembled {} quote(s)",
-                         misses.size(),
-                         assembled.size() );
-        done.set_value( outcome::success( std::move( assembled ) ) );
+            // A non-empty immediate set with a failed tier still resolves
+            // SUCCESS with the partial data (GetCoinprice's
+            // continue-with-what-we-have).
+            waiter.done.set_value( outcome::success( std::move( assembled ) ) );
+        }
+        m_logger->debug( "Dispatched batch of {} id(s) to tier 1 for {} waiter(s) (currency {})",
+                         missIds.size(),
+                         batch.waiters.size(),
+                         currency );
     }
 
     void LocalPriceManager::StoreInL1( const std::vector<PriceQuote> &quotes )

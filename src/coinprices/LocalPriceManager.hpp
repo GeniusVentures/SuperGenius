@@ -22,6 +22,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -82,12 +83,36 @@ namespace sgns
                                                         const std::string              &currency = "usd" );
 
     private:
+        /// @brief One blocked GetQuotes caller joined to a pending window.
+        struct PendingWaiter
+        {
+            std::vector<std::string>                                 requestedIds; // full original request
+            std::vector<PriceQuote>                                  immediate;    // fresh-L1 subset (D-06)
+            std::promise<PriceResult<std::vector<PriceQuote>>>       done;
+        };
+
+        /// @brief Per-currency coalescing window (D-05/D-08): the id union
+        /// collected so far plus the waiters parked on it. timer == null
+        /// means the window is not armed (timer-armed == window-open — the
+        /// idempotent-arm equivalent of P-5's scheduleFlush).
+        struct PendingWindow
+        {
+            std::set<std::string>                          ids;
+            std::vector<PendingWaiter>                     waiters;
+            std::unique_ptr<boost::asio::steady_timer>     timer;
+        };
+
         /// @brief Strand-side request handler: D-06 fresh/miss split over the
-        /// L1 cache, then single-tier inline dispatch for the miss set
-        /// (03-02 replaces the immediate dispatch with window coalescing).
+        /// L1 cache; misses join the currency's PendingWindow (armed on the
+        /// first miss) instead of dispatching immediately.
         void HandleRequestOnStrand( const std::vector<std::string>                     &ids,
                                     const std::string                                  &currency,
                                     std::promise<PriceResult<std::vector<PriceQuote>>> done );
+
+        /// @brief Fire the coalescing window: move the batch out, erase the
+        /// window, walk the tiers inline over the union, resolve every waiter
+        /// with its requested subset (D-05..D-08).
+        void DispatchBatchOnStrand( const std::string &currency );
 
         /// @brief Store tier-success quotes in the L1 cache, keyed
         /// currency -> id, keeping fetch-time source and timestamp verbatim.
@@ -109,6 +134,10 @@ namespace sgns
         /// @brief L1 cache keyed currency -> id (D-08 granularity): quotes for
         /// the same id in different currencies are distinct values.
         std::map<std::string, std::map<std::string, PriceQuote>> cache_;
+
+        /// @brief Open coalescing windows keyed by currency (D-08: requests
+        /// for different currencies never share a batch).
+        std::map<std::string, PendingWindow> windows_;
 
         base::Logger m_logger = sgns::base::createLogger( "LocalPriceManager" );
         std::thread  thread_;

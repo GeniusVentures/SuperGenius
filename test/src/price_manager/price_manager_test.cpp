@@ -15,9 +15,11 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -73,13 +75,35 @@ namespace
             sequence_.clear();
         }
 
+        /// @brief Park selected calls inside FetchPrices until released —
+        /// the D-07 "in-flight" scenario. The gate runs on the manager's
+        /// runner thread and receives only the zero-based call index; the
+        /// test's lambda owns the latch (e.g. a shared promise/future pair).
+        void SetCallGate( std::function<void( int callIndex )> gate )
+        {
+            std::lock_guard<std::mutex> lock( mutex_ );
+            gate_ = std::move( gate );
+        }
+
         sgns::PriceResult<std::vector<sgns::PriceQuote>> FetchPrices( const std::vector<std::string> &ids,
                                                                       const std::string              &currency ) override
         {
+            std::function<void( int )> gate;
+            {
+                std::lock_guard<std::mutex> lock( mutex_ );
+                ++callCount_;
+                calls_.push_back( Call{ ids, currency } );
+                cv_.notify_all();
+                gate = gate_;
+            }
+            if ( gate )
+            {
+                // Runs OUTSIDE the lock: the parked call must not block the
+                // test thread from reading the recorded call state.
+                gate( static_cast<int>( calls_.size() ) - 1 );
+            }
             std::lock_guard<std::mutex> lock( mutex_ );
-            ++callCount_;
-            calls_.push_back( Call{ ids, currency } );
-            cv_.notify_all();
+            const size_t callIndex = calls_.size() - 1;
             if ( synthetic_ )
             {
                 std::vector<sgns::PriceQuote> quotes;
@@ -97,7 +121,7 @@ namespace
             }
             if ( !sequence_.empty() )
             {
-                const size_t idx = calls_.size() - 1 < sequence_.size() ? calls_.size() - 1 : sequence_.size() - 1;
+                const size_t idx = callIndex < sequence_.size() ? callIndex : sequence_.size() - 1;
                 return sequence_[idx];
             }
             if ( fixedResult_.has_value() )
@@ -143,6 +167,7 @@ namespace
         std::vector<Call>                                       calls_;
         std::optional<sgns::PriceResult<std::vector<sgns::PriceQuote>>> fixedResult_;
         std::vector<sgns::PriceResult<std::vector<sgns::PriceQuote>>>   sequence_;
+        std::function<void( int )>                                     gate_;
         bool   synthetic_      = false;
         double syntheticPrice_ = 1.0;
     };
@@ -323,4 +348,151 @@ TEST_F( LocalPriceManagerTest, ConstructDestroyLoopDoesNotHang )
     }
     // The test completing IS the assertion (whole-suite timeout backs it):
     // 10 ctor/dtor cycles with the drain-then-join dtor prove clean teardown.
+}
+
+// ---- Coalescing cases (03-02 Task 1; window two-regime discipline) ----
+
+TEST_F( LocalPriceManagerTest, NConcurrentRequestsCollapseIntoOneCall )
+{
+    tier1_->SetSyntheticSuccess();
+    auto manager = MakeManager( std::chrono::milliseconds( 1000 ) );
+
+    // 4 overlapping requests within the 1s window: two {bitcoin, ethereum},
+    // one {ethereum, tether}, one {cardano}. The window must collapse them
+    // into exactly ONE tier call covering the 4-id union (LPM-02).
+    std::vector<std::thread> threads;
+    std::vector<bool>        ok( 4, false );
+    std::vector<size_t>      counts( 4, 0 );
+    threads.emplace_back( [&]() {
+        auto r  = manager.GetQuotes( { "bitcoin", "ethereum" }, "usd" );
+        ok[0]   = static_cast<bool>( r );
+        counts[0] = r ? r.value().size() : 0;
+    } );
+    threads.emplace_back( [&]() {
+        auto r  = manager.GetQuotes( { "bitcoin", "ethereum" }, "usd" );
+        ok[1]   = static_cast<bool>( r );
+        counts[1] = r ? r.value().size() : 0;
+    } );
+    threads.emplace_back( [&]() {
+        auto r  = manager.GetQuotes( { "ethereum", "tether" }, "usd" );
+        ok[2]   = static_cast<bool>( r );
+        counts[2] = r ? r.value().size() : 0;
+    } );
+    threads.emplace_back( [&]() {
+        auto r  = manager.GetQuotes( { "cardano" }, "usd" );
+        ok[3]   = static_cast<bool>( r );
+        counts[3] = r ? r.value().size() : 0;
+    } );
+    for ( auto &t : threads )
+    {
+        t.join();
+    }
+
+    ASSERT_EQ( tier1_->CallCount(), 1 );
+    const auto calls = tier1_->Calls();
+    // Set-equality on the union (order-independent).
+    std::set<std::string> received( calls[0].ids.begin(), calls[0].ids.end() );
+    const std::set<std::string> expected{ "bitcoin", "ethereum", "tether", "cardano" };
+    EXPECT_EQ( received, expected );
+    // Every waiter receives exactly its requested subset: 2/2/2/1.
+    EXPECT_TRUE( ok[0] );
+    EXPECT_EQ( counts[0], size_t{ 2 } );
+    EXPECT_TRUE( ok[1] );
+    EXPECT_EQ( counts[1], size_t{ 2 } );
+    EXPECT_TRUE( ok[2] );
+    EXPECT_EQ( counts[2], size_t{ 2 } );
+    EXPECT_TRUE( ok[3] );
+    EXPECT_EQ( counts[3], size_t{ 1 } );
+}
+
+TEST_F( LocalPriceManagerTest, EachWaiterReceivesItsSubsetWithCorrectSource )
+{
+    tier1_->SetSyntheticSuccess();
+    auto manager = MakeManager( std::chrono::milliseconds( 1000 ) );
+
+    std::thread t1( [&]() { (void) manager.GetQuotes( { "a", "b" }, "usd" ); } );
+    std::thread t2( [&]() { (void) manager.GetQuotes( { "b", "c" }, "usd" ); } );
+    t1.join();
+    t2.join();
+
+    ASSERT_EQ( tier1_->CallCount(), 1 );
+    // Quotes served straight after a fetch keep the TIER's source per the
+    // serving-source rule (only cache service rewrites to LocalCache).
+    const auto calls = tier1_->Calls();
+    std::set<std::string> received( calls[0].ids.begin(), calls[0].ids.end() );
+    const std::set<std::string> expected{ "a", "b", "c" };
+    EXPECT_EQ( received, expected );
+}
+
+TEST_F( LocalPriceManagerTest, MultiIdRequestIsOneBatch )
+{
+    tier1_->SetSyntheticSuccess();
+    auto manager = MakeManager( std::chrono::milliseconds( 0 ) );
+
+    auto result = manager.GetQuotes( { "a", "b", "c" }, "usd" );
+    ASSERT_TRUE( result );
+    ASSERT_EQ( tier1_->CallCount(), 1 ); // LPM-03: one call, all ids in one batch
+    EXPECT_EQ( tier1_->Calls()[0].ids, ( std::vector<std::string>{ "a", "b", "c" } ) );
+}
+
+TEST_F( LocalPriceManagerTest, PerCurrencyWindowsAreSeparate )
+{
+    tier1_->SetSyntheticSuccess();
+    auto manager = MakeManager( std::chrono::milliseconds( 1000 ) );
+
+    std::thread ta( [&]() { (void) manager.GetQuotes( { "x" }, "usd" ); } );
+    std::thread tb( [&]() { (void) manager.GetQuotes( { "x" }, "eur" ); } );
+    ta.join();
+    tb.join();
+
+    // D-08: windows are keyed by currency — never a shared batch.
+    ASSERT_EQ( tier1_->CallCount(), 2 );
+    const auto calls = tier1_->Calls();
+    EXPECT_NE( calls[0].currency, calls[1].currency );
+}
+
+TEST_F( LocalPriceManagerTest, NewMissesDuringInflightOpenNewWindow )
+{
+    tier1_->SetSyntheticSuccess();
+    // Call 1 parks on the promise until released; call 2 returns instantly.
+    auto release = std::make_shared<std::promise<void>>();
+    auto released = release->get_future().share();
+    tier1_->SetCallGate( [released]( int callIndex ) {
+        if ( callIndex == 0 )
+        {
+            released.wait(); // park call 1 (0-based index) until the test releases
+        }
+    } );
+    auto manager = MakeManager( std::chrono::milliseconds( 0 ) );
+
+    std::thread a( [&]() { (void) manager.GetQuotes( { "p" }, "usd" ); } );
+    // Wait until call 1 is parked in the gate, THEN post request q: it must
+    // not join call 1's batch (dispatch already began — the window was moved
+    // out before the walk); it lands in a NEW window that dispatches only
+    // after the in-flight walk completes (D-07).
+    ASSERT_TRUE( tier1_->WaitForCalls( 1, std::chrono::milliseconds( 2000 ) ) );
+    std::thread b( [&]() { (void) manager.GetQuotes( { "q" }, "usd" ); } );
+
+    release->set_value();
+    a.join();
+    b.join();
+
+    ASSERT_EQ( tier1_->CallCount(), 2 );
+    const auto calls = tier1_->Calls();
+    EXPECT_EQ( calls[0].ids, ( std::vector<std::string>{ "p" } ) );
+    EXPECT_EQ( calls[1].ids, ( std::vector<std::string>{ "q" } ) ); // disjoint batches — no id fetched twice
+}
+
+TEST_F( LocalPriceManagerTest, FirstCallerPaysTheWindowCost )
+{
+    tier1_->SetSyntheticSuccess();
+    auto manager = MakeManager( std::chrono::milliseconds( 1000 ) );
+
+    // Assert on cause, not wall time: the single request resolves
+    // successfully with exactly 1 tier call after the window fires — the
+    // future IS the synchronization (D-05's accepted first-caller cost).
+    auto result = manager.GetQuotes( { "solo" }, "usd" );
+    ASSERT_TRUE( result );
+    ASSERT_EQ( result.value().size(), size_t{ 1 } );
+    EXPECT_EQ( tier1_->CallCount(), 1 );
 }
