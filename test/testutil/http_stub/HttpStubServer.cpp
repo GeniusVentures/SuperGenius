@@ -131,15 +131,19 @@ namespace sgns::testutil
                     return;
                 }
                 const std::string target( request->target() );
+                // Script keys are path-only: strip any query string so
+                // /api/v3/simple/price?ids=... matches the "/api/v3/simple/price" script
+                const auto         queryPos = target.find( '?' );
+                const std::string pathOnly( queryPos == std::string::npos ? target : target.substr( 0, queryPos ) );
                 {
                     std::lock_guard<std::mutex> lock( uaMutex_ );
-                    lastUserAgent_[target] = std::string( request->at( http::field::user_agent ) );
+                    lastUserAgent_[pathOnly] = std::string( request->at( http::field::user_agent ) );
                 }
 
                 ScriptedResponse script;
                 {
                     std::lock_guard<std::mutex> lock( scriptsMutex_ );
-                    auto                        it = scripts_.find( target );
+                    auto                        it = scripts_.find( pathOnly );
                     if ( it != scripts_.end() )
                     {
                         script = it->second;

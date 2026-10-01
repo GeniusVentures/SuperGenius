@@ -1,5 +1,7 @@
 add_library(coinprices
-    coinprices.cpp 
+    coinprices.cpp
+    PriceRetryPolicy.cpp
+    PriceHttpClient.cpp
 )
 
 target_include_directories(coinprices PRIVATE ${AsyncIOManager_INCLUDE_DIR})
