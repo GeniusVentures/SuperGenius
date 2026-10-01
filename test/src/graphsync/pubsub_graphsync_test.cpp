@@ -77,11 +77,11 @@ protected:
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
         auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
         loggerGraphsync->set_level( spdlog::level::trace );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
 
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::debug );
     }
 
     static void TearDownTestSuite()
@@ -107,8 +107,6 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     sgns::test::removeAllWithRetry( basePath5 );
     sgns::test::removeAllWithRetry( basePath6 );
 
-    auto io_context = std::make_shared<boost::asio::io_context>();
-
     auto pubs1        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     auto start1Future = pubs1->Start( 0, {} );
     auto pubs2        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
@@ -133,13 +131,18 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
         &resultTime
 
     );
-    auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+    // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+    // single-threaded per host, so each scheduler has to run on its own host's
+    // io_context. One shared private context here races both hosts' yamux WriteQueue.
+    auto io_context  = pubs1->GetAsioContext();
+    auto io_context2 = pubs2->GetAsioContext();
+    auto scheduler   = std::make_shared<libp2p::basic::SchedulerImpl>(
         std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context ),
         libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto scheduler2       = std::make_shared<libp2p::basic::SchedulerImpl>(
-        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context ),
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context2 ),
         libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
     auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(),
                                                                                           scheduler2 );
@@ -153,7 +156,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
                                                     graphsyncnetwork,
                                                     scheduler,
                                                     generator );
-    auto globaldb_ret2 = sgns::crdt::GlobalDB::New( io_context,
+    auto globaldb_ret2 = sgns::crdt::GlobalDB::New( io_context2,
                                                     basePath2,
                                                     pubs2,
                                                     sgns::crdt::CrdtOptions::DefaultOptions(),
@@ -167,7 +170,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
                                                     graphsyncnetwork,
                                                     scheduler,
                                                     generator );
-    auto globaldb_ret4 = sgns::crdt::GlobalDB::New( io_context,
+    auto globaldb_ret4 = sgns::crdt::GlobalDB::New( io_context2,
                                                     basePath4,
                                                     pubs2,
                                                     sgns::crdt::CrdtOptions::DefaultOptions(),
@@ -182,7 +185,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
                                                     graphsyncnetwork,
                                                     scheduler,
                                                     generator );
-    auto globaldb_ret6 = sgns::crdt::GlobalDB::New( io_context,
+    auto globaldb_ret6 = sgns::crdt::GlobalDB::New( io_context2,
                                                     basePath6,
                                                     pubs2,
                                                     sgns::crdt::CrdtOptions::DefaultOptions(),
@@ -222,7 +225,6 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     gdb5->Start();
     gdb6->Start();
     pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
-    std::thread io_thread = std::thread( [io_context]() { io_context->run(); } );
     //Dummy Transaction Data
     auto                         transaction = gdb1->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key( "/test/test" );
@@ -270,7 +272,10 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
             }
             return false;
         },
-        std::chrono::milliseconds( 20000 ),
+        // There is no mesh settle wait between AddPeers and the first commit, so
+        // this window must absorb identify + gossip mesh formation + graphsync of
+        // the 512KB value. Loaded Windows runners have shown 6s dial gaps alone.
+        std::chrono::milliseconds( 60000 ),
         "Replication to gdb2 did not complete in time" );
 
     bool                         getConfirmed2 = false;
@@ -287,7 +292,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
             }
             return false;
         },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 60000 ),
         "Replication to gdb4 did not complete in time" );
     auto result2 = gdb3->Get( tx_key );
     auto result3 = gdb4->Get( tx_key );
@@ -307,10 +312,12 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     EXPECT_FALSE( result9 );
     EXPECT_TRUE( getConfirmed );
     EXPECT_TRUE( getConfirmed2 );
-    io_context->stop();
-    if ( io_thread.joinable() )
+    // CRDT/GraphSync teardown talks to the libp2p hosts, so drain the DBs before
+    // pubs1/pubs2 release them.
+    for ( const auto &gdb : { gdb1, gdb2, gdb3, gdb4, gdb5, gdb6 } )
     {
-        io_thread.join();
-        std::cout << "Join thread 1 " << std::endl;
+        gdb->ShutdownNow();
     }
+    pubs1->Stop();
+    pubs2->Stop();
 }

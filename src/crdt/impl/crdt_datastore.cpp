@@ -115,6 +115,8 @@ namespace sgns::crdt
                             {
                                 continue;
                             }
+                            self->RetryDueFailedRoots();
+                            self->RetryStalledDeltas();
                             if ( self->SeedNextExternalRoot() )
                             {
                                 continue;
@@ -205,10 +207,29 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingFailure( const RootCIDJob &job )
     {
-        // Signal job failure
+        // An external fetch failure (e.g. peer connection refused) must not
+        // poison the shared per-CID status while a local AddDAGNode put for the
+        // same CID is still queued: the self-created job can complete on the
+        // local node alone, and WaitForJob for the put would otherwise fail
+        // spuriously. Likewise keep the block — it belongs to the pending put.
+        bool self_created_job_pending = false;
         {
-            std::lock_guard lock_jobs( dagWorkerMutex_ );
-            pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
+            std::unique_lock lock_jobs( dagWorkerMutex_ );
+            if ( !job.created_by_self_ )
+            {
+                for ( std::queue<RootCIDJob> scan = selfCreatedJobList_; !scan.empty(); scan.pop() )
+                {
+                    if ( scan.front().root_node_->getCID() == job.root_node_->getCID() )
+                    {
+                        self_created_job_pending = true;
+                        break;
+                    }
+                }
+            }
+            if ( !self_created_job_pending )
+            {
+                MarkJobFailedLocked( job.root_node_->getCID(), !job.created_by_self_ );
+            }
         }
 
         const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
@@ -219,10 +240,13 @@ namespace sgns::crdt
         CleanupFailedJob( job );
 
         // Delete blocks
-        (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
-        if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+        if ( !self_created_job_pending )
         {
-            (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+            (void) dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
+            if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+            {
+                (void) dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+            }
         }
 
         if ( !job.created_by_self_ )
@@ -240,6 +264,7 @@ namespace sgns::crdt
             // Mark self-created job as completed
             std::lock_guard lock_jobs( dagWorkerMutex_ );
             pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
+            ClearFailedRootRetryLocked( job.root_node_->getCID() );
         }
         dagWorkerCv_.notify_all();
         if ( job.created_by_self_ )
@@ -312,8 +337,9 @@ namespace sgns::crdt
         handleNextFuture_ = std::async(
             [weakptr{ weak_from_this() }]
             {
-                auto threadRunning = true;
-                bool thread_id_set = false;
+                auto                         threadRunning = true;
+                bool                         thread_id_set = false;
+                std::shared_ptr<Broadcaster> broadcaster;
                 while ( threadRunning )
                 {
                     if ( auto self = weakptr.lock() )
@@ -331,15 +357,21 @@ namespace sgns::crdt
                             self->logger_->debug( "HandleNext thread finished" );
                             threadRunning = false;
                         }
+                        // Copy the handle out and drop `self` before waiting: holding a strong
+                        // reference across the wait would keep the datastore alive and land its
+                        // destructor on this very thread.
+                        broadcaster = self->broadcaster_;
                     }
                     else
                     {
                         threadRunning = false;
                     }
 
-                    if ( threadRunning )
+                    if ( threadRunning && broadcaster )
                     {
-                        std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
+                        // Sleeping blind here cost a full interval of intake latency on every
+                        // CRDT hop, and every transaction is several hops.
+                        broadcaster->WaitForNext( threadSleepTimeInMilliseconds_ );
                     }
                 }
             } );
@@ -500,6 +532,13 @@ namespace sgns::crdt
             activeRootCID_.has_value() );
 
         closeStarted_ = true;
+        // Signal before the waits so a worker parked in DAGSyncer::getNode() can
+        // see it and unwind; the actual syncer teardown has to come after the
+        // waits, or it races the workers still polling graphsync state.
+        if ( dagSyncer_ )
+        {
+            dagSyncer_->Stop();
+        }
         StopWorkerLoops();
 
         if ( IsCurrentThreadInternalWorker() )
@@ -507,11 +546,12 @@ namespace sgns::crdt
             logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
                             __func__ );
             auto keep_alive = shared_from_this();
-            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
+            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->StopSyncerAfterWorkerDrain(); } )
+                .detach();
             return;
         }
 
-        WaitForWorkersToExit();
+        StopSyncerAfterWorkerDrain();
 
         started_ = false;
         logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
@@ -526,14 +566,13 @@ namespace sgns::crdt
 
     void CrdtDatastore::StopWorkerLoops()
     {
-        if ( dagSyncer_ )
-        {
-            dagSyncer_->Stop();
-        }
-
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
+            if ( broadcaster_ )
+            {
+                broadcaster_->CancelWait();
+            }
         }
 
         if ( rebroadcastThreadRunning_ )
@@ -574,6 +613,15 @@ namespace sgns::crdt
         return false;
     }
 
+    void CrdtDatastore::StopSyncerAfterWorkerDrain()
+    {
+        WaitForWorkersToExit();
+        if ( dagSyncer_ )
+        {
+            dagSyncer_->StopSync();
+        }
+    }
+
     void CrdtDatastore::WaitForWorkersToExit()
     {
         logger_->debug( "WaitForWorkersToExit: waiting for {} DAG worker(s)", dagWorkers_.size() );
@@ -611,6 +659,8 @@ namespace sgns::crdt
             std::swap( rootCIDJobList_, empty1 );
             std::swap( selfCreatedJobList_, empty2 );
             pending_jobs_.clear();
+            failedRootRetries_.clear();
+            failedRootRetryCount_.store( 0, std::memory_order_relaxed );
         }
 
         {
@@ -632,86 +682,91 @@ namespace sgns::crdt
             return;
         }
 
-        auto broadcasterNextResult = broadcaster_->Next();
-        if ( broadcasterNextResult.has_failure() )
+        // Drain everything queued. Taking one message per wake-up capped intake at
+        // one announcement per wait interval however fast they arrived.
+        while ( handleNextThreadRunning_ )
         {
-            if ( broadcasterNextResult.error().value() !=
-                 static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
+            auto broadcasterNextResult = broadcaster_->Next();
+            if ( broadcasterNextResult.has_failure() )
             {
-                // logger_->debug("Failed to get next broadcaster (error code " +
-                //                std::to_string(broadcasterNextResult.error().value()) + ")");
+                return;
             }
-            return;
-        }
 
-        auto decodeResult = DecodeBroadcast( broadcasterNextResult.value() );
-        if ( decodeResult.has_failure() )
-        {
-            logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
-                            std::to_string( broadcasterNextResult.error().value() ) );
-            return;
-        }
-
-        for ( const auto &bCastHeadCID : decodeResult.value() )
-        {
-            logger_->trace( "{}: Received CID {}", __func__, bCastHeadCID.toString().value() );
-            auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
-            if ( dagSyncerResult.has_failure() )
+            auto decodeResult = DecodeBroadcast( broadcasterNextResult.value() );
+            if ( decodeResult.has_failure() )
             {
-                logger_->error( "{}: error checking for known block", __func__ );
-                continue;
-            }
-            if ( dagSyncerResult.value() )
-            {
-                // cid is known. Skip walking tree
-                logger_->trace( "{}: Already processed block {}", __func__, bCastHeadCID.toString().value() );
+                logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
+                                std::to_string( broadcasterNextResult.error().value() ) );
                 continue;
             }
 
-            if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
+            for ( const auto &bCastHeadCID : decodeResult.value() )
             {
-                // If the CID request was already triggered but node didn't finish processing
-                bool retry_failed = false;
+                logger_->trace( "{}: Received CID {}", __func__, bCastHeadCID.toString().value() );
+                auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
+                if ( dagSyncerResult.has_failure() )
                 {
-                    std::lock_guard lock( dagWorkerMutex_ );
-                    auto            it = pending_jobs_.find( bCastHeadCID );
-                    if ( it != pending_jobs_.end() && it->second == JobStatus::FAILED )
+                    logger_->error( "{}: error checking for known block", __func__ );
+                    continue;
+                }
+                if ( dagSyncerResult.value() )
+                {
+                    // cid is known. Skip walking tree
+                    logger_->trace( "{}: Already processed block {}", __func__, bCastHeadCID.toString().value() );
+                    continue;
+                }
+
+                if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
+                {
+                    // If the CID request was already triggered but node didn't finish processing
+                    bool retry_failed = false;
                     {
-                        pending_jobs_.erase( it );
-                        retry_failed = true;
+                        std::lock_guard lock( dagWorkerMutex_ );
+                        auto            it = pending_jobs_.find( bCastHeadCID );
+                        if ( it != pending_jobs_.end() && it->second == JobStatus::FAILED )
+                        {
+                            pending_jobs_.erase( it );
+                            // A fresh broadcast restarts the local retry budget.
+                            ClearFailedRootRetryLocked( bCastHeadCID );
+                            retry_failed = true;
+                        }
+                    }
+
+                    if ( retry_failed )
+                    {
+                        logger_->warn( "{}: Clearing failed job for CID {}, allowing retry",
+                                       __func__,
+                                       bCastHeadCID.toString().value() );
+                        (void) dagSyncer_->DeleteCIDBlock( bCastHeadCID );
+                    }
+                    else
+                    {
+                        logger_->trace( "{}: Processing block {} on graphsync",
+                                        __func__,
+                                        bCastHeadCID.toString().value() );
+                        continue;
                     }
                 }
 
-                if ( retry_failed )
+                if ( IsRootCIDPendingOrActive( bCastHeadCID ) )
                 {
-                    logger_->warn( "{}: Clearing failed job for CID {}, allowing retry",
-                                   __func__,
-                                   bCastHeadCID.toString().value() );
-                    (void)dagSyncer_->DeleteCIDBlock( bCastHeadCID );
+                    logger_->trace( "{}: Root CID {} already pending/active",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
+                    continue;
+                }
+
+                if ( EnqueueRootCID( bCastHeadCID ) )
+                {
+                    logger_->debug( "{}: Queueing processing for block {}", __func__, bCastHeadCID.toString().value() );
+                    dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
                 }
                 else
                 {
-                    logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
-                    continue;
+                    logger_->trace( "{}: Root CID {} could not be enqueued (already pending)",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
                 }
-            }
-
-            if ( IsRootCIDPendingOrActive( bCastHeadCID ) )
-            {
-                logger_->trace( "{}: Root CID {} already pending/active", __func__, bCastHeadCID.toString().value() );
-                continue;
-            }
-
-            if ( EnqueueRootCID( bCastHeadCID ) )
-            {
-                logger_->debug( "{}: Queueing processing for block {}", __func__, bCastHeadCID.toString().value() );
-                dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
-            }
-            else
-            {
-                logger_->trace( "{}: Root CID {} could not be enqueued (already pending)",
-                                __func__,
-                                bCastHeadCID.toString().value() );
             }
         }
     }
@@ -903,12 +958,13 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<pb::Delta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self )
+    outcome::result<CrdtDatastore::FilteredDelta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode,
+                                                                                   bool            created_by_self )
     {
         auto nodeBuffer = aNode.content();
 
-        auto delta = Delta();
-        if ( !delta.ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
+        FilteredDelta filtered;
+        if ( !filtered.delta.ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
         {
             logger_->debug( "{}: Can't parse delta from node buffer {}", __func__, aNode.getCID().toString().value() );
             return CrdtDatastore::Error::NODE_DESERIALIZATION;
@@ -916,7 +972,7 @@ namespace sgns::crdt
 
         if ( !created_by_self )
         {
-            crdt_filter_.FilterElementsOnDelta( delta );
+            filtered.dependency_stalled = crdt_filter_.FilterElementsOnDelta( filtered.delta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
             logger_->debug( "{}: Filtering node {} ", __func__, aNode.getCID().toString().value() );
         }
@@ -924,7 +980,7 @@ namespace sgns::crdt
         {
             logger_->debug( "{}: Posting node {} without filtering", __func__, aNode.getCID().toString().value() );
         }
-        return delta;
+        return filtered;
     }
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
@@ -952,7 +1008,17 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto cid_string, node_to_process->getCID().toString() );
 
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        auto &delta = filtered.delta;
+        if ( filtered.dependency_stalled )
+        {
+            // The stripped element belongs to this node, which may be deep inside the
+            // walk: track the node itself, because re-walking the root would stop at
+            // the already-resolved links and never look at this delta again.
+            logger_->info( "{}: element dependency not synced, re-evaluating {} later", __func__, cid_string );
+            std::lock_guard lock( dagWorkerMutex_ );
+            ScheduleStalledDeltaRetryLocked( node_to_process->getCID() );
+        }
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
@@ -963,7 +1029,7 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
         logger_->debug( "{}: addNode complete for {}", __func__, cid_string );
 
-        (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
+        (void) dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
         logger_->debug( "{}: DeleteCIDBlock complete for {}", __func__, cid_string );
 
         BOOST_OUTCOME_TRY( auto links, GetLinksToFetch( job_to_process ) );
@@ -996,8 +1062,20 @@ namespace sgns::crdt
                                 links.size() );
             }
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
+            // ConvergentImmutablePriority is a sentinel, not a height: recording it
+            // in the heads table poisons maxHeight for every later CreateDAGNode,
+            // whose height+1 wraps to 0 and makes fresh-key writes tie at priority 0
+            // (SetValue then fails the tie-break value read with NOT_FOUND). Record
+            // the immutable delta at the current max height instead so the sequence
+            // stays monotonic without ever reaching the sentinel.
+            uint64_t head_priority = delta.priority();
+            if ( head_priority == CrdtSet::ConvergentImmutablePriority )
+            {
+                BOOST_OUTCOME_TRY( auto current_heads, heads_->GetList( {} ) );
+                head_priority = current_heads.second;
+            }
             UpdateCRDTHeads( job_to_process.root_node_->getCID(),
-                             delta.priority(),
+                             head_priority,
                              job_to_process.created_by_self_ || has_full_node_topic_ );
             logger_->debug( "{}: UpdateCRDTHeads complete for {}", __func__, root_cid_string );
             {
@@ -1065,7 +1143,7 @@ namespace sgns::crdt
         return bCastHeads;
     }
 
-    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::unordered_set<CID> &heads )
     {
         CRDTBroadcast bcastData;
 
@@ -1313,6 +1391,50 @@ namespace sgns::crdt
         return Publish( deltaResult.value(), topics );
     }
 
+    outcome::result<void> CrdtDatastore::PutKeyLocal( const HierarchicalKey &aKey,
+                                                      const Buffer          &aValue,
+                                                      const std::string     &aID )
+    {
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( deltaResult.error() );
+        }
+
+        auto priorityResult = set_->GetPriority( aKey.GetKey() );
+        if ( priorityResult.has_failure() )
+        {
+            return outcome::failure( priorityResult.error() );
+        }
+
+        // Write at the SAME priority as the stored value, not +1: a local
+        // derived write (e.g. ParseRevokeTransaction's detach_flag rewrite) is
+        // not a chain advance in the broadcast height sequence. Bumping +1 let
+        // one local write permanently outrank every later broadcast write to the
+        // key on this node (a certified re-registration could never overwrite a
+        // revoked record). At equal priority the tie-break writes the new value
+        // (values differ), keeping derived state mutable by authoritative
+        // broadcasts while still replacing whatever was stored.
+        deltaResult.value()->set_priority( priorityResult.value() );
+
+        return set_->Merge( *deltaResult.value(), aID );
+    }
+
+    outcome::result<CID> CrdtDatastore::PutConvergentImmutableKey(
+        const HierarchicalKey                 &aKey,
+        const Buffer                          &aValue,
+        const std::unordered_set<std::string> &topics )
+    {
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( deltaResult.error() );
+        }
+
+        deltaResult.value()->set_priority( CrdtSet::ConvergentImmutablePriority );
+        return Publish( deltaResult.value(), topics );
+    }
+
     outcome::result<CID> CrdtDatastore::DeleteKey( const HierarchicalKey                 &aKey,
                                                    const std::unordered_set<std::string> &topics )
     {
@@ -1338,7 +1460,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID>                    &cids,
+    outcome::result<void> CrdtDatastore::Broadcast( const std::unordered_set<CID>          &cids,
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
@@ -1433,15 +1555,18 @@ namespace sgns::crdt
         auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
-        aDelta->set_priority( height );
+        if ( aDelta->priority() != CrdtSet::ConvergentImmutablePriority )
+        {
+            aDelta->set_priority( height );
+        }
 
         std::vector<std::pair<CID, std::string>> headsWithTopics;
 
         for ( const auto &[topic_name, cid_set] : head_map )
         {
-            for ( const auto &cid : cid_set )
+            if ( !cid_set.empty() )
             {
-                headsWithTopics.emplace_back( cid, topic_name );
+                headsWithTopics.emplace_back( *std::min_element( cid_set.begin(), cid_set.end() ), topic_name );
             }
         }
 
@@ -1492,6 +1617,17 @@ namespace sgns::crdt
     {
         auto cid_string_result = cid.toString();
         logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid_string_result.value() );
+
+        // Root jobs are processed one at a time, so a worker waiting on a job it
+        // (or a sibling) must process would wait forever. Fail instead of hanging.
+        if ( IsCurrentThreadInternalWorker() )
+        {
+            logger_->error( "WaitForJob: called from CRDT worker thread for CID {}; refusing to self-deadlock",
+                            cid_string_result.value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_.erase( cid );
+            return outcome::failure( Error::NODE_CREATION );
+        }
 
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();
@@ -1582,9 +1718,162 @@ namespace sgns::crdt
     {
         {
             std::lock_guard lock( dagWorkerMutex_ );
-            pending_jobs_[cid] = JobStatus::FAILED;
+            // Only external root jobs reach MarkJobFailed (HandleRootCIDBlock).
+            MarkJobFailedLocked( cid, /*schedule_retry=*/true );
         }
         dagWorkerCv_.notify_all();
+    }
+
+    void CrdtDatastore::MarkJobFailedLocked( const CID &cid, bool schedule_retry )
+    {
+        pending_jobs_[cid] = JobStatus::FAILED;
+        if ( schedule_retry )
+        {
+            ScheduleFailedRootRetryLocked( cid );
+        }
+    }
+
+    void CrdtDatastore::ScheduleFailedRootRetryLocked( const CID &cid )
+    {
+        auto &entry = failedRootRetries_[cid];
+        ++entry.attempts;
+        if ( entry.attempts > MAX_FAILED_ROOT_RETRIES )
+        {
+            // Give up locally; the sender's periodic rebroadcast remains as backstop.
+            failedRootRetries_.erase( cid );
+            logger_->warn( "ScheduleFailedRootRetry: giving up local retries for CID {}", cid.toString().value() );
+        }
+        else
+        {
+            // attempts <= 8, so the shift cannot overflow.
+            entry.next_attempt = std::chrono::steady_clock::now() +
+                                 std::min( FAILED_ROOT_RETRY_BASE_DELAY * ( 1U << ( entry.attempts - 1 ) ),
+                                           FAILED_ROOT_RETRY_MAX_DELAY );
+        }
+        failedRootRetryCount_.store( failedRootRetries_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ClearFailedRootRetryLocked( const CID &cid )
+    {
+        failedRootRetries_.erase( cid );
+        failedRootRetryCount_.store( failedRootRetries_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::RetryDueFailedRoots()
+    {
+        if ( failedRootRetryCount_.load( std::memory_order_relaxed ) == 0 )
+        {
+            return;
+        }
+
+        std::vector<CID> due;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            const auto      now = std::chrono::steady_clock::now();
+            due.reserve( failedRootRetries_.size() );
+            for ( auto &[cid, entry] : failedRootRetries_ )
+            {
+                if ( entry.next_attempt <= now )
+                {
+                    due.push_back( cid );
+                    // Re-armed rather than parked: the retried job's failure reschedules
+                    // and its success erases the entry, so this only fires again if the
+                    // enqueue below was lost to a race.
+                    entry.next_attempt = now + FAILED_ROOT_RETRY_MAX_DELAY;
+                }
+            }
+        }
+
+        for ( const auto &cid : due )
+        {
+            // EnqueueRootCID flips a FAILED pending_jobs_ entry back to PENDING itself.
+            (void) dagSyncer_->DeleteCIDBlock( cid );
+            if ( EnqueueRootCID( cid ) )
+            {
+                logger_->info( "RetryDueFailedRoots: retrying root CID {}", cid.toString().value() );
+                dagWorkerCv_.notify_one();
+            }
+        }
+    }
+
+    void CrdtDatastore::ScheduleStalledDeltaRetryLocked( const CID &cid )
+    {
+        auto &entry = stalledDeltas_[cid];
+        ++entry.attempts;
+        if ( entry.attempts > MAX_FAILED_ROOT_RETRIES )
+        {
+            stalledDeltas_.erase( cid );
+            logger_->warn( "{}: giving up on stalled delta {}", __func__, cid.toString().value() );
+        }
+        else
+        {
+            // attempts <= 8, so the shift cannot overflow.
+            entry.next_attempt = std::chrono::steady_clock::now() +
+                                 std::min( FAILED_ROOT_RETRY_BASE_DELAY * ( 1U << ( entry.attempts - 1 ) ),
+                                           FAILED_ROOT_RETRY_MAX_DELAY );
+        }
+        stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::RetryStalledDeltas()
+    {
+        if ( stalledDeltaRetryCount_.load( std::memory_order_relaxed ) == 0 )
+        {
+            return;
+        }
+
+        std::vector<CID> due;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            const auto      now = std::chrono::steady_clock::now();
+            due.reserve( stalledDeltas_.size() );
+            for ( auto &[cid, entry] : stalledDeltas_ )
+            {
+                if ( entry.next_attempt <= now )
+                {
+                    due.push_back( cid );
+                    // Re-armed rather than parked, so a lost pass cannot strand the entry.
+                    entry.next_attempt = now + FAILED_ROOT_RETRY_MAX_DELAY;
+                }
+            }
+        }
+
+        for ( const auto &cid : due )
+        {
+            // The node is already in the DAG: only the element the filter stripped is
+            // missing from the set, so re-filter and re-merge it in place. Re-walking
+            // it as a root would instead record an interior node as a head.
+            auto node = dagSyncer_->GetNodeWithoutRequest( cid );
+            if ( node.has_failure() || node.value() == nullptr )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto filtered = GetDeltaFromNode( *node.value(), false );
+            if ( filtered.has_failure() )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            auto merge_result = MergeDataFromDelta( cid, filtered.value().delta );
+            if ( merge_result.has_failure() || filtered.value().dependency_stalled )
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ScheduleStalledDeltaRetryLocked( cid );
+                continue;
+            }
+
+            logger_->info( "{}: stalled delta {} applied after its dependency synced",
+                           __func__,
+                           cid.toString().value() );
+            std::lock_guard lock( dagWorkerMutex_ );
+            stalledDeltas_.erase( cid );
+            stalledDeltaRetryCount_.store( stalledDeltas_.size(), std::memory_order_relaxed );
+        }
     }
 
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
@@ -1964,14 +2253,14 @@ namespace sgns::crdt
         return heads_->Add( aCid, priority, topic );
     }
 
-    void CrdtDatastore::AddTopicName( const std::string &topic )
+    void CrdtDatastore::AddTopicName( std::string topic )
     {
         if ( topic == "SuperGNUSNode.TestNet.FullNode" )
         {
             has_full_node_topic_ = true;
         }
         std::lock_guard lock( topicNamesMutex_ );
-        topicNames_.emplace( topic );
+        topicNames_.emplace( std::move( topic ) );
     }
 
     std::unordered_set<std::string> CrdtDatastore::GetTopicNames() const
@@ -1980,7 +2269,7 @@ namespace sgns::crdt
         return topicNames_;
     }
 
-    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetILPDNodeContent(
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetLocalDeltaKeyValues(
         const std::string &cid_string )
     {
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
@@ -1988,7 +2277,8 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
 
         //TODO - Check if filtering is needed here. Currently not filtering.
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node, true ) );
+        const auto &delta = filtered.delta;
 
         //TODO - Maybe check tombstones, right now just grabbing elements.
         std::vector elements( delta.elements().begin(), delta.elements().end() );

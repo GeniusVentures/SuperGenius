@@ -69,9 +69,13 @@ public:
     {
         SGProcessing::SubTaskResult result;
         result.set_subtaskid( subTaskId );
-        result.set_node_address( "test_node" );
         result.set_ipfs_results_data_id( ipfsDataId );
         result.add_chunk_hashes( "hash_valid" );
+        // Payout metadata required by ProcessingValidationCore::ValidateIndividualResult.
+        result.set_node_address( std::string( 128, 'a' ) );
+        result.set_developer_address( "0xcafe" );
+        result.set_developer_cut( 350000 );
+        result.set_token_id( std::string( 32, '\0' ) );
         return result;
     }
 

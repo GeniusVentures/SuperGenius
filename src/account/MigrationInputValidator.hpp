@@ -20,10 +20,11 @@ namespace sgns
                                      const std::string      &address,
                                      const UTXOManager      &utxo_manager ) const override;
 
-        bool ValidateWitness( const ConsensusSubject                   &subject,
-                              const std::shared_ptr<GeniusTransaction> &tx,
-                              const UTXOTxParameters                   &params,
-                              const std::shared_ptr<Blockchain>        &blockchain ) const override;
+        IInputValidator::WitnessVerdict ValidateWitness(
+            const ConsensusSubject  &subject,
+            const GeniusTransaction &tx,
+            const UTXOTxParameters  &params,
+            const Blockchain        &blockchain ) const override;
 
         bool RequiresConsensusUTXOData() const override
         {
@@ -32,18 +33,16 @@ namespace sgns
 
         /**
          * @brief       Registers this validator in the global registry for the "migration" chain ID.
-         * @return      true when the registration is done. This is used to ensure that the static instance is initialized and registered before main() starts.
+         * @return      true when the registration is done.
+         *
+         * Defined out-of-line and triggered before main() by a static initializer
+         * in TransactionManager.cpp. No static initializer in this header: it
+         * would construct a MigrationInputValidator in every including TU and
+         * bake the vftable (with signature-mangled virtuals) into those objects,
+         * breaking downstream links whenever a virtual's signature changes.
          */
-        static bool Register()
-        {
-            static MigrationInputValidator instance;
-            IInputValidator::Register( "migration", &instance );
-            return true;
-        }
+        static bool Register();
     };
-
-    /// @brief Static instance to trigger registration of the MigrationInputValidator before main() starts.
-    static inline bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
 } // namespace sgns
 
 #endif // SGNS_MIGRATION_INPUT_VALIDATOR_HPP

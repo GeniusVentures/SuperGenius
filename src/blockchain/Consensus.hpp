@@ -24,6 +24,7 @@
 #include <atomic>
 #include <limits>
 
+#include "account/NodeType.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -60,7 +61,7 @@ namespace sgns
         using Subject     = ConsensusSubject;     ///< Alias for Consensus Subject protobuf type
 
         /// @brief      Alias for a signer method type
-        using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
+        using Signer = std::function<outcome::result<std::vector<uint8_t>>( const std::vector<uint8_t> &payload )>;
 
         /**
          * @brief      Callback invoked during CreateVote to populate slot_N_hash
@@ -72,8 +73,10 @@ namespace sgns
          *             The callback is invoked AFTER proposal_id/voter_id/approve/
          *             timestamp are set but BEFORE VoteSigningBytes, so the
          *             resulting signature commits to the slot hashes (T-06-01).
+         *             The proposal's subject is passed so the populator can bind
+         *             slot hashes to the exact claim that was verified (#364).
          */
-        using SlotHashPopulator = std::function<void( ConsensusVote &vote )>;
+        using SlotHashPopulator = std::function<void( ConsensusVote &vote, const Subject &subject )>;
 
         /**
          * @brief Creates a ConsensusManager instance.
@@ -83,6 +86,10 @@ namespace sgns
          * @param[in] signer Local signing callback for outbound signed objects.
          * @param[in] address Local validator/account identifier.
          * @param[in] consensus_topic Optional topic override used to derive consensus channels.
+         * @param[in] node_type Deployment role. Archive nodes never emit a self-vote; every other
+         *            role votes normally. Passed at construction rather than set afterwards because
+         *            New() subscribes to the consensus topic before returning, so a later setter
+         *            would leave a window in which a proposal could arrive and be voted on.
          * @return Shared pointer to a new manager instance.
          */
         static std::shared_ptr<ConsensusManager> New( std::shared_ptr<ValidatorRegistry>         registry,
@@ -90,7 +97,8 @@ namespace sgns
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
-                                                      std::string                                consensus_topic = "" );
+                                                      std::string                                consensus_topic = "",
+                                                      NodeType                                   node_type = NodeType::Full );
         /**
          * @brief      Destroys the Consensus Manager object
          */
@@ -231,8 +239,8 @@ namespace sgns
             bool     has_quorum      = false; ///< Flag indicating if quorum was reached
             // Phase 6 (D-06): populated only for bridge-mint subjects; zero for
             // non-bridge subjects (observability -- the slot-tally result).
-            uint64_t qualified_sum  = 0;      ///< Slot-weighted qualified contribution.
-            uint64_t slot_threshold = 0;      ///< total_voting_reputation * 0.75 (D-06).
+            uint64_t qualified_sum  = 0; ///< Slot-weighted qualified contribution.
+            uint64_t slot_threshold = 0; ///< total_voting_reputation * 0.75 (D-06).
         };
 
         /**
@@ -332,24 +340,16 @@ namespace sgns
          * @param[in] voter_id Validator identifier of the voter.
          * @param[in] approve `true` for approval vote, `false` for rejection vote.
          * @param[in] sign Signing callback.
+         * @param[in] subject Subject of the proposal being voted on. Required to bind
+         *            RPC slot hashes to the exact verified claim (#364). When null,
+         *            the vote fails closed and carries no slot hashes.
          * @return Signed vote on success, otherwise an error.
          */
         outcome::result<Vote> CreateVote( const std::string &proposal_id,
                                           const std::string &voter_id,
                                           bool               approve,
-                                          Signer             sign );
-
-        /**
-         * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
-         * @param[in]  populator  Callback that fills slot_N_hash fields on a vote.
-         * @details    Set by GeniusNode during blockchain initialization. When the
-         *             callback is unset (default), CreateVote skips slot population.
-         */
-        void SetSlotHashPopulator( SlotHashPopulator populator )
-        {
-            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
-            slot_hash_populator_ = std::move( populator );
-        }
+                                          Signer             sign,
+                                          const Subject     *subject = nullptr );
 
         /**
          * @brief Builds and signs an aggregated vote bundle.
@@ -363,6 +363,18 @@ namespace sgns
                                                       const std::string       &aggregator_id,
                                                       const std::vector<Vote> &votes,
                                                       Signer                   sign );
+
+        /**
+         * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
+         * @param[in]  populator  Callback that fills slot_N_hash fields on a vote.
+         * @details    Set by GeniusNode during blockchain initialization. When the
+         *             callback is unset (default), CreateVote skips slot population.
+         */
+        void SetSlotHashPopulator( SlotHashPopulator populator )
+        {
+            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
+            slot_hash_populator_ = std::move( populator );
+        }
 
         /**
          * @brief Creates a certificate from a proposal and votes.
@@ -440,6 +452,21 @@ namespace sgns
          */
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
         /**
+         * @brief Filters a vote vector down to proposal-bound, deduplicated,
+         *        signature-verified entries.
+         * @details Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation)
+         *          resolve registry membership and weight but never verify vote
+         *          signatures, so any remotely-received vote vector fed to them
+         *          must pass through this filter first — otherwise fabricated
+         *          votes attributed to real ACTIVE validators reach bridge-mint
+         *          quorum with zero valid signatures.
+         * @param[in] proposal Proposal the votes must be bound to.
+         * @param[in] votes    Raw vote vector; may contain fabricated entries.
+         * @return Signature-verified votes (possibly empty).
+         */
+        static std::vector<Vote> SignatureVerifiedVotes( const Proposal          &proposal,
+                                                         const std::vector<Vote> &votes );
+        /**
          * @brief Computes canonical bytes to sign a vote bundle.
          * @param[in] bundle Vote bundle to encode.
          * @return Signing bytes on success, otherwise an error.
@@ -498,14 +525,17 @@ namespace sgns
          * @param[in] target_registry_epoch Target registry epoch after applying batch.
          * @param[in] certificate_count Number of certificates in the batch.
          * @param[in] batch_root Merkle/root hash of the batch payload.
+         * @param[in] member_slots Canonical certificate slots of the batch members
+         *                         (size must equal certificate_count and none may be empty).
          * @return Constructed subject or an error.
          */
-        static outcome::result<Subject> CreateRegistryBatchSubject( const std::string &account_id,
-                                                                    const std::string &base_registry_cid,
-                                                                    uint64_t           base_registry_epoch,
-                                                                    uint64_t           target_registry_epoch,
-                                                                    uint32_t           certificate_count,
-                                                                    const std::string &batch_root );
+        static outcome::result<Subject> CreateRegistryBatchSubject( const std::string              &account_id,
+                                                                    const std::string              &base_registry_cid,
+                                                                    uint64_t                        base_registry_epoch,
+                                                                    uint64_t                        target_registry_epoch,
+                                                                    uint32_t                        certificate_count,
+                                                                    const std::string              &batch_root,
+                                                                    const std::vector<std::string> &member_slots );
         /**
          * @brief Creates a generic typed subject for application-owned payload schemas.
          * @param[in] account_id Account identifier bound to the subject.
@@ -566,23 +596,65 @@ namespace sgns
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         /**
-         * @brief Retrieves a certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Certificate when present, or an error.
+         * @brief Whether this node takes an active part in consensus.
+         * @return False only for Archive nodes, which neither self-vote nor aggregate.
+         *
+         * Exposed so Blockchain can gate registry-batch authoring on the role without
+         * duplicating the flag; this instance is the single source of truth.
          */
-        outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+        bool ParticipatesInConsensus() const noexcept
+        {
+            return participates_in_consensus_;
+        }
+
         /**
-         * @brief Checks whether a certificate exists for a subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return `true` if a certificate exists, otherwise `false`.
+         * @brief Computes the proposal slot key used for conflict resolution.
+         * @param[in] proposal Proposal to map to a slot.
+         * @return Slot key.
          */
-        bool CheckCertificateForSubject( const std::string &subject_hash ) const;
+        static std::string GetSlotKey( const Proposal &proposal );
         /**
-         * @brief Checks whether a certificate exists for a subject.
-         * @param[in] subject Subject instance to hash and lookup.
-         * @return `true` if a certificate exists, otherwise `false`.
+         * @brief Computes the authoritative canonical-slot certificate key.
+         * @param[in] certificate Certificate whose embedded proposal supplies the slot.
+         * @return `/cert/<canonical-slot>` when the slot is available, otherwise empty.
          */
-        bool CheckCertificateForSubject( const Subject &subject ) const;
+        static std::string GetExpectedCertificateSlotKey( const Certificate &certificate );
+        /**
+         * @brief Computes the deterministic batch root over member identifiers.
+         * @param[in] members Member identifiers (canonical certificate slots) in the batch.
+         * @return Lowercase-hex SHA-256 of the newline-joined sorted members, or an error.
+         */
+        static outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &members );
+        /**
+         * @brief Retrieves the validated authoritative certificate for a canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return Certificate when the exact authoritative record is present and approved, or an error.
+         */
+        outcome::result<Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
+        /**
+         * @brief Checks whether an approved authoritative certificate exists for a canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` only when the exact authoritative record is approved.
+         */
+        /**
+         * @brief Checks the authoritative slot record and consumes pending work.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` only when the exact authoritative record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the slot to its
+         * registered handler before returning (the CRDT arrival callback only
+         * journals; the round timer would otherwise defer the dispatch by up to
+         * half a round). Serializes with the timer/registration recovery through
+         * `certificate_recovery_mutex_`; a handler must never call back into this
+         * method (it would self-deadlock).
+         */
+        bool CheckCertificateForSlot( const std::string &slot_key ) const;
+        /**
+         * @brief Dispatches pending certificate work for one canonical-slot record.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         */
+        void DispatchCertificateWorkForSlot( const std::string &slot_key );
 
     protected:
         /**
@@ -596,6 +668,19 @@ namespace sgns
          */
         void ConfigureRoundDuration( std::chrono::milliseconds duration );
         /**
+         * @brief Parks the round timer and waits for it to acknowledge.
+         *
+         * Unlike ConfigureRoundDuration, which only stretches the NEXT
+         * interval, this holds the timer thread at its loop top: a tick
+         * already in flight when the flag is set still finishes, and the
+         * acknowledge handshake guarantees that once this returns, no tick
+         * will dispatch certificate work (RecoverPendingCertificateWork,
+         * ProcessCertificates) until the manager is closed. Tests that own
+         * certificate ingress exclusively must use this, not a duration
+         * stretch, to close the residual-tick window.
+         */
+        void ParkRoundTimerForTest();
+        /**
          * @brief Sets allowable round skew tolerance.
          * @param[in] skew Allowed round skew.
          */
@@ -605,6 +690,8 @@ namespace sgns
         friend class ConsensusManagerTestAccess;
         friend class ConsensusPendingLifecycleTestAccess;
         friend class ConsensusSlotKeyTestAccess;
+        friend class CertificateFallbackTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
@@ -614,13 +701,15 @@ namespace sgns
          * @param[in] signer Local signing callback.
          * @param[in] address Local validator/account id.
          * @param[in] consensus_topic Consensus topic base.
+         * @param[in] node_type Deployment role; drives @ref participates_in_consensus_.
          */
         explicit ConsensusManager( std::shared_ptr<ValidatorRegistry>         registry,
                                    std::shared_ptr<crdt::GlobalDB>            db,
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
-                                   std::string                                consensus_topic );
+                                   std::string                                consensus_topic,
+                                   NodeType                                   node_type );
         /**
          * @brief Starts the background round timer loop.
          */
@@ -630,6 +719,8 @@ namespace sgns
             "consensus-channel-"; ///< Prefix for pubsub consensus channels.
         static constexpr std::string_view CERTIFICATE_BASE_PATH_KEY =
             "/cert/"; ///< Datastore key prefix for certificates.
+        static constexpr std::string_view ACTIVE_VOTE_BASE_PATH_KEY =
+            "/consensus/vote/"; ///< Private local RocksDB prefix for durable active votes.
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes(
             5 ); ///< Default timestamp acceptance window.
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION = std::chrono::milliseconds(
@@ -656,6 +747,12 @@ namespace sgns
             uint64_t                        last_attempt_round   = NO_ROUND; ///< Last certificate-attempt round.
         };
 
+        struct ScanPendingCandidate
+        {
+            Proposal                              proposal;
+            std::chrono::steady_clock::time_point admitted_at;
+        };
+
         /**
          * @brief Runtime slot arbitration state.
          */
@@ -664,6 +761,55 @@ namespace sgns
             std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
             std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
+            std::vector<Proposal>           eligible_candidates; ///< Approved contenders for the slot; late arrivals are retained for the next attempt.
+            std::vector<ScanPendingCandidate> scan_pending_candidates; ///< Validated contenders retained while finalized-slot scanning is indeterminate.
+            std::chrono::steady_clock::time_point candidate_deadline{}; ///< Fixed local contention deadline.
+            bool candidates_frozen = false; ///< Prevents admission after the deadline has passed.
+            bool active_vote_locked = false; ///< Prevents creation of a replacement local vote.
+            bool certificate_scan_pending = false; ///< A failed finalized-slot scan blocks vote work until it succeeds.
+            bool slot_decided = false; ///< A certificate for the slot is already accepted; no attempt can follow.
+            /// Voter id -> that voter's latest signature-verified vote in this slot, across
+            /// attempts. Under the one-vote-per-slot rule a voter committed to another
+            /// proposal is weight the local winner can never gain, which is what makes
+            /// unwinnability provable; keeping the whole vote lets a re-arbitrated winner
+            /// be re-tallied from here instead of a second per-proposal queue.
+            std::unordered_map<std::string, Vote> observed_votes;
+            uint64_t dissent_seen = 0; ///< Bumped when a vote disagrees with the local winner.
+            uint64_t dissent_evaluated = 0; ///< dissent_seen at the last unwinnability evaluation.
+        };
+
+        struct ActiveVoteState
+        {
+            Proposal                         proposal;
+            Vote                             vote;
+            uint64_t                         acceptance_deadline_ms = 0;
+            std::chrono::steady_clock::time_point next_retry_at{};
+        };
+
+        /** @brief Friend-only Phase 12 observation state; never a protocol control surface. */
+        struct FinalityFaultCounters
+        {
+            uint64_t vote_publications                    = 0;
+            uint64_t certificate_write_attempts           = 0;
+            uint64_t certificate_write_successes          = 0;
+            uint64_t certificate_notification_publications = 0;
+            uint64_t certificate_notifications_received   = 0;
+            uint64_t accepted_certificate_readbacks       = 0;
+            uint64_t active_vote_release_attempts         = 0;
+            uint64_t active_vote_release_successes         = 0;
+        };
+
+        /** @brief A post-action test pause released only by the friend test accessor. */
+        struct FinalityFaultBarrier
+        {
+            bool armed    = false;
+            bool entered  = false;
+            bool released = false;
+            // Round snapshot taken at the DECISION point (aggregator-role
+            // evaluation), before persistence — the test must not recompute
+            // the wall-clock round after the pause, which can cross a round
+            // boundary during the persist->observe window.
+            uint64_t entered_round = 0;
         };
 
         /**
@@ -710,12 +856,6 @@ namespace sgns
          * @param[in] proposal Proposal whose slot is about to be cleared on timeout.
          */
         void FireProposalCleanupCallbacks( const Proposal &proposal );
-        /**
-         * @brief Computes proposal slot key used for conflict resolution.
-         * @param[in] proposal Proposal to map to a slot.
-         * @return Slot key.
-         */
-        static std::string GetSlotKey( const Proposal &proposal );
         /**
          * @brief Compares competing proposals for the same slot.
          * @param[in] candidate Candidate proposal.
@@ -834,6 +974,92 @@ namespace sgns
                                                         std::size_t                           scheduled_retry_count = 0,
                                                         std::chrono::steady_clock::time_point last_retry_at = {} );
         void                      ProcessDuePendingRetries();
+        void                      ProcessDueVoteWork();
+        outcome::result<ActiveVoteRecord> BuildActiveVoteRecord( const std::string &slot_key,
+                                                                  const Proposal &proposal,
+                                                                  const Vote &vote,
+                                                                  uint64_t acceptance_deadline_ms ) const;
+        outcome::result<ActiveVoteState> DecodeActiveVoteRecord( const std::string &slot_key,
+                                                                  std::string_view serialized ) const;
+        outcome::result<ActiveVoteState> PersistOrLoadExactActiveVote( const std::string &slot_key,
+                                                                         const Proposal &proposal,
+                                                                         const Vote &vote,
+                                                                         uint64_t acceptance_deadline_ms );
+        bool EnterFinalityFaultBarrier( FinalityFaultBarrier &barrier );
+        void RecoverActiveVotes();
+        std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
+        /**
+         * @brief Checks the authoritative certificate value for a canonical slot.
+         */
+        outcome::result<bool> HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
+        /**
+         * @brief Removes a direct local active-vote record for an accepted slot.
+         * @return `true` when an exact matching local record was synchronously removed;
+         *         `false` when no local record exists. Both outcomes permit accepted
+         *         certificate processing after durable certificate validation.
+         */
+        outcome::result<bool> ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key );
+        /**
+         * @brief Erases the durable local active-vote record for a slot from the datastore.
+         *
+         * Split out so slot release can also run from the split-freeze recovery pass,
+         * which must drop the record before the next attempt's vote can be persisted
+         * (PersistOrLoadExactActiveVote refuses a differing record).
+         *
+         * @return `true` when a record was removed, `false` when none existed.
+         * @note Must NOT be called under `proposals_mutex_`: the datastore write can wait
+         *       on a CRDT worker whose callbacks take that same mutex. Callers erase the
+         *       in-memory `active_votes_` entry separately, under the lock.
+         */
+        outcome::result<bool> EraseDurableActiveVoteRecord( const std::string &slot_key );
+        /**
+         * @brief Reports whether the slot's frozen winner can still be certified.
+         *
+         * Sums the weight of validators that have committed to a different proposal in
+         * the slot; the winner's ceiling is the registry total minus that. Uses the
+         * single-pool quorum rule, whose threshold is never above the bridge-mint slot
+         * model's, so "unreachable here" implies unreachable under either model.
+         *
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        bool SlotWinnerUnwinnableLocked( const SlotState &slot_state, const std::string &registry_cid ) const;
+        /**
+         * @brief Re-opens arbitration for a slot whose frozen winner cannot be certified.
+         *
+         * Clears the freeze so the next ProcessDueVoteWork pass re-arbitrates over every
+         * candidate retained since and votes for the new winner. Only ever called once the
+         * previous winner is provably unwinnable, so the released vote cannot help certify
+         * it.
+         *
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        void ReopenSlotArbitrationLocked( SlotState &slot_state, const std::string &slot_key );
+        /**
+         * @brief Collects frozen slots whose winner the retained votes prove unwinnable.
+         *
+         * @param[out] slot_keys Canonical slot keys to release.
+         * @note Caller must hold `proposals_mutex_`.
+         */
+        void CollectUnwinnableSlotsLocked( std::vector<std::string> &slot_keys );
+        /**
+         * @brief Releases the collected slots and re-opens their arbitration.
+         *
+         * @note Must NOT be called under `proposals_mutex_` — it takes the lock itself
+         *       around the in-memory mutations, keeping the datastore write outside it.
+         */
+        void ReleaseUnwinnableSlots( const std::vector<std::string> &slot_keys );
+        /**
+         * @brief Processes a certificate only after its authoritative slot value has been read back.
+         */
+        void ProcessCommittedCertificate( const std::string &key, const Certificate &certificate );
+        /**
+         * @brief Runs the durable readback-to-dispatch sequence for one journal entry.
+         * @param[in] entry Work-journal entry to process.
+         *
+         * Caller must hold `certificate_recovery_mutex_`. Shared by the full-journal
+         * recovery scan.
+         */
+        void DispatchStalledCertificateEntryLocked( const crdt::CRDTWorkJournal::Entry &entry );
         void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
@@ -854,9 +1080,12 @@ namespace sgns
         /**
          * @brief Filters CRDT entries to certificate payloads.
          * @param[in] element CRDT element candidate.
-         * @return Filtered element vector, or `std::nullopt` when rejected.
+         * @return Accept to store, Reject to strip permanently, or Stall when the
+         *         certificate's registry snapshot is not loadable locally yet —
+         *         the delta retries via the failed-root machinery instead of
+         *         parking an unvalidatable record in the canonical slot.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterCertificate( const crdt::pb::Element &element );
         /**
          * @brief Callback for new certificate data received from CRDT.
          * @param[in] new_data New key-value pair.
@@ -873,6 +1102,19 @@ namespace sgns
          * @return Validation result enum.
          */
         ConsensusManager::Check ValidateCertificate( const Certificate &certificate ) const;
+        /**
+         * @brief Validates the certificate's exact embedded proposal and canonical slot binding.
+         * @param[in] certificate Certificate to inspect.
+         * @return `true` when the embedded proposal resolves to a non-empty canonical slot.
+         */
+        static bool ValidateCertificateBinding( const Certificate &certificate );
+        /**
+         * @brief Validates authoritative canonical-slot certificate-key binding for CRDT ingress.
+         * @param[in] certificate Certificate whose embedded proposal determines the expected key.
+         * @param[in] key Current CRDT key supplied by the ingress path.
+         * @return `true` when the supplied key matches the embedded proposal slot.
+         */
+        static bool ValidateCertificateKey( const Certificate &certificate, std::string_view key );
         /**
          * @brief Computes deterministic proposal identifier.
          * @param[in] proposal Proposal to identify.
@@ -928,6 +1170,7 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
         std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
+        std::mutex certificate_recovery_mutex_; ///< Serializes certificate recovery readback and dispatch.
         std::unordered_map<std::string, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
@@ -937,15 +1180,24 @@ namespace sgns
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
-                                  slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
-        static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
-        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
-        Signer                    signer_;                            ///< Local signing callback.
-        SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
-        mutable std::mutex        slot_hash_populator_mutex_;         ///< Guards callback replacement/copy at shutdown.
-        std::string               account_address_;                   ///< Local validator/account id.
-        std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
-        std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
+                                        slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
+        static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
+        mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
+        Signer                          signer_;                     ///< Local signing callback.
+        SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
+        mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
+        std::string                     account_address_;            ///< Local validator/account id.
+        /// Component logger, named "ConsensusManager:<address prefix>".
+        ///
+        /// Carrying the node id on the logger keeps it out of every format string: several
+        /// nodes share one process in tests, and the plain "ConsensusManager" logger they all
+        /// used could not say which node aggregated a proposal and which cleared it
+        /// (child_tokens_test, Linux CI 2026-09-09).
+        base::Logger                    logger_;
+        const bool                      participates_in_consensus_ = true; ///< False for Archive nodes (passive replicas).
+        std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
+        std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
+        std::unordered_map<std::string, ActiveVoteState> active_votes_; ///< Valid durable local votes keyed by slot.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>
@@ -954,7 +1206,40 @@ namespace sgns
                                pending_count_by_proposer_;                   ///< Pending proposal count by proposer id.
         std::size_t            pending_retained_bytes_ = 0;                  ///< Total retained pending proposal bytes.
         PendingLifecycleConfig pending_config_;                              ///< Local pending lifecycle bounds.
+        std::chrono::milliseconds candidate_window_{ std::chrono::seconds( 2 ) }; ///< Fixed local contender window.
+        std::chrono::milliseconds active_vote_retry_interval_{ std::chrono::milliseconds( 500 ) }; ///< Bounded replay cadence.
+        bool fail_active_vote_persistence_for_test_ = false; ///< Friend-scoped deterministic failure seam.
+        bool fail_active_vote_removal_for_test_ = false; ///< Friend-scoped durable-release failure seam.
+        bool fail_accepted_certificate_scan_for_test_ = false; ///< Friend-scoped finalized-slot scan failure seam.
+        std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
+        mutable std::mutex      fault_test_mutex_; ///< Guards Phase 12 friend-only counters and barriers.
+        std::condition_variable fault_test_cv_;    ///< Wakes friend-only post-durability barrier observers.
+        FinalityFaultCounters   fault_test_counters_;
+        FinalityFaultBarrier    active_vote_persisted_barrier_;
+        FinalityFaultBarrier    certificate_persisted_barrier_;
+        FinalityFaultBarrier    accepted_certificate_barrier_;
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
+        /// Orphaned pending-vote queues (proposal never seen locally) are evicted
+        /// once the map exceeds this bound and a queue's newest vote outlives the
+        /// TTL below — otherwise a peer replaying votes for unseen proposals grew
+        /// the map forever.
+        static constexpr size_t                kMaxTrackedPendingVoteQueues{ 10000 };
+        static constexpr std::chrono::minutes  kPendingVoteQueueTTL{ 30 };
+        /// Memo cache for LoadRegistryByCid on the vote-receive hot path: a CID
+        /// names immutable delta content, so the decoded Registry is a pure
+        /// function of the CID and caching is safe by construction. Capped small
+        /// (epochs advance slowly); guarded by registry_cache_mutex_.
+        static constexpr size_t kRegistryCacheMaxEntries{ 8 };
+        mutable std::mutex registry_cache_mutex_;
+        mutable std::unordered_map<std::string, ValidatorRegistry::Registry> registry_cache_;
+
+        /// Cached LoadRegistryByCid for hot paths (vote receive); falls back to
+        /// the direct load on a miss and memoizes the result.
+        outcome::result<ValidatorRegistry::Registry> LoadRegistryByCidCached( const std::string &cid ) const;
+
+        /// Handler failures at or below this many journal attempts retry on the
+        /// next tick; beyond it the stall carries an exponential backoff lease.
+        static constexpr uint64_t kHandlerFailureFastRetries{ 8 };
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
@@ -962,18 +1247,25 @@ namespace sgns
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
         std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.
-        std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW }; ///< Accepted timestamp window.
-        std::chrono::milliseconds certificate_delay_{
-            std::chrono::milliseconds( 2000 ) };                             ///< Delay before certificate processing.
-        std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
-        std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
+        // Tuning members are written by Configure* after construction while the
+        // round timer and pubsub threads read them: stored as atomic millisecond
+        // counts and materialized into chrono values at each read (a plain
+        // chrono member is a torn-read data race).
+        std::atomic<int64_t> timestamp_window_ms_{ DEFAULT_TIMESTAMP_WINDOW.count() }; ///< Accepted timestamp window.
+        std::atomic<int64_t> certificate_delay_ms_{ 2000 };                            ///< Delay before certificate processing.
+        std::atomic<int64_t> round_duration_ms_{ DEFAULT_ROUND_DURATION.count() };     ///< Consensus round duration.
+        std::atomic<int64_t> round_skew_ms_{ DEFAULT_ROUND_SKEW.count() }; ///< Round skew tolerance.
         std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
-        bool certificate_filter_registered_   = false;    ///< Owns the CRDT certificate filter.
-        bool certificate_callback_registered_ = false;    ///< Owns the CRDT certificate callback.
-        std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
+        bool                      certificate_filter_registered_   = false; ///< Owns the CRDT certificate filter.
+        bool                      certificate_callback_registered_ = false; ///< Owns the CRDT certificate callback.
+        std::atomic<bool>         stop_timer_{ false };                     ///< Signals the round timer thread to stop.
+        std::atomic<bool>         timer_parked_for_test_{ false }; ///< Test seam: holds the round timer at its loop top.
+        bool                      timer_parked_ack_ = false;       ///< Park acknowledgement, guarded by `timer_mutex_`.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
+        std::mutex                close_mutex_;                   ///< Serializes round timer ownership during shutdown.
+        std::function<void()>     timer_work_hook_for_test_;      ///< Friend-scoped timer work seam, guarded by `timer_mutex_`.
         std::thread               round_timer_;                   ///< Background thread driving round-based retries.
     };
 }

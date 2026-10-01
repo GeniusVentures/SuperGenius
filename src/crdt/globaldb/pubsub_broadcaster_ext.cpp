@@ -190,8 +190,11 @@ namespace sgns::crdt
 
             if ( new_content )
             {
-                std::lock_guard<std::mutex> lock( queueMutex_ );
-                messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+                {
+                    std::lock_guard<std::mutex> lock( queueMutex_ );
+                    messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+                }
+                queueCv_.notify_one();
             }
             else
             {
@@ -200,7 +203,9 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer                     &buff,
+                                                           std::string                             topic,
+                                                           boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
         std::set<std::string> broadcastTopicsCopy;
         {
@@ -241,7 +246,7 @@ namespace sgns::crdt
             peer_id_opt = peer_id_res.value();
         }
 
-        auto& peer_id = peer_id_opt.value();
+        auto &peer_id = peer_id_opt.value();
         bpi->set_id( std::string( peer_id.toVector().begin(), peer_id.toVector().end() ) );
 
         // Add addresses from PeerInfo (which already includes observed, interface, and relay addresses)
@@ -268,9 +273,9 @@ namespace sgns::crdt
         size_t               size = bmsg.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        if (!bmsg.SerializeToArray( serialized_proto.data(), serialized_proto.size() ))
+        if ( !bmsg.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
         {
-            m_logger->error("Failed to serialize broadcast message");
+            m_logger->error( "Failed to serialize broadcast message" );
             return std::errc::bad_message;
         }
 
@@ -280,9 +285,9 @@ namespace sgns::crdt
             if ( m_logger->level() <= spdlog::level::trace )
             {
                 m_logger->trace( "CIDs broadcasted by {} to topic {}, at this {}",
-                                peer_id.toBase58(),
-                                topic,
-                                reinterpret_cast<size_t>( this ) );
+                                 peer_id.toBase58(),
+                                 topic,
+                                 reinterpret_cast<size_t>( this ) );
             }
         }
 
@@ -305,6 +310,24 @@ namespace sgns::crdt
         base::Buffer buffer;
         buffer.put( strBuffer );
         return buffer;
+    }
+
+    void PubSubBroadcasterExt::WaitForNext( std::chrono::milliseconds timeout )
+    {
+        std::unique_lock<std::mutex> lock( queueMutex_ );
+        // Checking the queue in the predicate is what makes a push racing against the
+        // caller's last Next() safe: the notify may land with no waiter, but the queue
+        // is already non-empty by then, so the wait returns instead of missing it.
+        queueCv_.wait_for( lock, timeout, [this] { return wait_cancelled_ || !messageQueue_.empty(); } );
+    }
+
+    void PubSubBroadcasterExt::CancelWait()
+    {
+        {
+            std::lock_guard<std::mutex> lock( queueMutex_ );
+            wait_cancelled_ = true;
+        }
+        queueCv_.notify_all();
     }
 
     outcome::result<void> PubSubBroadcasterExt::AddBroadcastTopic( const std::string &topicName )
@@ -333,7 +356,7 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::AddListenTopic( std::string topic )
     {
-        auto            full_topic = std::move(topic) + version::GetNetAndVersionAppendix();
+        auto            full_topic = std::move( topic ) + version::GetNetAndVersionAppendix();
         std::lock_guard lock( listenTopicsMutex_ );
         if ( topicsToListen_.find( full_topic ) != topicsToListen_.end() )
         {
@@ -345,16 +368,17 @@ namespace sgns::crdt
         m_logger->debug( "Listen request on topic: '{}'", full_topic );
         if ( started_ )
         {
-            std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>> future = std::move( pubSub_->Subscribe(
-                full_topic,
-                [weakptr = weak_from_this(), full_topic]( boost::optional<const GossipPubSub::Message &> message )
-                {
-                    if ( auto self = weakptr.lock() )
+            std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>> future = std::move(
+                pubSub_->Subscribe(
+                    full_topic,
+                    [weakptr = weak_from_this(), full_topic]( boost::optional<const GossipPubSub::Message &> message )
                     {
-                        self->m_logger->debug( "Message received from topic: " + full_topic );
-                        self->OnMessage( message, full_topic );
-                    }
-                } ) );
+                        if ( auto self = weakptr.lock() )
+                        {
+                            self->m_logger->debug( "Message received from topic: " + full_topic );
+                            self->OnMessage( message, full_topic );
+                        }
+                    } ) );
 
             {
                 std::lock_guard lock( subscriptionMutex_ );
@@ -426,11 +450,17 @@ namespace sgns::crdt
             {
                 break;
             }
-            std::lock_guard<std::mutex> lock( queueMutex_ );
-            messageQueue_.emplace( peer_id_res.value(), std::string( cid_buffer.value().toString() ) );
+            {
+                std::lock_guard<std::mutex> lock( queueMutex_ );
+                messageQueue_.emplace( peer_id_res.value(), std::string( cid_buffer.value().toString() ) );
+            }
             ret = true;
         } while ( 0 );
 
+        if ( ret )
+        {
+            queueCv_.notify_one();
+        }
         return ret;
     }
 

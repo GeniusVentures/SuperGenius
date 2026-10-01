@@ -137,8 +137,8 @@ TEST_F( BurnConfigTest, BurnconfigCacheRefresh )
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
     const auto signature_bytes = self_account_->Sign( serialized );
-    auto sign_result = secure_crdt_->AddSignature( sgns::crdt::HierarchicalKey( "burn-config" ),
-                                                   self_account_->GetAddress(), signature_bytes );
+    auto       sign_result     = secure_crdt_->AddSignature( sgns::crdt::HierarchicalKey( "burn-config" ),
+                                                             self_account_->GetAddress(), signature_bytes );
     ASSERT_FALSE( sign_result.has_error() ) << sign_result.error().message();
 
     EXPECT_EQ( refresh_count, 0 ) << "quorum (2) not yet met with only 1/2 signatures -- refresh must not fire early";

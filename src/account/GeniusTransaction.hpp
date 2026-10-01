@@ -18,6 +18,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/UTXOStructs.hpp"
+#include "account/GeniusUTXO.hpp"
 #include "GeniusAccount.hpp"
 
 #include <gsl/span>
@@ -143,6 +144,12 @@ namespace sgns
         }
 
         /**
+         * @brief       Materializes the UTXOs this transaction produces, one per output destination.
+         * @return      nullopt when the hash is malformed or the transaction carries no UTXO parameters
+         */
+        std::optional<std::vector<GeniusUTXO>> GetProducedUTXOs() const;
+
+        /**
          * @brief       Returns the source chain id for input validation routing
          * @return      The source chain id
          */
@@ -262,6 +269,15 @@ namespace sgns
         bool CheckSignature() const;
 
         /**
+         * @brief       Verifies the transaction signature against an arbitrary caller-supplied address,
+         *              rather than the transaction's own declared source address. @ref CheckSignature
+         *              delegates to this with `dag_st.source_addr()`.
+         * @param[in]   address The address whose public key the signature should be verified against.
+         * @return      true if the signature is valid for the given address, false otherwise.
+         */
+        bool CheckSignatureAgainst( const std::string &address ) const;
+
+        /**
          * @brief       Legacy method to verify the transaction signature using the DAG metadata. This method may be used for backward compatibility with older transaction formats.
          * @return      true if the signature is valid and the hash matches, false otherwise.
          */
@@ -280,8 +296,6 @@ namespace sgns
         SGTransaction::DAGStruct dag_st;
 
     private:
-        /// Static map that holds registered deserializer functions for different transaction types, allowing dynamic deserialization based on the type field in the DAG metadata.
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
         /// The transaction type string that identifies the specific type of transaction (e.g., "transfer", "mint", "escrow-hold").
         const std::string transaction_type;
 
@@ -293,17 +307,21 @@ namespace sgns
          */
         static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
         {
-            deserializers_map[transaction_type] = std::move( fn );
+            GetDeSerializers()[transaction_type] = std::move( fn );
         }
 
         /**
          * @brief       Returns the map of registered deserializer functions for transaction types.
+         *
+         * Construct-on-first-use, not a `static inline` data member: the registrars are
+         * themselves dynamically-initialized statics in other translation units
+         * (`MigrationTransaction::registered` and friends), and cross-TU initialization order
+         * is unspecified. As a data member the map could still be unconstructed when the first
+         * registrar ran, which segfaulted child_tokens_test before main() on any link order
+         * that happened to put a registrar first.
          * @return      The map of transaction types to their corresponding deserializer functions.
          */
-        static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
-        {
-            return deserializers_map;
-        }
+        static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers();
     };
 }
 

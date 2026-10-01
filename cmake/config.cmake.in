@@ -1,3 +1,9 @@
 @PACKAGE_INIT@
 
+# The SUPERGENIUS_CONFIG_LIBSECRET placeholder below is set by the Linux entry
+# (build/Linux/CMakeLists.txt): the Linux export of sgns::secure_storage links
+# PkgConfig::LIBSECRET, so its config must define that target before the targets
+# file loads. Other platforms leave it unset and the lines are dropped.
+@SUPERGENIUS_CONFIG_LIBSECRET@
+
 include ( "${CMAKE_CURRENT_LIST_DIR}/supergeniusTargets.cmake" )

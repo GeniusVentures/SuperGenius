@@ -15,6 +15,64 @@ on:
         description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
         required: false
         type: string
+      # Names must be build_<target>-<abi>_<build-type>: the skip step looks
+      # them up dynamically instead of enumerating every combination.
+      build_Android-arm64-v8a_Release:
+        description: "Build Android arm64-v8a Release"
+        default: true
+        type: boolean
+      build_Android-arm64-v8a_Debug:
+        description: "Build Android arm64-v8a Debug"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Release:
+        description: "Build Android armeabi-v7a Release"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Debug:
+        description: "Build Android armeabi-v7a Debug"
+        default: true
+        type: boolean
+      build_iOS_Release:
+        description: "Build iOS Release"
+        default: true
+        type: boolean
+      build_iOS_Debug:
+        description: "Build iOS Debug"
+        default: true
+        type: boolean
+      build_OSX_Release:
+        description: "Build OSX Release"
+        default: true
+        type: boolean
+      build_OSX_Debug:
+        description: "Build OSX Debug"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Release:
+        description: "Build Linux x86_64 Release"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Debug:
+        description: "Build Linux x86_64 Debug"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Release:
+        description: "Build Linux aarch64 Release"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Debug:
+        description: "Build Linux aarch64 Debug"
+        default: true
+        type: boolean
+      build_Windows_Release:
+        description: "Build Windows Release"
+        default: true
+        type: boolean
+      build_Windows_Debug:
+        description: "Build Windows Debug"
+        default: true
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -140,22 +198,22 @@ jobs:
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Windows
             runner_key: windows
           - target: OSX
@@ -184,6 +242,25 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      # Shell-agnostic body so this works on both bash and pwsh runners.
+      - name: Skip build disabled by workflow_dispatch input
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs[format('build_{0}{1}_{2}', matrix.target, matrix.abi && format('-{0}', matrix.abi) || '', matrix.build-type)] }}
+        run: |
+          echo "Skipping build for ${{ matrix.target }}${{ matrix.abi && format(' {0}', matrix.abi) || '' }} ${{ matrix.build-type }}"
+          exit 78
+
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          foreach ($p in @("C:\Program Files\Git\bin", "C:\Program Files\Git\usr\bin")) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          $bash = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          Write-Output $(if ($bash) { "Bash location: $bash" } else { "WARNING: bash.exe not found in PATH" })
+
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{runner.workspace}}
@@ -193,24 +270,30 @@ jobs:
           echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{github.workspace}}"
 
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
+          fi
+
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
           
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
           if [ -d "thirdparty" ]; then
             echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+            $SUDO rm -rf thirdparty
           fi
           if [ -d "zkLLVM" ]; then
             echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+            $SUDO rm -rf zkLLVM
           fi
 
           echo "=== POST-CLEANUP DEBUG ==="
@@ -361,14 +444,78 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-          
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+
+          # Native Linux builds run in the AlmaLinux 8 CI image (glibc 2.28
+          # floor, replacing the EOL Debian Bullseye container). The image
+          # ships clang, cmake, ninja, Vulkan headers, and the perl modules
+          # OpenSSL's Configure needs, so the dnf branch is a guarded safety
+          # net that avoids repo traffic when the image already provides
+          # everything; Ubuntu runners (used by the Android builds, which run
+          # without a container) still need apt.
+          if command -v dnf >/dev/null 2>&1; then
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
+            fi
+          else
+            sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows'}}
         run: |
-          choco install ccache -A
+          choco install ccache ninja -A
+
+          # ccache only works with the Ninja generator: CMake honours
+          # CMAKE_<LANG>_COMPILER_LAUNCHER for Ninja and Makefiles, and silently
+          # drops it for Visual Studio. Ninja in turn does not discover the MSVC
+          # environment on its own the way the Visual Studio generator does, so
+          # export what vcvars64 sets up.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
+
+          # Snapshot the pre-vcvars PATH so the export below can skip entries
+          # the runner already provides.
+          $existingPath = @($env:PATH -split ';' | ForEach-Object { $_.TrimEnd('\').ToLower() } | Where-Object { $_ })
+
+          cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -notmatch '^([^=]+)=(.*)$') { return }
+            $name, $value = $matches[1], $matches[2]
+            if ($name -eq 'PATH') {
+              # Export vcvars' PATH in its own order, but only entries that are
+              # NEW relative to the runner PATH. Re-exporting system dirs
+              # (System32 et al.) pushes them ahead of the Git Bash dirs
+              # registered by the earlier "Configure bash on Windows" step;
+              # System32 contains the WSL bash.exe launcher, which then
+              # hijacks every later `shell: bash` step on hosts where WSL
+              # cannot run ("Nested virtualization is not supported"). The
+              # cl.exe directory is not on the base PATH and survives this
+              # filter; vcvars emits it twice with different case
+              # (HostX64/Hostx64) and duplicate entries are harmless.
+              $value -split ';' |
+                Where-Object { $_ -and $existingPath -notcontains $_.TrimEnd('\').ToLower() } |
+                Add-Content -Path $env:GITHUB_PATH
+            } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
+              "$name=$value" | Add-Content -Path $env:GITHUB_ENV
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
+
+          # Cap compiler concurrency on the self-hosted SG-WIN11 box: 24
+          # cl.exe instances compiling zkLLVM/crypto3 headers exhaust its
+          # 32 GB and page to disk (observed 2026-09: builds crawling at
+          # sub-1GHz + hard paging; RDP barely updating). The bare `-j` in
+          # the build step honours this env cap. Hosted Windows runners
+          # (8 vCPU, fleet RAM) keep unbounded parallelism.
+          if ("${{ runner.environment }}" -eq "self-hosted") {
+            Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_BUILD_PARALLEL_LEVEL=8"
+          }
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
@@ -479,7 +626,14 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        # Pin clang explicitly rather than relying on the /usr/bin/cc and
+        # /usr/bin/c++ update-alternatives symlinks: on AlmaLinux 8
+        # /usr/bin/c++ is a real file owned by gcc-c++ (not an alternatives
+        # symlink like Debian's), so the update-alternatives takeover fails
+        # silently and CMake falls back to g++ 8.5, which cannot compile the
+        # zkLLVM crypto3 constexpr code in ProofSystem (run 35377550250,
+        # divide.hpp:347 "is not a constant expression" on all Linux jobs).
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}

@@ -15,7 +15,7 @@
 
 namespace sgns
 {
-    class ISecureStorage : public IComponent, public std::enable_shared_from_this<ISecureStorage>
+    class ISecureStorage : public IComponent
     {
     public:
         ~ISecureStorage() override = default;

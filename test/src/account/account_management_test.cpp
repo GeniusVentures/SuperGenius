@@ -1,6 +1,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <fstream>
 
@@ -8,52 +9,99 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/offline_chainlist.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
+namespace sgns
+{
+    /**
+     * @brief Friend accessor for private GeniusNode state needed by account
+     *        management tests. Mirrors MultiAccountTestAccess in
+     *        child_tokens_test.cpp.
+     */
+    class AccountManagementTestAccess
+    {
+    public:
+        /// @brief Seeds the node's price cache so cost calculations never
+        ///        depend on the external CoinGecko API (rate-limited from CI
+        ///        runner IPs since 2026-09-29, breaking SetPayoutAddress with
+        ///        "The processing cost could not be calculated"). A seeded
+        ///        entry stays valid for m_cacheValidityDuration (1 minute).
+        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
+        {
+            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
+        }
+    };
+} // namespace sgns
+
+namespace
+{
+    std::shared_ptr<GeniusAccount> WriteTrustedNodeConfig( const boost::filesystem::path &path,
+                                                            const char                    *private_key,
+                                                            const char                    *node_type,
+                                                            bool                           is_processor )
+    {
+        auto account = GeniusAccount::NewFromPrivateKey( TOKEN_ID, private_key, path );
+        if ( !account )
+        {
+            return nullptr;
+        }
+        const auto address = account->GetAddress();
+        WriteTrustedSgnsConfig( path, node_type, is_processor, false, { address }, address, 1, 1, 144 );
+        return account;
+    }
+
+    void ConfirmConfiguredTrust( const std::shared_ptr<GeniusNode> &node )
+    {
+        ASSERT_NO_FATAL_FAILURE( test::MakeNodeReadyWithLocalTrust( node ) );
+    }
+} // namespace
+
 class AccountManagement : public ::testing::Test
 {
 public:
-    static inline boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    // Each test gets its own directory. The previous test's node can finish
+    // its async destruction (RocksDB close on a detached io thread) after this
+    // constructor runs; reusing one path made the new node's DB open race the
+    // old instance's lock and a directory wiped under still-open files, which
+    // surfaced as spurious "lock hold by current process" then MANIFEST/.sst
+    // corruption. No state is shared between tests — the old fixture wiped the
+    // directory here anyway.
+    static inline std::atomic<uint64_t> next_test_index{ 0 };
+    boost::filesystem::path             path = boost::dll::program_location().parent_path() /
+                   ( "am_full_node_" + std::to_string( next_test_index.fetch_add( 1 ) ) );
 
     AccountManagement()
     {
-        try
-        {
-            test::removeAllWithRetry( path.string() );
-        }
-        catch ( ... ) //NOLINT(bugprone-empty-catch)
-        {
-        }
-
+        test::removeAllWithRetry( path.string() );
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
-                                           /*node_type=*/"Full",
-                                           /*is_processor=*/true,
-                                           /*rpc_catchup=*/false );
-
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
+        const auto bootstrapper = WriteTrustedNodeConfig(
+            path, "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa", "Full", true );
+        assert( bootstrapper );
+        Blockchain::SetAuthorizedFullNodeAddress( bootstrapper->GetAddress() );
+
         node_ = sgns::GeniusNode::New(
-            { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
+            { "0xcafe", "0.35", "1.0", TOKEN_ID, path.generic_string() + '/' },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
+        node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         assert( node_ != nullptr );
-        test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 4000000 ),
-                                      "node not synced" );
+        ConfirmConfiguredTrust( node_ );
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
@@ -68,7 +116,7 @@ TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
 TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 {
     auto old_account_address = node_->GetAddress();
-    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -87,7 +135,7 @@ TEST_F( AccountManagement, TransferAccount )
         node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
             .has_value() );
     auto balance               = node_->GetBalance();
-    auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->TransferAccount( other_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -98,7 +146,7 @@ TEST_F( AccountManagement, TransferAccount )
 TEST_F( AccountManagement, CanDeleteAccount )
 {
     auto old_account_address = node_->GetAddress();
-    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
+    auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -127,29 +175,32 @@ TEST_F( AccountManagement, SetPayoutAddress )
     sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( path_receiver.generic_string() + '/',
-                                       /*node_type=*/"Light",
-                                       /*is_processor=*/false,
-                                       /*rpc_catchup=*/false );
+    auto receiver_authority = WriteTrustedNodeConfig(
+        path_receiver, "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f", "Light", false );
+    ASSERT_TRUE( receiver_authority );
     boost::filesystem::create_directories( path_requester );
     sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( path_requester.generic_string() + '/',
-                                       /*node_type=*/"Light",
-                                       /*is_processor=*/false,
-                                       /*rpc_catchup=*/false );
+    auto requester_authority = WriteTrustedNodeConfig(
+        path_requester, "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0", "Light", false );
+    ASSERT_TRUE( requester_authority );
 
     auto node_receiver = sgns::GeniusNode::New(
-        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
+        { "0xcafe", "0.35", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
         sgns::FromPrivateKey{ "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f" } );
     auto node_requester = sgns::GeniusNode::New(
-        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
+        { "0xcafe", "0.35", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
+    node_receiver->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
+    node_requester->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
 
     node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
     node_receiver->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
+
+    ConfirmConfiguredTrust( node_receiver );
+    ConfirmConfiguredTrust( node_requester );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -179,7 +230,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/ballet.data",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -199,7 +250,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -250,7 +301,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -276,7 +327,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
       "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
+        "source_uri_param": "file://[basepath]model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -301,11 +352,14 @@ TEST_F( AccountManagement, SetPayoutAddress )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto        cost      = node_requester->GetProcessCost( procmgr.value() );
-    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
-#if defined( _WIN32 ) || defined( __linux__ )
-    bin_path += "../";
-#endif
+    // Seed the price cache before any cost calculation: the external price API
+    // is rate-limited from CI runners, and ProcessImage fails outright when
+    // GetGNUSPrice cannot resolve a price.
+    sgns::AccountManagementTestAccess::SetGNUSPrice( node_requester, 1.0 );
+    auto        cost      = node_requester->GetProcessCost( *procmgr.value() );
+    // Assets live in the source tree. Deriving this from the binary location broke
+    // whenever the build layout changed (multi-config or ABI subdirectory).
+    std::string bin_path = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
 

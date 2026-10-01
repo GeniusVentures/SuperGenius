@@ -25,6 +25,7 @@ key-files:
     - test/src/CMakeLists.txt
 decisions:
   - "EvaluateQuorum built as a stateless pure function (no signer-role/epoch tracking) per D-03/D-04 — replay protection deferred to Phase 9's CRDT-backed caller, per threat register T-08-05"
+requirements-completed: [MSIG-01, MSIG-02, MSIG-03]
 metrics:
   duration: "~45m"
   completed: 2026-07-21

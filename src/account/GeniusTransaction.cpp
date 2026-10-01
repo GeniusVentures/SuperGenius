@@ -71,13 +71,18 @@ namespace sgns
 
     bool GeniusTransaction::CheckSignature() const
     {
+        return CheckSignatureAgainst( dag_st.source_addr() );
+    }
+
+    bool GeniusTransaction::CheckSignatureAgainst( const std::string &address ) const
+    {
         auto       str_signature = dag_st.signature();
 
         SGTransaction::DAGStruct dag_copy = dag_st;
         dag_copy.clear_signature();
         auto serialized = SerializeByteVector(dag_copy);
 
-        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
+        return GeniusAccount::VerifySignature( address, str_signature, serialized );
     }
 
     bool GeniusTransaction::CheckDAGSignatureLegacy() const
@@ -110,8 +115,43 @@ namespace sgns
         return dag_st.uncle_hash();
     }
 
+    std::optional<std::vector<GeniusUTXO>> GeniusTransaction::GetProducedUTXOs() const
+    {
+        auto tx_hash = base::Hash256::fromReadableString( GetHash() );
+        if ( tx_hash.has_error() || !HasUTXOParameters() )
+        {
+            return std::nullopt;
+        }
+
+        auto params_opt = GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
+        {
+            return std::nullopt;
+        }
+
+        const auto             &dst_infos = params_opt->second;
+        std::vector<GeniusUTXO> outputs;
+        outputs.reserve( dst_infos.size() );
+        for ( std::uint32_t i = 0; i < dst_infos.size(); ++i )
+        {
+            outputs.emplace_back( tx_hash.value(),
+                                  i,
+                                  dst_infos[i].encrypted_amount,
+                                  dst_infos[i].token_id,
+                                  dst_infos[i].dest_address );
+        }
+        return outputs;
+    }
+
     std::unordered_set<std::string> GeniusTransaction::GetTopics() const
     {
         return { GetSrcAddress() };
+    }
+
+    std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> &
+    GeniusTransaction::GetDeSerializers()
+    {
+        static std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+        return deserializers_map;
     }
 }

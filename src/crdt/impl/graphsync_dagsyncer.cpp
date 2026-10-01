@@ -15,6 +15,16 @@ namespace
 {
     std::mutex              g_request_wait_mutex;
     std::condition_variable g_request_wait_cv;
+    // Longer than graphsync's own 3-minute activity sweep is pointless; shorter
+    // keeps a single dead peer from stalling replication for minutes.
+    constexpr auto kInProgressRequestTimeout = std::chrono::seconds( 120 );
+    // Hard wall-clock budget for one getNode across ALL route peers. getNode runs
+    // synchronously on the (single) CRDT DAG worker via FetchNodes, so a CID whose
+    // peers never deliver would otherwise pin every CRDT operation - consensus
+    // publishes, registrations, certificates - for kInProgressRequestTimeout per
+    // peer (120s x N). Expiring here fails the fetch; the datastore's failed-root
+    // retry ladder reschedules it with backoff while the worker keeps serving.
+    constexpr auto kTotalFetchTimeout = std::chrono::seconds( 20 );
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
@@ -41,6 +51,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 
 namespace sgns::crdt
 {
+    // Test-only blacklist backoff override (milliseconds); 0 == production formula.
+    // Default-initialized to 0 so an unconfigured process keeps production durations.
+    std::atomic<uint64_t> GraphsyncDAGSyncer::blacklist_backoff_override_ms_for_test_{ 0 };
+
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
@@ -212,8 +226,18 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto route_keys, GetRouteKeys( cid ) );
 
+        const auto fetch_deadline = std::chrono::steady_clock::now() + kTotalFetchTimeout;
+
         for ( const auto peer_key : route_keys )
         {
+            if ( std::chrono::steady_clock::now() >= fetch_deadline )
+            {
+                logger_->error( "Fetch for CID {} abandoned: total budget of {}s exhausted across route peers",
+                                cid.toString().value(),
+                                std::chrono::duration_cast<std::chrono::seconds>( kTotalFetchTimeout ).count() );
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
+            }
+
             BOOST_OUTCOME_TRY( auto peerEntry, GetPeerById( peer_key ) );
             auto &peerID  = peerEntry.first;
             auto &address = peerEntry.second;
@@ -233,7 +257,22 @@ namespace sgns::crdt
             }
 
             ClearRequestStatus( cid );
-            BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
+            auto subscription = RequestNode( peerID, address, cid );
+            if ( subscription.has_error() )
+            {
+                // The request failed synchronously (e.g. the dial was refused
+                // outright), which previously returned from getNode via
+                // BOOST_OUTCOME_TRY before any failover bookkeeping ran — one
+                // refused connection failed the fetch even when other routes
+                // to the CID existed. Record the failure the same way the
+                // wait loop does and fall through to the next peer.
+                logger_->warn( "Request setup failed for CID {} from peer {}: {}. Trying fallback.",
+                               cid.toString().value(),
+                               peerID.toBase58(),
+                               subscription.error().message() );
+                (void) BlackListPeer( peerID );
+                continue;
+            }
             const auto    request_start_time      = std::chrono::steady_clock::now();
             auto          next_in_progress_log_at = request_start_time + std::chrono::seconds( 30 );
             std::uint64_t in_progress_checks      = 0;
@@ -351,6 +390,37 @@ namespace sgns::crdt
                         // Still in progress, keep waiting
                         ++in_progress_checks;
                         const auto now = std::chrono::steady_clock::now();
+                        // A response that never delivers its blocks stays IN_PROGRESS
+                        // indefinitely and would pin this (single) CRDT worker. Give up
+                        // on the peer and let the route failover / root retry handle it.
+                        if ( now - request_start_time >= kInProgressRequestTimeout )
+                        {
+                            logger_->error( "Request for CID {} from peer {} still IN_PROGRESS after {}s - giving up on peer",
+                                            cid.toString().value(),
+                                            peerID.toBase58(),
+                                            std::chrono::duration_cast<std::chrono::seconds>( now - request_start_time )
+                                                .count() );
+                            RecordCIDFailure( peerID, cid );
+                            ClearRequestStatus( cid );
+                            try_next_peer = true;
+                            break;
+                        }
+                        if ( now >= fetch_deadline )
+                        {
+                            // The whole-fetch budget is the binding bound: fail with
+                            // the same per-peer accounting so the retry ladder owns
+                            // the re-attempt, and stop walking further peers.
+                            logger_->error( "Fetch for CID {} exceeded the total {}s budget (last peer {}) - "
+                                            "giving up, root retry will reschedule",
+                                            cid.toString().value(),
+                                            std::chrono::duration_cast<std::chrono::seconds>( kTotalFetchTimeout )
+                                                .count(),
+                                            peerID.toBase58() );
+                            RecordCIDFailure( peerID, cid );
+                            ClearRequestStatus( cid );
+                            try_next_peer = true;
+                            break;
+                        }
                         if ( now >= next_in_progress_log_at )
                         {
                             const auto elapsed_seconds =
@@ -479,7 +549,11 @@ namespace sgns::crdt
             }
         };
 
-        graphsync_->start( shared_from_this(), blockCallback );
+        // Not shared_from_this(): graphsync serves incoming requests off this service on the
+        // libp2p host's io_context, and GraphsyncDAGSyncer::getNode fetches a block it does not
+        // have from the network, polling for up to two minutes. That pins the host's only
+        // thread and freezes the whole node. Responders serve what they already hold.
+        graphsync_->start( dagService_, blockCallback );
 
         if ( host_ == nullptr )
         {
@@ -791,7 +865,7 @@ namespace sgns::crdt
     {
         std::lock_guard lock( blacklist_mutex_ );
 
-        uint64_t now = GetCurrentTimestamp();
+        uint64_t now = GetCurrentTimestampMs();
 
         if ( auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) ); !inserted )
         {
@@ -812,27 +886,48 @@ namespace sgns::crdt
 
     uint64_t GraphsyncDAGSyncer::getBackoffTimeout( uint64_t failures, bool ever_connected )
     {
+        // Test-only override (developer directive 2026-09-03): a nonzero value is
+        // returned verbatim as a flat (non-exponential) millisecond backoff.
+        if ( uint64_t override_ms = blacklist_backoff_override_ms_for_test_.load( std::memory_order_relaxed );
+             override_ms != 0 )
+        {
+            return override_ms;
+        }
+
         if ( ever_connected )
         {
             // For previously connected peers:
-            // - Start with 5 seconds
-            // - Cap at 30 seconds
-            uint64_t base_seconds = 5;
-            uint64_t max_seconds  = 30;
+            // - Start with 5000 milliseconds (5 seconds)
+            // - Cap at 30000 milliseconds (30 seconds)
+            uint64_t base_ms = 5000;
+            uint64_t max_ms  = 30000;
 
-            // Calculate exponential backoff
-            uint64_t timeout = base_seconds * ( 1ULL << failures );
-            return std::min( timeout, max_seconds );
+            // Calculate exponential backoff. WR-06 (12-REVIEW.md round 5):
+            // failures increments without bound (AddToBlackList), entries
+            // are never erased, and resets happen only on successful
+            // connection, so shifting 1ULL by the raw failure count is UB
+            // at failures >= 64; the
+            // caps are reached by 2^6 and 2^8, so clamping the exponent at
+            // 16 preserves every reachable behavior.
+            const uint64_t exponent = failures < 16 ? failures : 16;
+            uint64_t        timeout  = base_ms * ( 1ULL << exponent );
+            return std::min( timeout, max_ms );
         }
         // For never-connected peers:
-        // - Start with 10 seconds
-        // - Cap at 1800 seconds (30 minutes)
-        uint64_t base_seconds = 10;
-        uint64_t max_seconds  = 1800;
+        // - Start with 10000 milliseconds (10 seconds)
+        // - Cap at 1800000 milliseconds (30 minutes)
+        uint64_t base_ms = 10000;
+        uint64_t max_ms  = 1800000;
 
-        // Calculate exponential backoff
-        uint64_t timeout = base_seconds * ( 1ULL << failures );
-        return std::min( timeout, max_seconds );
+        // Calculate exponential backoff (exponent clamped per WR-06 above)
+        const uint64_t exponent = failures < 16 ? failures : 16;
+        uint64_t        timeout  = base_ms * ( 1ULL << exponent );
+        return std::min( timeout, max_ms );
+    }
+
+    void GraphsyncDAGSyncer::SetBlacklistBackoffTimeoutForTest( uint64_t override_ms )
+    {
+        blacklist_backoff_override_ms_for_test_.store( override_ms, std::memory_order_relaxed );
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
@@ -848,7 +943,7 @@ namespace sgns::crdt
                 break;
             }
 
-            uint64_t        now   = GetCurrentTimestamp();
+            uint64_t        now   = GetCurrentTimestampMs();
             BlacklistEntry &entry = it->second;
 
             // If no failures yet, not blacklisted
@@ -876,7 +971,7 @@ namespace sgns::crdt
 
             // Still within blacklist timeout and has failures
             ret = true; // This peer IS on the blacklist
-            logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}s)",
+            logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}ms)",
                             peer.toBase58(),
                             entry.failures,
                             timeout );
@@ -901,11 +996,10 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const PeerId &peer ) const
     {
+        // Routes are kept: getNode already skips blacklisted peers, and erasing the
+        // only route to a CID turned a temporary backoff into an unfetchable CID
+        // until the sender's next rebroadcast re-added it.
         AddToBlackList( peer );
-        if ( IsOnBlackList( peer ) )
-        {
-            EraseRoutesFromPeerID( peer );
-        }
         return outcome::success();
     }
 
@@ -964,40 +1058,6 @@ namespace sgns::crdt
         routes.insert( routes.begin(), peerKey );
     }
 
-    void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
-    {
-        // First find the peer key in the peer index
-        PeerKey peerKeyToRemove;
-
-        {
-            std::lock_guard registry_lock( registry_mutex_ );
-            auto            it = peer_index_.find( peer );
-            if ( it == peer_index_.end() )
-            {
-                // Peer not found in registry, nothing to erase
-                return;
-            }
-            peerKeyToRemove = it->second;
-        }
-
-        // Remove all routes that point to this peer
-        std::lock_guard routing_lock( routing_mutex_ );
-        for ( auto it = routing_.begin(); it != routing_.end(); )
-        {
-            auto &route_keys = it->second;
-            route_keys.erase( std::remove( route_keys.begin(), route_keys.end(), peerKeyToRemove ), route_keys.end() );
-            if ( route_keys.empty() )
-            {
-                logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
-                it = routing_.erase( it );
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    }
-
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid )
     {
         std::lock_guard lock( routing_mutex_ );
@@ -1011,6 +1071,13 @@ namespace sgns::crdt
     {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+    }
+
+    uint64_t GraphsyncDAGSyncer::GetCurrentTimestampMs()
+    {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
     }
 
@@ -1035,13 +1102,12 @@ namespace sgns::crdt
             return false; // No failure recorded
         }
 
-        // Consider failure "recent" for 3 minutes (180 seconds)
-        // This prevents immediate re-requests but allows retry after some time
-        uint64_t       now             = GetCurrentTimestamp();
-        uint64_t       failure_age     = now - it->second;
-        const uint64_t FAILURE_TIMEOUT = 180; // 3 minutes
+        // Short rather than minutes: when the failing peer is the only route (common
+        // in small meshes), a long suppression makes the CID unfetchable for the
+        // whole window even after the peer recovers.
+        const std::chrono::seconds failure_age{ GetCurrentTimestamp() - it->second };
 
-        if ( failure_age > FAILURE_TIMEOUT )
+        if ( failure_age > CID_FAILURE_SUPPRESSION )
         {
             // Failure is old, remove it and allow retry
             cid_failures_.erase( it );
@@ -1067,9 +1133,13 @@ namespace sgns::crdt
 
     bool GraphsyncDAGSyncer::IsConnectionFailureStatus( ResponseStatusCode code )
     {
+        // RS_TIMEOUT is deliberately excluded: a timeout means the peer was slow
+        // to answer (e.g. busy serving other requests), not that it is
+        // unconnectable. Blacklisting on timeout excludes the peer for an
+        // escalating backoff (up to 30 min) — fatal when it is the only route
+        // for a CID. Slow peers are handled by the CID-specific failure count.
         return code == ipfs_lite::ipfs::graphsync::RS_NO_PEERS ||
                code == ipfs_lite::ipfs::graphsync::RS_CANNOT_CONNECT ||
-               code == ipfs_lite::ipfs::graphsync::RS_TIMEOUT ||
                code == ipfs_lite::ipfs::graphsync::RS_CONNECTION_ERROR;
     }
 
@@ -1214,8 +1284,7 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
-        graphsync_->stop();
-        logger_->debug( "Dagsyncer Stopped" );
+        g_request_wait_cv.notify_all();
     }
 
 }

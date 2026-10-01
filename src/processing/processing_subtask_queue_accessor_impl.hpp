@@ -6,6 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 
+#include "processing/processing_core.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
@@ -38,12 +39,17 @@ namespace sgns::processing
         * @param subTaskResultStorage Processing results storage.
         * @param taskResultProcessingSink Callback invoked when task processing completes.
         * @param processingErrorSink Callback invoked on processing errors.
+        * @param processingCore Optional ProcessingCore, used by FinalizeQueueProcessing to resolve the
+        *        originating Task's schema-declared quantScale/byteQuantMode (via GetTaskQueue()) for
+        *        ValidateResults's tolerance-fallback derivation. Defaulted to nullptr so this remains a
+        *        non-breaking change for any existing caller.
         */
         SubTaskQueueAccessorImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
                                   std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                   std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-                                  std::function<void( const std::string & )>              processingErrorSink );
+                                  std::function<void( const std::string & )>              processingErrorSink,
+                                  std::shared_ptr<ProcessingCore>                         processingCore = nullptr );
         ~SubTaskQueueAccessorImpl() override;
 
         /** SubTaskQueueAccessor overrides
@@ -97,6 +103,7 @@ namespace sgns::processing
         std::shared_ptr<SubTaskResultStorage>                   m_subTaskResultStorage;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
+        std::shared_ptr<ProcessingCore>                         m_processingCore; ///< Optional; used to resolve the originating Task's schema for tolerance derivation.
         std::shared_ptr<boost::asio::io_context>                m_localContext;
         using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
         std::optional<WorkGuard>                   m_localWorkGuard;

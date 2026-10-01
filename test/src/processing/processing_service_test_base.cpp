@@ -229,14 +229,17 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
                                                              []( const std::string & ) {} ) );
         m_processing_engines.emplace_back(
             std::make_shared<ProcessingEngine>( nodeId, processingCore, []( const std::string & ) {}, [] {} ) );
-        m_IsTaskFinalized.emplace_back( std::make_unique<std::atomic<bool>>( false ) );
+        m_IsTaskFinalized.emplace_back( std::make_shared<std::atomic<bool>>( false ) );
+        // The callback must not touch fixture state: it can fire after TearDown
+        // cleared the vectors while a broadcast handler still owns the accessor.
+        auto taskFinalized = m_IsTaskFinalized.back();
         auto queueAccessor = m_processing_queues_accessors.emplace_back( std::make_shared<SubTaskQueueAccessorImpl>(
             pubsub_node,
             processingQueueManager,
             std::make_shared<SubTaskResultStorageMock>(),
-            [this, i, nodeId]( const SGProcessing::TaskResult & )
+            [taskFinalized, nodeId]( const SGProcessing::TaskResult & )
             {
-                m_IsTaskFinalized[i]->store( true );
+                taskFinalized->store( true );
                 Color::PrintInfo( "Task finalized by ", nodeId );
             },
             []( const std::string & ) {} ) );

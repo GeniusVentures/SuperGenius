@@ -17,7 +17,7 @@ namespace sgns
     /**
      * @brief Executes the storage migration from database version 3.5.1 to 3.6.0.
      */
-    class Migration3_5_0To3_6_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_5_0To3_6_0>
+    class Migration3_5_0To3_6_0 : public IMigrationStep
     {
     public:
         /**

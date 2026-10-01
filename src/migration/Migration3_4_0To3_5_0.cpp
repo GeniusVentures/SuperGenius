@@ -9,7 +9,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "MigrationManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -34,7 +34,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account ) :
+        std::shared_ptr<GeniusAccount>                                  account,
+        NodeType                                                        node_type ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -42,7 +43,8 @@ namespace sgns
         generator_( std::move( generator ) ),
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
-        account_( std::move( account ) )
+        account_( std::move( account ) ),
+        node_type_( node_type )
     {
     }
 
@@ -72,7 +74,7 @@ namespace sgns
         {
             sgns::crdt::GlobalDB::Buffer version_key;
             version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-            auto version_ret = db_3_5_0_->GetDataStore()->get( version_key );
+            auto version_ret = db_3_5_0_->GetRaw( version_key );
 
             if ( version_ret.has_error() )
             {
@@ -145,7 +147,8 @@ namespace sgns
                         strong->logger_->debug( "Blockchain started successfully, starting transaction manager" );
                         strong->blockchain_status_.store( Status::ST_SUCCESS );
                     }
-                } );
+                },
+                node_type_ );
         }
 
         auto                  retry_duration   = std::chrono::minutes( 2 );
@@ -409,7 +412,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        BOOST_OUTCOME_TRY( db_3_5_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_5_0_->PutRaw( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

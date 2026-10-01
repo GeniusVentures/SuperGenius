@@ -217,6 +217,7 @@ namespace sgns
         static constexpr size_t kDestinationYOddIndex = 6;
         // SG public key is the uncompressed X||Y coordinates (32 + 32 bytes).
         static constexpr size_t kSgnsPubKeyBytes      = 64;
+        static constexpr size_t kSgnsCoordinateHexChars = 64;  ///< One X or Y half, bare hex.
 
         if ( values.size() < kExpectedMinParams )
         {
@@ -295,7 +296,19 @@ namespace sgns
                 BridgeRelayerLogger()->error( "ParseBurnEventValues: X-only decompression failed" );
                 return outcome::failure( std::errc::invalid_argument );
             }
-            destination = std::move( *dest_opt );
+            // DecompressXOnlyPubkey (since the evmrelay "preserve bridge
+            // destination byte order" bump) treats its bytes32 input as canonical
+            // big-endian and returns big-endian X||Y — the exact ordering of
+            // GetAddress() and the v1 event payload. Use it verbatim; reversing
+            // the halves here (the old compensation for contract-order output)
+            // credits a recipient no node owns.
+            if ( dest_opt->size() != 2 * kSgnsCoordinateHexChars )
+            {
+                BridgeRelayerLogger()->error( "ParseBurnEventValues: decompressed destination has unexpected length {}",
+                                              dest_opt->size() );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            destination = *dest_opt;
         }
         else
         {

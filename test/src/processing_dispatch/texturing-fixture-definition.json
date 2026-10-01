@@ -1,0 +1,89 @@
+{
+  "name": "render-texturing",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "texturingVertexInput",
+      "source_uri_param": "file://processing_dispatch/texturing-vertex-data.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    },
+    {
+      "name": "texturingSourceImage",
+      "source_uri_param": "file://processing_dispatch/texturing-source-image.raw",
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "texturingRenderOutput",
+      "source_uri_param": "file://processing_dispatch/texturing-render-output.raw",
+      "type": "image"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "byteQuantMode",
+      "type": "int",
+      "default": 7,
+      "description": "Empirically derived (Phase 17-07, RENDTOL-02): 17-CAPTURE-RESULTS-ROUND1.md measured maxAbsDelta=0.0 (genuine zero cross-hardware divergence, explained by UploadTexture() always using VK_FILTER_NEAREST regardless of texture_buffer.filter -- the wire format never threads a per-texture filter mode through end-to-end, so nearest-neighbor sampling has no interpolation math to diverge on). Because the real measured delta is zero, no widening was required a priori; N=7 was instead derived purely from secv01_render_texturing_counter_test.cpp's own binary search against a fully bit-inverted corrupted source texture: N=0..7 all still detect the corruption, N=8 fails (masks every byte to 0x00, an expected degenerate edge case, not a surprise). N=7 is one integer step below that N=8 failure boundary."
+    }
+  ],
+  "passes": [
+    {
+      "name": "texturingPass",
+      "type": "render",
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "glsl",
+            "source": "file://processing_dispatch/texturing_vertex_shader.glsl",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "glsl",
+            "source": "file://processing_dispatch/texturing_fragment_shader.glsl",
+            "entry_point": "main"
+          }
+        ]
+      },
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
+        "width": 64,
+        "height": 64,
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
+      },
+      "vertex_buffer": {
+        "source": "input:texturingVertexInput"
+      },
+      "texture_buffer": {
+        "source": "input:texturingSourceImage",
+        "width": 64,
+        "height": 64,
+        "filter": "nearest"
+      },
+      "vertex_layout": [
+        { "name": "inPosX", "format": "FLOAT32", "offset": 0 },
+        { "name": "inPosY", "format": "FLOAT32", "offset": 4 },
+        { "name": "inUvX", "format": "FLOAT32", "offset": 8 },
+        { "name": "inUvY", "format": "FLOAT32", "offset": 12 }
+      ],
+      "pipeline_state": {
+        "topology": "triangle_list",
+        "cull_mode": "none",
+        "front_face": "ccw",
+        "depth_test": "disabled"
+      }
+    }
+  ]
+}
