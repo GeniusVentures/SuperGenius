@@ -1386,8 +1386,47 @@ namespace
         // silently clear.
         EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
 
+        // Wired teardown (no dangling io), with one ordering this case cannot
+        // share with TearDownNodes: GossipPubSub::StopImpl destroys its
+        // io_context right after its own host reference, so a host kept alive
+        // past Stop by the fixture's retained graphsync Network destroys its
+        // PARKED (never-negotiated) wrong-PSK handshake connections against a
+        // dead kqueue reactor -- deregister-descriptor use-after-free. This
+        // case is the first whose wrong-PSK node owns a GlobalDB, so the
+        // A<->publicControl pair must release db + graphsync Network BEFORE
+        // their pubsubs Stop, making StopImpl's m_host.reset() the host's
+        // final release while its reactor is still alive (the
+        // globaldb_integration TestNodeCollection teardown shape). pnetB keeps
+        // the fixture's regular order (queue/storage still reference its db;
+        // its same-PSK connections are all closed cleanly inside Stop).
         broadcaster_b->ClearMembershipFilter();
-        TearDownNodes( broadcaster_a, io_context, io_thread, { pnetA->pubsub, pnetB->pubsub, publicControl->pubsub } );
+        broadcaster_a->ClearMembershipFilter();
+
+        io_context->stop();
+        if ( io_thread.joinable() )
+        {
+            io_thread.join();
+        }
+
+        for ( auto *node : { pnetA.get(), publicControl.get() } )
+        {
+            if ( node->db )
+            {
+                node->db->ShutdownNow();
+            }
+            node->db.reset();
+            node->graphsync_network.reset();
+            node->generator.reset();
+            node->scheduler.reset();
+        }
+
+        for ( auto &pubs : { pnetA->pubsub, pnetB->pubsub, publicControl->pubsub } )
+        {
+            if ( pubs )
+            {
+                pubs->Stop();
+            }
+        }
     }
 
 } // namespace
