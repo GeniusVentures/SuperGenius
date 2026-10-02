@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 15-private-networks-consume-privatenetworkid-identity-and-bind-
 source: [15-REVERIFICATION-3.md]
 started: 2026-09-04
@@ -53,5 +53,48 @@ blocked: 0
   reason: "User reported: So I think we should have an automated test for this"
   severity: major
   test: 1
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  root_cause: "Coverage-composition gap, not a production bug. Every ingredient
+    exists and is green in isolation, but no automated harness joins them: the
+    historical job-flow E2E host (processing_multi_test) is unregistered in
+    test/src/CMakeLists.txt; the GenesisNode E2E homes (blockchain_genesis_test,
+    processing_nodes_test) hang from the tracked phase-13 quorum regression; and
+    the surviving fixtures each stop one layer short —
+    NetworkMembershipFilterFlowTest hand-rolls keys/topics instead of the real
+    job path, its public control node has no GlobalDB (isolation proven only as
+    transport non-connectivity), and no teardown-to-deny-all leg exists. The
+    flow does NOT require Blockchain/genesis startup: single-peer quorum floors
+    are 1/1, so a GlobalDB-level composition avoids the quorum-broken fixtures
+    entirely."
+  artifacts:
+    - path: "test/src/networkregistry/network_membership_filter_test.cpp"
+      issue: "Primary extension point — fixture (MakeNode/JoinTopic/CommitPut/
+        AssertKeyNeverPresentWithin/IsConnectedTo/TearDownNodes) already
+        supports PSK GlobalDB nodes; lacks job-shaped data path, public
+        GlobalDB control node, and deny-all teardown leg"
+    - path: "test/src/CMakeLists.txt"
+      issue: "processing_multi (historical multi-GeniusNode job-flow E2E) not
+        registered among the 42 add_subdirectory entries"
+    - path: "test/testutil/genius_node_test_access.hpp"
+      issue: "No tx_globaldb_/task_queue_ accessors (GeniusNode.hpp:1079/:1163
+        private) — needed only for optional GeniusNode-level tier"
+  missing:
+    - "New NetworkMembershipFilterFlowTest case: two SYMMETRIC same-PSK GlobalDB
+      member nodes publishing via the real scoped data path
+      (TaskQueueImpl::New(db, TaskKeys::ScopedTopic(\"SGNUS.Processing.Channel\",
+      kId), kId) + EnqueueTask + SubTaskResultStorageImpl), asserting
+      TaskKeys::TaskKey/SubTaskKey/ClaimableListKey/SubTaskResultKey replicate
+      to node B (bounded wait)"
+    - "Public control node (different PSK) WITH its own GlobalDB, asserted via
+      AssertKeyNeverPresentWithin for every /chain/<kId>/ key AND unscoped job
+      keys (data-level isolation, not just IsConnectedTo == false)"
+    - "Teardown leg: install MakeBootstrapMembershipFilter({}) (production
+      shape from GeniusNode.cpp:2377-2378) on node A while its GlobalDB stays
+      live; new scoped writes on B never arrive on A; HasMembershipFilter()
+      stays true"
+    - "Plan risks to carry: do NOT touch blockchain_genesis_test/
+      processing_nodes_test (phase-13 todo); assert distinct host ids (DI Host
+      aliasing precedent pubsub_counts.cpp:178-186); keep every member gated
+      (ungated members mule intruder deltas, comment at
+      network_membership_filter_test.cpp:607-617); PSK ctor needs explicit
+      gossip Config; generous-but-bounded waits (15-25s) with wired teardown"
+  debug_session: .planning/debug/automated-e2e-private-network-job-flow.md
