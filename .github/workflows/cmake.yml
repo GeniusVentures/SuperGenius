@@ -630,12 +630,14 @@ jobs:
           # Two granularities:
           # - CTEST_EXCLUDE_REGEX drops suites whose EVERY case instantiates
           #   the processing manager (MNN) and would abort before reporting.
-          # - GTEST_FILTER narrows the three mixed suites to their
-          #   non-processing cases: only AccountManagement.SetPayoutAddress,
-          #   ProcessingNodesTest.PostProcessing, and
-          #   ProcessingNodesModuleTest.SinglePostProcessing touch MNN (the
-          #   DISABLED_* siblings never run regardless); the remaining
+          # - GTEST_FILTER narrows the two mixed suites to their
+          #   non-processing cases: only ProcessingNodesTest.PostProcessing
+          #   and ProcessingNodesModuleTest.SinglePostProcessing touch MNN
+          #   (the DISABLED_* siblings never run regardless); the remaining
           #   account/ledger/transfer cases are pure and keep running.
+          #   AccountManagement.SetPayoutAddress was previously excluded
+          #   here too, but is hermetic since Phase 4 (stub-backed
+          #   LocalPriceManager, no live CoinGecko) and runs again.
           # gtest filter grammar is POSITIVE-NEGATIVE with ONE dash: the
           # negative section is ':'-separated WITHOUT per-pattern dashes.
           # '-A:-B:-C' silently parses its 2nd/3rd patterns as literal
@@ -646,7 +648,7 @@ jobs:
           GTEST_FILTER_VALUE="*"
           if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
             CTEST_EXCLUDE_REGEX="processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
-            GTEST_FILTER_VALUE="*-AccountManagement.SetPayoutAddress:ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
+            GTEST_FILTER_VALUE="*-ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
             echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
           fi
           export CTEST_EXCLUDE_REGEX
