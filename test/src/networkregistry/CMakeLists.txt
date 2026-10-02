@@ -7,6 +7,8 @@ set(NETWORKREGISTRY_TEST_NODE_LIBS
     json_secure_storage
     libsecp256k1::secp256k1
     sgns_genius_account
+    processing_service
+    SGProcessingProto
 )
 
 addtest(network_registry_test

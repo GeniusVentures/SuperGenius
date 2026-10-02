@@ -11,12 +11,16 @@
  *             authorized member's writes replicate; runtime membership
  *             widening admits a previously-denied peer's subsequent messages
  *             (per-message consultation); an empty membership set denies
- *             everything (never fails open).
+ *             everything (never fails open). The job-flow E2E composition
+ *             case (11) additionally proves scoped job replication through
+ *             the real data path, data-level public-node isolation, and
+ *             deny-all ingest on a still-live GlobalDB teardown (UAT Test 1).
  */
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <chrono>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -41,6 +45,10 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "networkregistry/NetworkMembershipFilter.hpp"
 #include "networkregistry/NetworkRegistry.hpp"
+#include "processing/impl/TaskKeys.hpp"
+#include "processing/impl/TaskQueueImpl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
+#include "processing/proto/SGProcessing.pb.h"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
 #include "testutil/remove_all.hpp"
@@ -51,6 +59,7 @@ namespace
 {
     using namespace sgns;
     using namespace sgns::networkregistry;
+    using namespace sgns::processing;
     using sgns::test::assertWaitForCondition;
 
     constexpr const char *TPR_PRIVATE_KEYS[] = {
@@ -417,6 +426,45 @@ namespace
     }
 
     //
+    // Job-flow proto builders (task_keys_scope_test.cpp:160-189 idiom, renamed
+    // for the flow scene; per-file proto-builder duplication is the
+    // established repo test idiom).
+    //
+
+    /// Builds a Task proto with minimal fields for the job-flow scene.
+    SGProcessing::Task MakeJobFlowTask( const std::string &taskId )
+    {
+        SGProcessing::Task task;
+        task.set_ipfs_block_id( taskId );
+        task.set_json_data(
+            R"({"name":"test","gnus_spec_version":1,"inputs":[],"outputs":[],"passes":[],"version":"1.0"})" );
+        task.set_random_seed( 0.0f );
+        task.set_results_channel( "test_channel" );
+        return task;
+    }
+
+    /// Builds a SubTask proto with minimal fields for the job-flow scene.
+    SGProcessing::SubTask MakeJobFlowSubTask( const std::string &taskId, const std::string &subTaskId )
+    {
+        SGProcessing::SubTask sub;
+        sub.set_ipfsblock( taskId );
+        sub.set_subtaskid( subTaskId );
+        sub.set_json_data( R"({"source":"input:test_input"})" );
+        return sub;
+    }
+
+    /// Builds a SubTaskResult with minimal fields for the job-flow scene.
+    SGProcessing::SubTaskResult MakeJobFlowResult( const std::string &subTaskId )
+    {
+        SGProcessing::SubTaskResult result;
+        result.set_subtaskid( subTaskId );
+        result.set_result_hash( "deadbeef" );
+        result.set_ipfs_results_data_id( "ipfs://QmTestCid" );
+        result.set_node_address( "test_node" );
+        return result;
+    }
+
+    //
     // Flow fixture: pnet pubsub nodes carrying real GlobalDBs
     // (pubsub_graphsync replication shape + pubsub_counts pnet nodes).
     //
@@ -532,6 +580,30 @@ namespace
                 std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             }
             EXPECT_FALSE( HasKey( db, key ) ) << what << " present at end of negative window";
+        }
+
+        /// @brief Multi-key bounded negative window: EVERY key must stay ABSENT
+        ///        for the whole window (same grace-loop shape as the single-key
+        ///        helper; one home for the job-flow isolation/teardown assertions).
+        void AssertKeysNeverPresentWithin( sgns::crdt::GlobalDB                           &db,
+                                           const std::vector<sgns::crdt::HierarchicalKey> &keys,
+                                           std::chrono::milliseconds                       window,
+                                           const std::string                              &what )
+        {
+            const auto deadline = std::chrono::steady_clock::now() + window;
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                for ( const auto &key : keys )
+                {
+                    ASSERT_FALSE( HasKey( db, key ) )
+                        << what << " replicated although it must be denied: " << key.GetKey();
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            }
+            for ( const auto &key : keys )
+            {
+                EXPECT_FALSE( HasKey( db, key ) ) << what << " present at end of negative window: " << key.GetKey();
+            }
         }
 
         bool IsConnectedTo( const std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> &pubs,
@@ -1124,6 +1196,198 @@ namespace
         broadcaster_outsider->ClearMembershipFilter();
         TearDownNodes( broadcaster_gated, io_context, io_thread,
                        { gated->pubsub, member->pubsub, outsider->pubsub } );
+    }
+
+    // (11) UAT Test-1 composition (15-18, gap UAT-1): the two-member
+    //      private-network JOB flow through the real data path, with a live
+    //      public GlobalDB as the isolation control and a production-shaped
+    //      teardown. (a) Two symmetric gated+sealed members replicate a
+    //      private job's full key set -- task, subtask, claimable entry,
+    //      subtask result -- under /chain/<id>/ when the job is published
+    //      through TaskQueueImpl::EnqueueTask +
+    //      SubTaskResultStorageImpl::AddSubTaskResult on the scoped
+    //      SGNUS.Processing.Channel/<id> topic. (b) A public control node
+    //      with its own LIVE GlobalDB listening on the unscoped topic, dialed
+    //      from both directions, never holds any /chain/<id>/ job key nor the
+    //      same job's unscoped keys -- data-level isolation, not just
+    //      IsConnectedTo == false. (c) Installing MakeBootstrapMembershipFilter({})
+    //      on a member whose GlobalDB stays live (the GeniusNode
+    //      ShutdownNodePolicyServices production shape) stops that member from
+    //      receiving further scoped writes, and HasMembershipFilter() stays
+    //      true across the whole negative window.
+    TEST_F( NetworkMembershipFilterFlowTest, PrivateNetworkJobFlowReplicatesIsolatesAndDeniesOnTeardown )
+    {
+        // "SGNUS.Processing.Channel" matches GeniusNode::PROCESSING_CHANNEL
+        // (GeniusNode.hpp:1674); the literal avoids the heavy include
+        // (task_keys_scope_test precedent).
+        const std::string public_topic = "SGNUS.Processing.Channel";
+        const std::string scoped_topic = TaskKeys::ScopedTopic( public_topic, kFlowNetworkId );
+
+        const std::string task1   = "pnet_job_task_1";
+        const std::string sub1    = "pnet_job_sub_1";
+        const std::string result1 = "pnet_job_result_1";
+        const std::string task2   = "pnet_job_task_2";
+        const std::string sub2    = "pnet_job_sub_2";
+        const std::string result2 = "pnet_job_result_2";
+
+        auto io_context = std::make_shared<boost::asio::io_context>();
+
+        // The public control REUSES MakeNode so it owns a real GlobalDB with
+        // graphsync -- the data-level upgrade over flow-5's bare-pubsub
+        // public control.
+        auto pnetA         = MakeNode( io_context, "nmf_flow11_A", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto pnetB         = MakeNode( io_context, "nmf_flow11_B", GenerateKeyPair(), std::string( SWARM_KEY_PNET ) );
+        auto publicControl = MakeNode( io_context,
+                                       "nmf_flow11_P",
+                                       GenerateKeyPair(),
+                                       std::string( SWARM_KEY_OUTSIDE ) );
+        ASSERT_NE( pnetA, nullptr );
+        ASSERT_NE( pnetB, nullptr );
+        ASSERT_NE( publicControl, nullptr );
+
+        // DI-aliasing sanity (pubsub_counts precedent): three distinct hosts.
+        const auto idA      = pnetA->pubsub->GetHost()->getId();
+        const auto idB      = pnetB->pubsub->GetHost()->getId();
+        const auto idPublic = publicControl->pubsub->GetHost()->getId();
+        ASSERT_EQ( ( std::set<libp2p::peer::PeerId>{ idA, idB, idPublic } ).size(), 3u )
+            << "job-flow nodes silently share a host";
+
+        // Members listen/publish on the SCOPED topic; the public control's
+        // GlobalDB listens on the UNSCOPED one.
+        JoinTopic( *pnetA, scoped_topic );
+        JoinTopic( *pnetB, scoped_topic );
+        JoinTopic( *publicControl, public_topic );
+
+        // Symmetric gated members (the case-(5) muling rule: EVERY member
+        // gated and sealed); the public control installs NOTHING (the
+        // public-node shape -- no filter, no sealing key).
+        auto broadcaster_a = pnetA->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_a, nullptr );
+        broadcaster_a->SetMembershipFilter( MakeBootstrapMembershipFilter( { idA.toBase58(), idB.toBase58() } ) );
+        broadcaster_a->SetGossipSigningKey( pnetA->signing_key );
+        EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+        EXPECT_TRUE( broadcaster_a->HasGossipSigningKey() );
+
+        auto broadcaster_b = pnetB->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_b, nullptr );
+        broadcaster_b->SetMembershipFilter( MakeBootstrapMembershipFilter( { idA.toBase58(), idB.toBase58() } ) );
+        broadcaster_b->SetGossipSigningKey( pnetB->signing_key );
+        EXPECT_TRUE( broadcaster_b->HasMembershipFilter() );
+        EXPECT_TRUE( broadcaster_b->HasGossipSigningKey() );
+
+        auto broadcaster_public = publicControl->db->GetBroadcaster();
+        ASSERT_NE( broadcaster_public, nullptr );
+        EXPECT_FALSE( broadcaster_public->HasMembershipFilter() );
+
+        // Mesh A<->B (the private pair) and A<->publicControl in BOTH
+        // directions; the public dials fail the pnet handshake (different
+        // PSK) but the attempts prove the isolation is not a dialing gap.
+        pnetA->pubsub->AddPeers( { pnetB->pubsub->GetInterfaceAddress() } );
+        pnetB->pubsub->AddPeers( { pnetA->pubsub->GetInterfaceAddress() } );
+        pnetA->pubsub->AddPeers( { publicControl->pubsub->GetInterfaceAddress() } );
+        publicControl->pubsub->AddPeers( { pnetA->pubsub->GetInterfaceAddress() } );
+
+        std::thread io_thread( [io_context]() { io_context->run(); } );
+
+        ASSERT_WAIT_FOR_CONDITION( [&]() { return IsConnectedTo( pnetA->pubsub, idB ); },
+                                   std::chrono::milliseconds( 15000 ),
+                                   "private members did not connect",
+                                   nullptr );
+
+        // LEG (a) -- real job data path, scoped replication: publish the job
+        // on B through TaskQueueImpl + SubTaskResultStorageImpl, then wait
+        // (bounded, per the macOS flake precedent) for the full scoped key
+        // set on A.
+        auto queue_b = TaskQueueImpl::New( pnetB->db, scoped_topic, kFlowNetworkId );
+        ASSERT_TRUE( queue_b );
+        ASSERT_FALSE(
+            queue_b->EnqueueTask( MakeJobFlowTask( task1 ), { MakeJobFlowSubTask( task1, sub1 ) } ).has_error() );
+
+        SubTaskResultStorageImpl storage_b( pnetB->db, scoped_topic, kFlowNetworkId );
+        storage_b.AddSubTaskResult( MakeJobFlowResult( result1 ) );
+
+        assertWaitForCondition(
+            [&]()
+            {
+                return HasKey( *pnetA->db, sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( kFlowNetworkId, task1 ) ) );
+            },
+            std::chrono::milliseconds( 25000 ),
+            "scoped task key did not replicate to the other member" );
+        assertWaitForCondition(
+            [&]()
+            {
+                return HasKey( *pnetA->db,
+                               sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( kFlowNetworkId, task1, sub1 ) ) );
+            },
+            std::chrono::milliseconds( 25000 ),
+            "scoped subtask key did not replicate to the other member" );
+        assertWaitForCondition(
+            [&]()
+            {
+                return HasKey( *pnetA->db,
+                               sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( kFlowNetworkId, task1 ) ) );
+            },
+            std::chrono::milliseconds( 25000 ),
+            "scoped claimable entry did not replicate to the other member" );
+        assertWaitForCondition(
+            [&]()
+            {
+                return HasKey( *pnetA->db,
+                               sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kFlowNetworkId, result1 ) ) );
+            },
+            std::chrono::milliseconds( 25000 ),
+            "scoped subtask result key did not replicate to the other member" );
+
+        // LEG (b) -- public-node DATA-level isolation: the live public GlobalDB
+        // (unscoped-topic listener, dialed both directions) holds none of the
+        // private job's scoped keys NOR the same job's unscoped/public keys.
+        EXPECT_FALSE( IsConnectedTo( pnetA->pubsub, idPublic ) )
+            << "public control connected to the private member despite pnet mismatch";
+        EXPECT_FALSE( IsConnectedTo( publicControl->pubsub, idA ) )
+            << "private member connected to the public control despite pnet mismatch";
+        AssertKeysNeverPresentWithin(
+            *publicControl->db,
+            { sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( kFlowNetworkId, task1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( kFlowNetworkId, task1, sub1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( kFlowNetworkId, task1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kFlowNetworkId, result1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey( kFlowNetworkId ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::ClaimableListKey( kFlowNetworkId ) ),
+              // Public-scope forms of the same job: SubTaskResultKey has no
+              // 1-arg overload -- the empty scope IS the public form
+              // (TaskKeys.hpp:83-86).
+              sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey() ),
+              sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( "", result1 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::ClaimableListKey() ) },
+            std::chrono::milliseconds( 4000 ),
+            "private job data on the public control node" );
+
+        // LEG (c) -- teardown deny-all on a STILL-LIVE GlobalDB (the
+        // GeniusNode.cpp ShutdownNodePolicyServices production shape for
+        // private && !global_db_shutdown_follows): nothing on A is stopped
+        // or reset; only its ingest gate swaps to deny-all.
+        broadcaster_a->SetMembershipFilter( MakeBootstrapMembershipFilter( {} ) );
+        EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+
+        // NEW scoped writes on B via the SAME queue/storage objects.
+        ASSERT_FALSE(
+            queue_b->EnqueueTask( MakeJobFlowTask( task2 ), { MakeJobFlowSubTask( task2, sub2 ) } ).has_error() );
+        storage_b.AddSubTaskResult( MakeJobFlowResult( result2 ) );
+
+        AssertKeysNeverPresentWithin(
+            *pnetA->db,
+            { sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( kFlowNetworkId, task2 ) ),
+              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kFlowNetworkId, result2 ) ) },
+            std::chrono::milliseconds( 4000 ),
+            "post-teardown scoped write on the deny-all member" );
+
+        // The deny-all filter must persist across the window -- never
+        // silently clear.
+        EXPECT_TRUE( broadcaster_a->HasMembershipFilter() );
+
+        broadcaster_b->ClearMembershipFilter();
+        TearDownNodes( broadcaster_a, io_context, io_thread, { pnetA->pubsub, pnetB->pubsub, publicControl->pubsub } );
     }
 
 } // namespace
