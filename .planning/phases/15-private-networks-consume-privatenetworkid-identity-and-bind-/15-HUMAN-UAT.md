@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 phase: 15-private-networks-consume-privatenetworkid-identity-and-bind-
 source: [15-REVERIFICATION-3.md]
 started: 2026-09-04
@@ -32,6 +32,7 @@ topologies independently of phase 15.
 result: issue
 reported: "So I think we should have an automated test for this"
 severity: major
+resolution: "Automated coverage delivered by plan 15-18 (gap-closure, 2026-10-02): NetworkMembershipFilterFlowTest.PrivateNetworkJobFlowReplicatesIsolatesAndDeniesOnTeardown — test/src/networkregistry/network_membership_filter_test.cpp case (11). All three legs machine-checked: scoped replication via the real data path, data-level public-node isolation on a live GlobalDB, deny-all teardown with HasMembershipFilter() persisting. Verified: 3/3 standalone green, non-vacuity mutations fail as designed, full suite 13/13, phase-15 battery 15/15 (verification cycle 5, 11/11 must-haves)."
 
 ## Summary
 
@@ -49,7 +50,8 @@ blocked: 0
   (private scope replication under /chain/<privateNetworkId>/, public-node
   isolation, deny-all ingest on private-node teardown) is covered by an
   automated test"
-  status: failed
+  status: resolved
+  resolved_by: "15-18 (commits eafb89742, d1ffbc415) — automated E2E case (11); verification cycle 5 passed"
   reason: "User reported: So I think we should have an automated test for this"
   severity: major
   test: 1
