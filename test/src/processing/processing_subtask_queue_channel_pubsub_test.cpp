@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <thread>
+#include <unordered_set>
 #include <boost/chrono/duration.hpp>
 
 #include "testutil/wait_condition.hpp"
@@ -44,6 +45,40 @@ public:
     const std::string nodeId1 = "NODE_1";
     const std::string nodeId2 = "NODE_2";
 };
+
+namespace
+{
+    /// Initial subtasks (each with a chunk, per CreateQueue's validity rule)
+    /// so a ProcessingNode created with them OWNS a queue and publishes an
+    /// updated queue whenever a queue request is processed -- the observable
+    /// for the creation-window scene. SEVERAL subtasks + a slow processing
+    /// core keep available work present for the whole window: the engine
+    /// grabs one subtask at a time, and a grabbed subtask is LOCKED (not
+    /// available), so the remaining items keep HasAvailableWork() true.
+    std::list<SGProcessing::SubTask> MakeInitialSubTasks( const std::string &subTaskIdPrefix, size_t count )
+    {
+        std::list<SGProcessing::SubTask> subTasks;
+        for ( size_t i = 0; i < count; ++i )
+        {
+            SGProcessing::SubTask subtask;
+            const auto            subTaskId = subTaskIdPrefix + "_" + std::to_string( i );
+            subtask.set_subtaskid( subTaskId );
+            auto chunk = subtask.add_chunkstoprocess();
+            chunk->set_chunkid( subTaskId + "_CHUNK_1" );
+            chunk->set_n_subchunks( 1 );
+            subTasks.push_back( std::move( subtask ) );
+        }
+        return subTasks;
+    }
+
+    /// Slow core (2 min per subtask, executed on a detached engine thread) so
+    /// the first grabbed subtask does not complete during the scene and the
+    /// queue keeps available work throughout.
+    std::shared_ptr<sgns::test::ProcessingCoreImpl> MakeSlowProcessingCore()
+    {
+        return std::make_shared<sgns::test::ProcessingCoreImpl>( 120000 );
+    }
+} // namespace
 
 /**
  * @given 2 channels connected to a single pubsub host
@@ -301,4 +336,351 @@ TEST_F( ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost 
     ASSERT_EQ( 2, queueCount2.load() );
     EXPECT_EQ( nodeId1, queueSnapshotSet2[0]->processing_queue().owner_node_id() );
     EXPECT_EQ( nodeId2, queueSnapshotSet2[1]->processing_queue().owner_node_id() );
+}
+
+/**
+ * @given 2 channels connected to different pubsub hosts; a deny-all membership
+ *        filter installed on the receiving channel
+ * @when The sender publishes a queue ownership request
+ * @then The receiver's request sink is NOT invoked while the filter denies the
+ *       sender; after the filter is REPLACED with one allowing the sender's peer id,
+ *       the sender's next queue message propagates (set-time consultation at the
+ *       processing layer — runtime admission with no reinstall).
+ */
+TEST_F( ProcessingSubTaskChannelPubSubTest, MembershipFilterBlocksNonMemberQueueMessages )
+{
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
+
+    const std::string queueChannelId = "PROCESSING_MEMBERSHIP_CHANNEL";
+
+    auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, queueChannelId );
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, queueChannelId );
+
+    std::atomic<size_t>   requestCount2{ 0 };
+    std::set<std::string> requestedNodeIds2;
+    std::mutex            mutex2;
+    queueChannel2->SetQueueRequestSink(
+        [&requestCount2, &requestedNodeIds2, &mutex2]( const SGProcessing::SubTaskQueueRequest &request )
+        {
+            std::lock_guard lock( mutex2 );
+            requestedNodeIds2.insert( request.node_id() );
+            ++requestCount2;
+            return true;
+        } );
+
+    auto listen_result = queueChannel1->Listen();
+    ASSERT_TRUE( listen_result ) << "Sender channel subscription failed to establish";
+    listen_result = queueChannel2->Listen();
+    ASSERT_TRUE( listen_result ) << "Receiver channel subscription failed to establish";
+
+    // Learn the sender's transport peer id from the receiver's topic view (bounded
+    // wait for the mesh — the sender must be visible before the filter is built).
+    std::vector<libp2p::peer::PeerId> senderPeers;
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&queueChannel2, &senderPeers]()
+        {
+            senderPeers = queueChannel2->GetActiveNodes();
+            return !senderPeers.empty();
+        } ),
+        std::chrono::milliseconds( 5000 ),
+        "Sender peer not visible on the receiver's queue topic",
+        nullptr );
+    ASSERT_FALSE( senderPeers.empty() );
+    std::unordered_set<std::string> memberSenders;
+    for ( const auto &peer : senderPeers )
+    {
+        memberSenders.insert( peer.toBase58() );
+    }
+
+    // CR-G01 fixture repair: the SENDER must seal (a gated receiver denies
+    // raw data), so it installs the same membership shape + its own signing
+    // key; the receiver is keyed too. The sender's envelope authenticates
+    // fine (own key, own from) -- the deny phase is then attributable to the
+    // receiver's MEMBERSHIP predicate alone.
+    queueChannel1->SetMembershipFilter(
+        [memberSenders]( const libp2p::peer::PeerId &peer )
+        { return memberSenders.count( peer.toBase58() ) > 0; } );
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[0] );
+    queueChannel2->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
+    // Deny-all filter on the receiving channel
+    queueChannel2->SetMembershipFilter(
+        []( const libp2p::peer::PeerId & ) { return false; } );
+
+    // The sender-side operation the passing tests above prove propagates
+    queueChannel1->RequestQueueOwnership( "NODE_NON_MEMBER" );
+
+    // Bounded negative window (grace-loop pattern): the receiver's observable must
+    // NOT change while the filter denies the sender
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( 0, requestCount2.load() )
+            << "Non-member queue message reached the receiver's sink although the filter denies it";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( 0, requestCount2.load() );
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 0, requestedNodeIds2.size() );
+    }
+
+    // Widen the SAME live channel: replace the filter with one allowing the sender
+    queueChannel2->SetMembershipFilter(
+        [memberSenders]( const libp2p::peer::PeerId &peer )
+        { return memberSenders.count( peer.toBase58() ) > 0; } );
+
+    queueChannel1->RequestQueueOwnership( "NODE_MEMBER" );
+
+    ASSERT_WAIT_FOR_CONDITION( [&requestCount2]() { return requestCount2.load() >= 1; },
+                               std::chrono::milliseconds( 5000 ),
+                               "Member's queue message was not received after the filter widened",
+                               nullptr );
+
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 1, requestedNodeIds2.count( "NODE_MEMBER" ) );
+        EXPECT_EQ( 0, requestedNodeIds2.count( "NODE_NON_MEMBER" ) );
+    }
+}
+
+/**
+ * @given 2 channels on different pubsub hosts; the receiver's membership filter
+ *        ALLOWS the sender (it is in the allow-set), and both sides are keyed
+ *        for CR-G01 sealing
+ * @when The sender's signing key is wired to ANOTHER member's keypair, so its
+ *       envelope embeds a public key deriving a DIFFERENT member's PeerId than
+ *       the transport from-field it actually publishes under (impersonation
+ *       attempt), then the sender re-wires its OWN key and publishes again
+ * @then The impostor envelope is dropped at the authentication check (the
+ *       request sink stays at 0 although membership alone would admit the
+ *       sender); the honestly-sealed request propagates (positive control).
+ */
+TEST_F( ProcessingSubTaskChannelPubSubTest, QueueChannelImpostorEnvelopeIgnored )
+{
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
+
+    const std::string queueChannelId = "PROCESSING_IMPOSTOR_CHANNEL";
+
+    auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, queueChannelId );
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, queueChannelId );
+
+    std::atomic<size_t>   requestCount2{ 0 };
+    std::set<std::string> requestedNodeIds2;
+    std::mutex            mutex2;
+    queueChannel2->SetQueueRequestSink(
+        [&requestCount2, &requestedNodeIds2, &mutex2]( const SGProcessing::SubTaskQueueRequest &request )
+        {
+            std::lock_guard lock( mutex2 );
+            requestedNodeIds2.insert( request.node_id() );
+            ++requestCount2;
+            return true;
+        } );
+
+    auto listen_result = queueChannel1->Listen();
+    ASSERT_TRUE( listen_result ) << "Sender channel subscription failed to establish";
+    listen_result = queueChannel2->Listen();
+    ASSERT_TRUE( listen_result ) << "Receiver channel subscription failed to establish";
+
+    // Learn the sender's transport peer id from the receiver's topic view: the
+    // allow-set deliberately CONTAINS the sender (membership alone would admit
+    // it -- only the authentication check can deny the impostor envelope).
+    std::vector<libp2p::peer::PeerId> senderPeers;
+    ASSERT_WAIT_FOR_CONDITION(
+        ( [&queueChannel2, &senderPeers]()
+        {
+            senderPeers = queueChannel2->GetActiveNodes();
+            return !senderPeers.empty();
+        } ),
+        std::chrono::milliseconds( 5000 ),
+        "Sender peer not visible on the receiver's queue topic",
+        nullptr );
+    std::unordered_set<std::string> memberSenders;
+    for ( const auto &peer : senderPeers )
+    {
+        memberSenders.insert( peer.toBase58() );
+    }
+
+    const auto senderAllowFilter = [memberSenders]( const libp2p::peer::PeerId &peer )
+    { return memberSenders.count( peer.toBase58() ) > 0; };
+
+    // Receiver: allow-set filter + own signing key.
+    queueChannel2->SetMembershipFilter( senderAllowFilter );
+    queueChannel2->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
+    // Sender: allow-set filter (production shape; triggers sealing) but the
+    // signing key of the OTHER member -- every envelope it publishes claims
+    // the other member's identity while its transport from stays its own.
+    queueChannel1->SetMembershipFilter( senderAllowFilter );
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[1] );
+
+    queueChannel1->RequestQueueOwnership( "NODE_IMPOSTOR" );
+
+    // Bounded negative window (grace-loop pattern): membership would admit the
+    // sender; only the key<->from binding check denies the impostor envelope.
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( 0, requestCount2.load() )
+            << "Impostor envelope reached the receiver's sink although the from-field binding denies it";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( 0, requestCount2.load() );
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 0, requestedNodeIds2.size() );
+    }
+
+    // Positive control: re-wire the sender's OWN key and publish again -- the
+    // honestly-sealed request propagates (the mesh and both gates are fine).
+    queueChannel1->SetGossipSigningKey( m_pubsub_keypairs[0] );
+    queueChannel1->RequestQueueOwnership( "NODE_HONEST" );
+
+    ASSERT_WAIT_FOR_CONDITION( [&requestCount2]() { return requestCount2.load() >= 1; },
+                               std::chrono::milliseconds( 5000 ),
+                               "Honestly sealed queue message was not received",
+                               nullptr );
+
+    {
+        std::lock_guard lock( mutex2 );
+        EXPECT_EQ( 1, requestedNodeIds2.count( "NODE_HONEST" ) );
+        EXPECT_EQ( 0, requestedNodeIds2.count( "NODE_IMPOSTOR" ) );
+    }
+}
+
+/**
+ * @given 2 pubsub hosts; a RAW (ungated, unsealed) queue-request publisher on
+ *        host 1 that starts publishing CONTINUOUSLY before the receiving node
+ *        exists -- spanning the whole ProcessingNode::New creation window
+ *        (Listen waits up to 2000ms INSIDE New); the receiving ProcessingNode
+ *        on host 2 is created with a deny-all membership filter passed INTO
+ *        ProcessingNode::New (the CR-G02a pre-subscription install)
+ * @when the attacker's raw requests arrive during and after node creation
+ * @then none is ever processed -- the attacker's queue-update sink stays at 0
+ *       across the creation window AND at rest (no enrollment window), and the
+ *       receiver keeps its queue ownership. The pass-when-member positive
+ *       control (allow filter + sealed member publisher via the same
+ *       creation-time parameter) proves the mesh and the gates work, so the
+ *       negative window is not vacuous.
+ */
+TEST_F( ProcessingSubTaskChannelPubSubTest, CreationTimeFilterCoversSubscriptionWindow )
+{
+    auto attackerHost = m_pubsub_nodes[0];
+    auto receiverHost = m_pubsub_nodes[1];
+
+    // ---- Negative leg: raw attacker vs creation-time deny filter ----------
+    const std::string negChannelId = "PROCESSING_CREATION_WINDOW_NEG";
+
+    std::atomic<size_t> attackerQueueUpdates{ 0 };
+    auto                attackerChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( attackerHost,
+                                                                                                 negChannelId );
+    attackerChannel->SetQueueUpdateSink(
+        [&attackerQueueUpdates]( SGProcessing::SubTaskQueue * )
+        {
+            ++attackerQueueUpdates;
+            return true;
+        } );
+    // NO filter, NO signing key: the attacker publishes RAW queue requests --
+    // exactly the enrollment-window adversary. Pre-15-15, the receiver's
+    // channel ran ungated until the post-hoc filter application; a raw
+    // request landing in that window was ACCEPTED and produced a queue
+    // publish back to the attacker (the observable asserted to stay 0 here).
+    ASSERT_TRUE( attackerChannel->Listen() ) << "attacker channel subscription failed";
+
+    std::atomic<bool> stopPublishing{ false };
+    std::thread       attackerThread(
+            [&attackerChannel, &stopPublishing]()
+            {
+                for ( int i = 0; !stopPublishing.load(); ++i )
+                {
+                    // Distinct node ids keep every publish a distinct gossip
+                    // message (no seen-cache dedup).
+                    attackerChannel->RequestQueueOwnership( "NODE_ATTACKER_" + std::to_string( i ) );
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                }
+            } );
+
+    std::atomic<size_t> negResultCount{ 0 };
+    std::atomic<size_t> negErrorCount{ 0 };
+    auto                receiverNode = ProcessingNode::New(
+        receiverHost,
+        std::make_shared<SubTaskResultStorageMock>(),
+        MakeSlowProcessingCore(),
+        [&negResultCount]( const SGProcessing::TaskResult & ) { ++negResultCount; },
+        [&negErrorCount]( const std::string & ) { ++negErrorCount; },
+        [] {},
+        "RECEIVER_WINDOW_NEG",
+        negChannelId,
+        MakeInitialSubTasks( "SUBTASK_WINDOW_NEG", 8 ),
+        /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+        /*ttl=*/std::chrono::minutes( 2 ),
+        /*membershipFilter=*/[]( const libp2p::peer::PeerId & ) { return false; },
+        /*gossipSigningKey=*/m_pubsub_keypairs[1] );
+    ASSERT_NE( receiverNode, nullptr );
+    ASSERT_TRUE( receiverNode->HasQueueOwnership() )
+        << "created node did not take ownership of its initial queue";
+
+    // Negative window spanning the rest of the creation window and rest: the
+    // attacker's observable must stay 0 the whole time.
+    const auto denyDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3000 );
+    while ( std::chrono::steady_clock::now() < denyDeadline )
+    {
+        ASSERT_EQ( 0, attackerQueueUpdates.load() )
+            << "raw attacker queue request was processed during/after the creation "
+               "window (enrollment window is open)";
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    EXPECT_EQ( 0, attackerQueueUpdates.load() );
+    stopPublishing.store( true );
+    attackerThread.join();
+    EXPECT_TRUE( receiverNode->HasQueueOwnership() )
+        << "receiver lost queue ownership although every attacker request was denied";
+    receiverNode.reset();
+
+    // ---- Positive control: sealed member admitted through the SAME
+    //      creation-time parameter (the filter is live but permissive) ------
+    const std::string posChannelId = "PROCESSING_CREATION_WINDOW_POS";
+
+    std::atomic<size_t> memberQueueUpdates{ 0 };
+    auto                memberChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( attackerHost,
+                                                                                                posChannelId );
+    memberChannel->SetQueueUpdateSink(
+        [&memberQueueUpdates]( SGProcessing::SubTaskQueue * )
+        {
+            ++memberQueueUpdates;
+            return true;
+        } );
+    // Member: filter set (so its publishes SEAL per 15-14) + its own host key.
+    memberChannel->SetMembershipFilter( []( const libp2p::peer::PeerId & ) { return true; } );
+    memberChannel->SetGossipSigningKey( m_pubsub_keypairs[0] );
+    ASSERT_TRUE( memberChannel->Listen() ) << "member channel subscription failed";
+
+    std::atomic<size_t> posResultCount{ 0 };
+    auto                memberReceiver = ProcessingNode::New(
+        receiverHost,
+        std::make_shared<SubTaskResultStorageMock>(),
+        MakeSlowProcessingCore(),
+        [&posResultCount]( const SGProcessing::TaskResult & ) { ++posResultCount; },
+        []( const std::string & ) {},
+        [] {},
+        "RECEIVER_WINDOW_POS",
+        posChannelId,
+        MakeInitialSubTasks( "SUBTASK_WINDOW_POS", 8 ),
+        /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+        /*ttl=*/std::chrono::minutes( 2 ),
+        /*membershipFilter=*/[]( const libp2p::peer::PeerId & ) { return true; },
+        /*gossipSigningKey=*/m_pubsub_keypairs[1] );
+    ASSERT_NE( memberReceiver, nullptr );
+
+    memberChannel->RequestQueueOwnership( "NODE_MEMBER_CONTROL" );
+
+    ASSERT_WAIT_FOR_CONDITION( ( [&memberQueueUpdates]() { return memberQueueUpdates.load() >= 1; } ),
+                               std::chrono::milliseconds( 8000 ),
+                               "sealed member's queue request was not processed by the "
+                               "creation-time-filtered node",
+                               nullptr );
+
+    memberReceiver.reset();
 }

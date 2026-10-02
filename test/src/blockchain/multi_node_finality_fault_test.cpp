@@ -880,7 +880,21 @@ namespace
             peer.pubsub = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keypair.value() );
             EXPECT_TRUE( peer.pubsub );
             if ( !peer.pubsub ) return peer;
-            EXPECT_FALSE( peer.pubsub->Start( port, { peer.pubsub->GetLocalAddress() } ).get() );
+            // Advertise the concrete IPv4 address discovered by the fixture's
+            // ephemeral listener (wildcard listeners can produce empty PeerInfo
+            // addresses and silently skip the certificate broadcast even after
+            // gossip peers connected) — but keep the LISTEN on the wildcard: the
+            // phase-12 runner's controlled-cancellation gate connects on
+            // INADDR_LOOPBACK, and binding only the NIC IP refuses it
+            // (socket-gate-not-connected).
+            const auto fixture_address = libp2p::multi::Multiaddress::create( pubs_->GetLocalAddress() );
+            EXPECT_TRUE( fixture_address.has_value() );
+            if ( fixture_address.has_error() ) return peer;
+            const auto bind_address = fixture_address.value().getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
+            EXPECT_TRUE( bind_address.has_value() );
+            if ( !bind_address.has_value() ) return peer;
+            EXPECT_FALSE( peer.pubsub->Start( port, {}, /*bindAddresses=*/"", /*addAddresses=*/{ bind_address.value() } ).get() );
+            EXPECT_FALSE( peer.pubsub->GetHost()->getPeerInfo().addresses.empty() );
             // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
             // single-threaded per host, so the scheduler has to run on the host's
             // io_context. A private one here races yamux's WriteQueue — the same split
@@ -989,11 +1003,14 @@ namespace
         static bool PeersFormConnectedTopology( const std::array<Peer *, Count> &peers )
         {
             std::array<bool, Count> reachable{};
+            // A connected libp2p topology can still contain disjoint gossip
+            // meshes. With these three/four-peer fixtures, this minimum degree
+            // proves that every consensus-topic subscriber is in one component.
             for ( auto *peer : peers )
                 if ( !peer || !peer->pubsub || !peer->pubsub->IsStarted() || !peer->consensus ||
                      !peer->pubsub->GetHost() ||
                      peer->pubsub->getPeerCount(
-                         sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) ) < 1 )
+                         sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) ) < Count / 2 )
                     return false;
 
             reachable.front() = true;
@@ -1040,7 +1057,7 @@ namespace
             }
             ASSERT_WAIT_FOR_CONDITION( [&] { return PeersFormConnectedTopology( peers ); },
                                        std::chrono::seconds( 5 ),
-                                       "every peer is started in one public libp2p topology with a consensus-topic neighbor",
+                                       "every peer is started in one connected libp2p and consensus-topic topology",
                                        nullptr );
         }
 
@@ -1788,28 +1805,8 @@ TEST_F( FinalityFaultNetwork, RestartAtVoteCertificateAndMintDurableBoundariesRe
         RestartPeer( network.first );
         ASSERT_TRUE( network.first.consensus );
         ConnectPeers( Peers( network ) );
-        // 2026-09-03 developer decision Option A (round-5 gap closure,
-        // STATE.md:143, commit 633d6ff1): "delay the re-advertisement until
-        // recipient gossip-topic readiness is observable". ConnectPeers only
-        // proves >= 1 consensus-topic peer plus libp2p links — exactly the
-        // mesh race 12-19 attributed (GossipPubSub does not replay the missed
-        // publication). With four peers, requiring >= 2 consensus-topic peers
-        // on EVERY peer forces a connected mesh: a disconnected component of
-        // size k permits maximum degree k-1 (a 2+2 split caps degree at 1, a
-        // 3+1 split leaves the singleton at degree 0), so the predicate
-        // holding means the re-published ConsensusMessage can reach every
-        // recipient. The 10s bound is NEW for this NEW wait — no existing
-        // bound is relaxed.
-        ASSERT_WAIT_FOR_CONDITION( [&] {
-            for ( auto *peer : Peers( network ) )
-            {
-                if ( peer->pubsub->getPeerCount(
-                         sgns::MultiNodeFinalityFaultTestAccess::ConsensusTopic( peer->consensus ) ) < 2 )
-                    return false;
-            }
-            return true;
-        }, std::chrono::seconds( 10 ),
-                           "consensus-topic mesh re-formed with at least two topic peers on every peer before certificate re-advertisement", nullptr );
+        // ConnectPeers waits for the consensus-topic mesh before re-advertising;
+        // GossipPubSub does not replay publications made before that readiness.
         // 2026-09-03 developer directive fallback (round-4 gap closure):
         // "post-restart certificate re-publication / surviving-replica serving".
         // The blacklist-duration hypothesis was DISPROVEN (round4-traces/
