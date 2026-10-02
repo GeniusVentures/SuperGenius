@@ -1,14 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 15-private-networks-consume-privatenetworkid-identity-and-bind-
 source: [15-REVERIFICATION-3.md]
 started: 2026-09-04
-updated: 2026-09-04
+updated: 2026-10-02
 ---
 
 ## Current Test
 
-[awaiting human testing]
+[testing complete]
 
 ## Tests
 
@@ -29,15 +29,29 @@ regression (`.planning/todos/pending/genesis-e2e-suites-quorum-policy-regression
 which breaks `blockchain_genesis_test`/`processing_nodes_test` fixture
 topologies independently of phase 15.
 
-result: [pending]
+result: issue
+reported: "So I think we should have an automated test for this"
+severity: major
 
 ## Summary
 
 total: 1
 passed: 0
-issues: 0
-pending: 1
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+<!-- YAML format for plan-phase --gaps consumption -->
+- truth: "The E2E two-node private-network job flow with public-node control
+  (private scope replication under /chain/<privateNetworkId>/, public-node
+  isolation, deny-all ingest on private-node teardown) is covered by an
+  automated test"
+  status: failed
+  reason: "User reported: So I think we should have an automated test for this"
+  severity: major
+  test: 1
+  artifacts: []  # Filled by diagnosis
+  missing: []    # Filled by diagnosis
