@@ -880,18 +880,20 @@ namespace
             peer.pubsub = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keypair.value() );
             EXPECT_TRUE( peer.pubsub );
             if ( !peer.pubsub ) return peer;
-            // Reuse the concrete IPv4 address discovered by the fixture's
-            // ephemeral listener. This keeps advertisements independent of later
-            // runner NIC discovery (the transport rejects loopback destinations):
-            // wildcard listeners can produce empty PeerInfo addresses and silently
-            // skip the certificate broadcast even after gossip peers connected.
+            // Advertise the concrete IPv4 address discovered by the fixture's
+            // ephemeral listener (wildcard listeners can produce empty PeerInfo
+            // addresses and silently skip the certificate broadcast even after
+            // gossip peers connected) — but keep the LISTEN on the wildcard: the
+            // phase-12 runner's controlled-cancellation gate connects on
+            // INADDR_LOOPBACK, and binding only the NIC IP refuses it
+            // (socket-gate-not-connected).
             const auto fixture_address = libp2p::multi::Multiaddress::create( pubs_->GetLocalAddress() );
             EXPECT_TRUE( fixture_address.has_value() );
             if ( fixture_address.has_error() ) return peer;
             const auto bind_address = fixture_address.value().getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
             EXPECT_TRUE( bind_address.has_value() );
             if ( !bind_address.has_value() ) return peer;
-            EXPECT_FALSE( peer.pubsub->Start( port, {}, bind_address.value() ).get() );
+            EXPECT_FALSE( peer.pubsub->Start( port, {}, /*bindAddresses=*/"", /*addAddresses=*/{ bind_address.value() } ).get() );
             EXPECT_FALSE( peer.pubsub->GetHost()->getPeerInfo().addresses.empty() );
             // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
             // single-threaded per host, so the scheduler has to run on the host's
