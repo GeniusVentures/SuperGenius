@@ -13,6 +13,11 @@ import type { PriceEnvelope } from "./envelope";
 export interface Env {
   PRICE_COORDINATOR: DurableObjectNamespace;
   COINGECKO_API_KEY?: string; // optional (D-04) — read only in upstream.ts
+  // Test seam for the DO's collecting window (real-time coalescing window
+  // cannot be faked across the isolate boundary): CI runners can take
+  // >15ms between concurrent fetch arrivals, splitting batches. The
+  // production default stays BATCH_WINDOW_MS; tests may widen it.
+  BATCH_WINDOW_MS_OVERRIDE?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };

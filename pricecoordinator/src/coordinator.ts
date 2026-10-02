@@ -22,6 +22,13 @@ import type { Env } from "./index";
 
 const MAX_IDS_PER_BATCH = 100; // > MAX_IDS_PER_REQUEST(50): one request always fits
 
+/** Collecting window, overridable via env (test seam only; prod = BATCH_WINDOW_MS). */
+function batchWindowMs(env: Env): number {
+  const raw = Number(env.BATCH_WINDOW_MS_OVERRIDE);
+  // NaN/negative/non-finite fall back to the production default.
+  return Number.isFinite(raw) && raw >= 0 ? raw : BATCH_WINDOW_MS;
+}
+
 interface Waiter {
   ids: string[];
   resolve: (rows: Map<string, PriceRow>) => void;
@@ -124,7 +131,7 @@ export class PriceCoordinator extends DurableObject<Env> {
     this.flushTimer = setTimeout(() => {
       this.flushTimer = undefined;
       void this.flush();
-    }, BATCH_WINDOW_MS);
+    }, batchWindowMs(this.env));
   }
 
   private async flush(): Promise<void> {
