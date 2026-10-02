@@ -73,6 +73,10 @@ on:
         description: "Build Windows Debug"
         default: true
         type: boolean
+      run_tests:
+        description: "Run the CTest suite after building (same platform gating and exclusions as Release Build CI)"
+        default: false
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -181,6 +185,11 @@ jobs:
     env:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+      # Mirrors Release Build CI's RUN_TESTS platform gating: the AlmaLinux
+      # containers provide the keyring/dbus runtime the account suites need;
+      # Windows tests are Release-only there, Android/iOS builds have no
+      # test binaries (their build dirs force TESTING OFF).
+      RUN_TESTS: ${{ inputs.run_tests && (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.target == 'Windows' && matrix.build-type == 'Release')) }}
     runs-on: ${{ fromJson(needs.resolve-runners.outputs[matrix.runner_key]) }}
     container:
       image: ${{matrix.container}}
@@ -647,6 +656,91 @@ jobs:
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --install . --config ${{matrix.build-type}}
+
+      # --- Optional test stage (run_tests input; mirrors Release Build CI) ---
+      # max(8, cores). Split by OS because `shell: bash` on the self-hosted
+      # Windows runner resolves to WSL bash, which has no /bin/bash.
+      - name: Pick ctest parallelism
+        if: ${{ env.RUN_TESTS == 'true' && runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu)
+          echo "CTEST_JOBS=$(( CORES > 8 ? CORES : 8 ))" >> "$GITHUB_ENV"
+
+      - name: Pick ctest parallelism (Windows)
+        if: ${{ env.RUN_TESTS == 'true' && runner.os == 'Windows' }}
+        shell: powershell
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CTEST_JOBS=$([Math]::Max(8, [Environment]::ProcessorCount))"
+
+      - name: Run tests
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
+
+      - name: Run tests (Linux)
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        shell: bash
+        run: |
+          # MNN's VulkanInstance ctor asserts (VulkanInstance.cpp:89) when
+          # vkCreateInstance fails, killing the process before its own
+          # graceful supportVulkan() fallback can run. On the ARM runner
+          # (Cortex-A720/A520) the EL8 lavapipe ICD itself returns
+          # VK_ERROR_INITIALIZATION_FAILED (verified via vulkaninfo in a
+          # privileged container; bullseye's mesa initialized fine on the
+          # same host — runs 35675445960 / 35701510569). Debug-only because
+          # NDEBUG compiles the assert out. Skip the affected suites until
+          # the MNN assert is patched to degrade gracefully (rider for the
+          # next thirdparty rebuild); x86 (real GPU) and aarch64 Release
+          # keep full coverage.
+          # Pass exclusions through the ENVIRONMENT, never through eval'd
+          # string re-parsing: eval "bash -c '... $EXCLUDE'" re-tokenizes the
+          # line, and the single quotes around the regex close the outer
+          # single-quoted string so the pipes become shell pipes and ctest
+          # test names get executed as commands (observed in the first run
+          # of this exclusion). dbus-run-session and bash -c propagate env
+          # untouched.
+          #
+          # Two granularities:
+          # - CTEST_EXCLUDE_REGEX drops suites whose EVERY case instantiates
+          #   the processing manager (MNN) and would abort before reporting.
+          # - GTEST_FILTER narrows the two mixed suites to their
+          #   non-processing cases: only ProcessingNodesTest.PostProcessing
+          #   and ProcessingNodesModuleTest.SinglePostProcessing touch MNN
+          #   (the DISABLED_* siblings never run regardless); the remaining
+          #   account/ledger/transfer cases are pure and keep running.
+          #   AccountManagement.SetPayoutAddress was previously excluded
+          #   here too, but is hermetic since Phase 4 (stub-backed
+          #   LocalPriceManager, no live CoinGecko) and runs again.
+          # gtest filter grammar is POSITIVE-NEGATIVE with ONE dash: the
+          # negative section is ':'-separated WITHOUT per-pattern dashes.
+          # '-A:-B:-C' silently parses its 2nd/3rd patterns as literal
+          # '-B'/'-C' (matching nothing), so the exclusions never apply and
+          # the excluded cases run anyway (run 35781614193: PostProcessing
+          # and SinglePostProcessing still aborted). '*-A:B:C' is the
+          # unambiguous form.
+          GTEST_FILTER_VALUE="*"
+          if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
+            CTEST_EXCLUDE_REGEX="processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
+            GTEST_FILTER_VALUE="*-ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
+            echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
+          fi
+          export CTEST_EXCLUDE_REGEX
+          export GTEST_FILTER="$GTEST_FILTER_VALUE"
+          dbus-run-session -- bash -c '\
+            mkdir -p ~/.cache ~/.local/share/keyrings && \
+            echo -n "login" > ~/.local/share/keyrings/default && \
+            echo "[keyring]
+            display-name=login
+            lock-on-idle=false
+            lock-after=false" > ~/.local/share/keyrings/login.keyring && \
+            eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
+            if [ -n "$CTEST_EXCLUDE_REGEX" ]; then \
+              ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry -E "$CTEST_EXCLUDE_REGEX"; \
+            else \
+              ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry; \
+            fi'
+          unset GTEST_FILTER
 
       - name: Create or check release
         shell: bash
