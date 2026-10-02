@@ -17,6 +17,8 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/offline_chainlist.hpp"
+#include "HttpStubServer.hpp"
+#include "testutil/scoped_env.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -62,6 +64,18 @@ public:
 
     AccountManagement()
     {
+        // Hermetic price source (Phase 4, D-12/TEST-04): redirect both price
+        // tiers to a loopback stub BEFORE any node is constructed, so
+        // SetPayoutAddress's GetProcessCost call resolves against the
+        // scripted genius-ai price instead of live CoinGecko. Ordering is
+        // strict: stub Start (OS-assigned port) -> env guards -> node New.
+        stub_.OnPath( "/api/v3/simple/price",
+                      { 200, "application/json", R"({"genius-ai":{"usd":0.19}})" } );
+        stub_.Start();
+        const auto base = "http://127.0.0.1:" + std::to_string( stub_.Port() );
+        envCoinGecko_ = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_COINGECKO_URL", base );
+        envFallback_  = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_PRICE_FALLBACK_URL", base );
+
         test::removeAllWithRetry( path.string() );
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
@@ -83,7 +97,21 @@ public:
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
+    ~AccountManagement() override
+    {
+        // Env guards die before the stub (members destroyed in reverse
+        // declaration order — guards declared after stub_); reset them
+        // explicitly anyway so the restore is visibly first.
+        envCoinGecko_.reset();
+        envFallback_.reset();
+        stub_.Shutdown();
+    }
+
     std::shared_ptr<sgns::GeniusNode> node_;
+
+    sgns::testutil::HttpStubServer                stub_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> envCoinGecko_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> envFallback_;
 };
 
 TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
