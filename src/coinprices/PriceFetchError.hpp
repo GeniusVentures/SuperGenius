@@ -19,10 +19,10 @@ namespace outcome
 namespace sgns
 {
     /// @brief Typed price-fetch error taxonomy (D-15).
-    /// @brief The first six values preserve the legacy
-    /// CoinGeckoPriceRetriever::PriceError names and ordering byte-for-byte
-    /// (coinprices.hpp:22-30) so the still-compiling legacy retriever and the
-    /// new facade share vocabulary; HttpStatus and Blocked are new.
+    /// @brief The first six values keep the legacy price-error names and
+    /// ordering so log/test vocabulary stayed stable across the Phase 4
+    /// cutover (the legacy carrier class was deleted in its entirety per
+    /// Phase 4 D-09); HttpStatus and Blocked are new.
     enum class PriceFetchError
     {
         EmptyInput       = 1,
