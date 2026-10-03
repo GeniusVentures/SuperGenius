@@ -182,17 +182,24 @@ namespace sgns::testutil
 
                 auto respond = [this, shared_socket, script]()
                 {
-                    http::response<http::string_body> response{ http::status::ok, 11 };
-                    response.result( static_cast<http::status>( script.status ) );
-                    response.set( http::field::server, "SGNS-HttpStubServer" );
-                    response.set( http::field::content_type, script.contentType );
-                    response.body() = script.body;
-                    response.keep_alive( false );
-                    response.prepare_payload();
+                    // The response MUST outlive the async write: Beast's
+                    // serializer iterates the message's fields from the io
+                    // thread AFTER respond() returns. A stack-local response
+                    // freed at respond()-return caused SIGSEGV in
+                    // basic_fields::value_type::buffer on Linux (garbage
+                    // `this` in the field iterator) — own it via shared_ptr
+                    // captured by the completion handler.
+                    auto response = std::make_shared<http::response<http::string_body>>( http::status::ok, 11 );
+                    response->result( static_cast<http::status>( script.status ) );
+                    response->set( http::field::server, "SGNS-HttpStubServer" );
+                    response->set( http::field::content_type, script.contentType );
+                    response->body() = script.body;
+                    response->keep_alive( false );
+                    response->prepare_payload();
                     http::async_write(
                         *shared_socket,
-                        response,
-                        [shared_socket]( const boost::system::error_code &, std::size_t )
+                        *response,
+                        [shared_socket, response]( const boost::system::error_code &, std::size_t )
                         {
                             boost::system::error_code ig;
                             shared_socket->shutdown( tcp::socket::shutdown_both, ig );
