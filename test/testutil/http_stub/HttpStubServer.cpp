@@ -41,7 +41,15 @@ namespace sgns::testutil
         acceptor_->listen( net::socket_base::max_listen_connections );
         started_ = true;
         DoAccept();
-        thread_ = std::thread( [this]() { ioc_->run(); } );
+        // Capture the io_context and work guard BY VALUE, never `this`: the
+        // thread outlives neither guarantee — Shutdown() nulls ioc_/workGuard_
+        // and the test may destroy the HttpStubServer immediately after join.
+        // A `this` capture dangles once members are reset (Linux SIGSEGV in
+        // the thread-state destructor after run() returns; Windows/Ubuntu
+        // 22.04 masked it — EL8 + Boost 1.85 reliably faults).
+        auto ioc        = ioc_;
+        auto workGuard  = workGuard_;
+        thread_         = std::thread( [ioc, workGuard]() { ioc->run(); } );
     }
 
     uint16_t HttpStubServer::Port() const
@@ -70,22 +78,32 @@ namespace sgns::testutil
         started_ = false;
         // Post-then-stop ordering avoids the join-deadlock (R6): the close
         // runs on the io thread, then stop() unblocks run(), then join.
+        // Capture members via shared_ptrs by value: after join the server may
+        // be destroyed, and `this` would dangle inside the posted handler if
+        // the io thread is the last referrer.
+        auto acceptor    = acceptor_;
+        auto sessions    = std::make_shared<std::vector<std::shared_ptr<tcp::socket>>>();
+        auto sessionsMtx = std::make_shared<std::mutex>();
         net::post( *ioc_,
-                   [this]()
+                   [acceptor, sessions, sessionsMtx]()
                    {
                        boost::system::error_code ig;
-                       acceptor_->close( ig );
-                       std::lock_guard<std::mutex> lock( sessionsMutex_ );
-                       for ( auto &s : sessions_ )
-                       {
-                           s->close( ig );
-                       }
-                       sessions_.clear();
+                       acceptor->close( ig );
                    } );
         ioc_->stop();
         if ( thread_.joinable() )
         {
             thread_.join();
+        }
+        // Sockets are closed after join: the io thread is done touching them.
+        {
+            std::lock_guard<std::mutex> lock( sessionsMutex_ );
+            for ( auto &s : sessions_ )
+            {
+                boost::system::error_code ig;
+                s->close( ig );
+            }
+            sessions_.clear();
         }
         workGuard_->reset();
     }
