@@ -1208,9 +1208,10 @@ namespace
     //      SubTaskResultStorageImpl::AddSubTaskResult on the scoped
     //      SGNUS.Processing.Channel/<id> topic. (b) A public control node
     //      with its own LIVE GlobalDB listening on the unscoped topic, dialed
-    //      from both directions, never holds any /chain/<id>/ job key nor the
-    //      same job's unscoped keys -- data-level isolation, not just
-    //      IsConnectedTo == false. (c) Installing MakeBootstrapMembershipFilter({})
+    //      from both directions, never holds any job key the flow writes --
+    //      the scoped entry keys nor their public-scope forms -- data-level
+    //      isolation, not just IsConnectedTo == false. (c) Installing
+    //      MakeBootstrapMembershipFilter({})
     //      on a member whose GlobalDB stays live (the GeniusNode
     //      ShutdownNodePolicyServices production shape) stops that member from
     //      receiving further scoped writes, and HasMembershipFilter() stays
@@ -1359,7 +1360,10 @@ namespace
 
         // LEG (b) -- public-node DATA-level isolation: the live public GlobalDB
         // (unscoped-topic listener, dialed both directions) holds none of the
-        // private job's scoped keys NOR the same job's unscoped/public keys.
+        // job's scoped entry keys -- everything the flow actually writes
+        // (EnqueueTask + AddSubTaskResult) -- nor their public-scope forms,
+        // which would only appear if the fixture itself leaked its scope
+        // (spot-check of produced keys, not a prefix sweep -- WR-02).
         EXPECT_FALSE( IsConnectedTo( pnetA->pubsub, idPublic ) )
             << "public control connected to the private member despite pnet mismatch";
         EXPECT_FALSE( IsConnectedTo( publicControl->pubsub, idA ) )
@@ -1370,15 +1374,13 @@ namespace
               sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( kFlowNetworkId, task1, sub1 ) ),
               sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( kFlowNetworkId, task1 ) ),
               sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( kFlowNetworkId, result1 ) ),
-              sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey( kFlowNetworkId ) ),
-              sgns::crdt::HierarchicalKey( TaskKeys::ClaimableListKey( kFlowNetworkId ) ),
               // Public-scope forms of the same job: SubTaskResultKey has no
               // 1-arg overload -- the empty scope IS the public form
-              // (TaskKeys.hpp:83-86).
-              sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey() ),
+              // (TaskKeys.hpp:83-86). The scoped/public LIST keys are absent
+              // on purpose: production never materializes them -- they exist
+              // only as QueryKeyValues prefixes in TaskQueueImpl.
               sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task1 ) ),
-              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( "", result1 ) ),
-              sgns::crdt::HierarchicalKey( TaskKeys::ClaimableListKey() ) },
+              sgns::crdt::HierarchicalKey( TaskKeys::SubTaskResultKey( "", result1 ) ) },
             std::chrono::milliseconds( 4000 ),
             "private job data on the public control node" );
 
