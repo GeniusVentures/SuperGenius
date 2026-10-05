@@ -31,6 +31,9 @@ using namespace sgns;
 
 TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
 {
+    // Registration is no longer triggered by a static initializer in the
+    // header; production registers via TransactionManager::GetInputValidator.
+    ASSERT_TRUE( MigrationInputValidator::Register() );
     const auto *validator = IInputValidator::Get( "migration" );
     ASSERT_NE( validator, nullptr );
     EXPECT_FALSE( validator->RequiresConsensusUTXOData() );

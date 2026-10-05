@@ -44,6 +44,13 @@ namespace sgns
         }
     } // namespace
 
+    bool MigrationInputValidator::Register()
+    {
+        static MigrationInputValidator instance;
+        IInputValidator::Register( "migration", &instance );
+        return true;
+    }
+
     bool MigrationInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
                                                           const std::string      &address,
                                                           const UTXOManager      &utxo_manager ) const

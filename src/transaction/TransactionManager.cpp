@@ -24,6 +24,7 @@
 #include "account/MintTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/MigrationTransaction.hpp"
+#include "account/MigrationInputValidator.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
@@ -55,6 +56,22 @@ namespace sgns
 {
     namespace
     {
+        /// Eager registration of the built-in validators, before main().
+        ///
+        /// These used to self-register via static initializers in the exported
+        /// validator headers. That constructed a validator instance in every
+        /// including TU, which baked the MSVC vftable (referencing
+        /// signature-mangled virtuals) into downstream objects and broke their
+        /// link whenever a virtual's signature changed (GeniusWallet LNK2001
+        /// on ValidateWitness, 2026-09-25). Register() is out-of-line in each
+        /// validator's object file, so the instances and vftables live only in
+        /// this library; anchoring both calls here also forces the linker to
+        /// keep those object files in every binary that performs validation.
+        /// Separate variables (not &&): registration is insert-only, so one
+        /// already-claimed chain id must not skip the other built-in.
+        [[maybe_unused]] const bool kGeniusValidatorRegistered    = GeniusInputValidator::Register();
+        [[maybe_unused]] const bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
+
         using utxo_merkle::OutPointKey;
 
         std::string TransferInputOwner( const TransferTransaction &transaction )

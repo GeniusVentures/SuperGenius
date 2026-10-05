@@ -933,6 +933,7 @@ namespace sgns
         friend class MultiAccountTestAccess;
         friend class ChildRegTestAccess;
         friend class GeniusNodeTestAccess;
+        friend class AccountManagementTestAccess;
 
         /**
          * @brief Enqueues a transaction and its proof directly through the transaction manager.
