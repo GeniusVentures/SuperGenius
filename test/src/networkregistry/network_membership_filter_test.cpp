@@ -1289,6 +1289,25 @@ namespace
 
         std::thread io_thread( [io_context]() { io_context->run(); } );
 
+        // WR-01: the fatal ASSERTs below (queue creation, task enqueues)
+        // return from the test body on failure -- and destroying a joinable
+        // std::thread terminates the whole binary. The guard runs the same
+        // stop+join as the normal teardown on ANY exit, so a failed
+        // precondition fails this case instead of SIGABRT-ing the run.
+        struct IoThreadJoinGuard
+        {
+            std::thread             &thread;
+            boost::asio::io_context &io;
+            ~IoThreadJoinGuard()
+            {
+                io.stop();
+                if ( thread.joinable() )
+                {
+                    thread.join();
+                }
+            }
+        } io_join{ io_thread, *io_context };
+
         ASSERT_WAIT_FOR_CONDITION( [&]() { return IsConnectedTo( pnetA->pubsub, idB ); },
                                    std::chrono::milliseconds( 15000 ),
                                    "private members did not connect",
