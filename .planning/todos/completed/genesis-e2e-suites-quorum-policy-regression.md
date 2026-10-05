@@ -53,3 +53,11 @@ Either (a) update the two suites' fixtures to satisfy the canonical policy
 `quorum_policy_test`), or (b) revisit `QuorumPolicy` canonical floors if they
 were meant to admit the minimal test topologies. Needs a dedicated debug/fix
 session — do not fold into phase 15.
+
+## Resolution (2026-10-05)
+
+Fixed by fix-direction (a): commit 4742ff501 "Test: wire GeniusNode suites to the
+local trust setup helper" (2026-09-23) updated the fixtures to satisfy the canonical
+quorum policy. Verified during the v1.1 milestone audit at HEAD bb2f6fd42:
+`ctest -R "^(blockchain_genesis_test|processing_nodes_test)$" --timeout 150` → 2/2
+Passed (21.78s / 20.97s). Todo moved to completed as stale bookkeeping.
