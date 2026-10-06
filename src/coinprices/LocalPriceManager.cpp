@@ -416,7 +416,34 @@ namespace sgns
             {
                 continue;
             }
+            // A2 dedupe: a tier repeating an identical (timestamp, price)
+            // observation (e.g. the gnus envelope re-serving one fetchedAt)
+            // is not new evidence — skip consecutive duplicates so count
+            // reflects distinct observations.
+            const bool sameTime = !history_.empty() && history_.back().at == quote.timestamp;
+            const bool samePrice = !history_.empty() && history_.back().price == quote.price;
+            if ( sameTime && samePrice )
+            {
+                continue;
+            }
             history_.push_back( PriceObservation{ quote.timestamp, quote.price, quote.source } );
+        }
+        // T-06-01 bounds enforcement, oldest first: retention prune against
+        // the injected clock (hermetic — never system_clock::now()), then
+        // the count cap. Observation times may be non-monotonic across
+        // tiers, so retention compares EVERY entry rather than only
+        // scanning a sorted front (pitfall 5); the cap still evicts from
+        // the front (insertion order == eviction order).
+        const auto cutoff = now_() - historyConfig_.retention;
+        history_.erase( std::remove_if( history_.begin(),
+                                        history_.end(),
+                                        [&]( const PriceObservation &observation ) {
+                                            return observation.at < cutoff;
+                                        } ),
+                        history_.end() );
+        while ( history_.size() > historyConfig_.maxEntries )
+        {
+            history_.pop_front();
         }
     }
 } // namespace sgns

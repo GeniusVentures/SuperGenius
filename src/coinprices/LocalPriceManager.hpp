@@ -7,6 +7,17 @@
  * io_context + one work guard + one strand + ONE dedicated runner thread.
  * All state (the L1 cache, later the per-currency pending windows) is
  * strand-confined — there is not a single mutex in this class.
+ *
+ * Local price history (HIST-01, D-06-05..D-06-07): every genius-ai quote
+ * actually fetched from a network tier (CoinGecko / GnusPriceService — never
+ * an L1 cache hit) is appended to an in-memory, bounded history (retention
+ * prune against the injected clock + a count cap, oldest evicted first).
+ * The history is IN-MEMORY ONLY: it is EMPTY after a restart (D-06-06), and
+ * QueryHistory returning count==0 over a window means "no coverage" — not an
+ * error; callers (the Phase-7 validator) own the no-coverage policy. The
+ * history is LOCAL EVIDENCE for this node's own accept/reject input only
+ * (D-04 independence, D-06-07) — it is not a validity ruling and carries no
+ * consensus meaning.
  */
 #pragma once
 

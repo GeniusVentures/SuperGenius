@@ -910,3 +910,170 @@ TEST_F( LocalPriceManagerTest, HistoryL1HitIsNotRecorded )
         EXPECT_DOUBLE_EQ( stats.max, 0.19 );
     }
 }
+
+TEST_F( LocalPriceManagerTest, HistoryRetentionPrunesOldEntriesOnNextRecord )
+{
+    sgns::LocalPriceManager::PriceHistoryConfig config;
+    config.retention = std::chrono::seconds( 90 );
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.19 ) } ) );
+    {
+        auto manager = MakeManager( std::chrono::milliseconds( 0 ), config );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        now_ += std::chrono::seconds( 91 ); // past the 60s fresh band AND the 90s retention
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.21 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        // The first observation (age 91s > 90s retention) was pruned when the
+        // second fetch recorded; only the fresh observation survives.
+        const auto stats
+            = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ), now_ + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( stats.min, 0.21 );
+        EXPECT_DOUBLE_EQ( stats.max, 0.21 );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryCountCapEvictsOldest )
+{
+    sgns::LocalPriceManager::PriceHistoryConfig config;
+    config.maxEntries = 2;
+    {
+        auto manager = MakeManager( std::chrono::milliseconds( 0 ), config );
+
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.19 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+        now_ += std::chrono::seconds( 61 ); // expire L1 between records
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.21 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+        now_ += std::chrono::seconds( 61 );
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.23 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        // The third record evicted the OLDEST (0.19): two survive.
+        const auto stats
+            = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ), now_ + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 2 } );
+        EXPECT_DOUBLE_EQ( stats.min, 0.21 );
+        EXPECT_DOUBLE_EQ( stats.max, 0.23 );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryWindowBoundsAreInclusive )
+{
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.19 ) } ) );
+    {
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+        const auto t0 = now_;
+
+        now_ += std::chrono::seconds( 70 );
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.21 ) } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+        const auto t1 = now_;
+
+        // from == to == observation time: the bounds are inclusive.
+        const auto onlyFirst = manager.QueryHistory( t0, t0 );
+        EXPECT_EQ( onlyFirst.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( onlyFirst.min, 0.19 );
+        EXPECT_DOUBLE_EQ( onlyFirst.max, 0.19 );
+
+        const auto onlySecond = manager.QueryHistory( t1, t1 );
+        EXPECT_EQ( onlySecond.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( onlySecond.min, 0.21 );
+        EXPECT_DOUBLE_EQ( onlySecond.max, 0.21 );
+
+        const auto both = manager.QueryHistory( t0, t1 );
+        EXPECT_EQ( both.count, size_t{ 2 } );
+        EXPECT_DOUBLE_EQ( both.min, 0.19 );
+        EXPECT_DOUBLE_EQ( both.max, 0.21 );
+
+        // A disjoint window is "no coverage": count 0, no error (HIST-02).
+        const auto disjoint = manager.QueryHistory( t1 + std::chrono::seconds( 1 ), t1 + std::chrono::seconds( 2 ) );
+        EXPECT_EQ( disjoint.count, size_t{ 0 } );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryQueryHandlesNonMonotonicTimestamps )
+{
+    {
+        auto manager = MakeManager();
+
+        // First fetch carries a LATER fetch-time than the second — tiers
+        // stamp independently; the query is a linear scan, never a binary
+        // search over assumed ordering (pitfall 5).
+        sgns::PriceQuote late;
+        late.asset     = "genius-ai";
+        late.currency  = "usd";
+        late.price     = 1.0;
+        late.timestamp = kEpochBase + std::chrono::seconds( 100 );
+        late.source    = sgns::PriceSource::CoinGecko;
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ late } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        now_ += std::chrono::seconds( 200 ); // stored late quote is now 100s old -> refetch
+        sgns::PriceQuote early;
+        early.asset     = "genius-ai";
+        early.currency  = "usd";
+        early.price     = 2.0;
+        early.timestamp = kEpochBase; // OLDER than the first observation
+        early.source    = sgns::PriceSource::CoinGecko;
+        tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ early } ) );
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        const auto stats = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ),
+                                                 kEpochBase + std::chrono::seconds( 101 ) );
+        EXPECT_EQ( stats.count, size_t{ 2 } );
+        EXPECT_DOUBLE_EQ( stats.min, 1.0 );
+        EXPECT_DOUBLE_EQ( stats.max, 2.0 );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryIgnoresNonGeniusAiAssets )
+{
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "bitcoin", 65000.0 ) } ) );
+    {
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "bitcoin" }, "usd" ) );
+
+        // D-06-05: only genius-ai quotes enter the history.
+        const auto stats
+            = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ), now_ + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 0 } );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryEmptyOnFreshManagerReturnsZeroCount )
+{
+    auto manager = MakeManager(); // no fetch ever happens
+
+    // HIST-02: fresh/restarted manager has no coverage — count 0, no error.
+    const auto stats = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ),
+                                             kEpochBase + std::chrono::hours( 25 ) );
+    EXPECT_EQ( stats.count, size_t{ 0 } );
+}
+
+TEST_F( LocalPriceManagerTest, HistorySkipsConsecutiveDuplicateObservations )
+{
+    sgns::PriceQuote quote;
+    quote.asset     = "genius-ai";
+    quote.currency  = "usd";
+    quote.price     = 0.19;
+    quote.timestamp = kEpochBase; // identical (timestamp, price) on every fetch
+    quote.source    = sgns::PriceSource::CoinGecko;
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ quote } ) );
+    {
+        auto manager = MakeManager();
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        now_ += std::chrono::seconds( 61 ); // L1 expired -> the tier is hit again
+        ASSERT_TRUE( manager.GetQuotes( { "genius-ai" }, "usd" ) );
+
+        // A2: a repeated identical observation is recorded once, not twice.
+        const auto stats
+            = manager.QueryHistory( kEpochBase - std::chrono::seconds( 1 ), now_ + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( stats.min, 0.19 );
+        EXPECT_DOUBLE_EQ( stats.max, 0.19 );
+    }
+}
