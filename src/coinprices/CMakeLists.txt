@@ -3,6 +3,7 @@ add_library(coinprices
     PriceHttpClient.cpp
     PriceResponseParsers.cpp
     LocalPriceManager.cpp
+    PriceValidator.cpp
 )
 
 target_include_directories(coinprices PRIVATE ${AsyncIOManager_INCLUDE_DIR})
