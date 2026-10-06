@@ -148,4 +148,24 @@ namespace sgns
     /// inputs yield the identical verdict on every node (VAL-01).
     PriceValidationResult ValidatePrice( const PriceValidationInput &input,
                                          const PriceValidatorConfig &config = {} );
+
+    // ---- VAL-02: SGNS_PRICEVAL_* environment overrides (D-07-04) ----
+    // RED-stage stubs: defaults only; the getenv parsing lands with GREEN.
+
+    /// @brief Resolve the effective validator config from code defaults
+    /// plus the SGNS_PRICEVAL_* environment overrides (VAL-02, D-07-04).
+    inline PriceValidatorConfig ResolvePriceValidatorConfig()
+    {
+        return PriceValidatorConfig{};
+    }
+
+    /// @brief Caller-side NO_COVERAGE self-heal policy hook (D-07-06):
+    /// true only for NoCoverage — the Phase 8 caller observes the reason
+    /// and triggers a background LocalPriceManager fetch; the validator
+    /// itself stays pure.
+    inline bool ShouldTriggerRefetch( PriceValidationReason reason )
+    {
+        (void)reason;
+        return false;
+    }
 } // namespace sgns

@@ -12,6 +12,7 @@
 #include <coinprices/PriceValidator.hpp>
 
 #include "testutil/outcome.hpp"
+#include "testutil/scoped_env.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -322,4 +323,92 @@ TEST( PriceValidator, ChainOrderFirstReasonWins )
         EXPECT_FALSE( result.accepted );
         EXPECT_EQ( result.reason, sgns::PriceValidationReason::TimestampFuture );
     }
+}
+
+TEST( PriceValidatorConfig, ResolverDefaults )
+{
+    // Neutralize any ambient operator setting: an empty value unsets on the
+    // Windows CRT and is treated as unset by the resolver elsewhere, so the
+    // defaults are what remains.
+    const sgns::testutil::ScopedEnvVar t{ "SGNS_PRICEVAL_TOLERANCE_PCT", "" };
+    const sgns::testutil::ScopedEnvVar w{ "SGNS_PRICEVAL_WINDOW_TTL_S", "" };
+    const sgns::testutil::ScopedEnvVar s{ "SGNS_PRICEVAL_CLOCK_SKEW_S", "" };
+    const sgns::testutil::ScopedEnvVar m{ "SGNS_PRICEVAL_MAX_AGE_S", "" };
+
+    const auto cfg = sgns::ResolvePriceValidatorConfig();
+
+    EXPECT_DOUBLE_EQ( cfg.tolerancePct, sgns::kDefaultPriceTolerance );
+    EXPECT_EQ( cfg.windowTtl, sgns::kStaleMaxAge );
+    EXPECT_EQ( cfg.clockSkew, sgns::kDefaultValidatorClockSkew );
+    EXPECT_EQ( cfg.maxAge, sgns::kDefaultValidatorMaxAge );
+}
+
+TEST( PriceValidatorConfig, ResolverOverrides )
+{
+    const sgns::testutil::ScopedEnvVar t{ "SGNS_PRICEVAL_TOLERANCE_PCT", "0.25" };
+    const sgns::testutil::ScopedEnvVar w{ "SGNS_PRICEVAL_WINDOW_TTL_S", "120" };
+    const sgns::testutil::ScopedEnvVar s{ "SGNS_PRICEVAL_CLOCK_SKEW_S", "15" };
+    const sgns::testutil::ScopedEnvVar m{ "SGNS_PRICEVAL_MAX_AGE_S", "300" };
+
+    const auto cfg = sgns::ResolvePriceValidatorConfig();
+
+    EXPECT_DOUBLE_EQ( cfg.tolerancePct, 0.25 );
+    EXPECT_EQ( cfg.windowTtl, std::chrono::seconds( 120 ) );
+    EXPECT_EQ( cfg.clockSkew, std::chrono::seconds( 15 ) );
+    EXPECT_EQ( cfg.maxAge, std::chrono::seconds( 300 ) );
+}
+
+TEST( PriceValidatorConfig, ResolverNonsenseFallsBack )
+{
+    // Tolerance: empty, unparsable, negative, NaN, out-of-range 1.5 —
+    // each falls back to the default, never a non-finite or degenerate knob.
+    for ( const auto *bad : { "", "abc", "-5", "nan", "1.5" } )
+    {
+        const sgns::testutil::ScopedEnvVar t{ "SGNS_PRICEVAL_TOLERANCE_PCT", bad };
+        const auto cfg = sgns::ResolvePriceValidatorConfig();
+        EXPECT_DOUBLE_EQ( cfg.tolerancePct, sgns::kDefaultPriceTolerance ) << "tolerance input: " << bad;
+    }
+    // Integer seconds: unparsable, negative, zero — each falls back (> 0 is
+    // the valid range; a non-positive duration would degenerate the window).
+    for ( const auto *bad : { "abc", "-5", "0" } )
+    {
+        const sgns::testutil::ScopedEnvVar w{ "SGNS_PRICEVAL_WINDOW_TTL_S", bad };
+        const auto cfg = sgns::ResolvePriceValidatorConfig();
+        EXPECT_EQ( cfg.windowTtl, sgns::kStaleMaxAge ) << "windowTtl input: " << bad;
+    }
+    {
+        const sgns::testutil::ScopedEnvVar s{ "SGNS_PRICEVAL_CLOCK_SKEW_S", "abc" };
+        const auto cfg = sgns::ResolvePriceValidatorConfig();
+        EXPECT_EQ( cfg.clockSkew, sgns::kDefaultValidatorClockSkew );
+    }
+    {
+        const sgns::testutil::ScopedEnvVar m{ "SGNS_PRICEVAL_MAX_AGE_S", "0" };
+        const auto cfg = sgns::ResolvePriceValidatorConfig();
+        EXPECT_EQ( cfg.maxAge, sgns::kDefaultValidatorMaxAge );
+    }
+}
+
+TEST( PriceValidatorConfig, ResolverNotCached )
+{
+    // Set, resolve, CHANGE, resolve again: the second read must see the new
+    // value — no function-local static may freeze the first read (Pitfall 6).
+    const sgns::testutil::ScopedEnvVar s{ "SGNS_PRICEVAL_CLOCK_SKEW_S", "15" };
+    EXPECT_EQ( sgns::ResolvePriceValidatorConfig().clockSkew, std::chrono::seconds( 15 ) );
+
+    const sgns::testutil::ScopedEnvVar s2{ "SGNS_PRICEVAL_CLOCK_SKEW_S", "45" };
+    EXPECT_EQ( sgns::ResolvePriceValidatorConfig().clockSkew, std::chrono::seconds( 45 ) );
+}
+
+TEST( PriceValidatorConfig, RefetchOnlyOnNoCoverage )
+{
+    using R = sgns::PriceValidationReason;
+    // True only for NoCoverage (D-07-06) — the self-heal policy hook.
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::Accepted ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::LegacyNoPrice ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::TimestampFuture ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::TimestampStale ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::CostMismatch ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::AboveBand ) );
+    EXPECT_FALSE( sgns::ShouldTriggerRefetch( R::BelowBand ) );
+    EXPECT_TRUE( sgns::ShouldTriggerRefetch( R::NoCoverage ) );
 }
