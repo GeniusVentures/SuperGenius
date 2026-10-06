@@ -568,6 +568,44 @@ groups:
             return std::optional<ConfirmedTrustSnapshot>( loaded.value() );
         }
 
+        outcome::result<void> EnsureLocalGenesisConfirmed( std::chrono::steady_clock::time_point deadline )
+        {
+            auto confirmed = Confirmed();
+            if ( confirmed.has_error() )
+            {
+                return confirmed.error();
+            }
+            if ( confirmed.value().has_value() )
+            {
+                return outcome::success();
+            }
+            const auto fingerprint = manifest_.Fingerprint();
+            const auto payload     = manifest_.CanonicalBytes();
+            if ( !fingerprint || !payload )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto core      = sgns::trustedpeer::GenesisCandidateCore( manifest_, *payload, *fingerprint );
+            const auto candidate = sgns::securecrdt::CandidateId::FromCore( core );
+            if ( !candidate )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            std::error_code last_error = std::make_error_code( std::errc::timed_out );
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                const auto activated = registry()->TryActivateReviewedGenesisCandidate( *candidate );
+                if ( !activated.has_error() )
+                {
+                    return outcome::success();
+                }
+                last_error = activated.error();
+                std::cout << "Genesis approval not visible yet - waiting for CRDT catch-up...\n";
+                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+            }
+            return outcome::failure( last_error );
+        }
+
         std::shared_ptr<TrustedPeerRegistry> registry() const
         {
             return registry_;
@@ -739,6 +777,17 @@ int main( int argc, char **argv )
         read_catchup_seconds = *seconds;
     }
     const auto read_deadline = std::chrono::steady_clock::now() + std::chrono::seconds( read_catchup_seconds );
+
+    // A fresh actor database has no durable genesis, and every admin operation
+    // below needs the confirmed snapshot. Nodes run this discovery inside
+    // TrustStartupController::Refresh; the tool drives the registry's public
+    // activation step here, bounded by the same read catch-up window (the
+    // bootstrapper's approval record may still be arriving over pubsub).
+    if ( const auto ensured = runtime.EnsureLocalGenesisConfirmed( read_deadline ); ensured.has_error() )
+    {
+        std::cerr << ensured.error().message() << '\n';
+        return EXIT_FAILURE;
+    }
 
     if ( arguments->operation == "list" )
     {
