@@ -668,14 +668,60 @@ TEST_F( AccountManagement, ClaimedPriceMatchesEscrowQuote )
     // different minion count. This is the desync detector: had ProcessImage
     // used a second GetGNUSPrice() call, claim and escrow would disagree.
     sequencingStub_.OnPath( "/v1/prices", { 200, "application/json", NonFreshGnusEnvelopeBody( P2 ) } );
-    auto cost_at_P2 = node_->GetProcessCost( *procmgr.value() );
-    ASSERT_GT( cost_at_P2.minions, 0u );
+    uint64_t cost_at_P2 = node_->GetProcessCost( *procmgr.value() ).minions;
+    ASSERT_GT( cost_at_P2, 0u );
     auto expected_at_P2 = sgns::TokenAmount::CalculateCostMinions( blockLen.value(), P2 );
     ASSERT_TRUE( expected_at_P2 );
-    EXPECT_EQ( cost_at_P2.minions, expected_at_P2.value() );
-    EXPECT_NE( cost_at_P2.minions, expected_minions.value() ) << "P1/P2 must produce different costs for the test to bite";
+    EXPECT_EQ( cost_at_P2, expected_at_P2.value() );
+    EXPECT_NE( cost_at_P2, expected_minions.value() ) << "P1/P2 must produce different costs for the test to bite";
     // Re-read the persisted task: the wire claim is immutable at P1.
     auto reread_task = sgns::AccountManagementTestAccess::GetPostedTask( node_, task_id );
     ASSERT_TRUE( reread_task );
     EXPECT_DOUBLE_EQ( reread_task.value().claimed_price(), P1 );
+}
+
+// WIRE-01: claimed_price survives a serialize/parse round-trip bit-exactly.
+// The asserted value is a copied literal, never computed, so EXPECT_DOUBLE_EQ
+// proves wire fidelity of the double (research anti-pattern: no float math).
+TEST( TaskClaimedPriceWire, RoundTripPreservesDouble )
+{
+    const double kClaimed = 0.123456789012345; // full double precision, copied
+
+    SGProcessing::Task out;
+    out.set_ipfs_block_id( "wire-rt-task" );
+    out.set_claimed_price( kClaimed );
+    ASSERT_EQ( out.claimed_price(), kClaimed );
+
+    const std::string bytes = out.SerializeAsString();
+    ASSERT_FALSE( bytes.empty() );
+
+    SGProcessing::Task in;
+    ASSERT_TRUE( in.ParseFromString( bytes ) );
+    EXPECT_DOUBLE_EQ( in.claimed_price(), kClaimed );
+    EXPECT_EQ( in.ipfs_block_id(), "wire-rt-task" );
+}
+
+// WIRE-01 back-compat: bytes from a Task that only ever set fields 1-5 (what
+// every pre-Phase-6 node emits) parse with claimed_price()==0.0 — the proto3
+// default meaning "absent" — while the legacy fields stay intact.
+TEST( TaskClaimedPriceWire, OldMessageParsesAsZero )
+{
+    SGProcessing::Task legacy;
+    legacy.set_ipfs_block_id( "legacy-task" );
+    legacy.set_json_data( R"({"job":"legacy"})" );
+    legacy.set_random_seed( 0.5f );
+    legacy.set_results_channel( "RESULT_CHANNEL_ID_1" );
+    legacy.set_escrow_path( "/escrow/legacy" );
+
+    const std::string legacyBytes = legacy.SerializeAsString();
+    ASSERT_FALSE( legacyBytes.empty() );
+
+    SGProcessing::Task parsed;
+    ASSERT_TRUE( parsed.ParseFromString( legacyBytes ) );
+    EXPECT_DOUBLE_EQ( parsed.claimed_price(), 0.0 );
+    EXPECT_EQ( parsed.ipfs_block_id(), "legacy-task" );
+    EXPECT_EQ( parsed.json_data(), R"({"job":"legacy"})" );
+    EXPECT_FLOAT_EQ( parsed.random_seed(), 0.5f );
+    EXPECT_EQ( parsed.results_channel(), "RESULT_CHANNEL_ID_1" );
+    EXPECT_EQ( parsed.escrow_path(), "/escrow/legacy" );
 }

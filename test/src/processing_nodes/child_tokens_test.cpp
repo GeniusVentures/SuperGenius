@@ -594,7 +594,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
     auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto cost          = node_main->GetProcessCost( *procmgr.value() );
+    auto cost          = node_main->GetProcessCost( *procmgr.value() ).minions;
     auto bal_main_init = node_main->GetBalance();
     auto bal_p1_init   = node_proc1->GetBalance();
     auto bal_p2_init   = node_proc2->GetBalance();
