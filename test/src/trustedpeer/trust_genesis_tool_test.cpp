@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
-#include <map>
+#include <iterator>
 #include <sstream>
 
 #include <boost/filesystem/operations.hpp>
@@ -497,34 +497,89 @@ TEST_F( TrustGenesisToolTest, UnlinkFailureAfterConfirmationIsTypedAndLoud )
     EXPECT_NE( captured_errors_.find( "key file could not be removed" ), std::string::npos );
 }
 
-TEST_F( TrustGenesisToolTest, ArgvEnvironmentAndStructuredLogSurfacesExcludeSecretBytes )
+TEST_F( TrustGenesisToolTest, CompletedCeremonyLeavesNoKeyBytesOnDiskLogsOrDurableArtifacts )
 {
-    const std::vector<std::string>           argv_capture        = { "sgns-trust",
-                                                                     "genesis",
-                                                                     "--manifest",
-                                                                     ( path_ / "manifest" ).string(),
-                                                                     "--network-config",
-                                                                     ( path_ / "network.json" ).string(),
-                                                                     "--database",
-                                                                     path_.string(),
-                                                                     "--topic",
-                                                                     "existing-production-topic",
-                                                                     "--key-file",
-                                                                     key_path_.string() };
-    const std::map<std::string, std::string> environment_capture = { { "PATH", "/usr/bin" }, { "SGNS_NETWORK", "42" } };
-    const std::vector<std::string>           structured_logs;
-    for ( const auto &argument : argv_capture )
+    // Scans surfaces the ceremony actually wrote (captured output/errors,
+    // every regular file under the run directory, raw RocksDB store entries)
+    // instead of asserting over self-built key-free vectors. Both material
+    // forms of the committed bootstrap key are searched: the ASCII hex the
+    // key file holds and the raw 32-byte binary sequence.
+    const auto key_raw = sgns::base::unhex( PRIVATE_KEY );
+    ASSERT_TRUE( key_raw.has_value() ) << key_raw.error().message();
+    const std::string key_raw_bytes( key_raw.value().begin(), key_raw.value().end() );
+    const auto        holds_key_bytes = [&key_raw_bytes]( const std::string &surface )
+    { return surface.find( PRIVATE_KEY ) != std::string::npos || surface.find( key_raw_bytes ) != std::string::npos; };
+
+    // Non-vacuity guard, part one: while the key file exists it genuinely
+    // holds the secret, so the scan must demonstrably find key bytes before
+    // any absence assertion is worth anything.
     {
-        EXPECT_EQ( argument.find( PRIVATE_KEY ), std::string::npos );
+        std::ifstream     key_file( key_path_.string(), std::ios::binary );
+        const std::string contents( ( std::istreambuf_iterator<char>( key_file ) ), std::istreambuf_iterator<char>() );
+        ASSERT_TRUE( holds_key_bytes( contents ) );
     }
-    for ( const auto &[name, value] : environment_capture )
+
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::SUCCESS );
+    ASSERT_FALSE( boost::filesystem::exists( key_path_ ) );
+    ASSERT_TRUE( store_->LoadAndVerify().has_value() );
+
+    const auto run_dir_file_holding_key = [&]() -> std::string
     {
-        EXPECT_EQ( name.find( PRIVATE_KEY ), std::string::npos );
-        EXPECT_EQ( value.find( PRIVATE_KEY ), std::string::npos );
+        for ( boost::filesystem::recursive_directory_iterator entry( path_ ), end; entry != end; ++entry )
+        {
+            if ( !boost::filesystem::is_regular_file( *entry ) )
+            {
+                continue;
+            }
+            std::ifstream     in( entry->path().string(), std::ios::binary );
+            const std::string contents( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+            if ( holds_key_bytes( contents ) )
+            {
+                return entry->path().string();
+            }
+        }
+        return {};
+    };
+
+    // Non-vacuity guard, part two: a deliberately planted RAW-binary copy
+    // under the run directory must be located by the same walk that is about
+    // to assert absence, then is removed again.
+    const auto planted = path_ / "planted-scan-guard";
+    {
+        std::ofstream plant( planted.string(), std::ios::binary | std::ios::trunc );
+        plant.write( key_raw_bytes.data(), static_cast<std::streamsize>( key_raw_bytes.size() ) );
     }
-    for ( const auto &entry : structured_logs )
+    EXPECT_EQ( run_dir_file_holding_key(), planted.string() );
+    boost::filesystem::remove( planted );
+
+    EXPECT_FALSE( holds_key_bytes( captured_output_ ) );
+    EXPECT_FALSE( holds_key_bytes( captured_errors_ ) );
+    EXPECT_TRUE( run_dir_file_holding_key().empty() );
+
+    // Raw RocksDB scan of the durable store. Every handle on the trust
+    // database is released first (directory lock), mirroring the
+    // trust_state_store_test raw-access sequencing; access is read-only.
+    burn_config_.reset();
+    registry_.reset();
+    secure_crdt_.reset();
+    node_.reset();
+    store_.reset();
+    auto raw = sgns::storage::rocksdb::create( ( path_ / "trust" ).string() );
+    ASSERT_TRUE( raw.has_value() ) << raw.error().message();
+    // Non-vacuity guard, part three: the byte predicate detects a planted
+    // raw copy through the same Buffer-to-bytes conversion the scan uses.
+    const sgns::base::Buffer planted_buffer( key_raw.value().data(), key_raw.value().data() + key_raw.value().size() );
+    ASSERT_TRUE( holds_key_bytes( std::string( planted_buffer.toString() ) ) );
+    auto cursor = raw.value()->cursor();
+    ASSERT_TRUE( cursor->seekToFirst().has_value() );
+    for ( ; cursor->isValid(); cursor->next().assume_value() )
     {
-        EXPECT_EQ( entry.find( PRIVATE_KEY ), std::string::npos );
+        EXPECT_FALSE( holds_key_bytes( std::string( cursor->key().value().toString() ) ) )
+            << "RocksDB key holds bootstrap key bytes";
+        EXPECT_FALSE( holds_key_bytes( std::string( cursor->value().value().toString() ) ) )
+            << "RocksDB value holds bootstrap key bytes";
     }
 }
 
