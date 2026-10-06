@@ -435,6 +435,68 @@ TEST_F( TrustGenesisToolTest, SecretConfirmationFailureRetainsKeyAndProducesNoCo
     EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
 }
 
+TEST_F( TrustGenesisToolTest, NonCanonicalManifestIsRejectedTypedAndNeverSubmits )
+{
+    // Canonicalization orders the peer set, so a reversed manifest can never
+    // equal its canonical form - the malformed-submission shape the ceremony
+    // boundary must reject before any network activity happens.
+    manifest_.peers                  = { manifest_.peers[2], manifest_.peers[1], manifest_.peers[0] };
+    size_t                   starts  = 0;
+    size_t                   submits = 0;
+    GenesisCeremony::Network network;
+    network.start = [&starts]
+    {
+        ++starts;
+        return outcome::success();
+    };
+    network.submit = [&]( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
+    {
+        ++submits;
+        return outcome::failure( std::errc::operation_not_permitted );
+    };
+    network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
+    { return std::optional<ConfirmedTrustSnapshot>{}; };
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, std::move( network ), "unused\n" ), GenesisCeremony::Error::INVALID_MANIFEST );
+    EXPECT_EQ( starts, 0U );
+    EXPECT_EQ( submits, 0U );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+}
+
+TEST_F( TrustGenesisToolTest, SubmitFailureIsTypedLoudAndLeavesSecretAndNoDurableRecord )
+{
+    GenesisCeremony::Network network;
+    network.start  = [] { return outcome::success(); };
+    network.submit = []( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
+    { return outcome::failure( std::errc::operation_not_permitted ); };
+    network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
+    { return std::optional<ConfirmedTrustSnapshot>{}; };
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::SUBMISSION_FAILED );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+    EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+    EXPECT_EQ( store_, nullptr );
+}
+
+TEST_F( TrustGenesisToolTest, UnlinkFailureAfterConfirmationIsTypedAndLoud )
+{
+    std::string            unlinked_path;
+    GenesisCeremony::Hooks hooks = GenesisCeremony::DefaultHooks();
+    hooks.unlink_file            = [&]( const std::string &path )
+    {
+        unlinked_path = path;
+        return -1;
+    };
+    GenesisCeremony ceremony( std::move( hooks ) );
+    EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::KEY_FILE_UNLINK_FAILED );
+    EXPECT_EQ( unlinked_path, key_path_.string() );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+    EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+    EXPECT_NE( captured_errors_.find( "key file could not be removed" ), std::string::npos );
+}
+
 TEST_F( TrustGenesisToolTest, ArgvEnvironmentAndStructuredLogSurfacesExcludeSecretBytes )
 {
     const std::vector<std::string>           argv_capture        = { "sgns-trust",
