@@ -41,6 +41,7 @@
 #include "singleton/IComponent.hpp"
 #include "processing/processing_task_queue.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "coinprices/PriceQuote.hpp" // PriceQuote — ProcessCost::quote / GetGNUSQuote (Phase 6, D-06-01)
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
@@ -375,11 +376,39 @@ namespace sgns
         outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId );
 
         /**
+         * @brief Escrow-sizing cost plus the quote that produced it
+         *        (Phase 6, D-06-01). ProcessImage stamps the wire Task's
+         *        claimed_price from @ref quote — the exact price that sized
+         *        the escrow — so claim and escrow can never desync (WIRE-02).
+         */
+        struct ProcessCost
+        {
+            uint64_t   minions = 0; ///< Estimated cost in minions; 0 == failure (legacy convention).
+            PriceQuote quote;        ///< The single quote minions was computed from.
+        };
+
+        /**
          * @brief Estimates the GNUS cost of a processing request manager.
          * @param[in] procmgr Processing manager containing parsed request data.
-         * @return Estimated cost in minions, or 0 when the request size, price, or cost calculation fails.
+         * @return Cost in minions plus the quote it was computed from, or
+         *         minions == 0 when the request size, price, or cost
+         *         calculation fails.
          */
-        uint64_t GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
+        ProcessCost GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
+
+        /**
+         * @brief Resolves the current genius-ai quote (single read).
+         * @return The finite, positive PriceQuote, or Error::NO_PRICE.
+         * @note Shared by GetGNUSPrice (thin wrapper) and GetProcessCost so
+         *       every consumer sees the same one-shot quote semantics.
+         */
+        outcome::result<PriceQuote> GetGNUSQuote();
+
+        /**
+         * @brief Retrieves the current GNUS market price from the configured pricing service.
+         * @return Current GNUS price in USD, or Error::NO_PRICE when unavailable.
+         */
+        outcome::result<double> GetGNUSPrice();
 
         /**
          * @brief Basis points of an escrow payout burned to the zero address during release.
@@ -398,12 +427,6 @@ namespace sgns
         {
             return TransactionManager::BASIS_POINTS_TOTAL;
         }
-
-        /**
-         * @brief Retrieves the current GNUS market price from the configured pricing service.
-         * @return Current GNUS price in USD, or Error::NO_PRICE when unavailable.
-         */
-        outcome::result<double> GetGNUSPrice();
 
         /**
          * @brief Returns the component name used by the component framework.
@@ -1480,6 +1503,12 @@ namespace sgns
         /// (D-01/D-03) and wires both PriceHttpClientSource tiers.
         /// @return The shared manager instance (constructed on first call).
         std::shared_ptr<LocalPriceManager> GetOrCreatePriceManager();
+
+        /// @brief Test seam: drops the lazily-constructed price manager so the
+        /// next price read re-reads the tier env vars at construction (D-03).
+        /// Production code never calls this; tests use it to point a live node
+        /// at a per-test stub after the node was constructed.
+        void ResetPriceManagerForTest() { priceManager_.reset(); }
 
         static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.

@@ -12,6 +12,7 @@
 #include <memory>
 #include <random>
 #include <cctype>
+#include <algorithm>
 #include <filesystem>
 #include <set>
 #include <string_view>
@@ -2687,11 +2688,15 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
-        auto funds = GetProcessCost( *procmgr );
-        if ( funds <= 0 )
+        // D-06-01/WIRE-02: this ONE cost call both sizes the escrow and
+        // supplies the wire claim below — cost.quote.price is stamped onto
+        // the task, never re-fetched.
+        auto cost = GetProcessCost( *procmgr );
+        if ( cost.minions <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
+        const uint64_t funds = cost.minions;
 
         const auto snapshot = SnapshotAccountServices();
         if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
@@ -2710,6 +2715,9 @@ namespace sgns
         task.set_json_data( smalljson.dump( -1 ) );
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
+        // WIRE-02: claim the price that sized this job's escrow (the same
+        // quote GetProcessCost used — D-06-01; second fetch would desync).
+        task.set_claimed_price( cost.quote.price );
         //Get Processing Data
         auto procdata = procmgr->GetProcessingData();
 
@@ -2805,52 +2813,73 @@ namespace sgns
         return task_queue_->GetTaskResult( taskId );
     }
 
-    uint64_t GeniusNode::GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr )
+    GeniusNode::ProcessCost GeniusNode::GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr )
     {
         auto blockLen = procmgr.ParseBlockSize();
         if ( !blockLen )
         {
             node_logger_->error( "ParseBlockSize failed" );
-            return 0;
+            return {}; // minions == 0 — legacy failure convention
         }
         node_logger_->trace( "Parsed totalBytes: {}", blockLen.value() );
 
-        auto maybeGnusPrice = GetGNUSPrice();
-        if ( !maybeGnusPrice )
+        // D-06-01: ONE quote both sizes the escrow and (via ProcessImage's
+        // stamping) becomes the wire claim — callers must never re-fetch.
+        auto maybeQuote = GetGNUSQuote();
+        if ( !maybeQuote )
         {
-            node_logger_->error( "GetGNUSPrice failed: {}", maybeGnusPrice.error().message() );
-            return 0;
+            node_logger_->error( "GetGNUSQuote failed: {}", maybeQuote.error().message() );
+            return {};
         }
-        double gnusPrice = maybeGnusPrice.value();
+        PriceQuote quote     = maybeQuote.value();
+        double     gnusPrice = quote.price;
         node_logger_->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
 
         auto rawMinionsRes = TokenAmount::CalculateCostMinions( blockLen.value(), gnusPrice );
         if ( !rawMinionsRes )
         {
             node_logger_->error( "TokenAmount::CalculateCostMinions failed" );
-            return 0;
+            return {};
         }
         uint64_t rawMinions = rawMinionsRes.value();
         node_logger_->trace( "Raw cost in minions: {}", rawMinions );
 
-        return rawMinions;
+        return ProcessCost{ rawMinions, std::move( quote ) };
     }
 
-    outcome::result<double> GeniusNode::GetGNUSPrice()
+    outcome::result<PriceQuote> GeniusNode::GetGNUSQuote()
     {
-        auto price = GetCoinprice( { "genius-ai" } );
-        if ( !price )
+        // D-06-01: ONE GetQuotes read shared by every GNUS price consumer.
+        // GetCoinprice's map-flattening seam is bypassed on purpose so the
+        // full PriceQuote (price, fetch time, source) survives the read.
+        auto quotesResult = GetOrCreatePriceManager()->GetQuotes( { "genius-ai" }, "usd" );
+        if ( !quotesResult )
         {
-            node_logger_->error( "GNUS price request failed: {}", price.error().message() );
-            return price.error();
+            node_logger_->error( "GNUS price request failed: {}", quotesResult.error().Message() );
+            return outcome::failure( Error::NO_PRICE );
         }
-        auto price_it = price.value().find( "genius-ai" );
-        if ( price_it == price.value().end() || !std::isfinite( price_it->second ) || price_it->second <= 0.0 )
+        const auto &quotes = quotesResult.value();
+        auto        it     = std::find_if( quotes.begin(),
+                                  quotes.end(),
+                                  []( const PriceQuote &q ) { return q.asset == "genius-ai"; } );
+        if ( it == quotes.end() || !std::isfinite( it->price ) || it->price <= 0.0 )
         {
             node_logger_->error( "GNUS price response did not contain a finite positive price" );
             return outcome::failure( Error::NO_PRICE );
         }
-        return price_it->second;
+        return *it;
+    }
+
+    outcome::result<double> GeniusNode::GetGNUSPrice()
+    {
+        // Thin wrapper over GetGNUSQuote — public double API preserved
+        // (D-06-01); no SDK/wallet-facing break.
+        auto quote = GetGNUSQuote();
+        if ( !quote )
+        {
+            return quote.error();
+        }
+        return quote.value().price;
     }
 
     std::string GeniusNode::GetVersion()
