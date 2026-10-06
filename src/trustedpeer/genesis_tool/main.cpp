@@ -29,6 +29,10 @@
 #include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 #include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+#include <soralog/impl/configurator_from_yaml.hpp>
+
 namespace
 {
     using namespace sgns;
@@ -403,6 +407,43 @@ namespace
         return EXIT_SUCCESS;
     }
 
+    // Every network operation builds a libp2p host inside
+    // GlobalDbNetworkComposition, and libp2p's Noise security adaptor calls
+    // createLogger() unconditionally during DI injector construction — which
+    // segfaults unless libp2p's soralog system was configured first.
+    // GeniusNode::InitLoggers does this for nodes and the in-process tests use
+    // EnsureLoggingSystemConfigured for the same reason (documented beside
+    // that helper); the standalone tool entry must do it once here. Console
+    // sink at error level keeps the CLI's stdout contract machine-parseable.
+    bool ConfigureLibp2pLogging( std::ostream &errors )
+    {
+        static const std::string logging_config      = R"(
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: sgns_trust
+    sink: console
+    level: error
+    children:
+      - name: libp2p
+      - name: gossip
+      - name: debug
+)";
+        auto                     libp2p_configurator = std::make_shared<libp2p::log::Configurator>();
+        auto yaml_configurator = std::make_shared<soralog::ConfiguratorFromYAML>( libp2p_configurator, logging_config );
+        auto logging_system    = std::make_shared<soralog::LoggingSystem>( yaml_configurator );
+        const auto configured  = logging_system->configure();
+        if ( configured.has_error )
+        {
+            errors << "could not configure libp2p logging: " << configured.message << '\n';
+            return false;
+        }
+        libp2p::log::setLoggingSystem( logging_system );
+        return true;
+    }
+
     std::optional<sgns::securecrdt::CandidateId> ParseCandidateId( const std::string &value )
     {
         const auto first  = value.find( ':' );
@@ -599,6 +640,11 @@ int main( int argc, char **argv )
     if ( arguments->operation == "make-manifest" )
     {
         return MakeManifest( *arguments );
+    }
+
+    if ( !ConfigureLibp2pLogging( std::cerr ) )
+    {
+        return EXIT_FAILURE;
     }
 
     auto manifest_bytes = ReadBoundedFile( arguments->values.at( "--manifest" ), 65536 );
