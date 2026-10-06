@@ -176,22 +176,17 @@ namespace
         {
             allowed.insert( "--timeout-seconds" );
             allowed.insert( "--serve-seconds" );
-        }
-        else if ( arguments.operation == "propose-policy" || arguments.operation == "propose-burn" )
-        {
-            allowed.insert( "--serve-seconds" );
+            allowed.insert( "--candidate-id" );
         }
         else if ( arguments.operation == "propose-policy" )
         {
+            allowed.insert( "--serve-seconds" );
             allowed.insert( "--candidate" );
         }
         else if ( arguments.operation == "propose-burn" )
         {
+            allowed.insert( "--serve-seconds" );
             allowed.insert( "--basis-points" );
-        }
-        else if ( arguments.operation == "approve" )
-        {
-            allowed.insert( "--candidate-id" );
         }
 
         for ( const auto &[option, unused] : arguments.values )
