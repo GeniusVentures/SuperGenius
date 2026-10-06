@@ -601,3 +601,44 @@ TEST_F( TrustGenesisToolTest, AdminActivationFailureIsReturnedWhileUnderQuorumRe
     EXPECT_EQ( failed.error(), TrustStateStore::Error::COMMIT_FAILED );
     EXPECT_EQ( store_->LoadAndVerify().value(), durable_before );
 }
+
+TEST_F( TrustGenesisToolTest, LateBurnApprovalAfterActivationIsAcceptedInertAndAuditable )
+{
+    ConfirmForAdmin();
+    ConfirmInitialBurn();
+    // Returns the cached candidate id without resubmitting or signing.
+    const auto burn_id               = burn_config_->OnTrustedPeerGenesisConfirmed().value();
+    const auto durable_at_activation = store_->LoadAndVerify().value();
+    ASSERT_TRUE( burn_config_->IsEconomicallyReady() );
+    ASSERT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Raw CRDT seam: burn activation advanced the authorization context, so a
+    // third late honest signer's record is rejected loudly — never silently
+    // stored or dropped (same seam-split as membership: workflow inert, raw
+    // loud).
+    const auto snapshot = store_->LoadAndVerify().value();
+    const auto core     = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+    const auto late = secure_crdt_->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                               core,
+                                                               signers_[2].GetAddress(),
+                                                               signers_[2].Sign( core.CanonicalBytes().value() ) } );
+    EXPECT_TRUE( late.has_error() );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Workflow seam: the admin explicit-approve for the already-activated burn
+    // is an inert success — no error, no new record, no signature (D-16: the
+    // same rule as membership).
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    admin_sign_invocations_.store( 0 );
+    const auto accepted = admin.Approve( burn_id );
+    ASSERT_TRUE( accepted.has_value() ) << accepted.error().message();
+    EXPECT_EQ( admin_sign_invocations_.load(), 0U );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Readiness and durable state are unchanged, and re-activation stays inert.
+    EXPECT_TRUE( burn_config_->IsEconomicallyReady() );
+    const auto reactivated = burn_config_->TryActivateBurnCandidate( burn_id );
+    ASSERT_TRUE( reactivated.has_value() ) << reactivated.error().message();
+    EXPECT_FALSE( reactivated.value() );
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_at_activation );
+}
