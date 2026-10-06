@@ -15,12 +15,15 @@
 #include <set>
 #include <utility>
 
+#include <algorithm>
+
 namespace sgns
 {
     LocalPriceManager::LocalPriceManager( std::shared_ptr<IPriceSource> coinGeckoTier,
                                           std::shared_ptr<IPriceSource> gnusServiceTier,
                                           std::chrono::milliseconds      coalescingWindow,
-                                          Clock                          now )
+                                          Clock                          now,
+                                          PriceHistoryConfig             historyConfig )
         : ioc_( std::make_shared<boost::asio::io_context>() ),
           work_( std::make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
               ioc_->get_executor() ) ),
@@ -28,7 +31,8 @@ namespace sgns
           coinGeckoTier_( std::move( coinGeckoTier ) ),
           gnusServiceTier_( std::move( gnusServiceTier ) ),
           coalescingWindow_( coalescingWindow ),
-          now_( std::move( now ) )
+          now_( std::move( now ) ),
+          historyConfig_( historyConfig )
     {
         // The work guard is held for the manager's whole lifetime (no natural
         // idle point — timers and posted handlers come and go); without it
@@ -91,6 +95,43 @@ namespace sgns
                                HandleRequestOnStrand( ids, currency, std::move( p ) );
                            } );
         return future.get(); // D-01: blocking bridge — caller parks until the chain resolves
+    }
+
+    LocalPriceManager::PriceHistoryStats LocalPriceManager::QueryHistory( std::chrono::system_clock::time_point from,
+                                                                          std::chrono::system_clock::time_point to )
+    {
+        // Same self-deadlock guard as GetQuotes: the future below can only
+        // be satisfied by a strand handler.
+        assert( !strand_.running_in_this_thread() );
+
+        std::promise<PriceHistoryStats> promise;
+        auto                            future = promise.get_future();
+        boost::asio::post( strand_,
+                           [this, from, to, p = std::move( promise )]() mutable {
+                               PriceHistoryStats stats;
+                               // Linear scan (pitfall 5): observation times may be
+                               // non-monotonic across tiers — no binary search.
+                               for ( const auto &observation : history_ )
+                               {
+                                   if ( observation.at < from || observation.at > to )
+                                   {
+                                       continue; // [from, to] inclusive
+                                   }
+                                   if ( stats.count == 0 )
+                                   {
+                                       stats.min = observation.price;
+                                       stats.max = observation.price;
+                                   }
+                                   else
+                                   {
+                                       stats.min = std::min( stats.min, observation.price );
+                                       stats.max = std::max( stats.max, observation.price );
+                                   }
+                                   ++stats.count;
+                               }
+                               p.set_value( stats );
+                           } );
+        return future.get();
     }
 
     void LocalPriceManager::HandleRequestOnStrand( const std::vector<std::string>                     &ids,
@@ -230,6 +271,12 @@ namespace sgns
             }
         }
 
+        // History (D-06-05): record every genius-ai quote the walk actually
+        // fetched from a network tier — AFTER the walk so `fetched` is
+        // final, BEFORE per-waiter assembly. L1 hits never pass through
+        // here (HandleRequestOnStrand serves them without dispatching).
+        RecordObservations( fetched );
+
         // Per-waiter resolution per the serving-source rule, extended with
         // band-aware L1 lookups (D-10/D-11) for requested ids neither the
         // immediate set nor either tier covered — exactly the ids both
@@ -353,6 +400,23 @@ namespace sgns
         for ( const auto &quote : quotes )
         {
             cache_[quote.currency][quote.asset] = quote;
+        }
+    }
+
+    void LocalPriceManager::RecordObservations( const std::vector<PriceQuote> &quotes )
+    {
+        // D-06-05: only genius-ai quotes actually fetched from a network
+        // tier are recorded (hard-coded asset — the only asset the Phase-7
+        // validator prices). Observation time is the quote's fetch time
+        // (D-14), never local-store time.
+        static constexpr const char *kHistoryAsset = "genius-ai";
+        for ( const auto &quote : quotes )
+        {
+            if ( quote.asset != kHistoryAsset )
+            {
+                continue;
+            }
+            history_.push_back( PriceObservation{ quote.timestamp, quote.price, quote.source } );
         }
     }
 } // namespace sgns

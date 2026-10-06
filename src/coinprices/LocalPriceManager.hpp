@@ -19,6 +19,7 @@
 #include "base/logger.hpp"
 
 #include <chrono>
+#include <deque>
 #include <functional>
 #include <map>
 #include <memory>
@@ -42,6 +43,33 @@ namespace sgns
         /// to handlers running on this strand.
         using Strand = boost::asio::strand<boost::asio::io_context::executor_type>;
 
+        /// @brief One recorded price observation (HIST-01, D-06-05): a
+        /// genius-ai quote actually fetched from a network tier. The time is
+        /// the quote's FETCH time (D-14), never local-store time.
+        struct PriceObservation
+        {
+            std::chrono::system_clock::time_point at;
+            double                                price = 0.0;
+            PriceSource                           source = PriceSource::CoinGecko;
+        };
+
+        /// @brief Aggregate over a query window. count==0 means "no
+        /// coverage" — not an error (HIST-02).
+        struct PriceHistoryStats
+        {
+            size_t count = 0;
+            double min   = 0.0;
+            double max   = 0.0;
+        };
+
+        /// @brief Bounding configuration for the in-memory history
+        /// (T-06-01: retention prune + count cap, oldest evicted first).
+        struct PriceHistoryConfig
+        {
+            std::chrono::seconds retention{ std::chrono::hours( 24 ) };
+            size_t               maxEntries = 4096;
+        };
+
         /// @brief Construct the manager and start its runner thread.
         /// @param coinGeckoTier Tier 1 — CoinGecko direct (IPriceSource seam, D-13)
         /// @param gnusServiceTier Tier 2 — token.gnus.ai (held from day one;
@@ -53,7 +81,8 @@ namespace sgns
         LocalPriceManager( std::shared_ptr<IPriceSource> coinGeckoTier,
                            std::shared_ptr<IPriceSource> gnusServiceTier,
                            std::chrono::milliseconds      coalescingWindow = std::chrono::milliseconds( 50 ),
-                           Clock                          now              = [] { return std::chrono::system_clock::now(); } );
+                           Clock                          now              = [] { return std::chrono::system_clock::now(); },
+                           PriceHistoryConfig             historyConfig    = {} );
 
         /// @brief Drain-then-join teardown: posts a shutdown handler onto the
         /// strand (03-02 extends it to cancel window timers and resolve
@@ -81,6 +110,15 @@ namespace sgns
         /// Phase 4 node threads are all off-thread — safe by construction.
         PriceResult<std::vector<PriceQuote>> GetQuotes( const std::vector<std::string> &ids,
                                                         const std::string              &currency = "usd" );
+
+        /// @brief Aggregate the recorded genius-ai observations whose fetch
+        /// time lies in [from, to] (inclusive both ends).
+        /// @return count/min/max over the window; an empty or no-coverage
+        /// window returns count==0 with no error (HIST-02).
+        /// @note BLOCKING, same post+future bridge as GetQuotes; MUST NOT
+        /// be called from the manager's own runner thread (same assert).
+        PriceHistoryStats QueryHistory( std::chrono::system_clock::time_point from,
+                                        std::chrono::system_clock::time_point to );
 
     private:
         /// @brief One blocked GetQuotes caller joined to a pending window.
@@ -119,6 +157,12 @@ namespace sgns
         /// Only ever called on tier SUCCESS — no negative caching.
         void StoreInL1( const std::vector<PriceQuote> &quotes );
 
+        /// @brief Append network-fetched genius-ai quotes to the history
+        /// (D-06-05). Strand-side only; called from DispatchBatchOnStrand
+        /// once the tier walk's `fetched` set is final. L1 cache hits never
+        /// reach this method.
+        void RecordObservations( const std::vector<PriceQuote> &quotes );
+
         // Declaration order is load-bearing (reverse destruction: timers and
         // state maps die before the io_context; the thread is joined in the
         // dtor body BEFORE any member dies): ioc_ FIRST, thread_ LAST
@@ -138,6 +182,13 @@ namespace sgns
         /// @brief Open coalescing windows keyed by currency (D-08: requests
         /// for different currencies never share a batch).
         std::map<std::string, PendingWindow> windows_;
+
+        /// @brief History bounds (T-06-01) and the strand-confined history
+        /// itself (HIST-01): every genius-ai quote fetched from a network
+        /// tier, oldest first, pruned by retention against now_() and
+        /// capped at maxEntries (oldest evicted first).
+        PriceHistoryConfig             historyConfig_;
+        std::deque<PriceObservation>   history_;
 
         base::Logger m_logger = sgns::base::createLogger( "LocalPriceManager" );
         std::thread  thread_;

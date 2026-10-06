@@ -188,10 +188,11 @@ protected:
     // Construct the manager INSIDE the test body scope, never as a
     // fixture-lifetime member: the manager must die before the fixture's
     // fakes and the clock lambda capture (destruction-order safety).
-    sgns::LocalPriceManager MakeManager( std::chrono::milliseconds window = std::chrono::milliseconds( 0 ) )
+    sgns::LocalPriceManager MakeManager( std::chrono::milliseconds                        window = std::chrono::milliseconds( 0 ),
+                                         sgns::LocalPriceManager::PriceHistoryConfig historyConfig = {} )
     {
         return sgns::LocalPriceManager(
-            tier1_, tier2_, window, [this]() { return now_; } );
+            tier1_, tier2_, window, [this]() { return now_; }, historyConfig );
     }
 
     sgns::PriceQuote MakeQuote( std::string id, double price )
@@ -865,4 +866,47 @@ TEST( ProductionAdapterTest, ProductionAdapterCompilesForBothFormats )
                                               sgns::ResponseFormat::GnusEnvelope );
     (void) coingecko;
     (void) gnusEnvelope;
+}
+
+// ---- Local price history (Phase 6: HIST-01, D-06-05) ----
+
+TEST_F( LocalPriceManagerTest, HistoryRecordsOneNetworkFetch )
+{
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.19 ) } ) );
+    {
+        auto manager = MakeManager();
+        auto result  = manager.GetQuotes( { "genius-ai" }, "usd" );
+        ASSERT_TRUE( result );
+
+        // Window around the injected fetch time: exactly one observation,
+        // min == max == the tier's price.
+        const auto fetchedAt = now_;
+        const auto stats
+            = manager.QueryHistory( fetchedAt - std::chrono::seconds( 1 ), fetchedAt + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( stats.min, 0.19 );
+        EXPECT_DOUBLE_EQ( stats.max, 0.19 );
+    }
+}
+
+TEST_F( LocalPriceManagerTest, HistoryL1HitIsNotRecorded )
+{
+    tier1_->SetResult( outcome::success( std::vector<sgns::PriceQuote>{ MakeQuote( "genius-ai", 0.19 ) } ) );
+    {
+        auto manager = MakeManager();
+        auto first   = manager.GetQuotes( { "genius-ai" }, "usd" );
+        ASSERT_TRUE( first );
+        tier1_->Reset();
+        now_ += std::chrono::seconds( 30 ); // still inside the 60s fresh band
+
+        auto second = manager.GetQuotes( { "genius-ai" }, "usd" );
+        ASSERT_TRUE( second );
+        EXPECT_EQ( tier1_->CallCount(), 0 ); // served entirely from L1
+
+        // D-06-05: L1 cache hits are never recorded — count stays at 1.
+        const auto stats = manager.QueryHistory( kEpochBase, now_ + std::chrono::seconds( 1 ) );
+        EXPECT_EQ( stats.count, size_t{ 1 } );
+        EXPECT_DOUBLE_EQ( stats.min, 0.19 );
+        EXPECT_DOUBLE_EQ( stats.max, 0.19 );
+    }
 }
