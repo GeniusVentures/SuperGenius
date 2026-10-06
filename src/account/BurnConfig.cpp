@@ -325,7 +325,33 @@ namespace sgns::account
         {
             return authorization.error();
         }
-        return secure_crdt_->ListCandidates( candidate_domain_, authorization.value().expected_previous_hash );
+        auto listed = secure_crdt_->ListCandidates( candidate_domain_, authorization.value().expected_previous_hash );
+        if ( listed.has_error() )
+        {
+            return listed.error();
+        }
+        if ( listed.value().empty() )
+        {
+            // The initial burn candidate is pinned by the confirmed genesis
+            // snapshot but carries no CRDT record until the first listed peer
+            // approves it, so a record-only listing can never reveal the exact
+            // id an operator needs. Surface the derived candidate while the
+            // genesis burn is still BootstrapOnly-pending; the node side
+            // reaches the same candidate through OnTrustedPeerGenesisConfirmed.
+            auto snapshot = trusted_peer_registry_->GetConfirmedSnapshot();
+            if ( !snapshot.has_error() &&
+                 snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::BootstrapOnly &&
+                 snapshot.value().burn.version == 1 )
+            {
+                auto core    = BurnCandidateCore( snapshot.value().burn, candidate_domain_ );
+                auto initial = core ? sgns::securecrdt::CandidateId::FromCore( *core ) : std::nullopt;
+                if ( initial )
+                {
+                    listed.value().push_back( *initial );
+                }
+            }
+        }
+        return listed;
     }
 
     outcome::result<sgns::securecrdt::CandidateId> BurnConfig::ProposeBurnCandidate( uint64_t basis_points )
@@ -375,7 +401,21 @@ namespace sgns::account
         }
         if ( approvals.value().empty() )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            // The initial burn candidate has no approval record until a listed
+            // peer submits the first one — the node side does that automatically
+            // inside TrustStartupController::Refresh; the explicit operator path
+            // reaches the same submission here. Any other record-less candidate
+            // id stays invalid.
+            auto initiated = OnTrustedPeerGenesisConfirmed();
+            if ( initiated.has_error() )
+            {
+                return initiated.error();
+            }
+            if ( !( initiated.value() == candidate_id ) )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return initiated.value();
         }
         // Already activated by a concurrent refresh before this approval could be
         // submitted — the authorization context has advanced, so submitting would be
