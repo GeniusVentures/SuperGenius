@@ -17,7 +17,9 @@
 #include "PriceFreshness.hpp"    // kStaleMaxAge — window TTL default (D-07-02)
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 
 namespace sgns
 {
@@ -150,22 +152,129 @@ namespace sgns
                                          const PriceValidatorConfig &config = {} );
 
     // ---- VAL-02: SGNS_PRICEVAL_* environment overrides (D-07-04) ----
-    // RED-stage stubs: defaults only; the getenv parsing lands with GREEN.
+    // Header-only free functions over std::getenv in the PriceEndpoints.hpp
+    // shape (Phase 4 D-01 precedent): null-or-empty reads fall back to the
+    // default, and the read is intentionally NOT cached in a function-local
+    // static — a static would freeze the first value process-wide and break
+    // per-test overrides (Pitfall 6).
 
-    /// @brief Resolve the effective validator config from code defaults
-    /// plus the SGNS_PRICEVAL_* environment overrides (VAL-02, D-07-04).
+    /// @brief Environment variable overriding tolerancePct: a double in
+    /// [0.0, 1.0). Default 0.10 (10%, D-07-01). At or beyond 1.0 the band's
+    /// lower edge would go non-positive and BelowBand would become
+    /// unreachable, so out-of-range values fall back to the default.
+    inline constexpr const char *kPriceValToleranceEnv = "SGNS_PRICEVAL_TOLERANCE_PCT";
+
+    /// @brief Environment variable overriding windowTtl: positive integer
+    /// seconds, the TTL component of the window per D-07-02 (from =
+    /// T - (ttl + skew)). Default 300 — the kStaleMaxAge quote TTL.
+    inline constexpr const char *kPriceValWindowTtlEnv = "SGNS_PRICEVAL_WINDOW_TTL_S";
+
+    /// @brief Environment variable overriding clockSkew: positive integer
+    /// seconds. Default 30 (D-07-03).
+    inline constexpr const char *kPriceValClockSkewEnv = "SGNS_PRICEVAL_CLOCK_SKEW_S";
+
+    /// @brief Environment variable overriding maxAge: positive integer
+    /// seconds. Default 600 (D-07-03, 10 minutes).
+    inline constexpr const char *kPriceValMaxAgeEnv = "SGNS_PRICEVAL_MAX_AGE_S";
+
+    /// @brief Read one environment knob and parse it as a double.
+    /// @return true when the variable is set, non-empty, fully parsable as
+    /// a finite double inside [minValue, maxValueExclusive) — otherwise
+    /// false (fallback).
+    inline bool ReadEnvDoubleInRange( const char *envName, double minValue,
+                                      double maxValueExclusive, double &out )
+    {
+        const char *env = std::getenv( envName );
+        if ( env == nullptr || *env == '\0' )
+        {
+            return false;
+        }
+        char      *end   = nullptr;
+        const double val = std::strtod( env, &end );
+        // Fully consumed, finite, in range — anything else (empty, "abc",
+        // "-5", "nan", out-of-range) falls back to the default.
+        if ( end == env || *end != '\0' || !std::isfinite( val ) || val < minValue
+             || val >= maxValueExclusive )
+        {
+            return false;
+        }
+        out = val;
+        return true;
+    }
+
+    /// @brief Read one environment knob and parse it as positive integer
+    /// seconds (VAL-02 / ASVS V5 config validation: never a non-positive
+    /// or non-finite duration into window math).
+    /// @return true when the variable is set, non-empty, fully parsable as
+    /// a finite integral value > 0 — otherwise false (fallback).
+    inline bool ReadEnvPositiveSeconds( const char *envName, std::chrono::seconds &out )
+    {
+        const char *env = std::getenv( envName );
+        if ( env == nullptr || *env == '\0' )
+        {
+            return false;
+        }
+        char      *end   = nullptr;
+        const double val = std::strtod( env, &end );
+        if ( end == env || *end != '\0' || !std::isfinite( val ) || val <= 0.0
+             || val != std::floor( val ) )
+        {
+            return false;
+        }
+        // Integral and positive; also guard the conversion range so a huge
+        // literal cannot overflow the seconds rep.
+        if ( val > static_cast<double>( std::chrono::seconds::max().count() ) )
+        {
+            return false;
+        }
+        out = std::chrono::seconds( static_cast<std::chrono::seconds::rep>( val ) );
+        return true;
+    }
+
+    /// @brief Resolve the effective validator config: code defaults plus
+    /// the SGNS_PRICEVAL_* overrides (VAL-02, D-07-04). Unparsable,
+    /// non-finite, or out-of-range values fall back to that knob's
+    /// documented default — the resolver never propagates NaN or a
+    /// non-positive duration into band or window math.
+    /// @note NOT cached (Pitfall 6): every call re-reads the environment.
     inline PriceValidatorConfig ResolvePriceValidatorConfig()
     {
-        return PriceValidatorConfig{};
+        PriceValidatorConfig config;
+
+        double tolerance = config.tolerancePct;
+        if ( ReadEnvDoubleInRange( kPriceValToleranceEnv, 0.0, 1.0, tolerance ) )
+        {
+            config.tolerancePct = tolerance;
+        }
+
+        std::chrono::seconds windowTtl = config.windowTtl;
+        if ( ReadEnvPositiveSeconds( kPriceValWindowTtlEnv, windowTtl ) )
+        {
+            config.windowTtl = windowTtl;
+        }
+
+        std::chrono::seconds clockSkew = config.clockSkew;
+        if ( ReadEnvPositiveSeconds( kPriceValClockSkewEnv, clockSkew ) )
+        {
+            config.clockSkew = clockSkew;
+        }
+
+        std::chrono::seconds maxAge = config.maxAge;
+        if ( ReadEnvPositiveSeconds( kPriceValMaxAgeEnv, maxAge ) )
+        {
+            config.maxAge = maxAge;
+        }
+
+        return config;
     }
 
     /// @brief Caller-side NO_COVERAGE self-heal policy hook (D-07-06):
     /// true only for NoCoverage — the Phase 8 caller observes the reason
-    /// and triggers a background LocalPriceManager fetch; the validator
-    /// itself stays pure.
+    /// and triggers a background LocalPriceManager fetch so subsequent
+    /// tasks regain coverage within one fetch cycle. The verdict itself
+    /// stands; the validator stays pure.
     inline bool ShouldTriggerRefetch( PriceValidationReason reason )
     {
-        (void)reason;
-        return false;
+        return reason == PriceValidationReason::NoCoverage;
     }
 } // namespace sgns
