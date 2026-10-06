@@ -1753,7 +1753,9 @@ namespace sgns
 
     bool GeniusNode::InitUPNP()
     {
-        auto upnp = upnp::UPNP::New();
+        // upnp::UPNP::New() was removed from the vendored gnu_upnp header
+        // (public constructor + enable_shared_from_this instead).
+        auto upnp = std::make_shared<upnp::UPNP>();
         if ( !upnp->GetIGD() )
         {
             return true;
@@ -2296,7 +2298,7 @@ namespace sgns
             [this, pubsubport]()
             {
                 auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
-                auto upnp              = upnp::UPNP::New();
+                auto upnp              = std::make_shared<upnp::UPNP>();
 
                 while ( !stop_upnp )
                 {
