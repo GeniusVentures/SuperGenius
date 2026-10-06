@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <utility>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -83,9 +84,9 @@ namespace
 
         void ConfirmInitialBurn()
         {
-            auto       snapshot      = store_->LoadAndVerify().value();
-            const auto core          = sgns::testutil::BurnCandidateCore( snapshot.burn ).value();
-            const auto authorization = core.CanonicalBytes().value();
+            auto                          snapshot      = store_->LoadAndVerify().value();
+            const auto                    core          = sgns::testutil::BurnCandidateCore( snapshot.burn ).value();
+            const auto                    authorization = core.CanonicalBytes().value();
             multisig::CollectedSignatures proof{
                 { signers_[0].GetAddress(), signers_[0].Sign( authorization ) },
                 { signers_[1].GetAddress(), signers_[1].Sign( authorization ) },
@@ -103,6 +104,28 @@ namespace
             current.expected_previous_hash   = hash;
             current.authorizing_policy_hash  = hash;
             return current;
+        }
+
+        // Given for the above-quorum tests: a successor policy proposed by the
+        // local signer, seconded by signers_[1], and durably activated exactly
+        // at the membership threshold (the CurrentPolicyQuorum... shape).
+        std::pair<sgns::securecrdt::CandidateId, sgns::securecrdt::CandidateCore> ActivateSuccessorAtThreshold()
+        {
+            ConfirmInitialBurn();
+            auto candidate                 = Successor();
+            candidate.peers                = { signers_[0].GetAddress(), signers_[3].GetAddress() };
+            candidate.membership_threshold = 2;
+            candidate.burn_threshold       = 2;
+            const auto core                = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
+            const auto proposed            = registry_->ProposePolicyCandidate( candidate ).value();
+            EXPECT_TRUE( secure_crdt_
+                             ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                          core,
+                                                          signers_[1].GetAddress(),
+                                                          signers_[1].Sign( core.CanonicalBytes().value() ) } )
+                             .has_value() );
+            EXPECT_TRUE( registry_->TryActivatePolicyCandidate( proposed ).value() );
+            return { proposed, core };
         }
 
         boost::filesystem::path                               path_;
@@ -201,4 +224,51 @@ TEST_F( OperatorApprovalTest, CurrentPolicyQuorumCommitsBeforePublishingSuccesso
     EXPECT_TRUE( activated.value() );
     EXPECT_EQ( registry_->GetCurrentPeers(), candidate.Canonicalized()->peers );
     EXPECT_EQ( store_->LoadAndVerify().value().policy, candidate.Canonicalized().value() );
+}
+
+TEST_F( OperatorApprovalTest, LateMembershipApprovalAfterActivationIsAcceptedInertAndAuditable )
+{
+    ConfirmGenesis();
+    const auto [proposed_id, core]   = ActivateSuccessorAtThreshold();
+    const auto durable_at_activation = store_->LoadAndVerify().value();
+    ASSERT_EQ( secure_crdt_->ReadCandidateApprovals( proposed_id ).value().size(), 2U );
+
+    // Raw CRDT seam: activation advanced the authorization context, so a late
+    // distinct-signer record is rejected loudly — the same seam-split as the
+    // raw duplicate-approval rule (workflow inert, raw loud) — never silently
+    // stored or dropped.
+    const auto late = secure_crdt_->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                               core,
+                                                               signers_[3].GetAddress(),
+                                                               signers_[3].Sign( core.CanonicalBytes().value() ) } );
+    EXPECT_TRUE( late.has_error() );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( proposed_id ).value().size(), 2U );
+
+    // Workflow seam: the same late actor approving explicitly is an inert
+    // success — a slow honest operator gets no error (D-13).
+    const auto accepted = registry_->ApprovePolicyCandidate( proposed_id );
+    ASSERT_TRUE( accepted.has_value() ) << accepted.error().message();
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_at_activation );
+
+    // Re-activating the already-durable candidate is idempotent, and the two
+    // approvals activation consumed stay readable as the audit trace (D-15).
+    const auto reactivated = registry_->TryActivatePolicyCandidate( proposed_id );
+    ASSERT_TRUE( reactivated.has_value() ) << reactivated.error().message();
+    EXPECT_FALSE( reactivated.value() );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( proposed_id ).value().size(), 2U );
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_at_activation );
+}
+
+TEST_F( OperatorApprovalTest, DuplicateSelfApprovalAfterActivationIsInertWithoutNewRecord )
+{
+    ConfirmGenesis();
+    const auto activated             = ActivateSuccessorAtThreshold();
+    const auto durable_at_activation = store_->LoadAndVerify().value();
+    sign_invocations_.store( 0 );
+
+    auto again = registry_->ApprovePolicyCandidate( activated.first );
+    ASSERT_TRUE( again.has_value() ) << again.error().message();
+    EXPECT_EQ( sign_invocations_.load(), 0U );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( activated.first ).value().size(), 2U );
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_at_activation );
 }
