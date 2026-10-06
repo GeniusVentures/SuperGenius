@@ -83,7 +83,8 @@ namespace sgns::test::securecrdt
                     []() -> std::shared_ptr<sgns::securecrdt::ISignedCRDTData>
                     { return std::make_shared<TestSignedData>(); },
                     std::regex(),
-                    this } ) );
+                    this,
+                    nullptr } ) );
         }
 
         void TearDown() override

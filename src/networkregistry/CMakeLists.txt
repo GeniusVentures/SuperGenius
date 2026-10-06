@@ -1,0 +1,12 @@
+add_library(networkregistry
+    NetworkRegistry.cpp
+)
+target_link_libraries(networkregistry
+    PUBLIC
+    securecrdt
+    peerregistry
+    trustedpeer
+    PRIVATE
+    hexutil
+)
+supergenius_install(networkregistry)

@@ -6,6 +6,7 @@
  */
 
 #include <chrono>
+#include <algorithm>
 #include <future>
 #include <stdexcept>
 #include <thread>
@@ -48,8 +49,11 @@
 #include "account/TrustStartupController.hpp"
 #include "securecrdt/QuorumThresholdValidation.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "securecrdt/QuorumThresholdValidation.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "networkregistry/NetworkMembershipFilter.hpp"
+#include "networkregistry/NetworkRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
@@ -176,9 +180,12 @@ namespace sgns
         }
     }
 
-    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
-                                                          uint16_t           port_seed,
-                                                          bool               auto_dht )
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string              &base_path,
+                                                          uint16_t                        port_seed,
+                                                          bool                            auto_dht,
+                                                          const std::string              &network_key,
+                                                          const std::string              &private_network_id,
+                                                          const std::vector<std::string> &network_bootstrap_peers )
     {
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
@@ -194,7 +201,76 @@ namespace sgns
         // deterministic UPnP network I/O during construction (see multi-node-crdt-
         // instability debug session for the crash this caused).
         ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
-            << ", \"upnp_enabled\": false }";
+            << ", \"upnp_enabled\": false";
+        if ( !network_key.empty() )
+        {
+            // Full JSON string escaping so any of the accepted PSK encodings survives a
+            // round-trip through the JSON config file. The canonical go-ipfs swarm-key text
+            // ("/key/swarm/psk/1.0.0/\n/base16/<64 hex>\n") contains literal newline bytes,
+            // which are illegal raw inside JSON strings (CR-01): every control character is
+            // escaped here so the written file is always parseable.
+            std::string escaped;
+            escaped.reserve( network_key.size() );
+            for ( char c : network_key )
+            {
+                switch ( c )
+                {
+                    case '\\':
+                        escaped += "\\\\";
+                        break;
+                    case '"':
+                        escaped += "\\\"";
+                        break;
+                    case '\n':
+                        escaped += "\\n";
+                        break;
+                    case '\r':
+                        escaped += "\\r";
+                        break;
+                    case '\t':
+                        escaped += "\\t";
+                        break;
+                    case '\b':
+                        escaped += "\\b";
+                        break;
+                    case '\f':
+                        escaped += "\\f";
+                        break;
+                    default:
+                        if ( static_cast<unsigned char>( c ) < 0x20 )
+                        {
+                            escaped += fmt::format( "\\u{:04x}", static_cast<unsigned>( static_cast<unsigned char>( c ) ) );
+                        }
+                        else
+                        {
+                            escaped += c;
+                        }
+                        break;
+                }
+            }
+            ofs << ", \"network_key\": \"" << escaped << "\"";
+        }
+        if ( !private_network_id.empty() )
+        {
+            // Plain string: the id is 0x-prefixed hex (no characters JSON would escape).
+            ofs << ", \"private_network_id\": \"" << private_network_id << "\"";
+        }
+        if ( !network_bootstrap_peers.empty() )
+        {
+            ofs << ", \"network_bootstrap_peers\": [";
+            bool first = true;
+            for ( const auto &peer : network_bootstrap_peers )
+            {
+                if ( !first )
+                {
+                    ofs << ", ";
+                }
+                first = false;
+                ofs << "\"" << peer << "\"";
+            }
+            ofs << "]";
+        }
+        ofs << " }";
         return outcome::success();
     }
 
@@ -660,7 +736,35 @@ namespace sgns
                     return;
                 }
                 account_->ConfigureDatabaseDependencies( tx_globaldb_ );
-                tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+                // CR-G02b / G-WR-03 startup-window gate: on a private node the
+                // GlobalDB gossip ingest is live from the FIRST AddListenTopic
+                // below, but the registry-backed filter installs only at
+                // NetworkRegistry construction in INITIALIZING_TRANSACTIONS.
+                // Install a bootstrap-membership-backed interim filter NOW --
+                // before any subscription goes live -- so no ungated CRDT
+                // ingest window exists on boot. The predicate consults the
+                // provisioned network_bootstrap_peers_ (the same base58
+                // strings the registry caches verbatim) and the registry-backed
+                // filter REPLACES it via SetMembershipFilter at
+                // INITIALIZING_TRANSACTIONS (a replace on the same
+                // mutex-guarded slot -- worst case the stricter interim filter
+                // persists slightly longer, never a gap). Empty bootstrap set
+                // denies everything (fail-closed, consistent with the 15-05
+                // posture -- such a node never reaches READY). Public nodes
+                // take the guard and install nothing. Only the PUBLIC
+                // private_network_id_ is logged (D-03), never key material.
+                if ( !private_network_id_.empty() )
+                {
+                    if ( auto broadcaster = tx_globaldb_ ? tx_globaldb_->GetBroadcaster() : nullptr )
+                    {
+                        broadcaster->SetMembershipFilter(
+                            sgns::networkregistry::MakeBootstrapMembershipFilter( network_bootstrap_peers_ ) );
+                        node_logger_->info( "Interim bootstrap-membership gossip gating active for private "
+                                            "network {} (until the registry-backed filter replaces it)",
+                                            private_network_id_ );
+                    }
+                }
+                tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
@@ -723,7 +827,10 @@ namespace sgns
                                     } );
                             }
                         },
-                        node_type_ );
+                        node_type_,
+                        // Scope this blockchain's validator consensus to the private
+                        // network (empty on public nodes keeps public identifiers).
+                        private_network_id_ );
                 }
                 if ( blockchain_ )
                 {
@@ -931,6 +1038,69 @@ namespace sgns
                     account_service_switching_ = false;
                     StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                     return;
+                }
+
+                // D-06/D-07 (15-05): a node provisioned with a private_network_id constructs
+                // its per-network membership registry once the quorum trio is live. The
+                // registry (registered with SecureCrdtRegistry under "network-registry/<id>"
+                // inside New) is this network's PeerRegistry; its cached membership is the
+                // authorization state for the private network. Public nodes (empty
+                // private_network_id_) construct nothing here. Construction is FAIL-CLOSED: a
+                // private-network node whose membership authority cannot be established (for
+                // example, empty network_bootstrap_peers below the strict-majority quorum
+                // floor) must not start as if network enforcement were active. Only the
+                // PUBLIC private_network_id_ and the membership SIZE are ever logged (D-03).
+                if ( !private_network_id_.empty() && !network_registry_ )
+                {
+                    const auto network_quorum_floor =
+                        sgns::securecrdt::StrictMajorityQuorumFloor( network_bootstrap_peers_.size() );
+                    // The trailing arguments enable the registry's live cache refresh:
+                    // with tx_globaldb_ passed as global_db, membership changes
+                    // replicated through the network-registry CRDT key refresh the
+                    // cached PeerId set without a restart (BurnConfig pattern; the
+                    // 15-09-fixed refresh loop wakes per notification and never spins).
+                    auto network_registry_result = sgns::networkregistry::NetworkRegistry::New(
+                        secure_crdt_,
+                        trusted_peer_registry_,
+                        private_network_id_,
+                        network_bootstrap_peers_,
+                        network_quorum_floor,
+                        /*initial_network_signers=*/{},
+                        /*pnet_key_fingerprint=*/{},
+                        tx_globaldb_ );
+                    if ( network_registry_result.has_error() )
+                    {
+                        node_logger_->error(
+                            "NetworkRegistry construction failed for private network {} with {} bootstrap "
+                            "peers (quorum floor {}): {} - private-network membership is not provisioned; "
+                            "failing closed",
+                            private_network_id_,
+                            network_bootstrap_peers_.size(),
+                            network_quorum_floor,
+                            network_registry_result.error().message() );
+                        ShutdownNodePolicyServices();
+                        return;
+                    }
+                    network_registry_ = network_registry_result.value();
+
+                    // D-07 (15-12) enforcement posture: pnet proves PSK possession at
+                    // the transport; THIS filter is the identity/membership decision —
+                    // the registry's cached membership authorizes every inbound gossip
+                    // message before it enters CRDT replication (application-layer
+                    // ingest gate per the owner direction, deferred-items.md §3). The
+                    // direct processing-path channels (grid/results/queue) receive the
+                    // same filter in the processing-path gate plan (15-13).
+                    if ( tx_globaldb_ && tx_globaldb_->GetBroadcaster() )
+                    {
+                        tx_globaldb_->GetBroadcaster()->SetMembershipFilter(
+                            sgns::networkregistry::MakeNetworkMembershipFilter( network_registry_ ) );
+                        node_logger_->info( "Gossip ingest membership filtering active for private network {}",
+                                            private_network_id_ );
+                    }
+                    node_logger_->info( "NetworkRegistry active for private network {} (bootstrap membership: "
+                                        "{} peers)",
+                                        private_network_id_,
+                                        network_registry_->GetCurrentPeers().size() );
                 }
 
                 // A replacement must not register the same GlobalDB/account patterns until the
@@ -1452,6 +1622,9 @@ namespace sgns
         std::ifstream config_file( write_base_path_ + "/network_config.json" );
         if ( !config_file.good() )
         {
+            // Deliberate distinction (D-01): a MISSING file is the documented public-node
+            // provisioning state (absent identity keys -> public defaults), while a
+            // PRESENT-but-corrupt file below is a provisioning failure and is fatal.
             GeniusNodeLogger()->error( "Could not read network config file" );
             return settings;
         }
@@ -1462,7 +1635,11 @@ namespace sgns
         config_json.Parse( buffer.str().c_str() );
         if ( config_json.HasParseError() || !config_json.IsObject() )
         {
-            GeniusNodeLogger()->error( "Could not parse network config file" );
+            // Fail closed (WR-01): an unparseable existing config must abort the load, never
+            // silently boot public defaults - identity validation below only runs after a
+            // successful parse. Only the file and condition are named, never key values (D-03).
+            GeniusNodeLogger()->error( "network_config.json is unreadable or invalid JSON - refusing to start" );
+            settings.valid = false;
             return settings;
         }
 
@@ -1502,6 +1679,68 @@ namespace sgns
         read( "upnp_enabled", settings.upnp_enabled );
         read( "high_water", settings.high_water );
         read( "low_water", settings.low_water );
+        read( "network_key", settings.network_key );
+        read( "private_network_id", settings.private_network_id );
+
+        // Offline-provisioned initial NetworkRegistry membership (D-01): same FindMember /
+        // type-check array pattern as "bootstrap_addresses" below, but the entries land in the
+        // returned settings because they are consumed only when private_network_id is set.
+        if ( config_json.HasMember( "network_bootstrap_peers" ) && config_json["network_bootstrap_peers"].IsArray() )
+        {
+            for ( auto &v : config_json["network_bootstrap_peers"].GetArray() )
+            {
+                if ( v.IsString() )
+                {
+                    settings.network_bootstrap_peers.emplace_back( v.GetString() );
+                }
+            }
+        }
+
+        // D-01/D-02 identity validation (Task 2 encoding decision: 0x-hex-32B). The
+        // private_network_id is the PUBLIC identity - 0x-prefixed hex of exactly 32 bytes
+        // (66 characters) - and is intentionally distinct from the network_key secret.
+        // Malformed ids are fatal (fail closed): this mirrors the warn-on-ill-typed divergence
+        // precedent above but escalates to failure, because a misidentified "private" node
+        // must not start. Only key names appear in errors; the network_key value is never
+        // logged (D-03).
+        if ( !settings.private_network_id.empty() )
+        {
+            const auto &id          = settings.private_network_id;
+            const bool  well_formed = id.size() == 66 && id[0] == '0' && id[1] == 'x' &&
+                                     std::all_of( id.begin() + 2,
+                                                  id.end(),
+                                                  []( char c )
+                                                  { return std::isxdigit( static_cast<unsigned char>( c ) ) != 0; } );
+            const bool all_zero = id.size() == 66 &&
+                                  std::all_of( id.begin() + 2, id.end(), []( char c ) { return c == '0'; } );
+            if ( !well_formed )
+            {
+                node_logger_->error( "network_config.json: private_network_id must be 0x-prefixed hex of exactly "
+                                     "32 bytes (66 characters, 0x + 64 hex digits) - refusing to start" );
+                settings.valid = false;
+            }
+            else if ( all_zero )
+            {
+                node_logger_->error( "network_config.json: private_network_id is all-zero, which is reserved for "
+                                     "the public network - refusing to start" );
+                settings.valid = false;
+            }
+        }
+        // D-01 provisioning pair: the public identity and the pnet secret are provisioned
+        // together or not at all. "network_key" without "private_network_id" would run a
+        // PSK-isolated node writing private-intent data into PUBLIC CRDT paths (D-08 misroute);
+        // "private_network_id" without "network_key" claims a private namespace with no
+        // transport protection. Both-set and both-absent configs load exactly as before.
+        const bool has_id  = !settings.private_network_id.empty();
+        const bool has_key = !settings.network_key.empty();
+        if ( settings.valid && has_id != has_key )
+        {
+            settings.valid = false;
+            node_logger_->error( "network_config.json: half-provisioned private-network identity - \"{}\" is set "
+                                 "but \"{}\" is missing; provision both keys or neither - refusing to start",
+                                 has_key ? "network_key" : "private_network_id",
+                                 has_key ? "private_network_id" : "network_key" );
+        }
 
         std::string port_str;
         read( "pubsub_port", port_str );
@@ -1625,19 +1864,53 @@ namespace sgns
         base58key_              = maybe_base58.value();
         gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() + base58key_;
 
-        //Set a pubsub config, use no signing because we can verify with proof and dag structure
+        // PubSub config. CR-G01: sign gossip messages at the wire layer too --
+        // production now aligns with the test fixtures (GetDefaultConfig) and
+        // adds wire signatures for any future vendored verification. SGNUS
+        // gates do NOT consume these fields (the subscriber-facing
+        // Gossip::Message exposes only {from, topic, data},
+        // gossip.hpp:129-135); their authentication is the application-layer
+        // envelope (base/gossip_auth.hpp) sealed with the retained keypair
+        // below.
         libp2p::protocol::gossip::Config config;
         config.echo_forward_mode       = false;
-        config.sign_messages           = false;
+        config.sign_messages           = true;
         config.seen_cache_limit        = 10;
         config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
         config.rw_timeout_msec         = std::chrono::seconds{ 30 };
 
-        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
-                .GetKeyPair()
-                .value(),
-            config );
+        auto keypair = crdt::KeyPairFileStorage( write_base_path_ + gnus_network_full_path_ + "/pubs_processor" )
+                           .GetKeyPair()
+                           .value();
+
+        // Retain a member copy of the gossip host keypair BEFORE it is moved
+        // into GossipPubSub (CR-G01): private-network publishes are sealed
+        // with exactly this key so the envelope-embedded public key derives
+        // the from-field PeerId every gated receiver checks.
+        gossip_signing_keypair_ = std::make_shared<const libp2p::crypto::KeyPair>( keypair );
+
+        // A non-empty network key puts PubSub in private-network (pnet) mode: every
+        // connection passes the PSK boundary on both dial and accept paths. The pnet
+        // constructor validates the key eagerly and throws PskValidationError on bad
+        // key material; StartPubSub reports that as a plain init failure.
+        if ( settings.network_key.empty() )
+        {
+            pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( std::move( keypair ), config );
+        }
+        else
+        {
+            try
+            {
+                pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( std::move( keypair ),
+                                                                       config,
+                                                                       settings.network_key );
+            }
+            catch ( const std::exception &e )
+            {
+                node_logger_->error( "Private-network (pnet) initialization failed: {}", e.what() );
+                return false;
+            }
+        }
 
         // A half-started PubSub must not be left reachable, so every failure tears it down.
         auto fail = [this]( const std::string &message )
@@ -1705,6 +1978,14 @@ namespace sgns
     {
         const NetworkSettings settings = LoadNetworkConfig( port_seed, node_type );
 
+        // Fail closed on fatal identity config divergences (malformed private_network_id or a
+        // half-provisioned private_network_id/network_key pair); the reason was already logged
+        // at the detection site, and no network side effects may run before this check.
+        if ( !settings.valid )
+        {
+            return false;
+        }
+
         auto fullnodes            = ParseBootstrapPeers( bootstrap_fullnodes_, "fullnode" );
         bootstrap_fullnode_infos_ = std::move( fullnodes.infos );
         bootstrap_fullnode_ids_   = std::move( fullnodes.ids );
@@ -1720,6 +2001,22 @@ namespace sgns
         //      OS-selected port because GossipPubSub cannot reliably start on zero.
         pubsubport_ = settings.config_port != 0 ? settings.config_port
                                                 : GenerateRandomPort( settings.port_seed, account_->GetAddress() );
+
+        // Remember the pnet key (if any) so it can be reported and re-applied consistently.
+        network_key_ = settings.network_key;
+        if ( !network_key_.empty() )
+        {
+            node_logger_->info( "network_config.json: private-network (pnet) mode enabled" );
+        }
+
+        // Retain the distinct public identity (D-02) and the offline-provisioned bootstrap
+        // membership. Log the public id only - never the network_key value (D-03).
+        private_network_id_      = settings.private_network_id;
+        network_bootstrap_peers_ = settings.network_bootstrap_peers;
+        if ( !private_network_id_.empty() )
+        {
+            node_logger_->info( "network_config.json: private-network identity: {}", private_network_id_ );
+        }
 
         // Never block node construction on UPnP/IGD discovery.
         // RefreshUPNP() runs on its own thread and will try immediately.
@@ -1835,6 +2132,20 @@ namespace sgns
             }
             tx_globaldb_ = std::move( global_db_ret.value() );
 
+            // CR-G01: wire the retained gossip host keypair into the GlobalDB
+            // broadcaster so private-network CRDT publishes are sealed
+            // (PeerId::fromPublicKey(marshal(key.publicKey)) == the host's
+            // peer id == the from-field the vendored gossip stamps).
+            // Unconditional when the member is set: harmless for public nodes
+            // -- the key is unused unless a membership filter is installed.
+            if ( gossip_signing_keypair_ )
+            {
+                if ( auto broadcaster = tx_globaldb_->GetBroadcaster() )
+                {
+                    broadcaster->SetGossipSigningKey( gossip_signing_keypair_ );
+                }
+            }
+
             tx_globaldb_->Start();
 
             ret = true;
@@ -1861,12 +2172,16 @@ namespace sgns
             return false;
         }
 
-        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
+        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
+        // Thread the private-network key into the per-subtask processing host so it gets
+        // the same Noise-only + pnet enforcement as the gossip host (D-11). Public nodes
+        // keep the defaulted argument and today's construction semantics.
         processing_core_ = processing::ProcessingCoreImpl::New( task_queue_,
                                                                 1,
                                                                 dev_config_.TokenID,
                                                                 dev_config_.Addr,
-                                                                developer_cut.value()->Value() );
+                                                                developer_cut.value()->Value(),
+                                                                network_key_ );
         if ( !processing_core_ )
         {
             node_logger_->error( "Invalid processing payout configuration: address \"{}\", fraction {}",
@@ -1876,7 +2191,8 @@ namespace sgns
         }
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
-                                                                                       processing_channel_topic_ );
+                                                                                       ScopedProcessingChannel(),
+                                                                                       private_network_id_ );
 
         // Restore previously-submitted task IDs from local file
         LoadMyTaskIds();
@@ -2034,14 +2350,50 @@ namespace sgns
         previous_manager.reset();
     }
 
-    void GeniusNode::ShutdownNodePolicyServices()
+    void GeniusNode::ShutdownNodePolicyServices( bool global_db_shutdown_follows )
     {
         // The controller owns candidate callbacks into SecureCrdt and retains both
         // policy services. Release it before unregistering those owners.
         trust_startup_controller_.reset();
 
+        // CR-C2-01 fail-closed teardown contract: a private node whose policy stack
+        // is going away must never fall back to public pass-through gossip ingest
+        // while its GlobalDB is still live. The three policy-stack failure paths
+        // (BurnConfig::New failure, SecureCrdt::RegisterFilters failure,
+        // NetworkRegistry::New failure in INITIALIZING_TRANSACTIONS) park the node
+        // with PubSub running and topics subscribed while tx_globaldb_ keeps
+        // running indefinitely -- clearing the filter there would restore
+        // unauthenticated ingest and contradict the "failing closed" logs those
+        // paths emit. Those routes (private node + live GlobalDB) instead install
+        // an explicit deny-all membership filter: with the policy stack gone, the
+        // membership authority is gone too. Only the destruction route (ShutdownNow
+        // three lines after the ShutdownForDestruction call site) clears the
+        // filter -- the raw state is restored exactly when the datastore stops.
+        // Public nodes never install a filter, so the clear stays a no-op there.
+        if ( tx_globaldb_ && tx_globaldb_->GetBroadcaster() )
+        {
+            if ( !private_network_id_.empty() && !global_db_shutdown_follows )
+            {
+                tx_globaldb_->GetBroadcaster()->SetMembershipFilter(
+                    sgns::networkregistry::MakeBootstrapMembershipFilter( {} ) );
+                node_logger_->warn( "Policy-stack teardown on private network {} set gossip ingest to "
+                                    "deny-all: the GlobalDB remains live (CR-C2-01 fail-closed)",
+                                    private_network_id_ );
+            }
+            else
+            {
+                tx_globaldb_->GetBroadcaster()->ClearMembershipFilter();
+            }
+        }
+
         // Unregister while the policy owners and their owner tokens are still alive.
         // Their destructors repeat this defensively, so partial initialization is safe.
+        // NetworkRegistry first: it retains SecureCrdt and TrustedPeerRegistry, so it
+        // must drop those references before the owners below are released (15-05).
+        if ( network_registry_ )
+        {
+            network_registry_->Unregister();
+        }
         if ( burn_config_ )
         {
             burn_config_->Unregister();
@@ -2053,6 +2405,7 @@ namespace sgns
 
         // BurnConfig retains GlobalDB, TrustedPeerRegistry, SecureCrdt, and the
         // account. Release it first so those dependencies can actually drain.
+        network_registry_.reset();
         burn_config_.reset();
         trusted_peer_registry_.reset();
         secure_crdt_.reset();
@@ -2175,7 +2528,10 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
-        ShutdownNodePolicyServices();
+        // CR-C2-01: this path shuts tx_globaldb_ down later (after the io drain
+        // and PubSub stop below), so the policy stack must deny-all now instead
+        // of relying on the GlobalDB going away underneath it.
+        ShutdownNodePolicyServices( /*global_db_shutdown_follows=*/ true );
 
         // GraphSync retains PubSub's libp2p host, whose sockets are backed by
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
@@ -2404,10 +2760,101 @@ namespace sgns
         }
     }
 
+    namespace
+    {
+        // Parses a base58 peer-id string; nullopt when pubsub_ is down or the id is malformed.
+        std::optional<libp2p::peer::PeerId> ParsePeerId( const std::shared_ptr<ipfs_pubsub::GossipPubSub> &pubsub,
+                                                         const std::string                                         &peer_id,
+                                                         base::Logger                                               logger )
+        {
+            if ( !pubsub )
+            {
+                logger->warn( "Cannot manage peer deny list: PubSub is not running" );
+                return std::nullopt;
+            }
+            auto parsed = libp2p::peer::PeerId::fromBase58( peer_id );
+            if ( !parsed )
+            {
+                logger->warn( "Invalid peer id (expected base58): {}", peer_id );
+                return std::nullopt;
+            }
+            return parsed.value();
+        }
+    } // namespace
+
+    void GeniusNode::BlockPeer( const std::string &peer_id )
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        if ( peer )
+        {
+            pubsub_->BlockPeer( peer.value() );
+        }
+    }
+
+    void GeniusNode::BlockPeers( const std::vector<std::string> &peer_ids )
+    {
+        if ( !pubsub_ )
+        {
+            node_logger_->warn( "Cannot manage peer deny list: PubSub is not running" );
+            return;
+        }
+        std::vector<libp2p::peer::PeerId> peers;
+        peers.reserve( peer_ids.size() );
+        for ( const auto &id : peer_ids )
+        {
+            if ( auto peer = ParsePeerId( pubsub_, id, node_logger_ ) )
+            {
+                peers.push_back( std::move( peer.value() ) );
+            }
+        }
+        pubsub_->BlockPeers( peers );
+    }
+
+    void GeniusNode::UnblockPeer( const std::string &peer_id )
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        if ( peer )
+        {
+            pubsub_->UnblockPeer( peer.value() );
+        }
+    }
+
+    bool GeniusNode::IsPeerBlocked( const std::string &peer_id ) const
+    {
+        auto peer = ParsePeerId( pubsub_, peer_id, node_logger_ );
+        return peer && pubsub_->IsPeerBlocked( peer.value() );
+    }
+
+    std::vector<std::string> GeniusNode::GetBlockedPeers() const
+    {
+        if ( !pubsub_ )
+        {
+            return {};
+        }
+        std::vector<std::string> result;
+        for ( const auto &peer : pubsub_->GetBlockedPeers() )
+        {
+            result.push_back( peer.toBase58() );
+        }
+        return result;
+    }
+
+    std::string GeniusNode::ScopedProcessingChannel() const
+    {
+        return processing::TaskKeys::ScopedTopic( processing_channel_topic_, private_network_id_ );
+    }
+
+    std::string GeniusNode::ScopedProcessingGridChannel() const
+    {
+        return processing::TaskKeys::ScopedTopic( processing_grid_chanel_topic_, private_network_id_ );
+    }
+
     outcome::result<void> GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes, then compute its SHA-256
-        const std::string   topic = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
+        // Scope FIRST, net-and-version appendix LAST: an empty scope hashes today's exact
+        // byte string, so public job discovery keeps its CID.
+        const std::string topic = ScopedProcessingGridChannel() + sgns::version::GetNetAndVersionAppendix();
         const base::Hash256 hash  = crypto::sha2_256( topic.data(), topic.size() );
 
         // Provide CID
@@ -2564,7 +3011,7 @@ namespace sgns
             // the database itself.
             account->InitMessenger( this->pubsub_ );
             account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
-            this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+            this->tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
             {
                 std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
                 account_ = std::move( account );
@@ -2736,17 +3183,22 @@ namespace sgns
             return outcome::failure( Error::INVALID_JSON );
         }
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto result_pair, manager->HoldEscrow( funds, uuidstring ) );
+        BOOST_OUTCOME_TRY( auto result_pair, manager->HoldEscrow( funds, uuidstring, private_network_id_ ) );
 
         //TODO - Make it async to post the job data in case the transaction gets confirmed.
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
-        task.set_escrow_path( escrow_path );
+        // Scope the escrow CRDT path through the task-carried escrow_path so the write here and
+        // the PayEscrow -> FetchTransaction read stay symmetric; a public node's path equals the
+        // raw lock_id byte-for-byte.
+        const std::string scoped_escrow_path =
+            processing::TaskKeys::ScopedKeyPath( private_network_id_, escrow_path );
+        task.set_escrow_path( scoped_escrow_path );
 
         BOOST_OUTCOME_TRY( auto crdt_transaction,
-                           CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
+                           CreateEscrowInfoCRDTTransaction( scoped_escrow_path, std::move( escrow_data ) ) );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks, crdt_transaction );
         if ( enqueue_task_return.has_failure() )
@@ -3502,7 +3954,21 @@ namespace sgns
     {
         if ( processing_service_ )
         {
-            processing_service_->StartProcessing( processing_grid_chanel_topic_ );
+            // Private nodes: bind the registry-backed membership filter AND the
+            // gossip signing key to the processing service BEFORE its
+            // grid/results/queue channels go live — the same enforcement
+            // posture as the gossip host (deferred-items.md §3, D-11), now
+            // authenticated (CR-G01). Public nodes install nothing
+            // (default-arg public path unchanged).
+            if ( !private_network_id_.empty() && network_registry_ )
+            {
+                processing_service_->SetMembershipFilter(
+                    sgns::networkregistry::MakeNetworkMembershipFilter( network_registry_ ) );
+                processing_service_->SetGossipSigningKey( gossip_signing_keypair_ );
+                node_logger_->info( "Processing membership filtering active for private network {}",
+                                    private_network_id_ );
+            }
+            processing_service_->StartProcessing( ScopedProcessingGridChannel() );
         }
         else
         {

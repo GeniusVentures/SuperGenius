@@ -1,5 +1,6 @@
 #include "processing_service.hpp"
 #include "base/sgns_version.hpp"
+#include "base/gossip_auth.hpp"
 #include <utility>
 #include <thread>
 #include <vector>
@@ -145,6 +146,47 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingServiceImpl::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        {
+            std::scoped_lock lockFilter( m_membershipFilterMutex );
+            m_membershipFilter = filter;
+        }
+        // Apply to all existing nodes (mirrors setBitswap); nodes created later
+        // receive the filter INSIDE ProcessingNode::New (pre-subscription
+        // install at both creation sites), so there is no enrollment window.
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && filter )
+            {
+                node->SetMembershipFilter( filter );
+            }
+        }
+    }
+
+    void ProcessingServiceImpl::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        // Store the key, then propagate a copy to all existing nodes symmetric
+        // with the filter (CR-G01); nodes created later receive the key INSIDE
+        // ProcessingNode::New (pre-subscription install at both creation
+        // sites). The filter mutex is released before m_mutexNodes
+        // is acquired (same ordering discipline as SetMembershipFilter).
+        std::shared_ptr<const libp2p::crypto::KeyPair> key_copy = key;
+        {
+            std::scoped_lock lockFilter( m_membershipFilterMutex );
+            m_gossipSigningKey = std::move( key );
+        }
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && key_copy )
+            {
+                node->SetGossipSigningKey( key_copy );
+            }
+        }
+    }
+
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
@@ -171,7 +213,53 @@ namespace sgns::processing
         auto                             channelRequest = gridMessage.mutable_processing_channel_request();
         channelRequest->set_environment( "any" );
 
-        m_gridChannel->Publish( gridMessage.SerializeAsString() );
+        // Private-network publish sealing (CR-G01): seal under a set filter
+        // with the gossip host keypair; fail closed when a filter is set but
+        // no key is wired. No filter -> raw publish, byte-identical.
+        {
+            const std::string raw_payload = gridMessage.SerializeAsString();
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+            if ( !membershipFilter )
+            {
+                m_gridChannel->Publish( raw_payload );
+            }
+            else if ( !signingKey )
+            {
+                m_logger->error( "[{}] Grid channel publish FAILED CLOSED: membership filter set but no "
+                                 "gossip signing key wired",
+                                 node_address_ );
+            }
+            else
+            {
+                auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                if ( from_bytes.has_error() )
+                {
+                    m_logger->error( "[{}] Grid channel publish FAILED CLOSED: cannot derive from-bytes "
+                                     "from the gossip signing key",
+                                     node_address_ );
+                }
+                else
+                {
+                    auto sealed = sgns::base::SealGossipPayload( *signingKey, from_bytes.value(), sgns::base::detail::StringSpan( raw_payload ) );
+                    if ( sealed.has_error() )
+                    {
+                        m_logger->error( "[{}] Grid channel publish FAILED CLOSED: sealing failed ({})",
+                                         node_address_,
+                                         static_cast<int>( sealed.error() ) );
+                    }
+                    else
+                    {
+                        m_gridChannel->Publish( sealed.value() );
+                    }
+                }
+            }
+        }
         m_logger->debug( "List of processing channels requested" );
         m_timerChannelListRequestTimeout.expires_from_now( m_channelListRequestTimeout );
         m_timerChannelListRequestTimeout.async_wait(
@@ -193,9 +281,49 @@ namespace sgns::processing
             return;
         }
 
+        // Membership gate (15-13) + payload authentication (15-14, CR-G01):
+        // under a set membership filter the message is FIRST authenticated
+        // (sgns::base::OpenGossipPayload: envelope present, embedded public
+        // key derives the from-field PeerId, signature covers from+payload)
+        // and only THEN authorized (AuthorizeGossipSender on the verified
+        // identity) before ANY grid handling. Unsigned/unverifiable messages
+        // are denied under a set filter even when `from` names a member --
+        // a same-PSK forger cannot pass by writing a member id into the wire
+        // fields. Empty filter = public pass-through (raw parse,
+        // byte-identical); empty/malformed `from` fails OpenGossipPayload
+        // itself (fail-closed, T-15-13-04).
+        gsl::span<const uint8_t> grid_parse_source( message->data.data(), message->data.size() );
+        {
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+            }
+            if ( membershipFilter )
+            {
+                auto opened = sgns::base::OpenGossipPayload(
+                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ),
+                    gsl::span<const uint8_t>( message->data.data(), message->data.size() ) );
+                if ( opened.has_error() )
+                {
+                    m_logger->debug( "[{}] Grid channel message failed payload authentication ({}) -- ignored",
+                                     node_address_,
+                                     static_cast<int>( opened.error() ) );
+                    return;
+                }
+                grid_parse_source = opened.value().payload;
+                if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+                {
+                    m_logger->debug( "[{}] Grid channel message from unauthorized sender ignored", node_address_ );
+                    return;
+                }
+            }
+        }
+
         m_logger->trace( "[{}] Valid message.", node_address_ );
         SGProcessing::GridChannelMessage gridMessage;
-        if ( !gridMessage.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
+        if ( !gridMessage.ParseFromArray( grid_parse_source.data(),
+                                          static_cast<int>( grid_parse_source.size() ) ) )
         {
             m_logger->error( "[{}] Could not deserialize message", node_address_ );
             return;
@@ -371,6 +499,19 @@ namespace sgns::processing
         {
             m_logger->debug( "[{}] Accept Channel: Creating Node for queue {}", node_address_, channelId );
 
+            // CR-G02a: snapshot the membership filter + gossip signing key
+            // BEFORE creating the node and pass them INTO ProcessingNode::New,
+            // which installs them on the queue channel before Listen() and on
+            // the results accessor before CreateResultsChannel/
+            // ConnectToSubTaskQueue -- no subscription goes live ungated.
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+
             auto weakSelf = weak_from_this();
 
             auto node = ProcessingNode::New(
@@ -399,7 +540,12 @@ namespace sgns::processing
                     }
                 },
                 node_address_,
-                channelId );
+                channelId,
+                /*subTasks=*/{},
+                /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+                /*ttl=*/std::chrono::minutes( 2 ),
+                membershipFilter,
+                signingKey );
 
             if ( node != nullptr )
             {
@@ -414,6 +560,10 @@ namespace sgns::processing
                 {
                     node->setBitswap( m_bitswap );
                 }
+                // Membership filter + gossip signing key were passed INTO
+                // ProcessingNode::New above (pre-subscription install; the
+                // set-time propagation in SetMembershipFilter/
+                // SetGossipSigningKey refreshes EXISTING nodes).
             }
         }
 
@@ -441,7 +591,51 @@ namespace sgns::processing
                 auto                             channelResponse = gridMessage.mutable_processing_channel_response();
                 channelResponse->set_channel_id( itNode.first );
 
-                m_gridChannel->Publish( gridMessage.SerializeAsString() );
+                // Private-network publish sealing (CR-G01): seal under a set
+                // filter; fail closed when a filter is set but no key is
+                // wired. No filter -> raw publish, byte-identical.
+                const std::string raw_payload = gridMessage.SerializeAsString();
+                sgns::networkregistry::MembershipFilter membershipFilter;
+                std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+                {
+                    std::scoped_lock lockFilter( m_membershipFilterMutex );
+                    membershipFilter = m_membershipFilter;
+                    signingKey       = m_gossipSigningKey;
+                }
+                if ( !membershipFilter )
+                {
+                    m_gridChannel->Publish( raw_payload );
+                }
+                else if ( !signingKey )
+                {
+                    m_logger->error( "[{}] Grid channel publish FAILED CLOSED: membership filter set but no "
+                                     "gossip signing key wired",
+                                     node_address_ );
+                }
+                else
+                {
+                    auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                    if ( from_bytes.has_error() )
+                    {
+                        m_logger->error( "[{}] Grid channel publish FAILED CLOSED: cannot derive from-bytes "
+                                         "from the gossip signing key",
+                                         node_address_ );
+                    }
+                    else
+                    {
+                        auto sealed = sgns::base::SealGossipPayload( *signingKey, from_bytes.value(), sgns::base::detail::StringSpan( raw_payload ) );
+                        if ( sealed.has_error() )
+                        {
+                            m_logger->error( "[{}] Grid channel publish FAILED CLOSED: sealing failed ({})",
+                                             node_address_,
+                                             static_cast<int>( sealed.error() ) );
+                        }
+                        else
+                        {
+                            m_gridChannel->Publish( sealed.value() );
+                        }
+                    }
+                }
                 m_logger->trace( "[{}] Channel published: {}", node_address_, channelResponse->channel_id() );
             }
         }
@@ -594,7 +788,53 @@ namespace sgns::processing
             m_pendingCreationTimestamp = std::chrono::steady_clock::now();
         }
 
-        m_gridChannel->Publish( gridMessage.SerializeAsString() );
+        // Private-network publish sealing (CR-G01): seal under a set filter;
+        // fail closed when a filter is set but no key is wired. No filter ->
+        // raw publish, byte-identical.
+        {
+            const std::string raw_payload = gridMessage.SerializeAsString();
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::scoped_lock lockFilter( m_membershipFilterMutex );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+            if ( !membershipFilter )
+            {
+                m_gridChannel->Publish( raw_payload );
+            }
+            else if ( !signingKey )
+            {
+                m_logger->error( "[{}] Grid channel publish FAILED CLOSED: membership filter set but no "
+                                 "gossip signing key wired",
+                                 node_address_ );
+            }
+            else
+            {
+                auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                if ( from_bytes.has_error() )
+                {
+                    m_logger->error( "[{}] Grid channel publish FAILED CLOSED: cannot derive from-bytes "
+                                     "from the gossip signing key",
+                                     node_address_ );
+                }
+                else
+                {
+                    auto sealed = sgns::base::SealGossipPayload( *signingKey, from_bytes.value(), sgns::base::detail::StringSpan( raw_payload ) );
+                    if ( sealed.has_error() )
+                    {
+                        m_logger->error( "[{}] Grid channel publish FAILED CLOSED: sealing failed ({})",
+                                         node_address_,
+                                         static_cast<int>( sealed.error() ) );
+                    }
+                    else
+                    {
+                        m_gridChannel->Publish( sealed.value() );
+                    }
+                }
+            }
+        }
         m_logger->debug( "[{}] Broadcasting intent to create node for queue {}", node_address_, subTaskQueueId );
 
         // Set timer to wait for other peers' responses
@@ -750,6 +990,21 @@ namespace sgns::processing
             return;
         }
 
+        // CR-G02a: snapshot the membership filter + gossip signing key
+        // BEFORE creating the node and pass them INTO ProcessingNode::New,
+        // which installs them on the queue channel before Listen() and on
+        // the results accessor before CreateResultsChannel/
+        // ConnectToSubTaskQueue -- no subscription goes live ungated.
+        // (Taken while m_mutexNodes is held; the filter mutex is never held
+        // across m_mutexNodes -- same ordering discipline as the setters.)
+        sgns::networkregistry::MembershipFilter membershipFilter;
+        std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+        {
+            std::scoped_lock lockFilter( m_membershipFilterMutex );
+            membershipFilter = m_membershipFilter;
+            signingKey       = m_gossipSigningKey;
+        }
+
         // Create the ProcessingNode
         auto weakSelf = weak_from_this();
 
@@ -780,11 +1035,19 @@ namespace sgns::processing
             },
             node_address_,
             subTaskQueueId,
-            subTasks );
+            subTasks,
+            /*msSubscriptionWaitingDuration=*/std::chrono::milliseconds( 2000 ),
+            /*ttl=*/std::chrono::minutes( 2 ),
+            membershipFilter,
+            signingKey );
 
         if ( node != nullptr )
         {
             m_processingNodes[subTaskQueueId] = node;
+            // Membership filter + gossip signing key were passed INTO
+            // ProcessingNode::New above (pre-subscription install; the
+            // set-time propagation in SetMembershipFilter/
+            // SetGossipSigningKey refreshes EXISTING nodes).
         }
 
         lock.unlock(); // Release the mutex before potentially long operations

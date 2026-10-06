@@ -96,7 +96,21 @@ namespace sgns::crdt
             loggerDataStore->set_level( spdlog::level::debug );
         }
 
-        static std::pair<std::shared_ptr<CrdtDatastore>, std::shared_ptr<CRDTMirrorBroadcaster>>
+        struct LoopBackCRDTInstance
+        {
+            std::shared_ptr<CrdtDatastore> datastore;
+            std::shared_ptr<CRDTMirrorBroadcaster> broadcaster;
+
+            ~LoopBackCRDTInstance()
+            {
+                // Filters capture test-local state. Drain their workers before
+                // that state is destroyed, including after a fatal assertion.
+                if ( datastore ) datastore->Close();
+                if ( broadcaster ) broadcaster->SetMirrorCounterPart( nullptr );
+            }
+        };
+
+        static LoopBackCRDTInstance
         CreateLoopBackCRDTInstance( const std::string                        &base_path,
                                     const std::shared_ptr<InMemoryDatastore> &ipfsDataStore )
         {
@@ -122,24 +136,11 @@ namespace sgns::crdt
             auto              namespaceKey = HierarchicalKey( strNamespace );
 
             // Create crdtDatastore
-            return std::make_pair(
-                CrdtDatastore::New( db, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions() ),
-                broadcaster );
-        }
-
-        void CloseAndResetCRDT( std::shared_ptr<CrdtDatastore>         &crdt,
-                                std::shared_ptr<CRDTMirrorBroadcaster> &broadcaster )
-        {
-            if ( broadcaster )
-            {
-                broadcaster->SetMirrorCounterPart( nullptr );
-                broadcaster.reset();
-            }
-            if ( crdt )
-            {
-                crdt->Close();
-                crdt.reset();
-            }
+            auto datastore = CrdtDatastore::New( db, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions() );
+            // Subscribe the receiver so final-head traversal also fetches ancestors
+            // whose individual announcements were coalesced by the sender.
+            datastore->AddTopicName( "topic" );
+            return { std::move( datastore ), broadcaster };
         }
 
         void TearDown() override
@@ -373,8 +374,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux1", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = crdt_pair.datastore;
+        auto second_broadcaster = crdt_pair.broadcaster;
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
@@ -399,16 +400,15 @@ namespace sgns::crdt
 
         ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
 
-        filters_complete_future.wait();
-        while ( true )
-        {
-            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
-            if ( head_height.has_value() && head_height.value() > 0 )
+        ASSERT_EQ( filters_complete_future.wait_for( std::chrono::seconds( 10 ) ), std::future_status::ready )
+            << "Received " << filter_called_count.load() << " of 4 expected filter calls";
+        ASSERT_TRUE( waitForCondition(
+            [&]
             {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
+                auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+                return head_height.has_value() && head_height.value() > 0;
+            },
+            std::chrono::seconds( 10 ) ) ) << "Receiver did not apply the final head";
 
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
@@ -418,7 +418,6 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
-        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackOneValid )
@@ -452,8 +451,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux2", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = crdt_pair.datastore;
+        auto second_broadcaster = crdt_pair.broadcaster;
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
@@ -478,16 +477,15 @@ namespace sgns::crdt
 
         ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
 
-        filters_complete_future.wait();
-        while ( true )
-        {
-            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
-            if ( head_height.has_value() && head_height.value() > 0 )
+        ASSERT_EQ( filters_complete_future.wait_for( std::chrono::seconds( 10 ) ), std::future_status::ready )
+            << "Received " << filter_called_count.load() << " of 4 expected filter calls";
+        ASSERT_TRUE( waitForCondition(
+            [&]
             {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
+                auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+                return head_height.has_value() && head_height.value() > 0;
+            },
+            std::chrono::seconds( 10 ) ) ) << "Receiver did not apply the final head";
 
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), false );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
@@ -496,7 +494,6 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
-        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackMultipleDeltas )
@@ -530,8 +527,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux3", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = crdt_pair.datastore;
+        auto second_broadcaster = crdt_pair.broadcaster;
 
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
@@ -566,16 +563,15 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
         ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta4, { "topic" } ) );
 
-        filters_complete_future.wait();
-        while ( true )
-        {
-            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
-            if ( head_height.has_value() && head_height.value() > 0 )
+        ASSERT_EQ( filters_complete_future.wait_for( std::chrono::seconds( 10 ) ), std::future_status::ready )
+            << "Received " << filter_called_count.load() << " of 4 expected filter calls";
+        ASSERT_TRUE( waitForCondition(
+            [&]
             {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
+                auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+                return head_height.has_value() && head_height.value() > 0;
+            },
+            std::chrono::seconds( 10 ) ) ) << "Receiver did not apply the final head";
 
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key3" } ), true );
@@ -587,7 +583,6 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
-        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackMultipleFilters )
@@ -610,8 +605,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = crdt_pair.datastore;
+        auto second_broadcaster = crdt_pair.broadcaster;
 
         //This Filter always accepts all values
         second_crdt->RegisterElementFilter( "Key.*",
@@ -669,16 +664,15 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
         ASSERT_OUTCOME_SUCCESS( final_cid, crdtDatastore_->Publish( delta4, { "topic" } ) );
 
-        filters_complete_future.wait();
-        while ( true )
-        {
-            auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
-            if ( head_height.has_value() && head_height.value() > 0 )
+        ASSERT_EQ( filters_complete_future.wait_for( std::chrono::seconds( 10 ) ), std::future_status::ready )
+            << "Received " << filter_called_count.load() << " of 4 expected filter calls";
+        ASSERT_TRUE( waitForCondition(
+            [&]
             {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
+                auto head_height = second_crdt->GetHeadHeight( final_cid, "topic" );
+                return head_height.has_value() && head_height.value() > 0;
+            },
+            std::chrono::seconds( 10 ) ) ) << "Receiver did not apply the final head";
 
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), true );
         EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), true );
@@ -689,7 +683,57 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
-        CloseAndResetCRDT( second_crdt, second_broadcaster );
+    }
+
+    TEST_F( CrdtDatastoreTest, FinalHeadBroadcastFiltersUnseenAncestors )
+    {
+        const std::string acceptedValue = "AcceptMe";
+        const std::string rejectedValue = "RejectMe";
+        std::atomic<int> filter_called_count{ 0 };
+
+        auto receiver = CreateLoopBackCRDTInstance( databasePath + "final-head-only", ipfsDataStore_ );
+        receiver.datastore->RegisterElementFilter(
+            "Key.*",
+            [&]( const Element &element ) -> CRDTDataFilter::ElementFilterResult
+            {
+                ++filter_called_count;
+                if ( element.value() == rejectedValue )
+                {
+                    return CRDTDataFilter::ElementFilterResult::Reject( std::vector<Element>{ element } );
+                }
+                return CRDTDataFilter::ElementFilterResult::Accept();
+            } );
+
+        // Publish a chain while disconnected. Coalesced broadcasts may announce
+        // only its final head; the receiver must still fetch and filter ancestry.
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( CreateTestDelta( "Key1", acceptedValue, 1 ), { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( CreateTestDelta( "Key2", rejectedValue, 2 ), { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS( final_cid,
+                                crdtDatastore_->Publish( CreateTestDelta( "Key3", acceptedValue, 3 ), { "topic" } ) );
+        crdtDatastore_->Close(); // Drain queued announcements before connecting the mirror.
+
+        broadcaster_->SetMirrorCounterPart( receiver.broadcaster );
+        pb::CRDTBroadcast final_head;
+        ASSERT_OUTCOME_SUCCESS( cid_string, final_cid.toString() );
+        final_head.add_heads()->set_cid( cid_string );
+        Buffer broadcast;
+        broadcast.put( final_head.SerializeAsString() );
+        EXPECT_OUTCOME_TRUE_1( broadcaster_->Broadcast( broadcast, "topic" ) );
+        receiver.datastore->Start();
+
+        ASSERT_TRUE( waitForCondition(
+            [&]
+            {
+                auto head_height = receiver.datastore->GetHeadHeight( final_cid, "topic" );
+                return head_height.has_value() && head_height.value() > 0;
+            },
+            std::chrono::seconds( 10 ) ) ) << "Receiver did not apply the final head";
+
+        EXPECT_EQ( filter_called_count.load(), 3 );
+        EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( { "Key1" } ), true );
+        EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( { "Key2" } ), false );
+        EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( { "Key3" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackDependencyStallRetriesUntilAccepted )
@@ -717,8 +761,8 @@ namespace sgns::crdt
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux5", ipfsDataStore_ );
 
-        auto second_crdt        = crdt_pair.first;
-        auto second_broadcaster = crdt_pair.second;
+        auto second_crdt        = crdt_pair.datastore;
+        auto second_broadcaster = crdt_pair.broadcaster;
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
@@ -761,6 +805,5 @@ namespace sgns::crdt
         }
         EXPECT_TRUE( converged );
 
-        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 }
