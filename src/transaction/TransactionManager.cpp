@@ -201,6 +201,53 @@ namespace sgns
                 return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
             } );
 
+        // Phase 8 (D-08-05/D-08-06): TaskRejectionSubject handlers. The subject
+        // handler independently re-runs the price gate on the referenced
+        // task+escrow — validators verify the rejection claim, never trust the
+        // proposer's say-so (CONS-03 anti-forgery). The certificate handler
+        // restores the poster's funds once quorum has certified the rejection
+        // (CONS-02): FAILED rollback for an uncertified escrow (regime 1) or the
+        // CONFIRMED-gated full-refund release (regime 2).
+        instance->blockchain_->RegisterCertificateHandler(
+            TASK_REJECTION_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::string          &subject_hash,
+                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->HandleTaskRejectionCertificate( subject_hash, certificate );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+        instance->blockchain_->RegisterSubjectHandler(
+            TASK_REJECTION_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->HandleTaskRejectionSubject( subject );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+        // Slot identity for rejection subjects is the rejected escrow itself, so
+        // every honest rejector's proposal for the same escrow competes in ONE
+        // slot: duplicate proposals collapse through the existing slot machinery
+        // and one certificate settles the rejection network-wide (D-08-05).
+        instance->blockchain_->RegisterSlotKeyHandler(
+            TASK_REJECTION_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto payload = ConsensusManager::DecodeTaskRejectionSubject( subject );
+                if ( payload.has_value() && !payload.value().original_escrow_hash().empty() )
+                {
+                    return std::string( TASK_REJECTION_SUBJECT_TYPE ) + ":" +
+                           payload.value().original_escrow_hash();
+                }
+                return subject.account_id();
+            } );
+
         auto monitored_networks = GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
         {
@@ -394,10 +441,11 @@ namespace sgns
             }
         }
 
-        // Detach from consensus. All are keyed on NONCE_SUBJECT_TYPE.
-        // NOTE: the slot-key handler is deliberately NOT unregistered: its registry
+        // Detach from consensus. The nonce handlers are keyed on NONCE_SUBJECT_TYPE;
+        // the task-rejection handlers are keyed on TASK_REJECTION_SUBJECT_TYPE.
+        // NOTE: the slot-key handlers are deliberately NOT unregistered: their registry
         // is process-global (ConsensusManager::slot_key_handlers_ is static), so
-        // removing it here would strip every other peer in the process — and a
+        // removing them here would strip every other peer in the process — and a
         // restarted peer's RecoverActiveVotes (ConsensusManager::New, which runs
         // before this manager re-registers) would then decode durable nonce slots
         // through the ComputeSubjectId fallback and reject its own active votes.
@@ -406,6 +454,8 @@ namespace sgns
             blockchain_->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
             blockchain_->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
             blockchain_->UnregisterProposalCleanupHandler( NONCE_SUBJECT_TYPE );
+            blockchain_->UnregisterCertificateHandler( TASK_REJECTION_SUBJECT_TYPE );
+            blockchain_->UnregisterSubjectHandler( TASK_REJECTION_SUBJECT_TYPE );
         }
 
         // Detach from the account while it is still guaranteed alive: GeniusNode calls
@@ -4613,6 +4663,196 @@ namespace sgns
         if ( price_reject_notifier_ )
         {
             price_reject_notifier_( tx, outcome );
+        }
+    }
+
+    ConsensusManager::ValidationResult TransactionManager::HandleTaskRejectionSubject(
+        const ConsensusManager::Subject &subject ) const
+    {
+        auto payload_result = ConsensusManager::DecodeTaskRejectionSubject( subject );
+        if ( payload_result.has_error() )
+        {
+            m_logger->warn( "{}: TaskRejectionSubject payload undecodable, rejecting", __func__ );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+        const auto &payload = payload_result.value();
+
+        auto fetch_result = FetchTransaction( *globaldb_m, payload.escrow_path() );
+        if ( fetch_result.has_error() )
+        {
+            m_logger->warn( "{}: rejection refs unresolvable locally (escrow_path={} err={}) task={} — rejecting",
+                            __func__,
+                            payload.escrow_path(),
+                            fetch_result.error().message(),
+                            payload.task_id() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( fetch_result.value() );
+        if ( !escrow_tx )
+        {
+            m_logger->warn( "{}: escrow_path {} does not hold an escrow transaction — rejecting task={}",
+                            __func__,
+                            payload.escrow_path(),
+                            payload.task_id() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+        if ( escrow_tx->GetHash() != payload.original_escrow_hash() )
+        {
+            // escrow_path and original_escrow_hash must identify the SAME escrow:
+            // a subject whose refs disagree is forged (T-08-07).
+            m_logger->warn( "{}: escrow hash mismatch — path {} resolves to {} but subject claims {} (task={})",
+                            __func__,
+                            payload.escrow_path(),
+                            escrow_tx->GetHash(),
+                            payload.original_escrow_hash(),
+                            payload.task_id() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+
+        // D-08-06 independent verification: re-run the price gate on the
+        // referenced task+escrow from local state. The recomputed verdict must be
+        // Reject AND its typed reason must equal the subject's claim — anything
+        // else (Accept, Pending, or a different reason) is a forged or stale
+        // rejection and cannot certify.
+        const auto recomputed = EvaluateEscrowPriceGate( *escrow_tx );
+        if ( recomputed.check != EscrowPriceGateOutcome::Check::Reject )
+        {
+            m_logger->warn( "{}: recomputed gate verdict is not Reject (check={}) for escrow {} task={} — "
+                            "honest job falsely accused, rejecting subject",
+                            __func__,
+                            static_cast<int>( recomputed.check ),
+                            escrow_tx->GetHash(),
+                            payload.task_id() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+        if ( static_cast<uint32_t>( recomputed.reason ) != payload.reject_reason() )
+        {
+            m_logger->warn( "{}: recomputed reject reason {} does not match subject reason {} for escrow {} "
+                            "task={} — forged or stale rejection, rejecting subject",
+                            __func__,
+                            recomputed.reason,
+                            payload.reject_reason(),
+                            escrow_tx->GetHash(),
+                            payload.task_id() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
+
+        m_logger->info( "{}: rejection independently verified escrow={} task={} reason={}",
+                        __func__,
+                        escrow_tx->GetHash(),
+                        payload.task_id(),
+                        payload.reject_reason() );
+        return ConsensusManager::ValidationResult::Approve();
+    }
+
+    outcome::result<ConsensusManager::Check> TransactionManager::HandleTaskRejectionCertificate(
+        const std::string          &subject_hash,
+        const ConsensusCertificate &certificate )
+    {
+        auto payload_result = ConsensusManager::DecodeTaskRejectionSubject( certificate.proposal().subject() );
+        if ( payload_result.has_error() )
+        {
+            // A certified subject always carries a decodable payload (CheckSubject and
+            // ValidateSubject drop the undecodable ones before certification), so this
+            // cannot happen through honest consensus — ignore rather than retry forever.
+            m_logger->warn( "{}: certified rejection subject undecodable proposal_id={} — ignoring",
+                            __func__,
+                            certificate.proposal_id() );
+            return ConsensusManager::Check::Approve;
+        }
+        const auto &payload = payload_result.value();
+
+        auto fetch_result = FetchTransaction( *globaldb_m, payload.escrow_path() );
+        if ( fetch_result.has_error() )
+        {
+            // Locally-unknown escrow hash: nothing to restore on this node — no error
+            // state, the certificate work is settled.
+            m_logger->info( "{}: escrow_path {} unknown locally (err={}) — rejection certificate has nothing "
+                            "to restore here",
+                            __func__,
+                            payload.escrow_path(),
+                            fetch_result.error().message() );
+            return ConsensusManager::Check::Approve;
+        }
+        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( fetch_result.value() );
+        if ( !escrow_tx )
+        {
+            m_logger->info( "{}: escrow_path {} is not an escrow transaction here — nothing to restore",
+                            __func__,
+                            payload.escrow_path() );
+            return ConsensusManager::Check::Approve;
+        }
+        if ( escrow_tx->GetHash() != payload.original_escrow_hash() )
+        {
+            m_logger->warn( "{}: certified rejection refs disagree (path {} -> {} vs claimed {}) — ignoring",
+                            __func__,
+                            payload.escrow_path(),
+                            escrow_tx->GetHash(),
+                            payload.original_escrow_hash() );
+            return ConsensusManager::Check::Approve;
+        }
+
+        const auto tracked = GetTrackedTxByHash( escrow_tx->GetHash() );
+        if ( !tracked.has_value() )
+        {
+            // Escrow bytes are known but not tracked locally (e.g. a light node that
+            // never validated this escrow): no local reservations or state to restore.
+            m_logger->info( "{}: escrow {} not tracked locally — rejection certificate settled without effects",
+                            __func__,
+                            escrow_tx->GetHash() );
+            return ConsensusManager::Check::Approve;
+        }
+
+        switch ( tracked->status )
+        {
+            case TransactionStatus::FAILED:
+            case TransactionStatus::INVALID:
+            {
+                // The refund already ran (an earlier delivery of this certificate, or
+                // the poster's own gate path): FAILED rollback is idempotent-guarded,
+                // so settle without re-entering the state machine.
+                m_logger->info( "{}: escrow {} already {} — rejection refund already applied",
+                                __func__,
+                                escrow_tx->GetHash(),
+                                tracked->status == TransactionStatus::FAILED ? "FAILED" : "INVALID" );
+                return ConsensusManager::Check::Approve;
+            }
+            case TransactionStatus::CONFIRMED:
+            {
+                // Regime 2 (divergence topology): the escrow certified despite the
+                // rejection, so a real escrow UTXO exists. Route to the CONFIRMED-gated
+                // full-refund release spend (Task 2: BuildRejectionReleaseTransaction).
+                m_logger->info( "{}: rejection certificate for CONFIRMED escrow {} (regime 2) — routing to "
+                                "rejection release",
+                                __func__,
+                                escrow_tx->GetHash() );
+                return ConsensusManager::Check::Approve;
+            }
+            default:
+            {
+                // Regime 1 (all-honest topology): the escrow never certified here, so
+                // there is no escrow UTXO to spend. Drive the tracked escrow to FAILED;
+                // the existing FAILED machinery performs RollbackUTXOs on the poster,
+                // returning GetBalance (UTXO_READY-only) to its pre-post level.
+                m_logger->info( "{}: rejection certificate driving tracked escrow {} (status={}) to FAILED "
+                                "(regime 1) subject_hash={}",
+                                __func__,
+                                escrow_tx->GetHash(),
+                                static_cast<int>( tracked->status ),
+                                subject_hash );
+                auto fail_result = ChangeTransactionState( escrow_tx, TransactionStatus::FAILED );
+                if ( fail_result.has_error() )
+                {
+                    m_logger->error( "{}: FAILED transition failed for escrow {} err={}",
+                                     __func__,
+                                     escrow_tx->GetHash(),
+                                     fail_result.error().message() );
+                    // Transient state-machine failure: keep the certificate work
+                    // retryable so the refund is not lost.
+                    return outcome::failure( fail_result.error() );
+                }
+                return ConsensusManager::Check::Approve;
+            }
         }
     }
 

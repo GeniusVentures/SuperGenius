@@ -1022,6 +1022,39 @@ namespace sgns
         void                  ReleaseBridgeMintReservation( const GeniusTransaction &tx );
         bool                  EnterFinalityFaultBarrier();
 
+        /**
+         * @brief Vote-time verification of a TaskRejectionSubject (D-08-06).
+         *
+         * Independently re-runs the escrow price gate on the referenced
+         * task+escrow and approves only when the recomputed verdict is Reject
+         * AND its typed reason equals the subject's reject_reason. A forged or
+         * stale rejection (mismatched reason, unresolvable refs, or a subject
+         * whose refs recompute to Accept) can never certify (CONS-03).
+         *
+         * @param[in] subject Raw consensus subject to decode and verify.
+         * @return Approve on recomputed-reason match, otherwise Reject.
+         */
+        ConsensusManager::ValidationResult HandleTaskRejectionSubject(
+            const ConsensusManager::Subject &subject ) const;
+
+        /**
+         * @brief Applies a certified TaskRejectionSubject (D-08-05/D-08-07).
+         *
+         * Restores the poster's funds in whichever refund regime the tracked
+         * escrow is in: a PENDING/UNCONFIRMED (non-CONFIRMED, non-terminal)
+         * tracked escrow is driven to FAILED so the existing FAILED machinery
+         * performs RollbackUTXOs (regime 1); a CONFIRMED escrow routes to the
+         * regime-2 full-refund release spend. A locally-unknown escrow hash is
+         * ignored without an error state (nothing to restore on this node).
+         *
+         * @param[in] subject_hash Subject hash the certificate was keyed on.
+         * @param[in] certificate  Certified rejection carrier.
+         * @return Approve once the certificate's effects are settled.
+         */
+        outcome::result<ConsensusManager::Check> HandleTaskRejectionCertificate(
+            const std::string          &subject_hash,
+            const ConsensusCertificate &certificate );
+
         bool                  fail_bridge_executed_marker_write_for_test_ = false;
         std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
 
