@@ -4987,12 +4987,28 @@ namespace sgns
                 auto release_result = BuildRejectionReleaseTransaction( *escrow_tx );
                 if ( release_result.has_error() )
                 {
-                    // The refund is best-effort here: the certificate itself is
-                    // settled (quorum already certified the rejection), and the
-                    // release either landed or the regime gate correctly declined
-                    // to construct it. Failures are logged, never re-fired — a
-                    // second release of the same escrow would fail as a UTXO
-                    // double-spend anyway (D-08-05).
+                    // WR-03 transient/terminal split. Every failure return in
+                    // BuildRejectionReleaseTransaction happens BEFORE the release
+                    // is constructed or enqueued, so re-driving construction
+                    // cannot double-spend the escrow UTXO (a constructed release
+                    // returns its hash and never reaches this branch, and a
+                    // submitted-but-unobserved release would fail UTXO replay
+                    // checks anyway, D-08-05). A transient failure — the manager
+                    // stopping (operation_canceled) — therefore returns Stalled so
+                    // the certificate-work journal re-runs this handler on its next
+                    // tick with backoff (and after restart via journal recovery),
+                    // mirroring the regime-1 retry contract below. Terminal
+                    // failures (no payout output, non-CONFIRMED escrow) settle
+                    // Approve: the certificate is already network-authoritative
+                    // and no retry can make the refund constructible.
+                    if ( release_result.error() == std::errc::operation_canceled )
+                    {
+                        m_logger->warn( "{}: rejection release transiently unavailable for escrow {} (manager "
+                                        "stopping) — certificate work stays retryable",
+                                        __func__,
+                                        escrow_tx->GetHash() );
+                        return ConsensusManager::Check::Stalled;
+                    }
                     m_logger->error( "{}: rejection release construction failed for escrow {} err={}",
                                      __func__,
                                      escrow_tx->GetHash(),
