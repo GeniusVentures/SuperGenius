@@ -1548,6 +1548,22 @@ namespace sgns
          */
         TransactionManager::EscrowPriceGateOutcome FindTaskByEscrow( const GeniusTransaction &tx );
 
+        /**
+         * @brief Claim-time price backstop check (D-08-04/D-08-10).
+         *
+         * Fetches the task's escrow via the TransactionManager::FetchTransaction
+         * globaldb seam and re-uses ValidateTaskPriceClaim. An escrow that
+         * cannot be resolved fails closed (false — never processed; 08-RESEARCH
+         * Open Q5). A NoCoverage verdict triggers one bounded synchronous
+         * genius-ai fetch and a re-validation so honest tasks regain
+         * claimability within one fetch cycle; a still-uncovered or
+         * deterministically-gamed claim returns false (MarkTaskBad skip).
+         *
+         * @param[in] task Claim candidate from GrabTask.
+         * @return true when the task may be claimed; false marks it bad.
+         */
+        bool CheckTaskPriceBackstop( const SGProcessing::Task &task );
+
         static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread> io_threads_;                            ///< Threads running @ref io_.

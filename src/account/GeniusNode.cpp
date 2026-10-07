@@ -1886,7 +1886,29 @@ namespace sgns
             return false;
         }
 
-        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
+        task_queue_ = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
+        // Phase 8 (D-08-04): claim-time price backstop — re-validate the task's
+        // claimed_price against node-local price evidence before any claim is
+        // handed out. Wired immediately after construction so no GrabTask can
+        // run without enforcement.
+        if ( auto task_queue_impl = std::dynamic_pointer_cast<processing::TaskQueueImpl>( task_queue_ ) )
+        {
+            task_queue_impl->SetPriceBackstop(
+                [weak_self = weak_from_this()]( const SGProcessing::Task &task ) -> bool
+                {
+                    if ( auto self = weak_self.lock() )
+                    {
+                        return self->CheckTaskPriceBackstop( task );
+                    }
+                    // Owner dying: fail closed — never hand out a task the
+                    // node can no longer verify.
+                    return false;
+                } );
+        }
+        else
+        {
+            node_logger_->error( "Failed to install price backstop: task queue is not a TaskQueueImpl" );
+        }
         processing_core_ = processing::ProcessingCoreImpl::New( task_queue_,
                                                                 1,
                                                                 dev_config_.TokenID,
@@ -3783,6 +3805,65 @@ namespace sgns
         GateOutcome pending{};
         pending.check = GateOutcome::Check::Pending;
         return pending;
+    }
+
+    bool GeniusNode::CheckTaskPriceBackstop( const SGProcessing::Task &task )
+    {
+        // Fail-closed on an unresolvable escrow (08-RESEARCH Open Q5): a
+        // catchup-synced task whose escrow bytes cannot be fetched is never
+        // handed out for processing.
+        auto escrow_tx = TransactionManager::FetchTransaction( *tx_globaldb_, task.escrow_path() );
+        if ( escrow_tx.has_error() )
+        {
+            node_logger_->error( "{}: escrow fetch failed for task {} escrow_path={} (fail-closed)",
+                                 __func__,
+                                 task.ipfs_block_id(),
+                                 task.escrow_path() );
+            return false;
+        }
+        auto escrow = std::dynamic_pointer_cast<EscrowTransaction>( escrow_tx.value() );
+        if ( !escrow )
+        {
+            node_logger_->error( "{}: escrow_path {} did not resolve to an EscrowTransaction for task {} (fail-closed)",
+                                 __func__,
+                                 task.escrow_path(),
+                                 task.ipfs_block_id() );
+            return false;
+        }
+
+        auto verdict = ValidateTaskPriceClaim( task, *escrow );
+        if ( verdict.accepted )
+        {
+            return true;
+        }
+        if ( verdict.reason == PriceValidationReason::NoCoverage )
+        {
+            // Bounded self-heal before failing closed: one synchronous quote
+            // fetch (the claim loop may briefly block — never the consensus
+            // thread) and a re-validation, so an honest task whose node simply
+            // had not fetched yet stays claimable instead of being permanently
+            // MarkTaskBad'd. A fetch failure or still-empty window falls
+            // through to the fail-closed return below.
+            node_logger_->warn( "{}: no local price coverage for task {} escrow_path={}, fetching then re-validating",
+                                 __func__,
+                                 task.ipfs_block_id(),
+                                 task.escrow_path() );
+            auto fetch = GetOrCreatePriceManager()->GetQuotes( { "genius-ai" }, "usd" );
+            if ( !fetch.has_error() )
+            {
+                verdict = ValidateTaskPriceClaim( task, *escrow );
+                if ( verdict.accepted )
+                {
+                    return true;
+                }
+            }
+        }
+        node_logger_->error( "{}: price backstop rejected task {} escrow_path={} reason={} (fail-closed)",
+                             __func__,
+                             task.ipfs_block_id(),
+                             task.escrow_path(),
+                             static_cast<int>( verdict.reason ) );
+        return false;
     }
 
     outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )

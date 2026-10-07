@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <memory>
+#include <functional>
 
 #include "processing/processing_task_queue.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -57,6 +58,20 @@ namespace sgns::processing
         std::vector<std::string> ListTaskKeys() override;
         outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) override;
 
+        /// @brief Claim-time price backstop predicate (D-08-04). Called with
+        ///        each GrabTask candidate after GetTask and the
+        ///        IsProcessingValid check; a false return marks the task bad
+        ///        (per-node in-memory skip, D-08-10) and continues the scan.
+        using TaskPriceBackstopFn = std::function<bool( const SGProcessing::Task & )>;
+
+        /**
+         * @brief Installs the price backstop. A null (or never-set) backstop
+         *        leaves GrabTask behavior unchanged.
+         * @param[in] backstop Predicate returning false for tasks that must
+         *                     never be claimed (price-claim validation failed).
+         */
+        void SetPriceBackstop( TaskPriceBackstopFn backstop );
+
     private:
         static constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
         /**
@@ -94,6 +109,8 @@ namespace sgns::processing
         std::string processing_topic_;
         /// Jobs (tasks) that are incompatible with ProcessingManager
         std::unordered_set<std::string> incompatible_jobs_;
+        /// Price backstop injected by the node (null = unchanged behavior, D-08-04)
+        TaskPriceBackstopFn price_backstop_;
     };
 }
 #endif // TASK_QUEUE_IMPL_HPP

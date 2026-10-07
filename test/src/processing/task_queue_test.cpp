@@ -16,6 +16,7 @@
 #include "processing/impl/TaskKeys.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "testutil/storage/base_crdt_test.hpp"
+#include <processingbase/ProcessingManager.hpp>
 
 using namespace sgns::processing;
 using namespace sgns;
@@ -348,4 +349,140 @@ TEST_F( TaskQueueImplTest, ListTaskKeysSkipsEmptyEntries )
     auto keys = queue_->ListTaskKeys();
     ASSERT_EQ( keys.size(), 1u );
     EXPECT_EQ( keys[0], "task_valid" );
+}
+
+// ---------------------------------------------------------------------------
+// TaskQueue — claim-time price backstop (Phase 8, D-08-04/D-08-10)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// JSON that passes sgns::sgprocessing::ProcessingManager::IsProcessingValid
+    /// (GrabTask runs that check before the backstop, so the minimal MakeTask
+    /// json cannot reach the backstop path). Single-pass inference shape
+    /// mirroring the PostProcessing fixture's validated job spec.
+    const std::string kValidProcessingJson = R"({
+  "name": "backstop-probe",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "image",
+      "source_uri_param": "file://model.data",
+      "type": "texture2D",
+      "dimensions": {
+        "width": 64,
+        "height": 64,
+        "block_len": 16384,
+        "block_line_stride": 256,
+        "block_stride": 0,
+        "chunk_line_stride": 64,
+        "chunk_offset": 0,
+        "chunk_stride": 256,
+        "chunk_subchunk_height": 4,
+        "chunk_subchunk_width": 4,
+        "chunk_count": 16
+      },
+      "format": "RGBA8"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "keypoints",
+      "source_uri_param": "dummy",
+      "type": "tensor",
+      "dimensions": { "width": 17, "height": 3 },
+      "format": "FLOAT32"
+    }
+  ],
+  "passes": [
+    {
+      "name": "inference",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          { "name": "input", "type": "texture2D", "source": "input:image", "shape": [1, 32, 32, 4] }
+        ],
+        "output_nodes": [
+          { "name": "output", "type": "tensor", "target": "output:keypoints", "shape": [1, 17, 3] }
+        ]
+      }
+    }
+  ]
+})";
+} // namespace
+
+/// Suite named TaskQueue so gtest_filter=TaskQueue.PriceBackstop* selects it;
+/// reuses the CRDT-backed TaskQueueImplTest fixture.
+class TaskQueue : public TaskQueueImplTest
+{
+};
+
+TEST_F( TaskQueue, PriceBackstopRejectMarksTaskBad )
+{
+    ASSERT_TRUE( sgns::sgprocessing::ProcessingManager::IsProcessingValid( kValidProcessingJson ) )
+        << "precondition: probe json must pass IsProcessingValid so GrabTask reaches the backstop";
+
+    const std::string taskId = "aaa_backstop_rejected";
+    auto              task   = MakeTask( taskId, "escrow_backstop_rejected" );
+    task.set_json_data( kValidProcessingJson );
+    auto sub = MakeSubTask( taskId, "sub_backstop" );
+    ASSERT_TRUE( queue_->EnqueueTask( task, { sub } ).has_value() );
+
+    // Rejecting backstop: GrabTask must fail and never return the task
+    // (D-08-04 — a rejected task is never handed out for processing).
+    queue_->SetPriceBackstop( []( const SGProcessing::Task & ) { return false; } );
+    auto grabbed = queue_->GrabTask();
+    ASSERT_TRUE( grabbed.has_error() ) << "rejected task must not be returned by GrabTask";
+
+    // Disambiguate the follow-up skip from the claim lock: GrabTask locked the
+    // task before rejecting it, so remove the lock key and prove the skip is
+    // incompatible_jobs_ (MarkTaskBad semantics, D-08-10) rather than the lock.
+    const std::string taskKey = TaskKeys::TaskKey( taskId );
+    auto              removed = db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::LockKey( taskKey ) ),
+                                             { topic_ } );
+    ASSERT_TRUE( removed.has_value() ) << "test failed to remove the claim lock";
+
+    // With an accepting backstop and no lock, the task must STILL be skipped —
+    // MarkTaskBad inserted it into incompatible_jobs_.
+    queue_->SetPriceBackstop( []( const SGProcessing::Task & ) { return true; } );
+    auto regrabged = queue_->GrabTask();
+    EXPECT_TRUE( regrabged.has_error() ) << "MarkTaskBad must durably skip the rejected task";
+}
+
+TEST_F( TaskQueue, PriceBackstopUnsetKeepsBehavior )
+{
+    ASSERT_TRUE( sgns::sgprocessing::ProcessingManager::IsProcessingValid( kValidProcessingJson ) )
+        << "precondition: probe json must pass IsProcessingValid so GrabTask reaches the backstop";
+
+    // Never-set backstop: default behavior unchanged — the task is grabbed.
+    const std::string alphaId = "aaa_unset_task";
+    auto              alpha   = MakeTask( alphaId, "escrow_unset" );
+    alpha.set_json_data( kValidProcessingJson );
+    ASSERT_TRUE( queue_->EnqueueTask( alpha, { MakeSubTask( alphaId, "sub_alpha" ) } ).has_value() );
+
+    auto grabbed = queue_->GrabTask();
+    ASSERT_TRUE( grabbed.has_value() );
+    EXPECT_EQ( grabbed.value().first, alphaId );
+
+    // Set-then-reset: a rejecting backstop skips the next task, and resetting
+    // to null restores claiming for a fresh task (null default, D-08-04).
+    queue_->SetPriceBackstop( []( const SGProcessing::Task & ) { return false; } );
+    const std::string betaId = "bbb_reject_task";
+    auto              beta   = MakeTask( betaId, "escrow_beta" );
+    beta.set_json_data( kValidProcessingJson );
+    ASSERT_TRUE( queue_->EnqueueTask( beta, { MakeSubTask( betaId, "sub_beta" ) } ).has_value() );
+    EXPECT_TRUE( queue_->GrabTask().has_error() );
+
+    queue_->SetPriceBackstop( nullptr );
+    const std::string gammaId = "ccc_reset_task";
+    auto              gamma   = MakeTask( gammaId, "escrow_gamma" );
+    gamma.set_json_data( kValidProcessingJson );
+    ASSERT_TRUE( queue_->EnqueueTask( gamma, { MakeSubTask( gammaId, "sub_gamma" ) } ).has_value() );
+    auto regrabbed = queue_->GrabTask();
+    ASSERT_TRUE( regrabbed.has_value() );
+    EXPECT_EQ( regrabbed.value().first, gammaId );
 }

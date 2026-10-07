@@ -29,6 +29,11 @@ namespace sgns::processing
     {
     }
 
+    void TaskQueueImpl::SetPriceBackstop( TaskPriceBackstopFn backstop )
+    {
+        price_backstop_ = std::move( backstop );
+    }
+
     outcome::result<void> TaskQueueImpl::EnqueueTask( const SGProcessing::Task                &task,
                                                       const std::list<SGProcessing::SubTask>  &subTasks,
                                                       std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
@@ -162,6 +167,21 @@ namespace sgns::processing
                 TaskQueueImplLogger()->error( "Task with ID: {} has invalid processing data", taskId );
                 MarkTaskBad( taskId );
                 continue;
+            }
+            // Phase 8 (D-08-04): claim-time price backstop — the task's price
+            // claim is re-validated before the task is handed out for
+            // processing. A false verdict marks the task bad (per-node
+            // in-memory skip, D-08-10 — no CRDT write, no network tombstone)
+            // and the scan continues, so a rejected task is never returned.
+            if ( price_backstop_ )
+            {
+                if ( !price_backstop_( task ) )
+                {
+                    TaskQueueImplLogger()->error(
+                        "Task with ID: {} rejected by price backstop, marking bad and skipping", taskId );
+                    MarkTaskBad( taskId );
+                    continue;
+                }
             }
             return std::make_pair( taskId, task );
         }
