@@ -37,6 +37,7 @@ namespace sgns
 {
     static constexpr std::string_view NONCE_SUBJECT_TYPE          = "sgns.nonce.v1";
     static constexpr std::string_view TASK_RESULT_SUBJECT_TYPE    = "sgns.task_result.v1";
+    static constexpr std::string_view TASK_REJECTION_SUBJECT_TYPE = "sgns.task_rejection.v1";
     static constexpr std::string_view REGISTRY_BATCH_SUBJECT_TYPE = "sgns.registry_batch.v1";
 
     /**
@@ -486,6 +487,7 @@ namespace sgns
         static outcome::result<std::string>          ComputeSubjectTypeHash( std::string_view subject_type );
         static outcome::result<NonceSubject>         DecodeNonceSubject( const Subject &subject );
         static outcome::result<TaskResultSubject>    DecodeTaskResultSubject( const Subject &subject );
+        static outcome::result<TaskRejectionSubject> DecodeTaskRejectionSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
         static bool SubjectTypeMatches( const Subject &subject, std::string_view subject_type );
         /**
@@ -517,6 +519,23 @@ namespace sgns
                                                                  const std::string &escrow_path,
                                                                  const std::string &task_result_hash,
                                                                  uint64_t           result_epoch );
+        /**
+         * @brief Creates a task-rejection subject (D-08-06 rejection-release carrier).
+         * @param[in] account_id Account identifier bound to the subject.
+         * @param[in] escrow_path Escrow path associated with the gamed task.
+         * @param[in] task_id Identifier of the rejected task (task.ipfs_block_id).
+         * @param[in] reject_reason Typed rejection reason (static_cast of
+         *                         sgns::PriceValidationReason); must be non-zero
+         *                         (0 = Accepted can never legitimate a rejection).
+         * @param[in] original_escrow_hash Hash of the original escrow transaction
+         *                                 whose UTXO is released back to the poster.
+         * @return Constructed subject or an error.
+         */
+        static outcome::result<Subject> CreateTaskRejectionSubject( const std::string &account_id,
+                                                                    const std::string &escrow_path,
+                                                                    const std::string &task_id,
+                                                                    uint32_t          reject_reason,
+                                                                    const std::string &original_escrow_hash );
         /**
          * @brief Creates a registry-batch subject.
          * @param[in] account_id Account identifier bound to the subject.

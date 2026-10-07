@@ -815,6 +815,15 @@ namespace sgns
             }
             return payload.value().task_result_hash();
         }
+        if ( SubjectTypeMatches( subject, TASK_REJECTION_SUBJECT_TYPE ) )
+        {
+            auto payload = DecodeTaskRejectionSubject( subject );
+            if ( payload.has_error() || payload.value().original_escrow_hash().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return payload.value().original_escrow_hash();
+        }
         if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
         {
             auto payload = DecodeRegistryBatchSubject( subject );
@@ -4047,6 +4056,21 @@ namespace sgns
         return payload;
     }
 
+    outcome::result<TaskRejectionSubject> ConsensusManager::DecodeTaskRejectionSubject( const Subject &subject )
+    {
+        auto raw_payload = ExtractBuiltinPayload( subject, TASK_REJECTION_SUBJECT_TYPE );
+        if ( raw_payload.has_error() )
+        {
+            return outcome::failure( raw_payload.error() );
+        }
+        TaskRejectionSubject payload;
+        if ( !payload.ParseFromString( raw_payload.value() ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return payload;
+    }
+
     outcome::result<RegistryBatchSubject> ConsensusManager::DecodeRegistryBatchSubject( const Subject &subject )
     {
         auto raw_payload = ExtractBuiltinPayload( subject, REGISTRY_BATCH_SUBJECT_TYPE );
@@ -4118,6 +4142,36 @@ namespace sgns
         payload.set_task_result_hash( task_result_hash.data(), task_result_hash.size() );
         payload.set_result_epoch( result_epoch );
         auto type_hash = ComputeSubjectTypeHash( TASK_RESULT_SUBJECT_TYPE );
+        if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        subject.mutable_subject_type_hash()->set_hash( type_hash.value().data(), type_hash.value().size() );
+
+        ConsensusManagerLogger()->debug( "{}: success", __func__ );
+        return subject;
+    }
+
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateTaskRejectionSubject(
+        const std::string &account_id,
+        const std::string &escrow_path,
+        const std::string &task_id,
+        uint32_t           reject_reason,
+        const std::string &original_escrow_hash )
+    {
+        ConsensusManagerLogger()->trace( "{}: called account_id={} task_id={} reject_reason={}",
+                                         __func__,
+                                         account_id,
+                                         task_id,
+                                         reject_reason );
+        Subject subject;
+        subject.set_account_id( account_id );
+        TaskRejectionSubject payload;
+        payload.set_escrow_path( escrow_path );
+        payload.set_task_id( task_id );
+        payload.set_reject_reason( reject_reason );
+        payload.set_original_escrow_hash( original_escrow_hash );
+        auto type_hash = ComputeSubjectTypeHash( TASK_REJECTION_SUBJECT_TYPE );
         if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -4293,6 +4347,13 @@ namespace sgns
             auto payload = DecodeTaskResultSubject( subject );
             return payload.has_value() && !payload.value().task_result_hash().empty();
         }
+        if ( SubjectTypeMatches( subject, TASK_REJECTION_SUBJECT_TYPE ) )
+        {
+            auto payload = DecodeTaskRejectionSubject( subject );
+            return payload.has_value() && !payload.value().escrow_path().empty()
+                   && !payload.value().task_id().empty() && payload.value().reject_reason() != 0
+                   && !payload.value().original_escrow_hash().empty();
+        }
         if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
         {
             auto payload = DecodeRegistryBatchSubject( subject );
@@ -4402,6 +4463,35 @@ namespace sgns
             if ( payload.value().task_result_hash().empty() )
             {
                 ConsensusManagerLogger()->error( "{}: subject task_result task_result_hash is empty", __func__ );
+                return false;
+            }
+            return true;
+        }
+
+        if ( SubjectTypeMatches( subject, TASK_REJECTION_SUBJECT_TYPE ) )
+        {
+            auto payload = DecodeTaskRejectionSubject( subject );
+            if ( payload.has_error() || payload.value().escrow_path().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_rejection escrow_path is empty", __func__ );
+                return false;
+            }
+            if ( payload.value().task_id().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_rejection task_id is empty", __func__ );
+                return false;
+            }
+            if ( payload.value().reject_reason() == 0 )
+            {
+                // 0 (Accepted) can never legitimate a rejection — forged-zero
+                // subjects are dropped here (D-08-06; T-08-03 tampering).
+                ConsensusManagerLogger()->error( "{}: subject task_rejection reject_reason is zero", __func__ );
+                return false;
+            }
+            if ( payload.value().original_escrow_hash().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: subject task_rejection original_escrow_hash is empty",
+                                                 __func__ );
                 return false;
             }
             return true;

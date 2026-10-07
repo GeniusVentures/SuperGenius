@@ -95,6 +95,26 @@ message TaskResultSubject {
   uint64 result_epoch = 3;
 }
 
+// Typed rejection-release subject (D-08-06): the consensus carrier that
+// authorizes returning a gamed job's escrow to the poster (D-08-05).
+// Honest validators re-derive the reject verdict independently on the
+// referenced task + escrow before a certificate can form.
+message TaskRejectionSubject {
+  // Escrow path associated with the gamed task (== task.escrow_path, the
+  // escrow lock id whose UTXO the release will spend).
+  string escrow_path = 1;
+  // Identifier of the rejected task (== task.ipfs_block_id).
+  string task_id = 2;
+  // Typed rejection reason: static_cast<uint32_t> of sgns::PriceValidationReason
+  // (LegacyNoPrice/TimestampFuture/TimestampStale/CostMismatch/AboveBand/
+  // BelowBand/NoCoverage). Non-zero on the wire: 0 (Accepted) can never
+  // legitimate a rejection and is dropped by CheckSubject.
+  uint32 reject_reason = 3;
+  // Hash of the original escrow transaction (identifies the UTXO released
+  // back to the poster's release_address).
+  string original_escrow_hash = 4;
+}
+
 message RegistryBatchSubject {
   string base_registry_cid = 1;
   uint64 base_registry_epoch = 2;
