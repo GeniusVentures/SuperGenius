@@ -985,6 +985,24 @@ namespace sgns
         /// @brief Invokes the price-reject observer when one is set (null-safe).
         void NotifyPriceReject( const GeniusTransaction &tx, const EscrowPriceGateOutcome &outcome ) const;
 
+        /**
+         * @brief First-rejector trigger (D-08-05): proposes the rejection subject.
+         *
+         * Builds the TaskRejectionSubject for a gate-Rejected escrow and submits
+         * it through the consensus proposal path, so quorum can certify the
+         * rejection and the poster's refund becomes network-authoritative.
+         * Duplicates are harmless: the subject is slot-keyed on the rejected
+         * escrow, an existing certificate short-circuits the submission, and
+         * every honest rejector proposes the identical subject anyway.
+         *
+         * All failures are logged and swallowed — the gate verdict is already
+         * decided and returned; this telemetry must never change it.
+         *
+         * @param[in] escrow_tx Escrow-hold transaction the gate rejected.
+         * @param[in] outcome   Rejection verdict (typed reason + matched task id).
+         */
+        void SubmitTaskRejectionSubject( const GeniusTransaction &escrow_tx, const EscrowPriceGateOutcome &outcome );
+
         /** @brief Whole-transaction signature / authorization check. */
         bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
         /** @brief Parent-child registration authority check (transfers from certified children, revokes). */
@@ -1074,6 +1092,18 @@ namespace sgns
          * @return Release transaction hash on success, otherwise an error.
          */
         outcome::result<std::string> BuildRejectionReleaseTransaction( const EscrowTransaction &escrow_tx );
+
+        /**
+         * @brief Canonical slot key for a rejection subject's escrow (D-08-05).
+         *
+         * Shared by the registered slot-key handler and the first-rejector
+         * trigger's certificate dedupe so the two can never drift: every
+         * rejection proposal and certificate for one escrow lives in one slot.
+         *
+         * @param[in] original_escrow_hash Hash of the rejected escrow transaction.
+         * @return Namespaced slot key.
+         */
+        static std::string TaskRejectionSlotKey( const std::string &original_escrow_hash );
 
         bool                  fail_bridge_executed_marker_write_for_test_ = false;
         std::function<void()> fetch_and_process_before_state_change_hook_for_test_;

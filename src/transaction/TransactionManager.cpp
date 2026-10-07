@@ -242,8 +242,8 @@ namespace sgns
                 auto payload = ConsensusManager::DecodeTaskRejectionSubject( subject );
                 if ( payload.has_value() && !payload.value().original_escrow_hash().empty() )
                 {
-                    return std::string( TASK_REJECTION_SUBJECT_TYPE ) + ":" +
-                           payload.value().original_escrow_hash();
+                    return TransactionManager::TaskRejectionSlotKey(
+                        payload.value().original_escrow_hash() );
                 }
                 return subject.account_id();
             } );
@@ -4734,6 +4734,82 @@ namespace sgns
         {
             price_reject_notifier_( tx, outcome );
         }
+    }
+
+    std::string TransactionManager::TaskRejectionSlotKey( const std::string &original_escrow_hash )
+    {
+        return std::string( TASK_REJECTION_SUBJECT_TYPE ) + ":" + original_escrow_hash;
+    }
+
+    void TransactionManager::SubmitTaskRejectionSubject( const GeniusTransaction              &escrow_tx,
+                                                         const EscrowPriceGateOutcome &outcome )
+    {
+        // Best-effort telemetry: every failure below is logged and swallowed. The
+        // gate verdict is already decided and returned to the caller — a notifier
+        // failure must never change it, and the network converges on the rejection
+        // regardless because every honest rejector proposes the identical subject.
+        if ( stopped_.load() || !blockchain_ )
+        {
+            m_logger->debug( "{}: manager stopped or blockchain detached — rejection subject not proposed",
+                             __func__ );
+            return;
+        }
+        if ( outcome.reason == 0 )
+        {
+            // 0 (Accepted) can never legitimate a rejection — CheckSubject would drop
+            // the subject anyway; do not spend a consensus round on it.
+            m_logger->warn( "{}: reject notifier invoked with zero reason for escrow {} — not proposing",
+                            __func__,
+                            escrow_tx.GetHash() );
+            return;
+        }
+
+        // Dedupe (D-08-09: rejection rides consensus only, no second mechanism): an
+        // existing certificate for this escrow's rejection slot means the rejection
+        // is already network-authoritative and the refund machinery has settled —
+        // submit nothing. In-flight duplicates collapse through the slot's candidate
+        // machinery, which keys on this same slot identity.
+        const std::string slot_key = TaskRejectionSlotKey( escrow_tx.GetHash() );
+        if ( blockchain_->CheckCertificateForSlot( slot_key ) )
+        {
+            m_logger->info( "{}: rejection certificate already exists for escrow {} — subject not re-proposed",
+                            __func__,
+                            escrow_tx.GetHash() );
+            return;
+        }
+
+        auto proposal_result = blockchain_->CreateTaskRejectionProposal( account_m->GetAddress(),
+                                                                        escrow_tx.GetUncleHash(),
+                                                                        outcome.task_id,
+                                                                        static_cast<uint32_t>( outcome.reason ),
+                                                                        escrow_tx.GetHash() );
+        if ( proposal_result.has_error() )
+        {
+            m_logger->error( "{}: failed to create rejection proposal for escrow {} task={} reason={} err={}",
+                             __func__,
+                             escrow_tx.GetHash(),
+                             outcome.task_id,
+                             outcome.reason,
+                             proposal_result.error().message() );
+            return;
+        }
+
+        auto submit_result = blockchain_->SubmitProposal( proposal_result.value() );
+        if ( submit_result.has_error() )
+        {
+            m_logger->error( "{}: failed to submit rejection proposal for escrow {} err={}",
+                             __func__,
+                             escrow_tx.GetHash(),
+                             submit_result.error().message() );
+            return;
+        }
+
+        m_logger->info( "{}: rejection subject proposed escrow={} task={} reason={} slot={}",
+                        __func__,
+                        escrow_tx.GetHash(),
+                        outcome.task_id,
+                        outcome.reason,
+                        slot_key );
     }
 
     ConsensusManager::ValidationResult TransactionManager::HandleTaskRejectionSubject(

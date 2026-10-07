@@ -978,6 +978,23 @@ namespace sgns
                         return fallback;
                     } );
 
+                // Phase 8 (D-08-05): first-rejector trigger — when the gate rejects
+                // an escrow, this node immediately proposes the TaskRejectionSubject
+                // through consensus (no TTL wait, no poster action), so quorum can
+                // certify the rejection and authorize the poster's refund. The
+                // manager owns the submission and swallows its own failures — the
+                // gate verdict already returned is never affected.
+                transaction_manager_->SetPriceRejectNotifier(
+                    [weak_manager = std::weak_ptr<TransactionManager>( transaction_manager_ )](
+                        const GeniusTransaction                       &tx,
+                        const TransactionManager::EscrowPriceGateOutcome &outcome )
+                    {
+                        if ( auto manager = weak_manager.lock() )
+                        {
+                            manager->SubmitTaskRejectionSubject( tx, outcome );
+                        }
+                    } );
+
                 ++transaction_manager_construction_count_;
                 uint64_t owner_generation;
                 {

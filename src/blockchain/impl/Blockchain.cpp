@@ -1956,6 +1956,28 @@ namespace sgns
         return nonce_proposal;
     }
 
+    outcome::result<ConsensusManager::Proposal> Blockchain::CreateTaskRejectionProposal(
+        const std::string &account_id,
+        const std::string &escrow_path,
+        const std::string &task_id,
+        uint32_t           reject_reason,
+        const std::string &original_escrow_hash )
+    {
+        BOOST_OUTCOME_TRY( auto &&rejection_subject,
+                           ConsensusManager::CreateTaskRejectionSubject( account_id,
+                                                                        escrow_path,
+                                                                        task_id,
+                                                                        reject_reason,
+                                                                        original_escrow_hash ) );
+        BOOST_OUTCOME_TRY( auto &&rejection_proposal,
+                           consensus_manager_->CreateProposal( rejection_subject,
+                                                               account_id,
+                                                               validator_registry_->GetRegistryCid(),
+                                                               validator_registry_->GetRegistryEpoch() ) );
+
+        return rejection_proposal;
+    }
+
     outcome::result<void> Blockchain::SubmitProposal( const ConsensusManager::Proposal &proposal )
     {
         return consensus_manager_->SubmitProposal( std::move( proposal ) );

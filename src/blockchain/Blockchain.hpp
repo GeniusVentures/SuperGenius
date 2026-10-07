@@ -274,6 +274,22 @@ namespace sgns
             const std::optional<UTXOWitness>              &utxo_witness );
 
         /**
+         * @brief Creates a signed proposal for a task rejection (D-08-05/D-08-06).
+         * @param[in] account_id Proposer (rejector) account identifier.
+         * @param[in] escrow_path Escrow path (lock id) of the gamed task's escrow.
+         * @param[in] task_id Identifier of the rejected task.
+         * @param[in] reject_reason Typed PriceValidationReason value (non-zero).
+         * @param[in] original_escrow_hash Hash of the rejected escrow transaction.
+         * @return Signed proposal or an error.
+         */
+        outcome::result<ConsensusManager::Proposal> CreateTaskRejectionProposal(
+            const std::string &account_id,
+            const std::string &escrow_path,
+            const std::string &task_id,
+            uint32_t           reject_reason,
+            const std::string &original_escrow_hash );
+
+        /**
          * @brief Submits a proposal through consensus manager.
          * @param[in] proposal Proposal to submit.
          * @return outcome::success on success, otherwise an error.
