@@ -42,6 +42,7 @@
 #include "processing/processing_task_queue.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "coinprices/PriceQuote.hpp" // PriceQuote — ProcessCost::quote / GetGNUSQuote (Phase 6, D-06-01)
+#include "coinprices/PriceValidator.hpp" // PriceValidationResult — escrow price gate/backstop evidence (Phase 8, D-08-01/D-08-04)
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
@@ -75,6 +76,7 @@ namespace sgns::trustedpeer
 namespace sgns
 {
     class LocalPriceManager;
+    class EscrowTransaction;
 }
 
 namespace sgns::account
@@ -1497,6 +1499,7 @@ namespace sgns
         libp2p::Host::Connectedness HostConnectedness( const libp2p::peer::PeerInfo &peer ) const;
 
         std::shared_ptr<LocalPriceManager> priceManager_{}; ///< Lazily constructed on first GetCoinprice (D-05); owns its own ioc+thread; explicitly reset early in ~GeniusNode.
+        std::mutex price_manager_mutex_; ///< Guards lazy construction of priceManager_ (consensus-thread reachability, D-08-01).
 
         /// @brief Lazily construct the LocalPriceManager on first use.
         /// Reads SGNS_COINGECKO_URL / SGNS_PRICE_FALLBACK_URL at construction
@@ -1509,6 +1512,41 @@ namespace sgns
         /// Production code never calls this; tests use it to point a live node
         /// at a per-test stub after the node was constructed.
         void ResetPriceManagerForTest() { priceManager_.reset(); }
+
+        /**
+         * @brief Validates a task's claimed price against node-local price
+         *        evidence (D-08-01 evidence wiring; D-07-02 window).
+         *
+         * Assembles PriceValidationInput entirely from node-local reads — the
+         * poster-supplied claimed_price is an input to be checked, never
+         * evidence (D-04): stats come only from this node's own
+         * LocalPriceManager::QueryHistory observations. blockSize is recomputed
+         * exactly as the poster did (ProcessingManager::Create + ParseBlockSize,
+         * RESEARCH Pitfall 7). A task-json parse failure returns CostMismatch
+         * with accepted=false (fail-closed). When the verdict is NoCoverage the
+         * D-07-06 self-heal posts a background genius-ai fetch without blocking
+         * the caller.
+         *
+         * @param[in] task Claiming task (poster-controlled fields).
+         * @param[in] escrow Escrow-hold transaction funding the task.
+         * @return The ValidatePrice verdict plus diagnostics.
+         */
+        PriceValidationResult ValidateTaskPriceClaim( const SGProcessing::Task &task,
+                                                      const EscrowTransaction  &escrow );
+
+        /**
+         * @brief Gate entry for the consensus escrow price gate (D-08-01/D-08-02).
+         *
+         * Scans the bounded claimable list (never all tasks) for the task whose
+         * escrow_path matches the escrow's uncle hash (lock_id linkage), then
+         * runs ValidateTaskPriceClaim on the match. Zero matches map to Pending —
+         * the gate never rejects on a missing task record (D-08-02).
+         *
+         * @param[in] tx Escrow-hold transaction under consensus validation.
+         * @return Approve/Reject with the matched task id, or Pending when the
+         *         task record has not synced yet.
+         */
+        TransactionManager::EscrowPriceGateOutcome FindTaskByEscrow( const GeniusTransaction &tx );
 
         static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.

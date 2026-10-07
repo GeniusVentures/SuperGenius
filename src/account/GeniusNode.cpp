@@ -48,6 +48,8 @@
 #include "coinprices/LocalPriceManager.hpp"
 #include "coinprices/PriceHttpClientSource.hpp"
 #include "coinprices/PriceEndpoints.hpp"
+#include "coinprices/PriceValidator.hpp" // ValidatePrice + window/config — escrow price gate evidence (Phase 8, D-08-01)
+#include "account/EscrowTransaction.hpp" // EscrowTransaction — gate escrow cast/GetAmount (Phase 8, D-08-01)
 #include "account/BurnConfig.hpp"
 #include "account/TrustStartupController.hpp"
 #include "securecrdt/QuorumThresholdValidation.hpp"
@@ -955,6 +957,26 @@ namespace sgns
                     account_service_switching_ = false;
                     return;
                 }
+
+                // Phase 8 (D-08-01): install the escrow price gate BEFORE Start()
+                // so no escrow can pass consensus validation unguarded. The
+                // transaction layer stays coinprices-free — the node supplies the
+                // task lookup (FindTaskByEscrow) and the evidence assembly
+                // (ValidateTaskPriceClaim) behind the injected seam.
+                transaction_manager_->SetEscrowPriceGate(
+                    [weak_self = weak_from_this()]( const GeniusTransaction &tx )
+                        -> TransactionManager::EscrowPriceGateOutcome
+                    {
+                        if ( auto self = weak_self.lock() )
+                        {
+                            return self->FindTaskByEscrow( tx );
+                        }
+                        // Owner dying: approve so consensus teardown is not
+                        // blocked by a node that is shutting down.
+                        TransactionManager::EscrowPriceGateOutcome fallback{};
+                        fallback.check = TransactionManager::EscrowPriceGateOutcome::Check::Approve;
+                        return fallback;
+                    } );
 
                 ++transaction_manager_construction_count_;
                 uint64_t owner_generation;
@@ -3549,6 +3571,11 @@ namespace sgns
 
     std::shared_ptr<LocalPriceManager> GeniusNode::GetOrCreatePriceManager()
     {
+        // Phase 8 (D-08-01): the lazy construction is now reachable from the
+        // consensus-validation thread (escrow price gate) in addition to RPC /
+        // processing threads — guard the member under a lock so concurrent
+        // first-use cannot race two managers into existence.
+        std::lock_guard<std::mutex> lock( price_manager_mutex_ );
         if ( !priceManager_ )
         {
             // Each tier's adapter takes an io_context whose only role is the
@@ -3576,6 +3603,186 @@ namespace sgns
             priceManager_ = std::make_shared<LocalPriceManager>( tier1, tier2 );
         }
         return priceManager_;
+    }
+
+    PriceValidationResult GeniusNode::ValidateTaskPriceClaim( const SGProcessing::Task &task,
+                                                              const EscrowTransaction  &escrow )
+    {
+        const auto config = ResolvePriceValidatorConfig();
+
+        PriceValidationInput input{};
+        input.claimedPrice = task.claimed_price();
+        input.escrowAmount = escrow.GetAmount();
+        // FillDAGStruct stamps DAGStruct.timestamp in milliseconds since epoch.
+        input.dagTimestamp = std::chrono::system_clock::time_point(
+            std::chrono::milliseconds( escrow.GetTimestamp() ) );
+        // Purity contract (D-07-12): the clock is read here, at the call site —
+        // never inside the validator.
+        input.now = std::chrono::system_clock::now();
+
+        // Recompute blockSize exactly as the poster did (GetProcessCost /
+        // ProcessImage): ProcessingManager::Create over the task json, then
+        // ParseBlockSize — any other derivation false-rejects honest jobs with
+        // CostMismatch (RESEARCH Pitfall 7). Parse failure fails closed.
+        auto processing_manager = sgns::sgprocessing::ProcessingManager::Create( task.json_data() );
+        if ( !processing_manager )
+        {
+            node_logger_->error( "{}: ProcessingManager::Create failed for task {} (CostMismatch, fail-closed)",
+                                 __func__,
+                                 task.ipfs_block_id() );
+            PriceValidationResult result{};
+            result.accepted = false;
+            result.reason   = PriceValidationReason::CostMismatch;
+            return result;
+        }
+        auto block_size = processing_manager.value()->ParseBlockSize();
+        if ( !block_size )
+        {
+            node_logger_->error( "{}: ParseBlockSize failed for task {} (CostMismatch, fail-closed)",
+                                 __func__,
+                                 task.ipfs_block_id() );
+            PriceValidationResult result{};
+            result.accepted = false;
+            result.reason   = PriceValidationReason::CostMismatch;
+            return result;
+        }
+        input.blockSize = block_size.value();
+
+        // The ONE shared window formula (D-07-02) — caller and validator can
+        // never drift apart on the window definition. QueryHistory reads only
+        // this node's own observations (D-04 independence).
+        const auto window = PriceObservationWindow( input.dagTimestamp, config );
+        input.stats       = GetOrCreatePriceManager()->QueryHistory( window.from, window.to );
+
+        auto result = ValidatePrice( input, config );
+        node_logger_->debug( "{}: task={} claimed={} escrow={} blockSize={} stats.count={} -> accepted={} reason={}",
+                             __func__,
+                             task.ipfs_block_id(),
+                             input.claimedPrice,
+                             input.escrowAmount,
+                             input.blockSize,
+                             input.stats.count,
+                             result.accepted,
+                             static_cast<int>( result.reason ) );
+
+        // D-07-06 self-heal: the verdict stands, but a NoCoverage node fetches
+        // in the background so subsequent tasks regain coverage within one
+        // fetch cycle. Posted (non-blocking): GetQuotes is a blocking
+        // post+future bridge that must never run on the manager's own strand
+        // and must not stall the consensus-validation caller.
+        if ( ShouldTriggerRefetch( result.reason ) )
+        {
+            auto price_manager = GetOrCreatePriceManager();
+            boost::asio::post( *io_,
+                               [price_manager]()
+                               {
+                                   (void) price_manager->GetQuotes( { "genius-ai" }, "usd" );
+                               } );
+        }
+        return result;
+    }
+
+    TransactionManager::EscrowPriceGateOutcome GeniusNode::FindTaskByEscrow( const GeniusTransaction &tx )
+    {
+        using GateOutcome = TransactionManager::EscrowPriceGateOutcome;
+
+        // The escrow-hold type key guarantees an EscrowTransaction instance in
+        // practice; guard the cast anyway and fall through as Approve on an
+        // internal inconsistency rather than poisoning consensus.
+        auto escrow = dynamic_cast<const EscrowTransaction *>( &tx );
+        if ( escrow == nullptr )
+        {
+            node_logger_->error( "{}: escrow-hold tx {} failed EscrowTransaction cast, skipping gate",
+                                 __func__,
+                                 tx.GetHash() );
+            GateOutcome outcome{};
+            outcome.check = GateOutcome::Check::Approve;
+            return outcome;
+        }
+
+        // Bounded scan over the small claimable list — never a scan over all
+        // tasks (RESEARCH Pitfall 4). Completed tasks leave the list, so the
+        // scan stays small by construction.
+        auto claimable = tx_globaldb_->QueryKeyValues( processing::TaskKeys::ClaimableListKey() );
+        if ( claimable.has_error() )
+        {
+            node_logger_->warn( "{}: claimable list query failed for escrow {} ({}), pending",
+                                __func__,
+                                escrow->GetUncleHash(),
+                                claimable.error().message() );
+            GateOutcome pending{};
+            pending.check = GateOutcome::Check::Pending;
+            return pending;
+        }
+
+        // task.escrow_path == escrow lock_id == escrow.GetUncleHash() (the
+        // HoldEscrow/FillDAGStruct linkage — 08-CONTEXT Pitfall 4).
+        const auto escrow_path = escrow->GetUncleHash();
+        for ( const auto &element : claimable.value() )
+        {
+            if ( element.second.empty() )
+            {
+                continue;
+            }
+            const auto task_id = std::string( reinterpret_cast<const char *>( element.second.data() ),
+                                              element.second.size() );
+            auto task_buffer   = tx_globaldb_->Get( sgns::crdt::HierarchicalKey(
+                processing::TaskKeys::TaskKey( task_id ) ) );
+            if ( task_buffer.has_error() )
+            {
+                continue;
+            }
+            SGProcessing::Task task;
+            if ( !task.ParseFromArray( task_buffer.value().data(), task_buffer.value().size() ) )
+            {
+                continue;
+            }
+            if ( task.escrow_path() != escrow_path )
+            {
+                continue;
+            }
+
+            auto verdict = ValidateTaskPriceClaim( task, *escrow );
+            GateOutcome outcome{};
+            outcome.task_id = task_id;
+            outcome.reason  = static_cast<int>( verdict.reason );
+            if ( verdict.accepted )
+            {
+                outcome.check = GateOutcome::Check::Approve;
+            }
+            else if ( verdict.reason == PriceValidationReason::NoCoverage )
+            {
+                // NoCoverage is evidence absence, not a validation failure: the
+                // D-07-06 self-heal (posted inside ValidateTaskPriceClaim)
+                // regains coverage within one fetch cycle, and pending retries
+                // re-evaluate. Rejecting here poison-marks the honest escrow
+                // (embedded-tx FAILED tracking) whenever a coverage-less
+                // validator is asked to vote before its fetch lands. D-08-02's
+                // Pending machinery is the sanctioned "can't decide yet" path;
+                // every deterministic reason (band, cost, timestamp, legacy)
+                // still Rejects, so CONS-01 holds — a gamed claim can never be
+                // approved without in-band evidence.
+                node_logger_->warn( "{}: no local price coverage for escrow {} task {}, pending (self-heal fetch posted)",
+                                     __func__,
+                                     escrow_path,
+                                     task_id );
+                outcome.check = GateOutcome::Check::Pending;
+            }
+            else
+            {
+                outcome.check = GateOutcome::Check::Reject;
+            }
+            return outcome;
+        }
+
+        // Zero matches: the escrow may have arrived before its task record
+        // (poster commits escrow first, D-08-02) — Pending, never Reject.
+        node_logger_->debug( "{}: no claiming task synced yet for escrow {}, pending",
+                             __func__,
+                             escrow_path );
+        GateOutcome pending{};
+        pending.check = GateOutcome::Check::Pending;
+        return pending;
     }
 
     outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )

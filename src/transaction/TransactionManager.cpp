@@ -4583,6 +4583,39 @@ namespace sgns
         return consensus_m_->EvaluateTransactionReplayProtection( tx );
     }
 
+    void TransactionManager::SetEscrowPriceGate( EscrowPriceGateFn gate )
+    {
+        escrow_price_gate_ = std::move( gate );
+    }
+
+    void TransactionManager::SetPriceRejectNotifier( PriceRejectNotifierFn notifier )
+    {
+        price_reject_notifier_ = std::move( notifier );
+    }
+
+    TransactionManager::EscrowPriceGateOutcome TransactionManager::EvaluateEscrowPriceGate(
+        const GeniusTransaction &tx ) const
+    {
+        if ( !escrow_price_gate_.has_value() || !escrow_price_gate_.value() )
+        {
+            // Null-safe default (D-08-01): an unwired gate approves every escrow,
+            // keeping unwired callers and existing test suites unchanged.
+            EscrowPriceGateOutcome outcome{};
+            outcome.check = EscrowPriceGateOutcome::Check::Approve;
+            return outcome;
+        }
+        return ( *escrow_price_gate_ )( tx );
+    }
+
+    void TransactionManager::NotifyPriceReject( const GeniusTransaction              &tx,
+                                                const EscrowPriceGateOutcome &outcome ) const
+    {
+        if ( price_reject_notifier_ )
+        {
+            price_reject_notifier_( tx, outcome );
+        }
+    }
+
     void TransactionManager::SetBridgeExecutedMarkerWriteFailureForTest( bool fail )
     {
         fail_bridge_executed_marker_write_for_test_ = fail;

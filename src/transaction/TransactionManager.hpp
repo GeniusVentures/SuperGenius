@@ -938,6 +938,53 @@ namespace sgns
         /// @brief Evaluates previous-hash/nonce replay protection for a transaction.
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
 
+        /**
+         * @brief Outcome of the escrow price gate (D-08-01/D-08-02).
+         *
+         * Layer-neutral by design: the reason field carries the numeric value of
+         * sgns::PriceValidationReason (0 = Accepted) so this header stays free of
+         * any coinprices include — the transaction layer only consumes the verdict.
+         */
+        struct EscrowPriceGateOutcome
+        {
+            enum class Check : uint8_t
+            {
+                Approve, ///< Price claim validated (or no gate wired)
+                Reject,  ///< Price claim failed validation — typed reason below
+                Pending  ///< Claiming task not synced yet — retry, never reject (D-08-02)
+            };
+
+            Check       check   = Check::Approve;
+            int         reason  = 0; ///< static_cast<sgns::PriceValidationReason>; 0 = Accepted
+            std::string task_id;    ///< Matched claiming task id (empty when Pending)
+        };
+
+        /// @brief Node-supplied gate evaluating an escrow-hold tx's price claim (D-08-01).
+        using EscrowPriceGateFn = std::function<EscrowPriceGateOutcome( const GeniusTransaction & )>;
+
+        /// @brief Optional observer invoked when the gate rejects an escrow (wired by a later phase).
+        using PriceRejectNotifierFn =
+            std::function<void( const GeniusTransaction &, const EscrowPriceGateOutcome & )>;
+
+        /**
+         * @brief Installs the escrow price gate (D-08-01). Not setting one keeps
+         *        every escrow-hold transaction approving — null-safe default, so
+         *        unwired callers and existing test suites behave unchanged.
+         */
+        void SetEscrowPriceGate( EscrowPriceGateFn gate );
+
+        /// @brief Installs the price-reject observer (null clears it).
+        void SetPriceRejectNotifier( PriceRejectNotifierFn notifier );
+
+        /**
+         * @brief Runs the installed escrow price gate for @p tx.
+         * @return The gate verdict; Approve when no gate is set.
+         */
+        EscrowPriceGateOutcome EvaluateEscrowPriceGate( const GeniusTransaction &tx ) const;
+
+        /// @brief Invokes the price-reject observer when one is set (null-safe).
+        void NotifyPriceReject( const GeniusTransaction &tx, const EscrowPriceGateOutcome &outcome ) const;
+
         /** @brief Whole-transaction signature / authorization check. */
         bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
         /** @brief Parent-child registration authority check (transfers from certified children, revokes). */
@@ -964,6 +1011,12 @@ namespace sgns
 
         /// @brief Consensus-facing half of this manager; see TransactionConsensusHandler.
         std::unique_ptr<TransactionConsensusHandler> consensus_m_;
+
+        /// @brief Node-supplied escrow price gate; empty = gate disabled (D-08-01).
+        std::optional<EscrowPriceGateFn> escrow_price_gate_;
+
+        /// @brief Optional escrow price-reject observer (D-08-01; empty = none).
+        PriceRejectNotifierFn price_reject_notifier_;
 
         outcome::result<void> PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx );
         void                  ReleaseBridgeMintReservation( const GeniusTransaction &tx );

@@ -544,6 +544,33 @@ namespace sgns
             return ConsensusManager::ValidationResult::Reject();
         }
 
+        if ( tx.GetType() == "escrow-hold" )
+        {
+            // Phase 8 (D-08-01): escrow price gate — the claiming task's
+            // claimed_price must survive ValidatePrice before the escrow approves.
+            const auto gate_outcome = owner_.EvaluateEscrowPriceGate( tx );
+            using GateCheck = TransactionManager::EscrowPriceGateOutcome::Check;
+            if ( gate_outcome.check == GateCheck::Pending )
+            {
+                // D-08-02: the escrow may arrive before its task record — never
+                // reject on absence; pending retries re-evaluate once the task syncs.
+                logger_->warn( "{}: Escrow price gate pending (claiming task not synced) tx={}",
+                               __func__,
+                               tx.GetHash() );
+                return ConsensusManager::ValidationResult::Pending();
+            }
+            if ( gate_outcome.check == GateCheck::Reject )
+            {
+                logger_->error( "{}: Escrow price gate rejected tx={} task={} reason={}",
+                                __func__,
+                                tx.GetHash(),
+                                gate_outcome.task_id,
+                                gate_outcome.reason );
+                owner_.NotifyPriceReject( tx, gate_outcome );
+                return ConsensusManager::ValidationResult::Reject();
+            }
+        }
+
         logger_->debug( "{}: Transaction valid tx={}", __func__, tx.GetHash() );
         return ConsensusManager::ValidationResult::Approve();
     }
