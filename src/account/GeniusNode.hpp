@@ -1511,7 +1511,13 @@ namespace sgns
         /// next price read re-reads the tier env vars at construction (D-03).
         /// Production code never calls this; tests use it to point a live node
         /// at a per-test stub after the node was constructed.
-        void ResetPriceManagerForTest() { priceManager_.reset(); }
+        /// WR-02: synchronized against concurrent GetOrCreatePriceManager
+        /// readers on the consensus thread, same as the destructor reset.
+        void ResetPriceManagerForTest()
+        {
+            std::lock_guard<std::mutex> lock( price_manager_mutex_ );
+            priceManager_.reset();
+        }
 
         /**
          * @brief Validates a task's claimed price against node-local price

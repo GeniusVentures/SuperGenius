@@ -2245,7 +2245,14 @@ namespace sgns
         // references no node members (D-05); its drain-join destructor resolves
         // any parked GetQuotes waiters while the node is fully intact. Reset it
         // explicitly here, before the pubsub/io teardown below.
-        priceManager_.reset();
+        // WR-02: the reset is a write to the same shared_ptr the consensus
+        // thread can read under price_manager_mutex_ (GetOrCreatePriceManager),
+        // so take the mutex here too — scoped, never held across the teardown
+        // below.
+        {
+            std::lock_guard<std::mutex> lock( price_manager_mutex_ );
+            priceManager_.reset();
+        }
 
         // GraphSync retains PubSub's libp2p host, whose sockets are backed by
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
