@@ -180,6 +180,14 @@ namespace sgns::processing
                     TaskQueueImplLogger()->error(
                         "Task with ID: {} rejected by price backstop, marking bad and skipping", taskId );
                     MarkTaskBad( taskId );
+                    // WR-04: the claim lock was already taken above (LockTask);
+                    // leaving it behind keeps the rejected task network-visible
+                    // as claimed for the full LOCK_TIMEOUT and makes every other
+                    // node's GrabTask see it as locked. Remove the durable lock
+                    // key so only incompatible_jobs_ (D-08-10) masks the task —
+                    // deleting an absent key is a no-op success in the CRDT layer.
+                    (void) db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::LockKey( taskKey ) ),
+                                        { processing_topic_ } );
                     continue;
                 }
             }
