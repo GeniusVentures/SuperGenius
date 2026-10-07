@@ -1365,6 +1365,20 @@ namespace sgns
             return std::errc::operation_canceled;
         }
 
+        // WR-01 (PayEscrow parity): an escrow with no payout output has nothing
+        // to refund, and both .front() reads below would be undefined behavior
+        // on an empty vector (e.g. a structurally forged or defaulted escrow
+        // reaching this path through a certified rejection). Reject it before
+        // any dereference.
+        const auto escrow_params = escrow_tx.GetUTXOParameters();
+        if ( escrow_params.second.empty() )
+        {
+            m_logger->error( "{}: escrow {} has no payout output — rejection release not constructed",
+                             __func__,
+                             escrow_tx.GetHash() );
+            return std::errc::invalid_argument;
+        }
+
         // Regime-2 gate (08-RESEARCH Pitfall 1): only a CONFIRMED escrow has a UTXO
         // to spend. A release referencing an uncertified escrow would spend a
         // nonexistent outpoint and be rejected by honest validators, so a
@@ -1384,10 +1398,7 @@ namespace sgns
         // amount to the escrow's source address (the poster). The payout list is
         // constructed directly — the payout helper always emits a burn output,
         // which rejection refunds forbid.
-        const auto   escrow_params = escrow_tx.GetUTXOParameters();
-        const auto   token_id      = escrow_params.second.empty()
-                                         ? TokenID::FromBytes( { 0x00 } )
-                                         : escrow_params.second.front().token_id;
+        const auto token_id       = escrow_params.second.front().token_id;
         const uint64_t refund_amount = escrow_tx.GetAmount();
         const std::string poster     = escrow_tx.GetSrcAddress();
 
