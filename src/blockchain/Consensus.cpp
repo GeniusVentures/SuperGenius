@@ -3846,6 +3846,14 @@ namespace sgns
             slot_key = GetSlotKey( proposal );
         }
 
+        // Certificate aggregation and pubsub receipt can reach cleanup before
+        // durable recovery has a registered consumer. Keep the in-memory vote
+        // fence with its persisted record until that recovery releases the vote.
+        if ( active_votes_.find( slot_key ) != active_votes_.end() )
+        {
+            return;
+        }
+
         std::unordered_set<std::string> ids_to_remove;
         ids_to_remove.insert( proposal.proposal_id() );
         for ( const auto &kv : proposals_ )

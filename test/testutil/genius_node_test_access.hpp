@@ -8,8 +8,14 @@
 #include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TrustStartupController.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
+
+namespace sgns::networkregistry
+{
+    class NetworkRegistry; // test-accessor return type only; callers include the full header
+}
 
 namespace sgns
 {
@@ -22,6 +28,66 @@ namespace sgns
         static double BootstrapBackgroundMultiplier( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->reconnect_config_.background_multiplier : 0.0;
+        }
+
+        /// "private_network_id" retained by InitNetwork (empty = public node). No public getter
+        /// exists yet because the value's consumers (NetworkRegistry, scoped CRDT paths) land in
+        /// later Phase-15 plans; a test accessor is the only way to observe retention.
+        static std::string PrivateNetworkId( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->private_network_id_ : std::string();
+        }
+
+        /// "network_bootstrap_peers" retained by InitNetwork (empty unless provisioned).
+        static std::vector<std::string> NetworkBootstrapPeers( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->network_bootstrap_peers_ : std::vector<std::string>{};
+        }
+
+        /// NetworkRegistry constructed by the INITIALIZING_TRANSACTIONS path when a
+        /// private_network_id is provisioned (15-05); null on a public node. No public
+        /// getter exists because the registry's runtime consumers land in later Phase-15
+        /// plans (the vendored gater allow-list binding was descoped), so a test accessor
+        /// is the only way to observe the wiring.
+        static std::shared_ptr<sgns::networkregistry::NetworkRegistry> NetworkRegistry(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->network_registry_ : nullptr;
+        }
+
+        /// Whether the node's GlobalDB broadcaster currently enforces the
+        /// registry-backed membership filter (15-12): private nodes install it at
+        /// NetworkRegistry construction, public nodes never do, and teardown clears
+        /// it. No public getter exists because this observes private wiring state.
+        static bool BroadcasterMembershipFilterInstalled( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->tx_globaldb_ && node->tx_globaldb_->GetBroadcaster()
+                 && node->tx_globaldb_->GetBroadcaster()->HasMembershipFilter();
+        }
+
+        /// The node's GlobalDB broadcaster, captured BY VALUE so the shared_ptr keeps
+        /// the broadcaster object alive across GlobalDB shutdown: ShutdownNow MOVES
+        /// m_broadcaster out and Stops it, so a post-shutdown GetBroadcaster() through
+        /// the node returns null and any filter assertion through the node would pass
+        /// vacuously. Stop() does not touch the membership filter, so
+        /// HasMembershipFilter() on the held handle observes exactly the Set/Clear
+        /// calls made on that object.
+        static std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> BroadcasterOf(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->tx_globaldb_ ? node->tx_globaldb_->GetBroadcaster() : nullptr;
+        }
+
+        /// Drives the REAL destruction teardown route (ShutdownForDestruction is
+        /// PRIVATE at GeniusNode.hpp, so friend access is the only route).
+        /// ~GeniusNode calls it again; the shutdown_started_ compare_exchange makes
+        /// that second call a no-op, so explicit-call-then-destroy is safe.
+        static void RequestShutdownForDestruction( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( node )
+            {
+                node->ShutdownForDestruction();
+            }
         }
 
         /// The node's validator registry, for tests asserting consensus participation.

@@ -60,7 +60,7 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 - ✓ `ValidatorRegistry` genesis-path signature verification reuses `multisig::VerifyPayloadSignature` under the approved adjusted, signature-verification-only scope; the broader `ISignedCRDTData` storage/quorum migration remains retired (MIG-05, MIG-06) — **Validated in Phase 12; metadata reconciled in Phase 13**
 - ✓ Reviewed trusted-peer ceremony, canonical genesis identity, versioned quorum policy, durable restart authority, bounds validation, explicit approvals, and production first-boot/restart/tamper/economic/account-lifetime coverage (BOOT-01..04, POLICY-01, VALID-01, TEST-01) — **Validated in Phase 13**
 
-### Active
+### Active (v1.1 — shipped 2026-10-05)
 
 No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat gate plus five additional consecutive policy-lifetime passes is the closure evidence for the production integration rows.
 
@@ -86,7 +86,7 @@ No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat g
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
 **Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable vote locking, and application idempotency must be specified as one protocol contract. The certificate store is generic and keyed by canonical slot, not a bridge-only finality side channel. The finality path cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
-**v1.1 Outcome:** The decoupled multi-signature and SecureCRDT layers now back authenticated `TrustedPeerRegistry` and live `BURN_BASIS_POINTS` policy in the production node path. Phase 13 closed the audited genesis, policy-authority, callback-lifetime, operator-ingress, restart, tamper, and economic E2E gaps. Durable verified state is authoritative on restart; software detects rollback/fork/corruption while at least one trusted local anchor remains intact, but restoration of the whole disk and all local anchors together remains an accepted unsolved boundary without external monotonic or off-host anchoring.
+**v1.1 SHIPPED 2026-10-05** (trusted-peer genesis, quorum-policy, and production integration gaps; known gaps: ELM-01..08 dropped cross-repo, phase-14 discard residual, MIG-05 behavior-neutral revert — see milestones/v1.1-MILESTONE-AUDIT.md). The decoupled multi-signature and SecureCRDT layers now back authenticated `TrustedPeerRegistry` and live `BURN_BASIS_POINTS` policy in the production node path. Phase 13 closed the audited genesis, policy-authority, callback-lifetime, operator-ingress, restart, tamper, and economic E2E gaps. Phase 15 bound private-network identity (`privateNetworkId`) through every layer — config surface, per-network registries/quorums, gossip + processing host bindings, job-scope keys/topics/escrow chain ids under `/chain/<privateNetworkId>/` — with fail-closed membership enforcement machine-checked end-to-end (verification cycle 5, 11/11, incl. the automated two-node private-network job-flow E2E). Durable verified state is authoritative on restart; software detects rollback/fork/corruption while at least one trusted local anchor remains intact, but restoration of the whole disk and all local anchors together remains an accepted unsolved boundary without external monotonic or off-host anchoring.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -152,5 +152,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-10-05 after v1.1 milestone (shipped with recorded gaps; REQUIREMENTS archived; next milestone not yet planned)*
+*Last updated: 2026-10-02 — Phase 15 (private-network binding) complete: 17/18 plans (15-04 descoped into 15-13), verification cycle 5 passed 11/11, UAT-1 closed by automated E2E (15-18)*
 *Last updated: 2026-09-03 after v3.0 milestone (Canonical Burn Finality Rebuild shipped; 13 acknowledged deferred items in STATE.md; next milestone not yet planned)*
 *Last updated: 2026-08-12 — milestone v1.1 evidence reconciled after Phase 13 closure gate*
