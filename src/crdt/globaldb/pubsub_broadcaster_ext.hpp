@@ -6,6 +6,8 @@
 #include "crdt/crdt_datastore.hpp"
 #include "base/logger.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <libp2p/crypto/key.hpp>
+#include <functional>
 #include <queue>
 #include <tuple>
 #include <vector>
@@ -105,6 +107,65 @@ namespace sgns::crdt
 
         void Stop();
 
+        /**
+         * @brief Installs (or replaces) the private-network membership filter
+         *        consulted by OnMessage for EVERY inbound gossip message.
+         *
+         *        When set, a message is dropped before any CID decode, route,
+         *        or queueing unless BOTH its declared protobuf peer
+         *        (bmsg.peer().id()) AND its transport sender
+         *        (Gossip::Message::from) pass the predicate. An empty or
+         *        malformed transport `from` is denied under a set filter
+         *        (fail-closed -- mirrors
+         *        sgns::networkregistry::AuthorizeGossipSender without
+         *        including any networkregistry header; layering rule).
+         *
+         *        With no filter installed, OnMessage is byte-identical to the
+         *        pre-filter behavior (public pass-through).
+         * @param[in] filter Membership predicate; an empty std::function
+         *            behaves like ClearMembershipFilter().
+         */
+        void SetMembershipFilter( std::function<bool( const libp2p::peer::PeerId & )> filter );
+
+        /**
+         * @brief Reports whether a membership filter is currently installed.
+         * @return true when OnMessage enforces membership.
+         */
+        bool HasMembershipFilter() const;
+
+        /**
+         * @brief Removes the membership filter, restoring public pass-through
+         *        ingest (teardown counterpart of SetMembershipFilter).
+         */
+        void ClearMembershipFilter();
+
+        /**
+         * @brief Installs the gossip host keypair used to SEAL private-network
+         *        publishes (CR-G01 publisher side).
+         *
+         *        When a membership filter is installed, Broadcast seals the
+         *        serialized BroadcastMessage into an application-layer
+         *        authenticated envelope (sgns::base::SealGossipPayload) signed
+         *        with this keypair, and OnMessage requires every inbound
+         *        message to carry a verifiable envelope whose embedded public
+         *        key derives the from-field PeerId (sgns::base::OpenGossipPayload)
+         *        BEFORE the membership predicate is consulted. Without a key
+         *        wired, a filtered Broadcast FAILS CLOSED (publishing unsigned
+         *        data that every gated receiver would deny is pointless and
+         *        leaks the payload). With no filter installed, this key is
+         *        unused and publish/receive stay raw and byte-identical.
+         * @param[in] key The keypair that constructed the GossipPubSub host
+         *            (PeerId::fromPublicKey(marshal(public key)) must equal the
+         *            host's peer id, i.e. the gossip from-field it stamps).
+         */
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
+
+        /**
+         * @brief Reports whether a gossip signing key is currently installed.
+         * @return true when Broadcast can seal under a set membership filter.
+         */
+        bool HasGossipSigningKey() const;
+
         bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
 
     private:
@@ -132,6 +193,19 @@ namespace sgns::crdt
         std::mutex              listenTopicsMutex_;      ///< protects topicsToListen_
         std::mutex              broadcastTopicsMutex_;   ///< protects topicsToListen_
         std::mutex              subscriptionMutex_;      ///< protects subscriptionFutures_
+
+        /// Membership gate state (15-11): OnMessage snapshots the filter under
+        /// this mutex on the pubsub callback threads while the setters run on
+        /// node init/teardown -- the mutex is required.
+        mutable std::mutex membership_filter_mutex_; ///< protects membership_filter_ and gossip_signing_key_
+        std::function<bool( const libp2p::peer::PeerId & )>
+            membership_filter_; ///< set -> inbound gossip requires membership (fail-closed)
+
+        /// Gossip host keypair sealing private-network publishes (CR-G01):
+        /// guarded by membership_filter_mutex_ beside the filter so the
+        /// filter+key pair can be snapshotted consistently.
+        std::shared_ptr<const libp2p::crypto::KeyPair> gossip_signing_key_;
+
         std::atomic_bool        started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );

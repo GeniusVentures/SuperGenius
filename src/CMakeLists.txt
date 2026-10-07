@@ -37,6 +37,7 @@ set(GENIUS_NODE_LIBS
     sgns_genius_account
     trustedpeer
     burnconfig
+    networkregistry
 )
 
 add_subdirectory(api/transport)
@@ -58,7 +59,9 @@ add_subdirectory(coinprices)
 add_subdirectory(proof)
 add_subdirectory(multisig)
 add_subdirectory(securecrdt)
+add_subdirectory(peerregistry)
 add_subdirectory(trustedpeer)
+add_subdirectory(networkregistry)
 
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/"

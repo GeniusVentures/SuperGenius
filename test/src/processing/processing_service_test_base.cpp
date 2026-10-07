@@ -170,6 +170,7 @@ void ProcessingServiceTest::TearDown()
     }
 
     m_pubsub_nodes.clear();
+    m_pubsub_keypairs.clear();
     m_processing_queues_accessors.clear();
     m_processing_queues_managers.clear();
     m_processing_engines.clear();
@@ -191,7 +192,13 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
     config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
     for ( size_t i = 0; i < numNodes; ++i )
     {
-        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( config ) );
+        // CR-G01 fixture repair: construct every gossip host from an EXPLICIT
+        // keypair and retain a copy -- the single-arg ctor's internal keypair
+        // is inaccessible, and gated-surface tests must seal sender-side
+        // payloads / wire signing keys with the host's own key material.
+        auto keypair = GenerateEd25519KeyPair();
+        m_pubsub_keypairs.emplace_back( std::make_shared<const libp2p::crypto::KeyPair>( keypair ) );
+        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( std::move( keypair ), config ) );
 
         Color::PrintInfo( "Attempting to start PubSub node ", i, " on an OS-assigned port" );
         for (auto node : bootstrap_nodes) {

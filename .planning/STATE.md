@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
-current_phase: 13
-status: verifying
-stopped_at: Phase 14 context gathered
-last_updated: "2026-08-17T21:26:45.973Z"
-last_activity: 2026-08-17
+current_phase: 15
+status: Awaiting next milestone
+stopped_at: Completed 15-18-PLAN.md
+last_updated: "2026-10-05T17:38:23.386Z"
+last_activity: 2026-10-05 — Milestone v1.1 completed and archived
 progress:
   total_phases: 18
   completed_phases: 6
-  total_plans: 37
+  total_plans: 52
   completed_plans: 37
   percent: 33
 ---
@@ -19,20 +19,20 @@ progress:
 
 **Last updated:** 2026-08-12
 **Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 13
+**Current Phase:** 15
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-07-20)
 **Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 13 — Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 13 (Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps) — VERIFYING
-Plan: 29 of 29
-Status: Phase complete — ready for verification
-Last activity: 2026-09-01 - Completed quick task 260901-erh: Migration3_6_0To3_7_0 first-real-use investigation (ADJUST verdict)
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-05 — Milestone v1.1 completed and archived
 
 ## Roadmap Snapshot
 
@@ -62,8 +62,7 @@ Last activity: 2026-09-01 - Completed quick task 260901-erh: Migration3_6_0To3_7
 
 ## Operator Next Steps
 
-- Run final Phase 13 verification using the completed 29/29 plan evidence.
-- Preserve Plan 13-29's exact 22-case/25-target, sanitizer-aware, five-repeat results during the milestone audit.
+- Start the next milestone with /gsd-new-milestone
 
 ### Quick Tasks Completed
 
@@ -74,9 +73,9 @@ Last activity: 2026-09-01 - Completed quick task 260901-erh: Migration3_6_0To3_7
 
 ## Session
 
-**Last session:** 2026-08-17T21:26:45.876Z
-**Stopped At:** Phase 14 context gathered
-**Resume File:** .planning/phases/14-account-generation-publication-and-retired-manager-lifecycle/14-CONTEXT.md
+**Last session:** 2026-10-02T20:25:23.466Z
+**Stopped At:** Completed 15-18-PLAN.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -125,6 +124,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P27 | 36min | 2 tasks | 4 files |
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
+| Phase 15 P18 | 27min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -189,3 +189,22 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Only policy and burn discovery failures are transient; activation failures remain actionable and controller-scoped candidate suppression is preserved. — Semantic stage classification prevents retries from masking durable, genesis, publication, or candidate-specific activation faults.
 - [Phase 13]: One refresh cycle is exactly attempts 1 through 7 with 100/200/400/800/1600/3200ms delays; duplicate requests coalesce and exhaustion returns the dispatcher to idle. — The fixed cap and exact observability close retry storms while preserving autonomous recovery from transient discovery failures.
 - [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
+- [Phase 15]: Wrong-PSK GlobalDB test nodes must release db (ShutdownNow+reset) and graphsync Network BEFORE pubsub Stop - StopImpl destroys its io_context right after its own host ref, so a host surviving Stop via a retained Network member destroys parked never-negotiated pnet handshake connections against a dead kqueue reactor (15-18 ordered teardown)
+- [Phase 15]: UAT-1 closed by GlobalDB-level composition (no Blockchain/genesis): NetworkMembershipFilterFlowTest case 11 joins real-data-path scoped job replication (TaskQueueImpl+SubTaskResultStorageImpl on the scoped topic), data-level public-node isolation (live public GlobalDB, both-direction dials, multi-key negative window), and deny-all teardown on a still-live GlobalDB - mutation-verified non-vacuous
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
+
+| Category | Item | Status |
+|----------|------|--------|
+| todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the BOOT-01..04 scope (durable confirmed trust-state, ceremony, policy authority); kept for reference |
+| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track A bridge scope (evmrelay_integration track), not v1.1 |
+| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track A Phase 5 scope (PR #298 findings), not v1.1 |
+| quick_task | 11 June-2026 TokenId/InputValidator records (260602-*) | Stale — artifacts no longer on disk |
+| uat | 14-UAT.md (4 open scenarios) | Discarded — phase 14 execution discarded by owner 2026-08; scope unshipped |
+| uat | 15-HUMAN-UAT.md | Resolved 2026-10-02 (status label predates resolve state) |
+| verification | 11-VERIFICATION.md (conditional) | Documented — multi_account instability later green; see v1.1-MILESTONE-AUDIT.md |
+| verification | 13-VERIFICATION.md (29/32) | Documented — residuals map to discarded phase-14 scope; see v1.1-MILESTONE-AUDIT.md |
+| gap | ELM-01..08 | Dropped from v1.1 — cross-repo SGProcessingManager scope; see v1.1-MILESTONE-AUDIT.md |
+| gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |

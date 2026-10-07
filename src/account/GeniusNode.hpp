@@ -21,6 +21,7 @@
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <libp2p/crypto/key.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
@@ -73,9 +74,13 @@ namespace sgns::trustedpeer
     class TrustedPeerRegistry;
 }
 
+namespace sgns::networkregistry
+{
+    class NetworkRegistry;
+}
+
 namespace sgns
 {
-    class LocalPriceManager;
     class EscrowTransaction;
 }
 
@@ -166,12 +171,25 @@ namespace sgns
          * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
          * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
          * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
+         * @param[in] network_key Optional private-network (pnet) PSK written as the
+         *            "network_key" key — swarm-key text, or base16/base64-encoded 32-byte
+         *            PSK. Empty (default) writes no key and the node joins the public network.
+         * @param[in] private_network_id Optional public private-network identity written as the
+         *            "private_network_id" key — 0x-prefixed hex of exactly 32 bytes (D-01/D-02).
+         *            Empty (default) writes no key. LoadNetworkConfig rejects a config that
+         *            provisions exactly one of private_network_id / network_key.
+         * @param[in] network_bootstrap_peers Optional offline-provisioned initial NetworkRegistry
+         *            membership written as the "network_bootstrap_peers" array (libp2p PeerId
+         *            base58 strings). Empty (default) writes no array.
          * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
          *         tests and examples do not depend on the host LAN.
          */
-        static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
-                                                         uint16_t           port_seed,
-                                                         bool               auto_dht );
+        static outcome::result<void> WriteNetworkConfig( const std::string              &base_path,
+                                                         uint16_t                        port_seed,
+                                                         bool                            auto_dht,
+                                                         const std::string              &network_key             = "",
+                                                         const std::string              &private_network_id      = "",
+                                                         const std::vector<std::string> &network_bootstrap_peers = {} );
 
         /**
          * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
@@ -491,6 +509,42 @@ namespace sgns
          * @param[in] peers Peer multiaddresses to connect to.
          */
         void AddPeers( const std::vector<std::string> &peers );
+
+        /**
+         * @brief Blocks a peer at the connection-gater level.
+         *
+         * Blocked peers are rejected at every stage of the connection upgrade
+         * pipeline (dial, secured, upgraded). Existing connections are not
+         * terminated; the block applies to new connection attempts. No-op
+         * (with a warning) when PubSub is not running.
+         * @param[in] peer_id Peer ID (base58) of the peer to block.
+         */
+        void BlockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Blocks several peers at the connection-gater level.
+         * @param[in] peer_ids Peer IDs (base58) of the peers to block.
+         */
+        void BlockPeers( const std::vector<std::string> &peer_ids );
+
+        /**
+         * @brief Removes a peer from the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) of the peer to unblock.
+         */
+        void UnblockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Checks whether a peer is in the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) to check.
+         * @return True when the peer is blocked (false when PubSub is not running).
+         */
+        bool IsPeerBlocked( const std::string &peer_id ) const;
+
+        /**
+         * @brief Returns all peers currently blocked by the connection gater.
+         * @return Base58 peer IDs in the deny list (empty when PubSub is not running).
+         */
+        std::vector<std::string> GetBlockedPeers() const;
 
         /**
          * @brief Starts or restarts the background UPnP port refresh thread.
@@ -1020,6 +1074,13 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>   pubsub_context_keepalive_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_; ///< PubSub networking service.
 
+        /// Retained copy of the gossip host keypair loaded in StartPubSub
+        /// (CR-G01): private-network publishes are sealed with this key
+        /// (broadcaster + processing channels) so the envelope-embedded public
+        /// key derives the from-field PeerId every gated receiver checks.
+        /// Unused on public nodes (no membership filter installed).
+        std::shared_ptr<const libp2p::crypto::KeyPair> gossip_signing_keypair_;
+
     protected:
         /// Active account used by node services. Declared after @ref pubsub_ because
         /// GeniusAccount owns an AccountMessenger holding PubSub subscriptions.
@@ -1108,6 +1169,11 @@ namespace sgns
         /// deliberately does not.
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        /// D-06/D-07 (15-05): per-privateNetworkId membership authority, constructed only
+        /// when private_network_id_ is provisioned. Declared after trusted_peer_registry_
+        /// for the same destructor-ordering reason as the rest of the quorum trio: its
+        /// destructor calls Unregister(), which needs SecureCrdt alive (destroyed last).
+        std::shared_ptr<sgns::networkregistry::NetworkRegistry> network_registry_;
         std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
 
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction service.
@@ -1172,6 +1238,16 @@ namespace sgns
             trust_startup_controller_; ///< Restricted boot state machine.
         /// Created once with the policy controller; SelectAccount never mutates it.
         std::shared_ptr<const NodeTrustSigner> trust_signer_;
+        /// Private-network (pnet) PSK from network_config.json ("network_key"); empty = public network.
+        std::string network_key_;
+        /// Public private-network identity from network_config.json ("private_network_id",
+        /// 0x-prefixed hex of exactly 32 bytes); empty = public network. Intentionally distinct
+        /// from network_key_ (D-02): this value drives identity/CRDT paths, never transport.
+        std::string private_network_id_;
+        /// Offline-provisioned initial NetworkRegistry membership from network_config.json
+        /// ("network_bootstrap_peers", libp2p PeerId base58 strings); consumed when
+        /// private_network_id_ is set.
+        std::vector<std::string> network_bootstrap_peers_;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1262,6 +1338,16 @@ namespace sgns
             int         low_water    = 0;         ///< Connection-manager low water mark.
             uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
             uint16_t    port_seed    = 0;         ///< "port_seed", or the constructor param when the key is absent.
+            std::string network_key;              ///< "network_key" pnet PSK; empty = public network.
+            ///< "private_network_id" public Ed25519 identity from the license NFT (D-01/D-02);
+            ///< 0x-prefixed hex of exactly 32 bytes; empty = public network.
+            std::string private_network_id;
+            ///< "network_bootstrap_peers" offline-provisioned initial NetworkRegistry membership
+            ///< (libp2p PeerId base58 strings); consumed when private_network_id is set.
+            std::vector<std::string> network_bootstrap_peers;
+            bool valid = true; ///< False when a fatal config divergence (malformed private_network_id
+                               ///< or a half-provisioned private_network_id/network_key pair) must
+                               ///< abort node start instead of silently running a misidentified node.
         };
 
         /**
@@ -1294,7 +1380,10 @@ namespace sgns
 
         /**
          * @brief Derives @c base58key_, then creates and starts PubSub on @ref pubsubport_.
-         * @param[in] settings Resolved network settings (bind address, water marks).
+         * When @c settings.network_key is non-empty, PubSub is created via the private-network
+         * (pnet) constructor so every connection passes the PSK boundary; nodes holding a
+         * different key cannot communicate with this node.
+         * @param[in] settings Resolved network settings (bind address, water marks, optional pnet key).
          * @return True on success; on failure PubSub is stopped and reset before returning false.
          */
         bool StartPubSub( const NetworkSettings &settings );
@@ -1334,6 +1423,23 @@ namespace sgns
          * @return True when processing modules are constructed.
          */
         bool InitProcessingModules();
+
+        /**
+         * @brief Returns the processing channel topic scoped to this node's network identity.
+         * @return PROCESSING_CHANNEL unchanged when public; PROCESSING_CHANNEL + "/" +
+         *         private_network_id when the node belongs to a private network. Used at every
+         *         listen/commit/construction site so replication follows the scoped channel.
+         */
+        std::string ScopedProcessingChannel() const;
+
+        /**
+         * @brief Returns the processing grid topic scoped to this node's network identity.
+         * @return PROCESSING_GRID_CHANNEL unchanged when public; PROCESSING_GRID_CHANNEL + "/" +
+         *         private_network_id when scoped. Feeds the job-discovery DHT CID derivation
+         *         (DHTInit) and the grid subscription (StartProcessing) so a private network's
+         *         job discovery stops colliding with the public DHT advertisement.
+         */
+        std::string ScopedProcessingGridChannel() const;
 
         /**
          * @brief Begins the asynchronous database migration and initialization state flow.
@@ -1423,8 +1529,14 @@ namespace sgns
 
         /**
          * @brief Unregisters and releases node-scoped policy services during full shutdown only.
+         * @param[in] global_db_shutdown_follows True only on the destruction route, where the
+         *            caller shuts the GlobalDB down immediately after this call: the broadcaster
+         *            membership filter is cleared back to the raw state. False (the
+         *            policy-stack failure paths) leaves the GlobalDB running indefinitely, so a
+         *            private node's gossip ingest is set to deny-all instead (CR-C2-01
+         *            fail-closed); public nodes never install a filter, so the clear is a no-op.
          */
-        void ShutdownNodePolicyServices();
+        void ShutdownNodePolicyServices( bool global_db_shutdown_follows = false );
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,

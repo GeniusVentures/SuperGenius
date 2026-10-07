@@ -86,6 +86,26 @@ namespace sgns
             return amount_;
         }
 
+        /**
+         * @brief Overrides the chain id used for input-validation routing.
+         * @param[in] chain_id Scoped chain id (TransactionManager::ScopedChainId output) or any
+         *            explicit routing id; empty-scope escrows keep the default genius chain id.
+         */
+        void SetChainIdOverride( std::string chain_id )
+        {
+            chain_id_ = std::move( chain_id );
+        }
+
+        /**
+         * @brief Returns the chain id used for input-validation routing.
+         * @return The override when set; otherwise the genius chain id (byte-identical to the
+         *         GeniusTransaction default).
+         */
+        std::string GetChainId() const override
+        {
+            return chain_id_;
+        }
+
     private:
         /**
          * @brief Constructs an escrow-hold transaction from its payload and DAG metadata.
@@ -97,6 +117,9 @@ namespace sgns
 
         UTXOTxParameters utxo_params_; ///< Signed inputs and outputs for the escrow hold.
         uint64_t         amount_;      ///< Total amount locked in escrow.
+        /// Chain id for input-validation routing (metadata, not part of the signed payload);
+        /// defaults to the genius chain id so public escrows are byte-identical.
+        std::string chain_id_ = std::string( GeniusTransaction::GENIUS_CHAIN_ID );
 
         /**
          * @brief Registers the deserializer for the escrow-hold transaction type.

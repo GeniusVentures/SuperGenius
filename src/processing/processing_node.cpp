@@ -18,7 +18,9 @@ namespace sgns::processing
         const std::string                                      &processingQueueChannelId,
         std::list<SGProcessing::SubTask>                        subTasks,
         std::chrono::milliseconds                               msSubscriptionWaitingDuration,
-        std::chrono::seconds                                    ttl )
+        std::chrono::seconds                                    ttl,
+        sgns::networkregistry::MembershipFilter                 membershipFilter,
+        std::shared_ptr<const libp2p::crypto::KeyPair>          gossipSigningKey )
     {
         // Create the shared_ptr using the protected constructor
         auto node = std::shared_ptr<ProcessingNode>( new ProcessingNode( std::move( gossipPubSub ),
@@ -30,7 +32,14 @@ namespace sgns::processing
                                                                          std::move( node_id ),
                                                                          std::move( ttl ) ) );
 
-        node->Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
+        // CR-G02a: the filter/key travel INTO Initialize so both channel
+        // gates are live before any subscription goes up (queue-channel
+        // Listen + results-channel CreateResultsChannel/ConnectToSubTaskQueue
+        // in AttachTo below) -- no creation-time enrollment window.
+        node->Initialize( processingQueueChannelId,
+                          msSubscriptionWaitingDuration,
+                          std::move( membershipFilter ),
+                          std::move( gossipSigningKey ) );
         node->InitTTL();
         if ( !node->AttachTo( processingQueueChannelId ) )
         {
@@ -138,24 +147,124 @@ namespace sgns::processing
         }
     }
 
-    void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
-                                     std::chrono::milliseconds msSubscriptionWaitingDuration )
+    void ProcessingNode::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        // Results channel (SubTaskQueueAccessorImpl::OnResultChannelMessage gate)
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->SetMembershipFilter( filter );
+            }
+            else
+            {
+                // IN-01: a skipped security control must never be silent.
+                m_logger->warn( "[{}] SetMembershipFilter: subtask queue accessor is not a "
+                                "SubTaskQueueAccessorImpl -- results-channel membership gate NOT updated",
+                                m_nodeId );
+            }
+        }
+        // Processing queue channel (ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage gate)
+        if ( m_queueChannel )
+        {
+            auto channel = std::dynamic_pointer_cast<ProcessingSubTaskQueueChannelPubSub>( m_queueChannel );
+            if ( channel )
+            {
+                channel->SetMembershipFilter( std::move( filter ) );
+            }
+            else
+            {
+                m_logger->warn( "[{}] SetMembershipFilter: queue channel is not a "
+                                "ProcessingSubTaskQueueChannelPubSub -- queue-channel membership gate NOT updated",
+                                m_nodeId );
+            }
+        }
+    }
+
+    void ProcessingNode::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        // Results channel (SubTaskQueueAccessorImpl publish sealing + gate authentication)
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->SetGossipSigningKey( key );
+            }
+            else
+            {
+                // IN-01: a skipped security control must never be silent.
+                m_logger->warn( "[{}] SetGossipSigningKey: subtask queue accessor is not a "
+                                "SubTaskQueueAccessorImpl -- results-channel gate NOT updated",
+                                m_nodeId );
+            }
+        }
+        // Processing queue channel (ProcessingSubTaskQueueChannelPubSub publish sealing + gate)
+        if ( m_queueChannel )
+        {
+            auto channel = std::dynamic_pointer_cast<ProcessingSubTaskQueueChannelPubSub>( m_queueChannel );
+            if ( channel )
+            {
+                channel->SetGossipSigningKey( std::move( key ) );
+            }
+            else
+            {
+                m_logger->warn( "[{}] SetGossipSigningKey: queue channel is not a "
+                                "ProcessingSubTaskQueueChannelPubSub -- queue-channel gate NOT updated",
+                                m_nodeId );
+            }
+        }
+    }
+
+    void ProcessingNode::Initialize( const std::string                              &processingQueueChannelId,
+                                     std::chrono::milliseconds                       msSubscriptionWaitingDuration,
+                                     sgns::networkregistry::MembershipFilter         membershipFilter,
+                                     std::shared_ptr<const libp2p::crypto::KeyPair>  gossipSigningKey )
     {
         // Subscribe to subtask queue channel
         auto processingQueueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( m_gossipPubSub,
                                                                                              processingQueueChannelId );
+
+        // CR-G02a: install the membership filter (and the CR-G01 signing key)
+        // on the queue channel BEFORE Listen() puts the subscription live --
+        // a node created under a set filter never runs an ungated queue
+        // channel, not even during the subscription wait. Empty filter/key
+        // (public node) -> install nothing, byte-identical public behavior.
+        if ( membershipFilter )
+        {
+            processingQueueChannel->SetMembershipFilter( membershipFilter );
+        }
+        if ( gossipSigningKey )
+        {
+            processingQueueChannel->SetGossipSigningKey( gossipSigningKey );
+        }
 
         m_subtaskQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( processingQueueChannel,
                                                                                  m_localContext,
                                                                                  m_nodeId,
                                                                                  m_processingErrorSink );
 
-        m_subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>( m_gossipPubSub,
-                                                                             m_subtaskQueueManager,
-                                                                             m_subTaskResultStorage,
-                                                                             m_taskResultProcessingSink,
-                                                                             m_processingErrorSink,
-                                                                             m_processingCore );
+        auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>( m_gossipPubSub,
+                                                                                m_subtaskQueueManager,
+                                                                                m_subTaskResultStorage,
+                                                                                m_taskResultProcessingSink,
+                                                                                m_processingErrorSink,
+                                                                                m_processingCore );
+        // CR-G02a (results channel): same pre-subscription install on the
+        // accessor -- this runs inside Initialize, strictly BEFORE AttachTo's
+        // CreateResultsChannel/ConnectToSubTaskQueue subscribe the results
+        // channel, so the OnResultChannelMessage gate is live from the first
+        // inbound result message.
+        if ( membershipFilter )
+        {
+            subTaskQueueAccessor->SetMembershipFilter( membershipFilter );
+        }
+        if ( gossipSigningKey )
+        {
+            subTaskQueueAccessor->SetGossipSigningKey( gossipSigningKey );
+        }
+        m_subTaskQueueAccessor = subTaskQueueAccessor;
 
         processingQueueChannel->SetQueueRequestSink(
             [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( m_subtaskQueueManager ) )](

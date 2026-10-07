@@ -431,6 +431,7 @@ namespace sgns
 
         static bool HasActiveVoteLock( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot_key )
         {
+            std::lock_guard lock( manager->proposals_mutex_ );
             auto it = manager->slot_states_.find( slot_key );
             return it != manager->slot_states_.end() && it->second.active_vote_locked;
         }
@@ -2816,6 +2817,8 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     ASSERT_TRUE( registry );
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
+    // This test supplies the durable certificate itself, after casting a vote.
+    manager->ConfigureCertificateDelay( std::chrono::minutes( 10 ) );
 
     auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                 88,
@@ -2833,6 +2836,7 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( manager ) );
 
     auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
     ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
@@ -2850,6 +2854,10 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     callback_value.put( serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived( manager, { key, std::move( callback_value ) } );
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, certificate.value() );
+
+    // Exercise the timer's already-certified cleanup path before a handler exists.
+    // It must retain the vote fence just like durable recovery does.
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessCertificates( manager );
 
     // A durable certificate cannot consume a vote or finish work before its consumer exists.
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
