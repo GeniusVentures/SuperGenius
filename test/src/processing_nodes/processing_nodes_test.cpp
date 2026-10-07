@@ -590,3 +590,329 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
                    burn_amount );
 }
+
+namespace
+{
+    /// @brief RAII guard for D-08-12 stub flips: installs the given price
+    /// payload on construction and re-installs the fixture-default 1.0
+    /// payload on destruction, so an early ASSERT_* exit can never leak a
+    /// flipped price into a later suite case.
+    class ScopedStubPrice
+    {
+    public:
+        ScopedStubPrice( sgns::testutil::HttpStubServer &stub, const char *body )
+            : stub_( stub )
+        {
+            stub_.OnPath( "/api/v3/simple/price", { 200, "application/json", body } );
+        }
+
+        ~ScopedStubPrice()
+        {
+            stub_.OnPath( "/api/v3/simple/price", { 200, "application/json", R"({"genius-ai":{"usd":1.0}})" } );
+        }
+
+        ScopedStubPrice( const ScopedStubPrice & )            = delete;
+        ScopedStubPrice &operator=( const ScopedStubPrice & ) = delete;
+
+    private:
+        sgns::testutil::HttpStubServer &stub_;
+    };
+} // namespace
+
+TEST_F( ProcessingNodesTest, GamedPriceJobRejectedAndRefunded )
+{
+    // TEST-02 (D-08-11..13): a gamed-price job posted through the real
+    // ProcessImage wire path is BelowBand-rejected by every honest
+    // validator, never processed by either processor, and fully refunded
+    // to the poster with no burn (regime 1: reservation rollback via the
+    // rejection certificate - asserted in-test, never assumed).
+    //
+    // Gamed construction (D-08-12). LocalPriceManager::GetQuotes serves
+    // FRESH L1 cache entries (kFreshMaxAge = 60s, fresh-closed boundary)
+    // with zero network, so the eras are sequenced around that freshness
+    // window (verified against HandleRequestOnStrand - the flagged TEST-02
+    // cache-hit assumption):
+    //   - t0:   warm all three nodes' caches at the honest 1.0 era;
+    //   - t61:  every L1 entry has aged past fresh, so the next forced
+    //           fetches are guaranteed NETWORK fetches, never cache hits;
+    //   - t61:  stub serves 50.0 -> both validators fetch; 50.0-era
+    //           observations land in their QueryHistory windows;
+    //   - t61.5: stub serves 1.0 again -> the poster refetches a FRESH 1.0
+    //           quote (the claim era) into its cache;
+    //   - t62:  ProcessImage prices the job from the poster's fresh cached
+    //           1.0 quote (L1 hit, zero network) while both validators'
+    //           only in-window evidence is 50.0-era. With the validation
+    //           window shrunk to [T-5s, T+2s] (TTL=3, skew=2), the 1.0-era
+    //           observations sit outside the window and the claim sits far
+    //           below the [45, 55] band -> BelowBand Reject on both. The
+    //           50x flip dwarfs the 10% tolerance, so the verdict cannot
+    //           land on a boundary (TEST-02 boundary item).
+
+    // (1) All three nodes READY (fixture idiom).
+    assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
+                            std::chrono::milliseconds( 50000 ),
+                            "Main node not synced" );
+    assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                            std::chrono::milliseconds( 50000 ),
+                            "Node proc 1 not synced" );
+    assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
+                            std::chrono::milliseconds( 50000 ),
+                            "Node proc 2 not synced" );
+
+    // Mint funds first (its finalization latency must not eat the poster's
+    // 60s quote-freshness window): wait for the exact credit before any
+    // era sequencing begins.
+    const uint64_t mint_amount       = 50000000000;
+    const uint64_t balance_pre_mint  = node_main->GetBalance();
+    const auto     mint_result       = node_main->MintTokens( mint_amount,
+                                                              sgns::test::NextMintSourceHash(),
+                                                              "test",
+                                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                                              "",
+                                                              std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+    assertWaitForCondition( [&] { return node_main->GetBalance() == balance_pre_mint + mint_amount; },
+                            std::chrono::milliseconds( 60000 ),
+                            "Gamed-case mint credit not observed" );
+
+    // (2) Warm every price cache at the honest 1.0 era (the stub still
+    // serves the fixture-default 1.0): populates the poster cache AND both
+    // validators' QueryHistory with 1.0-era observations.
+    const auto warm_main  = node_main->GetGNUSPrice();
+    const auto warm_proc1 = node_proc1->GetGNUSPrice();
+    const auto warm_proc2 = node_proc2->GetGNUSPrice();
+    ASSERT_TRUE( warm_main.has_value() );
+    ASSERT_TRUE( warm_proc1.has_value() );
+    ASSERT_TRUE( warm_proc2.has_value() );
+    ASSERT_NEAR( warm_main.value(), 1.0, 0.05 );
+    ASSERT_NEAR( warm_proc1.value(), 1.0, 0.05 );
+    ASSERT_NEAR( warm_proc2.value(), 1.0, 0.05 );
+
+    // Age every L1 entry past kFreshMaxAge (60s; an age of exactly 60s is
+    // still Fresh, so 61s guarantees Stale) so the next forced fetches are
+    // guaranteed network fetches, never cache hits.
+    std::this_thread::sleep_for( std::chrono::seconds( 61 ) );
+
+    // (3)+(4) Flip the stub to the 50.0 era and force fresh evidence on
+    // both validators only: their stale caches miss, the loopback stub
+    // serves 50.0, and the 50.0-era observations land in their windows.
+    {
+        const ScopedStubPrice era_50( price_stub_, R"({"genius-ai":{"usd":50.0}})" );
+        const auto            forced_proc1 = node_proc1->GetGNUSPrice();
+        const auto            forced_proc2 = node_proc2->GetGNUSPrice();
+        ASSERT_TRUE( forced_proc1.has_value() );
+        ASSERT_TRUE( forced_proc2.has_value() );
+        ASSERT_NEAR( forced_proc1.value(), 50.0, 0.5 );
+        ASSERT_NEAR( forced_proc2.value(), 50.0, 0.5 );
+    }
+
+    // Re-warm the poster's cache with a FRESH 1.0-era quote while the stub
+    // briefly serves 1.0 again: this is the quote ProcessImage will serve
+    // from L1 (zero network) when it prices the gamed job seconds later.
+    {
+        const ScopedStubPrice era_10( price_stub_, R"({"genius-ai":{"usd":1.0}})" );
+        const auto            forced_main = node_main->GetGNUSPrice();
+        ASSERT_TRUE( forced_main.has_value() );
+        ASSERT_NEAR( forced_main.value(), 1.0, 0.05 );
+    }
+
+    // (5) Shrink the validation window for deterministic aging (the env is
+    // read per call by ResolvePriceValidatorConfig - never cached): the
+    // window around the upcoming escrow's DAG timestamp T is [T-5s, T+2s],
+    // which contains only the 50.0-era observations.
+    const sgns::testutil::ScopedEnvVar window_ttl( "SGNS_PRICEVAL_WINDOW_TTL_S", "3" );
+    const sgns::testutil::ScopedEnvVar clock_skew( "SGNS_PRICEVAL_CLOCK_SKEW_S", "2" );
+
+    // (7) Baselines for the exact-refund and no-processing assertions.
+    const uint64_t balance_before_gamed = node_main->GetBalance();
+    const uint64_t balance_proc1_before = node_proc1->GetBalance();
+    const uint64_t balance_proc2_before = node_proc2->GetBalance();
+    std::cout << "Balance main (gamed before): " << balance_before_gamed << std::endl;
+
+    // Same asset-substituted json as PostProcessing, distinct name so logs
+    // distinguish the gamed post from the honest job.
+    std::string bin_path  = std::string( SGNS_PROCESSING_ASSETS_DIR ) + "/";
+    std::string json_data = R"(
+{
+  "name": "posenet-inference-gamed",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "Gamed-price PoseNet inference job for TEST-02 rejection coverage",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+
+  "inputs": [
+    {
+      "name": "ballet_image",
+	  "source_uri_param": "file://[basepath]data/ballet.data",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25
+      },
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image",
+	  "source_uri_param": "file://[basepath]data/frisbee3.data",
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16
+      },
+      "format": "RGB8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
+      "type": "tensor",
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "file://[basepath]model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "file://[basepath]model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}
+       )";
+    std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
+    boost::replace_all( json_data, "[basepath]", bin_path );
+
+    // (8) Post the gamed job through the real wire path (D-08-12 - no
+    // hand-built Task proto injection). The stub serves 50.0 from here on;
+    // the poster's cache serves the fresh 1.0 quote (L1 hit), so
+    // claimed_price and the escrow amount are sized at the 1.0 era while
+    // both validators' in-window evidence is 50.0-only.
+    std::string gamed_task_id;
+    {
+        const ScopedStubPrice era_50_vote( price_stub_, R"({"genius-ai":{"usd":50.0}})" );
+        const auto            postjob = node_main->ProcessImage( json_data );
+        ASSERT_TRUE( postjob ) << "post job error: " << postjob.error().message();
+
+        const auto my_tasks = node_main->GetMyTaskIds();
+        ASSERT_FALSE( my_tasks.empty() );
+        gamed_task_id = my_tasks.back();
+
+        // (9) Exact refund (D-08-07/D-08-13, regime 1): the certified
+        // rejection drives the poster's tracked escrow to FAILED, whose
+        // machinery performs RollbackUTXOs, returning the reservation.
+        // Generous deadline: certificate formation + FAILED + rollback.
+        assertWaitForCondition( [&] { return node_main->GetBalance() == balance_before_gamed; },
+                                std::chrono::milliseconds( 120000 ),
+                                "Gamed escrow not refunded in time" );
+        ASSERT_EQ( balance_before_gamed, node_main->GetBalance() );
+
+        // (10) Regime assertion (08-RESEARCH Open Q1 / assumption A3):
+        // the poster's tracked escrow reached FAILED - regime 1 (the
+        // escrow never certified; rollback, not a release spend). A
+        // CONFIRMED status would mean regime 2 fired instead and must be
+        // surfaced, not silently accepted.
+        const auto escrow_status
+            = node_main->WaitForTransactionOutgoing( postjob.value(), std::chrono::milliseconds( 150000 ) );
+        ASSERT_EQ( sgns::TransactionManager::TransactionStatus::FAILED, escrow_status )
+            << "Expected regime 1 (FAILED rollback); status was " << static_cast<int>( escrow_status );
+    }
+
+    // (11) No processing (D-08-08): after a short grace period, both
+    // processors' balances are exactly unchanged and the gamed task has no
+    // result - no payout, no subtask completion.
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    ASSERT_EQ( balance_proc1_before, node_proc1->GetBalance() );
+    ASSERT_EQ( balance_proc2_before, node_proc2->GetBalance() );
+    const auto gamed_result = node_main->GetTaskResult( gamed_task_id );
+    EXPECT_TRUE( gamed_result.has_error() ) << "Gamed task must never produce a result";
+
+    std::cout << "Balance main (gamed after):  " << node_main->GetBalance() << std::endl;
+    // (12) The stub is restored to the fixture-default 1.0 by the RAII
+    // guards above; the env guards restore themselves on scope exit.
+}
