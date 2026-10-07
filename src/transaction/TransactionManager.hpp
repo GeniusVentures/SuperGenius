@@ -47,7 +47,7 @@ namespace sgns::account
 namespace sgns
 {
     class MintTransactionV2;
-
+    class EscrowTransaction;
 
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
@@ -1054,6 +1054,26 @@ namespace sgns
         outcome::result<ConsensusManager::Check> HandleTaskRejectionCertificate(
             const std::string          &subject_hash,
             const ConsensusCertificate &certificate );
+
+        /**
+         * @brief Builds and submits the regime-2 rejection release (D-08-05/D-08-07).
+         *
+         * Follows the PayEscrow construction verbatim (fetch record, escrow
+         * InputUTXOInfo signed by the local account, FillDAGStruct lock id with
+         * the empty-fallback, MakeSignature, EnqueueTransaction) but emits
+         * exactly ONE output paying the FULL escrowed amount to the escrow's
+         * source address (the poster). BuildPayoutOutputs is deliberately NOT
+         * used — it always emits a burn output, which D-08-07 forbids for
+         * rejection refunds. Only reachable from the rejection-certificate
+         * handler's CONFIRMED branch: an uncertified escrow has no outpoint to
+         * spend and honest validators would reject the release (08-RESEARCH
+         * Pitfall 1). A second release of the same escrow fails structurally
+         * through UTXO double-spend rules.
+         *
+         * @param[in] escrow_tx CONFIRMED escrow whose UTXO is refunded.
+         * @return Release transaction hash on success, otherwise an error.
+         */
+        outcome::result<std::string> BuildRejectionReleaseTransaction( const EscrowTransaction &escrow_tx );
 
         bool                  fail_bridge_executed_marker_write_for_test_ = false;
         std::function<void()> fetch_and_process_before_state_change_hook_for_test_;

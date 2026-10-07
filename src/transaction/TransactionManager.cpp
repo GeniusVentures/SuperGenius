@@ -1356,6 +1356,76 @@ namespace sgns
         return transfer_transaction->GetHash();
     }
 
+    outcome::result<std::string> TransactionManager::BuildRejectionReleaseTransaction(
+        const EscrowTransaction &escrow_tx )
+    {
+        // Dereferences globaldb_m and account_m below; Stop() has already detached from both.
+        if ( stopped_.load() )
+        {
+            return std::errc::operation_canceled;
+        }
+
+        // Regime-2 gate (08-RESEARCH Pitfall 1): only a CONFIRMED escrow has a UTXO
+        // to spend. A release referencing an uncertified escrow would spend a
+        // nonexistent outpoint and be rejected by honest validators, so a
+        // non-CONFIRMED status logs and returns without constructing.
+        const auto tracked = GetTrackedTxByHash( escrow_tx.GetHash() );
+        if ( !tracked.has_value() || tracked->status != TransactionStatus::CONFIRMED )
+        {
+            m_logger->warn( "{}: escrow {} is not CONFIRMED (tracked={}) — rejection release not constructed",
+                            __func__,
+                            escrow_tx.GetHash(),
+                            tracked.has_value() ? std::to_string( static_cast<int>( tracked->status ) )
+                                                : std::string( "no" ) );
+            return std::errc::invalid_argument;
+        }
+
+        // D-08-07 full refund, no burn: exactly one output paying the full escrowed
+        // amount to the escrow's source address (the poster). The payout list is
+        // constructed directly — the payout helper always emits a burn output,
+        // which rejection refunds forbid.
+        const auto   escrow_params = escrow_tx.GetUTXOParameters();
+        const auto   token_id      = escrow_params.second.empty()
+                                         ? TokenID::FromBytes( { 0x00 } )
+                                         : escrow_params.second.front().token_id;
+        const uint64_t refund_amount = escrow_tx.GetAmount();
+        const std::string poster     = escrow_tx.GetSrcAddress();
+
+        std::vector<OutputDestInfo> refund_outputs;
+        refund_outputs.push_back( { refund_amount, poster, token_id } );
+
+        InputUTXOInfo escrow_utxo_input;
+        escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx.GetHash() ).value();
+        escrow_utxo_input.output_idx_ = 0;
+        escrow_utxo_input.signature_  = account_m->Sign( escrow_utxo_input.SerializeForSigning() );
+
+        std::string lock_id = escrow_tx.GetUncleHash();
+        if ( lock_id.empty() )
+        {
+            lock_id = escrow_params.second.front().dest_address;
+            m_logger->warn( "Escrow transaction {} has empty lock_id but has UTXO parameters - using dest_address "
+                            "as fallback lock_id: {}",
+                            escrow_tx.GetHash(),
+                            lock_id );
+        }
+
+        auto transfer_transaction = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( std::vector{ escrow_utxo_input }, refund_outputs, FillDAGStruct( lock_id ) ) );
+
+        transfer_transaction->MakeSignature( *account_m );
+
+        // D-08-13 observability: refund amount, escrow identity, and poster address.
+        m_logger->info( "{}: rejection release submitted escrow={} amount={} poster={} release_tx={}",
+                        __func__,
+                        escrow_tx.GetHash(),
+                        refund_amount,
+                        poster,
+                        transfer_transaction->GetHash() );
+
+        EnqueueTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } }, std::nullopt } );
+        return transfer_transaction->GetHash();
+    }
+
     void TransactionManager::AsyncPayEscrow( std::string                              escrow_path,
                                              SGProcessing::TaskResult                 task_result,
                                              std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
@@ -4820,12 +4890,28 @@ namespace sgns
             case TransactionStatus::CONFIRMED:
             {
                 // Regime 2 (divergence topology): the escrow certified despite the
-                // rejection, so a real escrow UTXO exists. Route to the CONFIRMED-gated
-                // full-refund release spend (Task 2: BuildRejectionReleaseTransaction).
-                m_logger->info( "{}: rejection certificate for CONFIRMED escrow {} (regime 2) — routing to "
+                // rejection, so a real escrow UTXO exists. Route to the
+                // CONFIRMED-gated full-refund release spend (D-08-05/D-08-07);
+                // construction is unreachable for non-CONFIRMED escrows.
+                m_logger->info( "{}: rejection certificate for CONFIRMED escrow {} (regime 2) — constructing "
                                 "rejection release",
                                 __func__,
                                 escrow_tx->GetHash() );
+                auto release_result = BuildRejectionReleaseTransaction( *escrow_tx );
+                if ( release_result.has_error() )
+                {
+                    // The refund is best-effort here: the certificate itself is
+                    // settled (quorum already certified the rejection), and the
+                    // release either landed or the regime gate correctly declined
+                    // to construct it. Failures are logged, never re-fired — a
+                    // second release of the same escrow would fail as a UTXO
+                    // double-spend anyway (D-08-05).
+                    m_logger->error( "{}: rejection release construction failed for escrow {} err={}",
+                                     __func__,
+                                     escrow_tx->GetHash(),
+                                     release_result.error().message() );
+                    return ConsensusManager::Check::Approve;
+                }
                 return ConsensusManager::Check::Approve;
             }
             default:
