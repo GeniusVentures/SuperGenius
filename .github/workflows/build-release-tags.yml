@@ -8,11 +8,11 @@ on:
         required: true
         type: string
       thirdparty_tag:
-        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified)'
+        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified); "main" or "develop" pulls the rolling branch releases from the Release Build CI'
         required: false
         type: string
       zkllvm_tag:
-        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
+        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified); "main" or "develop" pulls the rolling branch releases from the Release Build CI'
         required: false
         type: string
       # Names must be build_<target>-<abi>_<build-type>: the skip step looks
@@ -424,13 +424,23 @@ jobs:
           fi
           echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
 
+          # "main"/"develop" select the rolling branch releases published by
+          # the Release Build CI (cmake.yml), which are tagged
+          # <target[-abi]>-<branch>-<build-type> instead of a bare release tag.
+          TARGET_ID="${FILE_NAME%-${{matrix.build-type}}.tar.gz}"
+          if [ "${THIRDPARTY_TAG}" = "main" ] || [ "${THIRDPARTY_TAG}" = "develop" ]; then
+            DOWNLOAD_TAG="${TARGET_ID}-${THIRDPARTY_TAG}-${{matrix.build-type}}"
+          else
+            DOWNLOAD_TAG="${THIRDPARTY_TAG}"
+          fi
+
           mkdir thirdparty
           cd thirdparty
 
           # Download from the specified thirdparty tag's release
-          echo "Downloading thirdparty from tag: ${THIRDPARTY_TAG}"
+          echo "Downloading thirdparty from tag: ${DOWNLOAD_TAG}"
 
-          gh release download ${THIRDPARTY_TAG} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
@@ -451,20 +461,35 @@ jobs:
           mkdir zkLLVM
           cd zkLLVM
 
-          echo "Downloading zkLLVM from tag: ${ZKLLVM_TAG}"
-
           if [ "${{ matrix.target }}" = "Windows" ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
-          elif [ '${{matrix.abi}}' ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
+              ZK_TYPE=${{matrix.build-type}}
           else
-              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
+              # zkLLVM only publishes Release artifacts outside Windows, so
+              # non-Windows Debug builds link against the Release zkLLVM.
+              ZK_TYPE=Release
           fi
 
-          gh release download ${ZKLLVM_TAG} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+          if [ '${{matrix.abi}}' ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${ZK_TYPE}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${ZK_TYPE}/${{matrix.abi}}
+          else
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${ZK_TYPE}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${ZK_TYPE}
+          fi
+
+          # "main"/"develop" select the rolling branch releases published by
+          # the Release Build CI (cmake.yml), which are tagged
+          # <target[-abi]>-<branch>-<zk build type> instead of a bare release tag.
+          TARGET_ID="${ZKLLVM_FILE_NAME%-${ZK_TYPE}.tar.gz}"
+          if [ "${ZKLLVM_TAG}" = "main" ] || [ "${ZKLLVM_TAG}" = "develop" ]; then
+              DOWNLOAD_TAG="${TARGET_ID}-${ZKLLVM_TAG}-${ZK_TYPE}"
+          else
+              DOWNLOAD_TAG="${ZKLLVM_TAG}"
+          fi
+
+          echo "Downloading zkLLVM from tag: ${DOWNLOAD_TAG}"
+
+          gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
 
