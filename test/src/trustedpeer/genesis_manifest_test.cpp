@@ -6,11 +6,14 @@
 #include <gtest/gtest.h>
 #include <gsl/span>
 
+#include "base/hexutil.hpp"
 #include "trustedpeer/CanonicalTrustCodec.hpp"
 #include "trustedpeer/GenesisManifest.hpp"
 
 namespace
 {
+    using sgns::base::hex_lower;
+    using sgns::base::unhex;
     using sgns::trustedpeer::CanonicalTrustCodec;
     using sgns::trustedpeer::GenesisManifest;
 
@@ -18,6 +21,16 @@ namespace
     const std::string PEER_B( 128, 'b' );
     const std::string BOOTSTRAPPER( 128, 'c' );
     constexpr char    GOLDEN_FINGERPRINT[] = "a43ea4b21877879fa156645d776c18a6e338ff5020caf897947cbe0e421e2270";
+    // Full canonical bytes of MakeManifest() beside the derived fingerprint: the bytes
+    // are the single source of truth every downstream layer verifies against.
+    constexpr char GOLDEN_CANONICAL_BYTES_HEX[] =
+        "53474e535f54525553545f47454e455349535f563101002a00000040cccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccc00000000000000010000000200000040aaaaaaaaaaaaaaaaaa"
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00000040bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        "bbbbbbbbbbbb000000000000000200000000000000020000000000000064";
 
     GenesisManifest MakeManifest( std::vector<std::string> peers = { PEER_B, PEER_A } )
     {
@@ -56,6 +69,58 @@ TEST( GenesisManifestTest, PeerPermutationsNormalizeToOneGoldenFingerprint )
     ASSERT_TRUE( reversed_fingerprint.has_value() );
     EXPECT_EQ( *forward_fingerprint, GOLDEN_FINGERPRINT );
     EXPECT_EQ( *reversed_fingerprint, GOLDEN_FINGERPRINT );
+}
+
+TEST( GenesisManifestTest, CanonicalBytesNormalizeToGoldenHexPinAcrossConstructions )
+{
+    // Byte-level analog of the fingerprint permutation test above: both input orders
+    // must produce the pinned bytes, not merely an equal fingerprint.
+    const auto forward  = MakeManifest( { PEER_A, PEER_B } ).Canonicalized();
+    const auto reversed = MakeManifest( { PEER_B, PEER_A } ).Canonicalized();
+    ASSERT_TRUE( forward.has_value() );
+    ASSERT_TRUE( reversed.has_value() );
+
+    const auto forward_bytes  = forward->CanonicalBytes();
+    const auto reversed_bytes = reversed->CanonicalBytes();
+    ASSERT_TRUE( forward_bytes.has_value() );
+    ASSERT_TRUE( reversed_bytes.has_value() );
+
+    const auto to_hex = []( const std::vector<uint8_t> &bytes )
+    { return hex_lower( gsl::span<const uint8_t>( bytes.data(), bytes.size() ) ); };
+    EXPECT_EQ( to_hex( *forward_bytes ), GOLDEN_CANONICAL_BYTES_HEX );
+    EXPECT_EQ( to_hex( *reversed_bytes ), GOLDEN_CANONICAL_BYTES_HEX );
+}
+
+TEST( GenesisManifestTest, GoldenCanonicalBytesPinDecodesBackToTheManifest )
+{
+    // The pinned bytes are the source of truth: they must decode into exactly the
+    // canonical manifest, proving the fingerprint is derived, never the reverse.
+    const auto pinned_bytes = unhex( GOLDEN_CANONICAL_BYTES_HEX );
+    ASSERT_TRUE( pinned_bytes.has_value() ) << pinned_bytes.error().message();
+
+    const auto decoded = GenesisManifest::DecodeCanonical( pinned_bytes.value() );
+    ASSERT_TRUE( decoded.has_value() );
+
+    const auto canonical = MakeManifest().Canonicalized();
+    ASSERT_TRUE( canonical.has_value() );
+    EXPECT_EQ( *decoded, *canonical );
+}
+
+TEST( GenesisManifestTest, IndependentConstructionsProduceByteIdenticalCanonicalBytes )
+{
+    // Replay proof: two independent construction->canonicalize->encode cycles over the
+    // same inputs must agree on the bytes themselves, not only on their common hash.
+    const auto first  = MakeManifest( { PEER_A, PEER_B } ).Canonicalized();
+    const auto second = MakeManifest( { PEER_A, PEER_B } ).Canonicalized();
+    ASSERT_TRUE( first.has_value() );
+    ASSERT_TRUE( second.has_value() );
+
+    const auto first_bytes  = first->CanonicalBytes();
+    const auto second_bytes = second->CanonicalBytes();
+    ASSERT_TRUE( first_bytes.has_value() );
+    ASSERT_TRUE( second_bytes.has_value() );
+
+    EXPECT_EQ( *first_bytes, *second_bytes );
 }
 
 TEST( GenesisManifestTest, NormalizesUppercasePeersAndRejectsDuplicatesAfterNormalization )

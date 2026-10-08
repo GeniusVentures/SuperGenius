@@ -29,6 +29,10 @@
 #include "trustedpeer/genesis_tool/GenesisCeremonyPlatform.hpp"
 #include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+#include <soralog/impl/configurator_from_yaml.hpp>
+
 namespace
 {
     using namespace sgns;
@@ -68,15 +72,17 @@ namespace
 
     struct Arguments
     {
-        std::string operation;
+        std::string                        operation;
         std::map<std::string, std::string> values;
-        std::set<std::string> flags;
+        std::set<std::string>              flags;
     };
 
     std::optional<Arguments> ParseArguments( int argc, char **argv, std::ostream &errors )
     {
         if ( argc < 2 )
+        {
             return std::nullopt;
+        }
         Arguments parsed;
         parsed.operation = argv[1];
         const std::set<std::string> flag_options{ "--key-stdin" };
@@ -113,8 +119,12 @@ namespace
 
     bool ValidateOptions( const Arguments &arguments, std::ostream &errors )
     {
-        static const std::set<std::string> operations{ "genesis",       "list",         "propose-policy",
-                                                       "propose-burn",  "approve",      "make-manifest" };
+        static const std::set<std::string> operations{ "genesis",
+                                                       "list",
+                                                       "propose-policy",
+                                                       "propose-burn",
+                                                       "approve",
+                                                       "make-manifest" };
         if ( operations.count( arguments.operation ) == 0 )
         {
             errors << "unknown local operation: " << arguments.operation << '\n';
@@ -123,11 +133,15 @@ namespace
 
         if ( arguments.operation == "make-manifest" )
         {
-            static const std::set<std::string> allowed{ "--network-id",  "--bootstrapper", "--peers",
-                                                        "--membership-threshold", "--burn-threshold", "--out" };
+            static const std::set<std::string> allowed{ "--network-id",
+                                                        "--bootstrapper",
+                                                        "--peers",
+                                                        "--membership-threshold",
+                                                        "--burn-threshold",
+                                                        "--out" };
             for ( const auto &[option, unused] : arguments.values )
             {
-                (void)unused;
+                (void) unused;
                 if ( allowed.count( option ) == 0 )
                 {
                     errors << "option is not valid for make-manifest: " << option << '\n';
@@ -169,21 +183,22 @@ namespace
         {
             allowed.insert( "--timeout-seconds" );
             allowed.insert( "--serve-seconds" );
-        }
-        else if ( arguments.operation == "propose-policy" || arguments.operation == "propose-burn" )
-        {
-            allowed.insert( "--serve-seconds" );
+            allowed.insert( "--candidate-id" );
         }
         else if ( arguments.operation == "propose-policy" )
+        {
+            allowed.insert( "--serve-seconds" );
             allowed.insert( "--candidate" );
+        }
         else if ( arguments.operation == "propose-burn" )
+        {
+            allowed.insert( "--serve-seconds" );
             allowed.insert( "--basis-points" );
-        else if ( arguments.operation == "approve" )
-            allowed.insert( "--candidate-id" );
+        }
 
         for ( const auto &[option, unused] : arguments.values )
         {
-            (void)unused;
+            (void) unused;
             if ( allowed.count( option ) == 0 )
             {
                 errors << "option is not valid for " << arguments.operation << ": " << option << '\n';
@@ -208,7 +223,7 @@ namespace
         }
         if ( arguments.operation != "list" )
         {
-            const bool file = arguments.values.count( "--key-file" ) != 0;
+            const bool file  = arguments.values.count( "--key-file" ) != 0;
             const bool input = arguments.flags.count( "--key-stdin" ) != 0;
             if ( file == input )
             {
@@ -217,11 +232,17 @@ namespace
             }
         }
         if ( arguments.operation == "propose-policy" && arguments.values.count( "--candidate" ) == 0 )
+        {
             return errors << "required option missing: --candidate\n", false;
+        }
         if ( arguments.operation == "propose-burn" && arguments.values.count( "--basis-points" ) == 0 )
+        {
             return errors << "required option missing: --basis-points\n", false;
+        }
         if ( arguments.operation == "approve" && arguments.values.count( "--candidate-id" ) == 0 )
+        {
             return errors << "required option missing: --candidate-id\n", false;
+        }
         return true;
     }
 
@@ -229,13 +250,17 @@ namespace
     {
         std::ifstream input( path, std::ios::binary );
         if ( !input.good() )
+        {
             return std::nullopt;
+        }
         std::vector<uint8_t> bytes;
-        char value = 0;
+        char                 value = 0;
         while ( input.get( value ) )
         {
             if ( bytes.size() == maximum )
+            {
                 return std::nullopt;
+            }
             bytes.push_back( static_cast<uint8_t>( value ) );
         }
         return input.eof() ? std::optional<std::vector<uint8_t>>( std::move( bytes ) ) : std::nullopt;
@@ -243,10 +268,12 @@ namespace
 
     std::optional<uint64_t> ParseUint64( const std::string &value )
     {
-        uint64_t result = 0;
+        uint64_t   result = 0;
         const auto parsed = std::from_chars( value.data(), value.data() + value.size(), result );
         if ( parsed.ec != std::errc() || parsed.ptr != value.data() + value.size() )
+        {
             return std::nullopt;
+        }
         return result;
     }
 
@@ -313,11 +340,10 @@ namespace
             return EXIT_FAILURE;
         }
 
-        const auto peer_count = manifest.peers.size();
+        const auto peer_count         = manifest.peers.size();
         manifest.membership_threshold = sgns::securecrdt::MembershipQuorumFloor( peer_count );
         manifest.burn_threshold       = sgns::securecrdt::BurnQuorumFloor( peer_count );
-        if ( const auto value = arguments.values.find( "--membership-threshold" );
-             value != arguments.values.end() )
+        if ( const auto value = arguments.values.find( "--membership-threshold" ); value != arguments.values.end() )
         {
             const auto threshold = ParseUint64( value->second );
             if ( !threshold )
@@ -341,8 +367,8 @@ namespace
         // Canonicalized() validates addresses, enforces the quorum floors, and sorts
         // the peer list; CanonicalBytes()/Fingerprint() pin policy_version=1 and the
         // default initial burn (100 basis points), matching what nodes derive locally.
-        const auto canonical = manifest.Canonicalized();
-        const auto bytes     = canonical ? canonical->CanonicalBytes() : std::nullopt;
+        const auto canonical   = manifest.Canonicalized();
+        const auto bytes       = canonical ? canonical->CanonicalBytes() : std::nullopt;
         const auto fingerprint = canonical ? canonical->Fingerprint() : std::nullopt;
         if ( !canonical || !bytes || !fingerprint )
         {
@@ -383,16 +409,57 @@ namespace
         return EXIT_SUCCESS;
     }
 
+    // Every network operation builds a libp2p host inside
+    // GlobalDbNetworkComposition, and libp2p's Noise security adaptor calls
+    // createLogger() unconditionally during DI injector construction — which
+    // segfaults unless libp2p's soralog system was configured first.
+    // GeniusNode::InitLoggers does this for nodes and the in-process tests use
+    // EnsureLoggingSystemConfigured for the same reason (documented beside
+    // that helper); the standalone tool entry must do it once here. Console
+    // sink at error level keeps the CLI's stdout contract machine-parseable.
+    bool ConfigureLibp2pLogging( std::ostream &errors )
+    {
+        static const std::string logging_config      = R"(
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: sgns_trust
+    sink: console
+    level: error
+    children:
+      - name: libp2p
+      - name: gossip
+      - name: debug
+)";
+        auto                     libp2p_configurator = std::make_shared<libp2p::log::Configurator>();
+        auto yaml_configurator = std::make_shared<soralog::ConfiguratorFromYAML>( libp2p_configurator, logging_config );
+        auto logging_system    = std::make_shared<soralog::LoggingSystem>( yaml_configurator );
+        const auto configured  = logging_system->configure();
+        if ( configured.has_error )
+        {
+            errors << "could not configure libp2p logging: " << configured.message << '\n';
+            return false;
+        }
+        libp2p::log::setLoggingSystem( logging_system );
+        return true;
+    }
+
     std::optional<sgns::securecrdt::CandidateId> ParseCandidateId( const std::string &value )
     {
-        const auto first = value.find( ':' );
+        const auto first  = value.find( ':' );
         const auto second = first == std::string::npos ? std::string::npos : value.find( ':', first + 1 );
         if ( first == 0 || second == std::string::npos || second + 1 >= value.size() )
+        {
             return std::nullopt;
+        }
         const auto version = ParseUint64( value.substr( first + 1, second - first - 1 ) );
-        const auto hash = value.substr( second + 1 );
+        const auto hash    = value.substr( second + 1 );
         if ( !version || hash.size() != 64 || !sgns::base::IsLowerHex( hash ) )
+        {
             return std::nullopt;
+        }
         return sgns::securecrdt::CandidateId{ value.substr( 0, first ), *version, hash };
     }
 
@@ -402,17 +469,19 @@ namespace
     }
 
     outcome::result<GenesisCeremony::Signer> LoadLocalSigner( const Arguments &arguments,
-                                                              std::istream &input,
-                                                              std::ostream &output )
+                                                              std::istream    &input,
+                                                              std::ostream    &output )
     {
-        auto hooks = GenesisCeremony::DefaultHooks();
+        auto        hooks = GenesisCeremony::DefaultHooks();
         std::string key;
-        const auto file = arguments.values.find( "--key-file" );
+        const auto  file = arguments.values.find( "--key-file" );
         if ( file != arguments.values.end() )
         {
             BOOST_OUTCOME_TRY( auto status, hooks.inspect_key_file( file->second ) );
             if ( auto problem = GenesisCeremony::KeyFileStatusProblem( status ) )
+            {
                 return outcome::failure( *problem );
+            }
             BOOST_OUTCOME_TRY( key, hooks.read_key_file( file->second ) );
         }
         else
@@ -420,13 +489,19 @@ namespace
             output << "local signing key (protected stdin): " << std::flush;
             const auto read = sgns::trustedpeer::genesis_ceremony_platform::ReadProtectedLine( input, output, key );
             if ( read == sgns::trustedpeer::genesis_ceremony_platform::ProtectedInputResult::NOT_A_TERMINAL )
+            {
                 return outcome::failure( GenesisCeremony::Error::INVALID_KEY_SOURCE );
+            }
             if ( read != sgns::trustedpeer::genesis_ceremony_platform::ProtectedInputResult::SUCCESS )
+            {
                 return outcome::failure( GenesisCeremony::Error::KEY_FILE_IO );
+            }
         }
         outcome::result<GenesisCeremony::Signer> local_signer = hooks.create_signer( key );
         if ( !key.empty() )
+        {
             hooks.cleanse( key.data(), key.size() );
+        }
         return local_signer;
     }
 
@@ -438,29 +513,35 @@ namespace
         {
             sgns::crdt::GlobalDbNetworkComposition::Config config;
             config.network_config_path = arguments_.values.at( "--network-config" );
-            config.database_path = arguments_.values.at( "--database" );
-            config.listen_topic = arguments_.values.at( "--topic" );
-            config.broadcast_topic = arguments_.values.at( "--topic" );
-            config.logger = sgns::base::createLogger( "sgns-trust" );
-            auto created = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( config ) );
+            config.database_path       = arguments_.values.at( "--database" );
+            config.listen_topic        = arguments_.values.at( "--topic" );
+            config.broadcast_topic     = arguments_.values.at( "--topic" );
+            config.logger              = sgns::base::createLogger( "sgns-trust" );
+            auto created               = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( config ) );
             if ( created.has_value() )
+            {
                 composition_ = created.value();
+            }
             else
+            {
                 composition_error_ = created.error();
+            }
         }
 
         outcome::result<void> Start()
         {
             if ( !composition_ )
-                return outcome::failure( composition_error_ ? composition_error_ : std::make_error_code( std::errc::invalid_argument ) );
+            {
+                return outcome::failure( composition_error_ ? composition_error_
+                                                            : std::make_error_code( std::errc::invalid_argument ) );
+            }
             return composition_->Start();
         }
 
-        outcome::result<sgns::securecrdt::CandidateId> SubmitGenesis(
-            const GenesisManifest &manifest,
-            const std::vector<uint8_t> &signature,
-            const std::string &address,
-            TrustedPeerRegistry::SignCallback sign )
+        outcome::result<sgns::securecrdt::CandidateId> SubmitGenesis( const GenesisManifest            &manifest,
+                                                                      const std::vector<uint8_t>       &signature,
+                                                                      const std::string                &address,
+                                                                      TrustedPeerRegistry::SignCallback sign )
         {
             BOOST_OUTCOME_TRY( Prepare( address, std::move( sign ), signature ) );
             return registry_->SubmitReviewedGenesisApproval();
@@ -474,48 +555,111 @@ namespace
         outcome::result<std::optional<ConfirmedTrustSnapshot>> Confirmed() const
         {
             if ( !store_ )
+            {
                 return std::optional<ConfirmedTrustSnapshot>{};
+            }
             auto loaded = store_->LoadAndVerify();
             if ( loaded.has_error() )
             {
                 if ( loaded.error() == TrustStateStore::Error::NOT_FOUND )
+                {
                     return std::optional<ConfirmedTrustSnapshot>{};
+                }
                 return loaded.error();
             }
             return std::optional<ConfirmedTrustSnapshot>( loaded.value() );
         }
 
-        std::shared_ptr<TrustedPeerRegistry> registry() const { return registry_; }
-        std::shared_ptr<sgns::account::BurnConfig> burn_config() const { return burn_config_; }
+        outcome::result<void> EnsureLocalGenesisConfirmed( std::chrono::steady_clock::time_point deadline )
+        {
+            auto confirmed = Confirmed();
+            if ( confirmed.has_error() )
+            {
+                return confirmed.error();
+            }
+            if ( confirmed.value().has_value() )
+            {
+                return outcome::success();
+            }
+            const auto fingerprint = manifest_.Fingerprint();
+            const auto payload     = manifest_.CanonicalBytes();
+            if ( !fingerprint || !payload )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto core      = sgns::trustedpeer::GenesisCandidateCore( manifest_, *payload, *fingerprint );
+            const auto candidate = sgns::securecrdt::CandidateId::FromCore( core );
+            if ( !candidate )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            std::error_code last_error = std::make_error_code( std::errc::timed_out );
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                const auto activated = registry()->TryActivateReviewedGenesisCandidate( *candidate );
+                if ( !activated.has_error() )
+                {
+                    return outcome::success();
+                }
+                last_error = activated.error();
+                std::cout << "Genesis approval not visible yet - waiting for CRDT catch-up...\n";
+                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+            }
+            return outcome::failure( last_error );
+        }
+
+        std::shared_ptr<TrustedPeerRegistry> registry() const
+        {
+            return registry_;
+        }
+
+        std::shared_ptr<sgns::account::BurnConfig> burn_config() const
+        {
+            return burn_config_;
+        }
 
     private:
-        outcome::result<void> Prepare( const std::string &address,
+        outcome::result<void> Prepare( const std::string                &address,
                                        TrustedPeerRegistry::SignCallback sign,
-                                       const std::vector<uint8_t> &bootstrap_signature )
+                                       const std::vector<uint8_t>       &bootstrap_signature )
         {
             if ( !composition_ || !composition_->db() )
+            {
                 return outcome::failure( std::errc::not_connected );
-            secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>(
-                composition_->db(), arguments_.values.at( "--topic" ) );
-            BOOST_OUTCOME_TRY( store_, TrustStateStore::Open(
-                arguments_.values.at( "--database" ) + "/trust-state", manifest_.network_id ) );
-            BOOST_OUTCOME_TRY( registry_, TrustedPeerRegistry::NewProduction(
-                secure_crdt_, store_, manifest_, bootstrap_signature, address, sign ) );
-            BOOST_OUTCOME_TRY( burn_config_, sgns::account::BurnConfig::NewProduction(
-                secure_crdt_, registry_, store_, address, std::move( sign ) ) );
+            }
+            secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( composition_->db(),
+                                                                           arguments_.values.at( "--topic" ) );
+            BOOST_OUTCOME_TRY(
+                store_,
+                TrustStateStore::Open( arguments_.values.at( "--database" ) + "/trust-state", manifest_.network_id ) );
+            BOOST_OUTCOME_TRY( registry_,
+                               TrustedPeerRegistry::NewProduction( secure_crdt_,
+                                                                   store_,
+                                                                   manifest_,
+                                                                   bootstrap_signature,
+                                                                   address,
+                                                                   sign ) );
+            BOOST_OUTCOME_TRY( burn_config_,
+                               sgns::account::BurnConfig::NewProduction( secure_crdt_,
+                                                                         registry_,
+                                                                         store_,
+                                                                         address,
+                                                                         std::move( sign ) ) );
             if ( !secure_crdt_->RegisterFilters() )
+            {
                 return outcome::failure( std::errc::operation_not_permitted );
+            }
             return outcome::success();
         }
 
-        const Arguments &arguments_;
-        GenesisManifest manifest_;
-        std::error_code composition_error_;
+        const Arguments                                        &arguments_;
+        GenesisManifest                                         manifest_;
+        std::error_code                                         composition_error_;
         std::shared_ptr<sgns::crdt::GlobalDbNetworkComposition> composition_;
-        std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt_;
-        std::shared_ptr<TrustStateStore> store_;
-        std::shared_ptr<TrustedPeerRegistry> registry_;
-        std::shared_ptr<sgns::account::BurnConfig> burn_config_;
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
+        std::shared_ptr<TrustStateStore>                        store_;
+        std::shared_ptr<TrustedPeerRegistry>                    registry_;
+        std::shared_ptr<sgns::account::BurnConfig>              burn_config_;
     };
 } // namespace
 
@@ -538,8 +682,13 @@ int main( int argc, char **argv )
         return MakeManifest( *arguments );
     }
 
+    if ( !ConfigureLibp2pLogging( std::cerr ) )
+    {
+        return EXIT_FAILURE;
+    }
+
     auto manifest_bytes = ReadBoundedFile( arguments->values.at( "--manifest" ), 65536 );
-    auto manifest = manifest_bytes ? GenesisManifest::DecodeCanonical( *manifest_bytes ) : std::nullopt;
+    auto manifest       = manifest_bytes ? GenesisManifest::DecodeCanonical( *manifest_bytes ) : std::nullopt;
     if ( !manifest )
     {
         std::cerr << "manifest must contain canonical GenesisManifest bytes\n";
@@ -552,7 +701,9 @@ int main( int argc, char **argv )
         GenesisCeremony::Request request;
         request.manifest = *manifest;
         if ( const auto key = arguments->values.find( "--key-file" ); key != arguments->values.end() )
+        {
             request.key_file = key->second;
+        }
         request.key_stdin = arguments->flags.count( "--key-stdin" ) != 0;
         if ( const auto timeout = arguments->values.find( "--timeout-seconds" ); timeout != arguments->values.end() )
         {
@@ -575,10 +726,10 @@ int main( int argc, char **argv )
         }
         request.serve_duration = std::chrono::seconds( *serve_seconds );
         GenesisCeremony::Network network;
-        network.start = [&] { return runtime.Start(); };
-        network.submit = [&]( const GenesisManifest &value,
-                              const std::vector<uint8_t> &signature,
-                              const std::string &address,
+        network.start  = [&] { return runtime.Start(); };
+        network.submit = [&]( const GenesisManifest            &value,
+                              const std::vector<uint8_t>       &signature,
+                              const std::string                &address,
                               TrustedPeerRegistry::SignCallback sign )
         { return runtime.SubmitGenesis( value, signature, address, std::move( sign ) ); };
         network.confirmed = [&] { return runtime.Confirmed(); };
@@ -587,7 +738,7 @@ int main( int argc, char **argv )
         // fetches while the process waits.
         network.serve = []( std::chrono::milliseconds duration ) { std::this_thread::sleep_for( duration ); };
         GenesisCeremony ceremony;
-        auto result = ceremony.Run( request, network, std::cin, std::cout, std::cerr );
+        auto            result = ceremony.Run( request, network, std::cin, std::cout, std::cerr );
         return result.has_value() ? EXIT_SUCCESS : ( std::cerr << result.error().message() << '\n', EXIT_FAILURE );
     }
 
@@ -629,6 +780,17 @@ int main( int argc, char **argv )
     }
     const auto read_deadline = std::chrono::steady_clock::now() + std::chrono::seconds( read_catchup_seconds );
 
+    // A fresh actor database has no durable genesis, and every admin operation
+    // below needs the confirmed snapshot. Nodes run this discovery inside
+    // TrustStartupController::Refresh; the tool drives the registry's public
+    // activation step here, bounded by the same read catch-up window (the
+    // bootstrapper's approval record may still be arriving over pubsub).
+    if ( const auto ensured = runtime.EnsureLocalGenesisConfirmed( read_deadline ); ensured.has_error() )
+    {
+        std::cerr << ensured.error().message() << '\n';
+        return EXIT_FAILURE;
+    }
+
     if ( arguments->operation == "list" )
     {
         auto listed = admin.ListCandidates();
@@ -639,21 +801,29 @@ int main( int argc, char **argv )
             listed = admin.ListCandidates();
         }
         if ( listed.has_error() )
+        {
             return std::cerr << listed.error().message() << '\n', EXIT_FAILURE;
+        }
         for ( const auto &candidate : listed.value() )
+        {
             std::cout << ( candidate.type == LocalTrustAdmin::CandidateType::Policy ? "policy " : "burn " )
                       << FormatCandidateId( candidate.id ) << '\n';
+        }
         return EXIT_SUCCESS;
     }
     if ( arguments->operation == "propose-policy" )
     {
-        auto bytes = ReadBoundedFile( arguments->values.at( "--candidate" ), 65536 );
+        auto bytes     = ReadBoundedFile( arguments->values.at( "--candidate" ), 65536 );
         auto candidate = bytes ? QuorumPolicyState::DecodeCanonical( *bytes ) : std::nullopt;
         if ( !candidate )
+        {
             return std::cerr << "invalid canonical policy candidate\n", EXIT_FAILURE;
+        }
         auto proposed = admin.ProposePolicy( *candidate );
         if ( proposed.has_error() )
+        {
             return std::cerr << proposed.error().message() << '\n', EXIT_FAILURE;
+        }
         std::cout << FormatCandidateId( proposed.value() ) << '\n';
         // Serve the fresh proposal: exiting immediately would destroy the only
         // transport serving its DAG before peers can fetch it.
@@ -669,10 +839,14 @@ int main( int argc, char **argv )
     {
         const auto basis_points = ParseUint64( arguments->values.at( "--basis-points" ) );
         if ( !basis_points )
+        {
             return std::cerr << "invalid basis points\n", EXIT_FAILURE;
+        }
         auto proposed = admin.ProposeBurn( *basis_points );
         if ( proposed.has_error() )
+        {
             return std::cerr << proposed.error().message() << '\n', EXIT_FAILURE;
+        }
         std::cout << FormatCandidateId( proposed.value() ) << '\n';
         const auto serve_seconds = ParseServeSeconds( *arguments, std::cerr );
         if ( !serve_seconds )
@@ -685,7 +859,9 @@ int main( int argc, char **argv )
 
     const auto candidate = ParseCandidateId( arguments->values.at( "--candidate-id" ) );
     if ( !candidate )
+    {
         return std::cerr << "invalid candidate ID\n", EXIT_FAILURE;
+    }
     // The target ID is exact: retry while the referenced record has not arrived
     // (ReadCandidateApprovals runs before the record is available otherwise).
     auto approved = admin.Approve( *candidate );
@@ -697,7 +873,9 @@ int main( int argc, char **argv )
         approved = admin.Approve( *candidate );
     }
     if ( approved.has_error() )
+    {
         return std::cerr << approved.error().message() << '\n', EXIT_FAILURE;
+    }
     std::cout << FormatCandidateId( approved.value() ) << '\n';
     // An approval can complete a quorum or activate a successor: serve the
     // update so other nodes fetch it instead of staying on the old policy.
