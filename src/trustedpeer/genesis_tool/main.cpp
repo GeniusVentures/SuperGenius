@@ -52,11 +52,18 @@ namespace
                "  [--timeout-seconds N]   confirmation poll deadline (default 30)\n"
                "  [--serve-seconds N]     keep serving the genesis DAG to peers after durable\n"
                "                          confirmation (default 600, 0 exits immediately)\n"
+               "                          the serve window is a ceremony-time bootstrap\n"
+               "                          convenience: after it expires the genesis DAG is\n"
+               "                          ordinary network state, served and synced to\n"
+               "                          newcomers by any node holding it\n"
                "\nadmin options:\n"
                "  [--timeout-seconds N]   list/approve catch-up window while candidates sync\n"
                "                          in from peers (default 30, 0 reads immediately)\n"
                "  [--serve-seconds N]     keep serving after approve/propose-* so peers fetch\n"
-               "                          the update (default 600, 0 exits immediately)\n";
+               "                          the update (default 600, 0 exits immediately)\n"
+               "                          after window expiry the updated DAG is ordinary\n"
+               "                          network state, served to newcomers by any node\n"
+               "                          holding it\n";
     }
 
     struct Arguments

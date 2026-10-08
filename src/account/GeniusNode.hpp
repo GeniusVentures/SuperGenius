@@ -977,6 +977,12 @@ namespace sgns
         std::string GetAuthorizedFullNodeAddress() const;
 
         /**
+         * @brief Returns the stored CID of the selected genesis block.
+         * @return Genesis CID on success, or std::errc::not_connected when the blockchain service is not available.
+         */
+        outcome::result<std::string> GetGenesisCID() const;
+
+        /**
          * @brief Returns the current GeniusNode lifecycle state.
          * @return Current node state.
          */

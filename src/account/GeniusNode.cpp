@@ -4674,6 +4674,15 @@ namespace sgns
         return Blockchain::GetAuthorizedFullNodeAddress();
     }
 
+    outcome::result<std::string> GeniusNode::GetGenesisCID() const
+    {
+        if ( !blockchain_ )
+        {
+            return outcome::failure( std::errc::not_connected );
+        }
+        return blockchain_->GetGenesisCID();
+    }
+
     // ── Result Cache GC ──
 
     void GeniusNode::StartResultGC()
