@@ -217,22 +217,22 @@ jobs:
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Windows
             runner_key: windows
           - target: OSX
@@ -514,12 +514,22 @@ jobs:
       - name: Configure Linux host
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
-          sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
-          sudo update-alternatives --set cc $(which clang)
-          sudo update-alternatives --set c++ $(which clang++)
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
-          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+          # Native Linux runs in AlmaLinux 8; Android runs on Ubuntu without a container.
+          if command -v dnf >/dev/null 2>&1; then
+            if ! rpm -q ccache ninja-build vulkan-loader-devel libsecret-devel dbus gnome-keyring >/dev/null 2>&1; then
+              sudo dnf install -y ccache ninja-build vulkan-loader-devel libsecret-devel dbus gnome-keyring
+            fi
+            # RHEL/Alma /usr/bin/c++ is GCC-owned: pin clang explicitly for CMake.
+            echo "CC=$(command -v clang)" >> "$GITHUB_ENV"
+            echo "CXX=$(command -v clang++)" >> "$GITHUB_ENV"
+          else
+            sudo update-alternatives --install /usr/bin/cc cc "$(command -v clang)" 100
+            sudo update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++)" 100
+            sudo update-alternatives --set cc "$(command -v clang)"
+            sudo update-alternatives --set c++ "$(command -v clang++)"
+            sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev dbus gnome-keyring -y
+          fi
+          echo "CMAKE_GENERATOR=Ninja" >> "$GITHUB_ENV"
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows' }}
@@ -632,7 +642,7 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{ github.workspace }}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DSGNS_PRINT_LOGS=ON
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_C_COMPILER="$(command -v clang)" -DCMAKE_CXX_COMPILER="$(command -v clang++)" -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DSGNS_PRINT_LOGS=ON
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
