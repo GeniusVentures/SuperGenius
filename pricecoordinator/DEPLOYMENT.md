@@ -193,17 +193,20 @@ Run from anywhere (all checks hit the live origin):
 ```powershell
 # Happy path: 200, PriceEnvelope with "stale": false on fresh admission,
 # and Cache-Control: public, max-age=45
-curl.exe -i "https://token.gnus.ai/v1/prices?ids=gnus&vs=usd"
+# NOTE: the CoinGecko asset id for GNUS is "genius-ai" (the C++ client's
+# IPriceSource docs use the same id). Plain "gnus" is an unknown id and
+# returns 200 with "prices": {} (D-09 silently drops unknown ids).
+curl.exe -i "https://token.gnus.ai/v1/prices?ids=genius-ai&vs=usd"
 
 # Negative: unknown path -> 404 {"error":{"code":"not_found",...}}
 curl.exe -i "https://token.gnus.ai/v1/prices/extra"
 
 # Negative: non-GET method -> 405 method_not_allowed
-curl.exe -i -X POST "https://token.gnus.ai/v1/prices?ids=gnus&vs=usd"
+curl.exe -i -X POST "https://token.gnus.ai/v1/prices?ids=genius-ai&vs=usd"
 
 # Cache canonicalization: duplicate ids address the same canonical cache key
 # (sorted + deduped) — compare the two envelopes; the second is a cache hit.
-curl.exe -s "https://token.gnus.ai/v1/prices?ids=gnus,gnus&vs=usd"
+curl.exe -s "https://token.gnus.ai/v1/prices?ids=genius-ai,genius-ai&vs=usd"
 ```
 
 Expected on the happy path: HTTP 200, JSON body with `"stale": false`, header
@@ -242,7 +245,7 @@ To reproduce exactly what the C++ fallback request hits, with no C++ side
 effects:
 
 ```powershell
-curl.exe -i "https://token.gnus.ai/v1/prices?ids=gnus&vs=usd"
+curl.exe -i "https://token.gnus.ai/v1/prices?ids=genius-ai&vs=usd"
 ```
 
 If that returns 200 with a fresh envelope, every node running default
