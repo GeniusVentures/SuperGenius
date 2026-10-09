@@ -8,6 +8,7 @@ target_include_directories(processing_nodes_test PRIVATE ${AsyncIOManager_INCLUD
 target_link_libraries(processing_nodes_test
     genius_node_test
     json_secure_storage
+    price_test_support
 )
 
 # See the note in test/src/account/CMakeLists.txt: the asset path must not depend
@@ -37,6 +38,7 @@ target_include_directories(child_tokens_test PRIVATE ${AsyncIOManager_INCLUDE_DI
 target_link_libraries(child_tokens_test
     genius_node_test
     json_secure_storage
+    price_test_support
 )
 if(WIN32)
     target_link_options(child_tokens_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)

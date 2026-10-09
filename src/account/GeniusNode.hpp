@@ -41,7 +41,6 @@
 #include "processing/processing_service.hpp"
 #include "singleton/IComponent.hpp"
 #include "processing/processing_task_queue.hpp"
-#include "coinprices/coinprices.hpp"
 #include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
@@ -57,6 +56,11 @@ namespace sgns::ipfs_bitswap
 }
 
 // Forward declarations for BURN-02/BURN-03 quorum-wiring types (full includes live in GeniusNode.cpp).
+namespace sgns
+{
+    class LocalPriceManager;
+}
+
 namespace sgns::securecrdt
 {
     class SecureCrdt;
@@ -870,33 +874,18 @@ namespace sgns
         void StartProcessing();
 
         /**
-         * @brief Retrieves current USD prices for token identifiers, using a short local cache.
+         * @brief Retrieves current USD prices for token identifiers via the
+         * lazily constructed LocalPriceManager (L1 cache, coalescing, and the
+         * four-tier fallback chain). Ids the chain cannot serve stay absent
+         * from the map; failure is returned only when nothing is servable.
          * @param[in] tokenIds CoinGecko token identifiers to price.
          * @return Map from token identifier to current USD price, or a price-retrieval error.
+         * @note BLOCKING (D-08): parks the caller up to the tier-retry worst
+         * case when both tiers time out; never call from io callbacks or the
+         * manager's runner thread. The first call also pays one-time manager
+         * construction.
          */
         outcome::result<std::map<std::string, double>> GetCoinprice( const std::vector<std::string> &tokenIds );
-
-        /**
-         * @brief Retrieves historical USD prices for token identifiers at exact timestamps.
-         * @param[in] tokenIds CoinGecko token identifiers to price.
-         * @param[in] timestamps Unix timestamps to query.
-         * @return Nested map from token identifier to timestamp to USD price.
-         */
-        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPriceByDate(
-            const std::vector<std::string> &tokenIds,
-            const std::vector<int64_t>     &timestamps );
-
-        /**
-         * @brief Retrieves historical USD prices for token identifiers over a date range.
-         * @param[in] tokenIds CoinGecko token identifiers to price.
-         * @param[in] from Start Unix timestamp for the range.
-         * @param[in] to End Unix timestamp for the range.
-         * @return Nested map from token identifier to timestamp to USD price.
-         */
-        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPricesByDateRange(
-            const std::vector<std::string> &tokenIds,
-            int64_t                         from,
-            int64_t                         to );
 
         /**
          * @brief Waits for an incoming transaction to be processed.
@@ -1000,7 +989,6 @@ namespace sgns
         friend class MultiAccountTestAccess;
         friend class ChildRegTestAccess;
         friend class GeniusNodeTestAccess;
-        friend class AccountManagementTestAccess;
 
         /**
          * @brief Enqueues a transaction and its proof directly through the transaction manager.
@@ -1598,16 +1586,13 @@ namespace sgns
          */
         libp2p::Host::Connectedness HostConnectedness( const libp2p::peer::PeerInfo &peer ) const;
 
-        struct PriceInfo
-        {
-            double                                             price;      ///< Cached USD token price.
-            std::chrono::time_point<std::chrono::system_clock> lastUpdate; ///< Time when @ref price was fetched.
-        };
+        std::shared_ptr<LocalPriceManager> priceManager_{}; ///< Lazily constructed on first GetCoinprice (D-05); owns its own ioc+thread; explicitly reset early in ~GeniusNode.
 
-        std::map<std::string, PriceInfo>                   m_tokenPriceCache; ///< Cached token price data by token id.
-        const std::chrono::minutes                         m_cacheValidityDuration{ 1 }; ///< Price cache TTL.
-        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{}; ///< Last external price API call time.
-        static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 }; ///< Minimum price API interval.
+        /// @brief Lazily construct the LocalPriceManager on first use.
+        /// Reads SGNS_COINGECKO_URL / SGNS_PRICE_FALLBACK_URL at construction
+        /// (D-01/D-03) and wires both PriceHttpClientSource tiers.
+        /// @return The shared manager instance (constructed on first call).
+        std::shared_ptr<LocalPriceManager> GetOrCreatePriceManager();
 
         static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.

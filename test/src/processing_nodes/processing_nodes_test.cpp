@@ -21,6 +21,8 @@
 #include "testutil/offline_chainlist.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
+#include "HttpStubServer.hpp"
+#include "testutil/scoped_env.hpp"
 
 using namespace sgns::test;
 
@@ -37,8 +39,22 @@ protected:
 
     static std::string binary_path;
 
+    // Hermetic price source (Phase 4 cutover): serves the genius-ai price the
+    // old CacheGnusPrice friend-accessor used to inject into the node's
+    // deleted price cache. Both tiers redirect to the same loopback stub.
+    static sgns::testutil::HttpStubServer                    price_stub_;
+    static std::unique_ptr<sgns::testutil::ScopedEnvVar>     env_coin_gecko_;
+    static std::unique_ptr<sgns::testutil::ScopedEnvVar>     env_fallback_;
+
     static void SetUpTestSuite()
     {
+        price_stub_.OnPath( "/api/v3/simple/price",
+                            { 200, "application/json", R"({"genius-ai":{"usd":1.0}})" } );
+        price_stub_.Start();
+        const auto base = "http://127.0.0.1:" + std::to_string( price_stub_.Port() );
+        env_coin_gecko_ = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_COINGECKO_URL", base );
+        env_fallback_   = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_PRICE_FALLBACK_URL", base );
+
         sgns::GeniusAccount::SetSecureStorageFactory(
             []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
             { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
@@ -71,14 +87,12 @@ protected:
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         node_proc1->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
-        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         node_main->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
-        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
@@ -86,7 +100,6 @@ protected:
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         node_proc2->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
-        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc2, 1.0 );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
@@ -119,6 +132,13 @@ protected:
         std::cout << "Tear down 3" << std::endl;
         sgns::GeniusNodeTestAccess::StopNode( node_proc2 );
         node_proc2.reset();
+
+        // Restore env BEFORE the stub goes away (guards reference the stub
+        // only via the base-URL string, but restore-then-shutdown keeps the
+        // redirect window strictly inside the suite).
+        env_coin_gecko_.reset();
+        env_fallback_.reset();
+        price_stub_.Shutdown();
     }
 };
 
@@ -144,6 +164,10 @@ GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
                                                   "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
+
+sgns::testutil::HttpStubServer                                                ProcessingNodesTest::price_stub_;
+std::unique_ptr<sgns::testutil::ScopedEnvVar> ProcessingNodesTest::env_coin_gecko_ = nullptr;
+std::unique_ptr<sgns::testutil::ScopedEnvVar> ProcessingNodesTest::env_fallback_   = nullptr;
 
 /// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
 static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;

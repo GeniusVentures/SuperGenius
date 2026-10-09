@@ -25,6 +25,8 @@
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "HttpStubServer.hpp"
+#include "testutil/scoped_env.hpp"
 
 using namespace sgns;
 using namespace sgns::test;
@@ -42,11 +44,6 @@ namespace sgns
         static std::shared_ptr<ConsensusManager> GetConsensusManager( const std::shared_ptr<Blockchain> &blockchain )
         {
             return blockchain ? blockchain->consensus_manager_ : nullptr;
-        }
-
-        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
-        {
-            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
         }
     };
 } // namespace sgns
@@ -88,6 +85,32 @@ namespace
 class ChildTokensNodeFixture : public ::testing::Test
 {
 protected:
+    ChildTokensNodeFixture()
+    {
+        // Hermetic price source (Phase 4 cutover): both tiers redirect to a
+        // loopback stub serving the genius-ai price the old cache-writing
+        // accessors used to inject. Env set BEFORE any node in this test is
+        // created; restored in the dtor after every node is stopped.
+        price_stub_.OnPath( "/api/v3/simple/price",
+                            { 200, "application/json", R"({"genius-ai":{"usd":1.0}})" } );
+        price_stub_.Start();
+        const auto base = "http://127.0.0.1:" + std::to_string( price_stub_.Port() );
+        env_coin_gecko_ = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_COINGECKO_URL", base );
+        env_fallback_   = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_PRICE_FALLBACK_URL", base );
+    }
+
+    ~ChildTokensNodeFixture() override
+    {
+        for ( const auto &node : nodes_ )
+        {
+            sgns::GeniusNodeTestAccess::StopNode( node );
+        }
+        nodes_.clear();
+        env_coin_gecko_.reset();
+        env_fallback_.reset();
+        price_stub_.Shutdown();
+    }
+
     void TearDown() override
     {
         for ( const auto &node : nodes_ )
@@ -140,7 +163,6 @@ protected:
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false, key );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
-        sgns::GeniusNodeTestAccess::CacheGnusPrice( node, 1.0 );
 
         if ( setAsAuthorized )
         {
@@ -167,6 +189,10 @@ protected:
 
 private:
     std::vector<std::shared_ptr<sgns::GeniusNode>> nodes_;
+
+    sgns::testutil::HttpStubServer                price_stub_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> env_coin_gecko_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> env_fallback_;
 };
 
 // Suite-name-preserving wrappers so TEST_F can back the original TEST suites.
@@ -567,7 +593,6 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
        )";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
-    MultiAccountTestAccess::SetGNUSPrice( node_main, 1.0 );
     auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto cost          = node_main->GetProcessCost( *procmgr.value() );
     auto bal_main_init = node_main->GetBalance();

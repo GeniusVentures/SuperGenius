@@ -22,14 +22,6 @@ namespace sgns
     class GeniusNodeTestAccess
     {
     public:
-        static void CacheGnusPrice( const std::shared_ptr<GeniusNode> &node, double price )
-        {
-            if ( node )
-            {
-                node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
-            }
-        }
-
         /// Resolved value of the "bootstrap_background_multiplier" network_config.json key.
         /// There is no public getter because the value has no runtime consumer today (see the
         /// note on the test that uses this), so a test accessor is the only way to observe it.

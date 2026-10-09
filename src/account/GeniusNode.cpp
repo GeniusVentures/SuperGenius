@@ -45,6 +45,9 @@
 #include "account/TokenAmount.hpp"
 #include "base/ScaledInteger.hpp"
 #include "account/GeniusNode.hpp"
+#include "coinprices/LocalPriceManager.hpp"
+#include "coinprices/PriceHttpClientSource.hpp"
+#include "coinprices/PriceEndpoints.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/TrustStartupController.hpp"
 #include "securecrdt/QuorumThresholdValidation.hpp"
@@ -309,8 +312,7 @@ namespace sgns
         isprocessor_( true ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
-        processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
-        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL )
+        processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) )
     {
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
@@ -1501,7 +1503,6 @@ namespace sgns
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
@@ -1563,7 +1564,6 @@ namespace sgns
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
@@ -2532,6 +2532,12 @@ namespace sgns
         // and PubSub stop below), so the policy stack must deny-all now instead
         // of relying on the GlobalDB going away underneath it.
         ShutdownNodePolicyServices( /*global_db_shutdown_follows=*/ true );
+
+        // The LocalPriceManager owns its own io_context + runner thread and
+        // references no node members (D-05); its drain-join destructor resolves
+        // any parked GetQuotes waiters while the node is fully intact. Reset it
+        // explicitly here, before the pubsub/io teardown below.
+        priceManager_.reset();
 
         // GraphSync retains PubSub's libp2p host, whose sockets are backed by
         // PubSub's io_context. GossipPubSub::Stop() releases its own references
@@ -3976,78 +3982,60 @@ namespace sgns
         }
     }
 
+    std::shared_ptr<LocalPriceManager> GeniusNode::GetOrCreatePriceManager()
+    {
+        if ( !priceManager_ )
+        {
+            // Each tier's adapter takes an io_context whose only role is the
+            // documented-vestigial ioc parameter of PriceHttpClientSource
+            // (the facade builds a fresh per-attempt context internally) — a
+            // throwaway context satisfies the wiring with zero runtime effect.
+            auto tier1 = std::make_shared<PriceHttpClientSource>(
+                std::make_shared<boost::asio::io_context>(),
+                GetCoinGeckoBaseUrl(),
+                RetryConfig{},
+                std::chrono::seconds( 60 ),
+                [] { return std::chrono::system_clock::now(); },
+                std::chrono::milliseconds( 5000 ),
+                ResponseFormat::CoinGeckoSimplePrice );
+            auto tier2 = std::make_shared<PriceHttpClientSource>(
+                std::make_shared<boost::asio::io_context>(),
+                GetFallbackBaseUrl(),
+                RetryConfig{},
+                std::chrono::seconds( 60 ),
+                [] { return std::chrono::system_clock::now(); },
+                std::chrono::milliseconds( 5000 ),
+                ResponseFormat::GnusEnvelope );
+            // Default 50ms coalescing window, real clock (D-03: env read
+            // happens here, at construction — never cached earlier).
+            priceManager_ = std::make_shared<LocalPriceManager>( tier1, tier2 );
+        }
+        return priceManager_;
+    }
+
     outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
-        auto                          currentTime = std::chrono::system_clock::now();
+        // Preserve today's empty-in -> empty-map-success seam contract
+        // (GetQuotes({}) fails with EmptyInput by design — Pitfall 3).
+        if ( tokenIds.empty() )
+        {
+            return std::map<std::string, double>{};
+        }
+
+        auto quotesResult = GetOrCreatePriceManager()->GetQuotes( tokenIds, "usd" );
+        if ( !quotesResult )
+        {
+            node_logger_->error( "GetCoinprice failed: {}", quotesResult.error().Message() );
+            return outcome::failure( Error::NO_PRICE );
+        }
+
         std::map<std::string, double> result;
-        std::vector<std::string>      tokensToFetch;
-        // Determine which tokens need to be fetched
-        for ( const auto &tokenId : tokenIds )
+        for ( const auto &quote : quotesResult.value() )
         {
-            auto it = m_tokenPriceCache.find( tokenId );
-
-            if ( it != m_tokenPriceCache.end() && ( currentTime - it->second.lastUpdate ) < m_cacheValidityDuration )
-            {
-                // Use cached price if it's still valid
-                result[tokenId] = it->second.price;
-            }
-            else
-            {
-                // Add to the list of tokens that need fresh data
-                tokensToFetch.push_back( tokenId );
-            }
+            // Ids the chain couldn't serve stay absent — D-07 partial-map semantics.
+            result[quote.asset] = quote.price;
         }
-
-        // If we have tokens to fetch and we're not rate limited
-        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= MIN_API_CALL_INTERVAL )
-        {
-            sgns::CoinGeckoPriceRetriever retriever;
-            auto                          newPricesResult = retriever.getCurrentPrices( tokensToFetch );
-
-            if ( newPricesResult )
-            {
-                auto &newPrices = newPricesResult.value();
-                m_lastApiCall   = currentTime;
-
-                // Update the cache and result with new prices
-                for ( const auto &[token, price] : newPrices )
-                {
-                    m_tokenPriceCache[token] = { price, currentTime };
-                    result[token]            = price;
-                }
-            }
-            else
-            {
-                // Handle the error case
-                // If we have some cached data, continue with what we have
-                if ( result.empty() )
-                {
-                    // Only return error if we have no data at all
-                    return newPricesResult.error();
-                }
-                // Otherwise, continue with partial data and log the error
-                // log("Failed to fetch prices for some tokens: " + newPricesResult.error().message());
-            }
-        }
-
         return result;
-    }
-
-    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(
-        const std::vector<std::string> &tokenIds,
-        const std::vector<int64_t>     &timestamps )
-    {
-        sgns::CoinGeckoPriceRetriever retriever;
-        return retriever.getHistoricalPrices( tokenIds, timestamps );
-    }
-
-    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPricesByDateRange(
-        const std::vector<std::string> &tokenIds,
-        int64_t                         from,
-        int64_t                         to )
-    {
-        sgns::CoinGeckoPriceRetriever retriever;
-        return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
     outcome::result<std::string> GeniusNode::FormatTokens( uint64_t amount, TokenID tokenId )

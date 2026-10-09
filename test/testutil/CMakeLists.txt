@@ -4,3 +4,4 @@ addtest(remove_all_test
 
 add_subdirectory(primitives)
 add_subdirectory(storage)
+add_subdirectory(http_stub)

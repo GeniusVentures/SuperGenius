@@ -17,33 +17,13 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/offline_chainlist.hpp"
+#include "HttpStubServer.hpp"
+#include "testutil/scoped_env.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
-
-namespace sgns
-{
-    /**
-     * @brief Friend accessor for private GeniusNode state needed by account
-     *        management tests. Mirrors MultiAccountTestAccess in
-     *        child_tokens_test.cpp.
-     */
-    class AccountManagementTestAccess
-    {
-    public:
-        /// @brief Seeds the node's price cache so cost calculations never
-        ///        depend on the external CoinGecko API (rate-limited from CI
-        ///        runner IPs since 2026-09-29, breaking SetPayoutAddress with
-        ///        "The processing cost could not be calculated"). A seeded
-        ///        entry stays valid for m_cacheValidityDuration (1 minute).
-        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
-        {
-            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
-        }
-    };
-} // namespace sgns
 
 namespace
 {
@@ -84,6 +64,18 @@ public:
 
     AccountManagement()
     {
+        // Hermetic price source (Phase 4, D-12/TEST-04): redirect both price
+        // tiers to a loopback stub BEFORE any node is constructed, so
+        // SetPayoutAddress's GetProcessCost call resolves against the
+        // scripted genius-ai price instead of live CoinGecko. Ordering is
+        // strict: stub Start (OS-assigned port) -> env guards -> node New.
+        stub_.OnPath( "/api/v3/simple/price",
+                      { 200, "application/json", R"({"genius-ai":{"usd":0.19}})" } );
+        stub_.Start();
+        const auto base = "http://127.0.0.1:" + std::to_string( stub_.Port() );
+        envCoinGecko_ = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_COINGECKO_URL", base );
+        envFallback_  = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_PRICE_FALLBACK_URL", base );
+
         test::removeAllWithRetry( path.string() );
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
@@ -105,7 +97,21 @@ public:
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
+    ~AccountManagement() override
+    {
+        // Env guards die before the stub (members destroyed in reverse
+        // declaration order — guards declared after stub_); reset them
+        // explicitly anyway so the restore is visibly first.
+        envCoinGecko_.reset();
+        envFallback_.reset();
+        stub_.Shutdown();
+    }
+
     std::shared_ptr<sgns::GeniusNode> node_;
+
+    sgns::testutil::HttpStubServer                stub_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> envCoinGecko_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> envFallback_;
 };
 
 TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
@@ -352,10 +358,6 @@ TEST_F( AccountManagement, SetPayoutAddress )
 }
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    // Seed the price cache before any cost calculation: the external price API
-    // is rate-limited from CI runners, and ProcessImage fails outright when
-    // GetGNUSPrice cannot resolve a price.
-    sgns::AccountManagementTestAccess::SetGNUSPrice( node_requester, 1.0 );
     auto        cost      = node_requester->GetProcessCost( *procmgr.value() );
     // Assets live in the source tree. Deriving this from the binary location broke
     // whenever the build layout changed (multi-config or ABI subdirectory).

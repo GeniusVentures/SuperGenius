@@ -36,7 +36,7 @@ addtest(account_management_test
     account_management_test.cpp
 )
 
-target_link_libraries(account_management_test genius_node_test json_secure_storage)
+target_link_libraries(account_management_test genius_node_test json_secure_storage price_test_support)
 
 # Absolute path to the shared processing test assets. Passed in rather than derived
 # from the binary location at runtime: that walked a fixed number of parent

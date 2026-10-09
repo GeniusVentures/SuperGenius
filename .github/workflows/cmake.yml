@@ -636,6 +636,17 @@ jobs:
           #   ProcessingNodesModuleTest.SinglePostProcessing touch MNN (the
           #   DISABLED_* siblings never run regardless); the remaining
           #   account/ledger/transfer cases are pure and keep running.
+          #   SetPayoutAddress is HERMETIC since Phase 4 (stub-backed
+          #   LocalPriceManager, no live CoinGecko — proven green in a local
+          #   Linux Debug run and by the price path logging "1 fresh" in run
+          #   37082942495), but it stays excluded here: on the ARM runner its
+          #   multi-node bootstrap constructs a 5th MNN VulkanInstance whose
+          #   vkCreateInstance fails (no ICD) and MNN's Debug assert aborts
+          #   the whole account suite before gtest can report (run
+          #   37082942495: "Subprocess aborted" after 4 graceful CPU
+          #   fallbacks). Re-include once the MNN assert degrades gracefully
+          #   (thirdparty rebuild rider); the exclusion is now Vulkan-only,
+          #   NOT network.
           # gtest filter grammar is POSITIVE-NEGATIVE with ONE dash: the
           # negative section is ':'-separated WITHOUT per-pattern dashes.
           # '-A:-B:-C' silently parses its 2nd/3rd patterns as literal
@@ -769,3 +780,55 @@ jobs:
         with:
           path: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
           key: ctest-cost-${{ matrix.id }}-${{ matrix.build-type }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  # Hermetic Worker (pricecoordinator) checks, kept out of the C++ build
+  # matrix: Node 22 + the audited lockfile, zero CoinGecko egress, no
+  # deployment. Runs only when the changed paths touch the Worker directory,
+  # so C++-only changes never pay the Node toolchain setup. Workflow-only
+  # edits remain non-triggering via the existing workflow-ignore list
+  # (D-01); workflow_dispatch always runs the Worker checks.
+  worker-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    defaults:
+      run:
+        working-directory: pricecoordinator
+    steps:
+      - name: Checkout SuperGenius repository
+        uses: actions/checkout@v7
+
+      - name: Detect Worker directory changes
+        id: changes
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ github.token }}
+          # Pushes compare against the pre-push head only; pull requests use
+          # the action's changed-files API. Manual dispatch skips the filter
+          # and is treated as an explicit request to run the Worker checks.
+          base: ${{ github.event_name == 'push' && github.event.before || '' }}
+          filters: |
+            worker:
+              - 'pricecoordinator/**'
+
+      - name: Set up Node 22
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pricecoordinator/package-lock.json
+
+      - name: Install Worker dependencies
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
+        run: npm ci
+
+      - name: Typecheck Worker
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
+        run: npm run typecheck
+
+      - name: Run Worker tests
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
+        run: npm run test
