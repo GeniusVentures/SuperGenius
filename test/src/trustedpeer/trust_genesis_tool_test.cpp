@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
-#include <map>
+#include <iterator>
 #include <sstream>
 
 #include <boost/filesystem/operations.hpp>
@@ -53,13 +53,13 @@ namespace
             signers_.push_back( GeniusSigner::Generate() );
             signers_.push_back( GeniusSigner::Generate() );
             signers_.push_back( GeniusSigner::Generate() );
-            const auto &bootstrapper = signers_.front();
-            manifest_.network_id = 42;
+            const auto &bootstrapper          = signers_.front();
+            manifest_.network_id              = 42;
             manifest_.bootstrapper_public_key = bootstrapper.GetAddress();
             manifest_.peers = { bootstrapper.GetAddress(), signers_[1].GetAddress(), signers_[2].GetAddress() };
             manifest_.membership_threshold = 2;
-            manifest_.burn_threshold = 2;
-            manifest_ = manifest_.Canonicalized().value();
+            manifest_.burn_threshold       = 2;
+            manifest_                      = manifest_.Canonicalized().value();
         }
 
         void TearDown() override
@@ -86,27 +86,34 @@ namespace
             node_ = test::securecrdt::MakeSecureCrdtTestNode( "trust_genesis_tool" );
             EXPECT_NE( node_, nullptr );
             secure_crdt_ = std::make_shared<securecrdt::SecureCrdt>( node_->db, "trust-genesis-tool-topic" );
-            store_ = TrustStateStore::Open( ( path_ / "trust" ).string(),
+            store_       = TrustStateStore::Open( ( path_ / "trust" ).string(),
                                             manifest_.network_id,
-                                            test::MakeBatchCommitter(
-                                                [this] { return fail_commits_.load(); } ) )
+                                            test::MakeBatchCommitter( [this] { return fail_commits_.load(); } ) )
                          .value();
 
             GenesisCeremony::Network network;
-            network.start = [] { return outcome::success(); };
-            network.submit = [this]( const GenesisManifest &manifest,
-                                     const std::vector<uint8_t> &manifest_signature,
-                                     const std::string &address,
-                                     TrustedPeerRegistry::SignCallback sign )
-                -> outcome::result<securecrdt::CandidateId>
+            network.start  = [] { return outcome::success(); };
+            network.submit = [this](
+                                 const GenesisManifest            &manifest,
+                                 const std::vector<uint8_t>       &manifest_signature,
+                                 const std::string                &address,
+                                 TrustedPeerRegistry::SignCallback sign ) -> outcome::result<securecrdt::CandidateId>
             {
-                auto created = TrustedPeerRegistry::NewProduction(
-                    secure_crdt_, store_, manifest, manifest_signature, address, std::move( sign ) );
+                auto created = TrustedPeerRegistry::NewProduction( secure_crdt_,
+                                                                   store_,
+                                                                   manifest,
+                                                                   manifest_signature,
+                                                                   address,
+                                                                   std::move( sign ) );
                 if ( created.has_error() )
+                {
                     return created.error();
+                }
                 registry_ = created.value();
                 if ( !secure_crdt_->RegisterFilters() )
+                {
                     return outcome::failure( std::errc::operation_not_permitted );
+                }
                 return registry_->SubmitReviewedGenesisApproval();
             };
             network.confirmed = [this]() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
@@ -115,7 +122,9 @@ namespace
                 if ( loaded.has_error() )
                 {
                     if ( loaded.error() == TrustStateStore::Error::NOT_FOUND )
+                    {
                         return std::optional<ConfirmedTrustSnapshot>{};
+                    }
                     return loaded.error();
                 }
                 return std::optional<ConfirmedTrustSnapshot>( loaded.value() );
@@ -126,10 +135,10 @@ namespace
         GenesisCeremony::Request Request() const
         {
             GenesisCeremony::Request request;
-            request.manifest = manifest_;
-            request.key_file = key_path_.string();
+            request.manifest             = manifest_;
+            request.key_file             = key_path_.string();
             request.confirmation_timeout = std::chrono::milliseconds( 50 );
-            request.poll_interval = std::chrono::milliseconds( 1 );
+            request.poll_interval        = std::chrono::milliseconds( 1 );
             return request;
         }
 
@@ -139,54 +148,55 @@ namespace
             EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
                        GenesisCeremony::Error::SUCCESS );
             registry_.reset();
-            auto rebuilt = TrustedPeerRegistry::NewProduction(
-                secure_crdt_,
-                store_,
-                manifest_,
-                {},
-                signers_[0].GetAddress(),
-                [this]( const std::vector<uint8_t> &bytes )
-                {
-                    ++admin_sign_invocations_;
-                    return signers_[0].Sign( bytes );
-                } );
+            auto rebuilt = TrustedPeerRegistry::NewProduction( secure_crdt_,
+                                                               store_,
+                                                               manifest_,
+                                                               {},
+                                                               signers_[0].GetAddress(),
+                                                               [this]( const std::vector<uint8_t> &bytes )
+                                                               {
+                                                                   ++admin_sign_invocations_;
+                                                                   return signers_[0].Sign( bytes );
+                                                               } );
             ASSERT_TRUE( rebuilt.has_value() ) << rebuilt.error().message();
             registry_ = rebuilt.value();
-            auto burn = account::BurnConfig::NewProduction(
-                secure_crdt_,
-                registry_,
-                store_,
-                signers_[0].GetAddress(),
-                [this]( const std::vector<uint8_t> &bytes )
-                {
-                    ++admin_sign_invocations_;
-                    return signers_[0].Sign( bytes );
-                } );
+            auto burn = account::BurnConfig::NewProduction( secure_crdt_,
+                                                            registry_,
+                                                            store_,
+                                                            signers_[0].GetAddress(),
+                                                            [this]( const std::vector<uint8_t> &bytes )
+                                                            {
+                                                                ++admin_sign_invocations_;
+                                                                return signers_[0].Sign( bytes );
+                                                            } );
             ASSERT_TRUE( burn.has_value() ) << burn.error().message();
             burn_config_ = burn.value();
         }
 
         QuorumPolicyState Successor( bool alternate = false ) const
         {
-            auto current = registry_->GetConfirmedSnapshot().value().policy;
-            const auto hash = current.Hash().value();
-            current.version += 1;
-            current.expected_previous_hash = hash;
-            current.authorizing_policy_hash = hash;
+            auto       current               = registry_->GetConfirmedSnapshot().value().policy;
+            const auto hash                  = current.Hash().value();
+            current.version                 += 1;
+            current.expected_previous_hash   = hash;
+            current.authorizing_policy_hash  = hash;
             if ( alternate )
+            {
                 current.peers = { signers_[0].GetAddress(), signers_[1].GetAddress(), signers_[3].GetAddress() };
+            }
             return current.Canonicalized().value();
         }
 
         securecrdt::CandidateId SubmitRemotePolicyApproval( const QuorumPolicyState &candidate )
         {
-            const auto core = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
+            const auto core  = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
             const auto bytes = core.CanonicalBytes().value();
-            return secure_crdt_->SubmitCandidateApproval(
-                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-                  core,
-                  signers_[1].GetAddress(),
-                  signers_[1].Sign( bytes ) } ).value();
+            return secure_crdt_
+                ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                             core,
+                                             signers_[1].GetAddress(),
+                                             signers_[1].Sign( bytes ) } )
+                .value();
         }
 
         void ConfirmInitialBurn()
@@ -194,13 +204,14 @@ namespace
             auto local = burn_config_->OnTrustedPeerGenesisConfirmed();
             ASSERT_TRUE( local.has_value() ) << local.error().message();
             const auto snapshot = store_->LoadAndVerify().value();
-            const auto core = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
-            const auto bytes = core.CanonicalBytes().value();
-            ASSERT_TRUE( secure_crdt_->SubmitCandidateApproval(
-                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-                  core,
-                  signers_[1].GetAddress(),
-                  signers_[1].Sign( bytes ) } ).has_value() );
+            const auto core     = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+            const auto bytes    = core.CanonicalBytes().value();
+            ASSERT_TRUE( secure_crdt_
+                             ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                          core,
+                                                          signers_[1].GetAddress(),
+                                                          signers_[1].Sign( bytes ) } )
+                             .has_value() );
             ASSERT_TRUE( burn_config_->TryActivateBurnCandidate( local.value() ).has_value() );
             ASSERT_TRUE( burn_config_->IsEconomicallyReady() );
         }
@@ -208,52 +219,53 @@ namespace
         securecrdt::CandidateId SubmitRemoteInitialBurnApproval()
         {
             const auto snapshot = store_->LoadAndVerify().value();
-            const auto core = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
-            const auto bytes = core.CanonicalBytes().value();
-            return secure_crdt_->SubmitCandidateApproval(
-                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-                  core,
-                  signers_[1].GetAddress(),
-                  signers_[1].Sign( bytes ) } ).value();
+            const auto core     = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+            const auto bytes    = core.CanonicalBytes().value();
+            return secure_crdt_
+                ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                             core,
+                                             signers_[1].GetAddress(),
+                                             signers_[1].Sign( bytes ) } )
+                .value();
         }
 
-        GenesisCeremony::Error Run( GenesisCeremony &ceremony,
-                                    GenesisCeremony::Network network,
-                                    std::string confirmation,
+        GenesisCeremony::Error Run( GenesisCeremony          &ceremony,
+                                    GenesisCeremony::Network  network,
+                                    std::string               confirmation,
                                     std::chrono::milliseconds serve_duration = std::chrono::milliseconds( 0 ) )
         {
-            auto request   = Request();
+            auto request           = Request();
             request.serve_duration = serve_duration;
             std::istringstream input( std::move( confirmation ) );
             std::ostringstream output;
             std::ostringstream errors;
-            auto result = ceremony.Run( request, network, input, output, errors );
-            captured_output_ = output.str();
-            captured_errors_ = errors.str();
+            auto               result = ceremony.Run( request, network, input, output, errors );
+            captured_output_          = output.str();
+            captured_errors_          = errors.str();
             return result.has_error() ? static_cast<GenesisCeremony::Error>( result.error().value() )
                                       : GenesisCeremony::Error::SUCCESS;
         }
 
-        boost::filesystem::path path_;
-        boost::filesystem::path key_path_;
-        GenesisManifest manifest_;
+        boost::filesystem::path                               path_;
+        boost::filesystem::path                               key_path_;
+        GenesisManifest                                       manifest_;
         std::unique_ptr<test::securecrdt::SecureCrdtTestNode> node_;
-        std::shared_ptr<securecrdt::SecureCrdt> secure_crdt_;
-        std::shared_ptr<TrustStateStore> store_;
-        std::shared_ptr<TrustedPeerRegistry> registry_;
-        std::shared_ptr<account::BurnConfig> burn_config_;
-        std::vector<GeniusSigner> signers_;
-        std::atomic_uint32_t admin_sign_invocations_{ 0 };
-        std::atomic_bool fail_commits_{ false };
-        std::string captured_output_;
-        std::string captured_errors_;
+        std::shared_ptr<securecrdt::SecureCrdt>               secure_crdt_;
+        std::shared_ptr<TrustStateStore>                      store_;
+        std::shared_ptr<TrustedPeerRegistry>                  registry_;
+        std::shared_ptr<account::BurnConfig>                  burn_config_;
+        std::vector<GeniusSigner>                             signers_;
+        std::atomic_uint32_t                                  admin_sign_invocations_{ 0 };
+        std::atomic_bool                                      fail_commits_{ false };
+        std::string                                           captured_output_;
+        std::string                                           captured_errors_;
     };
 }
 
 TEST_F( TrustGenesisToolTest, SecretFileReviewSubmitsDurablyCleansesThenUnlinks )
 {
     std::vector<std::string> lifecycle;
-    size_t account_storage_calls = 0;
+    size_t                   account_storage_calls = 0;
     GeniusAccount::SetSecureStorageFactory(
         [&]( const std::string & ) -> std::shared_ptr<ISecureStorage>
         {
@@ -262,7 +274,7 @@ TEST_F( TrustGenesisToolTest, SecretFileReviewSubmitsDurablyCleansesThenUnlinks 
         } );
 
     GenesisCeremony::Hooks hooks = GenesisCeremony::DefaultHooks();
-    hooks.cleanse = [&]( void *data, size_t size )
+    hooks.cleanse                = [&]( void *data, size_t size )
     {
         lifecycle.emplace_back( "cleanse" );
         OPENSSL_cleanse( data, size );
@@ -285,7 +297,9 @@ TEST_F( TrustGenesisToolTest, SecretFileReviewSubmitsDurablyCleansesThenUnlinks 
     EXPECT_NE( captured_output_.find( "burn threshold: 2" ), std::string::npos );
     EXPECT_NE( captured_output_.find( "initial burn basis points: 100" ), std::string::npos );
     for ( const auto &peer : manifest_.peers )
+    {
         EXPECT_NE( captured_output_.find( peer ), std::string::npos );
+    }
     EXPECT_NE( captured_output_.find( manifest_.Fingerprint().value() ), std::string::npos );
     EXPECT_EQ( account_storage_calls, 0U );
     EXPECT_EQ( captured_output_.find( PRIVATE_KEY ), std::string::npos );
@@ -299,13 +313,13 @@ TEST_F( TrustGenesisToolTest, DurableConfirmationServesToPeersBeforeReturning )
     // reached, and the tool is the only serving transport for the fresh DAG.
     // The ceremony must run the serving window before returning success.
     std::vector<std::chrono::milliseconds> served_windows;
-    auto network = RealNetwork();
+    auto                                   network = RealNetwork();
     network.serve = [&]( std::chrono::milliseconds duration ) { served_windows.push_back( duration ); };
 
     GenesisCeremony ceremony;
-    EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n",
-                    std::chrono::milliseconds( 250 ) ),
-               GenesisCeremony::Error::SUCCESS );
+    EXPECT_EQ(
+        Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n", std::chrono::milliseconds( 250 ) ),
+        GenesisCeremony::Error::SUCCESS );
 
     ASSERT_EQ( served_windows.size(), 1U ) << "serving window must run exactly once after confirmation";
     EXPECT_EQ( served_windows.front(), std::chrono::milliseconds( 250 ) );
@@ -349,11 +363,10 @@ TEST_F( TrustGenesisToolTest, BurnActivationRetriesWhenApprovalsNotYetVisible )
 
 TEST_F( TrustGenesisToolTest, WrongFingerprintLeavesSecretAndDoesNotSubmit )
 {
-    size_t submits = 0;
+    size_t                   submits = 0;
     GenesisCeremony::Network network;
-    network.start = [] { return outcome::success(); };
-    network.submit = [&]( const auto &, const auto &, const auto &, auto )
-        -> outcome::result<securecrdt::CandidateId>
+    network.start  = [] { return outcome::success(); };
+    network.submit = [&]( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
     {
         ++submits;
         return outcome::failure( std::errc::operation_not_permitted );
@@ -370,11 +383,10 @@ TEST_F( TrustGenesisToolTest, WrongFingerprintLeavesSecretAndDoesNotSubmit )
 TEST_F( TrustGenesisToolTest, WrongBootstrapperLeavesSecretAndDoesNotConfirm )
 {
     manifest_.bootstrapper_public_key = GeniusSigner::Generate().GetAddress();
-    GenesisCeremony ceremony;
+    GenesisCeremony          ceremony;
     GenesisCeremony::Network network;
-    network.start = [] { return outcome::success(); };
-    network.submit = []( const auto &, const auto &, const auto &, auto )
-        -> outcome::result<securecrdt::CandidateId>
+    network.start  = [] { return outcome::success(); };
+    network.submit = []( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
     { return outcome::failure( std::errc::operation_not_permitted ); };
     network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
     { return std::optional<ConfirmedTrustSnapshot>{}; };
@@ -384,12 +396,16 @@ TEST_F( TrustGenesisToolTest, WrongBootstrapperLeavesSecretAndDoesNotConfirm )
 
 TEST_F( TrustGenesisToolTest, ConfirmationTimeoutLeavesSecretAndReportsCriticalRecovery )
 {
-    GenesisCeremony ceremony;
+    GenesisCeremony          ceremony;
     GenesisCeremony::Network network;
-    network.start = [] { return outcome::success(); };
+    network.start  = [] { return outcome::success(); };
     network.submit = []( const GenesisManifest &manifest, const auto &, const auto &, auto )
         -> outcome::result<securecrdt::CandidateId>
-    { return securecrdt::CandidateId::FromCore( GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) ).value(); };
+    {
+        return securecrdt::CandidateId::FromCore(
+                   GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) )
+            .value();
+    };
     network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
     { return std::optional<ConfirmedTrustSnapshot>{}; };
     EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
@@ -400,12 +416,16 @@ TEST_F( TrustGenesisToolTest, ConfirmationTimeoutLeavesSecretAndReportsCriticalR
 
 TEST_F( TrustGenesisToolTest, SecretConfirmationFailureRetainsKeyAndProducesNoConfirmedRecord )
 {
-    GenesisCeremony ceremony;
+    GenesisCeremony          ceremony;
     GenesisCeremony::Network network;
-    network.start = [] { return outcome::success(); };
+    network.start  = [] { return outcome::success(); };
     network.submit = []( const GenesisManifest &manifest, const auto &, const auto &, auto )
         -> outcome::result<securecrdt::CandidateId>
-    { return securecrdt::CandidateId::FromCore( GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) ).value(); };
+    {
+        return securecrdt::CandidateId::FromCore(
+                   GenesisCandidateCore( manifest, manifest.CanonicalBytes().value(), manifest.Fingerprint().value() ) )
+            .value();
+    };
     network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
     { return outcome::failure( std::errc::io_error ); };
     EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
@@ -415,26 +435,152 @@ TEST_F( TrustGenesisToolTest, SecretConfirmationFailureRetainsKeyAndProducesNoCo
     EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
 }
 
-TEST_F( TrustGenesisToolTest, ArgvEnvironmentAndStructuredLogSurfacesExcludeSecretBytes )
+TEST_F( TrustGenesisToolTest, NonCanonicalManifestIsRejectedTypedAndNeverSubmits )
 {
-    const std::vector<std::string> argv_capture = {
-        "sgns-trust", "genesis", "--manifest", ( path_ / "manifest" ).string(),
-        "--network-config", ( path_ / "network.json" ).string(), "--database", path_.string(),
-        "--topic", "existing-production-topic", "--key-file", key_path_.string()
-    };
-    const std::map<std::string, std::string> environment_capture = {
-        { "PATH", "/usr/bin" }, { "SGNS_NETWORK", "42" }
-    };
-    const std::vector<std::string> structured_logs;
-    for ( const auto &argument : argv_capture )
-        EXPECT_EQ( argument.find( PRIVATE_KEY ), std::string::npos );
-    for ( const auto &[name, value] : environment_capture )
+    // Canonicalization orders the peer set, so a reversed manifest can never
+    // equal its canonical form - the malformed-submission shape the ceremony
+    // boundary must reject before any network activity happens.
+    manifest_.peers                  = { manifest_.peers[2], manifest_.peers[1], manifest_.peers[0] };
+    size_t                   starts  = 0;
+    size_t                   submits = 0;
+    GenesisCeremony::Network network;
+    network.start = [&starts]
     {
-        EXPECT_EQ( name.find( PRIVATE_KEY ), std::string::npos );
-        EXPECT_EQ( value.find( PRIVATE_KEY ), std::string::npos );
+        ++starts;
+        return outcome::success();
+    };
+    network.submit = [&]( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
+    {
+        ++submits;
+        return outcome::failure( std::errc::operation_not_permitted );
+    };
+    network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
+    { return std::optional<ConfirmedTrustSnapshot>{}; };
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, std::move( network ), "unused\n" ), GenesisCeremony::Error::INVALID_MANIFEST );
+    EXPECT_EQ( starts, 0U );
+    EXPECT_EQ( submits, 0U );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+}
+
+TEST_F( TrustGenesisToolTest, SubmitFailureIsTypedLoudAndLeavesSecretAndNoDurableRecord )
+{
+    GenesisCeremony::Network network;
+    network.start  = [] { return outcome::success(); };
+    network.submit = []( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
+    { return outcome::failure( std::errc::operation_not_permitted ); };
+    network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
+    { return std::optional<ConfirmedTrustSnapshot>{}; };
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::SUBMISSION_FAILED );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+    EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+    EXPECT_EQ( store_, nullptr );
+}
+
+TEST_F( TrustGenesisToolTest, UnlinkFailureAfterConfirmationIsTypedAndLoud )
+{
+    std::string            unlinked_path;
+    GenesisCeremony::Hooks hooks = GenesisCeremony::DefaultHooks();
+    hooks.unlink_file            = [&]( const std::string &path )
+    {
+        unlinked_path = path;
+        return -1;
+    };
+    GenesisCeremony ceremony( std::move( hooks ) );
+    EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::KEY_FILE_UNLINK_FAILED );
+    EXPECT_EQ( unlinked_path, key_path_.string() );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+    EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+    EXPECT_NE( captured_errors_.find( "key file could not be removed" ), std::string::npos );
+}
+
+TEST_F( TrustGenesisToolTest, CompletedCeremonyLeavesNoKeyBytesOnDiskLogsOrDurableArtifacts )
+{
+    // Scans surfaces the ceremony actually wrote (captured output/errors,
+    // every regular file under the run directory, raw RocksDB store entries)
+    // instead of asserting over self-built key-free vectors. Both material
+    // forms of the committed bootstrap key are searched: the ASCII hex the
+    // key file holds and the raw 32-byte binary sequence.
+    const auto key_raw = sgns::base::unhex( PRIVATE_KEY );
+    ASSERT_TRUE( key_raw.has_value() ) << key_raw.error().message();
+    const std::string key_raw_bytes( key_raw.value().begin(), key_raw.value().end() );
+    const auto        holds_key_bytes = [&key_raw_bytes]( const std::string &surface )
+    { return surface.find( PRIVATE_KEY ) != std::string::npos || surface.find( key_raw_bytes ) != std::string::npos; };
+
+    // Non-vacuity guard, part one: while the key file exists it genuinely
+    // holds the secret, so the scan must demonstrably find key bytes before
+    // any absence assertion is worth anything.
+    {
+        std::ifstream     key_file( key_path_.string(), std::ios::binary );
+        const std::string contents( ( std::istreambuf_iterator<char>( key_file ) ), std::istreambuf_iterator<char>() );
+        ASSERT_TRUE( holds_key_bytes( contents ) );
     }
-    for ( const auto &entry : structured_logs )
-        EXPECT_EQ( entry.find( PRIVATE_KEY ), std::string::npos );
+
+    GenesisCeremony ceremony;
+    EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::SUCCESS );
+    ASSERT_FALSE( boost::filesystem::exists( key_path_ ) );
+    ASSERT_TRUE( store_->LoadAndVerify().has_value() );
+
+    const auto run_dir_file_holding_key = [&]() -> std::string
+    {
+        for ( boost::filesystem::recursive_directory_iterator entry( path_ ), end; entry != end; ++entry )
+        {
+            if ( !boost::filesystem::is_regular_file( *entry ) )
+            {
+                continue;
+            }
+            std::ifstream     in( entry->path().string(), std::ios::binary );
+            const std::string contents( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+            if ( holds_key_bytes( contents ) )
+            {
+                return entry->path().string();
+            }
+        }
+        return {};
+    };
+
+    // Non-vacuity guard, part two: a deliberately planted RAW-binary copy
+    // under the run directory must be located by the same walk that is about
+    // to assert absence, then is removed again.
+    const auto planted = path_ / "planted-scan-guard";
+    {
+        std::ofstream plant( planted.string(), std::ios::binary | std::ios::trunc );
+        plant.write( key_raw_bytes.data(), static_cast<std::streamsize>( key_raw_bytes.size() ) );
+    }
+    EXPECT_EQ( run_dir_file_holding_key(), planted.string() );
+    boost::filesystem::remove( planted );
+
+    EXPECT_FALSE( holds_key_bytes( captured_output_ ) );
+    EXPECT_FALSE( holds_key_bytes( captured_errors_ ) );
+    EXPECT_TRUE( run_dir_file_holding_key().empty() );
+
+    // Raw RocksDB scan of the durable store. Every handle on the trust
+    // database is released first (directory lock), mirroring the
+    // trust_state_store_test raw-access sequencing; access is read-only.
+    burn_config_.reset();
+    registry_.reset();
+    secure_crdt_.reset();
+    node_.reset();
+    store_.reset();
+    auto raw = sgns::storage::rocksdb::create( ( path_ / "trust" ).string() );
+    ASSERT_TRUE( raw.has_value() ) << raw.error().message();
+    // Non-vacuity guard, part three: the byte predicate detects a planted
+    // raw copy through the same Buffer-to-bytes conversion the scan uses.
+    const sgns::base::Buffer planted_buffer( key_raw.value().data(), key_raw.value().data() + key_raw.value().size() );
+    ASSERT_TRUE( holds_key_bytes( std::string( planted_buffer.toString() ) ) );
+    auto cursor = raw.value()->cursor();
+    ASSERT_TRUE( cursor->seekToFirst().has_value() );
+    for ( ; cursor->isValid(); cursor->next().assume_value() )
+    {
+        EXPECT_FALSE( holds_key_bytes( std::string( cursor->key().value().toString() ) ) )
+            << "RocksDB key holds bootstrap key bytes";
+        EXPECT_FALSE( holds_key_bytes( std::string( cursor->value().value().toString() ) ) )
+            << "RocksDB value holds bootstrap key bytes";
+    }
 }
 
 TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSecret )
@@ -449,14 +595,14 @@ TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSec
     for ( const auto &[status, expected] : cases )
     {
         SCOPED_TRACE( static_cast<int>( expected ) );
-        GenesisCeremony::Hooks hooks = GenesisCeremony::DefaultHooks();
-        const auto status_copy = status;
+        GenesisCeremony::Hooks hooks       = GenesisCeremony::DefaultHooks();
+        const auto             status_copy = status;
         hooks.inspect_key_file = [status_copy]( const std::string & ) { return outcome::success( status_copy ); };
-        GenesisCeremony ceremony( std::move( hooks ) );
+        GenesisCeremony          ceremony( std::move( hooks ) );
         GenesisCeremony::Network network;
         network.start = [] { return outcome::success(); };
-        network.submit = []( const auto &, const auto &, const auto &, auto )
-            -> outcome::result<securecrdt::CandidateId>
+        network.submit =
+            []( const auto &, const auto &, const auto &, auto ) -> outcome::result<securecrdt::CandidateId>
         { return outcome::failure( std::errc::operation_not_permitted ); };
         network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
         { return std::optional<ConfirmedTrustSnapshot>{}; };
@@ -470,15 +616,15 @@ TEST_F( TrustGenesisToolTest, AdminReceiptAndListNeverSignWhileExplicitProposeSi
     ConfirmForAdmin();
     ConfirmInitialBurn();
     const auto candidate = Successor();
-    const auto id = SubmitRemotePolicyApproval( candidate );
+    const auto id        = SubmitRemotePolicyApproval( candidate );
     admin_sign_invocations_.store( 0 );
 
     LocalTrustAdmin admin( registry_, burn_config_ );
-    auto listed = admin.ListCandidates();
+    auto            listed = admin.ListCandidates();
     ASSERT_TRUE( listed.has_value() ) << listed.error().message();
-    ASSERT_NE( std::find_if( listed.value().begin(), listed.value().end(),
-                            [&]( const auto &item ) { return item.id == id; } ),
-               listed.value().end() );
+    ASSERT_NE(
+        std::find_if( listed.value().begin(), listed.value().end(), [&]( const auto &item ) { return item.id == id; } ),
+        listed.value().end() );
     EXPECT_EQ( admin_sign_invocations_.load(), 0U );
 
     auto proposed = admin.ProposePolicy( candidate );
@@ -493,20 +639,20 @@ TEST_F( TrustGenesisToolTest, AdminApproveTargetsOnlyExactCandidateId )
 {
     ConfirmForAdmin();
     ConfirmInitialBurn();
-    const auto first = SubmitRemotePolicyApproval( Successor() );
+    const auto first  = SubmitRemotePolicyApproval( Successor() );
     const auto second = SubmitRemotePolicyApproval( Successor( true ) );
     admin_sign_invocations_.store( 0 );
 
     LocalTrustAdmin admin( registry_, burn_config_ );
     ASSERT_TRUE( admin.Approve( first ).has_value() );
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
-    const auto first_approvals = secure_crdt_->ReadCandidateApprovals( first ).value();
+    const auto first_approvals  = secure_crdt_->ReadCandidateApprovals( first ).value();
     const auto second_approvals = secure_crdt_->ReadCandidateApprovals( second ).value();
     EXPECT_EQ( first_approvals.size(), 2U );
     EXPECT_EQ( second_approvals.size(), 1U );
-    EXPECT_TRUE( std::none_of( second_approvals.begin(), second_approvals.end(), [&]( const auto &approval ) {
-        return approval.signer == signers_[0].GetAddress();
-    } ) );
+    EXPECT_TRUE( std::none_of( second_approvals.begin(),
+                               second_approvals.end(),
+                               [&]( const auto &approval ) { return approval.signer == signers_[0].GetAddress(); } ) );
 }
 
 TEST_F( TrustGenesisToolTest, AdminExplicitBurnProposalContributesOneApproval )
@@ -516,7 +662,7 @@ TEST_F( TrustGenesisToolTest, AdminExplicitBurnProposalContributesOneApproval )
     admin_sign_invocations_.store( 0 );
 
     LocalTrustAdmin admin( registry_, burn_config_ );
-    auto proposed = admin.ProposeBurn( 250 );
+    auto            proposed = admin.ProposeBurn( 250 );
     ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
     EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( proposed.value() ).value().size(), 1U );
@@ -525,12 +671,12 @@ TEST_F( TrustGenesisToolTest, AdminExplicitBurnProposalContributesOneApproval )
 TEST_F( TrustGenesisToolTest, AdminInitialBurnGatePreservesBurnV1Approval )
 {
     ConfirmForAdmin();
-    const auto policy = Successor();
+    const auto policy    = Successor();
     const auto policy_id = SubmitRemotePolicyApproval( policy );
     admin_sign_invocations_.store( 0 );
 
     LocalTrustAdmin admin( registry_, burn_config_ );
-    auto rejected_proposal = admin.ProposePolicy( policy );
+    auto            rejected_proposal = admin.ProposePolicy( policy );
     ASSERT_TRUE( rejected_proposal.has_error() );
     EXPECT_EQ( rejected_proposal.error(), std::make_error_code( std::errc::operation_not_permitted ) );
     auto rejected_approval = admin.Approve( policy_id );
@@ -538,8 +684,8 @@ TEST_F( TrustGenesisToolTest, AdminInitialBurnGatePreservesBurnV1Approval )
     EXPECT_EQ( rejected_approval.error(), std::make_error_code( std::errc::operation_not_permitted ) );
     EXPECT_EQ( admin_sign_invocations_.load(), 0U );
 
-    const auto burn_id = SubmitRemoteInitialBurnApproval();
-    auto approved_burn = admin.Approve( burn_id );
+    const auto burn_id       = SubmitRemoteInitialBurnApproval();
+    auto       approved_burn = admin.Approve( burn_id );
     ASSERT_TRUE( approved_burn.has_value() ) << approved_burn.error().message();
     EXPECT_EQ( approved_burn.value(), burn_id );
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
@@ -551,23 +697,65 @@ TEST_F( TrustGenesisToolTest, AdminActivationFailureIsReturnedWhileUnderQuorumRe
     ConfirmForAdmin();
     ConfirmInitialBurn();
     LocalTrustAdmin admin( registry_, burn_config_ );
-    const auto candidate = Successor( true );
-    const auto durable_before = store_->LoadAndVerify().value();
+    const auto      candidate      = Successor( true );
+    const auto      durable_before = store_->LoadAndVerify().value();
 
     auto pending = admin.ProposePolicy( candidate );
     ASSERT_TRUE( pending.has_value() ) << pending.error().message();
     EXPECT_EQ( store_->LoadAndVerify().value(), durable_before );
 
-    const auto core = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
+    const auto core  = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
     const auto bytes = core.CanonicalBytes().value();
-    ASSERT_TRUE( secure_crdt_->SubmitCandidateApproval(
-        { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-          core,
-          signers_[1].GetAddress(),
-          signers_[1].Sign( bytes ) } ).has_value() );
+    ASSERT_TRUE( secure_crdt_
+                     ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                  core,
+                                                  signers_[1].GetAddress(),
+                                                  signers_[1].Sign( bytes ) } )
+                     .has_value() );
     fail_commits_.store( true );
     auto failed = admin.Approve( pending.value() );
     ASSERT_TRUE( failed.has_error() );
     EXPECT_EQ( failed.error(), TrustStateStore::Error::COMMIT_FAILED );
     EXPECT_EQ( store_->LoadAndVerify().value(), durable_before );
+}
+
+TEST_F( TrustGenesisToolTest, LateBurnApprovalAfterActivationIsAcceptedInertAndAuditable )
+{
+    ConfirmForAdmin();
+    ConfirmInitialBurn();
+    // Returns the cached candidate id without resubmitting or signing.
+    const auto burn_id               = burn_config_->OnTrustedPeerGenesisConfirmed().value();
+    const auto durable_at_activation = store_->LoadAndVerify().value();
+    ASSERT_TRUE( burn_config_->IsEconomicallyReady() );
+    ASSERT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Raw CRDT seam: burn activation advanced the authorization context, so a
+    // third late honest signer's record is rejected loudly — never silently
+    // stored or dropped (same seam-split as membership: workflow inert, raw
+    // loud).
+    const auto snapshot = store_->LoadAndVerify().value();
+    const auto core     = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+    const auto late = secure_crdt_->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                                                               core,
+                                                               signers_[2].GetAddress(),
+                                                               signers_[2].Sign( core.CanonicalBytes().value() ) } );
+    EXPECT_TRUE( late.has_error() );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Workflow seam: the admin explicit-approve for the already-activated burn
+    // is an inert success — no error, no new record, no signature (D-16: the
+    // same rule as membership).
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    admin_sign_invocations_.store( 0 );
+    const auto accepted = admin.Approve( burn_id );
+    ASSERT_TRUE( accepted.has_value() ) << accepted.error().message();
+    EXPECT_EQ( admin_sign_invocations_.load(), 0U );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( burn_id ).value().size(), 2U );
+
+    // Readiness and durable state are unchanged, and re-activation stays inert.
+    EXPECT_TRUE( burn_config_->IsEconomicallyReady() );
+    const auto reactivated = burn_config_->TryActivateBurnCandidate( burn_id );
+    ASSERT_TRUE( reactivated.has_value() ) << reactivated.error().message();
+    EXPECT_FALSE( reactivated.value() );
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_at_activation );
 }

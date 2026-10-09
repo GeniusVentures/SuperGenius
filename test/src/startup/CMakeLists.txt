@@ -69,6 +69,24 @@ if(NOT IOS)
     )
 endif()
 
+# Runtime-class labels (same grain as trustedpeer/ and the requires_foundry
+# precedent in bridge_e2e): these ceremony-behavior tests construct in-process
+# GlobalDB/libp2p nodes, so they join the inprocess_node class CI selects via
+# `ctest -L inprocess_node`. The IOS guard mirrors the block above because
+# trust_first_boot_e2e_test is not registered on that platform.
+set_tests_properties(
+    trust_restart_test
+    trust_tamper_e2e_test
+    PROPERTIES LABELS "inprocess_node"
+)
+
+if(NOT IOS)
+    set_tests_properties(
+        trust_first_boot_e2e_test
+        PROPERTIES LABELS "inprocess_node"
+    )
+endif()
+
 if(MSVC)
     target_link_options(startup_wiring_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
     target_link_options(trust_restart_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
