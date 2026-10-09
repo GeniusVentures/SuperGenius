@@ -186,6 +186,28 @@ hardcode `token.gnus.ai`, so it should be the *only* advertised origin:
 - **Never put the CoinGecko key (or any secret) into `wrangler.jsonc`** — see
   the D-04 rule in §6.
 
+### Allowlist enforcement — `ALLOWED_IDS` / `ALLOWED_VS`
+
+- **Why.** Without an allowlist the endpoint is a free CoinGecko proxy: any
+  well-formed id (`[a-z0-9-]+`, up to 50 per request) and any `[a-z]{2,10}`
+  vs currency was forwarded upstream, letting a third party burn the shared
+  CoinGecko quota and trip the shared rate limit.
+- **What.** After format validation, every requested id and the vs currency
+  must be members of the configured allowlists (`wrangler.jsonc` `vars` →
+  `Env.ALLOWED_IDS` / `Env.ALLOWED_VS`), else the worker returns
+  `400 invalid_request` naming the policy and the rejected token — before any
+  cache or Durable Object interaction.
+- **Defaults.** Unset or whitespace-empty vars restrict to `genius-ai` /
+  `usd` only. The worker fails closed: a fresh deploy with no vars can never
+  be unrestricted.
+- **How to widen.** Edit the `vars` stanza in `wrangler.jsonc` and redeploy
+  (§5) — a config change, no code. Comma-separated, trimmed, lowercased
+  tokens. The wider test allowlist in `vitest.config.ts`
+  (`miniflare.bindings`) exists only in the test runtime.
+- **Compliance.** Plain vars are public configuration, not secrets (D-04
+  unchanged — the CoinGecko key stays a `wrangler secret` / `.dev.vars`
+  entry), and plain env vars keep SRVC-07 (no KV/queue bindings).
+
 ## 9. Post-deploy verification
 
 Run from anywhere (all checks hit the live origin):
@@ -203,6 +225,11 @@ curl.exe -i "https://token.gnus.ai/v1/prices/extra"
 
 # Negative: non-GET method -> 405 method_not_allowed
 curl.exe -i -X POST "https://token.gnus.ai/v1/prices?ids=genius-ai&vs=usd"
+
+# Negative: well-formed but DISALLOWED id -> 400 invalid_request naming the
+# allowlist policy ("id 'bitcoin' is not allowed on this endpoint"). The
+# SRVC-08 allowlist must reject it BEFORE any cache/DO interaction.
+curl.exe -i "https://token.gnus.ai/v1/prices?ids=bitcoin&vs=usd"
 
 # Cache canonicalization: duplicate ids address the same canonical cache key
 # (sorted + deduped) — compare the two envelopes; the second is a cache hit.

@@ -4,11 +4,22 @@
   //   - SQLite-backed DO migration only (Free plan + ctx.storage.sql availability)
   //   - no message-queue or key-value store bindings of any kind (SRVC-07)
   //   - no secrets inline — the CoinGecko key is an optional `wrangler secret`
-  //     / .dev.vars entry, never referenced in this file (D-04)
+  //     / .dev.vars entry, never referenced in this file (D-04). Plain
+  //     non-secret config vars (e.g. the allowlist below) are fine inline —
+  //     D-04 bans credentials, not configuration.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "price-coordinator",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
+  // Allowlist enforcement (SRVC-08): after format validation, ids/vs must be
+  // members of these lists or the request is 400'd — prevents use as a
+  // general CoinGecko proxy. Widen by editing and redeploying (config
+  // change, no code). Unset/empty → worker fails closed to genius-ai/usd.
+  // Public config, not secrets (D-04); plain env vars, no bindings (SRVC-07).
+  "vars": {
+    "ALLOWED_IDS": "genius-ai",
+    "ALLOWED_VS": "usd"
+  },
   "durable_objects": {
     "bindings": [
       { "name": "PRICE_COORDINATOR", "class_name": "PriceCoordinator" }

@@ -6,7 +6,7 @@
 // (SRVC-04) with canonical keys and FRESH-ONLY admission.
 export { PriceCoordinator } from "./coordinator";
 
-import { parsePricesRequest } from "./validate";
+import { parsePricesRequest, resolveAllowlist } from "./validate";
 import { UpstreamError } from "./upstream";
 import type { PriceEnvelope } from "./envelope";
 
@@ -18,6 +18,11 @@ export interface Env {
   // >15ms between concurrent fetch arrivals, splitting batches. The
   // production default stays BATCH_WINDOW_MS; tests may widen it.
   BATCH_WINDOW_MS_OVERRIDE?: string;
+  // Allowlist enforcement (SRVC-08): plain wrangler vars — public config,
+  // deliberately NOT secrets (D-04 scope); plain env, no store bindings
+  // (SRVC-07). Unset/empty → resolveAllowlist fails closed to genius-ai/usd.
+  ALLOWED_IDS?: string;
+  ALLOWED_VS?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -122,8 +127,10 @@ export default {
       return errorResponse(405, "method_not_allowed", `method ${request.method} not allowed; use GET`);
     }
 
-    // Validation BEFORE any DO/cache interaction (ASVS V5, T-01-03).
-    const parsed = parsePricesRequest(url);
+    // Validation BEFORE any DO/cache interaction (ASVS V5, T-01-03) —
+    // format first, then allowlist membership (SRVC-08): a disallowed
+    // request must never touch caches.default or the Durable Object.
+    const parsed = parsePricesRequest(url, resolveAllowlist(env));
     if (!parsed.ok) {
       return errorResponse(parsed.status, parsed.code, parsed.message);
     }

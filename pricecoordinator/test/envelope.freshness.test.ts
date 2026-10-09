@@ -13,7 +13,13 @@ import {
   STALE_SEC,
   type PriceRow,
 } from "../src/envelope";
-import { parsePricesRequest } from "../src/validate";
+import {
+  parsePricesRequest,
+  resolveAllowlist,
+  DEFAULT_ALLOWED_IDS,
+  DEFAULT_ALLOWED_VS,
+  type AllowedLists,
+} from "../src/validate";
 
 afterEach(() => vi.useRealTimers());
 
@@ -137,11 +143,37 @@ describe("nowSec / parseSec (Landmine 10 — seconds, never ms)", () => {
   });
 });
 
+describe("resolveAllowlist (SRVC-08 — fail closed)", () => {
+  it("unset vars → default closed (genius-ai / usd only)", () => {
+    const a = resolveAllowlist({});
+    expect([...a.ids]).toEqual([DEFAULT_ALLOWED_IDS]);
+    expect(a.ids.has("genius-ai")).toBe(true);
+    expect(a.vs.has(DEFAULT_ALLOWED_VS)).toBe(true);
+    expect(a.ids.size).toBe(1);
+    expect(a.vs.size).toBe(1);
+  });
+
+  it("whitespace/empty vars → still the closed defaults", () => {
+    const a = resolveAllowlist({ ALLOWED_IDS: "   ", ALLOWED_VS: "" });
+    expect([...a.ids]).toEqual(["genius-ai"]);
+    expect([...a.vs]).toEqual(["usd"]);
+  });
+
+  it("comma list → trimmed, lowercased tokens (dedupe via Set)", () => {
+    const a = resolveAllowlist({ ALLOWED_IDS: "genius-ai, foo", ALLOWED_VS: "usd, eur" });
+    expect([...a.ids].sort()).toEqual(["foo", "genius-ai"]);
+    expect([...a.vs].sort()).toEqual(["eur", "usd"]);
+  });
+});
+
 describe("parsePricesRequest (SRVC-08 allowlist)", () => {
   const url = (qs: string) => new URL(`https://token.gnus.ai/v1/prices${qs}`);
+  // Wide fixture allowlist for the legacy positive cases — these keep
+  // proving format+dedupe behavior, not membership.
+  const wide: AllowedLists = { ids: new Set(["bitcoin", "ethereum"]), vs: new Set(["usd", "eur"]) };
 
   it("accepts ids=bitcoin,ethereum + vs=usd", () => {
-    const r = parsePricesRequest(url("?ids=bitcoin,ethereum&vs=usd"));
+    const r = parsePricesRequest(url("?ids=bitcoin,ethereum&vs=usd"), wide);
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.ids).toEqual(["bitcoin", "ethereum"]);
@@ -150,9 +182,49 @@ describe("parsePricesRequest (SRVC-08 allowlist)", () => {
   });
 
   it("dedupes ids=bitcoin,bitcoin", () => {
-    const r = parsePricesRequest(url("?ids=bitcoin,bitcoin&vs=usd"));
+    const r = parsePricesRequest(url("?ids=bitcoin,bitcoin&vs=usd"), wide);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.ids).toEqual(["bitcoin"]);
+  });
+
+  it("no allowlist arg → default closed: ids=bitcoin → 400 policy message naming bitcoin", () => {
+    const r = parsePricesRequest(url("?ids=bitcoin&vs=usd"));
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(400);
+      expect(r.code).toBe("invalid_request");
+      expect(r.message).toContain("not allowed on this endpoint");
+      expect(r.message).toContain("bitcoin");
+    }
+  });
+
+  it("default allowlist vs: ids=genius-ai&vs=eur → 400 currency policy message", () => {
+    const r = parsePricesRequest(url("?ids=genius-ai&vs=eur"));
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(400);
+      expect(r.code).toBe("invalid_request");
+      expect(r.message).toContain("not allowed on this endpoint");
+      expect(r.message).toContain("eur");
+    }
+  });
+
+  it("multi-id config passes through: ids=a,b with allowed {a,b}", () => {
+    const allowed: AllowedLists = { ids: new Set(["a", "b"]), vs: new Set(["usd"]) };
+    const r = parsePricesRequest(url("?ids=a,b&vs=usd"), allowed);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.ids).toEqual(["a", "b"]);
+  });
+
+  it("mixed allowed+disallowed ids → 400 naming the disallowed one", () => {
+    const allowed: AllowedLists = { ids: new Set(["genius-ai", "ethereum"]), vs: new Set(["usd"]) };
+    const r = parsePricesRequest(url("?ids=genius-ai,bitcoin&vs=usd"), allowed);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(400);
+      expect(r.code).toBe("invalid_request");
+      expect(r.message).toContain("bitcoin");
+    }
   });
 
   const bad: Array<[string, string]> = [

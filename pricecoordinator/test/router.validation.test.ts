@@ -79,6 +79,47 @@ describe("4xx table (SRVC-08, D-08) — never 500", () => {
   });
 });
 
+describe("allowlist enforcement (SRVC-08) — default closed at the router", () => {
+  // `call()` passes {} as Env, so the DEFAULT closed allowlist is what runs:
+  // unset ALLOWED_IDS/ALLOWED_VS can never mean unrestricted.
+  it("GET /v1/prices?ids=bitcoin&vs=usd → 400 invalid_request policy message", async () => {
+    const res = await call("/v1/prices?ids=bitcoin&vs=usd");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("invalid_request");
+    expect(body.error.message).toMatch(/not allowed on this endpoint/);
+  });
+
+  it("GET /v1/prices?ids=genius-ai&vs=eur → 400 (vs outside default)", async () => {
+    const res = await call("/v1/prices?ids=genius-ai&vs=eur");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("invalid_request");
+    expect(body.error.message).toMatch(/not allowed on this endpoint/);
+  });
+
+  it("format validation runs BEFORE the membership gate — malformed id keeps today's message", async () => {
+    const res = await call("/v1/prices?ids=Bit_Coin!&vs=usd");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("invalid_request");
+    expect(body.error.message).toMatch(/\[a-z0-9-\]\+/);
+    expect(body.error.message).not.toMatch(/not allowed on this endpoint/);
+  });
+
+  it("production-default id passes end-to-end: genius-ai/usd → 200 PriceEnvelope", async () => {
+    network.use(http.get(UPSTREAM, () => HttpResponse.json({ "genius-ai": { usd: 0.42 } })));
+    const res = await SELF.fetch(`${BASE}/v1/prices?ids=genius-ai&vs=usd`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown> & {
+      prices: Record<string, number>;
+      stale: boolean;
+    };
+    expect(body.prices).toEqual({ "genius-ai": 0.42 });
+    expect(body.stale).toBe(false);
+  });
+});
+
 describe("upstream failure → structured 502 (D-08)", () => {
   it("403-HTML upstream → 502 upstream_error with upstreamStatus, JSON body", async () => {
     network.use(

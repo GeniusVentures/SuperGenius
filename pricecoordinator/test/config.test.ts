@@ -37,6 +37,18 @@ describe("wrangler.jsonc permanent config guard", () => {
     // CONFIG BLOCK instead of banning the word entirely.
     expect(cfg.secrets).toBeUndefined();
   });
+
+  it("defines the SRVC-08 allowlist vars — comma lists of [a-z0-9-]+ tokens incl. genius-ai/usd", () => {
+    const vars = cfg.vars as Record<string, unknown> | undefined;
+    expect(vars).toBeDefined();
+    const shape = /^[a-z0-9-]+(,[a-z0-9-]+)*$/;
+    expect(typeof vars?.ALLOWED_IDS).toBe("string");
+    expect(vars?.ALLOWED_IDS as string).toMatch(shape);
+    expect((vars?.ALLOWED_IDS as string).split(",")).toContain("genius-ai");
+    expect(typeof vars?.ALLOWED_VS).toBe("string");
+    expect(vars?.ALLOWED_VS as string).toMatch(shape);
+    expect((vars?.ALLOWED_VS as string).split(",")).toContain("usd");
+  });
 });
 
 describe("parseJsonc (guard the guard)", () => {
