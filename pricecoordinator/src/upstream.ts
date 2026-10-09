@@ -6,6 +6,9 @@ import type { Env } from "./index";
 
 const UPSTREAM_BASE = "https://api.coingecko.com/api/v3/simple/price";
 
+/** Descriptive UA CoinGecko requires on /simple/price (single source of truth for the test). */
+export const UPSTREAM_USER_AGENT = "GNUS-PriceCoordinator/1.0 (https://token.gnus.ai)";
+
 /** Typed upstream failure carrying the truthful HTTP status (D-08). */
 export class UpstreamError extends Error {
   readonly upstreamStatus?: number;
@@ -29,6 +32,11 @@ export async function fetchUpstream(
   const url = `${UPSTREAM_BASE}?ids=${[...ids].sort().join(",")}&vs_currencies=${currency}`;
 
   const headers: Record<string, string> = {};
+  // CoinGecko hard-403s /simple/price requests lacking a descriptive
+  // User-Agent (live-verified 2026-10-09), and Cloudflare Workers fetch
+  // sends no User-Agent unless explicitly set — hence the constant on
+  // every call, keyed and anonymous alike.
+  headers["User-Agent"] = UPSTREAM_USER_AGENT;
   // D-04/D-05: key applied identically on every upstream call, iff present.
   if (env.COINGECKO_API_KEY) {
     headers["x-cg-demo-api-key"] = env.COINGECKO_API_KEY;

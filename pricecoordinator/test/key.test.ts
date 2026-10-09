@@ -13,7 +13,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { network } from "./server";
 import { UPSTREAM_TIMEOUT_MS } from "../src/envelope";
-import { fetchUpstream } from "../src/upstream";
+import { fetchUpstream, UPSTREAM_USER_AGENT } from "../src/upstream";
 import type { Env } from "../src/index";
 
 const UPSTREAM = "https://api.coingecko.com/api/v3/simple/price";
@@ -51,6 +51,31 @@ describe("x-cg-demo-api-key binding (D-04/D-05) — fetchUpstream seam", () => {
     const rows = await fetchUpstream(["key-b"], "usd", anon as Env);
     expect(rows.get("key-b")?.price).toBe(2);
     expect(seen).toBeNull();
+  });
+
+  it("sends a descriptive User-Agent on every upstream request — keyed and anonymous", async () => {
+    const keyed = { ...env, COINGECKO_API_KEY: "test-key-123" } as Env;
+    const { COINGECKO_API_KEY: _omit, ...anon } = { ...env } as Env;
+
+    let uaSeen: string | null = null;
+    network.use(
+      http.get(UPSTREAM, ({ request }) => {
+        uaSeen = request.headers.get("User-Agent");
+        return HttpResponse.json({ "ua-keyed": { usd: 4 } });
+      }),
+    );
+    await fetchUpstream(["ua-keyed"], "usd", keyed);
+    expect(uaSeen).toBe(UPSTREAM_USER_AGENT);
+
+    uaSeen = null;
+    network.use(
+      http.get(UPSTREAM, ({ request }) => {
+        uaSeen = request.headers.get("User-Agent");
+        return HttpResponse.json({ "ua-anon": { usd: 5 } });
+      }),
+    );
+    await fetchUpstream(["ua-anon"], "usd", anon as Env);
+    expect(uaSeen).toBe(UPSTREAM_USER_AGENT);
   });
 
   it("end-to-end: response bodies through the full worker never contain the key", async () => {
