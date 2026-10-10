@@ -8,6 +8,7 @@
 #ifndef SGNS_BLOCKCHAIN_HPP
 #define SGNS_BLOCKCHAIN_HPP
 
+#include <chrono>
 #include <memory>
 #include <map>
 #include <functional>
@@ -18,10 +19,14 @@
 #include <atomic>
 #include <optional>
 #include <unordered_map>
+#include <mutex>
+#include <thread>
+
 #include "outcome/outcome.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "blockchain/impl/proto/SGBlockchain.pb.h"
 #include "blockchain/Consensus.hpp"
 #include "base/buffer.hpp"
@@ -31,6 +36,8 @@
 namespace sgns
 {
     class ValidatorRegistry;
+    class CertificateFallbackTestAccess;
+    class MultiNodeFinalityFaultTestAccess;
 
     class Migration3_5_0To3_6_0;
     class Migration3_6_0To3_7_0;
@@ -75,12 +82,20 @@ namespace sgns
          * @param[in] account GeniusAccount instance.
          * @param[in] pubsub PubSub instance used by consensus manager.
          * @param[in] callback Called when initialization completes.
+         * @param[in] node_type Deployment role, forwarded to the consensus manager. Archive nodes
+         *            abstain from self-voting; defaults to Full so existing call sites are unaffected.
+         * @param[in] network_scope Private-network identity (0x-hex-32B) scoping the validator
+         *            registry's CRDT key/topic/CID key; empty = public scope (identifiers stay
+         *            byte-identical to the public constants). Defaults to empty so existing
+         *            call sites are unaffected.
          * @return Shared pointer to blockchain instance.
          */
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                BlockchainCallback                         callback );
+                                                BlockchainCallback                         callback,
+                                                NodeType                                   node_type = NodeType::Full,
+                                                std::string                                network_scope = "" );
 
         /**
          * @brief Destroys the blockchain instance.
@@ -156,6 +171,15 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         /**
+         * @brief Returns the CRDT database used for authoritative transaction evidence.
+         * @return Shared GlobalDB instance, or null when the blockchain has no database.
+         */
+        std::shared_ptr<crdt::GlobalDB> GetGlobalDB() const
+        {
+            return db_;
+        }
+
+        /**
          * @brief Forces full-node mode behavior for bootstrap/generation flow.
          */
         void SetFullNodeMode();
@@ -193,6 +217,12 @@ namespace sgns
          */
         bool RegisterProposalCleanupHandler( std::string_view                         subject_type,
                                              ConsensusManager::ProposalCleanupHandler handler );
+
+        /**
+         * @brief Unregisters all proposal cleanup handlers for a canonical subject type.
+         * @param[in] subject_type Canonical subject type to remove.
+         */
+        void UnregisterProposalCleanupHandler( std::string_view subject_type );
 
         /**
          * @brief Registers a slot key handler for a specific embedded transaction oneof case.
@@ -268,36 +298,42 @@ namespace sgns
          */
         outcome::result<void> TryResumePendingDependency( const ConsensusManager::PendingDependencyKey &dependency );
         /**
-         * @brief Checks whether any certificate exists for subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return `true` when certificate exists.
+         * @brief Checks the authoritative slot record and consumes pending work.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return `true` when the authoritative slot record is approved.
+         *
+         * A successful durable readback proves finality, so this call also delivers
+         * any not-yet-consumed certificate acceptance work for the slot to its
+         * registered handler before returning.
          */
-        bool CheckCertificate( const std::string &subject_hash ) const;
+        bool CheckCertificateForSlot( const std::string &slot_key );
         /**
-         * @brief Performs strict certificate check for a specific subject object.
-         * @param[in] subject Subject to evaluate.
-         * @return `true` when certificate exists and matches strictly.
+         * @brief Looks up the certified parent (main) address for a registered child.
+         * @param[in] child_addr Child address whose `reg/` record should be resolved.
+         * @return The certified main address, or `std::nullopt` when the child is unregistered,
+         *         malformed, or not yet certified (D-26).
          */
-        bool CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
+        std::optional<std::string> CheckCertifiedParent( const std::string &child_addr ) const;
         /**
-         * @brief Loads certificate by subject hash.
-         * @param[in] subject_hash Subject hash key.
+         * @brief Loads the validated authoritative certificate by canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return Certificate on success, otherwise an error.
          */
-        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.
          * @return Reference to selected hash.
          */
-        const std::string &BestHash( const std::string &a, const std::string &b ) const;
+        static const std::string &BestHash( const std::string &a, const std::string &b );
 
     protected:
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
+        friend class CertificateFallbackTestAccess;
+        friend class MultiNodeFinalityFaultTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
@@ -305,8 +341,7 @@ namespace sgns
          * @param[in] new_db Target GlobalDB.
          * @return outcome::success on success, otherwise an error.
          */
-        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+        static outcome::result<void> MigrateCids( crdt::GlobalDB &old_db, crdt::GlobalDB &new_db );
 
     private:
         /**
@@ -459,14 +494,31 @@ namespace sgns
          * @brief Watches CID download completion with timeout handling.
          * @param[in] cid CID being tracked.
          * @param[in] error_on_failure Error code to emit on timeout/failure.
-         * @param[in] timeout_ms Timeout in milliseconds.
+         * @param[in] timeout How long to wait for the download before emitting the error.
          */
-        void WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
+        void WatchCIDDownload( const std::string &cid, Error error_on_failure, std::chrono::milliseconds timeout );
         /**
          * @brief Ensures validator registry is initialized and available.
          * @return outcome::success when registry is ready, otherwise an error.
          */
         outcome::result<void> EnsureValidatorRegistry() const;
+        void                  RequestValidatorRegistry();
+
+        /**
+         * @brief Re-issues the validator registry pulls while Start() is deferred.
+         *
+         * ValidatorRegistry::RetryInitializationIfNeeded() only inspects our OWN head list,
+         * which on a fresh client is populated exclusively by a gossip broadcast from a full
+         * node -- and nothing reacts to us connecting or grafting. Without this the client
+         * cannot ask, so it converges only if the full node happens to broadcast while we
+         * are already grafted, and otherwise waits for the periodic rebroadcast.
+         *
+         * Genesis and account creation are already re-requested on every deferred Start();
+         * the registry was the one dependency whose pull fired once in New(), before any
+         * peer was reachable, with its failure swallowed by an empty callback. This
+         * restores the symmetry.
+         */
+        void                  RequestValidatorRegistryWhileDeferred();
 
         static constexpr std::string_view BLOCKCHAIN_TOPIC =
             "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
@@ -480,9 +532,14 @@ namespace sgns
             "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
         static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX =
             "gnus-account-creation-cid-";                          ///< Prefix for account-creation CID keys.
-        static constexpr uint64_t TIMEOUT_GENESIS_BLOCK_MS = 8000; ///< Genesis CID download timeout in milliseconds.
-        static constexpr uint64_t TIMEOUT_ACC_CREATION_BLOCK_MS =
-            8000; ///< Account-creation CID download timeout in milliseconds.
+        static constexpr std::chrono::milliseconds TIMEOUT_GENESIS_BLOCK = std::chrono::seconds(
+            8 ); ///< Genesis CID download timeout.
+        /// Floor between direct registry-CID re-requests. Above TIMEOUT_GENESIS_BLOCK because
+        /// each request occupies the messenger's single worker for up to that long and the
+        /// task queue is unbounded, so a faster cadence would only build a backlog.
+        static constexpr std::chrono::milliseconds REGISTRY_BLOCK_REQUEST_MIN_INTERVAL = std::chrono::seconds( 20 );
+        static constexpr std::chrono::milliseconds TIMEOUT_ACC_CREATION_BLOCK          = std::chrono::seconds(
+            8 ); ///< Account-creation CID download timeout.
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
@@ -552,16 +609,24 @@ namespace sgns
 
         std::shared_ptr<ValidatorRegistry> validator_registry_; ///< Validator registry component.
 
+        std::string network_scope_; ///< Private-network identity forwarded to the validator registry ("" = public scope).
+
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
-        bool              created_successfully_ = false; ///< Indicates successful initialization/creation flow.
-        bool              filters_registered_   = false; ///< Indicates CRDT filters were registered.
-        bool              callbacks_registered_ = false; ///< Indicates CRDT callbacks were registered.
-        std::atomic<bool> stop_started_{ false }; ///< Makes account-bound teardown one-shot.
+        std::atomic<bool> stop_started_{ false };                   ///< Makes account-bound teardown one-shot.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
-        std::atomic<bool> start_deferred_{ false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
-        bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
-        bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
+        std::atomic<std::chrono::steady_clock::time_point> last_registry_block_request_{
+            {} }; ///< When the last direct registry-CID request went out; default = never.
+        std::atomic<bool> start_deferred_{
+            false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
+
+        /// Signals CID-watch threads to exit; set by Stop() so they cannot
+        /// poll the GlobalDB or fire result callbacks during node teardown.
+        std::atomic<bool>        watchers_stop_requested_{ false };
+        mutable std::mutex       cid_watchers_mutex_;             ///< Guards cid_watchers_ push/join.
+        std::vector<std::thread> cid_watchers_;                   ///< Joinable CID-watch threads (never detached).
+        bool                     genesis_ready_          = false; ///< Indicates genesis block is ready.
+        bool                     account_creation_ready_ = false; ///< Indicates account-creation block is ready.
 
         std::shared_ptr<ConsensusManager> consensus_manager_; ///< Consensus manager used for proposals/certificates.
     };

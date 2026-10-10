@@ -10,6 +10,10 @@
 #include "processing_subtask_queue_accessor.hpp"
 #include "base/logger.hpp"
 
+#include <atomic>
+#include <thread>
+#include <vector>
+
 namespace sgns::processing
 {
     /**
@@ -35,6 +39,13 @@ namespace sgns::processing
         void StopQueueProcessing();
         bool IsQueueProcessingStarted() const;
 
+        /**
+         * @brief Stops accepting new subtasks and joins all in-flight subtask
+         *        threads, so no thread writes results or publishes after the
+         *        caller proceeds with teardown.
+         */
+        void Stop();
+
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)
         */
@@ -54,6 +65,10 @@ namespace sgns::processing
         std::function<void( void )>                m_processingDoneSink;
 
         std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
+
+        std::atomic<bool>        m_stopRequested{ false }; ///< Set by Stop(); blocks new subtask threads.
+        mutable std::mutex       m_mutexProcessingThreads; ///< Guards m_processingThreads push/drain.
+        std::vector<std::thread> m_processingThreads;      ///< Joinable subtask threads (never detached).
 
         mutable std::mutex m_mutexSubTaskQueue;
 

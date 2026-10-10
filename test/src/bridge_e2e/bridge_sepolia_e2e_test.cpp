@@ -29,6 +29,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/outcome.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -136,9 +137,9 @@ protected:
 
 std::array<std::shared_ptr<GeniusNode>, BridgeSepoliaE2ETest::kNodeCount> BridgeSepoliaE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeSepoliaE2ETest::kNodeCount>                BridgeSepoliaE2ETest::s_configs = { {
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node0" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node1" },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node2" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node0" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node1" },
+    { "0xcafe", "0.35", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./bridge_sepolia_node2" },
 } };
 std::string BridgeSepoliaE2ETest::s_eth_private_key;
 
@@ -178,7 +179,11 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
         sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
         std::filesystem::create_directories( s_configs[i].BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath, ( i == 0u ) ? "Full" : "Light", /*is_processor=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( s_configs[i].BaseWritePath,
+                                               ( i == 0u ) ? "Full" : "Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/true,
+                                               s_eth_private_key );
     }
 
     spdlog::info( "bridge_sepolia: creating {}-node cluster against live Sepolia", kNodeCount );
@@ -186,6 +191,8 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
     s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ s_eth_private_key } );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
     spdlog::info( "bridge_sepolia: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
+
+    ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( s_nodes[0] ) );
 
     ASSERT_WAIT_FOR_CONDITION(
         [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
@@ -204,6 +211,11 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
             if ( j != i ) { peers.push_back( s_nodes[j]->GetPubSub()->GetLocalAddress() ); }
         }
         s_nodes[i]->AddPeers( peers );
+    }
+
+    for ( unsigned int i = 1u; i < kNodeCount; ++i )
+    {
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( s_nodes[i] ) );
     }
 
     ASSERT_WAIT_FOR_CONDITION(

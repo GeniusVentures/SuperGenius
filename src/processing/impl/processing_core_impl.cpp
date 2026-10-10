@@ -2,6 +2,23 @@
 
 #include <rapidjson/document.h>
 
+#include "processing/processing_validation_core.hpp"
+
+#include <boost/di/extension/scopes/shared.hpp>
+#include <libp2p/security/noise.hpp>
+// Concrete crypto providers for the explicit binding set below (the same
+// includes GossipPubSub's host composition uses).
+#include <libp2p/crypto/crypto_provider/crypto_provider_impl.hpp>
+#include <libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp>
+#include <libp2p/crypto/ed25519_provider/ed25519_provider_impl.hpp>
+#include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
+#include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
+#include <libp2p/crypto/key_validator/key_validator_impl.hpp>
+#include <libp2p/crypto/random_generator/boost_generator.hpp>
+#include <libp2p/crypto/rsa_provider/rsa_provider_impl.hpp>
+#include <libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp>
+
+#include "base/logger.hpp"
 #include "FileManager.hpp"
 #include <processingbase/ProcessingManager.hpp>
 #include <Generators.hpp>
@@ -23,6 +40,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
             return "Job incompatibility error";
         case E::INVALID_MODEL_ERROR:
             return "Invalid model error";
+        case E::PNET_INITIALIZATION_ERROR:
+            return "Private-network initialization error";
     }
     return "Unknown error";
 }
@@ -30,25 +49,132 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
 namespace sgns::processing
 {
 
-    std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
-                                                                 uint32_t maximalProcessingSubTaskCount,
-                                                                 TokenID  tokenID )
+    namespace
     {
-        if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) )
+        base::Logger ProcessingCoreLogger()
+        {
+            return base::createLogger( "ProcessingCoreImpl" );
+        }
+
+        /**
+         * @brief   Materializes the eagerly-needed io_context and exposes the gated
+         *          Host lazily from one injector composition (both branch compositions
+         *          have distinct injector types, so the sink is a template - the same
+         *          structure the vendored GossipPubSub::InitHostFromInjector uses).
+         *          The move-only injector is held via shared_ptr so the copyable
+         *          std::function closure can keep it (and its shared singletons) alive;
+         *          the Host later created from it shares this io_context.
+         */
+        template <typename InjectorT>
+        ProcessingCoreImpl::GatedHostContext MakeContextFromInjector( InjectorT &&injector )
+        {
+            auto held = std::make_shared<std::decay_t<InjectorT>>( std::move( injector ) );
+            ProcessingCoreImpl::GatedHostContext context;
+            context.io_context = held->template create<std::shared_ptr<boost::asio::io_context>>();
+            context.make_host  = [held]() -> std::shared_ptr<libp2p::Host> {
+                return held->template create<std::shared_ptr<libp2p::Host>>();
+            };
+            return context;
+        }
+    } // namespace
+
+    ProcessingCoreImpl::GatedHostContext ProcessingCoreImpl::MakeGatedHostInjector(
+        const std::string                                               &network_key,
+        const std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater> &gater,
+        libp2p::protocol::kademlia::Config                                kademlia_config )
+    {
+        namespace di = boost::di;
+        using namespace libp2p;
+
+        // Use the same explicit crypto provider bindings as the gossip host.
+        auto csprng             = std::make_shared<libp2p::crypto::random::BoostRandomGenerator>();
+        auto ed25519_provider   = std::make_shared<libp2p::crypto::ed25519::Ed25519ProviderImpl>();
+        auto rsa_provider       = std::make_shared<libp2p::crypto::rsa::RsaProviderImpl>();
+        auto ecdsa_provider     = std::make_shared<libp2p::crypto::ecdsa::EcdsaProviderImpl>();
+        auto secp256k1_provider = std::make_shared<libp2p::crypto::secp256k1::Secp256k1ProviderImpl>();
+        auto hmac_provider      = std::make_shared<libp2p::crypto::hmac::HmacProviderImpl>();
+        std::shared_ptr<libp2p::crypto::CryptoProvider> crypto_provider = std::make_shared<libp2p::crypto::CryptoProviderImpl>(
+            csprng,
+            ed25519_provider,
+            rsa_provider,
+            ecdsa_provider,
+            secp256k1_provider,
+            hmac_provider );
+        auto validator = std::make_shared<libp2p::crypto::validator::KeyValidatorImpl>( crypto_provider );
+        auto key_pair  = crypto_provider->generateKeys( libp2p::crypto::Key::Type::Ed25519 ).value();
+
+        // Bind a shared_ptr value: Boost.DI retains a const lvalue reference
+        // passed to .to(gater), but this lazy injector outlives the caller's
+        // shared_ptr (including temporaries passed by the construction tests).
+        // usePrivateNetwork validates the key EAGERLY and throws PskValidationError
+        // (a std::exception) on invalid key material before anything assembles.
+        if ( network_key.empty() )
+        {
+            auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+                di::bind<libp2p::crypto::CryptoProvider>().to( crypto_provider )[di::override],
+                di::bind<libp2p::crypto::KeyPair>().to( std::move( key_pair ) )[di::override],
+                di::bind<libp2p::crypto::random::CSPRNG>().to( csprng )[di::override],
+                di::bind<libp2p::crypto::marshaller::KeyMarshaller>()
+                    .to<libp2p::crypto::marshaller::KeyMarshallerImpl>()[di::override],
+                di::bind<libp2p::crypto::validator::KeyValidator>().to( validator )[di::override],
+                libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
+                    libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
+                libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
+                di::bind<libp2p::network::ConnectionGater>()
+                    .to( std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater>( gater ) )[di::override] );
+            return MakeContextFromInjector( std::move( injector ) );
+        }
+
+        auto injector = libp2p::injector::makeHostInjector<di::extension::shared_config>(
+            di::bind<libp2p::crypto::CryptoProvider>().to( crypto_provider )[di::override],
+            di::bind<libp2p::crypto::KeyPair>().to( std::move( key_pair ) )[di::override],
+            di::bind<libp2p::crypto::random::CSPRNG>().to( csprng )[di::override],
+            di::bind<libp2p::crypto::marshaller::KeyMarshaller>()
+                .to<libp2p::crypto::marshaller::KeyMarshallerImpl>()[di::override],
+            di::bind<libp2p::crypto::validator::KeyValidator>().to( validator )[di::override],
+            libp2p::injector::makeKademliaInjector<di::extension::shared_config>(
+                libp2p::injector::useKademliaConfig( std::move( kademlia_config ) ) ),
+            libp2p::injector::useSecurityAdaptors<libp2p::security::Noise>(),
+            di::bind<libp2p::network::ConnectionGater>()
+                .to( std::shared_ptr<sgns::ipfs_pubsub::DenyListConnectionGater>( gater ) )[di::override],
+            libp2p::injector::usePrivateNetwork( network_key ) );
+        return MakeContextFromInjector( std::move( injector ) );
+    }
+
+    std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
+                                                                 uint32_t           maximalProcessingSubTaskCount,
+                                                                 TokenID            tokenID,
+                                                                 const std::string &developerAddress,
+                                                                 uint64_t           developerCut,
+                                                                 std::string        network_key )
+    {
+        if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) || developerAddress.empty() ||
+             ( developerCut > ProcessingValidationCore::DEVELOPER_CUT_SCALE ) )
         {
             return nullptr;
         }
-        auto instance = std::shared_ptr<ProcessingCoreImpl>(
-            new ProcessingCoreImpl( std::move( task_queue ), maximalProcessingSubTaskCount, std::move( tokenID ) ) );
+        auto instance = std::shared_ptr<ProcessingCoreImpl>( new ProcessingCoreImpl( std::move( task_queue ),
+                                                                                     maximalProcessingSubTaskCount,
+                                                                                     std::move( tokenID ),
+                                                                                     developerAddress,
+                                                                                     developerCut,
+                                                                                     std::move( network_key ) ) );
         return instance;
     }
 
     ProcessingCoreImpl::ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
                                             uint32_t                             maximalProcessingSubTaskCount,
-                                            TokenID                              tokenID ) :
+                                            TokenID                              tokenID,
+                                            std::string                          developerAddress,
+                                            uint64_t                             developerCut,
+                                            std::string                          network_key ) :
         task_queue_( std::move( task_queue ) ),
         token_ID_( std::move( tokenID ) ),
-        max_processing_subtask_count_( maximalProcessingSubTaskCount )
+        developer_address_( std::move( developerAddress ) ),
+        developer_cut_( developerCut ),
+        max_processing_subtask_count_( maximalProcessingSubTaskCount ),
+        network_key_( std::move( network_key ) ),
+        connection_gater_( std::make_shared<sgns::ipfs_pubsub::DenyListConnectionGater>() )
     {
     }
 
@@ -93,16 +219,35 @@ namespace sgns::processing
             kademlia_config.randomWalk.enabled  = true;
             kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
             kademlia_config.requestConcurency   = 20;
-            auto injector                       = libp2p::injector::makeHostInjector(
-                libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
-            auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+            // Per-subtask host composition with the same private-network enforcement
+            // as the gossip host (D-11): Noise-only security + connection gater, plus
+            // the pnet PSK boundary when a network key is configured. Invalid key
+            // material throws eagerly - caught here and mapped to an Error instead of
+            // leaking an exception or proceeding with a half-configured host.
+            std::shared_ptr<boost::asio::io_context> ioc;
+            try
+            {
+                auto host_context = MakeGatedHostInjector( network_key_, connection_gater_, kademlia_config );
+                ioc               = std::move( host_context.io_context );
+            }
+            catch ( const std::exception &e )
+            {
+                // Never log the key material itself - only the error message.
+                ProcessingCoreLogger()->error( "Private-network (pnet) host initialization failed: {}", e.what() );
+                error = Error::PNET_INITIALIZATION_ERROR;
+                break;
+            }
 
             std::vector<std::vector<uint8_t>> chunk_hashes;
-            std::vector<std::string>        output_locations;
-            auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value(), output_locations );
+            std::vector<std::string>          output_locations;
+            auto                              result_retval = processing_manager_->Process( ioc,
+                                                                                            chunk_hashes,
+                                                                                            model_retval.value(),
+                                                                                            output_locations );
 
             DecProcessingSubTaskCount();
-            
+
             if ( !result_retval.has_value() )
             {
                 return result_retval.error();
@@ -118,6 +263,10 @@ namespace sgns::processing
             std::string hash_string( result_retval.value().begin(), result_retval.value().end() );
             result.set_result_hash( hash_string );
             result.set_token_id( token_ID_.bytes().data(), token_ID_.size() );
+            // Payout metadata is reported by the peer that ran the work, not by the job poster:
+            // peers of the same job may be running apps from different developers.
+            result.set_developer_address( developer_address_ );
+            result.set_developer_cut( developer_cut_ );
 
             // Populate output location(s) in the result so the job requester
             // can discover where their output was saved (file path, IPFS CID, etc.)
@@ -158,6 +307,11 @@ namespace sgns::processing
             return processing_manager_->GetProgress();
         }
         return 0.0f;
+    }
+
+    std::shared_ptr<ProcessingTaskQueue> ProcessingCoreImpl::GetTaskQueue() const
+    {
+        return task_queue_;
     }
 
     outcome::result<void> ProcessingCoreImpl::IncProcessingSubTaskCount()

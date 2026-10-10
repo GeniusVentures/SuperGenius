@@ -588,25 +588,25 @@ namespace
 {
     /// @brief Known secp256k1 test vector: public key of private key = 1.
     ///        X coordinate (big-endian) = 79BE667E...81798 (canonical Bitcoin vector),
-    ///        with an EVEN Y (compressed prefix 0x02).  Contract byte order is the
-    ///        reverse of big-endian, matching what the v2 event carries in bytes32.
+    ///        with an EVEN Y (compressed prefix 0x02). ABI bytes32 preserves the
+    ///        canonical big-endian coordinate order.
     constexpr bool kKnownEvenYOdd = false; // even Y → destination_y_odd = false
 
     /// @brief Big-endian X hex for private key = 1 (canonical secp256k1 vector).
     constexpr const char *kKnownXBigEndianHex = "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798";
 
-    /// @brief Parse a big-endian hex X coordinate into contract-order (reversed)
-    ///        32-byte array — matching the bytes32 the bridge contract emits.
+    /// @brief Full canonical big-endian X||Y destination for private key = 1.
+    constexpr const char *kKnownDestinationHex =
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+        "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
+
+    /// @brief Parse a canonical big-endian X coordinate into the bytes32 emitted
+    ///        by the bridge contract.
     std::array<uint8_t, 32> ParseContractOrderX( const std::string &big_endian_hex )
     {
         std::array<uint8_t, 32> big_endian{};
         rlp::base::parse::hex_array( big_endian_hex, big_endian );
-        std::array<uint8_t, 32> contract_order{};
-        for ( size_t i = 0; i < big_endian.size(); ++i )
-        {
-            contract_order[i] = big_endian[big_endian.size() - 1u - i];
-        }
-        return contract_order;
+        return big_endian;
     }
 } // namespace
 
@@ -666,6 +666,8 @@ TEST( BridgeRelayerTest, DecompressMatchesKnownVector )
     const auto dest       = eth::DecompressXOnlyPubkey( contract_x, kKnownEvenYOdd );
     ASSERT_TRUE( dest.has_value() ) << "Decompression of known on-curve X must succeed";
     EXPECT_EQ( dest->size(), 128U ) << "Destination must be 128 hex chars (X+Y)";
+    EXPECT_EQ( *dest, kKnownDestinationHex )
+        << "Destination must preserve canonical big-endian X and Y coordinates";
 
     // The first 64 hex chars are the contract-order X — must equal the input X
     // rendered as plain hex (no "0x" prefix).
@@ -703,6 +705,36 @@ TEST( BridgeRelayerTest, V1DestinationIsBareHexMatchingGetAddressFormat )
         << "v1 destination must be bare 128-char hex (no \"0x\" prefix)";
     EXPECT_EQ( result.value().destination, kTestSgnsDestination )
         << "v1 destination must equal the input public key (GetAddress format)";
+}
+
+TEST( BridgeRelayerTest, V2DestinationMatchesGetAddressOrdering )
+{
+    // @regression v2 BridgeOutInitiated carries an X-only bytes32 (canonical
+    //             big-endian) plus a Y-parity flag. ParseBurnEventValues must
+    //             return the DecompressXOnlyPubkey output verbatim — canonical
+    //             big-endian X||Y, matching GetAddress(). It previously
+    //             byte-reversed each 32-byte half, a compensation for the old
+    //             evmrelay contract-order output that stranded every v2 mint
+    //             on reverse(X)||reverse(Y) — a recipient no node owns — after
+    //             the submodule's "preserve bridge destination byte order" bump.
+    const auto contract_x = ParseContractOrderX( kKnownXBigEndianHex );
+
+    std::vector<eth::abi::AbiValue> values;
+    values.push_back( eth::codec::Address{} );             // [0] sender
+    values.push_back( intx::uint256( 1 ) );                // [1] id
+    values.push_back( intx::uint256( 1 ) );                // [2] amount
+    values.push_back( intx::uint256( 11155111 ) );         // [3] srcChainID
+    values.push_back( intx::uint256( 8453 ) );             // [4] destChainID
+    values.push_back( contract_x );                        // [5] sgnsDestination (v2 X-only)
+    values.push_back( kKnownEvenYOdd );                    // [6] destinationYOdd
+
+    auto result = BridgeRelayer::ParseBurnEventValues( values );
+    ASSERT_TRUE( result.has_value() ) << "v2 values must parse successfully";
+    EXPECT_EQ( result.value().destination.size(), 128U )
+        << "v2 destination must be bare 128-char hex (no \"0x\" prefix)";
+    EXPECT_EQ( result.value().destination, kKnownDestinationHex )
+        << "v2 destination must equal DecompressXOnlyPubkey output verbatim "
+           "(canonical big-endian X||Y, GetAddress format)";
 }
 
 TEST( BridgeRelayerTest, V1DestinationRejectsEmptyPayload )

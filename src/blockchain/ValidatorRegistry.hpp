@@ -45,9 +45,20 @@ namespace sgns
     /**
      * @brief Maintains validator registry state and applies certificate-driven updates.
      *
-     * This component stores the active validator set in GlobalDB/CRDT, computes
-     * quorum thresholds, validates registry updates, and derives next registry
-     * snapshots from consensus certificates.
+     * Here, a certificate is a finalized `ConsensusCertificate`: the signed
+     * proposal together with the validators' signed votes and the registry
+     * CID/epoch against which their voting weight and quorum are evaluated.
+     * It is consensus evidence that the proposal was approved, not a TLS/X.509
+     * identity certificate.
+     *
+     * The active validator set is the subset of entries in the current registry
+     * snapshot whose status is `ACTIVE`. Each entry identifies a validator and
+     * its role and voting weight; only active entries contribute to quorum.
+     * Suspended and blacklisted entries remain in the registry but are excluded.
+     *
+     * This component stores the registry in GlobalDB/CRDT, computes quorum
+     * thresholds, validates registry updates, and derives next registry snapshots
+     * from consensus certificates.
      */
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
     {
@@ -101,7 +112,7 @@ namespace sgns
             // promoted to Role::FULL. The promoted node's weight then accumulates
             // up to full_max_weight_, flowing into EvaluateSlotQuorum via
             // validator.weight() with no tally-side special case. Equal to regular_max_weight_ so the approve-branch clamp
-			// does not prevent reaching the threshold.
+            // does not prevent reaching the threshold.
             uint64_t full_promotion_weight_ = 100; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
         };
 
@@ -129,6 +140,9 @@ namespace sgns
          * @param[in] genesis_authority Validator id treated as genesis authority.
          * @param[in] block_request_method Callback used to fetch blocks by CID.
          * @param[in] init_callback Optional callback notified after initialization.
+         * @param[in] network_scope Private-network identity (0x-hex-32B) scoping the
+         *            registry's CRDT key, gossip topic, and CID key; empty = public
+         *            scope (byte-identical to the historical static identifiers).
          * @return Shared pointer to the created registry.
          */
         static std::shared_ptr<ValidatorRegistry> New( std::shared_ptr<crdt::GlobalDB> db,
@@ -137,7 +151,8 @@ namespace sgns
                                                        WeightConfig                    weight_config,
                                                        std::string                     genesis_authority,
                                                        BlockRequestMethod              block_request_method,
-                                                       InitCallback                    init_callback = nullptr );
+                                                       InitCallback                    init_callback = nullptr,
+                                                       std::string                     network_scope = "" );
         /**
          * @brief Destroys the registry instance.
          */
@@ -195,7 +210,7 @@ namespace sgns
          * @return Slot tally result.
          */
         SlotQuorumResult EvaluateSlotQuorum( const std::vector<sgns::ConsensusVote> &votes,
-                                             const Registry                        &registry ) const;
+                                             const Registry                         &registry ) const;
 
         /**
          * @brief Pure (stateless) slot-quorum tally for deterministic unit testing.
@@ -210,8 +225,8 @@ namespace sgns
          * @return Slot tally result.
          */
         static SlotQuorumResult EvaluateSlotQuorumStatic( const std::vector<sgns::ConsensusVote> &votes,
-                                                          const Registry                        &registry,
-                                                          const WeightConfig                    &weight_config );
+                                                          const Registry                         &registry,
+                                                          const WeightConfig                     &weight_config );
 
         /**
          * @brief Pure (stateless) REGULAR -> FULL promotion decision (D-08).
@@ -229,8 +244,7 @@ namespace sgns
          * @param[in] weight_config Weight policy supplying thresholds.
          * @return true if the entry should be promoted from REGULAR to FULL.
          */
-        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
-                                                    const WeightConfig   &weight_config );
+        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry, const WeightConfig &weight_config );
 
         /**
          * @brief Creates an in-memory genesis registry snapshot.
@@ -253,6 +267,12 @@ namespace sgns
         outcome::result<Registry> LoadCurrentRegistry() const;
         /**
          * @brief Loads a registry by CID.
+         *
+         * Each registry CRDT element contains a complete serialized
+         * RegistryUpdate snapshot, so this reads the element from the identified
+         * delta directly; reconstructing the registry does not require replaying
+         * or merging ancestor deltas.
+         *
          * @param[in] cid Registry CID.
          * @return Registry snapshot or an error.
          */
@@ -266,8 +286,14 @@ namespace sgns
          * @brief Looks up validator weight by validator id.
          * @param[in] validator_id Validator identifier.
          * @return Optional weight when validator exists, or an error.
-         */
+        */
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
+        /**
+         * @brief Checks whether a validator is active in the current registry.
+         * @param[in] validator_id Validator identifier.
+         * @return `true` when the registry is available and the validator is active.
+         */
+        bool IsActiveValidator( const std::string &validator_id ) const;
         /**
          * @brief Registers CRDT filter/callbacks for registry updates.
          * @return `true` when registration succeeds.
@@ -280,32 +306,47 @@ namespace sgns
          */
         outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
         /**
+         * @brief Outcome classification of registry-update verification.
+         */
+        enum class UpdateVerification : uint8_t
+        {
+            kValid,           ///< Update fully verified.
+            kMissingDependency, ///< Referenced data (base registry snapshot, member certificate) not synced locally yet — retryable.
+            kInvalid,         ///< Update failed verification permanently.
+        };
+        /**
+         * @brief Verifies a registry update and classifies the failure mode.
+         * @details Missing dependencies must stall (retry once the referenced
+         *          data syncs) rather than reject: CRDT element arrival order
+         *          is unordered across deltas, so an update can legitimately
+         *          reach a node before the certificates/registry snapshot it
+         *          was derived from.
+         * @param[in] update Update to verify.
+         * @param[in] enforce_time_window Whether timestamp window checks are enforced.
+         * @return Verification verdict.
+         */
+        UpdateVerification VerifyUpdateClassified( const RegistryUpdate &update, bool enforce_time_window ) const;
+        /**
          * @brief Persists a registry update.
          * @param[in] update Registry update to store.
          * @return outcome::success on success, otherwise an error.
          */
         outcome::result<void> StoreRegistryUpdate( const RegistryUpdate &update );
         /**
-         * @brief Starts an atomic transaction to apply a registry update.
-         * @param[in] update Registry update being applied.
+         * @brief Begins a CRDT atomic transaction for multi-key registry writes.
+         * @param[in] update Registry update whose payload seeds the transaction.
          * @return Transaction handle or an error.
          */
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
             const RegistryUpdate &update );
         /**
-         * @brief Sets the maximum number of unregistered validators added per update.
-         * @param[in] max_new New cap value.
-         */
-        void SetMaxNewValidatorsPerUpdate( size_t max_new );
-
-        /**
-         * @brief Serializes a registry protobuf.
-         * @param[in] registry Registry to serialize.
+         * @brief Serializes a registry snapshot protobuf.
+         * @param[in] registry Registry snapshot to serialize.
          * @return Serialized bytes or an error.
          */
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
         /**
-         * @brief Deserializes a registry protobuf.
+         * @brief Deserializes a registry snapshot protobuf.
          * @param[in] buffer Serialized registry bytes.
          * @return Parsed registry or an error.
          */
@@ -338,6 +379,11 @@ namespace sgns
          */
         void SetCertificatesPerBatch( size_t batch_size );
         /**
+         * @brief Sets the cap on newly admitted validators per registry update.
+         * @param[in] max_new Maximum new validators admitted per update.
+         */
+        void SetMaxNewValidatorsPerUpdate( size_t max_new );
+        /**
          * @brief Sets callback used to submit generated batch subjects.
          * @param[in] submitter Subject submitter callback.
          */
@@ -365,24 +411,22 @@ namespace sgns
         {
             Approve, ///< Certificate is accepted.
             Reject,  ///< Certificate is rejected.
-            Pending, ///< Decision is deferred due to missing prerequisites.
             Stalled  ///< Processing is stalled and should be retried later.
         };
         /**
          * @brief Evaluates a registry-batch subject payload.
          * @param[in] subject Subject to evaluate.
-         * @return Subject decision or an error.
+         * @return Subject decision.
          */
-        outcome::result<BatchSubjectDecision> EvaluateBatchSubject( const ConsensusSubject &subject );
+        BatchSubjectDecision EvaluateBatchSubject( const ConsensusSubject &subject );
         /**
          * @brief Handles certificate associated with a registry-batch subject.
          * @param[in] subject_hash Subject hash key.
          * @param[in] certificate Certificate to process.
-         * @return Certificate handling decision or an error.
+         * @return Certificate handling decision.
          */
-        outcome::result<BatchCertificateDecision> HandleBatchCertificate(
-            const std::string                &subject_hash,
-            const sgns::ConsensusCertificate &certificate );
+        BatchCertificateDecision HandleBatchCertificate( const std::string                &subject_hash,
+                                                         const sgns::ConsensusCertificate &certificate );
 
         /**
          * @brief Registry object key used in datastore.
@@ -410,6 +454,34 @@ namespace sgns
         {
             return "gnus-validator-registry-cid";
         }
+
+        /**
+         * @brief Instance-scoped registry object key used in the datastore.
+         *
+         * Empty network scope yields exactly @ref RegistryKey(); a non-empty scope
+         * yields RegistryKey() + "/" + scope. Two registries with different scopes
+         * therefore read/write disjoint CRDT keys (D-09).
+         * @return This instance's registry key.
+         */
+        std::string RegistryKeyValue() const;
+
+        /**
+         * @brief Instance-scoped topic used to publish/subscribe registry updates.
+         *
+         * Empty network scope yields exactly @ref ValidatorTopic(); a non-empty
+         * scope yields ValidatorTopic() + "/" + scope.
+         * @return This instance's validator topic.
+         */
+        std::string ValidatorTopicValue() const;
+
+        /**
+         * @brief Instance-scoped key used to persist the current registry CID.
+         *
+         * Empty network scope yields exactly @ref RegistryCidKey(); a non-empty
+         * scope yields RegistryCidKey() + "/" + scope.
+         * @return This instance's registry CID key.
+         */
+        std::string RegistryCidKeyValue() const;
 
         /**
          * @brief Finds validator entry by id in a registry snapshot.
@@ -443,10 +515,13 @@ namespace sgns
          * @brief Migrates registry-related CIDs from old to new datastore.
          * @param[in] old_db Source GlobalDB.
          * @param[in] new_db Target GlobalDB.
+         * @param[in] network_scope Private-network identity scoping the migrated
+         *            CID key; empty = public scope (the only pre-existing data).
          * @return outcome::success on success, otherwise an error.
          */
-        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
-                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+        static outcome::result<void> MigrateCids( crdt::GlobalDB &old_db,
+                                                  crdt::GlobalDB &new_db,
+                                                  std::string     network_scope = "" );
 
     private:
         /**
@@ -454,10 +529,10 @@ namespace sgns
          */
         struct CertificateVotes
         {
-            std::unordered_set<std::string>       approved;           ///< Validators that approved the certificate.
-            std::unordered_set<std::string>       unregistered;       ///< Unregistered voters observed in certificate.
             std::unordered_map<std::string, bool> registered_votes;   ///< Vote decisions by registered validators.
             std::unordered_map<std::string, bool> unregistered_votes; ///< Vote decisions by unregistered validators.
+            std::unordered_set<std::string>       unregistered;       ///< Unregistered voter ids (observability).
+            std::unordered_set<std::string>       approved;           ///< Approving active validator ids (observability).
         };
 
         /**
@@ -469,6 +544,8 @@ namespace sgns
          * @param[in] genesis_authority Validator id treated as genesis authority.
          * @param[in] block_request_method Callback used to fetch blocks by CID.
          * @param[in] init_callback Optional callback notified after initialization.
+         * @param[in] network_scope Private-network identity scoping the instance
+         *            identifiers; empty = public scope.
          */
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                            uint64_t                        quorum_numerator,
@@ -476,14 +553,18 @@ namespace sgns
                            WeightConfig                    weight_config,
                            std::string                     genesis_authority,
                            BlockRequestMethod              block_request_method,
-                           InitCallback                    init_callback );
+                           InitCallback                    init_callback,
+                           std::string                     network_scope = "" );
 
         /**
          * @brief Filters CRDT elements to registry-update entries.
          * @param[in] element Incoming CRDT element.
-         * @return Aditional elements to be filtered out or nullopt when no other elements need to be removed.
+         * @return Accept to keep the element, Reject to strip it, or Stall when
+         *         referenced data (base registry snapshot / member certificates)
+         *         is not synced locally yet — the delta job then retries via the
+         *         failed-root machinery instead of being permanently dropped.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterRegistryUpdate( const crdt::pb::Element &element );
         /**
          * @brief Callback invoked when a registry update element is received.
          * @param[in] new_data New key/value data pair.
@@ -503,6 +584,16 @@ namespace sgns
          * @return `true` when update is valid.
          */
         bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
+        /**
+         * @brief Derives the registry committed to by a certificate-backed update.
+         * @param[in] update Registry update carrying certificate metadata.
+         * @param[in] certificate Certificate authorizing the update.
+         * @param[in] base_registry Registry to which the certificate applies.
+         * @return Expected next registry, or an error when batch metadata is invalid.
+         */
+        outcome::result<Registry> BuildExpectedRegistryFromCertificate( const RegistryUpdate             &update,
+                                                                        const sgns::ConsensusCertificate &certificate,
+                                                                        const Registry &base_registry ) const;
         /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
@@ -525,14 +616,17 @@ namespace sgns
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
          * @param[in] current_registry Current registry snapshot.
-         * @return Partitioned vote representation.
+         * @return Partitioned votes, or failure when the certificate's verified
+         *         votes do not reach quorum (an empty partition set is a verdict,
+         *         not a valid zero-vote tally).
          */
-        CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
-                                                  const Registry                   &current_registry ) const;
+        outcome::result<CertificateVotes> ExtractCertificateVotes(
+            const sgns::ConsensusCertificate &certificate,
+            const Registry                   &current_registry ) const;
         /**
          * @brief Builds next registry snapshot using a certificate-derived vote set.
          * @param[in] current_registry Current registry snapshot.
-         * @param[in] certificate Certificate being applied.
+         * @param[in] certificate Certificate whose votes drive the update.
          * @param[in] registered_votes Vote decisions from registered validators.
          * @param[in] unregistered_votes Vote decisions from unregistered validators.
          * @return Derived registry snapshot.
@@ -567,6 +661,12 @@ namespace sgns
         void ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
                                const std::unordered_map<std::string, bool> &registered_votes ) const;
         /**
+         * @brief Returns the configured maximum weight for a validator role.
+         * @param[in] role Validator role.
+         * @return Maximum weight associated with the role.
+         */
+        uint64_t MaxWeight( Role role ) const;
+        /**
          * @brief Applies inactivity decay to validators absent from participants.
          * @param[in,out] entries Validator entries to mutate.
          * @param[in] participants Validators observed in current activity set.
@@ -579,18 +679,17 @@ namespace sgns
          */
         void ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
         /**
-         * @brief Sorts and normalizes registry structure deterministically.
-         * @param[in,out] registry Registry to normalize.
+         * @brief Normalizes a registry snapshot for deterministic comparison.
+         * @param[in,out] registry Registry to normalize in place.
          */
         static void NormalizeRegistry( Registry &registry );
-
         /**
          * @brief Initializes local cache from persistent storage.
          */
         void InitializeCache();
 
         /**
-         * @brief Builds map key for pending certificate subjects by base registry.
+         * @brief Builds map key for pending certificate slots by base registry.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
@@ -601,30 +700,32 @@ namespace sgns
         }
 
         /**
-         * @brief Computes deterministic batch root from subject hashes.
-         * @param[in] subject_hashes Subject hashes included in the batch.
+         * @brief Computes deterministic batch root from batch member identifiers.
+         * @param[in] members Member identifiers (canonical certificate slots) included in the batch.
          * @return Batch root hash or an error.
          */
-        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &subject_hashes ) const;
+        outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &members ) const;
         /**
-         * @brief Selects subjects eligible for a registry batch proposal.
+         * @brief Selects canonical certificate slots eligible for a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @param[in] certificate_count Required number of certificates.
          * @param[in] expected_root Optional expected batch root constraint.
-         * @return Selected subject-hash list or an error.
+         * @return Selected canonical certificate slots or an error.
          */
         outcome::result<std::vector<std::string>> SelectBatchSubjects( const std::string         &base_registry_cid,
                                                                        uint64_t                   base_registry_epoch,
                                                                        uint32_t                   certificate_count,
                                                                        std::optional<std::string> expected_root ) const;
         /**
-         * @brief Loads certificate referenced by subject hash.
-         * @param[in] subject_hash Subject hash key.
-         * @return Loaded certificate or an error.
+         * @brief Loads the authoritative member certificate from its canonical slot.
+         * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
+         * @return Certificate when the durable `/cert/<slot>` record parses and binds
+         *         to the exact slot, or an error. A datastore miss is reported as the
+         *         underlying lookup error so callers can distinguish a not-yet-synced
+         *         member (retry) from a corrupt or mismatched record (reject).
          */
-        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySubjectHash(
-            const std::string &subject_hash ) const;
+        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySlot( const std::string &slot_key ) const;
         /**
          * @brief Attempts to create and submit a registry batch proposal.
          * @param[in] base_registry_cid Base registry CID.
@@ -647,7 +748,7 @@ namespace sgns
          * @brief Requests head blocks for the provided CIDs.
          * @param[in] cids Set of CIDs to request.
          */
-        void RequestHeadCids( const std::set<CID> &cids );
+        void RequestHeadCids( const std::unordered_set<CID> &cids );
 
         struct PendingRegistryWrite
         {
@@ -674,11 +775,22 @@ namespace sgns
         void PersistenceWorkerLoop();
         bool EnqueueRegistryWrite( std::string subject_hash, RegistryUpdate update );
 
+        /**
+         * @brief Derives an instance identifier from its public base and network scope.
+         * @param[in] base Public identifier constant (RegistryKey()/ValidatorTopic()/RegistryCidKey()).
+         * @param[in] network_scope Private-network identity; empty = public scope.
+         * @return base unchanged when the scope is empty, otherwise base + "/" + scope.
+         */
+        static std::string ScopedIdentifier( std::string_view base, const std::string &network_scope );
+
         std::shared_ptr<crdt::GlobalDB> db_;                 ///< Backing GlobalDB instance.
         uint64_t                        quorum_numerator_;   ///< Quorum numerator.
         uint64_t                        quorum_denominator_; ///< Quorum denominator.
         WeightConfig                    weight_config_;      ///< Weight and penalty configuration.
         std::string                     genesis_authority_;  ///< Genesis authority validator id.
+        std::string                     registry_key_;       ///< Instance-scoped registry CRDT key (public base when scope is empty).
+        std::string                     validator_topic_;    ///< Instance-scoped registry gossip topic (public base when scope is empty).
+        std::string                     registry_cid_key_;   ///< Instance-scoped registry-CID persistence key (public base when scope is empty).
         base::Logger                    logger_ = base::createLogger( "ValidatorRegistry" ); ///< Component logger.
         mutable std::shared_mutex       cache_mutex_;               ///< Guards cached registry/update state.
         std::optional<Registry>         cached_registry_;           ///< Cached active registry snapshot.
@@ -690,7 +802,7 @@ namespace sgns
         size_t certificates_per_batch_ = DefaultCertificatesPerBatch; ///< Certificates required per batch subject.
         mutable std::mutex batch_mutex_;                              ///< Guards batch-tracking collections.
         std::unordered_map<std::string, std::set<std::string>>
-            pending_certificate_subjects_by_base_;                  ///< Pending subject hashes keyed by base registry.
+            pending_certificate_slots_by_base_;                  ///< Pending canonical certificate slots keyed by base registry.
         std::unordered_set<std::string> pending_batch_subject_ids_; ///< Batch subject ids pending finalization.
         std::unordered_set<std::string> finalized_batch_subject_ids_; ///< Batch subject ids already finalized.
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
@@ -700,11 +812,11 @@ namespace sgns
         std::mutex                       persistence_mutex_; ///< Guards the persistence queue and shutdown state.
         std::condition_variable          persistence_cv_;    ///< Wakes the persistence worker during work/shutdown.
         std::deque<PendingRegistryWrite> persistence_queue_; ///< Registry updates waiting to be persisted.
-        bool                             persistence_stopping_ = false; ///< Rejects work after Close starts.
-        size_t                           active_batch_handlers_ = 0; ///< Batch handlers still using GlobalDB.
-        std::thread                      persistence_worker_; ///< Owned registry persistence worker.
-        std::mutex                       close_mutex_;        ///< Serializes idempotent Close calls.
-        bool                             close_started_ = false; ///< Makes Close one-shot.
+        bool                             persistence_stopping_  = false; ///< Rejects work after Close starts.
+        size_t                           active_batch_handlers_ = 0;     ///< Batch handlers still using GlobalDB.
+        std::thread                      persistence_worker_;            ///< Owned registry persistence worker.
+        std::mutex                       close_mutex_;                   ///< Serializes idempotent Close calls.
+        bool                             close_started_ = false;         ///< Makes Close one-shot.
 
         InitCallback init_callback_; ///< Optional initialization callback.
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>

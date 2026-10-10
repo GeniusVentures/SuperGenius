@@ -40,7 +40,7 @@ namespace sgns
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
         std::shared_ptr<GeniusAccount>                                  account,
-        bool                                                            is_full_node )
+        NodeType                                                        node_type )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
         instance->RegisterStep( std::make_shared<Migration0_2_0To1_0_0>( ioContext,
@@ -64,7 +64,8 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key,
-                                                                         account ) );
+                                                                         account,
+                                                                         node_type ) );
         instance->RegisterStep( std::make_shared<Migration3_5_0To3_6_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,
@@ -80,7 +81,7 @@ namespace sgns
                                                                          writeBasePath,
                                                                          base58key,
                                                                          account,
-                                                                         is_full_node ) );
+                                                                         node_type ) );
         return instance;
     }
 

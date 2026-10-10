@@ -1,0 +1,44 @@
+name: OSS Scanner Docker build
+
+on:
+  pull_request:
+    paths:
+      - '.oss-scanner/**'
+      - '.github/workflows/oss-scanner-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scanner-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source anonymously
+        uses: actions/checkout@v5
+        with:
+          submodules: false
+          lfs: false
+          persist-credentials: false
+
+      - name: Verify enrollment intent
+        run: |
+          set -euo pipefail
+          grep -Fx 'repo: https://github.com/GeniusVentures/SuperGenius#develop' .oss-scanner/project.yaml
+          grep -Fx 'primary_contact: admin@gnus.ai' .oss-scanner/project.yaml
+          test -s .oss-scanner/threat_model.md
+          ! grep -nE 'GNUS_TOKEN_1|GH_TOKEN|secrets\\.|--mount=type=secret' .oss-scanner/Dockerfile
+
+      - name: Build from public AlmaLinux and release archives
+        run: docker build --pull --progress=plain --build-arg SCANNER_BUILD_JOBS=3 -f .oss-scanner/Dockerfile -t supergenius-oss:check .
+
+      - name: Run CRDT regression offline
+        run: |
+          docker run --rm --network none --entrypoint /bin/bash supergenius-oss:check -euo pipefail -c '
+            cd /src
+            test -d GeniusKDF
+            test -d ProofSystem
+            test -d SGProcessingManager
+            ctest --test-dir build/Linux/Release/x86_64 --output-on-failure --timeout 180 -R "^securecrdt_interface_test$"
+          '

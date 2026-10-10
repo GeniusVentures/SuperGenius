@@ -65,6 +65,28 @@ namespace test
         keypair_path_ = ( base_path / "keypair" ).string();
         db_path_      = ( base_path / "db" ).string();
 
+        // Reap exactly the derived paths before any consumer opens them: a leftover
+        // database from a killed/crashed run (or pid reuse) would otherwise be
+        // silently reopened by GlobalDB::New and poison the run with stale state.
+        // Never sweep more broadly - base_path also holds other live fixtures.
+        for ( const auto *stale_path : { &keypair_path_, &db_path_ } )
+        {
+            try
+            {
+                if ( fs::exists( *stale_path ) )
+                {
+                    fs::remove_all( *stale_path );
+                    std::cerr << "[CRDTFixture] removed pre-existing " << *stale_path << std::endl;
+                }
+            }
+            catch ( const fs::filesystem_error &err )
+            {
+                std::cerr << err.what() << std::endl;
+            }
+        }
+
+        // Application-work pool, mirroring GeniusNode::io_. Tests drive it by hand
+        // (io_->restart()/poll()), so it must stay separate from the host's context.
         io_ = std::make_shared<io_context>();
 
         pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
@@ -75,7 +97,10 @@ namespace test
         BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
 
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
+        // GraphSync writes to libp2p streams from its scheduler thread, and libp2p is
+        // single-threaded per host, so the scheduler has to run on the host's
+        // io_context. A private one here races yamux's WriteQueue.
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(pubs_->GetAsioContext()), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
                                                                                              scheduler );
@@ -91,6 +116,23 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        /*
+         * Teardown invariant (asio), mirroring Peer::Stop in
+         * multi_node_finality_fault_test.cpp: the io_context owned by
+         * GossipPubSub must outlive every I/O object that touches it. This
+         * fixture wires graphsync::Network from pubs_->GetHost() into
+         * GlobalDB::New, and Start(40001, {GetLocalAddress()}) creates a
+         * self-connection, so db_ (whose ~GlobalDB -> ~BasicHost deregisters
+         * leftover TcpConnections) must be reset BEFORE pubs_->Stop().
+         * Otherwise StopImpl frees m_context first and the later ~BasicHost
+         * deregisters from the freed kqueue reactor. With db_ released first,
+         * pubs_->Stop() is the FINAL host release.
+         */
+        if ( db_ )
+        {
+            db_->ShutdownNow();
+        }
+        db_.reset();
         try
         {
             if ( pubs_ )
@@ -102,7 +144,6 @@ namespace test
         {
             std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
         }
-        db_.reset();
         try
         {
             pubs_.reset();

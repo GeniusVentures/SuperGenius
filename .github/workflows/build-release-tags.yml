@@ -8,13 +8,75 @@ on:
         required: true
         type: string
       thirdparty_tag:
-        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified)'
+        description: 'Tag for thirdparty dependencies (defaults to main tag if not specified); "main" or "develop" pulls the rolling branch releases from the Release Build CI'
         required: false
         type: string
       zkllvm_tag:
-        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
+        description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified); "main" or "develop" pulls the rolling branch releases from the Release Build CI'
         required: false
         type: string
+      # Names must be build_<target>-<abi>_<build-type>: the skip step looks
+      # them up dynamically instead of enumerating every combination.
+      build_Android-arm64-v8a_Release:
+        description: "Build Android arm64-v8a Release"
+        default: true
+        type: boolean
+      build_Android-arm64-v8a_Debug:
+        description: "Build Android arm64-v8a Debug"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Release:
+        description: "Build Android armeabi-v7a Release"
+        default: true
+        type: boolean
+      build_Android-armeabi-v7a_Debug:
+        description: "Build Android armeabi-v7a Debug"
+        default: true
+        type: boolean
+      build_iOS_Release:
+        description: "Build iOS Release"
+        default: true
+        type: boolean
+      build_iOS_Debug:
+        description: "Build iOS Debug"
+        default: true
+        type: boolean
+      build_OSX_Release:
+        description: "Build OSX Release"
+        default: true
+        type: boolean
+      build_OSX_Debug:
+        description: "Build OSX Debug"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Release:
+        description: "Build Linux x86_64 Release"
+        default: true
+        type: boolean
+      build_Linux-x86_64_Debug:
+        description: "Build Linux x86_64 Debug"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Release:
+        description: "Build Linux aarch64 Release"
+        default: true
+        type: boolean
+      build_Linux-aarch64_Debug:
+        description: "Build Linux aarch64 Debug"
+        default: true
+        type: boolean
+      build_Windows_Release:
+        description: "Build Windows Release"
+        default: true
+        type: boolean
+      build_Windows_Debug:
+        description: "Build Windows Debug"
+        default: true
+        type: boolean
+      run_tests:
+        description: "Run the CTest suite after building (same platform gating and exclusions as Release Build CI)"
+        default: false
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -123,6 +185,11 @@ jobs:
     env:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+      # Mirrors Release Build CI's RUN_TESTS platform gating: the AlmaLinux
+      # containers provide the keyring/dbus runtime the account suites need;
+      # Windows tests are Release-only there, Android/iOS builds have no
+      # test binaries (their build dirs force TESTING OFF).
+      RUN_TESTS: ${{ inputs.run_tests && (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.target == 'Windows' && matrix.build-type == 'Release')) }}
     runs-on: ${{ fromJson(needs.resolve-runners.outputs[matrix.runner_key]) }}
     container:
       image: ${{matrix.container}}
@@ -140,22 +207,22 @@ jobs:
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_x64
             abi: "x86_64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Release"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Linux
             runner_key: linux_arm
             abi: "aarch64"
             build-type: "Debug"
-            container: ghcr.io/geniusventures/debian-bullseye:latest
+            container: ghcr.io/geniusventures/almalinux-8:latest
           - target: Windows
             runner_key: windows
           - target: OSX
@@ -184,6 +251,25 @@ jobs:
           - target: Linux
             abi: ""
     steps:
+      # Shell-agnostic body so this works on both bash and pwsh runners.
+      - name: Skip build disabled by workflow_dispatch input
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs[format('build_{0}{1}_{2}', matrix.target, matrix.abi && format('-{0}', matrix.abi) || '', matrix.build-type)] }}
+        run: |
+          echo "Skipping build for ${{ matrix.target }}${{ matrix.abi && format(' {0}', matrix.abi) || '' }} ${{ matrix.build-type }}"
+          exit 78
+
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          foreach ($p in @("C:\Program Files\Git\bin", "C:\Program Files\Git\usr\bin")) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          $bash = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          Write-Output $(if ($bash) { "Bash location: $bash" } else { "WARNING: bash.exe not found in PATH" })
+
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{runner.workspace}}
@@ -193,24 +279,30 @@ jobs:
           echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{github.workspace}}"
 
+          # Use sudo on Linux to handle root-owned files left by container jobs
+          SUDO=""
+          if [ "$(uname)" = "Linux" ]; then
+            SUDO="sudo"
+          fi
+
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
           
           # Clean contents of SuperGenius directory but keep the directory itself
           if [ -d "SuperGenius" ]; then
             echo "Cleaning SuperGenius directory contents..."
-            rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
+            $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
           
           # Delete sibling dependency directories completely
           if [ -d "thirdparty" ]; then
             echo "Removing thirdparty directory..."
-            rm -rf thirdparty
+            $SUDO rm -rf thirdparty
           fi
           if [ -d "zkLLVM" ]; then
             echo "Removing zkLLVM directory..."
-            rm -rf zkLLVM
+            $SUDO rm -rf zkLLVM
           fi
 
           echo "=== POST-CLEANUP DEBUG ==="
@@ -262,12 +354,46 @@ jobs:
             if ($?) { Get-ChildItem -Path "SuperGenius" -Force } else { Write-Output "  (empty)" }
           }
 
+      - name: Install git-lfs (Linux containers)
+        # Ported from Release Build CI: the VALD cross-machine .cap fixtures
+        # under test/src/processing/fixtures/ are tracked via Git LFS; without
+        # lfs: true the checkout materializes 134-byte pointer files and
+        # processing_validation_core_test's DeserializeCaptureFile correctly
+        # rejects them (cmake.yml run 35045845230). The AlmaLinux 8 CI image
+        # bakes git-lfs in (via EPEL) so this is usually a no-op there; the
+        # guarded static-binary drop-in covers any Linux host without it.
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          if command -v git-lfs >/dev/null 2>&1; then
+            echo "git-lfs already present: $(git-lfs version)"
+            exit 0
+          fi
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64)  lfs_arch="amd64" ;;
+            aarch64) lfs_arch="arm64" ;;
+            *) echo "Unsupported architecture for git-lfs download: $arch"; exit 1 ;;
+          esac
+          url="https://github.com/git-lfs/git-lfs/releases/download/v3.7.1/git-lfs-linux-${lfs_arch}-v3.7.1.tar.gz"
+          if command -v curl >/dev/null 2>&1; then
+            curl -fsSL --retry 3 -o /tmp/git-lfs.tgz "$url"
+          elif command -v wget >/dev/null 2>&1; then
+            wget -q --tries=3 -O /tmp/git-lfs.tgz "$url"
+          else
+            echo "ERROR: neither curl nor wget found in container"; exit 1
+          fi
+          tar -xzf /tmp/git-lfs.tgz -C /tmp
+          sudo install -m 0755 /tmp/git-lfs-3.7.1/git-lfs /usr/local/bin/git-lfs
+          rm -rf /tmp/git-lfs.tgz /tmp/git-lfs-3.7.1
+          git-lfs version
+
       - name: Checkout SuperGenius repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           path: "SuperGenius"
           submodules: "recursive"
           ref: ${{ github.event.inputs.tag }}
+          lfs: true
           persist-credentials: true # We need the credentials for uploading the release later
 
       - name: Set build directory
@@ -298,13 +424,23 @@ jobs:
           fi
           echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
 
+          # "main"/"develop" select the rolling branch releases published by
+          # the Release Build CI (cmake.yml), which are tagged
+          # <target[-abi]>-<branch>-<build-type> instead of a bare release tag.
+          TARGET_ID="${FILE_NAME%-${{matrix.build-type}}.tar.gz}"
+          if [ "${THIRDPARTY_TAG}" = "main" ] || [ "${THIRDPARTY_TAG}" = "develop" ]; then
+            DOWNLOAD_TAG="${TARGET_ID}-${THIRDPARTY_TAG}-${{matrix.build-type}}"
+          else
+            DOWNLOAD_TAG="${THIRDPARTY_TAG}"
+          fi
+
           mkdir thirdparty
           cd thirdparty
 
           # Download from the specified thirdparty tag's release
-          echo "Downloading thirdparty from tag: ${THIRDPARTY_TAG}"
+          echo "Downloading thirdparty from tag: ${DOWNLOAD_TAG}"
 
-          gh release download ${THIRDPARTY_TAG} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
@@ -325,20 +461,35 @@ jobs:
           mkdir zkLLVM
           cd zkLLVM
 
-          echo "Downloading zkLLVM from tag: ${ZKLLVM_TAG}"
-
           if [ "${{ matrix.target }}" = "Windows" ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
-          elif [ '${{matrix.abi}}' ]; then
-              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
+              ZK_TYPE=${{matrix.build-type}}
           else
-              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
-              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
+              # zkLLVM only publishes Release artifacts outside Windows, so
+              # non-Windows Debug builds link against the Release zkLLVM.
+              ZK_TYPE=Release
           fi
 
-          gh release download ${ZKLLVM_TAG} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+          if [ '${{matrix.abi}}' ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${ZK_TYPE}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${ZK_TYPE}/${{matrix.abi}}
+          else
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${ZK_TYPE}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${ZK_TYPE}
+          fi
+
+          # "main"/"develop" select the rolling branch releases published by
+          # the Release Build CI (cmake.yml), which are tagged
+          # <target[-abi]>-<branch>-<zk build type> instead of a bare release tag.
+          TARGET_ID="${ZKLLVM_FILE_NAME%-${ZK_TYPE}.tar.gz}"
+          if [ "${ZKLLVM_TAG}" = "main" ] || [ "${ZKLLVM_TAG}" = "develop" ]; then
+              DOWNLOAD_TAG="${TARGET_ID}-${ZKLLVM_TAG}-${ZK_TYPE}"
+          else
+              DOWNLOAD_TAG="${ZKLLVM_TAG}"
+          fi
+
+          echo "Downloading zkLLVM from tag: ${DOWNLOAD_TAG}"
+
+          gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
 
@@ -361,14 +512,78 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-          
-          sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+
+          # Native Linux builds run in the AlmaLinux 8 CI image (glibc 2.28
+          # floor, replacing the EOL Debian Bullseye container). The image
+          # ships clang, cmake, ninja, Vulkan headers, and the perl modules
+          # OpenSSL's Configure needs, so the dnf branch is a guarded safety
+          # net that avoids repo traffic when the image already provides
+          # everything; Ubuntu runners (used by the Android builds, which run
+          # without a container) still need apt.
+          if command -v dnf >/dev/null 2>&1; then
+            if ! rpm -q vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd >/dev/null 2>&1; then
+              sudo dnf install -y vulkan-loader-devel vulkan-headers ninja-build which perl perl-IPC-Cmd
+            fi
+          else
+            sudo apt install ccache ninja-build libvulkan-dev libsecret-1-dev -y
+          fi
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
         if: ${{ runner.os == 'Windows'}}
         run: |
-          choco install ccache -A
+          choco install ccache ninja -A
+
+          # ccache only works with the Ninja generator: CMake honours
+          # CMAKE_<LANG>_COMPILER_LAUNCHER for Ninja and Makefiles, and silently
+          # drops it for Visual Studio. Ninja in turn does not discover the MSVC
+          # environment on its own the way the Visual Studio generator does, so
+          # export what vcvars64 sets up.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "No Visual Studio install with the C++ toolset was found" }
+
+          # Snapshot the pre-vcvars PATH so the export below can skip entries
+          # the runner already provides.
+          $existingPath = @($env:PATH -split ';' | ForEach-Object { $_.TrimEnd('\').ToLower() } | Where-Object { $_ })
+
+          cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+            if ($_ -notmatch '^([^=]+)=(.*)$') { return }
+            $name, $value = $matches[1], $matches[2]
+            if ($name -eq 'PATH') {
+              # Export vcvars' PATH in its own order, but only entries that are
+              # NEW relative to the runner PATH. Re-exporting system dirs
+              # (System32 et al.) pushes them ahead of the Git Bash dirs
+              # registered by the earlier "Configure bash on Windows" step;
+              # System32 contains the WSL bash.exe launcher, which then
+              # hijacks every later `shell: bash` step on hosts where WSL
+              # cannot run ("Nested virtualization is not supported"). The
+              # cl.exe directory is not on the base PATH and survives this
+              # filter; vcvars emits it twice with different case
+              # (HostX64/Hostx64) and duplicate entries are harmless.
+              $value -split ';' |
+                Where-Object { $_ -and $existingPath -notcontains $_.TrimEnd('\').ToLower() } |
+                Add-Content -Path $env:GITHUB_PATH
+            } elseif ($name -notmatch '^(GITHUB_|RUNNER_)') {
+              "$name=$value" | Add-Content -Path $env:GITHUB_ENV
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_GENERATOR=Ninja"
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
+
+          # Cap compiler concurrency on the self-hosted SG-WIN11 box: 24
+          # cl.exe instances compiling zkLLVM/crypto3 headers exhaust its
+          # 32 GB and page to disk (observed 2026-09: builds crawling at
+          # sub-1GHz + hard paging; RDP barely updating). The bare `-j` in
+          # the build step honours this env cap. Hosted Windows runners
+          # (8 vCPU, fleet RAM) keep unbounded parallelism.
+          if ("${{ runner.environment }}" -eq "self-hosted") {
+            Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_BUILD_PARALLEL_LEVEL=8"
+          }
 
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
@@ -479,7 +694,14 @@ jobs:
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        # Pin clang explicitly rather than relying on the /usr/bin/cc and
+        # /usr/bin/c++ update-alternatives symlinks: on AlmaLinux 8
+        # /usr/bin/c++ is a real file owned by gcc-c++ (not an alternatives
+        # symlink like Debian's), so the update-alternatives takeover fails
+        # silently and CMake falls back to g++ 8.5, which cannot compile the
+        # zkLLVM crypto3 constexpr code in ProofSystem (run 35377550250,
+        # divide.hpp:347 "is not a constant expression" on all Linux jobs).
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
@@ -493,6 +715,127 @@ jobs:
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --install . --config ${{matrix.build-type}}
+
+      # --- Optional test stage (run_tests input; mirrors Release Build CI) ---
+      # max(8, cores). Split by OS because `shell: bash` on the self-hosted
+      # Windows runner resolves to WSL bash, which has no /bin/bash.
+      - name: Pick ctest parallelism
+        if: ${{ env.RUN_TESTS == 'true' && runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu)
+          echo "CTEST_JOBS=$(( CORES > 8 ? CORES : 8 ))" >> "$GITHUB_ENV"
+
+      - name: Pick ctest parallelism (Windows)
+        if: ${{ env.RUN_TESTS == 'true' && runner.os == 'Windows' }}
+        shell: powershell
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CTEST_JOBS=$([Math]::Max(8, [Environment]::ProcessorCount))"
+
+      - name: Run tests
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
+
+      - name: Run tests (Linux)
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        shell: bash
+        run: |
+          # MNN's VulkanInstance ctor asserts (VulkanInstance.cpp:89) when
+          # vkCreateInstance fails, killing the process before its own
+          # graceful supportVulkan() fallback can run. On the ARM runner
+          # (Cortex-A720/A520) the EL8 lavapipe ICD itself returns
+          # VK_ERROR_INITIALIZATION_FAILED (verified via vulkaninfo in a
+          # privileged container; bullseye's mesa initialized fine on the
+          # same host — runs 35675445960 / 35701510569). Debug-only because
+          # NDEBUG compiles the assert out. Skip the affected suites until
+          # the MNN assert is patched to degrade gracefully (rider for the
+          # next thirdparty rebuild); x86 (real GPU) and aarch64 Release
+          # keep full coverage.
+          # Pass exclusions through the ENVIRONMENT, never through eval'd
+          # string re-parsing: eval "bash -c '... $EXCLUDE'" re-tokenizes the
+          # line, and the single quotes around the regex close the outer
+          # single-quoted string so the pipes become shell pipes and ctest
+          # test names get executed as commands (observed in the first run
+          # of this exclusion). dbus-run-session and bash -c propagate env
+          # untouched.
+          #
+          # Two granularities:
+          # - CTEST_EXCLUDE_REGEX drops suites whose EVERY case instantiates
+          #   the processing manager (MNN) and would abort before reporting.
+          # - GTEST_FILTER narrows the three mixed suites to their
+          #   non-processing cases: only AccountManagement.SetPayoutAddress,
+          #   ProcessingNodesTest.PostProcessing, and
+          #   ProcessingNodesModuleTest.SinglePostProcessing touch MNN (the
+          #   DISABLED_* siblings never run regardless); the remaining
+          #   account/ledger/transfer cases are pure and keep running.
+          #   SetPayoutAddress is HERMETIC since Phase 4 (stub-backed
+          #   LocalPriceManager, no live CoinGecko) but stays excluded on
+          #   this leg: its multi-node bootstrap constructs a 5th MNN
+          #   VulkanInstance that asserts (no ICD) and aborts the suite
+          #   (run 37082942495). Vulkan-only exclusion, NOT network.
+          # gtest filter grammar is POSITIVE-NEGATIVE with ONE dash: the
+          # negative section is ':'-separated WITHOUT per-pattern dashes.
+          # '-A:-B:-C' silently parses its 2nd/3rd patterns as literal
+          # '-B'/'-C' (matching nothing), so the exclusions never apply and
+          # the excluded cases run anyway (run 35781614193: PostProcessing
+          # and SinglePostProcessing still aborted). '*-A:B:C' is the
+          # unambiguous form.
+          GTEST_FILTER_VALUE="*"
+          if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
+            CTEST_EXCLUDE_REGEX="processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
+            GTEST_FILTER_VALUE="*-AccountManagement.SetPayoutAddress:ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
+            echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
+          fi
+          export CTEST_EXCLUDE_REGEX
+          export GTEST_FILTER="$GTEST_FILTER_VALUE"
+          dbus-run-session -- bash -c '\
+            mkdir -p ~/.cache ~/.local/share/keyrings && \
+            echo -n "login" > ~/.local/share/keyrings/default && \
+            echo "[keyring]
+            display-name=login
+            lock-on-idle=false
+            lock-after=false" > ~/.local/share/keyrings/login.keyring && \
+            eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
+            if [ -n "$CTEST_EXCLUDE_REGEX" ]; then \
+              ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry -E "$CTEST_EXCLUDE_REGEX"; \
+            else \
+              ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry; \
+            fi'
+          unset GTEST_FILTER
+
+      # Segfault triage (Linux): the price/account suites crash inside the
+      # first sgns::HTTPClient exchange on EL8 (both arches; hermetic stub,
+      # so Windows-only green masked it). Under dbus-run-session a crashing
+      # test leaves no stack, so re-run each SEGFAULTed binary under gdb with
+      # batch commands and echo the backtrace straight into the job log.
+      # Best-effort: gdb absence or a clean re-run never fails the job.
+      - name: Capture segfault backtraces (Linux)
+        if: ${{ failure() && matrix.target == 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        shell: bash
+        run: |
+          if ! command -v gdb >/dev/null 2>&1; then
+            echo "gdb not available on this image; skipping backtrace capture"
+            exit 0
+          fi
+          export GTEST_FILTER="*-ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
+          for bin in price_http_client_test price_facade_test price_retrieval_test account_management_test; do
+            exe="test_bin/${bin}"
+            [ -x "$exe" ] || continue
+            echo "=================================================="
+            echo "::group::gdb backtrace: ${bin}"
+            gdb -q -batch \
+              -ex "set pagination off" \
+              -ex "run" \
+              -ex "echo \n======== BACKTRACE ========\n" \
+              -ex "bt" \
+              -ex "echo \n======== ALL THREADS ========\n" \
+              -ex "thread apply all bt 15" \
+              --args "$exe" 2>&1 | tail -n 200
+            echo "::endgroup::"
+          done
+          exit 0
 
       - name: Create or check release
         shell: bash

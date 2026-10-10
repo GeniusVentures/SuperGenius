@@ -141,3 +141,19 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+# The requires_foundry label marks these tests as needing the Foundry binaries
+# (anvil + cast) on PATH (see anvil_fixture.hpp / each fixture's runtime
+# GTEST_SKIP). CI excludes them deterministically via
+# `ctest -LE requires_foundry` (cmake.yml) instead of relying on that PATH probe,
+# which only "passes" them on runners without Foundry. bridge_e2e_test and
+# bridge_e2e_chainlist_test do NOT use the anvil fixture and stay unlabeled.
+# Local `ctest` runs still execute them and skip inside the fixture when Foundry
+# is missing.
+set_tests_properties(
+    bridge_anvil_e2e_test
+    bridge_anvil_catchup_e2e_test
+    bridge_sepolia_e2e_test
+    bridge_rlpx_e2e_test
+    PROPERTIES LABELS "requires_foundry"
+)

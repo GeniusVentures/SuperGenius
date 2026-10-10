@@ -6,6 +6,9 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
+#include "processing/processing_core.hpp"
+#include <libp2p/crypto/key.hpp>
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
@@ -13,6 +16,7 @@
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <list>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <boost/asio.hpp>
@@ -38,12 +42,17 @@ namespace sgns::processing
         * @param subTaskResultStorage Processing results storage.
         * @param taskResultProcessingSink Callback invoked when task processing completes.
         * @param processingErrorSink Callback invoked on processing errors.
+        * @param processingCore Optional ProcessingCore, used by FinalizeQueueProcessing to resolve the
+        *        originating Task's schema-declared quantScale/byteQuantMode (via GetTaskQueue()) for
+        *        ValidateResults's tolerance-fallback derivation. Defaulted to nullptr so this remains a
+        *        non-breaking change for any existing caller.
         */
         SubTaskQueueAccessorImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
                                   std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                   std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-                                  std::function<void( const std::string & )>              processingErrorSink );
+                                  std::function<void( const std::string & )>              processingErrorSink,
+                                  std::shared_ptr<ProcessingCore>                         processingCore = nullptr );
         ~SubTaskQueueAccessorImpl() override;
 
         /** SubTaskQueueAccessor overrides
@@ -59,6 +68,15 @@ namespace sgns::processing
 
         /// @brief Set bitswap instance for data availability checks on IPFS results.
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+        /// @brief Set membership filter gating the results channel (empty = public
+        ///        pass-through; non-member senders are dropped before any result handling).
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
+
+        /// @brief Set the gossip host keypair sealing private-network results-channel
+        ///        publishes and authenticating inbound envelopes (CR-G01). Filter set +
+        ///        no key = publishes fail closed. Empty filter = raw, byte-identical.
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
 
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
@@ -97,6 +115,7 @@ namespace sgns::processing
         std::shared_ptr<SubTaskResultStorage>                   m_subTaskResultStorage;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
+        std::shared_ptr<ProcessingCore>                         m_processingCore; ///< Optional; used to resolve the originating Task's schema for tolerance derivation.
         std::shared_ptr<boost::asio::io_context>                m_localContext;
         using WorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
         std::optional<WorkGuard>                   m_localWorkGuard;
@@ -107,6 +126,13 @@ namespace sgns::processing
 
         std::function<void( const std::string & )> m_mirrorResultCallback; ///< Invoked when a mirrored result arrives.
         mutable std::mutex                         m_mutexMirrorCallback;
+
+        sgns::networkregistry::MembershipFilter m_membershipFilter;    ///< Membership gate for results-channel messages (empty = public).
+        mutable std::mutex                      m_mutexMembershipFilter; ///< Guards m_membershipFilter and m_gossipSigningKey (setters vs pubsub callback threads).
+
+        /// Gossip host keypair sealing private-network results-channel publishes
+        /// (CR-G01); guarded by m_mutexMembershipFilter.
+        std::shared_ptr<const libp2p::crypto::KeyPair> m_gossipSigningKey;
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap; ///< For data availability checks on IPFS results.
 

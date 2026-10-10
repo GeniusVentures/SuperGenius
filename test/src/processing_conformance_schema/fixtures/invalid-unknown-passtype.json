@@ -1,0 +1,26 @@
+{
+  "name": "invalid-unknown-passtype-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "testInput",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "tensor",
+      "format": "FLOAT32"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "testOutput",
+      "source_uri_param": "file://processing_datatypes/float_output.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "unknown_type_pass",
+      "type": "UNKNOWN_TYPE"
+    }
+  ]
+}

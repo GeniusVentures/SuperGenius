@@ -23,16 +23,10 @@ namespace sgns
          * @brief Creates a new escrow-hold transaction from signed UTXO parameters.
          * @param[in] params Signed UTXO inputs and escrow/change outputs for the hold.
          * @param[in] amount Total amount locked in escrow.
-         * @param[in] dev_addr Developer payout address that receives the post-peer remainder.
-         * @param[in] peers_cut Per-peer payout multiplier used when releasing escrow.
          * @param[in] dag DAG metadata shared by all transaction types.
          * @return Escrow transaction with transaction type set and hash populated.
          */
-        static EscrowTransaction New( UTXOTxParameters         params,
-                                      uint64_t                 amount,
-                                      std::string              dev_addr,
-                                      uint64_t                 peers_cut,
-                                      SGTransaction::DAGStruct dag );
+        static EscrowTransaction New( UTXOTxParameters params, uint64_t amount, SGTransaction::DAGStruct dag );
 
         /**
          * @brief Deserializes a serialized escrow transaction.
@@ -84,15 +78,6 @@ namespace sgns
         }
 
         /**
-         * @brief Returns the developer payout address.
-         * @return Address that receives escrow remainder after peer payouts.
-         */
-        std::string GetDevAddress() const
-        {
-            return dev_addr_;
-        }
-
-        /**
          * @brief Returns the total amount locked in escrow.
          * @return Total amount locked by this escrow hold.
          */
@@ -102,12 +87,23 @@ namespace sgns
         }
 
         /**
-         * @brief Returns the configured peer-share multiplier.
-         * @return Peer payout multiplier applied during escrow release.
+         * @brief Overrides the chain id used for input-validation routing.
+         * @param[in] chain_id Scoped chain id (TransactionManager::ScopedChainId output) or any
+         *            explicit routing id; empty-scope escrows keep the default genius chain id.
          */
-        uint64_t GetPeersCut() const
+        void SetChainIdOverride( std::string chain_id )
         {
-            return peers_cut_;
+            chain_id_ = std::move( chain_id );
+        }
+
+        /**
+         * @brief Returns the chain id used for input-validation routing.
+         * @return The override when set; otherwise the genius chain id (byte-identical to the
+         *         GeniusTransaction default).
+         */
+        std::string GetChainId() const override
+        {
+            return chain_id_;
         }
 
     private:
@@ -115,20 +111,15 @@ namespace sgns
          * @brief Constructs an escrow-hold transaction from its payload and DAG metadata.
          * @param[in] params Signed UTXO inputs and escrow/change outputs for the hold.
          * @param[in] amount Total amount locked in escrow.
-         * @param[in] dev_addr Developer payout address that receives the post-peer remainder.
-         * @param[in] peers_cut Per-peer payout multiplier used when releasing escrow.
          * @param[in] dag DAG metadata shared by all transaction types.
          */
-        EscrowTransaction( UTXOTxParameters         params,
-                           uint64_t                 amount,
-                           std::string              dev_addr,
-                           uint64_t                 peers_cut,
-                           SGTransaction::DAGStruct dag );
+        EscrowTransaction( UTXOTxParameters params, uint64_t amount, SGTransaction::DAGStruct dag );
 
         UTXOTxParameters utxo_params_; ///< Signed inputs and outputs for the escrow hold.
         uint64_t         amount_;      ///< Total amount locked in escrow.
-        std::string      dev_addr_;    ///< Developer payout address for escrow remainder.
-        uint64_t         peers_cut_;   ///< Peer payout multiplier used during escrow release.
+        /// Chain id for input-validation routing (metadata, not part of the signed payload);
+        /// defaults to the genius chain id so public escrows are byte-identical.
+        std::string chain_id_ = std::string( GeniusTransaction::GENIUS_CHAIN_ID );
 
         /**
          * @brief Registers the deserializer for the escrow-hold transaction type.

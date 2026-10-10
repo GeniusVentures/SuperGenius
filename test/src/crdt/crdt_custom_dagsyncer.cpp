@@ -1,32 +1,51 @@
 #include "crdt_custom_dagsyncer.hpp"
 
+#include <vector>
+
+namespace
+{
+    // InMemoryDatastore is shared by these simulated peers and is not thread
+    // safe. Protect its DAG operations across all CustomDagSyncer instances.
+    // select() callbacks may synchronously read another block through a syncer.
+    std::recursive_mutex shared_datastore_mutex;
+}
+
 namespace sgns::crdt
 {
     CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( std::move( service ) ) {}
 
     outcome::result<bool> CustomDagSyncer::HasBlock( const CID &cid ) const
     {
-        if ( IsCIDInCache( cid ) )
-        {
-            auto getNodeResult = dagService_.getNode( cid );
-            return getNodeResult.has_value();
-        }
-        return false;
+        std::lock_guard lock( state_mutex_ );
+        return local_cids_.count( cid ) != 0;
     }
 
     outcome::result<void> CustomDagSyncer::addNode( std::shared_ptr<const IPLDNode> node )
     {
-        return dagService_.addNode( node );
+        std::lock_guard datastore_lock( shared_datastore_mutex );
+        auto result = dagService_.addNode( node );
+        if ( result.has_value() )
+        {
+            std::lock_guard state_lock( state_mutex_ );
+            local_cids_.insert( node->getCID() );
+        }
+        return result;
     }
 
     outcome::result<std::shared_ptr<IPLDNode>> CustomDagSyncer::getNode( const CID &cid ) const
     {
+        std::lock_guard lock( shared_datastore_mutex );
         return dagService_.getNode( cid );
     }
 
     outcome::result<void> CustomDagSyncer::removeNode( const CID &cid )
     {
-        return dagService_.removeNode( cid );
+        // Removing a local replica does not remove the remote peer's block.
+        std::lock_guard lock( state_mutex_ );
+        local_cids_.erase( cid );
+        requested_cids_.erase( cid );
+        resolved_cids_.erase( cid );
+        return outcome::success();
     }
 
     outcome::result<size_t> CustomDagSyncer::select(
@@ -34,43 +53,50 @@ namespace sgns::crdt
         gsl::span<const uint8_t>                                    selector,
         std::function<bool( std::shared_ptr<const IPLDNode> node )> handler ) const
     {
+        std::lock_guard lock( shared_datastore_mutex );
         return dagService_.select( root_cid, selector, handler );
     }
 
     outcome::result<std::shared_ptr<CustomDagSyncer::Leaf>> CustomDagSyncer::fetchGraph( const CID &cid ) const
     {
+        std::lock_guard lock( shared_datastore_mutex );
         return dagService_.fetchGraph( cid );
     }
 
     outcome::result<std::shared_ptr<CustomDagSyncer::Leaf>> CustomDagSyncer::fetchGraphOnDepth( const CID &cid,
                                                                                                 uint64_t   depth ) const
     {
+        std::lock_guard lock( shared_datastore_mutex );
         return dagService_.fetchGraphOnDepth( cid, depth );
     }
 
     void CustomDagSyncer::InitCIDBlock( const CID &cid )
     {
-        cids_cache.emplace( cid );
+        std::lock_guard lock( state_mutex_ );
+        requested_cids_.insert( cid );
     }
 
     bool CustomDagSyncer::IsCIDInCache( const CID &cid ) const
     {
-        return cids_cache.find( cid ) != cids_cache.end();
+        std::lock_guard lock( state_mutex_ );
+        return requested_cids_.count( cid ) != 0;
     }
 
     outcome::result<void> CustomDagSyncer::DeleteCIDBlock( const CID &cid )
     {
+        std::lock_guard lock( state_mutex_ );
+        requested_cids_.erase( cid );
         return outcome::success();
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest(
         const CID &cid ) const
     {
-        //if ( IsCIDInCache( cid ) )
-        //{
-        //    return outcome::failure( boost::system::error_code{} );
-        //}
-        return dagService_.getNode( cid );
+        if ( !HasBlock( cid ).value() )
+        {
+            return outcome::failure( std::errc::no_such_file_or_directory );
+        }
+        return getNode( cid );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(
@@ -81,44 +107,39 @@ namespace sgns::crdt
         DAGSyncer::LinkInfoSet links_to_fetch;
         DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
-        const CID &root_cid = node.getCID();
-
-        bool already_seen_root = std::any_of( visited.begin(),
-                                              visited.end(),
-                                              [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
-
-        if ( already_seen_root )
+        if ( isResolved( node.getCID() ).value() )
         {
             return { std::move( links_to_fetch ), std::move( visited ) };
         }
 
-        for ( const auto &link : node.getLinks() )
+        std::vector<std::shared_ptr<IPLDNode>> pending{
+            std::shared_ptr<IPLDNode>( &node, []( IPLDNode * ) {} ) };
+        while ( !pending.empty() )
         {
-            const CID         &child = link.get().getCID();
-            const std::string &name  = link.get().getName();
-            LinkInfoPair       pair{ child, name };
-
-            if ( !link_name.empty() && name != link_name )
+            auto current = std::move( pending.back() );
+            pending.pop_back();
+            for ( const auto &link : current->getLinks() )
             {
-                continue;
+                const CID         &child = link.get().getCID();
+                const std::string &name  = link.get().getName();
+                LinkInfoPair       pair{ child, name };
+
+                if ( ( !link_name.empty() && name != link_name ) || !visited.insert( pair ).second ||
+                     isResolved( child ).value() )
+                {
+                    continue;
+                }
+
+                auto get_child_result = GetNodeWithoutRequest( child );
+                if ( get_child_result.has_failure() )
+                {
+                    links_to_fetch.insert( pair );
+                }
+                else
+                {
+                    pending.push_back( get_child_result.value() );
+                }
             }
-
-            if ( !visited.insert( pair ).second )
-            {
-                continue;
-            }
-
-            auto get_child_result = GetNodeWithoutRequest( child );
-            if ( get_child_result.has_failure() )
-            {
-                links_to_fetch.insert( pair );
-                continue;
-            }
-
-            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(), link_name, visited );
-
-            links_to_fetch.merge( child_links );
-            visited.merge( child_visited );
         }
 
         return { std::move( links_to_fetch ), std::move( visited ) };
@@ -126,12 +147,15 @@ namespace sgns::crdt
 
     outcome::result<void> CustomDagSyncer::markResolved( const CID &cid )
     {
-        return dagService_.markResolved( cid );
+        std::lock_guard lock( state_mutex_ );
+        resolved_cids_.insert( cid );
+        return outcome::success();
     }
 
     outcome::result<bool> CustomDagSyncer::isResolved( const CID &cid ) const
     {
-        return dagService_.isResolved( cid );
+        std::lock_guard lock( state_mutex_ );
+        return resolved_cids_.count( cid ) != 0;
     }
 
     void CustomDagSyncer::Stop() {}

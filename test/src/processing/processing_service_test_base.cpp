@@ -170,6 +170,7 @@ void ProcessingServiceTest::TearDown()
     }
 
     m_pubsub_nodes.clear();
+    m_pubsub_keypairs.clear();
     m_processing_queues_accessors.clear();
     m_processing_queues_managers.clear();
     m_processing_engines.clear();
@@ -191,7 +192,13 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
     config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
     for ( size_t i = 0; i < numNodes; ++i )
     {
-        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( config ) );
+        // CR-G01 fixture repair: construct every gossip host from an EXPLICIT
+        // keypair and retain a copy -- the single-arg ctor's internal keypair
+        // is inaccessible, and gated-surface tests must seal sender-side
+        // payloads / wire signing keys with the host's own key material.
+        auto keypair = GenerateEd25519KeyPair();
+        m_pubsub_keypairs.emplace_back( std::make_shared<const libp2p::crypto::KeyPair>( keypair ) );
+        auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( std::move( keypair ), config ) );
 
         Color::PrintInfo( "Attempting to start PubSub node ", i, " on an OS-assigned port" );
         for (auto node : bootstrap_nodes) {
@@ -229,14 +236,17 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
                                                              []( const std::string & ) {} ) );
         m_processing_engines.emplace_back(
             std::make_shared<ProcessingEngine>( nodeId, processingCore, []( const std::string & ) {}, [] {} ) );
-        m_IsTaskFinalized.emplace_back( std::make_unique<std::atomic<bool>>( false ) );
+        m_IsTaskFinalized.emplace_back( std::make_shared<std::atomic<bool>>( false ) );
+        // The callback must not touch fixture state: it can fire after TearDown
+        // cleared the vectors while a broadcast handler still owns the accessor.
+        auto taskFinalized = m_IsTaskFinalized.back();
         auto queueAccessor = m_processing_queues_accessors.emplace_back( std::make_shared<SubTaskQueueAccessorImpl>(
             pubsub_node,
             processingQueueManager,
             std::make_shared<SubTaskResultStorageMock>(),
-            [this, i, nodeId]( const SGProcessing::TaskResult & )
+            [taskFinalized, nodeId]( const SGProcessing::TaskResult & )
             {
-                m_IsTaskFinalized[i]->store( true );
+                taskFinalized->store( true );
                 Color::PrintInfo( "Task finalized by ", nodeId );
             },
             []( const std::string & ) {} ) );

@@ -22,7 +22,7 @@
 
 namespace sgns::crdt
 {
-    class GlobalDB : public std::enable_shared_from_this<GlobalDB>
+    class GlobalDB
     {
     public:
         struct BackupOptions
@@ -60,7 +60,7 @@ namespace sgns::crdt
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
-            BackupOptions                                                         backup_options = BackupOptions{ false, 15, 12, true } );
+            BackupOptions backup_options = BackupOptions{ false, 15, 12, true } );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -100,6 +100,11 @@ namespace sgns::crdt
                                   const Buffer                          &value,
                                   const std::unordered_set<std::string> &topics );
 
+        /** Writes an authoritative immutable record that converges by SHA-256 content ordering. */
+        outcome::result<CID> PutConvergentImmutable( const HierarchicalKey                 &key,
+                                                      const Buffer                          &value,
+                                                      const std::unordered_set<std::string> &topics );
+
         /**
          * @brief       Writes a batch of CRDT data all at once
          * @param[in]   data_vector A set of crdt to be written in a single transaction
@@ -108,6 +113,16 @@ namespace sgns::crdt
          */
         outcome::result<CID> Put( const std::vector<DataPair>           &data_vector,
                                   const std::unordered_set<std::string> &topics );
+
+        /**
+         * @brief       Puts a key-value pair directly into local storage, bypassing DAG broadcast.
+         *              See CrdtDatastore::PutKeyLocal for the full rationale/contract.
+         * @param[in]   key The hierarchical key where the value should be stored.
+         * @param[in]   value The value to store.
+         * @param[in]   id Provenance/tie-break identifier for the local write.
+         * @return      outcome::success on success, or outcome::failure otherwise.
+         */
+        outcome::result<void> PutLocal( const HierarchicalKey &key, const Buffer &value, const std::string &id );
 
         /** Gets a value that corresponds to specified key.
         * @param key - value key
@@ -151,12 +166,34 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
-        void                  AddTopicName( const std::string &topicName );
-        void                  AddListenTopic( const std::string &topicName );
+        void                  AddTopicName( std::string topicName );
+        void                  AddListenTopic( std::string topicName );
 
         void PrintDataStore();
 
         std::shared_ptr<RocksDB>                          GetDataStore();
+
+        /**
+         * @brief Reads a node-local key straight from RocksDB, bypassing the CRDT layer.
+         * @param[in] key Raw key, not a HierarchicalKey; nothing here is replicated.
+         * @return The stored value, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<Buffer> GetRaw( const Buffer &key ) const;
+
+        /**
+         * @brief Writes a node-local key straight to RocksDB, bypassing the CRDT layer.
+         * @param[in] key Raw key, not a HierarchicalKey; nothing here is replicated.
+         * @param[in] value Value to store.
+         * @return Failure on I/O error, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<void> PutRaw( const Buffer &key, const Buffer &value );
+
+        /**
+         * @brief Prefix-scans node-local keys straight from RocksDB, bypassing the CRDT layer.
+         * @param[in] key_prefix Raw key prefix.
+         * @return Matching key/value pairs, or `operation_canceled` once shutdown released the store.
+         */
+        outcome::result<QueryResult> QueryRaw( const Buffer &key_prefix ) const;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
@@ -190,7 +227,7 @@ namespace sgns::crdt
          * @brief Unregisters the new element callback for a pattern.
          * @param pattern The pattern to unregister the new element callback for.
          */
-        
+
         void UnregisterNewElementCallback( const std::string &pattern );
         /**
          * @brief Unregisters the deleted element callback for a pattern.
@@ -246,7 +283,7 @@ namespace sgns::crdt
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
 
-        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetCIDContent(
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
     private:
@@ -309,17 +346,19 @@ namespace sgns::crdt
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
         mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.
 
-        std::shared_ptr<CrdtDatastore> ActiveCRDTDataStore() const;
+        std::shared_ptr<RocksDB>       ActiveDataStore() const;
+
+        std::shared_ptr<CrdtDatastore>        ActiveCRDTDataStore() const;
         std::shared_ptr<PubSubBroadcasterExt> ActiveBroadcaster() const;
 
         /** @brief Resolves the backup directory path based on the database path. */
         std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;
         /** @brief Creates a backup immediately. */
-        void        CreateBackupNow();
+        void CreateBackupNow();
         /** @brief Starts the backup loop in a separate thread. */
-        void        StartBackupLoop();
+        void StartBackupLoop();
         /** @brief Stops the backup loop and waits for the thread to finish. */
-        void        StopBackupLoop();
+        void StopBackupLoop();
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };

@@ -1,0 +1,77 @@
+{
+  "name": "image-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for image input using a tiny 2D conv model",
+  "tags": ["image", "float32", "test"],
+
+  "inputs": [
+    {
+      "name": "inputImage",
+      "source_uri_param": "file://processing_datatypes/image_input.raw",
+      "type": "image",
+      "description": "Input float32 RGB image",
+      "dimensions": {
+        "width": 32,
+        "height": 32,
+        "block_len": 32,
+        "chunk_stride": 1024
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "imageOutput",
+      "source_uri_param": "file://processing_datatypes/image_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from image model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/image_tiny.mnn",
+      "description": "URI to the image MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "image_inference",
+      "type": "inference",
+      "description": "Image model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/image_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputImage",
+            "shape": [1, 3, 32, 32]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:imageOutput",
+            "shape": [1, 3, 32, 32]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-08-05",
+    "framework": "MNN",
+    "test_case": "image_datatype"
+  }
+}

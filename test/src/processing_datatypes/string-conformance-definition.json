@@ -1,0 +1,88 @@
+{
+  "name": "string-conformance-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for string input using a tiny embedding model (conformance variant)",
+  "tags": ["string", "int32", "conformance", "test"],
+
+  "inputs": [
+    {
+      "name": "inputText",
+      "source_uri_param": "file://processing_datatypes/test_input.txt",
+      "type": "string",
+      "description": "Input text for string processor"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "textEmbedding",
+      "source_uri_param": "file://processing_datatypes/string_output.raw",
+      "type": "tensor",
+      "description": "Output embedding from string model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/string_tiny.mnn",
+      "description": "URI to the string MNN model"
+    },
+    {
+      "name": "tokenizerMode",
+      "type": "string",
+      "default": "character",
+      "description": "Tokenizer mode"
+    },
+    {
+      "name": "textInput",
+      "type": "string",
+      "default": "Hello World! Test.",
+      "description": "Text input for the model"
+    },
+    {
+      "name": "maxLength",
+      "type": "int",
+      "default": 16,
+      "description": "Maximum sequence length"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "string_conformance_inference",
+      "type": "inference",
+      "description": "String model inference (conformance variant with string_tiny.mnn)",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/string_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputText",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:textEmbedding",
+            "shape": [1, 4]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-08-05",
+    "framework": "MNN",
+    "test_case": "string_conformance"
+  }
+}

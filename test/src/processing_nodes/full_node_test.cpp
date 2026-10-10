@@ -8,6 +8,7 @@
 #include <fstream>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
@@ -37,7 +38,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
-    GeniusNodeConfig devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
+    GeniusNodeConfig devConfig = { self_address, "0.0", tokenValue, tokenId, outPath };
 
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
@@ -49,7 +50,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     }
 
     GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false, privKey );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )
@@ -82,12 +83,8 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             sharedKey );
     originalNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "fullnode not synced" );
-    test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "Recovery node initial balance not updated in time" );
+    sgns::test::MakeNodeReadyWithLocalTrust( fullNode );
+    sgns::test::MakeNodeReadyWithLocalTrust( originalNode );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
@@ -96,12 +93,18 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
+        // TIMEOUT_MINT is only 30s in Release builds (50s under SGNS_DEBUG), which
+        // is not enough for the approved->finalized leg on a slow hosted macOS
+        // runner: run 35764381725 saw consensus approve the mint and still time
+        // out 25s later. Budget the finalization wait explicitly, independent of
+        // build type, like the 30s CRDT-visibility waits in
+        // registration_transaction_test.
         auto mintRes = originalNode->MintTokens( 500000,
                                                  sgns::test::NextMintSourceHash(),
                                                  "test",
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  "",
-                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                 std::chrono::milliseconds( 60000 ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );
@@ -120,4 +123,13 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
                                   std::chrono::milliseconds( 150000 ),
                                   "Recovery node balance not updated in time" );
+
+    // The balance arrives while the recovery node is still booting, and the boot handler
+    // holds a strong reference: returning here would drop the test's shared_ptr without
+    // running ~GeniusNode, leaving the node's io_ threads alive past main() to fault on
+    // spdlog's already-destroyed static registry. Wait for the boot to finish so the
+    // destructor runs on this thread and joins them.
+    test::assertWaitForCondition( [&]() { return recoveryNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 150000 ),
+                                  "Recovery node did not finish booting" );
 }

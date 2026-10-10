@@ -12,9 +12,7 @@ namespace sgns::subscription {
   class Subscriber;
 
   template <typename Key, typename Type, typename... Arguments>
-  class SubscriptionEngine final
-      : public std::enable_shared_from_this<
-            SubscriptionEngine<Key, Type, Arguments...>> {
+  class SubscriptionEngine final {
    public:
     using KeyType = Key;
     using ValueType = Type;

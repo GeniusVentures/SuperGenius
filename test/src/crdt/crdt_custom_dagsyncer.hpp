@@ -7,6 +7,7 @@
 #include <ipfs_lite/ipfs/impl/in_memory_datastore.hpp>
 #include "ipfs_lite/ipld/ipld_node.hpp"
 #include <memory>
+#include <mutex>
 
 namespace sgns::crdt
 {
@@ -85,6 +86,8 @@ namespace sgns::crdt
 
         void Stop() override;
 
+        void StopSync() override {}
+
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
@@ -98,10 +101,15 @@ namespace sgns::crdt
 
         outcome::result<void> markResolved( const CID &cid ) override;
         outcome::result<bool> isResolved( const CID &cid ) const override;
-        /** DAG service implementation */
+    private:
+        // The shared backing store models remote blocks, not this peer's local
+        // processing state. A sender's writes and seals must not resolve a
+        // receiver's DAG before its filters and merges have run.
         MerkleDagServiceImpl dagService_;
-
-        std::set<CID> cids_cache;
+        mutable std::mutex   state_mutex_;
+        std::set<CID>        requested_cids_;
+        std::set<CID>        local_cids_;
+        std::set<CID>        resolved_cids_;
     };
 
 } // namespace sgns::crdt

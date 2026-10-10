@@ -1,9 +1,9 @@
 /**
  * @file       SecureCrdtRegistry.hpp
- * @brief      Static registry mapping a base_key pattern to {signer-set source,
+ * @brief      Instance registry mapping a base_key pattern to {signer-set source,
  *             required signature count, ISignedCRDTData factory}, resolvable at
- *             startup/runtime by key. Header-only, mirrors IInputValidator's
- *             static Register/UnregisterIf/Get idiom.
+ *             startup/runtime by key. Each SecureCrdt owns an independent
+ *             instance so in-process nodes cannot replace one another's policy.
  * @date       2026-07-23
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -23,6 +23,14 @@
 
 #include "outcome/outcome.hpp"
 #include "securecrdt/ISignedCRDTData.hpp"
+#include "securecrdt/SecureCrdtCandidate.hpp"
+
+namespace sgns::peerregistry
+{
+    class PeerRegistry; // complete type not needed here - association only (D-04);
+                        // the adaptation helper lives in peerregistry/PeerRegistry.hpp
+                        // to avoid an include cycle.
+} // namespace sgns::peerregistry
 
 namespace sgns::securecrdt
 {
@@ -43,29 +51,62 @@ namespace sgns::securecrdt
      */
     using SignerSetSource = std::function<outcome::result<SignerSetSnapshot>( const std::string &base_key )>;
 
+    struct CandidateAuthorizationSnapshot
+    {
+        uint16_t                 network_id   = 0;
+        CandidateKind            kind         = CandidateKind::TrustPolicy;
+        uint64_t                 next_version = 0;
+        std::string              expected_previous_hash;
+        std::string              authorizing_policy_hash;
+        std::vector<std::string> authorized_signers;
+    };
+
+    /// Return SecureCrdt::Error::CANDIDATE_AUTHORIZATION_PENDING when local trust
+    /// prerequisites are missing, so incoming approvals can be retried safely.
+    using CandidateAuthorizationSource = std::function<outcome::result<CandidateAuthorizationSnapshot>()>;
+
+    struct CandidateDomainEntry
+    {
+        std::string                  domain;
+        CandidateKind                kind = CandidateKind::TrustPolicy;
+        CandidateAuthorizationSource authorization_source;
+        const void                  *owner_token = nullptr;
+    };
+
     /**
      * @brief Policy entry describing how a registered key pattern is verified
      *        and instantiated.
      */
     struct SecureCrdtRegistryEntry
     {
-        std::string                                          key_pattern;
-        SignerSetSource                                      signer_set_source;
-        std::function<std::shared_ptr<ISignedCRDTData>()>    make_instance;
-        std::regex                                           compiled_pattern;
+        std::string                                       key_pattern;
+        SignerSetSource                                   signer_set_source;
+        std::function<std::shared_ptr<ISignedCRDTData>()> make_instance;
+        std::regex                                        compiled_pattern;
         /// @brief Opaque token supplied by the caller at Register() time; must
         ///        be presented verbatim to UnregisterIf() to remove this entry.
         const void                                          *owner_token = nullptr;
+        /// @brief Explicit association to the PeerRegistry instance that owns
+        ///        this key pattern's authorization (D-04) - defaults to null
+        ///        for entries whose signer_set_source was built without a
+        ///        registry. Shared ownership per the BurnConfig shared_ptr
+        ///        registry precedent. Register() stores it verbatim and never
+        ///        replaces an explicitly provided signer_set_source; entries
+        ///        wanting a registry-derived source build it with
+        ///        peerregistry::MakeRegistrySignerSetSource. Declared LAST so
+        ///        existing positional aggregate initializers (which supply
+        ///        owner_token as the final element) stay source-compatible.
+        std::shared_ptr<sgns::peerregistry::PeerRegistry>    peer_registry;
     };
 
     /**
-     * @brief Static registry resolving a CRDT key to its SecureCrdtRegistryEntry.
+     * @brief Thread-safe registry resolving a CRDT key to its policy entry.
      */
     class SecureCrdtRegistry
     {
     public:
         /**
-         * @brief Registers (or replaces) the policy entry for `key_pattern`.
+         * @brief Registers the policy entry for `key_pattern` if absent.
          *        Compiles `compiled_pattern` as "/?" + key_pattern + "(/sig/[^/]+)?"
          *        so both the base key and a valid `sig/<addr>` child resolve to the
          *        same entry - mirrors CRDTDataFilter::RegisterElementFilter's
@@ -74,13 +115,65 @@ namespace sgns::securecrdt
          *            if it contains regex metacharacters).
          * @param[in] entry Policy entry to register (compiled_pattern is
          *            overwritten by this call).
+         * @return true when inserted; false when this registry already owns
+         *         the same pattern. Existing registrations are never replaced.
          */
-        static void Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
+        bool Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
         {
-            entry.key_pattern     = key_pattern;
+            entry.key_pattern      = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
-            std::unique_lock<std::shared_mutex> lock( registryMutex() );
-            registry()[key_pattern] = std::move( entry );
+            {
+                // Unlink any replaced entry WITHOUT destroying it while the
+                // registry mutex is held: a replaced entry's peer_registry may
+                // own the last reference to a PeerRegistry whose destructor
+                // re-enters Unregister() -> UnregisterIf() (destruction
+                // re-entrancy; std::shared_mutex is not recursive).
+                std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+                auto                                replaced = registry_.extract( key_pattern );
+                lock.unlock();
+            } // replaced node (if any) destroyed here, mutex released
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            return registry_.insert_or_assign( key_pattern, std::move( entry ) ).second;
+        }
+
+        /**
+         * @brief Registers the policy entry for `key_pattern` ONLY when no
+         *        entry for the pattern exists yet -- an atomic-detecting
+         *        insert that can never replace a live entry (G-WR-04: closes
+         *        the check-then-act window between a caller's Resolve()
+         *        pre-check and its Register(), which concurrent constructions
+         *        could otherwise use to clobber a live policy entry and brick
+         *        the registry still using it).
+         *        Compiles `compiled_pattern` exactly like Register():
+         *        "/?" + key_pattern + "(/sig/[^/]+)?".
+         * @param[in] key_pattern Base key pattern (regex-escaped by the caller
+         *            if it contains regex metacharacters).
+         * @param[in] entry Policy entry to register (compiled_pattern is
+         *            overwritten by this call).
+         * @return true when the entry was inserted; false when an entry for
+         *         the pattern already exists (the live entry is untouched and
+         *         the caller's `entry` copy is destroyed only after the
+         *         registry mutex has been released).
+         */
+        bool RegisterIfAbsent( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
+        {
+            entry.key_pattern      = key_pattern;
+            entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
+            bool inserted = false;
+            {
+                std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+                // find-then-emplace under ONE continuous lock hold: emplace
+                // cannot lose the race, so the moved entry is never destroyed
+                // under the mutex (mirror of Register/UnregisterIf's
+                // extract-then-destroy destruction-reentrancy safety -- a
+                // failed insert's caller-owned entry copy is destroyed after
+                // the lock released).
+                if ( registry_.find( key_pattern ) == registry_.end() )
+                {
+                    inserted = registry_.emplace( key_pattern, std::move( entry ) ).second;
+                }
+            } // lock released; a rejected entry copy is destroyed after this point
+            return inserted;
         }
 
         /**
@@ -91,15 +184,26 @@ namespace sgns::securecrdt
          * @param[in] key_pattern Base key pattern to unregister.
          * @param[in] expected_token Opaque token that must match the registering
          *            token for the removal to take effect.
+         * @return true when this call removed the entry; false when no entry
+         *         existed or the live entry belongs to a different owner
+         *         (lets the caller scope pattern-keyed cleanup -- e.g. filter
+         *         teardown -- to the case where IT owned the entry).
          */
-        static void UnregisterIf( const std::string &key_pattern, const void *expected_token )
+        bool UnregisterIf( const std::string &key_pattern, const void *expected_token )
         {
-            std::unique_lock<std::shared_mutex> lock( registryMutex() );
-            auto it = registry().find( key_pattern );
-            if ( it != registry().end() && it->second.owner_token == expected_token )
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            auto                                it = registry_.find( key_pattern );
+            if ( it != registry_.end() && it->second.owner_token == expected_token )
             {
-                registry().erase( it );
-            }
+                // Unlink without destroying under the lock: the entry's
+                // peer_registry may own the last PeerRegistry reference, whose
+                // destructor re-enters Unregister() -> UnregisterIf()
+                // (destruction re-entrancy; std::shared_mutex is not recursive).
+                auto node = registry_.extract( it );
+                lock.unlock();
+                return true;
+            } // node destroyed here, mutex released
+            return false;
         }
 
         /**
@@ -108,10 +212,10 @@ namespace sgns::securecrdt
          * @param[in] key CRDT key to resolve.
          * @return Snapshot of the matching entry, or std::nullopt if unregistered.
          */
-        static std::optional<SecureCrdtRegistryEntry> Resolve( const std::string &key )
+        std::optional<SecureCrdtRegistryEntry> Resolve( const std::string &key ) const
         {
-            std::shared_lock<std::shared_mutex> lock( registryMutex() );
-            for ( const auto &[pattern, entry] : registry() )
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            for ( const auto &[pattern, entry] : registry_ )
             {
                 if ( std::regex_match( key, entry.compiled_pattern ) )
                 {
@@ -127,12 +231,48 @@ namespace sgns::securecrdt
          *        callback for each registered base_key pattern at startup.
          * @return Vector of registered entries (order unspecified).
          */
-        static std::vector<SecureCrdtRegistryEntry> AllEntries()
+        std::vector<SecureCrdtRegistryEntry> AllEntries() const
         {
-            std::shared_lock<std::shared_mutex> lock( registryMutex() );
+            std::shared_lock<std::shared_mutex>  lock( registry_mutex_ );
             std::vector<SecureCrdtRegistryEntry> entries;
-            entries.reserve( registry().size() );
-            for ( const auto &[pattern, entry] : registry() )
+            entries.reserve( registry_.size() );
+            for ( const auto &[pattern, entry] : registry_ )
+            {
+                entries.push_back( entry );
+            }
+            return entries;
+        }
+
+        bool RegisterCandidateDomain( const std::string &domain, CandidateDomainEntry entry )
+        {
+            entry.domain = domain;
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            return candidate_domains_.emplace( domain, std::move( entry ) ).second;
+        }
+
+        void UnregisterCandidateDomainIf( const std::string &domain, const void *expected_token )
+        {
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            auto                                it = candidate_domains_.find( domain );
+            if ( it != candidate_domains_.end() && it->second.owner_token == expected_token )
+            {
+                candidate_domains_.erase( it );
+            }
+        }
+
+        std::optional<CandidateDomainEntry> ResolveCandidateDomain( const std::string &domain ) const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            const auto                          it = candidate_domains_.find( domain );
+            return it == candidate_domains_.end() ? std::nullopt : std::optional<CandidateDomainEntry>( it->second );
+        }
+
+        std::vector<CandidateDomainEntry> AllCandidateDomains() const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            std::vector<CandidateDomainEntry>   entries;
+            entries.reserve( candidate_domains_.size() );
+            for ( const auto &[domain, entry] : candidate_domains_ )
             {
                 entries.push_back( entry );
             }
@@ -140,17 +280,9 @@ namespace sgns::securecrdt
         }
 
     private:
-        static std::unordered_map<std::string, SecureCrdtRegistryEntry> &registry()
-        {
-            static std::unordered_map<std::string, SecureCrdtRegistryEntry> map;
-            return map;
-        }
-
-        static std::shared_mutex &registryMutex()
-        {
-            static std::shared_mutex mutex;
-            return mutex;
-        }
+        std::unordered_map<std::string, SecureCrdtRegistryEntry> registry_;
+        std::unordered_map<std::string, CandidateDomainEntry>    candidate_domains_;
+        mutable std::shared_mutex                                registry_mutex_;
     };
 } // namespace sgns::securecrdt
 
