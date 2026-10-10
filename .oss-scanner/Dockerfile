@@ -19,7 +19,6 @@ COPY . /src
 RUN git config --global --add url."https://github.com/".insteadOf "git@github.com:" \
  && git submodule sync --recursive \
  && git submodule update --init --recursive \
- && git lfs install --local \
  && git lfs pull
 
 # These are public Linux x86_64 Release artifacts, byte-checked against the
