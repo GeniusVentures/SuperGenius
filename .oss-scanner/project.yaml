@@ -1,0 +1,8 @@
+# Copy after validation to anthropics/oss-scanner/projects/supergenius/project.yaml.
+# The in-repo file is a prepared draft, not an active Anthropic enrollment.
+repo: https://github.com/GeniusVentures/SuperGenius#develop
+primary_contact: admin@gnus.ai
+homepage: https://docs.gnus.ai
+disabled: false
+dockerfile: .oss-scanner/Dockerfile
+threat_model: .oss-scanner/threat_model.md
