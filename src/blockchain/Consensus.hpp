@@ -25,6 +25,7 @@
 #include <limits>
 
 #include "account/NodeType.hpp"
+#include "base/blob.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -995,6 +996,15 @@ namespace sgns
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**
          * @brief Checks the authoritative certificate value for a canonical slot.
+         * @details The definitive verdict (Approve/Reject) is memoized per slot
+         *          keyed by the durable certificate bytes' digest: validation is
+         *          deterministic over immutable content (the registry is pinned
+         *          by CID), so a verdict only changes when the stored bytes
+         *          change. Retryable outcomes (registry not yet loadable, data
+         *          errors) are never memoized. This keeps the per-tick replay
+         *          loops from re-verifying every certificate signature on every
+         *          pass while a slot stays uncertified or holds a rejected
+         *          certificate.
          */
         outcome::result<bool> HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
         /**
@@ -1274,6 +1284,16 @@ namespace sgns
         std::atomic<bool>         timer_parked_for_test_{ false }; ///< Test seam: holds the round timer at its loop top.
         bool                      timer_parked_ack_ = false;       ///< Park acknowledgement, guarded by `timer_mutex_`.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
+        /// Memoized HasAcceptedCertificateForSlot verdicts: slot key -> digest of
+        /// the durable certificate bytes + definitive verdict. Guarded by
+        /// certificate_verdict_cache_mutex_; never held across validation.
+        struct CertificateVerdict
+        {
+            base::Hash256 content_digest{};
+            bool          accepted = false;
+        };
+        mutable std::mutex                                          certificate_verdict_cache_mutex_;
+        mutable std::unordered_map<std::string, CertificateVerdict> certificate_verdict_cache_;
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
         std::mutex                close_mutex_;                   ///< Serializes round timer ownership during shutdown.

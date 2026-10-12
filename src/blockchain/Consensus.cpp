@@ -1356,6 +1356,24 @@ namespace sgns
             }
             return outcome::failure( value.error() );
         }
+        // Memoize the definitive verdict keyed by the durable bytes' digest:
+        // the replay loops call this per slot on every timer tick, and
+        // ValidateCertificate re-verifies every vote signature — for a slot
+        // holding a rejected (or not-yet-releasable) certificate that burns
+        // O(votes) ECDSA per tick indefinitely. Validation is deterministic
+        // over immutable content (registry pinned by CID), so the verdict only
+        // changes when the stored bytes change. Retryable outcomes below are
+        // deliberately NOT memoized. The cache lock is never held across the
+        // validation.
+        const auto content_digest = crypto::sha2_256( value.value().data(), value.value().size() );
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            auto            it = certificate_verdict_cache_.find( slot_key );
+            if ( it != certificate_verdict_cache_.end() && it->second.content_digest == content_digest )
+            {
+                return it->second.accepted;
+            }
+        }
         Certificate certificate;
         if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
              !ValidateCertificateKey( certificate, key ) )
@@ -1367,7 +1385,12 @@ namespace sgns
         {
             return outcome::failure( std::errc::resource_unavailable_try_again );
         }
-        return validation == Check::Approve;
+        const bool accepted = validation == Check::Approve;
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            certificate_verdict_cache_[slot_key] = CertificateVerdict{ content_digest, accepted };
+        }
+        return accepted;
     }
 
     outcome::result<bool> ConsensusManager::ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key )
@@ -3884,6 +3907,14 @@ namespace sgns
             {
                 ids_to_remove.insert( kv.first );
             }
+        }
+
+        // The slot is finalized: its memoized certificate verdict will never be
+        // consulted again, so drop it to bound the cache (lock order is safe —
+        // the cache lock is never held across proposals_mutex_).
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            certificate_verdict_cache_.erase( slot_key );
         }
 
         for ( const auto &proposal_id : ids_to_remove )
