@@ -183,38 +183,16 @@ namespace sgns
         }
     }
 
-    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string              &base_path,
-                                                          uint16_t                        port_seed,
-                                                          bool                            auto_dht,
-                                                          const std::string              &network_key,
-                                                          const std::string              &private_network_id,
-                                                          const std::vector<std::string> &network_bootstrap_peers )
+    namespace
     {
-        std::error_code ec;
-        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
-        std::ofstream ofs( base_path + "/network_config.json" );
-        if ( !ofs.good() )
+        // Full JSON string escaping for the hand-written network_config.json emitter:
+        // every control character is escaped so the written file is always parseable
+        // (CR-01). The reader is rapidjson, which unescapes all of these forms.
+        std::string EscapeJsonString( const std::string &value )
         {
-            return Error::DATABASE_WRITE_ERROR;
-        }
-        // upnp_enabled is intentionally forced false here: this helper writes the
-        // network_config.json used by tests/examples (see class doc comment), which must
-        // not depend on real host-LAN UPnP/SSDP discovery. Without this, GeniusNode
-        // defaults upnp_enabled to true and every node performs real, blocking, non-
-        // deterministic UPnP network I/O during construction (see multi-node-crdt-
-        // instability debug session for the crash this caused).
-        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
-            << ", \"upnp_enabled\": false";
-        if ( !network_key.empty() )
-        {
-            // Full JSON string escaping so any of the accepted PSK encodings survives a
-            // round-trip through the JSON config file. The canonical go-ipfs swarm-key text
-            // ("/key/swarm/psk/1.0.0/\n/base16/<64 hex>\n") contains literal newline bytes,
-            // which are illegal raw inside JSON strings (CR-01): every control character is
-            // escaped here so the written file is always parseable.
             std::string escaped;
-            escaped.reserve( network_key.size() );
-            for ( char c : network_key )
+            escaped.reserve( value.size() );
+            for ( char c : value )
             {
                 switch ( c )
                 {
@@ -242,7 +220,8 @@ namespace sgns
                     default:
                         if ( static_cast<unsigned char>( c ) < 0x20 )
                         {
-                            escaped += fmt::format( "\\u{:04x}", static_cast<unsigned>( static_cast<unsigned char>( c ) ) );
+                            escaped += fmt::format( "\\u{:04x}",
+                                                    static_cast<unsigned>( static_cast<unsigned char>( c ) ) );
                         }
                         else
                         {
@@ -251,12 +230,43 @@ namespace sgns
                         break;
                 }
             }
-            ofs << ", \"network_key\": \"" << escaped << "\"";
+            return escaped;
+        }
+    } // namespace
+
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string              &base_path,
+                                                          uint16_t                        port_seed,
+                                                          bool                            auto_dht,
+                                                          const std::string              &network_key,
+                                                          const std::string              &private_network_id,
+                                                          const std::vector<std::string> &network_bootstrap_peers )
+    {
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
+        std::ofstream ofs( base_path + "/network_config.json" );
+        if ( !ofs.good() )
+        {
+            return Error::DATABASE_WRITE_ERROR;
+        }
+        // upnp_enabled is intentionally forced false here: this helper writes the
+        // network_config.json used by tests/examples (see class doc comment), which must
+        // not depend on real host-LAN UPnP/SSDP discovery. Without this, GeniusNode
+        // defaults upnp_enabled to true and every node performs real, blocking, non-
+        // deterministic UPnP network I/O during construction (see multi-node-crdt-
+        // instability debug session for the crash this caused).
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
+            << ", \"upnp_enabled\": false";
+        if ( !network_key.empty() )
+        {
+            // Full JSON string escaping so any of the accepted PSK encodings survives a
+            // round-trip through the JSON config file. The canonical go-ipfs swarm-key text
+            // ("/key/swarm/psk/1.0.0/\n/base16/<64 hex>\n") contains literal newline bytes,
+            // which are illegal raw inside JSON strings (CR-01).
+            ofs << ", \"network_key\": \"" << EscapeJsonString( network_key ) << "\"";
         }
         if ( !private_network_id.empty() )
         {
-            // Plain string: the id is 0x-prefixed hex (no characters JSON would escape).
-            ofs << ", \"private_network_id\": \"" << private_network_id << "\"";
+            ofs << ", \"private_network_id\": \"" << EscapeJsonString( private_network_id ) << "\"";
         }
         if ( !network_bootstrap_peers.empty() )
         {
@@ -269,7 +279,7 @@ namespace sgns
                     ofs << ", ";
                 }
                 first = false;
-                ofs << "\"" << peer << "\"";
+                ofs << "\"" << EscapeJsonString( peer ) << "\"";
             }
             ofs << "]";
         }
