@@ -3439,12 +3439,6 @@ namespace sgns
         }
         certificate_work_journal_->MarkSeen( key );
         certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
-        // The timer's idle-branch wait predicate tests certificates_pending_,
-        // so the notify alone is spurious: without the flag the just-journaled
-        // certificate waits out the full round_duration/2 tick before
-        // RecoverPendingCertificateWork dispatches it. UpdateCertificatesPending
-        // re-derives (and clears) the flag once this iteration's work runs.
-        certificates_pending_.store( true );
         timer_cv_.notify_all();
     }
 
