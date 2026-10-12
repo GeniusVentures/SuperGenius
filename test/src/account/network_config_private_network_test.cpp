@@ -129,7 +129,8 @@ TEST( NetworkConfigPrivateNetwork, AbsentKeysKeepPublicNodeBehavior )
     EXPECT_EQ( config_text.find( "network_bootstrap_peers" ), std::string::npos );
     EXPECT_EQ( config_text.find( "network_key" ), std::string::npos );
 
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -166,7 +167,8 @@ TEST( NetworkConfigPrivateNetwork, ValidIdentityPairIsRetainedAndDistinctFromKey
                std::string::npos );
 
     // Round-trip step 2 — LoadNetworkConfig (inside New) re-reads and retains them.
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -188,9 +190,10 @@ TEST( NetworkConfigPrivateNetwork, UppercaseHexBodyIdentityAccepted )
     const std::string uppercase_id = "0xABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
     ASSERT_EQ( uppercase_id.size(), 66u );
 
-    auto node = NodeFromRawConfig( "ncpn_uppercase",
+    auto              node = NodeFromRawConfig( "ncpn_uppercase",
                                    ", \"network_key\": \"" + std::string( VALID_NETWORK_KEY_BASE16 ) +
                                        "\", \"private_network_id\": \"" + uppercase_id + "\"" );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
     EXPECT_EQ( GeniusNodeTestAccess::PrivateNetworkId( node ), uppercase_id );
@@ -274,7 +277,8 @@ TEST( NetworkConfigPrivateNetwork, SwarmKeyTextWithNewlinesRoundTrips )
 
     // The reload retains the private-network identity (pre-fix: parse error silently
     // swallowed, node booted public with an EMPTY id - the retained id discriminates).
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
     EXPECT_EQ( GeniusNodeTestAccess::PrivateNetworkId( node ), VALID_PRIVATE_NETWORK_ID );

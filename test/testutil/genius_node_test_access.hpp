@@ -227,6 +227,26 @@ namespace sgns
             }
         }
     };
+
+    /// RAII teardown for TEST-body (non-fixture) node lifetimes.
+    ///
+    /// CI 2026-10-08, network_config_private_network_test: the node's last
+    /// shared_ptr was released by a background io_context dispatch, so
+    /// ~GeniusNode ran on an io thread (detached to avoid self-join) and was
+    /// still executing when main() returned; exit()'s static destructors then
+    /// raced it into a SIGSEGV inside a static shared_ptr<soralog::Logger>.
+    /// A trailing StopNode() call cannot fix this: fatal ASSERT_* early-returns
+    /// skip trailing statements, so teardown must run from a destructor.
+    struct NodeTeardownGuard
+    {
+        std::shared_ptr<GeniusNode> node;
+
+        ~NodeTeardownGuard()
+        {
+            GeniusNodeTestAccess::StopNode( node );
+            node.reset();
+        }
+    };
 } // namespace sgns
 
 #endif // SGNS_TESTUTIL_GENIUS_NODE_TEST_ACCESS_HPP
