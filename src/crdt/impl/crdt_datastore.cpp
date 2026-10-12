@@ -1562,11 +1562,19 @@ namespace sgns::crdt
 
         std::vector<std::pair<CID, std::string>> headsWithTopics;
 
+        // Link EVERY live head as a parent, never a subset: a head is retired
+        // only when a new node's links reach it (UpdateCRDTHeads walks the new
+        // node's ancestry), so any concurrent head left out of the parent set
+        // survives forever — re-broadcast in every announcement, re-fetched by
+        // peers, and unreachable from the newest head (its branch syncs only
+        // while its own head announcement is not lost). Linking all heads makes
+        // each new node a merge point that collapses the head set back to one
+        // per topic.
         for ( const auto &[topic_name, cid_set] : head_map )
         {
-            if ( !cid_set.empty() )
+            for ( const auto &cid : cid_set )
             {
-                headsWithTopics.emplace_back( *std::min_element( cid_set.begin(), cid_set.end() ), topic_name );
+                headsWithTopics.emplace_back( cid, topic_name );
             }
         }
 
