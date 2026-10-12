@@ -418,26 +418,46 @@ namespace sgns
         static bool IsBridgeMintSubject( const Proposal &proposal );
 
         /**
-         * @brief Phase 6 (D-06): single quorum dispatcher.
+         * @brief Phase 6 (D-06): the single authoritative quorum verdict.
          *
-         * For non-bridge subjects: computes the single-pool tally (total weight,
-         * approved weight, IsQuorum) -- identical to the pre-Phase-6 behavior.
-         * For bridge-mint subjects: delegates to ValidatorRegistry::EvaluateSlotQuorum
-         * (cumulative slot model with 50/25/75 weighting and >=2-validator PUBLIC
-         * deduplication).
+         * The single-pool rule (IsQuorum over the signature-verified approve
+         * weight) stands for every subject unless the proposal is a bridge mint
+         * whose slot evidence can structurally reach the slot threshold: when
+         * SlotEvidenceReputation exceeds the threshold, the cumulative slot tally
+         * (ValidatorRegistry::EvaluateSlotQuorum, 50/25/75 weighting with
+         * >=2-validator PUBLIC deduplication) is authoritative for has_quorum —
+         * including overriding an already-reached single-pool quorum downward,
+         * and vice versa. When that ceiling cannot pass the threshold the
+         * cumulative model is unreachable for this vote set — e.g. an
+         * evidence-starved mesh where vote slot population silently no-ops — and
+         * the single-pool result stands; every approve voter has still passed the
+         * public-chain witness validation in that case.
          *
-         * Used by BOTH TallyVotes (certificate creation) and the incremental
-         * HandleVote tally so the two sites agree on bridge-mint quorum
-         * (RESEARCH Pitfall 1 mitigation / T-06-10).
+         * Used by BOTH TallyVotes (certificate creation/validation) and the
+         * incremental HandleVote tally so the two sites can never disagree on
+         * bridge-mint quorum (RESEARCH Pitfall 1 mitigation / T-06-10): a
+         * HandleVote quorum announcement that TallyVotes would reject creates and
+         * rejects certificates forever, and the reverse withholds finality.
          *
-         * @param[in] proposal Proposal being evaluated.
-         * @param[in] votes   Votes to tally.
-         * @param[in] registry Registry snapshot used for weight resolution.
-         * @return Quorum tally result.
+         * @param[in] bridge_mint          IsBridgeMintSubject(proposal); passed in so
+         *                                 this helper needs no subject decoding.
+         * @param[in] pool_approved_weight Single-pool approved weight over the
+         *                                 signature-verified votes.
+         * @param[in] pool_total_weight    Registry total weight.
+         * @param[in] verified_votes       Signature-verified, proposal-bound votes.
+         *                                 The slot helpers resolve membership and
+         *                                 weight but never verify signatures, so
+         *                                 unverified entries must never reach them.
+         * @param[in] registry             Registry snapshot for weight resolution.
+         * @return QuorumTally with the verdict and bridge observability fields
+         *         (approved_weight becomes the slot total_voting_reputation for
+         *         bridge mints; qualified_sum/slot_threshold stay zero otherwise).
          */
-        outcome::result<QuorumTally> EvaluateQuorum( const Proposal                    &proposal,
-                                                     const std::vector<Vote>           &votes,
-                                                     const ValidatorRegistry::Registry &registry ) const;
+        QuorumTally DecideQuorum( bool                               bridge_mint,
+                                  uint64_t                           pool_approved_weight,
+                                  uint64_t                           pool_total_weight,
+                                  const std::vector<Vote>           &verified_votes,
+                                  const ValidatorRegistry::Registry &registry ) const;
 
         /**
          * @brief Computes canonical bytes to sign a proposal.
@@ -451,21 +471,6 @@ namespace sgns
          * @return Signing bytes on success, otherwise an error.
          */
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
-        /**
-         * @brief Filters a vote vector down to proposal-bound, deduplicated,
-         *        signature-verified entries.
-         * @details Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation)
-         *          resolve registry membership and weight but never verify vote
-         *          signatures, so any remotely-received vote vector fed to them
-         *          must pass through this filter first — otherwise fabricated
-         *          votes attributed to real ACTIVE validators reach bridge-mint
-         *          quorum with zero valid signatures.
-         * @param[in] proposal Proposal the votes must be bound to.
-         * @param[in] votes    Raw vote vector; may contain fabricated entries.
-         * @return Signature-verified votes (possibly empty).
-         */
-        static std::vector<Vote> SignatureVerifiedVotes( const Proposal          &proposal,
-                                                         const std::vector<Vote> &votes );
         /**
          * @brief Computes canonical bytes to sign a vote bundle.
          * @param[in] bundle Vote bundle to encode.
