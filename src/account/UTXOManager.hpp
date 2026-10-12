@@ -498,8 +498,10 @@ namespace sgns
                                                  const std::vector<std::pair<OutPoint, UTXOEntry>> &entries );
 
         /// @brief Captures and persists an address snapshot while utxos_mutex_ is exclusively held.
-        outcome::result<void> StoreUTXOsLocked( const std::string    &address,
-                                                std::function<void()> before_store_hook = {} );
+        /// @details The before-store test hooks fire at the PutUTXO/ConsumeUTXOs call
+        ///          sites BEFORE this call — see UTXOManager.cpp for why the hook must
+        ///          not run inside the fail-fault sequence.
+        outcome::result<void> StoreUTXOsLocked( const std::string &address );
 
         // Friend-only fault and barrier seams for certificate durability regression coverage.
         void SetFailNextPutUTXOStoreForTest( bool fail );

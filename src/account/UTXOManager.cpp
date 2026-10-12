@@ -1076,14 +1076,9 @@ namespace sgns
         return StoreUTXOsLocked( address );
     }
 
-    outcome::result<void> UTXOManager::StoreUTXOsLocked( const std::string    &address,
-                                                         std::function<void()> before_store_hook )
+    outcome::result<void> UTXOManager::StoreUTXOsLocked( const std::string &address )
     {
         auto entries_to_store = SnapshotAddressUTXOsLocked( address );
-        if ( before_store_hook )
-        {
-            before_store_hook();
-        }
         return StoreUTXOSnapshot( db_, address, entries_to_store );
     }
 
