@@ -1246,6 +1246,13 @@ namespace sgns
         /// next tick; beyond it the stall carries an exponential backoff lease.
         static constexpr uint64_t kHandlerFailureFastRetries{ 8 };
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
+        /// Serializes durable active-vote persistence across concurrent
+        /// ProcessDueVoteWork passes (round timer + subject continuation). The
+        /// datastore write itself runs OUTSIDE proposals_mutex_ (see
+        /// EraseDurableActiveVoteRecord's note); this mutex keeps the
+        /// get-then-put pair of PersistOrLoadExactActiveVote atomic so two
+        /// passes cannot both "succeed" with different records for one slot.
+        std::mutex active_vote_persist_mutex_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.

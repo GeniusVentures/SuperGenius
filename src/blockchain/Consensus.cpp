@@ -1764,6 +1764,20 @@ namespace sgns
             return;
         }
 
+        // Durable vote records chosen this pass. The persist itself runs OUTSIDE
+        // proposals_mutex_ (see EraseDurableActiveVoteRecord's note: the
+        // datastore write can wait on a CRDT worker while every
+        // proposals_mutex_ consumer — vote/proposal ingress — blocks), so the
+        // locked pass only records what to persist.
+        struct PersistIntent
+        {
+            std::string slot_key;
+            Proposal    proposal;
+            Vote        vote;
+            uint64_t    deadline_ms = 0;
+        };
+        std::vector<PersistIntent> persist_intents;
+
         std::vector<ActiveVoteState> publish;
         std::vector<Vote>            replay_votes;
         std::vector<std::string>     unwinnable_slots;
@@ -1852,33 +1866,14 @@ namespace sgns
                 {
                     continue;
                 }
-                const auto deadline_ms = now_ms + static_cast<uint64_t>( candidate_window_.count() );
-                auto active_vote = PersistOrLoadExactActiveVote( slot_key, *winner, vote.value(), deadline_ms );
-                if ( active_vote.has_error() )
-                {
-                    logger_->error( "{}: failed to persist active vote slot={}: {}",
-                                                     __func__, slot_key, active_vote.error().message() );
-                    continue;
-                }
-                if ( stop_timer_.load() )
-                {
-                    return;
-                }
-                slot_state.active_vote_locked = true;
-                slot_state.voted_proposal_ids.insert( active_vote.value().proposal.proposal_id() );
-                active_vote.value().next_retry_at = now_steady + active_vote_retry_interval_;
-                publish.push_back( active_vote.value() );
-                active_votes_[slot_key] = std::move( active_vote.value() );
-                // Peers that voted for this winner while it was not the local winner (a
-                // previous attempt, or a peer that froze first) were recorded but never
-                // tallied; re-tally them now so the weight already gathered counts.
-                for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
-                {
-                    if ( observed_vote.proposal_id() == slot_state.best_proposal_id )
-                    {
-                        replay_votes.push_back( observed_vote );
-                    }
-                }
+                // Installation (lock latching, active_votes_, replay tally) happens
+                // after the persist, under the lock, re-validated against the
+                // current slot state — the lock is released during the write.
+                persist_intents.push_back(
+                    PersistIntent{ slot_key,
+                                   *winner,
+                                   vote.value(),
+                                   now_ms + static_cast<uint64_t>( candidate_window_.count() ) } );
             }
 
             for ( auto &[slot_key, active_vote] : active_votes_ )
@@ -1912,6 +1907,78 @@ namespace sgns
             }
 
             CollectUnwinnableSlotsLocked( unwinnable_slots );
+        }
+
+        // Durable write phase — outside proposals_mutex_. Serialized by
+        // active_vote_persist_mutex_ so concurrent ProcessDueVoteWork passes
+        // (round timer + subject continuation) cannot interleave their
+        // get-then-put pairs and both "succeed" with different records.
+        std::vector<std::pair<std::string, ActiveVoteState>> persisted;
+        if ( !persist_intents.empty() )
+        {
+            std::lock_guard persist_lock( active_vote_persist_mutex_ );
+            for ( auto &intent : persist_intents )
+            {
+                auto active_vote = PersistOrLoadExactActiveVote( intent.slot_key,
+                                                                 intent.proposal,
+                                                                 intent.vote,
+                                                                 intent.deadline_ms );
+                if ( active_vote.has_error() )
+                {
+                    logger_->error( "{}: failed to persist active vote slot={}: {}",
+                                    __func__,
+                                    intent.slot_key,
+                                    active_vote.error().message() );
+                    continue;
+                }
+                persisted.emplace_back( intent.slot_key, std::move( active_vote.value() ) );
+            }
+        }
+        if ( stop_timer_.load() )
+        {
+            return;
+        }
+
+        // Installation phase — back under proposals_mutex_, re-validating each
+        // slot: the lock was released during the persist, so the slot may have
+        // been cleared, certified, re-arbitrated, or locked by a concurrent
+        // pass in the meantime. A skipped install leaves the durable record in
+        // place; recovery (RecoverActiveVotes) or unwinnable-slot release
+        // re-owns it later.
+        if ( !persisted.empty() )
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto &[slot_key, active_vote] : persisted )
+            {
+                auto slot_it = slot_states_.find( slot_key );
+                if ( slot_it == slot_states_.end() )
+                {
+                    continue;
+                }
+                auto &slot_state = slot_it->second;
+                if ( slot_state.active_vote_locked || !slot_state.candidates_frozen ||
+                     slot_state.best_proposal_id != active_vote.proposal.proposal_id() )
+                {
+                    // Already installed by a concurrent pass, re-opened for
+                    // arbitration, or re-frozen on a different winner.
+                    continue;
+                }
+                slot_state.active_vote_locked = true;
+                slot_state.voted_proposal_ids.insert( active_vote.proposal.proposal_id() );
+                active_vote.next_retry_at = now_steady + active_vote_retry_interval_;
+                publish.push_back( active_vote );
+                active_votes_[slot_key] = std::move( active_vote );
+                // Peers that voted for this winner while it was not the local winner (a
+                // previous attempt, or a peer that froze first) were recorded but never
+                // tallied; re-tally them now so the weight already gathered counts.
+                for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
+                {
+                    if ( observed_vote.proposal_id() == slot_state.best_proposal_id )
+                    {
+                        replay_votes.push_back( observed_vote );
+                    }
+                }
+            }
         }
 
         ReleaseUnwinnableSlots( unwinnable_slots );
