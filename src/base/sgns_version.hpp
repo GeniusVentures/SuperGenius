@@ -12,6 +12,7 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET_ID           = 369;
         static constexpr std::uint16_t    TEST_NET_ID           = 963;
         static constexpr std::uint16_t    DEV_NET_ID            = 144;
+        static constexpr std::uint16_t    STAGING_NET_ID        = 333;
         static constexpr std::string_view NET_ID_APPENDIX       = ".%hu";
         static constexpr std::string_view SGNS_VERSION_APPENDIX = ".%hu.%hu";
         /**

@@ -74,7 +74,7 @@ std::string sgns::version::GetNetAndVersionAppendix( uint32_t version_major, uin
 
 void sgns::version::SetNetworkId( uint16_t net_id )
 {
-    if ( net_id == MAIN_NET_ID || net_id == TEST_NET_ID || net_id == DEV_NET_ID )
+    if ( net_id == MAIN_NET_ID || net_id == TEST_NET_ID || net_id == DEV_NET_ID || net_id == STAGING_NET_ID )
     {
         network_id_ = net_id;
     }

@@ -9,6 +9,7 @@
 #include <optional>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -18,6 +19,7 @@
 #include "account/BurnConfig.hpp"
 #include "base/hexutil.hpp"
 #include "base/logger.hpp"
+#include "base/sgns_version.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "securecrdt/QuorumThresholdValidation.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -52,6 +54,12 @@ namespace
                "\nmake-manifest options:\n"
                "  --network-id N --bootstrapper ADDRESS --peers ADDR[,ADDR...] --out PATH\n"
                "  [--membership-threshold N] [--burn-threshold N]   (default: majority/burn floors)\n"
+               "\nnetworked operations (genesis/list/approve/propose-*) options:\n"
+               "  [--net-id N]            process net registry id (369/963/144/333) — scopes\n"
+               "                          every pubsub/DHT topic this process joins via the\n"
+               "                          net appendix (default: DEV 144). Pin the same id\n"
+               "                          the target net's nodes run on, or the actor's\n"
+               "                          topics never meet theirs\n"
                "\ngenesis options:\n"
                "  [--timeout-seconds N]   confirmation poll deadline (default 30)\n"
                "  [--serve-seconds N]     keep serving the genesis DAG to peers after durable\n"
@@ -164,7 +172,7 @@ namespace
             return true;
         }
 
-        std::set<std::string> allowed{ "--manifest", "--network-config", "--database", "--topic" };
+        std::set<std::string> allowed{ "--manifest", "--network-config", "--database", "--topic", "--net-id" };
         if ( arguments.operation != "list" )
         {
             allowed.insert( "--key-file" );
@@ -309,6 +317,37 @@ namespace
                   << "s before exit (0 peers fetched = update confined to this database).\n";
         std::this_thread::sleep_for( std::chrono::seconds( serve_seconds ) );
         std::cout << "Serving window complete.\n";
+    }
+
+    // Optional process net-id pin, applied BEFORE any network stack exists:
+    // every pubsub/DHT topic this tool joins carries the net appendix
+    // (PubsubBroadcasterExt appends GetNetAndVersionAppendix), so a ceremony
+    // actor joining a non-default net MUST pin the same registry id the nodes
+    // run on or its topics never meet theirs (observed live: actor topics
+    // .3.7.144 vs staging node topics .3.7.333 — the CRDT catch-up starves).
+    bool ApplyNetIdPin( const Arguments &arguments, std::ostream &errors )
+    {
+        const auto net_id = arguments.values.find( "--net-id" );
+        if ( net_id == arguments.values.end() )
+        {
+            return true;
+        }
+        const auto parsed = ParseUint64( net_id->second );
+        if ( !parsed || *parsed == 0 || *parsed > 65535 )
+        {
+            errors << "invalid --net-id (expected 1..65535)\n";
+            return false;
+        }
+        try
+        {
+            sgns::version::SetNetworkId( static_cast<uint16_t>( *parsed ) );
+        }
+        catch ( const std::invalid_argument &error )
+        {
+            errors << "invalid --net-id: " << error.what() << '\n';
+            return false;
+        }
+        return true;
     }
 
     int MakeManifest( const Arguments &arguments )
@@ -680,6 +719,11 @@ int main( int argc, char **argv )
     if ( arguments->operation == "make-manifest" )
     {
         return MakeManifest( *arguments );
+    }
+
+    if ( !ApplyNetIdPin( *arguments, std::cerr ) )
+    {
+        return EXIT_FAILURE;
     }
 
     if ( !ConfigureLibp2pLogging( std::cerr ) )
