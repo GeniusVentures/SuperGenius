@@ -8,6 +8,7 @@
 #define _GENIUS_NODE_HPP_
 
 #include <chrono>
+#include <condition_variable>
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -20,14 +21,16 @@
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <libp2p/crypto/key.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
 #include "base/buffer.hpp"
 #include "account/PublicChainInputValidator.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
@@ -38,7 +41,6 @@
 #include "processing/processing_service.hpp"
 #include "singleton/IComponent.hpp"
 #include "processing/processing_task_queue.hpp"
-#include "coinprices/coinprices.hpp"
 #include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
@@ -54,6 +56,11 @@ namespace sgns::ipfs_bitswap
 }
 
 // Forward declarations for BURN-02/BURN-03 quorum-wiring types (full includes live in GeniusNode.cpp).
+namespace sgns
+{
+    class LocalPriceManager;
+}
+
 namespace sgns::securecrdt
 {
     class SecureCrdt;
@@ -61,12 +68,19 @@ namespace sgns::securecrdt
 
 namespace sgns::trustedpeer
 {
+    class TrustStateStore;
     class TrustedPeerRegistry;
+}
+
+namespace sgns::networkregistry
+{
+    class NetworkRegistry;
 }
 
 namespace sgns::account
 {
     class BurnConfig;
+    class TrustStartupController;
 }
 
 /**
@@ -75,7 +89,7 @@ namespace sgns::account
 typedef struct DevConfig
 {
     std::string   Addr;             ///< Developer payout address.
-    std::string   Cut;              ///< Developer or peer cut encoded as a string.
+    std::string   DevFraction;      ///< Developer's share of each subtask payout, as a decimal string ("0.35" = 35%).
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
@@ -135,7 +149,7 @@ namespace sgns
     public:
         /**
          * @brief Canonical node factory (INTF-01). Account identity is chosen via
-         *        AccountSource; node role (is_full_node_) is derived from node_type in
+         *        AccountSource; node role (node_type_) is read from node_type in
          *        sgns_config.json, not a param. Old factories are retained this phase
          *        (deleted in Phase 3 per 02-CONTEXT.md D-01).
          * @param[in] dev_config Runtime configuration (paths, token, payout data).
@@ -150,12 +164,25 @@ namespace sgns
          * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
          * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
          * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
+         * @param[in] network_key Optional private-network (pnet) PSK written as the
+         *            "network_key" key — swarm-key text, or base16/base64-encoded 32-byte
+         *            PSK. Empty (default) writes no key and the node joins the public network.
+         * @param[in] private_network_id Optional public private-network identity written as the
+         *            "private_network_id" key — 0x-prefixed hex of exactly 32 bytes (D-01/D-02).
+         *            Empty (default) writes no key. LoadNetworkConfig rejects a config that
+         *            provisions exactly one of private_network_id / network_key.
+         * @param[in] network_bootstrap_peers Optional offline-provisioned initial NetworkRegistry
+         *            membership written as the "network_bootstrap_peers" array (libp2p PeerId
+         *            base58 strings). Empty (default) writes no array.
          * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
          *         tests and examples do not depend on the host LAN.
          */
-        static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
-                                                         uint16_t           port_seed,
-                                                         bool               auto_dht );
+        static outcome::result<void> WriteNetworkConfig( const std::string              &base_path,
+                                                         uint16_t                        port_seed,
+                                                         bool                            auto_dht,
+                                                         const std::string              &network_key             = "",
+                                                         const std::string              &private_network_id      = "",
+                                                         const std::vector<std::string> &network_bootstrap_peers = {} );
 
         /**
          * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
@@ -185,6 +212,9 @@ namespace sgns
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            WAITING_FOR_TRUST_GENESIS, ///< Networking is live but no durable trust genesis exists.
+            WAITING_FOR_BURN_GENESIS,  ///< Trust genesis is durable but initial burn quorum is pending.
+            FATAL_TRUST_MISMATCH,      ///< Durable trust state cannot safely start for this network.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
@@ -215,15 +245,11 @@ namespace sgns
         /**
          * @brief Deployment node role, read from sgns_config.json ("node_type").
          *
-         * Drives the derived is_full_node_ flag (Full/Archive -> true, Light -> false).
-         * Co-located with NodeState/Error per CFG-02.
+         * Defined in account/NodeType.hpp so the lower layers that consume it
+         * (TransactionManager, MigrationManager) need not include this facade.
+         * Aliased here for source compatibility with GeniusNode::NodeType call sites.
          */
-        enum class NodeType : uint8_t
-        {
-            Full    = 0, ///< Full node (is_full_node_ = true).
-            Light   = 1, ///< Light node (is_full_node_ = false). Default on missing/unknown key.
-            Archive = 2, ///< Archive node (is_full_node_ = true; behavior identical to Full this milestone).
-        };
+        using NodeType = ::sgns::NodeType;
 
 #ifdef SGNS_DEBUG
         static constexpr std::chrono::milliseconds TIMEOUT_ESCROW_PAY{ 50000 }; ///< Debug escrow payout timeout.
@@ -255,18 +281,33 @@ namespace sgns
         bool IsAutodhtEnabled() const noexcept;
 
         /**
-         * @brief Returns whether this node runs in full-node mode after config resolution.
-         * @return The resolved @c is_full_node_ (derived from @c node_type_ in the
-         *         AccountSource constructor: Full/Archive -> true, Light -> false).
-         *         Test/read-only observable; does not mutate state.
+         * @brief Returns whether this node's role is Full.
+         * @return True only for @c NodeType::Full. Derived from @c node_type_;
+         *         test/read-only observable; does not mutate state.
+         *
+         * @note This is a role check, not a capability check. Archive replicates
+         *       network-wide data just like Full but is not a Full node — for the
+         *       "does it store everything" question use @c ReplicatesAllAccounts,
+         *       and for "does it do the work" use @c ParticipatesInConsensus
+         *       (both in account/NodeType.hpp, taking @ref GetNodeType).
          */
-        bool IsFullNode() const noexcept;
+        bool IsFullNode() const noexcept
+        {
+            return node_type_ == NodeType::Full;
+        }
 
         /**
          * @brief Returns the resolved node role.
          * @return The @c node_type_ read from sgns_config.json (default Light). Read-only observable.
          */
         NodeType GetNodeType() const noexcept;
+
+        /**
+         * @brief Returns whether processing services run after config resolution.
+         * @return The resolved @c isprocessor_ (the @c is_processor key, forced to false for
+         *         Archive nodes). Test/read-only observable; does not mutate state.
+         */
+        bool IsProcessor() const noexcept;
 
         /**
          * @brief Adds an account to local storage using an Ethereum private key.
@@ -352,7 +393,7 @@ namespace sgns
          * @param[in] procmgr Processing manager containing parsed request data.
          * @return Estimated cost in minions, or 0 when the request size, price, or cost calculation fails.
          */
-        uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );
+        uint64_t GetProcessCost( const sgns::sgprocessing::ProcessingManager &procmgr );
 
         /**
          * @brief Basis points of an escrow payout burned to the zero address during release.
@@ -441,6 +482,42 @@ namespace sgns
         void AddPeers( const std::vector<std::string> &peers );
 
         /**
+         * @brief Blocks a peer at the connection-gater level.
+         *
+         * Blocked peers are rejected at every stage of the connection upgrade
+         * pipeline (dial, secured, upgraded). Existing connections are not
+         * terminated; the block applies to new connection attempts. No-op
+         * (with a warning) when PubSub is not running.
+         * @param[in] peer_id Peer ID (base58) of the peer to block.
+         */
+        void BlockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Blocks several peers at the connection-gater level.
+         * @param[in] peer_ids Peer IDs (base58) of the peers to block.
+         */
+        void BlockPeers( const std::vector<std::string> &peer_ids );
+
+        /**
+         * @brief Removes a peer from the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) of the peer to unblock.
+         */
+        void UnblockPeer( const std::string &peer_id );
+
+        /**
+         * @brief Checks whether a peer is in the connection-gater deny list.
+         * @param[in] peer_id Peer ID (base58) to check.
+         * @return True when the peer is blocked (false when PubSub is not running).
+         */
+        bool IsPeerBlocked( const std::string &peer_id ) const;
+
+        /**
+         * @brief Returns all peers currently blocked by the connection gater.
+         * @return Base58 peer IDs in the deny list (empty when PubSub is not running).
+         */
+        std::vector<std::string> GetBlockedPeers() const;
+
+        /**
          * @brief Starts or restarts the background UPnP port refresh thread.
          * @param[in] pubsubport TCP port to keep mapped through UPnP.
          */
@@ -473,6 +550,30 @@ namespace sgns
          * @return Local UTXO balance for @p address and @p token_id.
          */
         uint64_t GetBalance( TokenID token_id, const std::string &address );
+
+        /**
+         * @brief Returns a child wallet's balance for a specific token, read from
+         *        the locally-synced CRDT UTXO view. Thin alias over GetBalance
+         *        targeting @p child_address — no registration check is performed.
+         * @param[in] child_address Address of the child wallet to query.
+         * @param[in] token_id Token identifier to filter by (the child's own DevConfig
+         *            token, not necessarily this node's dev_config_.TokenID).
+         * @return Local UTXO balance for @p child_address and @p token_id.
+         * @note A return value of 0 is ambiguous — it may mean the address genuinely
+         *       has no balance, or that CRDT sync has not yet propagated the child's
+         *       UTXOs to this node. No sync-status distinction is provided.
+         */
+        uint64_t GetChildBalance( const std::string &child_address, TokenID token_id );
+
+        /**
+         * @brief Returns a child wallet's total balance across all tokens, read from
+         *        the locally-synced CRDT UTXO view.
+         * @param[in] child_address Address of the child wallet to query.
+         * @return Total local UTXO balance (GNUS base units) for @p child_address,
+         *         summed across all tokens.
+         * @note Same 0-ambiguity caveat as the token-filtered overload applies.
+         */
+        uint64_t GetChildBalance( const std::string &child_address );
 
         /**
          * @brief Returns serialized incoming transactions known to the transaction manager.
@@ -558,6 +659,124 @@ namespace sgns
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
         /**
+         * @brief Registers a child wallet under a main wallet address.
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @param[in] sequence      Registration sequence number.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata,
+                                                    uint64_t                             sequence );
+
+        /**
+         * @brief Registers this node as a child of main_address with auto-derived sequence.
+         *
+         * Reads the existing reg/ CRDT record for this node and increments the
+         * sequence automatically. Caller-supplied sequence variant is available
+         * for tests and replay scenarios.
+         *
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address and
+         *        waits for the transaction to finalize (D-60/D-62/CONS-02).
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RecoverFromChild( const std::string        &child_address,
+                                                                            uint64_t                  amount,
+                                                                            TokenID                   token_id,
+                                                                            std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address,
+         *        without waiting for finalization.
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @return Transfer transaction hash on success, or a readiness, balance, or submission error.
+         */
+        outcome::result<std::string> RecoverFromChild( const std::string &child_address,
+                                                       uint64_t           amount,
+                                                       TokenID            token_id );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
+         * @param[in] new_main_address    New main wallet public address (128-hex).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata,
+                                                  uint64_t                             sequence,
+                                                  uint64_t                             supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         * @param[in] new_main_address New main wallet public address (128-hex).
+         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Revokes a registered child wallet and waits for the transaction to finalize (D-36).
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RevokeChild( const std::string        &child_address,
+                                                                       std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Revokes a registered child wallet, without waiting for finalization.
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RevokeChild( const std::string &child_address );
+
+        /**
+         * @brief Enumerates child registrations naming a specific main wallet.
+         *
+         * Scans the reg/ CRDT namespace and returns entries whose main_address matches.
+         *
+         * @param[in] main_address Main wallet public address (128-hex) to query for.
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
+
+        /**
          * @brief Transfers funds to the configured developer address.
          * @param[in] amount Amount to transfer in token base units.
          * @param[in] token_id Token identifier to transfer.
@@ -603,6 +822,16 @@ namespace sgns
         }
 
         /**
+         * @brief Returns the shared GraphSync network used by the node's GlobalDBs.
+         * @return Shared graphsync Network instance; inbound graphsync for this
+         *         host is dispatched through its registered protocol handler.
+         */
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> GetGraphsyncNetwork()
+        {
+            return graphsyncnetwork_;
+        }
+
+        /**
          * @brief Releases processing service, core, queue, and result-storage references.
          */
         void ResetProcessingMembers();
@@ -645,33 +874,18 @@ namespace sgns
         void StartProcessing();
 
         /**
-         * @brief Retrieves current USD prices for token identifiers, using a short local cache.
+         * @brief Retrieves current USD prices for token identifiers via the
+         * lazily constructed LocalPriceManager (L1 cache, coalescing, and the
+         * four-tier fallback chain). Ids the chain cannot serve stay absent
+         * from the map; failure is returned only when nothing is servable.
          * @param[in] tokenIds CoinGecko token identifiers to price.
          * @return Map from token identifier to current USD price, or a price-retrieval error.
+         * @note BLOCKING (D-08): parks the caller up to the tier-retry worst
+         * case when both tiers time out; never call from io callbacks or the
+         * manager's runner thread. The first call also pays one-time manager
+         * construction.
          */
         outcome::result<std::map<std::string, double>> GetCoinprice( const std::vector<std::string> &tokenIds );
-
-        /**
-         * @brief Retrieves historical USD prices for token identifiers at exact timestamps.
-         * @param[in] tokenIds CoinGecko token identifiers to price.
-         * @param[in] timestamps Unix timestamps to query.
-         * @return Nested map from token identifier to timestamp to USD price.
-         */
-        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPriceByDate(
-            const std::vector<std::string> &tokenIds,
-            const std::vector<int64_t>     &timestamps );
-
-        /**
-         * @brief Retrieves historical USD prices for token identifiers over a date range.
-         * @param[in] tokenIds CoinGecko token identifiers to price.
-         * @param[in] from Start Unix timestamp for the range.
-         * @param[in] to End Unix timestamp for the range.
-         * @return Nested map from token identifier to timestamp to USD price.
-         */
-        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPricesByDateRange(
-            const std::vector<std::string> &tokenIds,
-            int64_t                         from,
-            int64_t                         to );
 
         /**
          * @brief Waits for an incoming transaction to be processed.
@@ -752,6 +966,12 @@ namespace sgns
         std::string GetAuthorizedFullNodeAddress() const;
 
         /**
+         * @brief Returns the stored CID of the selected genesis block.
+         * @return Genesis CID on success, or std::errc::not_connected when the blockchain service is not available.
+         */
+        outcome::result<std::string> GetGenesisCID() const;
+
+        /**
          * @brief Returns the current GeniusNode lifecycle state.
          * @return Current node state.
          */
@@ -760,9 +980,14 @@ namespace sgns
             return state_.load();
         }
 
+        [[nodiscard]] bool                     IsTrustEconomicallyReady() const;
+        [[nodiscard]] bool                     CanApproveTrustSuccessors() const;
+        [[nodiscard]] std::vector<std::string> GetCurrentTrustedPeers() const;
+
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
+        friend class ChildRegTestAccess;
         friend class GeniusNodeTestAccess;
 
         /**
@@ -772,40 +997,187 @@ namespace sgns
          */
         void SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
 
-        std::string                    write_base_path_; ///< Base path for node databases, logs, and account storage.
-        std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
+        std::string write_base_path_; ///< Base path for node databases, logs, and account storage.
 
     private:
+        // ─────────────────────────────────────────────────────────────────────────────
+        // Runtime object graph — OWNERSHIP ORDER.
+        //
+        // The chain, provider first:
+        //   io_context -> PubSub -> GeniusAccount (its AccountMessenger owns PubSub
+        //   subscriptions) -> scheduler/generator/GraphSync -> Bitswap -> GlobalDB
+        //   -> Blockchain -> bridge -> quorum -> TransactionManager -> processing
+        //   -> timers and observers.
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        std::shared_ptr<soralog::LoggingSystem>
+            logging_system_; ///< libp2p logging system; outlives everything that logs.
+
+        /**
+         * One published account generation.  The two owners and their generation
+         * are copied together while holding lifecycle_mutex_; callers must not
+         * reconstruct this tuple from the individual member shared_ptrs.
+         */
+        struct AccountServiceSnapshot
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            uint64_t                            generation = 0;
+            /// Catchup-callback owner generation sampled under the same lifecycle
+            /// lock as the rest of the tuple — always consistent with `generation`.
+            uint64_t                            catchup_generation = 0;
+        };
+
+        /** Immutable address/key binding used by node-scoped trust policy. Pins the
+         *  genesis account so trust signatures survive SelectAccount (CR-12). */
+        struct NodeTrustSigner
+        {
+            std::string                    address;
+            std::shared_ptr<GeniusAccount> authority;
+
+            std::vector<uint8_t> Sign( const std::vector<uint8_t> &bytes ) const
+            {
+                return authority ? authority->Sign( bytes ) : std::vector<uint8_t>{};
+            }
+        };
+
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                     io_work_guard_;     ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
+            io_work_guard_; ///< Keeps @ref io_ alive.
+
+        /// PubSub's own io_context, retained across teardown.
+        /// It must outlive @ref graphsyncnetwork_, hence the declaration here, above it.
+        std::shared_ptr<boost::asio::io_context>   pubsub_context_keepalive_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_; ///< PubSub networking service.
+
+        /// Retained copy of the gossip host keypair loaded in StartPubSub
+        /// (CR-G01): private-network publishes are sealed with this key
+        /// (broadcaster + processing channels) so the envelope-embedded public
+        /// key derives the from-field PeerId every gated receiver checks.
+        /// Unused on public nodes (no membership filter installed).
+        std::shared_ptr<const libp2p::crypto::KeyPair> gossip_signing_keypair_;
+
+    protected:
+        /// Active account used by node services. Declared after @ref pubsub_ because
+        /// GeniusAccount owns an AccountMessenger holding PubSub subscriptions.
+        std::shared_ptr<GeniusAccount> account_;
+
+    private:
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_; ///< GraphSync network.
+
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
-        std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap; borrows the PubSub host and the bus.
+
+        std::shared_ptr<crdt::GlobalDB>   tx_globaldb_;       ///< Transaction/global state CRDT DB.
+        /// Serializes lifecycle work while permitting the existing synchronous nested transitions.
+        mutable std::recursive_mutex lifecycle_mutex_;
+        /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
+        uint64_t account_service_generation_ = 0;
+        bool     account_service_switching_  = false;
+
+        /// Generation-scoped submission lease: an API call that validated an
+        /// account-service snapshot and is about to drive a long TransactionManager
+        /// submission (UTXO reservation through enqueue) holds a lease, so
+        /// SelectAccount() drains in-flight submissions before stopping the manager
+        /// instead of stranding a returned transaction hash that will never be
+        /// processed. Dedicated mutex (NOT lifecycle_mutex_) so the drain
+        /// condition_variable never waits on the recursive lifecycle lock.
+        /// @note Lock order: lifecycle_mutex_ -> submission_lease_mutex_ only.
+        void AcquireSubmissionLease();
+        void ReleaseSubmissionLease();
+        bool WaitForSubmissionLeasesToDrain( std::chrono::milliseconds timeout );
+        std::mutex              submission_lease_mutex_;
+        std::condition_variable submission_leases_cv_;
+        size_t                  active_submission_leases_      = 0;
+        std::chrono::milliseconds submission_lease_drain_timeout_{ std::chrono::milliseconds( 30000 ) };
+
+        /// RAII holder for one submission lease. Acquire() is called while
+        /// lifecycle_mutex_ is held so lease ownership is atomic with the snapshot
+        /// validation in the same critical section; a switch cannot begin between
+        /// the two.
+        class SubmissionLease
+        {
+        public:
+            explicit SubmissionLease( GeniusNode &node ) : node_( node ) {}
+            ~SubmissionLease()
+            {
+                if ( held_ )
+                {
+                    node_.ReleaseSubmissionLease();
+                }
+            }
+            SubmissionLease( const SubmissionLease & )            = delete;
+            SubmissionLease &operator=( const SubmissionLease & ) = delete;
+            void Acquire()
+            {
+                node_.AcquireSubmissionLease();
+                held_ = true;
+            }
+        private:
+            GeniusNode &node_;
+            bool        held_ = false;
+        };
+        /// State currently executing inside StateTransition; nested transitions temporarily replace it.
+        std::optional<NodeState> transition_in_progress_;
+        /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
+        uint64_t transition_epoch_ = 0;
+        /// Per-node diagnostics and callback ownership generation for TransactionManager lifetimes.
+        std::atomic<uint64_t> transaction_manager_construction_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_start_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_owner_generation_{ 0 };
+        std::atomic<uint64_t> account_transaction_callback_owner_generation_{ 0 };
+        std::atomic<uint64_t> blockchain_slot_hash_owner_generation_{ 0 };
+        std::atomic<uint64_t> catchup_callback_owner_generation_{ 0 };
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
-        std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
-        std::shared_ptr<BridgeRelayer>                   bridge_relayer_;    ///< Bridge burn→mint relayer.
-        std::shared_ptr<processing::ProcessingTaskQueue> task_queue_;        ///< Processing task queue.
-        std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
-        static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
+
+        /// Declared before @ref transaction_manager_, which borrows it.
+        std::shared_ptr<Blockchain>           blockchain_;        ///< Blockchain service.
+        std::shared_ptr<eth::EthWatchService> eth_watch_service_; ///< Shared EVM event watcher.
+        std::shared_ptr<BridgeRelayer>        bridge_relayer_;    ///< Bridge burn→mint relayer.
+
+        /// Quorum trio. ~BurnConfig and ~TrustedPeerRegistry each call Unregister(),
+        /// which needs SecureCrdt alive — hence SecureCrdt is declared first and so
+        /// destroyed last. On the teardown path this is the only thing that
+        /// unregisters them; ShutdownAccountBoundServices(_, release_members=false)
+        /// deliberately does not.
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        /// D-06/D-07 (15-05): per-privateNetworkId membership authority, constructed only
+        /// when private_network_id_ is provisioned. Declared after trusted_peer_registry_
+        /// for the same destructor-ordering reason as the rest of the quorum trio: its
+        /// destructor calls Unregister(), which needs SecureCrdt alive (destroyed last).
+        std::shared_ptr<sgns::networkregistry::NetworkRegistry> network_registry_;
+        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
+
+        std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction service.
+
+        std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
-        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
-        std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
-        bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
-        bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
-        NodeType node_type_ =
-            NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
-        base::Logger     node_logger_;                            ///< Main node logger.
-        GeniusNodeConfig dev_config_;                             ///< Runtime node configuration.
-        std::string      ipfs_cache_dir_          = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
-        bool             mirror_results_          = false; ///< Whether to mirror processing results from other nodes.
-        int              result_retention_hours_  = 168;   ///< Hours to retain results before GC (0 = keep forever).
-        int              result_retention_max_mb_ = 0;     ///< Max MB for result cache (0 = no space cap).
+        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
+
+        std::shared_ptr<ChainRpcEndpointProvider>
+            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
+        std::unique_ptr<evmwatcher::BridgeCatchupWatcher>
+            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns.
+        std::unique_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
+
+        // ───────────────────────────── end ownership order ────────────────────────────
+
+        std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
+        static constexpr size_t  kMyTasksMemoryLimit = 50;       ///< Max task IDs kept in @ref my_task_ids_.
+        bool                     autodht_;                       ///< Whether DHT discovery is enabled.
+        bool                     isprocessor_;                   ///< Whether processing service should run.
+        NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
+        base::Logger             node_logger_;                   ///< Main node logger.
+        GeniusNodeConfig         dev_config_;                    ///< Runtime node configuration.
+        std::string              ipfs_cache_dir_ = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool                     mirror_results_ = false; ///< Whether to mirror processing results from other nodes.
+        int result_retention_hours_              = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int result_retention_max_mb_             = 0;     ///< Max MB for result cache (0 = no space cap).
 
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
 
@@ -813,17 +1185,8 @@ namespace sgns
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex catchup_mutex_;
-        std::shared_ptr<ChainRpcEndpointProvider>
-            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
-        std::shared_ptr<evmwatcher::BridgeCatchupWatcher>
-            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns (replaces PerformStartupCatchupScan).
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
-        /// Generation token for async bridge init. Incremented on account
-        /// switch; the posted Initialize() job captures the value at post time
-        /// and aborts if it is stale — so a reset transaction_manager_ /
-        /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t> bridge_init_generation_{ 0 };
         std::string           gnus_network_full_path_;       ///< Versioned network DB path.
         std::string           processing_channel_topic_;     ///< Processing task channel topic.
         std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
@@ -845,20 +1208,29 @@ namespace sgns
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
-        std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
-
-        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
-        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
-        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
-
-        std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>
+            trust_state_store_; ///< Durable network-scoped trust authority.
+        std::shared_ptr<sgns::account::TrustStartupController>
+            trust_startup_controller_; ///< Restricted boot state machine.
+        /// Created once with the policy controller; SelectAccount never mutates it.
+        std::shared_ptr<const NodeTrustSigner> trust_signer_;
+        /// Private-network (pnet) PSK from network_config.json ("network_key"); empty = public network.
+        std::string network_key_;
+        /// Public private-network identity from network_config.json ("private_network_id",
+        /// 0x-prefixed hex of exactly 32 bytes); empty = public network. Intentionally distinct
+        /// from network_key_ (D-02): this value drives identity/CRDT paths, never transport.
+        std::string private_network_id_;
+        /// Offline-provisioned initial NetworkRegistry membership from network_config.json
+        /// ("network_bootstrap_peers", libp2p PeerId base58 strings); consumed when
+        /// private_network_id_ is set.
+        std::vector<std::string> network_bootstrap_peers_;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
-         *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
+         *        resolves node_type_ (the init-order hinge fix, INTF-03).
          *
          * Account creation runs via std::visit over the AccountSource variant, with
-         * is_full_node_ already derived. Throws std::runtime_error on account-restore
+         * node_type_ already resolved. Throws std::runtime_error on account-restore
          * failure; the public New(dev_config, AccountSource) catches and returns nullptr (D-04).
          * Old private constructor above is retained this phase (deleted in Phase 3).
          *
@@ -914,7 +1286,8 @@ namespace sgns
          *            OS-assigned ephemeral port. Fallback when the
          *            @c port_seed key is absent from @c network_config.json; overridable by
          *            that key when present (config wins, param is fallback).
-         * @param[in] is_full_node Whether to use full-node connection limits.
+         * @param[in] node_type Node role; drives the connection-limit water marks
+         *            (replicating roles — Full and Archive — get the higher limits).
          * @return True when network initialization succeeds.
          *
          * @par Port resolution priority
@@ -926,7 +1299,83 @@ namespace sgns
          *      @c GenerateRandomPort(port_seed, account_address), except zero which first
          *      resolves an OS-selected ephemeral port.
          */
-        bool InitNetwork( uint16_t port_seed, bool is_full_node );
+        bool InitNetwork( uint16_t port_seed, NodeType node_type );
+
+        /**
+         * @brief Network knobs resolved from @c network_config.json, passed between the
+         *        InitNetwork helpers. Members the node owns outright (@c autodht_,
+         *        @c bootstrap_peers_, @c reconnect_config_) are written directly instead.
+         */
+        struct NetworkSettings
+        {
+            std::string bind_address = "0.0.0.0"; ///< PubSub bind address ("pubsub_bind_address").
+            bool        upnp_enabled = true;      ///< Whether UPnP/IGD mapping is attempted.
+            int         high_water   = 0;         ///< Connection-manager high water mark.
+            int         low_water    = 0;         ///< Connection-manager low water mark.
+            uint16_t    config_port  = 0;         ///< "pubsub_port" override; zero when unset.
+            uint16_t    port_seed    = 0;         ///< "port_seed", or the constructor param when the key is absent.
+            std::string network_key;              ///< "network_key" pnet PSK; empty = public network.
+            ///< "private_network_id" public Ed25519 identity from the license NFT (D-01/D-02);
+            ///< 0x-prefixed hex of exactly 32 bytes; empty = public network.
+            std::string private_network_id;
+            ///< "network_bootstrap_peers" offline-provisioned initial NetworkRegistry membership
+            ///< (libp2p PeerId base58 strings); consumed when private_network_id is set.
+            std::vector<std::string> network_bootstrap_peers;
+            bool valid = true; ///< False when a fatal config divergence (malformed private_network_id
+                               ///< or a half-provisioned private_network_id/network_key pair) must
+                               ///< abort node start instead of silently running a misidentified node.
+        };
+
+        /**
+         * @brief Reads @c network_config.json, applying every key that is present and well-typed.
+         * @param[in] port_seed Fallback seed, returned in @c NetworkSettings::port_seed unless a
+         *            valid @c port_seed key overrides it.
+         * @param[in] node_type Node role; seeds the default water marks before any config override.
+         * @return Settings with defaults for absent or ill-typed keys.
+         *
+         * Also repopulates @c bootstrap_peers_ and updates @c autodht_ / @c reconnect_config_.
+         */
+        NetworkSettings LoadNetworkConfig( uint16_t port_seed, NodeType node_type );
+
+        /**
+         * @brief A parsed bootstrap peer set: the PeerInfos to dial and their IDs for lookup.
+         */
+        struct BootstrapPeers
+        {
+            std::vector<libp2p::peer::PeerInfo>      infos; ///< Successfully parsed peers, in input order.
+            std::unordered_set<libp2p::peer::PeerId> ids;   ///< The same peers' IDs, for membership tests.
+        };
+
+        /**
+         * @brief Resolves multiaddr strings into the peer set used for reconnection tracking.
+         * @param[in] addresses Multiaddr strings to parse; unparseable entries are warned and skipped.
+         * @param[in] kind Role word used in log messages ("fullnode" or "peer").
+         * @return The parsed peers; empty when @p addresses is empty or nothing parsed.
+         */
+        BootstrapPeers ParseBootstrapPeers( const std::vector<std::string> &addresses, std::string_view kind ) const;
+
+        /**
+         * @brief Derives @c base58key_, then creates and starts PubSub on @ref pubsubport_.
+         * When @c settings.network_key is non-empty, PubSub is created via the private-network
+         * (pnet) constructor so every connection passes the PSK boundary; nodes holding a
+         * different key cannot communicate with this node.
+         * @param[in] settings Resolved network settings (bind address, water marks, optional pnet key).
+         * @return True on success; on failure PubSub is stopped and reset before returning false.
+         */
+        bool StartPubSub( const NetworkSettings &settings );
+
+        /**
+         * @brief Adopts the OS-assigned TCP port into @ref pubsubport_ after an ephemeral bind.
+         * @param[in] interface_address Multiaddr reported by PubSub once listening.
+         * @return True when a non-zero port was recovered.
+         */
+        bool AdoptEphemeralPort( const std::string &interface_address );
+
+        /**
+         * @brief Brings up Bitswap, the FileManager singletons, and the GraphSync network.
+         * @note Requires a started PubSub; uses its libp2p host.
+         */
+        void InitContentExchange();
 
         /**
          * @brief Loads the CRDT configuration.
@@ -950,6 +1399,23 @@ namespace sgns
          * @return True when processing modules are constructed.
          */
         bool InitProcessingModules();
+
+        /**
+         * @brief Returns the processing channel topic scoped to this node's network identity.
+         * @return PROCESSING_CHANNEL unchanged when public; PROCESSING_CHANNEL + "/" +
+         *         private_network_id when the node belongs to a private network. Used at every
+         *         listen/commit/construction site so replication follows the scoped channel.
+         */
+        std::string ScopedProcessingChannel() const;
+
+        /**
+         * @brief Returns the processing grid topic scoped to this node's network identity.
+         * @return PROCESSING_GRID_CHANNEL unchanged when public; PROCESSING_GRID_CHANNEL + "/" +
+         *         private_network_id when scoped. Feeds the job-discovery DHT CID derivation
+         *         (DHTInit) and the grid subscription (StartProcessing) so a private network's
+         *         job discovery stops colliding with the public DHT advertisement.
+         */
+        std::string ScopedProcessingGridChannel() const;
 
         /**
          * @brief Begins the asynchronous database migration and initialization state flow.
@@ -995,6 +1461,13 @@ namespace sgns
          */
         void InitializeAndStartBridge();
 
+        /** Copy the one published account/manager generation, or an empty snapshot while switching. */
+        [[nodiscard]] AccountServiceSnapshot SnapshotAccountServices() const;
+
+        /** Recheck a captured generation under the lifecycle lock before an asynchronous side effect. */
+        bool ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
+                                            const std::function<void()>  &side_effect );
+
         /**
          * @brief IBridgeInitObserver callback — stores chain list for catch-up scan.
          * @param[in] chains  Chain/contract pairs discovered during initialization.
@@ -1008,6 +1481,14 @@ namespace sgns
         void ShutdownForDestruction();
 
         /**
+         * @brief Releases the runtime object graph after all node I/O threads have stopped.
+         *
+         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
+         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         */
+        void ReleaseRuntimeMembersAfterIoStopped();
+
+        /**
          * @brief Stops account-bound runtime services in dependency order.
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
          * @param[in] release_members Whether to release service owners immediately after stopping them.
@@ -1015,17 +1496,23 @@ namespace sgns
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
 
         /**
-         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         * @brief Stops and releases the current TransactionManager and every callback owner it installed.
+         *
+         * Must complete before TransactionManager::New registers replacement callbacks on the shared
+         * GlobalDB, account, or blockchain objects.
          */
-        void ResetQuorumMembers();
+        void ReleaseTransactionManagerOwnership();
 
         /**
-         * @brief Releases the runtime object graph after all node I/O threads have stopped.
-         *
-         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
-         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         * @brief Unregisters and releases node-scoped policy services during full shutdown only.
+         * @param[in] global_db_shutdown_follows True only on the destruction route, where the
+         *            caller shuts the GlobalDB down immediately after this call: the broadcaster
+         *            membership filter is cleared back to the raw state. False (the
+         *            policy-stack failure paths) leaves the GlobalDB running indefinitely, so a
+         *            private node's gossip ingest is set to deny-all instead (CR-C2-01
+         *            fail-closed); public nodes never install a filter, so the clear is a no-op.
          */
-        void ReleaseRuntimeMembersAfterIoStopped();
+        void ShutdownNodePolicyServices( bool global_db_shutdown_follows = false );
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
@@ -1034,7 +1521,7 @@ namespace sgns
         /**
          * @brief Starts DHT provider discovery for the processing grid topic.
          */
-        void DHTInit();
+        outcome::result<void> DHTInit();
 
         /**
          * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
@@ -1076,29 +1563,47 @@ namespace sgns
          */
         void PerformHealthCheck();
 
-        struct PriceInfo
-        {
-            double                                             price;      ///< Cached USD token price.
-            std::chrono::time_point<std::chrono::system_clock> lastUpdate; ///< Time when @ref price was fetched.
-        };
+        /**
+         * @brief Queries libp2p connectedness for @p peer on the host's own io thread.
+         *
+         * libp2p's ConnectionManagerImpl keeps its connection table
+         * (`connections_`) in a bare unordered_map with no synchronisation: it
+         * assumes every access happens on the single io_context thread that owns
+         * the host. GossipPubSub runs that context on its own thread, while
+         * GeniusNode's scheduler runs on a separate io_context with several
+         * threads. Calling Host::connectedness() directly therefore walks the
+         * connection table while the pubsub thread erases from it during
+         * connect/disconnect churn, which segfaults on a torn shared_ptr.
+         *
+         * This helper posts the query onto the pubsub io_context and waits for
+         * the answer, so the table is only ever read on its owning thread. When
+         * the context is unavailable, already stopped, or when we are already
+         * running on it, the query runs inline (posting would deadlock).
+         *
+         * @param[in] peer Peer to query.
+         * @return Connectedness for @p peer, or NOT_CONNECTED when the query
+         *         could not be completed (shutdown in progress or timed out).
+         */
+        libp2p::Host::Connectedness HostConnectedness( const libp2p::peer::PeerInfo &peer ) const;
 
-        std::map<std::string, PriceInfo>                   m_tokenPriceCache; ///< Cached token price data by token id.
-        const std::chrono::minutes                         m_cacheValidityDuration{ 1 }; ///< Price cache TTL.
-        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{}; ///< Last external price API call time.
-        static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 }; ///< Minimum price API interval.
+        std::shared_ptr<LocalPriceManager> priceManager_{}; ///< Lazily constructed on first GetCoinprice (D-05); owns its own ioc+thread; explicitly reset early in ~GeniusNode.
 
-        static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
-        size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
-        std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
-        std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
-        std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_; ///< GraphSync network.
+        /// @brief Lazily construct the LocalPriceManager on first use.
+        /// Reads SGNS_COINGECKO_URL / SGNS_PRICE_FALLBACK_URL at construction
+        /// (D-01/D-03) and wires both PriceHttpClientSource tiers.
+        /// @return The shared manager instance (constructed on first call).
+        std::shared_ptr<LocalPriceManager> GetOrCreatePriceManager();
+
+        static constexpr size_t  DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
+        size_t                   io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
+        std::vector<std::thread> io_threads_;                            ///< Threads running @ref io_.
+        std::thread              upnp_thread;                            ///< Background UPnP refresh thread.
+        std::atomic<bool>        stop_upnp{ false };                     ///< UPnP thread stop flag.
+        std::string              base58key_;                             ///< Base58 key suffix for DB paths.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
+        std::atomic_uint blockchain_retry_count_{ 0 }; ///< Number of blockchain retries scheduled (test observable).
 
         // ── Bootstrap fullnode reconnection ──
         struct BootstrapReconnectConfig
@@ -1173,6 +1678,11 @@ sinks:
     - name: file
       type: file
       capacity: 1000
+      # buffer_size must stay near capacity * message size: Sink::push only calls
+      # async_flush() at 4/5 of it, so the 4Mb default made that threshold
+      # unreachable and left the sink waiting on its latency timer.
+      buffer_size: 131072
+      latency: 100
       path: [basepath]/sgnslog.log
 groups:
     - name: SuperGeniusNode
@@ -1208,5 +1718,12 @@ groups:
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );
+
+/// Lets a NodeState be passed straight to any spdlog/fmt call: `logger->debug( "state {}", state )`.
+template <>
+struct fmt::formatter<sgns::GeniusNode::NodeState> : formatter<std::string_view>
+{
+    format_context::iterator format( sgns::GeniusNode::NodeState state, format_context &ctx ) const;
+};
 
 #endif

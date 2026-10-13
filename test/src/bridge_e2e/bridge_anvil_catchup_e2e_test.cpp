@@ -51,6 +51,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 
@@ -82,11 +83,7 @@ namespace
     inline sgns::evmwatcher::BridgeCatchupWatcher::ChainsProvider MakeStandaloneChainsProvider()
     {
         return []() -> std::vector<sgns::ChainContractPair>
-        {
-            return { { "ethereum-sepolia",
-                       sgns::test::anvil::kSepoliaBridgeContractLower,
-                       kSepoliaChainIdNumeric } };
-        };
+        { return { { "ethereum-sepolia", sgns::test::anvil::kSepoliaBridgeContractLower, kSepoliaChainIdNumeric } }; };
     }
 
     /**
@@ -94,8 +91,8 @@ namespace
      * @param[in] anvil_rpc_url  Local Anvil HTTP RPC URL captured by the resolver.
      * @return Lambda matching BridgeCatchupWatcher::RpcUrlResolver signature.
      */
-    inline sgns::evmwatcher::BridgeCatchupWatcher::RpcUrlResolver
-    MakeStandaloneRpcResolver( const std::string &anvil_rpc_url )
+    inline sgns::evmwatcher::BridgeCatchupWatcher::RpcUrlResolver MakeStandaloneRpcResolver(
+        const std::string &anvil_rpc_url )
     {
         return [anvil_rpc_url]( const std::string &chain_id_str ) -> std::optional<std::string>
         {
@@ -112,18 +109,20 @@ namespace
      * @param[in,out] burn_count  Atomic counter captured by reference; incremented per burn.
      * @return Lambda matching BridgeCatchupWatcher::BurnProcessor signature.
      */
-    inline sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessor
-    MakeCountingBurnProcessor( std::atomic<uint64_t> &burn_count )
+    inline sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessor MakeCountingBurnProcessor(
+        std::atomic<uint64_t> &burn_count )
     {
         return [&burn_count]( const std::vector<eth::abi::AbiValue> &decoded_values,
-                              const std::string                       &tx_hash_hex,
-                              const std::string                       &chain_id_str ) -> bool
+                              const std::string                     &tx_hash_hex,
+                              const std::string                     &chain_id_str )
+            -> sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome
         {
-            (void)decoded_values;
-            (void)tx_hash_hex;
-            (void)chain_id_str;
+            (void) decoded_values;
+            (void) tx_hash_hex;
+            (void) chain_id_str;
             burn_count.fetch_add( 1ull, std::memory_order_relaxed );
-            return true;
+            // Counting only: report the burn as settled so the cursor advances as before.
+            return sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome::Processed;
         };
     }
 } // anonymous namespace
@@ -167,8 +166,8 @@ protected:
     /** @brief Developer payout address (DevConfig::Addr) shared by all catchup-test nodes. */
     static inline constexpr const char *kDevPayoutAddr = "0xcafe";
 
-    /** @brief Developer cut fraction (DevConfig::Cut) shared by all catchup-test nodes. */
-    static inline constexpr const char *kDevCutFraction = "0.65";
+    /** @brief Developer fraction (DevConfig::DevFraction) shared by all catchup-test nodes. */
+    static inline constexpr const char *kDevFraction = "0.35";
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all catchup-test nodes. */
     static inline constexpr const char *kDevTokenValue = "1.0";
@@ -180,6 +179,17 @@ protected:
 
     /** @brief Pre-node burn tx hashes seeded on the local Anvil fork before any node starts. */
     static std::vector<std::string> s_pre_node_burn_hashes;
+
+    /**
+     * @brief Address of node_main's account — the EXACT burn recipient.
+     *
+     * The pre-node burns pay EthereumKeyGenerator(kAnvilAccountHexKeys[0]).
+     * GetEntirePubValue(), the source key's own public point. node_main is created
+     * FromPrivateKey-from-storage with that EXACT key (seeded via
+     * SeedAccountWithExactKey), because NewFromPrivateKey's legacy derivation yields a
+     * DIFFERENT address that would never receive the mints.
+     */
+    static std::string s_receiving_address;
 
     /** @brief Anvil fork block (eth_blockNumber captured BEFORE pre-node burns per D-22). */
     static uint64_t s_fork_block;
@@ -214,6 +224,18 @@ protected:
     /** @brief Timeout for the auto-mint path after node READY (scan runs after CRDT sync). */
     static inline constexpr std::chrono::milliseconds kCatchupMintTimeout{ 30000 };
 
+    /**
+     * @brief Budget for Test A's full auto-mint sequence: the watcher's first poll plus
+     *        ONE consensus round per seeded burn.
+     *
+     * Mint proposals for the backfilled burns serialize through consensus (~6s per round
+     * measured on Linux Debug), so the budget must scale with kNumCatchupBurns. The flat
+     * kCatchupMintTimeout it replaced expired ~300ms before the third mint's certificate
+     * landed, failing at balance 2 of 3.
+     */
+    static inline constexpr std::chrono::milliseconds kCatchupAllMintsTimeout{
+        kCatchupMintTimeout + std::chrono::milliseconds{ kNumCatchupBurns * 20000 } };
+
     /** @brief > production 15s poll_interval; gates on node READY liveness for Test C (D-26). */
     static inline constexpr std::chrono::milliseconds kCatchupPollIntervalGate{ 16000 };
 
@@ -227,9 +249,9 @@ protected:
      *         Each index gets a distinct key so every node occupies a separate validator slot
      *         and PubSub peer id (mirrors bridge_anvil_e2e_test.cpp). */
     static inline constexpr const char *kAnvilAccountHexKeys[] = {
-        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",  // Account #0
-        "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",  // Account #1
-        "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",  // Account #2
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // Account #0
+        "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // Account #1
+        "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", // Account #2
     };
 
     /**
@@ -259,12 +281,25 @@ std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc1 = nullptr;
 std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc2 = nullptr;
 sgns::test::anvil::AnvilProcess BridgeAnvilCatchupE2ETest::s_anvil;
 std::vector<std::string>        BridgeAnvilCatchupE2ETest::s_pre_node_burn_hashes;
+std::string                     BridgeAnvilCatchupE2ETest::s_receiving_address;
 uint64_t                        BridgeAnvilCatchupE2ETest::s_fork_block = 0ull;
 
 std::array<GeniusNodeConfig, BridgeAnvilCatchupE2ETest::kNodeCount> BridgeAnvilCatchupE2ETest::s_configs = { {
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node1" },
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node2" },
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node3"},
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
+      BridgeAnvilCatchupE2ETest::kDevTokenValue,
+      sgns::TokenID::FromBytes( { 0x00 } ),
+      "./catchup_node1" },
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
+      BridgeAnvilCatchupE2ETest::kDevTokenValue,
+      sgns::TokenID::FromBytes( { 0x00 } ),
+      "./catchup_node2" },
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr,
+      BridgeAnvilCatchupE2ETest::kDevFraction,
+      BridgeAnvilCatchupE2ETest::kDevTokenValue,
+      sgns::TokenID::FromBytes( { 0x00 } ),
+      "./catchup_node3" },
 } };
 
 void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base_write_path )
@@ -276,10 +311,10 @@ void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base
     // node-owned watcher (Test A) doesn't scan from genesis.  0 is safe here
     // — s_fork_block is always > kCatchupBackfillWindow for Sepolia.
     const uint64_t creation_block = ( s_fork_block > kCatchupBackfillWindow )
-                                    ? ( s_fork_block - kCatchupBackfillWindow )
-                                    : 0ull;
+                                        ? ( s_fork_block - kCatchupBackfillWindow )
+                                        : 0ull;
 
-    std::string config_json( kBridgeChainsConfigTemplate );
+    std::string       config_json( kBridgeChainsConfigTemplate );
     const std::string placeholder( "__CREATION_BLOCK__" );
     const auto        pos = config_json.find( placeholder );
     if ( pos != std::string::npos )
@@ -310,7 +345,8 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     spdlog::info( "catchup_e2e: fork_url={}", fork_url );
 
     // D-01: start Anvil subprocess forking Sepolia.
-    ASSERT_TRUE( s_anvil.Start( fork_url ) ) << "Failed to start anvil subprocess";
+    ASSERT_TRUE( s_anvil.Start( fork_url, sgns::test::anvil::kAnvilPortBandCatchup ) )
+        << "Failed to start anvil subprocess";
 
     // D-04: poll Anvil readiness via cast block-number.
     ASSERT_TRUE( s_anvil.WaitForReady() ) << "Anvil did not become ready";
@@ -319,16 +355,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
     {
         s_anvil.Stop();
-        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
-                     << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
+        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of " << sgns::test::anvil::kGnusHolderSepolia
+                     << " — skipping";
     }
 
     // D-22: capture the Anvil fork block BEFORE sending any local burns.
     // cast block-number returns the current head, which is the Sepolia fork block.
     {
-        int          fork_exit_code  = 0;
+        int               fork_exit_code = 0;
         const std::string fork_block_str = sgns::test::anvil::RunShellCapture(
-            "cast block-number --rpc-url " + s_anvil.RpcUrl(), fork_exit_code );
+            "cast block-number --rpc-url " + s_anvil.RpcUrl(),
+            fork_exit_code );
         ASSERT_EQ( fork_exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
         ASSERT_FALSE( fork_block_str.empty() ) << "cast block-number returned empty output";
         s_fork_block = std::stoull( fork_block_str );
@@ -343,16 +380,26 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // races ahead and misses them.
     {
         ethereum::EthereumKeyGenerator key_gen( kAnvilAccountHexKeys[0] );
-        const std::string sgns_dest = key_gen.GetEntirePubValue();
-        spdlog::info( "catchup_e2e: derived SGNS destination {} from private key",
-                      sgns_dest.substr( 0, 16 ) );
+        const std::string              sgns_dest = key_gen.GetEntirePubValue();
+        spdlog::info( "catchup_e2e: derived SGNS destination {} from private key", sgns_dest.substr( 0, 16 ) );
 
-        spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil",
-                      kNumCatchupBurns );
+        // The burns above pay the source key's OWN public point. Seed the receiving
+        // account with that exact key so node_main (created FromPublicKey below)
+        // owns the burn recipient and the minted funds are spendable by it.
+        // NewFromPrivateKey's legacy derivation produces a different address and
+        // would never see these mints.
+        s_receiving_address = sgns::test::anvil::SeedAccountWithExactKey( kAnvilAccountHexKeys[0] );
+        ASSERT_FALSE( s_receiving_address.empty() )
+            << "Could not seed the receiving account with the exact burn-recipient key";
+        ASSERT_EQ( s_receiving_address, sgns_dest )
+            << "Seeded receiving account must own the burn destination";
+
+        spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
         for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
         {
-            const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-                s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), sgns_dest );
+            const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                              static_cast<uint64_t>( kMintAmount ),
+                                                                              sgns_dest );
             ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
             s_pre_node_burn_hashes.push_back( tx_hash );
             spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
@@ -362,10 +409,10 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     }
 
     // Per-node BaseWritePath from binary location (Plan 04.1-01 pattern), distinct subdirs.
-    const std::string binary_path   = boost::dll::program_location().parent_path().string();
-    s_configs[0].BaseWritePath = binary_path + kNode1Dir;
-    s_configs[1].BaseWritePath = binary_path + kNode2Dir;
-    s_configs[2].BaseWritePath = binary_path + kNode3Dir;
+    const std::string binary_path = boost::dll::program_location().parent_path().string();
+    s_configs[0].BaseWritePath    = binary_path + kNode1Dir;
+    s_configs[1].BaseWritePath    = binary_path + kNode2Dir;
+    s_configs[2].BaseWritePath    = binary_path + kNode3Dir;
 
     // Write per-node bridge_chains_config.json so ResolveBridgeChainsConfigPath() finds it at
     // priority 1 and OnRpcEndpointsReady populates catchup_chains_.
@@ -377,62 +424,118 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
 
     // Chainlist fetcher returning only the Anvil RPC endpoint, so the
     // catch-up scan queries the local fork instead of chainid.network.
-    const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
-    auto chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string> {
-        return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) +
-               kAnvilRpcUrl + R"("],"status":"active"}])";
+    const std::string kAnvilRpcUrl      = s_anvil.RpcUrl();
+    auto              chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string>
+    {
+        return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) + kAnvilRpcUrl +
+               R"("],"status":"active"}])";
     };
 
-    // Create ALL three nodes FIRST (matching Plan 04.1-01 pattern) so
-    // SetAdditionalGenesisValidatorAddresses has every address before the
-    // ValidatorRegistry initializes. The burn seeding happens AFTER the
-    // genesis validators are registered so the catch-up scan discovers the
-    // burns when it fires at READY.
+    // Create the Light nodes FIRST and register them as genesis validators before the
+    // Full node exists. A node starts initializing its blockchain inside New(), and
+    // EnsureValidatorRegistry() runs at blockchain construction — registering the
+    // genesis validator set AFTER construction races the async init and deadlocks the
+    // deferred blockchain start, so every address is derived up front here. The burn
+    // seeding happened BEFORE this point so the catch-up scan discovers the burns
+    // when it fires at READY. Each node carries a self-contained local trust policy
+    // (thresholds 1/1) so MakeNodeReadyWithLocalTrust can drive it to READY without
+    // a genesis ceremony.
     const char *kWNodeType[] = { "Full", "Light", "Light" };
 
-    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
-    node_main->SetChainlistFetcher( chainlist_fetcher );
+    const std::string proc1_address =
+        sgns::test::TrustAddressFromPrivateKey( s_configs[1].BaseWritePath, kAnvilAccountHexKeys[1] );
+    ASSERT_FALSE( proc1_address.empty() ) << "Could not derive node_proc1 trust address";
+    const std::string proc2_address =
+        sgns::test::TrustAddressFromPrivateKey( s_configs[2].BaseWritePath, kAnvilAccountHexKeys[2] );
+    ASSERT_FALSE( proc2_address.empty() ) << "Could not derive node_proc2 trust address";
+
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { proc1_address, proc2_address } );
+    // node_main is loaded from the pre-seeded storage (see SeedAccountWithExactKey
+    // above) so its address IS the burn destination; the authorized-full-node and
+    // trust-policy entries must use that exact address, not the KDF address
+    // NewFromPrivateKey(kAnvilAccountHexKeys[0]) would derive.
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( s_receiving_address );
+    spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
+                  s_receiving_address.substr( 0, 16 ) );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( s_configs[1].BaseWritePath,
+                                           kWNodeType[1],
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/true,
+                                           kAnvilAccountHexKeys[1] );
     node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
+    ASSERT_NE( node_proc1, nullptr ) << "Failed to create node_proc1";
     node_proc1->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, kWNodeType[2], /*is_processor=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( s_configs[2].BaseWritePath,
+                                           kWNodeType[2],
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/true,
+                                           kAnvilAccountHexKeys[2] );
     node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
+    ASSERT_NE( node_proc2, nullptr ) << "Failed to create node_proc2";
     node_proc2->SetChainlistFetcher( chainlist_fetcher );
 
-    // Register all node addresses as genesis validators IMMEDIATELY after node
-    // creation so the ValidatorRegistry bootstraps the genesis registry before
-    // the blockchain attempts to initialize (must be called before the genesis
-    // block is created).
-    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
-    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses(
-        { node_proc1->GetAddress(), node_proc2->GetAddress() } );
-    spdlog::info( "catchup_e2e: authorized full node = {}, +2 additional genesis validators",
-                  node_main->GetAddress().substr( 0, 16 ) );
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, /*port_seed=*/0, /*auto_dht=*/true );
+    sgns::test::WriteTrustedSgnsConfig( s_configs[0].BaseWritePath,
+                                        kWNodeType[0],
+                                        /*is_processor=*/false,
+                                        /*rpc_catchup=*/true,
+                                        { s_receiving_address },
+                                        s_receiving_address,
+                                        /*membership_threshold=*/1,
+                                        /*burn_threshold=*/1 );
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPublicKey{ s_receiving_address } );
+    ASSERT_NE( node_main, nullptr ) << "Failed to create node_main";
+    node_main->SetChainlistFetcher( chainlist_fetcher );
 
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
-    node_proc1->AddPeers(
-        { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc1->AddPeers( { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for the full node to reach READY. The BridgeCatchupWatcher polls
     // eth_getLogs independently on its own thread — no state machine coupling.
     // The watcher snapshots catchup_chains_ (populated by OnRpcEndpointsReady)
     // on each poll cycle and mints any discovered burns via MintTokens.
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
-        kNodeReadyTimeout,
-        "node_main READY",
-        nullptr );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_main );
 
     // Prime the validator URL map NOW (TM guaranteed READY) so the catch-up
     // scan queries eth_getLogs against http://127.0.0.1:18545 instead of real
     // Sepolia. Configure on all nodes for slot-based consensus.
+    {
+        sgns::WeightedRpcEndpoint ep_direct;
+        ep_direct.url                     = s_anvil.RpcUrl();
+        ep_direct.consensus_weight        = 100;
+        ep_direct.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
+        ep_direct.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
+
+        sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
+        ep_public1.consensus_weight          = 0;
+
+        sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
+        ep_public2.consensus_weight          = 0;
+
+        std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
+        // Prime node_main NOW (its TM is READY) so the catch-up scan queries
+        // eth_getLogs against the local Anvil instead of real Sepolia. The
+        // processors are still in their trust lifecycle here and would drop the
+        // call ("ConfigureRpcEndpoint called before transaction manager is
+        // ready"); they are primed after reaching READY below.
+        node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        spdlog::info( "catchup_e2e: primed node_main with {} Anvil RPC endpoints at {}",
+                      anvil_eps.size(),
+                      s_anvil.RpcUrl() );
+    }
+
+    // Wait for processor nodes to sync and reach READY.
+    sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 );
+    sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 );
+
+    // Now that the processors' transaction managers are ready, prime their
+    // validator URL maps as well so slot-based witness consensus on the mints
+    // reaches the 75-weight quorum against the local Anvil endpoint.
     {
         sgns::WeightedRpcEndpoint ep_direct;
         ep_direct.url                     = s_anvil.RpcUrl();
@@ -447,27 +550,12 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         ep_public2.consensus_weight = 0;
 
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
-        {
-            ( i == 0u ? node_main : ( i == 1u ? node_proc1 : node_proc2 ) )
-                ->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
-        }
-        spdlog::info( "catchup_e2e: primed {} nodes with {} Anvil RPC endpoints at {}",
-                      kNodeCount,
+        node_proc1->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        node_proc2->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        spdlog::info( "catchup_e2e: primed processor nodes with {} Anvil RPC endpoints at {}",
                       anvil_eps.size(),
                       s_anvil.RpcUrl() );
     }
-
-    // Wait for processor nodes to sync and reach READY.
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_proc1->GetState() == GeniusNode::NodeState::READY &&
-                   node_proc2->GetState() == GeniusNode::NodeState::READY;
-        },
-        kNodeReadyTimeout,
-        "processor nodes READY",
-        nullptr );
 
     spdlog::info( "catchup_e2e: 3-node cluster ready; auto-mint path armed" );
 }
@@ -513,7 +601,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
     // a scan) and provides zero coverage (WR-01).
     EXPECT_WAIT_FOR_CONDITION(
         [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
-        kCatchupMintTimeout,
+        kCatchupAllMintsTimeout,
         "Catch-up scan must mint all pre-node burns",
         nullptr );
 
@@ -547,24 +635,21 @@ TEST_F( BridgeAnvilCatchupE2ETest, PostForkScanMintsLocalBurns )
     cfg.start_block          = s_fork_block;
     cfg.max_blocks_per_query = kStandaloneMaxBlocksPerQuery;
 
-    const std::string anvil_url = s_anvil.RpcUrl();
+    const std::string anvil_url       = s_anvil.RpcUrl();
     auto              chains_provider = MakeStandaloneChainsProvider();
     auto              rpc_resolver    = MakeStandaloneRpcResolver( anvil_url );
     auto              burn_processor  = MakeCountingBurnProcessor( burn_count );
 
-    sgns::evmwatcher::BridgeCatchupWatcher watcher_b( cfg,
-                                                      []( const std::string & ) {},
-                                                      chains_provider,
-                                                      rpc_resolver,
-                                                      burn_processor );
+    sgns::evmwatcher::BridgeCatchupWatcher
+        watcher_b( cfg, []( const std::string & ) {}, chains_provider, rpc_resolver, burn_processor );
 
     // D-26 standalone-watcher driver: start, wait for scan to advance, stop.
     watcher_b.startWatching();
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return watcher_b.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > s_fork_block; },
-        kCatchupMintTimeout,
-        "Test B: GetLastProcessedBlock must advance past s_fork_block",
-        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&]()
+                               { return watcher_b.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > s_fork_block; },
+                               kCatchupMintTimeout,
+                               "Test B: GetLastProcessedBlock must advance past s_fork_block",
+                               nullptr );
     watcher_b.stopWatching();
 
     const uint64_t last_block = watcher_b.GetLastProcessedBlock( kSepoliaChainIdNumeric );
@@ -596,33 +681,31 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     const uint64_t phase2_start = ( s_fork_block >= 5ull ) ? ( s_fork_block - 5ull ) : 0ull;
 
     // ── PHASE 1: forward scan, 3 chunks × 1000 = 3000 blocks before fork ──
-    constexpr uint64_t kPhase1ScanWindow = kStandaloneMaxChunks * kStandaloneMaxBlocksPerQuery;
+    constexpr uint64_t    kPhase1ScanWindow = kStandaloneMaxChunks * kStandaloneMaxBlocksPerQuery;
     std::atomic<uint64_t> phase1_burn_count{ 0ull };
 
     sgns::evmwatcher::BridgeCatchupWatcher::Config cfg_phase1;
-    cfg_phase1.poll_interval        = kStandalonePollInterval;
-    cfg_phase1.start_block          = ( s_fork_block > kPhase1ScanWindow )
-                                      ? ( s_fork_block - kPhase1ScanWindow )
-                                      : 0ull;
+    cfg_phase1.poll_interval = kStandalonePollInterval;
+    cfg_phase1.start_block   = ( s_fork_block > kPhase1ScanWindow ) ? ( s_fork_block - kPhase1ScanWindow ) : 0ull;
     cfg_phase1.max_blocks_per_query = kStandaloneMaxBlocksPerQuery;
     cfg_phase1.max_chunks           = kStandaloneMaxChunks;
 
-    const std::string anvil_url_phase1 = s_anvil.RpcUrl();
+    const std::string anvil_url_phase1   = s_anvil.RpcUrl();
     auto              chains_provider_p1 = MakeStandaloneChainsProvider();
     auto              rpc_resolver_p1    = MakeStandaloneRpcResolver( anvil_url_phase1 );
     auto              burn_processor_p1  = MakeCountingBurnProcessor( phase1_burn_count );
 
-    sgns::evmwatcher::BridgeCatchupWatcher watcher_phase1( cfg_phase1,
-                                                           []( const std::string & ) {},
-                                                           chains_provider_p1,
-                                                           rpc_resolver_p1,
-                                                           burn_processor_p1 );
+    sgns::evmwatcher::BridgeCatchupWatcher watcher_phase1(
+        cfg_phase1,
+        []( const std::string & ) {},
+        chains_provider_p1,
+        rpc_resolver_p1,
+        burn_processor_p1 );
     watcher_phase1.startWatching();
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > 0ull; },
-        kCatchupMintTimeout,
-        "Test C Phase 1: forward scan must advance last block",
-        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > 0ull; },
+                               kCatchupMintTimeout,
+                               "Test C Phase 1: forward scan must advance last block",
+                               nullptr );
     watcher_phase1.stopWatching();
     const uint64_t phase1_last_block = watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric );
 
@@ -634,16 +717,17 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     cfg_phase2.start_block          = phase2_start;
     cfg_phase2.max_blocks_per_query = kStandaloneMaxBlocksPerQuery;
 
-    const std::string anvil_url_phase2 = s_anvil.RpcUrl();
+    const std::string anvil_url_phase2   = s_anvil.RpcUrl();
     auto              chains_provider_p2 = MakeStandaloneChainsProvider();
     auto              rpc_resolver_p2    = MakeStandaloneRpcResolver( anvil_url_phase2 );
     auto              burn_processor_p2  = MakeCountingBurnProcessor( phase2_burn_count );
 
-    sgns::evmwatcher::BridgeCatchupWatcher watcher_phase2( cfg_phase2,
-                                                           []( const std::string & ) {},
-                                                           chains_provider_p2,
-                                                           rpc_resolver_p2,
-                                                           burn_processor_p2 );
+    sgns::evmwatcher::BridgeCatchupWatcher watcher_phase2(
+        cfg_phase2,
+        []( const std::string & ) {},
+        chains_provider_p2,
+        rpc_resolver_p2,
+        burn_processor_p2 );
     watcher_phase2.startWatching();
     ASSERT_WAIT_FOR_CONDITION(
         [&]() { return watcher_phase2.GetLastProcessedBlock( kSepoliaChainIdNumeric ) >= phase2_start; },
@@ -684,11 +768,10 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     // LIVENESS GATE: gate on node READY liveness for the production watcher's
     // second-poll window to prove no double-mint occurred at the node level.
     // The poll window elapses BETWEEN balance_before and balance_after reads.
-    EXPECT_WAIT_FOR_CONDITION(
-        [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
-        kCatchupPollIntervalGate,
-        "node_main must remain READY for the full poll window (liveness + no double-mint)",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
+                               kCatchupPollIntervalGate,
+                               "node_main must remain READY for the full poll window (liveness + no double-mint)",
+                               nullptr );
 
     // Balance stability: production watcher must not double-mint on its second poll
     // because last_block_per_chain_ bridged the gap.

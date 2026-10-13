@@ -86,3 +86,23 @@ target_include_directories(sgns_version
 
 supergenius_install(sgns_version)
 
+
+# Header-only application-layer gossip payload authentication (CR-G01):
+# SealGossipPayload / OpenGossipPayload bind an envelope-embedded public key
+# to the PeerId derived from the gossip from-field and verify a signature over
+# the payload before any membership predicate is consulted.
+add_library(gossip_auth INTERFACE)
+supergenius_install(gossip_auth)
+target_link_libraries(gossip_auth
+    INTERFACE
+    p2p::p2p_crypto_provider
+    p2p::p2p_key_marshaller
+    p2p::p2p_key_validator
+    p2p::p2p_ed25519_provider
+    p2p::p2p_random_generator
+    p2p::p2p_rsa_provider
+    p2p::p2p_ecdsa_provider
+    p2p::p2p_secp256k1_provider
+    p2p::p2p_hmac_provider
+    p2p::p2p_peer_id
+)

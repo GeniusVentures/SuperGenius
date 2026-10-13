@@ -30,10 +30,13 @@ namespace sgns::processing
          * @brief       Factory method to create a TaskQueueImpl instance
          * @param[in]   db The database instance to use for storing tasks and subtasks
          * @param[in]   processing_topic The topic for processing tasks
+         * @param[in]   private_network_id Private-network identity scoping every CRDT key
+         *              (empty = public scope; public keys are byte-identical to the legacy ones)
          * @return      Instance of the TaskQueueImpl initialized or nullptr if error occurs
          */
         static std::shared_ptr<TaskQueueImpl> New( std::shared_ptr<sgns::crdt::GlobalDB> db,
-                                                   std::string                           processing_topic );
+                                                   std::string                           processing_topic,
+                                                   std::string                           private_network_id = "" );
 
         ~TaskQueueImpl() override = default;
 
@@ -63,8 +66,12 @@ namespace sgns::processing
          * @brief       Constructs a task queue implementation with the given database and processing topic.
          * @param[in]   db The database instance to use for storing tasks and subtasks
          * @param[in]   processing_topic The topic for processing tasks
+         * @param[in]   private_network_id Private-network identity scoping every CRDT key
+         *              (empty = public scope)
          */
-        explicit TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic );
+        explicit TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                std::string                           processing_topic,
+                                std::string                           private_network_id = "" );
 
         /**
          * @brief       Checks if a task is currently locked
@@ -92,6 +99,9 @@ namespace sgns::processing
         std::shared_ptr<sgns::crdt::GlobalDB> db_;
         /// The topic used by CRDT to share tasks and subtasks across the network
         std::string processing_topic_;
+        /// Private-network identity scoping every CRDT key this queue reads/writes
+        /// (empty = public scope). The commit topic stays in processing_topic_.
+        std::string network_scope_;
         /// Jobs (tasks) that are incompatible with ProcessingManager
         std::unordered_set<std::string> incompatible_jobs_;
     };

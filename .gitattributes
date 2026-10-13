@@ -1,0 +1,2 @@
+# Capture fixtures are large binaries — track via Git LFS
+*.cap filter=lfs diff=lfs merge=lfs -text

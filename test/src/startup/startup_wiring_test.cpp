@@ -738,7 +738,7 @@ TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
                               const std::string &,
                               const std::string & )
     {
-        return true;
+        return sgns::evmwatcher::BridgeCatchupWatcher::BurnOutcome::Processed;
     };
 
     sgns::evmwatcher::BridgeCatchupWatcher watcher(

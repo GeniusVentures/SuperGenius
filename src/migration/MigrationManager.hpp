@@ -23,6 +23,7 @@
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 #include "IMigrationStep.hpp"
+#include "account/NodeType.hpp"
 
 namespace sgns
 {
@@ -31,10 +32,10 @@ namespace sgns
     /**
      * @brief   Executes a sequence of migration steps to update a CRDT store.
      */
-    class MigrationManager : public std::enable_shared_from_this<MigrationManager>
+    class MigrationManager
     {
     public:
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             BLOCKCHAIN_INIT_FAILED = 1,
         };
@@ -59,7 +60,7 @@ namespace sgns
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
             std::shared_ptr<GeniusAccount>                                  account,
-            bool                                                            is_full_node );
+            NodeType                                                        node_type );
 
         /**
          * @brief   Register a migration step.

@@ -8,7 +8,13 @@ target_include_directories(processing_nodes_test PRIVATE ${AsyncIOManager_INCLUD
 target_link_libraries(processing_nodes_test
     genius_node_test
     json_secure_storage
+    price_test_support
 )
+
+# See the note in test/src/account/CMakeLists.txt: the asset path must not depend
+# on how deep the binary sits in the build tree.
+target_compile_definitions(processing_nodes_test PRIVATE
+    SGNS_PROCESSING_ASSETS_DIR="${CMAKE_CURRENT_LIST_DIR}")
 if(WIN32)
     target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
@@ -32,6 +38,7 @@ target_include_directories(child_tokens_test PRIVATE ${AsyncIOManager_INCLUDE_DI
 target_link_libraries(child_tokens_test
     genius_node_test
     json_secure_storage
+    price_test_support
 )
 if(WIN32)
     target_link_options(child_tokens_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
@@ -46,6 +53,8 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+set_tests_properties(child_tokens_test PROPERTIES TIMEOUT 500)
 
 
 addtest(full_node_test
@@ -85,3 +94,11 @@ add_custom_command(TARGET child_tokens_test POST_BUILD
     "$<TARGET_FILE_DIR:child_tokens_test>/child_tokens/"
     COMMENT "Copying files"
 )
+
+# Several suites in this directory boot multiple full nodes; running them
+# concurrently starves CPU on smaller CI runners (observed: a genesis creator
+# starved for 30s while eight test binaries ran), stalling startup past any
+# sane timeout. Sharing this lock serializes them against the other
+# node-booting suites while light suites keep running in parallel.
+set_tests_properties(child_tokens_test full_node_test processing_nodes_test
+    PROPERTIES RESOURCE_LOCK genius_node_pool)

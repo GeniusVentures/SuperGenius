@@ -1,0 +1,19 @@
+{
+  "name": "pricecoordinator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p test/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.2.3",
+    "@cloudflare/workers-types": "^5.20260922.1",
+    "@msw/cloudflare": "^0.0.1",
+    "msw": "^2.15.0",
+    "typescript": "~5.9.0",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.136.3"
+  }
+}

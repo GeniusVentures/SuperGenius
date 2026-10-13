@@ -308,10 +308,11 @@ std::vector<MockEndpointConfig> LoadMockConfig(const std::filesystem::path &conf
 std::array<MockEndpointConfig, 3> BuildDivergentSlotConfigs(
     MockBehavior direct_behavior,
     MockBehavior public1_behavior,
-    MockBehavior public2_behavior)
+    MockBehavior public2_behavior,
+    std::string  direct_url)
 {
     return {
-        MockEndpointConfig{"mock://direct", direct_behavior, {}},
+        MockEndpointConfig{std::move(direct_url), direct_behavior, {}},
         MockEndpointConfig{"mock://public1", public1_behavior, {}},
         MockEndpointConfig{"mock://public2", public2_behavior, {}},
     };

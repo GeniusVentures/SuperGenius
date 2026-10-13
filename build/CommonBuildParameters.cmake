@@ -22,9 +22,9 @@ else()
 endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
-	add_definitions(-DSGNS_DEBUGLOGS)
+    add_definitions(-DSGNS_DEBUGLOGS)
 elseif (DEFINED SGNS_PRINT_LOGS)
-	add_definitions(-DSGNS_DEBUGLOGS)
+    add_definitions(-DSGNS_DEBUGLOGS)
 endif()
 
 set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
@@ -92,7 +92,7 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 set(MNN_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib/cmake/MNN")
 find_package(MNN CONFIG REQUIRED)
 set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-message(STATIS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
+message(STATUS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
 include_directories(${MNN_INCLUDE_DIR})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_DEBUG)
@@ -247,15 +247,100 @@ endif()
 
 include_directories(${c-ares_INCLUDE_DIR})
 
+# VulkanHeaders
+set(VulkanHeaders_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/share/cmake/VulkanHeaders" CACHE PATH "Path to Vulkan-Headers install folder")
+find_package(VulkanHeaders CONFIG REQUIRED)
 # Vulkan
 find_package(Vulkan)
 
 if(NOT TARGET Vulkan::Vulkan)
+    set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include")
     if(NOT DEFINED $ENV{VULKAN_SDK})
         set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
     endif()
 
     find_package(Vulkan REQUIRED)
+endif()
+
+# Override Vulkan::Vulkan to use our vendored Vulkan-Headers on all platforms.
+# vk-bootstrap was built against our headers (v1.4); mixing with system/NDK
+# headers (v1.3 or other versions) causes unknown-type errors in
+# VkBootstrapDispatch.h and VkBootstrapFeatureChain.h.
+set_target_properties(Vulkan::Vulkan PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
+)
+
+# On macOS, libMoltenVK.a contains Objective-C code that calls Metal.
+# The ObjC runtime (-lobjc) and Metal frameworks must be linked by
+# every consumer of Vulkan::Vulkan or the linker fails with undefined
+# _objc_msgSend / _objc_retain / _objc_release etc.
+# AppKit does not exist on iOS (ld: framework 'AppKit' not found); MoltenVK
+# uses UIKit there, mirroring the gating in SGProcessors.
+if(APPLE)
+    target_link_libraries(Vulkan::Vulkan INTERFACE
+        "-framework Metal"
+        "-framework IOSurface"
+        "-framework QuartzCore"
+        "-framework Foundation"
+        "-framework CoreFoundation"
+        "-framework CoreGraphics"
+        "-framework IOKit"
+    )
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework AppKit")
+    else()
+        target_link_libraries(Vulkan::Vulkan INTERFACE "-framework UIKit")
+    endif()
+endif()
+
+# Resolve the Vulkan runtime DLL that matches the loader we just linked.
+# The thirdparty Vulkan-Loader installs vulkan-1.dll (runtime) alongside
+# vulkan-1.lib (import lib, found above). Every exe that links it — directly
+# or via SGProcessors' MNN::MNN + Vulkan::Vulkan PUBLIC deps, i.e. the whole
+# processing/node test closure — needs the DLL next to the exe or the Windows
+# loader kills the process with 0xc0000135 before main() runs. CI runners
+# have no system Vulkan runtime, so the vendored one must be deployed
+# (addtest in cmake/functions.cmake does the copy per test executable).
+if(WIN32)
+    find_file(VULKAN_RUNTIME_DLL NAMES vulkan-1.dll
+        PATHS "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/bin"
+              "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib"
+        NO_DEFAULT_PATH)
+
+    if(NOT VULKAN_RUNTIME_DLL)
+        # Only fatal when we actually link the thirdparty loader; a system
+        # Vulkan SDK brings its own runtime on PATH.
+        string(FIND "${Vulkan_LIBRARY}" "${_THIRDPARTY_BUILD_DIR}" _SGNS_VK_LOADER_IS_VENDORED)
+        if(_SGNS_VK_LOADER_IS_VENDORED EQUAL 0)
+            message(FATAL_ERROR "vulkan-1.dll not found in "
+                "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader (searched bin/ and lib/). "
+                "Executables link ${Vulkan_LIBRARY} and will fail to start with "
+                "0xc0000135 without the matching runtime DLL.")
+        endif()
+    endif()
+endif()
+
+# vk-bootstrap
+set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
+find_package(vk-bootstrap CONFIG REQUIRED)
+
+# SPIRV-Tools — no longer a standalone build.  libshaderc_combined (linked via
+# shaderc::shaderc below) statically bundles the exact same SPIRV-Tools code at the
+# exact same pinned commit (v2024.3 DEPS).  The spirv-tools include path is folded into
+# shaderc::shaderc's INTERFACE_INCLUDE_DIRECTORIES so <spirv-tools/libspirv.hpp> resolves.
+
+# shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
+# github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
+# IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
+# libshaderc_combined statically bundles glslang+SPIRV-Tools and installs spirv-tools
+# headers into <prefix>/include/spirv-tools/, so <spirv-tools/libspirv.hpp> resolves
+# for consumers that call spvtools::SpirvTools::Validate() directly (SHADER-02).
+if(NOT TARGET shaderc::shaderc)
+    add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
+    set_target_properties(shaderc::shaderc PROPERTIES
+        IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
+    )
 endif()
 
 # ipfs-lite-cpp
@@ -280,6 +365,10 @@ set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecation warnings" FORCE)
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 find_package(RapidJSON CONFIG REQUIRED)
+
+# Enable RapidJSON's std::string overloads (Value::Get<std::string>, SetString(std::string),
+# Document::Parse(std::string), ...)
+add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
 
 # secp256k1
 set(libsecp256k1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")
@@ -462,6 +551,16 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+# enable_testing() must run before any add_subdirectory() below so that CTest's
+# per-directory CTestTestfile.cmake chain (root -> SGProcessingManager -> test ->
+# capability/artifacts/capture) is actually generated; calling it only inside the
+# later if(BUILD_TESTING) block (after these subdirectories are already configured)
+# left ctest silently unable to discover any test registered under them, even
+# though the leaf CMakeLists.txt files call enable_testing()/add_test() themselves.
+if(BUILD_TESTING)
+    enable_testing()
+endif()
+
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
@@ -470,7 +569,6 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 if(BUILD_TESTING)
-    enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
 

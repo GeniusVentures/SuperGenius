@@ -7,19 +7,23 @@
 #include "crdt_mirror_broadcaster.hpp"
 #include "crdt/globaldb/proto/broadcast.pb.h"
 #include <iostream>
+#include <memory>
 
 namespace sgns::crdt
 {
     void CRDTMirrorBroadcaster::SetMirrorCounterPart( const std::shared_ptr<CRDTMirrorBroadcaster> &dest )
     {
-        counterpart_ = dest;
+        std::atomic_store( &counterpart_, dest );
     }
 
     outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
-        if ( ( !buff.empty() ) && ( counterpart_ ) )
+        // Keep the destination alive if teardown disconnects this mirror while
+        // a datastore worker is delivering a broadcast.
+        auto counterpart = std::atomic_load( &counterpart_ );
+        if ( ( !buff.empty() ) && ( counterpart ) )
         {
-            std::lock_guard<std::mutex>    lock( counterpart_->mutex_ );
+            std::lock_guard<std::mutex>    lock( counterpart->mutex_ );
             broadcasting::BroadcastMessage bmsg;
             auto                           bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
             std::string                    data( buff.toString() );
@@ -28,7 +32,7 @@ namespace sgns::crdt
             bpi->add_addrs( data );
             bmsg.set_allocated_peer( bpi );
             const std::string bCastData( bmsg.SerializeAsString() );
-            counterpart_->listOfBroadcasts_.push( bCastData );
+            counterpart->listOfBroadcasts_.push( bCastData );
         }
         return outcome::success();
     }

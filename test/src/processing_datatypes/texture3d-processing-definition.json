@@ -42,6 +42,12 @@
       "type": "uri",
       "default": "file://processing_datatypes/spleen_ct_seg.mnn",
       "description": "URI to the spleen CT segmentation model"
+    },
+    {
+      "name": "quantScale",
+      "type": "float",
+      "default": 128.0,
+      "description": "Empirically-derived tex3d/spleen_ct_seg quantization scale (Phase 14 QUANT-CFG-03/D-10), replacing v2.1's one-size-fits-all S=2^15. STATE.md captured a real Mac-vs-Windows cross-hardware divergence for this workload of delta 0.005126953125 (168x the old S=2^15 grid step) with all 25 chunk hashes mismatching. A local binary search of secv01_tex3d_counter_test.cpp (Phase 14 D-09) over power-of-two scales from 256 down to 1 found no value in the valid domain that lets a deliberately corrupted spleen_ct_seg.mnn go undetected -- this workload's corruption divergence is far larger than any quantization grid in that range could mask. S=2^7=128 (grid step 0.0078125) is chosen instead because it is the finest (largest) power-of-two grid step that still exceeds the measured 0.005126953125 real divergence (~1.53x margin, actually absorbing the cross-hardware noise this parameter exists to tolerate), while remaining empirically confirmed to still pass the corrupted-model counter-test."
     }
   ],
   

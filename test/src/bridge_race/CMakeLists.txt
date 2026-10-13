@@ -23,10 +23,6 @@ else()
     )
 endif()
 
-# D-15/Pitfall 2: 11-node startup cost is higher than the fast bridge_e2e suite's
-# default timeout — own extended TIMEOUT, isolated ctest target.
-set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 500)
-
 addtest(bridge_race_batch_test
     bridge_race_batch_test.cpp
     )
@@ -51,8 +47,6 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-
-set_tests_properties(bridge_race_batch_test PROPERTIES TIMEOUT 180)
 
 addtest(bridge_race_fault_rpc_test
     bridge_race_fault_rpc_test.cpp
@@ -80,8 +74,6 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_rpc_test PROPERTIES TIMEOUT 180)
-
 addtest(bridge_race_fault_kill_test
     bridge_race_fault_kill_test.cpp
     )
@@ -106,8 +98,6 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-
-set_tests_properties(bridge_race_fault_kill_test PROPERTIES TIMEOUT 180)
 
 addtest(bridge_race_fault_partition_test
     bridge_race_fault_partition_test.cpp
@@ -134,4 +124,27 @@ else()
     )
 endif()
 
-set_tests_properties(bridge_race_fault_partition_test PROPERTIES TIMEOUT 180)
+# All five bridge_race targets share bridge_race_fixture.hpp, which owns the
+# bridge_race_node1..11 data directories and remove_all()s them in SetUpTestSuite, and each
+# target starts its own Sepolia-forking Anvil. Run two concurrently and one deletes the
+# other's live RocksDB tree -- including the LOCK file, after which both processes believe
+# they hold exclusive ownership of the same paths. DeriveNodeKey() is also deterministic, so
+# every target derives the same 11 account addresses. Beyond correctness, 5 x (11 GeniusNodes
+# + a forking Anvil) does not fit the fixture's 90s readiness budget on a developer box.
+# ctest never co-schedules two tests holding the same RESOURCE_LOCK name.
+#
+# The requires_foundry label marks these tests as needing the Foundry binaries
+# (anvil + cast) on PATH. CI excludes them deterministically via
+# `ctest -LE requires_foundry` (cmake.yml) instead of relying on the fixture's
+# runtime GTEST_SKIP PATH probe -- that probe only "passes" them in ~1.4s on
+# runners without Foundry and would silently run them for real (failing, and
+# taking minutes) if Foundry ever lands on a runner. Local `ctest` runs still
+# execute them and skip inside the fixture when Foundry is missing.
+set_tests_properties(
+    bridge_race_single_burn_test
+    bridge_race_batch_test
+    bridge_race_fault_rpc_test
+    bridge_race_fault_kill_test
+    bridge_race_fault_partition_test
+    PROPERTIES RESOURCE_LOCK bridge_race_cluster LABELS "requires_foundry"
+)

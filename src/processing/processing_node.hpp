@@ -10,7 +10,9 @@
 #include <thread>
 #include <optional>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <libp2p/crypto/key.hpp>
 
+#include "networkregistry/NetworkMembershipFilter.hpp"
 #include "processing/processing_engine.hpp"
 #include "processing/processing_subtask_queue_manager.hpp"
 #include "processing/processing_subtask_queue_accessor.hpp"
@@ -44,6 +46,16 @@ namespace sgns::processing
          * @param subTasks Optional initial subtask list.
          * @param msSubscriptionWaitingDuration Wait duration for queue subscription.
          * @param ttl Time-to-live for node ownership.
+         * @param membershipFilter Membership gate installed BEFORE any
+         *        subscription goes live: on the queue channel before Listen()
+         *        and on the results accessor before
+         *        CreateResultsChannel/ConnectToSubTaskQueue (CR-G02a -- the
+         *        creation-site snapshot eliminates the enrollment window).
+         *        Empty (public node) -> nothing installed, byte-identical.
+         * @param gossipSigningKey Gossip host keypair installed beside the
+         *        filter at the same pre-subscription points (CR-G01 symmetry:
+         *        sealed publishes + authenticated ingest from the first
+         *        message).
          */
         static std::shared_ptr<ProcessingNode> New(
             std::shared_ptr<ipfs_pubsub::GossipPubSub>              gossipPubSub,
@@ -56,17 +68,34 @@ namespace sgns::processing
             const std::string                                      &processingQueueChannelId,
             std::list<SGProcessing::SubTask>                        subTasks = {},
             std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
-            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
+            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ),
+            sgns::networkregistry::MembershipFilter               membershipFilter = {},
+            std::shared_ptr<const libp2p::crypto::KeyPair>        gossipSigningKey = {} );
 
         ~ProcessingNode();
 
         bool HasQueueOwnership() const;
+
+        /**
+         * @brief Stops the processing engine and joins its in-flight subtask
+         *        threads so no result write or publish outlives this call.
+         */
+        void StopEngine();
 
         /** Set callback for mirroring results from other nodes */
         void setMirrorResultCallback( std::function<void( const std::string & )> callback );
 
         /** Set bitswap instance for data availability checks */
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+        /** Set membership filter forwarded to this node's results channel (queue accessor)
+         *  and processing queue channel — gates non-member senders at both handlers. */
+        void SetMembershipFilter( sgns::networkregistry::MembershipFilter filter );
+
+        /** Set gossip signing key forwarded to this node's results channel and
+         *  processing queue channel — seals private-network publishes and
+         *  authenticates inbound envelopes at both handlers (CR-G01). */
+        void SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key );
 
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)
@@ -95,8 +124,10 @@ namespace sgns::processing
 
         bool AttachTo( const std::string &processingQueueChannelId );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
-        void Initialize( const std::string        &processingQueueChannelId,
-                         std::chrono::milliseconds msSubscriptionWaitingDuration );
+        void Initialize( const std::string                          &processingQueueChannelId,
+                         std::chrono::milliseconds                   msSubscriptionWaitingDuration,
+                         sgns::networkregistry::MembershipFilter     membershipFilter,
+                         std::shared_ptr<const libp2p::crypto::KeyPair> gossipSigningKey );
 
         void InitTTL();
         void StartTTLTimer();

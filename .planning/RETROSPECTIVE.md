@@ -48,6 +48,40 @@
 
 ---
 
+## Milestone: v1.1 — trusted-peer genesis, quorum-policy, and production integration gaps
+
+**Shipped:** 2026-10-05 (with recorded gaps)
+**Phases:** 7 executed (08-13, 15) + 1 discarded (14) | **Plans:** 55 (54 summarized; 15-04 descoped)
+
+### What Was Built
+- MultiSig primitive + SecureCRDT storage layer: quorum-signed CRDT values with propose/sign/quorum over CRDT itself (no new networking)
+- TrustedPeerRegistry + BurnConfig wired into the production GeniusNode startup path, ahead of TransactionManager, fail-closed on floor violations
+- Phase 13 (29 plans): reviewed authenticated genesis ceremony (`sgns-trust`), durable versioned quorum policy as restart authority, fail-closed first boot/restart/tamper/rollback, live PayEscrow economics across account switches — closed through four gap-closure waves with exact 25-test gates
+- Phase 15 (18 plans): privateNetworkId bound through config → gossip/processing hosts → TaskKeys `/chain/<id>/` scope → membership filters with deny-all teardown; UAT-1 closed by a mutation-verified automated E2E
+
+### What Worked
+- Owner-converted UAT gaps into automation ("we should have an automated test for this") → diagnose → plan → execute → verify chain closed a manual-only E2E in one session
+- Verification cycles (5 for phase 15) with independent re-runs caught real defects without trusting SUMMARY claims
+- Descopes recorded, not silently dropped (15-04 → 15-13 app-layer delivery; coverage ≥80% descope confirmed by owner)
+
+### What Was Inefficient
+- Planning-record drift: ROADMAP never gained phase 14/15 sections; REQUIREMENTS never gained phase-15 IDs; MILESTONES described an ELM phase-13/14 that diverged from execution — the milestone audit had to reconstruct scope from STATE + phase dirs
+- Phase 14 executed 44 commits then discarded — planning/context mismatch discovered late
+- MIG-05's wiring contract was silently reverted in a rebase fix (d1f2a14ca) and only surfaced at milestone audit
+
+### Patterns Established
+- Wrong-PSK GlobalDB test nodes release db + graphsync Network BEFORE pubsub Stop (kqueue reactor use-after-free otherwise)
+- Mutation-verified non-vacuity for negative-window tests; per-file minimal proto builders as the repo test idiom
+- Fail-closed membership posture: empty registry ⇒ deny-all, teardown installs deny-all on still-live GlobalDBs
+
+### Key Lessons
+- A milestone extension recorded in REQUIREMENTS but never reflected in ROADMAP phases will surface as an 8-requirement gap at audit — keep the two in lockstep or descope explicitly at decision time
+- Stale todos outlive their fixes (genesis-e2e quorum todo was fixed 2026-09-23, discovered stale 2026-10-05) — tie todo closure to the fixing commit
+
+### Cost Observations
+- ~1211 commits in the milestone range (includes Track-A/rebase traffic); 424 files, +63.7k/−8.5k lines
+- Phase 13 consumed four gap-closure waves — the cost of exacting security gates, accepted
+
 ## Cross-Milestone Trends
 
 *(First milestone — trends will accumulate as v1.1+ ship.)*

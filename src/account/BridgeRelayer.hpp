@@ -14,7 +14,7 @@
 #include "account/BridgeEventTypes.hpp"
 #include "account/ChainContractPair.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "base/logger.hpp"
 #include "eth/eth_watch_service.hpp"
 #include "outcome/outcome.hpp"

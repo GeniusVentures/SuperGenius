@@ -31,15 +31,14 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( mutex_ );
         auto                        maybe_entry = GetEntryUnlocked( key );
 
-        Entry entry;
+        // A re-sighting must not regress a tracked key: filter re-evaluation of
+        // an already-queued element would otherwise rewrite Stalled to Seen and
+        // reset its dispatch progress.
         if ( maybe_entry.has_value() )
         {
-            entry = maybe_entry.value();
-            if ( entry.state == State::Processing )
-            {
-                return;
-            }
+            return;
         }
+        Entry entry;
         entry.key            = key;
         entry.state          = State::Seen;
         entry.updated_at_ms  = NowMs();
@@ -115,7 +114,7 @@ namespace sgns::crdt
         return GetEntryUnlocked( key );
     }
 
-    std::vector<CRDTWorkJournal::Entry> CRDTWorkJournal::ListUnfinished( std::string_view key_pattern ) const
+    std::vector<CRDTWorkJournal::Entry> CRDTWorkJournal::ListUnfinished( std::optional<std::regex> pattern ) const
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         std::vector<Entry>          out;
@@ -132,26 +131,13 @@ namespace sgns::crdt
             return out;
         }
 
-        std::optional<std::regex> pattern_regex;
-        if ( !key_pattern.empty() )
-        {
-            try
-            {
-                pattern_regex.emplace( std::string( key_pattern ) );
-            }
-            catch ( const std::regex_error & )
-            {
-                return out;
-            }
-        }
-
         out.reserve( result.value().size() );
         for ( const auto &[raw_key, raw_value] : result.value() )
         {
             auto parsed = DeserializeEntry( raw_key.toString(), raw_value.toString() );
             if ( parsed.has_value() )
             {
-                if ( pattern_regex.has_value() && !std::regex_match( parsed->key, pattern_regex.value() ) )
+                if ( pattern.has_value() && !std::regex_match( parsed->key, pattern.value() ) )
                 {
                     continue;
                 }
@@ -161,7 +147,7 @@ namespace sgns::crdt
         return out;
     }
 
-    size_t CRDTWorkJournal::RecoverStaleProcessing( std::string_view key_pattern, std::chrono::milliseconds stale )
+    size_t CRDTWorkJournal::RecoverStaleProcessing( std::optional<std::regex> pattern, std::chrono::milliseconds stale )
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         if ( !datastore_ )
@@ -180,18 +166,6 @@ namespace sgns::crdt
         {
             return recovered;
         }
-        std::optional<std::regex> pattern_regex;
-        if ( !key_pattern.empty() )
-        {
-            try
-            {
-                pattern_regex.emplace( std::string( key_pattern ) );
-            }
-            catch ( const std::regex_error & )
-            {
-                return recovered;
-            }
-        }
 
         for ( const auto &[raw_key, raw_value] : result.value() )
         {
@@ -201,7 +175,7 @@ namespace sgns::crdt
                 continue;
             }
             auto &entry = parsed.value();
-            if ( pattern_regex.has_value() && !std::regex_match( entry.key, pattern_regex.value() ) )
+            if ( pattern.has_value() && !std::regex_match( entry.key, pattern.value() ) )
             {
                 continue;
             }
@@ -297,10 +271,6 @@ namespace sgns::crdt
 
     std::optional<CRDTWorkJournal::Entry> CRDTWorkJournal::GetEntryUnlocked( const std::string &key ) const
     {
-        if ( !datastore_ )
-        {
-            return std::nullopt;
-        }
         base::Buffer key_buf;
         key_buf.put( BuildStorageKey( key ) );
         auto maybe_value = datastore_->get( key_buf );
@@ -313,10 +283,6 @@ namespace sgns::crdt
 
     bool CRDTWorkJournal::PutEntryUnlocked( const Entry &entry ) const
     {
-        if ( !datastore_ )
-        {
-            return false;
-        }
         base::Buffer key_buf;
         key_buf.put( BuildStorageKey( entry.key ) );
         base::Buffer value_buf;

@@ -44,6 +44,13 @@ namespace sgns
         }
     } // namespace
 
+    bool MigrationInputValidator::Register()
+    {
+        static MigrationInputValidator instance;
+        IInputValidator::Register( "migration", &instance );
+        return true;
+    }
+
     bool MigrationInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
                                                           const std::string      &address,
                                                           const UTXOManager      &utxo_manager ) const
@@ -53,44 +60,44 @@ namespace sgns
         return HasValidMigrationShape( params );
     }
 
-    bool MigrationInputValidator::ValidateWitness( const ConsensusSubject                   &subject,
-                                                   const std::shared_ptr<GeniusTransaction> &tx,
-                                                   const UTXOTxParameters                   &params,
-                                                   const std::shared_ptr<Blockchain>        &blockchain ) const
+    IInputValidator::WitnessVerdict MigrationInputValidator::ValidateWitness( const ConsensusSubject  &subject,
+                                                   const GeniusTransaction &tx,
+                                                   const UTXOTxParameters  &params,
+                                                   const Blockchain        &blockchain ) const
     {
         (void) blockchain;
-        auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx );
+        auto migration_tx = dynamic_cast<const MigrationTransaction *>( &tx );
         if ( !migration_tx || !HasValidMigrationShape( params ) )
         {
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto expected_source = MigrationTransaction::DeriveUniqueSourceKey( migration_tx->GetFromVersion(),
-                                                                                  tx->GetSrcAddress(),
+                                                                                  tx.GetSrcAddress(),
                                                                                   migration_tx->GetTokenID() );
         if ( params.first.front().txid_hash_.toReadableString() != expected_source ||
-             tx->GetUncleHash() != expected_source ||
+             tx.GetUncleHash() != expected_source ||
              params.second.front().encrypted_amount != migration_tx->GetAmount() ||
              params.second.front().token_id != migration_tx->GetTokenID() )
         {
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         if ( nonce_subject.has_error() || !nonce_subject.value().has_utxo_commitment() )
         {
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto &commitment = nonce_subject.value().utxo_commitment();
         if ( commitment.consumed_outpoints_size() != 1 || commitment.produced_outputs_size() != 1 ||
              !MatchesCommittedOutpoint( commitment.consumed_outpoints( 0 ), params.first.front() ) )
         {
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto &committed_output = commitment.produced_outputs( 0 );
-        const auto  tx_hash          = base::Hash256::fromReadableString( tx->GetHash() );
+        const auto  tx_hash          = base::Hash256::fromReadableString( tx.GetHash() );
         const auto &output           = params.second.front();
         const auto &token_bytes      = output.token_id.bytes();
         if ( tx_hash.has_error() || committed_output.tx_id_hash().size() != base::Hash256::size() ||
@@ -99,7 +106,7 @@ namespace sgns
              committed_output.token_id() != std::string( token_bytes.begin(), token_bytes.end() ) ||
              committed_output.amount() != output.encrypted_amount )
         {
-            return false;
+            return IInputValidator::WitnessVerdict::kInvalid;
         }
 
         const auto consumed_root = utxo_merkle::ComputeMerkleRootFromPayloads(
@@ -112,7 +119,8 @@ namespace sgns
         const auto       produced_root = utxo_merkle::ComputeMerkleRootFromPayloads(
             { utxo_merkle::SerializeUTXOLeafPayload( produced_utxo ) } );
 
-        return commitment.consumed_outpoints_root() == std::string( consumed_root.begin(), consumed_root.end() ) &&
-               commitment.produced_outputs_root() == std::string( produced_root.begin(), produced_root.end() );
+        const bool roots_match = commitment.consumed_outpoints_root() == std::string( consumed_root.begin(), consumed_root.end() ) &&
+                                  commitment.produced_outputs_root() == std::string( produced_root.begin(), produced_root.end() );
+        return roots_match ? IInputValidator::WitnessVerdict::kValid : IInputValidator::WitnessVerdict::kInvalid;
     }
 } // namespace sgns

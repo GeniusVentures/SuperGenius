@@ -1,6 +1,8 @@
 #ifndef SUPERGENIUS_CRDT_SET_HPP
 #define SUPERGENIUS_CRDT_SET_HPP
 
+#include <cstdint>
+#include <limits>
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
 #include "crdt/hierarchical_key.hpp"
@@ -18,6 +20,9 @@ namespace sgns::crdt
     class CrdtSet
     {
     public:
+        /// Reserved replicated priority for values that converge by serialized-content hash.
+        static constexpr uint64_t ConvergentImmutablePriority = std::numeric_limits<uint64_t>::max();
+
         using Delta       = pb::Delta;
         using Element     = pb::Element;
         using Buffer      = base::Buffer;
@@ -324,7 +329,12 @@ namespace sgns::crdt
 
         std::shared_ptr<DataStore> dataStore_ = nullptr;
         HierarchicalKey            namespaceKey_;
-        std::mutex                 mutex_;
+        // Recursive: PutElems holds this lock across its synchronous putHookFunc_ callback,
+        // and that callback can trigger a write that re-enters PutElems on the same thread
+        // (e.g. a certificate-confirmation PutHook driving confirmed-transaction processing
+        // that itself writes back into this same CrdtSet). A plain std::mutex self-deadlocks
+        // on that reentry.
+        std::recursive_mutex       mutex_;
         PutHookPtr                 putHookFunc_    = nullptr;
         DeleteHookPtr              deleteHookFunc_ = nullptr;
 

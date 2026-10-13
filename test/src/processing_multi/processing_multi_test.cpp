@@ -23,11 +23,13 @@
 #include <boost/asio.hpp>
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "FileManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
 class ProcessingMultiTest : public ::testing::Test
@@ -68,18 +70,32 @@ protected:
         // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_main ) );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG2.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/true,
+                                               /*rpc_catchup=*/false,
+                                               "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG3.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/true,
+                                               /*rpc_catchup=*/false,
+                                               "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
@@ -92,6 +108,9 @@ protected:
 
         bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
         node_proc1->AddPeers( bootstrappers );
+
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc1 ) );
+        ASSERT_NO_FATAL_FAILURE( sgns::test::MakeNodeReadyWithLocalTrust( node_proc2 ) );
 
         // bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
         // node_proc2->AddPeers( bootstrappers );
@@ -128,17 +147,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc2 = nullptr;
 
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG  = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
 GeniusNodeConfig ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe",
-                                                  "0.65",
+                                                  "0.35",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node3" };
@@ -287,7 +306,7 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
+    //TODO: use DEV_CONFIG.DevFraction in the expectations below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 
@@ -363,7 +382,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
+    //TODO: use DEV_CONFIG.DevFraction in the expectations below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 

@@ -2,8 +2,7 @@
 #define SUPERGENIUS_CRDT_HEADS_HPP
 
 #include <shared_mutex>
-#include <map>
-#include <set>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <storage/rocksdb/rocksdb.hpp>
@@ -21,7 +20,7 @@ namespace sgns::crdt
     public:
         using DataStore      = storage::rocksdb;
         using Buffer         = base::Buffer;
-        using CRDTHeadList   = std::unordered_map<std::string, std::set<CID>>;
+        using CRDTHeadList   = std::unordered_map<std::string, std::unordered_set<CID>>;
         using CRDTListResult = std::pair<CRDTHeadList, uint64_t>;
 
         /** Constructor
@@ -145,7 +144,7 @@ namespace sgns::crdt
 
         mutable std::shared_mutex                                mutex_;
         std::shared_ptr<DataStore>                               dataStore_;
-        std::unordered_map<std::string, std::map<CID, uint64_t>> cache_;
+        std::unordered_map<std::string, std::unordered_map<CID, uint64_t>> cache_;
         HierarchicalKey                                          namespaceKey_;
         base::Logger                                             logger_ = base::createLogger( "CrdtHeads" );
     };

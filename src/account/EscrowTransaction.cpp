@@ -14,24 +14,18 @@ namespace sgns
 {
     EscrowTransaction::EscrowTransaction( UTXOTxParameters         params,
                                           uint64_t                 amount,
-                                          std::string              dev_addr,
-                                          uint64_t                 peers_cut,
                                           SGTransaction::DAGStruct dag ) :
         GeniusTransaction( "escrow-hold", SetDAGWithType( std::move( dag ), "escrow-hold" ) ),
         utxo_params_( std::move( params ) ),
-        amount_( amount ),
-        dev_addr_( std::move( dev_addr ) ),
-        peers_cut_( peers_cut )
+        amount_( amount )
     {
     }
 
     EscrowTransaction EscrowTransaction::New( UTXOTxParameters         params,
                                               uint64_t                 amount,
-                                              std::string              dev_addr,
-                                              uint64_t                 peers_cut,
                                               SGTransaction::DAGStruct dag )
     {
-        EscrowTransaction instance( std::move( params ), amount, std::move( dev_addr ), peers_cut, std::move( dag ) );
+        EscrowTransaction instance( std::move( params ), amount, std::move( dag ) );
         instance.FillHash();
         return instance;
     }
@@ -57,8 +51,6 @@ namespace sgns
             output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
         }
         tx_struct.set_amount( amount_ );
-        tx_struct.set_dev_addr( dev_addr_ );
-        tx_struct.set_peers_cut( peers_cut_ );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
@@ -92,8 +84,6 @@ namespace sgns
             output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
         }
         tx_struct.set_amount( amount_ );
-        tx_struct.set_dev_addr( dev_addr_ );
-        tx_struct.set_peers_cut( peers_cut_ );
         *embedded.mutable_escrow() = tx_struct;
         return embedded;
     }
@@ -128,12 +118,7 @@ namespace sgns
                                  TokenID::FromBytes( output_proto.token_id().data(), output_proto.token_id().size() ) };
             outputs.push_back( curr );
         }
-        uint64_t amount    = tx_struct.amount();
-        uint64_t peers_cut = tx_struct.peers_cut();
-        return std::make_shared<EscrowTransaction>( EscrowTransaction( UTXOTxParameters{ inputs, outputs },
-                                                                       amount,
-                                                                       tx_struct.dev_addr(),
-                                                                       peers_cut,
-                                                                       tx_struct.dag_struct() ) );
+        return std::make_shared<EscrowTransaction>(
+            EscrowTransaction( UTXOTxParameters{ inputs, outputs }, tx_struct.amount(), tx_struct.dag_struct() ) );
     }
 }

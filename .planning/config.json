@@ -49,7 +49,8 @@
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
-    "security_block_on": "high"
+    "security_block_on": "high",
+    "use_worktrees": false
   },
   "hooks": {
     "context_warnings": true,
@@ -63,5 +64,5 @@
   "agent_skills": {},
   "features": {},
   "resolve_model_ids": "omit",
-  "runtime": "claude"
+  "runtime": "codex"
 }

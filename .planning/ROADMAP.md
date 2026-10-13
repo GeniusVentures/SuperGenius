@@ -3,27 +3,74 @@
 ## Milestones
 
 - ✅ **v1.0 GeniusNode Construction Refactor** — Phases 1-3 (shipped 2026-07-03)
+- ✅ **v3.0 Canonical Burn Finality Rebuild** — Phases 8-12 (shipped 2026-09-03)
+- ✅ **v1.1 trusted-peer genesis, quorum-policy, and production integration gaps** — Phases 08-15 (shipped 2026-10-05, known gaps recorded)
 
 ## Phases
 
 <details>
 <summary>✅ v1.0 GeniusNode Construction Refactor (Phases 1-3) — SHIPPED 2026-07-03</summary>
 
-- [x] Phase 1: Config-Driven Settings Foundation (1/1 plans)
-- [x] Phase 2: Variant Factory + Constructor Reorder (1/1 plans)
-- [x] Phase 3: Call-Site Migration + Verification (3/3 plans)
-
-**Core value delivered:** Constructing a `GeniusNode` is a single, self-documenting call — `New(dev_config, AccountSource)` — driven by config files (`network_config.json`, `sgns_config.json`); the three overloaded factories are gone.
+- [x] **Phase 1: Config-Driven Settings Foundation** (1/1 plans) — completed 2026-07-03
+- [x] **Phase 2: Variant Factory + Constructor Reorder** (1/1 plans) — completed 2026-07-03
+- [x] **Phase 3: Call-Site Migration + Verification** (3/3 plans) — completed 2026-07-03
 
 Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
-Requirements: `.planning/milestones/v1.0-REQUIREMENTS.md`
-Milestone summary: `.planning/MILESTONES.md`
 
 </details>
 
+<details>
+<summary>✅ v3.0 Canonical Burn Finality Rebuild (Phases 8-12) — SHIPPED 2026-09-03</summary>
+
+- [x] **Phase 8: Canonical Slot & Certificate Binding** (1/1 plans) — completed 2026-08-20
+- [x] **Phase 9: Durable One-Vote Finality** (2/2 plans) — completed 2026-08-20
+- [x] **Phase 10: Authoritative Slot Certificate Publication** (7/7 plans) — completed 2026-08-21
+- [x] **Phase 11: Convergent Certificate Consumption & Mint Recovery** (5/5 plans) — completed 2026-08-24
+- [x] **Phase 12: Multi-Node Finality Fault Proof** (22/22 plans, six gap-closure rounds) — completed 2026-09-03
+
+Full phase details: `.planning/milestones/v3.0-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v1.1 trusted-peer genesis, quorum-policy, and production integration gaps (Phases 08-15) — SHIPPED 2026-10-05</summary>
+
+**Milestone Goal:** Quorum-signed CRDT trust state as the production authority: decoupled multi-signature and SecureCRDT layers back an authenticated TrustedPeerRegistry and live BURN_BASIS_POINTS policy, closed through reviewed genesis ceremony, versioned quorum policy, restart/tamper authority, and production integration gates — then private-network identity (`privateNetworkId`) bound through every layer with fail-closed membership enforcement.
+
+- [x] **Phase 08: MultiSig Primitive** (1/1 plans) — MSIG-01..03
+- [x] **Phase 09: SecureCRDT Layer** (2/2 plans) — SCRDT-01..04
+- [x] **Phase 10: TrustedPeerRegistry** (2/2 plans) — TPR-01..03
+- [x] **Phase 11: BurnConfig Quorum Wiring** (2/2 plans) — BURN-01..03
+- [x] **Phase 12: ValidatorRegistry Migration** (1/1 plans) — MIG-05/06
+- [x] **Phase 13: Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps** (29/29 plans, four gap-closure waves) — BOOT-01..04, POLICY-01, VALID-01, TEST-01
+- [x] **Phase 15: Private networks consume privateNetworkId identity and bind** (17/18 plans; 15-04 descoped into 15-13) — D-01..D-11 (CONTEXT-derived)
+- ✗ **Phase 14: Account generation publication and retired manager lifecycle** — 0/15 executed, discarded by owner (2026-08); scope unshipped
+
+**Known gaps at ship:** ELM-01..08 dropped (cross-repo SGProcessingManager scope); MIG-05 wiring behavior-neutral revert; phase-14 SelectAccount lifecycle residual. Full record: `.planning/milestones/v1.1-MILESTONE-AUDIT.md` and `.planning/MILESTONES.md`.
+
+Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
+
+</details>
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Config-Driven Settings Foundation | v1.0 | 1/1 | Complete | 2026-07-03 |
+| 2. Variant Factory + Constructor Reorder | v1.0 | 1/1 | Complete | 2026-07-03 |
+| 3. Call-Site Migration + Verification | v1.0 | 3/3 | Complete | 2026-07-03 |
+| 8. MultiSig Primitive | v1.1 | 1/1 | Complete | 2026-07-29 |
+| 9. SecureCRDT Layer | v1.1 | 2/2 | Complete | 2026-07-29 |
+| 10. TrustedPeerRegistry | v1.1 | 2/2 | Complete | 2026-07-24 |
+| 11. BurnConfig Quorum Wiring | v1.1 | 2/2 | Complete | 2026-07-27 |
+| 12. ValidatorRegistry Migration | v1.1 | 1/1 | Complete | 2026-07-27 |
+| 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
+| 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
+| 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
+
 ## Backlog
 
-(Items deferred to future milestones — see `.planning/milestones/v1.0-REQUIREMENTS.md` v2 section: PROP-01 NodeType propagation, PROP-02 Archive/Full behavior split, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
+(v1.0 deferrals: PROP-01 NodeType propagation *(partially delivered by develop role gating)*, PROP-02 Archive/Full split *(delivered: participates_in_consensus_)*, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
 
 ---
 *Roadmap last updated: 2026-07-03 (v1.0 archived)*
@@ -53,6 +100,7 @@ Milestone summary: `.planning/MILESTONES.md`
 **Summary:** [01-SUMMARY.md](phases/01-rpc-endpoint-wiring/01-SUMMARY.md)
 
 **Tasks:**
+
 - [x] Load `chains_config.json` to determine supported chains
 - [x] For each supported chain, ingest RPC URLs via `eth::rpc::load_chainlist_from_json_text()`
 - [x] Filter/deduplicate by chain ID
@@ -60,6 +108,7 @@ Milestone summary: `.planning/MILESTONES.md`
 - [x] Wire this into the application startup path (GeniusNode or equivalent)
 
 **Success criteria:**
+
 - Each configured chain has at least 3 RPC endpoints available
 - Endpoints are loaded from data, not hardcoded
 - Build passes
@@ -73,6 +122,7 @@ Milestone summary: `.planning/MILESTONES.md`
 **Architecture:** `BridgeRelayer` takes a shared `EthWatchService` (DI), registers a `BridgeSourceBurned` watch, and calls `MintFunds` when burns are detected.
 
 **Tasks:**
+
 - [x] Create `BridgeRelayer` with DI `EthWatchService`
 - [x] Register `BridgeSourceBurned` watch via `eth::cli::event_registry()`
 - [x] Extract burn details from decoded ABI values (sender, token_id, amount, srcChainID, tx_hash)
@@ -81,6 +131,7 @@ Milestone summary: `.planning/MILESTONES.md`
 - [ ] Validators independently verify the burn via `PublicChainInputValidator::VerifyPublicChainSmartContract`
 
 **Success criteria:**
+
 - Burn event on EVM chain triggers `MintFunds` via evmrelay signal
 - `MintTransactionV2` created with correct chain_id, amount, token_id, burn_tx_hash
 - Transaction enters nonce consensus
@@ -95,9 +146,11 @@ Milestone summary: `.planning/MILESTONES.md`
 **Plans:** 1 plan
 
 Plans:
+
 - [x] 03-01-PLAN.md — Gap closure: slot key collision, fail-closed endpoints, UTXO witness fix, receipt log verification
 
 **Tasks:**
+
 - [x] Define canonical message_id for EVM bridge source events
 - [x] Map bridge mints to deterministic consensus slot keys
 - [x] Add processing reservation state
@@ -119,11 +172,13 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
+
 - [x] 04-01-PLAN.md — Test infrastructure + positive E2E test (fixture, burn-to-mint pipeline)
 - [x] 04-02-PLAN.md — Negative tests (replay rejection, missing endpoints, invalid logs)
 - [x] 04-03-PLAN.md — Slot key collision resistance verification
 
 **Tasks:**
+
 - [x] Create test/src/bridge_e2e/ directory with CMakeLists.txt and BridgeE2ETest fixture
 - [x] Wire into test/src/CMakeLists.txt via add_subdirectory
 - [x] Positive E2E: burn on Sepolia via cast send -> detection -> MintTransactionV2 -> UTXO consensus -> minted tokens
@@ -145,6 +200,7 @@ Plans:
 **Plans:** 1/2 plans complete
 
 Plans:
+
 - [x] 04.1-01-PLAN.md — AnvilProcess helper + BridgeAnvilE2ETest (positive burn-to-mint + replay rejection) + Sepolia-direct fallback
 - [ ] 04.1-02-PLAN.md — Startup catch-up scan E2E: nodes start, scan RPC for historical burns via BridgeRelayer watch, auto-mint, verify
 
@@ -159,6 +215,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
+
 - [x] 04.2-01-PLAN.md — Live-Sepolia RLPx E2E: 3 nodes each run EthWatchService in production RLPx mode (kDiscoverFirst), BridgeRelayer auto-mints streamed burns (10 burns at 1-2s cadence), all-3-nodes mint verification
 
 ---
@@ -178,6 +235,7 @@ Plans:
 **Wave 1** (parallel — independent subsystems):
 
 Plans:
+
 - [x] 05-01-PLAN.md — BridgeRelayer multi-chain Start(): ChainContractPair struct, per-chain watch_id tracking, best-effort registration (D-01, D-21); REQ-WIRE-01, REQ-CATCH-02
 - [x] 05-02-PLAN.md — Mock RPC Transport: MockRpcTransport implements JsonRpcTransport, 6 failure modes (D-13), stateful sequences (D-10), config parser (D-08/D-09), behavioral tests; REQ-MOCK-01, REQ-MOCK-02, REQ-MOCK-03
 - [x] 05-03-PLAN.md — Transport Factory DI: TransportFactory + SetTransportFactory() in PublicChainInputValidator, replaces hard RpcHttpTransport construction, SGNS_E2E_REAL_RPC=1 env var (D-15); REQ-MOCK-01, REQ-MOCK-03, REQ-MOCK-04
@@ -186,6 +244,7 @@ Plans:
 **Wave 2** (blocked on Wave 1 completion — depends on 05-01, 05-03, 05-04):
 
 Plans:
+
 - [x] 05-05-PLAN.md — GeniusNode Startup Wiring: InitializeAndStartBridge() async init from INITIALIZING_TRANSACTIONS (D-04), rewritten InitializeRpcEndpoints() from chains_config.json (D-02/D-05), startup catch-up scan (D-20), CWD path fix; REQ-WIRE-02, REQ-WIRE-03, REQ-CATCH-01
 - [x] 05-06-SUMMARY.md — Unit Test Generation: 28 GTest tests across 3 modules (UTXOManager, GeniusNode startup, ChainRpcEndpointProvider)
 
@@ -193,10 +252,10 @@ Plans:
 
 ---
 
-
 ### Phase 05.2: Bridge V2 — X-only compressed encoding: smart contract updated with `bridgeOut(uint256,uint256,uint256,bytes32)` accepting 32-byte X-only compressed SG public key (not an Ethereum address). Event renamed from `BridgeSourceBurned` to `BridgeOutInitiated`. C++ side must decode 32-byte X-only key → decompress to full X+Y → match `GetAddress()`. Versioned catch-up scan handles old topic0 for v1 burns.
 
 Contract:
+
 ```solidity
 function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgnsDestination) external {
     address sender = _msgSender();
@@ -215,15 +274,18 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	
 	**Wave 1** (evmrelay foundation — independent):
 	Plans:
+
 	- [x] 05.2-01-PLAN.md — EventRegistry v2 registration (D-04, D-05) + DecompressXOnlyPubkey free function (D-07, D-08, D-09, D-10) + 5 secp256k1 decompression tests (REQ-V2-01, REQ-V2-02, REQ-V2-05, REQ-V2-06, REQ-V2-09)
 	
 	**Wave 2** (BridgeRelayer + GeniusNode — parallel, depends on Wave 1):
 	Plans:
+
 	- [x] 05.2-02-PLAN.md — BridgeRelayer::Start() dual-watch v1+v2 (D-14, D-15) + OnWatchEvent() variant dispatch ByteBuffer/Hash256 with v2 decompression (D-06) (REQ-V2-03, REQ-V2-04)
 	- [x] 05.2-03-PLAN.md — GeniusNode::PerformStartupCatchupScan() dual topic0 query v1+v2 (D-11, D-12) + v2 X-only decompression before MintFunds (D-13) (REQ-V2-07, REQ-V2-08)
 	
 	**Wave 3** (test coverage — depends on Waves 1+2):
 	Plans:
+
 	- [x] 05.2-04-PLAN.md — EventRegistry v2 tests + BridgeRelayer v2 dispatch/dual-watch tests + Startup catch-up scan v2 topic0 tests (REQ-V2-03, REQ-V2-04, REQ-V2-07, REQ-V2-09)
 
 ### Phase 05.1: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (INSERTED)
@@ -234,6 +296,7 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 **Plans:** 3 plans
 
 Plans:
+
 - [ ] 05.1-01-PLAN.md — Define IBridgeInitObserver + re-signature ChainRpcEndpointProvider::Initialize(path, validator, logger); move JSON read, chain_id parse, IInputValidator::Register, and observer notification into the provider (D-01, D-02, D-03, D-04)
 - [ ] 05.1-02-PLAN.md — Make BridgeRelayer implement IBridgeInitObserver (OnRpcEndpointsReady delegates to Start); add numeric chain_id to bridge_chains_config.json (D-03, D-04)
 - [ ] 05.1-03-PLAN.md — Rewrite GeniusNode as thin orchestrator (resolve path, construct provider, AddObserver relayer+self, post Initialize); remove InitializeRpcEndpoints body, kChainNameToId, bridge_chains_; catch-up scan reads catchup_chains_ via observer callback (D-01, D-02, D-04)
@@ -249,21 +312,25 @@ Plans:
 **Wave 1** (proto foundation + node self-classification):
 
 Plans:
+
 - [x] 06-01-PLAN.md — Extend ConsensusVote proto with slot_0_hash/slot_1_hash/slot_2_hash (D-01, D-04, D-09) + PublicChainInputValidator hashing accessors + GeniusNode::PopulateVoteSlotHashes wiring (D-10 Tier 1 unchanged) (REQ-SLOT-01)
 
 **Wave 2** (slot tally + dual tally-site routing — depends on Wave 1; touches shared consensus hot paths):
 
 Plans:
+
 - [x] 06-02-PLAN.md — ValidatorRegistry::EvaluateSlotQuorum (D-02 slot 0 50%, D-03 slots 1-2 dedup 25%, D-06 cumulative >75%) + ConsensusManager::EvaluateQuorum dispatcher routing BOTH TallyVotes + HandleVote through one helper (D-05 abstain, D-07 rep=weight, REQ-DETERM-01) (REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06)
 
 **Wave 3** (Role::FULL promotion — depends on Waves 1+2; serialized due to ValidatorRegistry file overlap):
 
 Plans:
+
 - [x] 06-03-PLAN.md — REGULAR->FULL promotion in ApplyVoteEffects via full_promotion_weight_ + penalty gate (D-07 reuse weight, D-08 independence from tally) (REQ-REPUT-01)
 
 **Wave 4** (test coverage + full regression gate — depends on Waves 1+2+3):
 
 Plans:
+
 - [ ] 06-04-PLAN.md — consensus_slot_quorum_test.cpp (golden D-06 example, dedup, both-sites-agree, determinism) + validator_registry_promotion_test.cpp + blocking full ctest -j8 checkpoint per CLAUDE.md shared-library mandate (all REQs)
 
 ---
@@ -385,15 +452,20 @@ misclassifying inconclusive consensus as transaction failure.
   1. **Out-of-order certificate recovery:** When Peer B receives `tx2` before `tx1`'s certificate,
      Peer B keeps `tx2` pending and automatically revalidates it when the certificate arrives. A
      valid `tx2` then receives Peer B's Approval vote without requiring re-proposal.
+
   2. **Generic deferred outcomes:** Subject handlers can identify explicit dependency keys or request
      bounded scheduled retry for transient failures. Pending remains local and never contributes to
      quorum.
+
   3. **Bounded lifecycle:** Pending state uses a compile-time three-minute default TTL, supports an
      injected ten-second test TTL, and enforces count and retained-byte limits.
+
   4. **Complete cleanup:** Certification, terminal rejection, and expiry remove proposal,
      dependency, vote, retry, and temporary transaction state without duplicate callbacks or leaks.
+
   5. **Correct terminal state:** Locally proven invalid transactions become `FAILED`; proposals that
      reach TTL without a conclusive outcome become `EXPIRED` or `UNCONFIRMED`.
+
   6. **Retry safety:** Revalidation is idempotent, emits at most one local Approval vote per proposal
      slot, and never double-counts validator weight.
 
@@ -449,7 +521,14 @@ Plans:
 - [x] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow (completed 2026-07-23)
 - [x] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT (completed 2026-07-24)
 - [x] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager` (completed 2026-07-27)
-- [ ] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry` migrated onto `ISignedCRDTData`, existing behavior/tests preserved
+- [x] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved (completed 2026-07-27)
+
+**Extended scope (added 2026-08-26) — ELM Bridging, a product-v1.0 pre-ship requirement.** Extends v1.1 beyond its original multisig/CRDT goal per owner directive; the milestone now gates product v1.0.
+
+- [ ] **Phase 13: ELM Job Bridging (SuperGenius)** — GCS creates/funds one normal processing job whose `Task.json_data` carries multiple ELM work items; grid distributes subtasks; fixed $0.0003/hour funding; work-item results via existing mechanism. Corrects issue #369 (scheduler/bidding layer removed). Issue: GeniusVentures/SuperGenius#369
+- [ ] **Phase 14: ELM Runtime in SGProcessingManager** — manifest resolution + verification, content-addressed model cache, real LM runtime (tokenizer/prefill/generation/KV-cache/sampling/stop/detokenize/cancel), work-item results. Executes in the GeniusVentures/SGProcessingManager repo. Issue: assigned to itsafuu only
+
+> Phase 15 (ELM Events & Streaming proto) **dropped** 2026-08-26 per owner: streaming, if ever needed, rides the existing gossip-pubsub results channel (seq-numbered JSON events on `Task.results_channel`) — no new protobuf. `SGElmProcessing.proto` is not planned.
 
 ## Phase Details
 
@@ -459,12 +538,15 @@ Plans:
 **Depends on**: Nothing (first phase of this milestone)
 **Requirements**: MSIG-01, MSIG-02, MSIG-03
 **Success Criteria** (what must be TRUE):
+
   1. Given a payload, the component produces canonical signing-bytes and verifies a valid signature against them using `ConsensusAuth`'s SHA-256/`VerifySignature` primitives, rejecting invalid/tampered signatures.
   2. Given a signer set and a required threshold (N-of-M, no hardcoded N), the component correctly reports quorum-met/quorum-not-met for varying valid-signature counts, including boundary cases (exactly N, N-1, all M).
   3. The component can be constructed, exercised, and unit-tested with no running node, no CRDT store, and no network dependency.
+
 **Plans**: 1 plan
 
 Plans:
+
 - [x] 08-01-PLAN.md — MultiSig library (VerifyPayloadSignature + EvaluateQuorum) + CMake wiring + tests (MSIG-01, MSIG-02, MSIG-03)
 
 ### Phase 9: SecureCRDT Layer
@@ -473,13 +555,16 @@ Plans:
 **Depends on**: Phase 8
 **Requirements**: SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04
 **Success Criteria** (what must be TRUE):
+
   1. An `ISignedCRDTData` interface exists; a concrete implementer can supply a payload codec plus `Verify()`/`Apply()`, and the interface compiles/links independent of any specific data type.
   2. A static, code-declared registry maps topic/key patterns to {signer-set source, quorum rule, `ISignedCRDTData` type}, resolvable at startup for a given key.
   3. A propose+sign+quorum sequence for a registered key — driven entirely by CRDT puts and filter callbacks (pending-value entry + signature entries) — results in the value being applied only after quorum is reached, with no new networking/RPC code path introduced.
   4. An unsigned or under-signed write attempt to a registered key is rejected locally (never applied) before quorum is reached, verified by an automated test.
+
 **Plans**: 2 plans
 
 Plans:
+
 - [x] 09-01-PLAN.md — ISignedCRDTData interface + SecureCrdtRegistry static registry + Wave-0 tests (SCRDT-01, SCRDT-02)
 - [x] 09-02-PLAN.md — SecureCrdt wrapper (local-write gate + filter registration + read-path quorum re-derivation) + quorum-gate/propose-sign-quorum tests (SCRDT-03, SCRDT-04)
 
@@ -489,12 +574,15 @@ Plans:
 **Depends on**: Phase 9
 **Requirements**: TPR-01, TPR-02, TPR-03
 **Success Criteria** (what must be TRUE):
+
   1. A freshly-initialized genesis node's `TrustedPeerRegistry` contains exactly the initial trusted-peer set hardcoded in genesis config, with no manual bootstrapping step required.
   2. Adding, removing, or replacing a trusted-peer member succeeds only when a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set is presented; a sub-quorum attempt is rejected and the membership set is unchanged.
   3. `TrustedPeerRegistry`'s implementation is a consumer of `ISignedCRDTData`/SecureCRDT (registered via the Phase 9 policy registry) — code inspection confirms no parallel/duplicate signature-verification logic exists outside SecureCRDT.
+
 **Plans**: 2 plans
 
 Plans:
+
 - [x] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
 - [x] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
 
@@ -504,24 +592,32 @@ Plans:
 **Depends on**: Phase 10
 **Requirements**: BURN-01, BURN-02, BURN-03
 **Success Criteria** (what must be TRUE):
+
   1. `BURN_BASIS_POINTS` is stored and updated as a `TrustedPeerRegistry`-quorum-signed CRDT value (via the Phase 9/10 SecureCRDT machinery), not a hardcoded constant in `TransactionManager.hpp`.
   2. `TransactionManager::PayEscrow` uses a cached in-memory value for the burn rate; no CRDT read occurs on the `PayEscrow` call path, and the cache updates automatically via a CRDT-change callback when a quorum-signed update lands.
   3. A freshly-seeded genesis node burns exactly 1% (`BURN_BASIS_POINTS=100`) on `PayEscrow` by default, matching pre-milestone behavior, until a quorum-signed update changes the value.
+
 **Plans**: 2 plans
 
 Plans:
+
 - [x] 11-01-PLAN.md — Majority-floor quorum validation (D-07) + TrustedPeerRegistry::New breaking-change retrofit + BurnConfigPayload/BurnConfig core (genesis auto-seed, signer-set-source, cache-refresh) + tests (BURN-01)
 - [x] 11-02-PLAN.md — TransactionManager cached burn-rate + GeniusNode INITIALIZING_TRANSACTIONS wiring (SecureCrdt/TrustedPeerRegistry/BurnConfig construction) + config fields + CMake linkage (BURN-02, BURN-03)
 
 ### Phase 12: ValidatorRegistry Migration
 
-**Goal**: `ValidatorRegistry`'s existing signature+quorum-gated CRDT update logic is re-expressed on top of the `ISignedCRDTData`/SecureCRDT abstraction introduced in Phase 9, proving the abstraction generalizes beyond its first two consumers, with zero regression in existing behavior or tests.
-**Depends on**: Phase 9
+**Goal**: `ValidatorRegistry`'s genesis-path signature verification is migrated from `GeniusAccount::VerifySignature` onto the shared `multisig::VerifyPayloadSignature` primitive (Phase 8), narrowed per 12-CONTEXT.md D-01/D-03 to signature-verification-only reuse — `ValidatorRegistry` does not adopt `ISignedCRDTData`/`SecureCrdt` (its weighted-quorum/certificate machinery is structurally incompatible), with zero regression in existing behavior or tests.
+**Depends on**: Phase 8
 **Requirements**: MIG-05, MIG-06
 **Success Criteria** (what must be TRUE):
-  1. `ValidatorRegistry` implements `ISignedCRDTData` (or is registered through the Phase 9 policy registry) for its signature-gated CRDT updates, with its bespoke pre-migration verification/quorum code paths removed.
-  2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged (or with only mechanical updates for the new interface), with no behavioral regression in validator add/remove/quorum semantics.
-**Plans**: TBD
+
+  1. `VerifyUpdate`'s genesis-path signature check calls `multisig::VerifyPayloadSignature` instead of `GeniusAccount::VerifySignature`; `blockchain_genesis` links `multisig` directly.
+  2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged, with no behavioral regression in genesis-signature verification, and the D-05 `multi_account_test` exit gate (5-10 consecutive clean runs) is satisfied.
+
+**Plans:** 1/1 plans complete
+Plans:
+
+- [x] 12-01-PLAN.md — Migrate genesis-path signature verification onto multisig::VerifyPayloadSignature, wire CMake link, run D-05 exit gate
 
 ### Progress Table (v1.1)
 
@@ -531,4 +627,34 @@ Plans:
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
 | 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
 | 11. BurnConfig Quorum Wiring | 2/2 | Complete   | 2026-07-27 |
-| 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
+| 12. ValidatorRegistry Migration | 1/1 | Complete   | 2026-07-27 |
+| 13. ELM Job Bridging (SuperGenius) | 0/? | Not started | — |
+| 14. ELM Runtime in SGProcessingManager (cross-repo) | 0/? | Not started | — |
+
+### Phase 13: ELM Job Bridging (SuperGenius)
+
+**Goal**: A GCS instance creates and funds one normal SuperGenius processing job containing one or more ELM work items; the existing grid distributes them as subtasks and results flow back identifying their work item — with no scheduler/bidding/leasing layer added on top.
+**Depends on**: Nothing within v1.1 (can proceed in parallel with Phase 14; end-to-end proof needs Phase 14's runtime)
+**Requirements**: ELM-01, ELM-02, ELM-03, ELM-08
+**Success Criteria** (what must be TRUE):
+  1. A job with multiple ELM work items in `Task.json_data` is published and distributed through the existing processing grid with no new task-ownership protocol messages.
+  2. Funding is deterministic from the job JSON at the fixed $0.0003/hour rate; no quote/bid/negotiation protocol exists anywhere in the feature.
+  3. Every result identifies its ELM work item; GCS aggregates by work-item ID with no SuperGenius-side aggregation.
+**Tracking**: GeniusVentures/SuperGenius#369 (corrected scope — see INGEST-CONFLICTS.md auto-resolutions)
+**Depends on (cross-repo)**: GeniusVentures/AsyncIOManager#11 — `ipfspubsub://` URL prefix (gossip pubsub channels as FileManager source/destination), assigned itsafuu; results delivery addresses the results channel as `ipfspubsub://results/<task_id>` with the durable artifact via the `ipfs://` saver (CID)
+**Plans**: none yet
+
+### Phase 14: ELM Runtime in SGProcessingManager
+
+**Goal**: SGProcessingManager parses multiple ELM work items, resolves and verifies immutable model manifests, maintains a content-addressed model-bundle cache, and executes a real ELM processor end to end.
+**Depends on**: Phase 13's job/subtask JSON shape (contract only — development can start in parallel from the manifest spec)
+**Requirements**: ELM-04, ELM-05, ELM-06, ELM-07
+**Success Criteria** (what must be TRUE):
+  1. A node never executes a model whose manifest or artifact verification failed; cached files are verified before reuse.
+  2. A node with an empty cache completes an assigned ELM subtask by downloading the model as part of the job; no protocol message carries node model/cache inventory.
+  3. A causal-LM work item produces generated text honoring `max_output_tokens`/`temperature`/`top_p`/`seed` and stop conditions, with accurate token counts; cancellation aborts in-flight generation.
+**Tracking**: Executes in the GeniusVentures/SGProcessingManager repo — separate issue, assigned to itsafuu only
+**Plans**: none yet
+
+---
+*Roadmap last updated: 2026-09-07 — v3.0 rebased onto develop (Track A bridge phases + ELM from develop preserved)*

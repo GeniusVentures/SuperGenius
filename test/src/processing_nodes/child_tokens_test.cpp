@@ -21,9 +21,12 @@
 #include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/genius_node_test_access.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "HttpStubServer.hpp"
+#include "testutil/scoped_env.hpp"
 
 using namespace sgns;
 using namespace sgns::test;
@@ -42,21 +45,86 @@ namespace sgns
         {
             return blockchain ? blockchain->consensus_manager_ : nullptr;
         }
-
-        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
-        {
-            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
-        }
     };
 } // namespace sgns
 
 namespace
 {
+    void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
+    {
+        ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+            [&]()
+            {
+                auto blockchain = MultiAccountTestAccess::GetBlockchain( node );
+                return node->GetState() == GeniusNode::NodeState::READY && blockchain &&
+                       MultiAccountTestAccess::GetConsensusManager( blockchain );
+            },
+            std::chrono::seconds( 120 ),
+            description + " not synced" ) );
+
+        MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
+            ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
+    }
+
+} // namespace
+
+/**
+ * @brief Fixture backing every suite in this binary.
+ *
+ * Nodes are created with port_seed=0, so every test reuses the SAME
+ * deterministic ports. Default destruction of the node shared_ptrs at
+ * end-of-test lets a node whose last reference is released by a background
+ * dispatch stay alive (listening port open, consensus round timer running)
+ * into the next test's node creation — the cross-test zombie-mesh registry
+ * poisoning seen on CI (test 3's node destructing while test 4 dials the
+ * same ports). TearDown therefore stops every node created by the test
+ * BEFORE the members are destroyed, so no node from test N can still hold a
+ * port or a round timer once test N+1 begins. See
+ * GeniusNodeTestAccess::StopNode for the teardown invariant.
+ */
+class ChildTokensNodeFixture : public ::testing::Test
+{
+protected:
+    ChildTokensNodeFixture()
+    {
+        // Hermetic price source (Phase 4 cutover): both tiers redirect to a
+        // loopback stub serving the genius-ai price the old cache-writing
+        // accessors used to inject. Env set BEFORE any node in this test is
+        // created; restored in the dtor after every node is stopped.
+        price_stub_.OnPath( "/api/v3/simple/price",
+                            { 200, "application/json", R"({"genius-ai":{"usd":1.0}})" } );
+        price_stub_.Start();
+        const auto base = "http://127.0.0.1:" + std::to_string( price_stub_.Port() );
+        env_coin_gecko_ = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_COINGECKO_URL", base );
+        env_fallback_   = std::make_unique<sgns::testutil::ScopedEnvVar>( "SGNS_PRICE_FALLBACK_URL", base );
+    }
+
+    ~ChildTokensNodeFixture() override
+    {
+        for ( const auto &node : nodes_ )
+        {
+            sgns::GeniusNodeTestAccess::StopNode( node );
+        }
+        nodes_.clear();
+        env_coin_gecko_.reset();
+        env_fallback_.reset();
+        price_stub_.Shutdown();
+    }
+
+    void TearDown() override
+    {
+        for ( const auto &node : nodes_ )
+        {
+            sgns::GeniusNodeTestAccess::StopNode( node );
+        }
+        nodes_.clear();
+    }
+
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize GeniusGeniusNodeConfig.
      * @param tokenId TokenID to initialize GeniusGeniusNodeConfig.
-     * @return shared_ptr to the initialized GeniusNode.
+     * @return shared_ptr to the initialized GeniusNode, registered for teardown.
      */
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &tokenValue,
@@ -74,7 +142,7 @@ namespace
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/child_tokens_node_" + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { self_address, "0.35", tokenValue, tokenId, outPath };
 
         removeAllWithRetry( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
@@ -93,20 +161,21 @@ namespace
                          } );
 
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false, key );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
-        sgns::GeniusNodeTestAccess::CacheGnusPrice( node, 1.0 );
 
         if ( setAsAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
+        nodes_.push_back( node );
         return node;
     }
 
     void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
     {
+        sgns::test::MakeNodeReadyWithLocalTrust( node );
         test::assertWaitForCondition(
             [&]()
             {
@@ -116,15 +185,29 @@ namespace
             },
             std::chrono::milliseconds( 50000 ),
             description + " not synced" );
-
-        MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
-            ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
     }
 
-} // namespace
+private:
+    std::vector<std::shared_ptr<sgns::GeniusNode>> nodes_;
+
+    sgns::testutil::HttpStubServer                price_stub_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> env_coin_gecko_;
+    std::unique_ptr<sgns::testutil::ScopedEnvVar> env_fallback_;
+};
+
+// Suite-name-preserving wrappers so TEST_F can back the original TEST suites.
+class TransferTokenValue : public ChildTokensNodeFixture
+{
+};
+class GeniusNodeChildTokenMintTest : public ChildTokensNodeFixture
+{
+};
+class GeniusNodeMultiTokenMintTest : public ChildTokensNodeFixture
+{
+};
 
 // Suite: Enhanced Three-Node Transfers with Grouped Minting and Change
-TEST( TransferTokenValue, ThreeNodeTransferTest )
+TEST_F( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
     auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, true );
@@ -135,9 +218,9 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     node51->AddPeers(
         { node50->GetPubSub()->GetInterfaceAddress(), node52->GetPubSub()->GetInterfaceAddress() } );
     node52->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
-    ConfigureTestConsensus( node50, "node50" );
-    ConfigureTestConsensus( node51, "node51" );
-    ConfigureTestConsensus( node52, "node52" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node50, "node50" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node51, "node51" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node52, "node52" ) );
 
     // Record initial balances
     uint64_t init50_full = node50->GetBalance();
@@ -244,15 +327,15 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 }
 
 // Suite: one live node check that child-token conversion is wired into minting.
-TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
+TEST_F( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 {
     auto tokenId  = sgns::TokenID::FromBytes( { 0x05 } );
     auto nodefull = CreateNode( "0xaffb", "0.5", tokenId, true, true );
     auto node = CreateNode( "0xfadb", "0.5", tokenId );
     nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( nodefull, "nodefull" );
-    ConfigureTestConsensus( node, "node" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( nodefull, "nodefull" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node, "node" ) );
 
     auto initialMain  = node->GetBalance();
     auto initialToken = node->GetBalance( tokenId );
@@ -277,14 +360,14 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 }
 
 // Suite 3: Mint multiple token IDs on same node
-TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
+TEST_F( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
     nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( nodefull, "nodefull" );
-    ConfigureTestConsensus( node, "node" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( nodefull, "nodefull" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node, "node" ) );
 
     struct TokenMint
     {
@@ -343,17 +426,14 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
 // ------------------ Suite 4: Processing Nodes test with child tokens ------------------
 
-class ProcessingNodesModuleTest : public ::testing::Test
+class ProcessingNodesModuleTest : public ChildTokensNodeFixture
 {
-protected:
-    void SetUp() override
-    {
-    }
-
-    void TearDown() override
-    {
-    }
 };
+
+/// Scale of SubTaskResult::developer_cut, mirroring SGProcessing.proto.
+static constexpr uint64_t DEVELOPER_CUT_SCALE = 1000000;
+/// Developer fraction every node created by CreateNode is configured with (0.35).
+static constexpr uint64_t DEVELOPER_CUT = 350000;
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
@@ -365,9 +445,9 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
     node_proc1->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfigureTestConsensus( node_proc1, "node_proc1" );
-    ConfigureTestConsensus( node_main, "node_main" );
-    ConfigureTestConsensus( node_proc2, "node_proc2" );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_proc1, "node_proc1" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_main, "node_main" ) );
+    ASSERT_NO_FATAL_FAILURE( ConfigureTestConsensus( node_proc2, "node_proc2" ) );
 
     auto mintResMain = node_main->MintTokens( 1000,
                                               sgns::test::NextMintSourceHash(),
@@ -513,15 +593,16 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
        )";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
-    MultiAccountTestAccess::SetGNUSPrice( node_main, 1.0 );
     auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
-    auto cost          = node_main->GetProcessCost( procmgr.value() );
+    auto cost          = node_main->GetProcessCost( *procmgr.value() );
     auto bal_main_init = node_main->GetBalance();
     auto bal_p1_init   = node_proc1->GetBalance();
     auto bal_p2_init   = node_proc2->GetBalance();
-    auto tok_main_init = node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) );
-    auto tok_p1_init   = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
-    auto tok_p2_init   = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_main_init      = node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto tok_p1_init        = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
+    auto tok_p2_init        = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_p1_other_init  = node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) );
+    auto tok_p2_other_init  = node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) );
 
     std::cout << "Process cost: " << cost << "\n";
     auto postjob = node_main->ProcessImage( json_data );
@@ -539,23 +620,47 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     uint64_t burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
     uint64_t available   = cost - burn_amount;
 
-    uint64_t expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
+    // node_proc1 and node_proc2 run apps from *different* developers (0xadfe and 0xaffa), each
+    // taking the same 0.35 cut. This is precisely what issue #148 got wrong: the release used to
+    // name a single developer on the escrow hold, so one developer collected everything. It now
+    // credits each developer out of its own peer's share, in that peer's child token.
+    //
+    // Queue ownership rotates opportunistically, so a single processor can end up running both
+    // subtasks, and which node ran what is not observable from balances here. So instead of
+    // asserting a per-peer split, assert what holds for every split of the work: each peer is
+    // paid only for subtasks it ran, in its own child token, and the payout closes the escrow
+    // exactly. The exact split math is covered by PayoutOutputsTest.
+    const uint64_t per_result       = available / 2;
+    const uint64_t peer_entitlement = per_result - ( per_result * DEVELOPER_CUT ) / DEVELOPER_CUT_SCALE;
 
     assertWaitForCondition(
         [&]()
         {
-            return ( node_proc1->GetBalance() + node_proc2->GetBalance() ) ==
-                   ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
+            auto gain = ( node_proc1->GetBalance() + node_proc2->GetBalance() ) - ( bal_p1_init + bal_p2_init );
+            return gain == 2 * peer_entitlement;
         },
         std::chrono::milliseconds( 40000 ),
         "Other nodes balance not updated in time" );
-    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance() + node_proc2->GetBalance() );
-    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) +
-                   node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
 
-    uint64_t dev_payment = available - 2 * expected_peer_gain;
+    const auto p1_gain = node_proc1->GetBalance() - bal_p1_init;
+    const auto p2_gain = node_proc2->GetBalance() - bal_p2_init;
+
+    // A peer is paid per subtask it ran: 0, 1 or 2 whole credits.
+    ASSERT_TRUE( p1_gain == 0 || p1_gain == peer_entitlement || p1_gain == 2 * peer_entitlement )
+        << "p1_gain=" << p1_gain << " peer_entitlement=" << peer_entitlement;
+    ASSERT_TRUE( p2_gain == 0 || p2_gain == peer_entitlement || p2_gain == 2 * peer_entitlement )
+        << "p2_gain=" << p2_gain << " peer_entitlement=" << peer_entitlement;
+
+    // Whatever each peer received was paid in its own child token, and nothing leaks into the
+    // other's.
+    ASSERT_EQ( tok_p1_init + p1_gain, node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) );
+    ASSERT_EQ( tok_p2_init + p2_gain, node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+    ASSERT_EQ( tok_p1_other_init, node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
+    ASSERT_EQ( tok_p2_other_init, node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) );
+
+    // Whatever the peers did not take went to the two developers: the outputs sum to the escrow
+    // exactly, so this closes the books on the whole release.
+    const uint64_t dev_payment = available - p1_gain - p2_gain;
     ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment +
                    burn_amount );

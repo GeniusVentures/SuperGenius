@@ -1,0 +1,20 @@
+{
+  // token.gnus.ai price coordinator — Cloudflare Worker config (D-01..D-04).
+  // Hard rules encoded here (test-enforced in plan 01-05):
+  //   - SQLite-backed DO migration only (Free plan + ctx.storage.sql availability)
+  //   - no message-queue or key-value store bindings of any kind (SRVC-07)
+  //   - no secrets inline — the CoinGecko key is an optional `wrangler secret`
+  //     / .dev.vars entry, never referenced in this file (D-04)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "price-coordinator",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "durable_objects": {
+    "bindings": [
+      { "name": "PRICE_COORDINATOR", "class_name": "PriceCoordinator" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["PriceCoordinator"] }
+  ]
+}

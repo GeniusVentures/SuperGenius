@@ -36,7 +36,14 @@ addtest(account_management_test
     account_management_test.cpp
 )
 
-target_link_libraries(account_management_test genius_node_test json_secure_storage)
+target_link_libraries(account_management_test genius_node_test json_secure_storage price_test_support)
+
+# Absolute path to the shared processing test assets. Passed in rather than derived
+# from the binary location at runtime: that walked a fixed number of parent
+# directories and so silently depended on the build layout (the Visual Studio
+# per-config subdirectory, or the ABI subdirectory on Linux) supplying a level.
+target_compile_definitions(account_management_test PRIVATE
+    SGNS_PROCESSING_ASSETS_DIR="${PROJECT_ROOT}/test/src/processing_nodes")
 
 addtest(result_gc_test
     result_gc_test.cpp
@@ -65,6 +72,9 @@ addtest(account_signature_test
 target_link_libraries(account_signature_test
     sgns_genius_account
     json_secure_storage
+    # Kept only so this test can cross-check the crypto3-free implementation
+    # against the legacy crypto3/ProofSystem derivation.
+    ProofSystem
 )
 
 addtest(burnconfig_test
@@ -83,6 +93,34 @@ target_link_libraries(burnconfig_test
 )
 target_include_directories(burnconfig_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
+addtest(burnconfig_policy_e2e_test
+    burnconfig_policy_e2e_test.cpp
+)
+target_link_libraries(burnconfig_policy_e2e_test
+    genius_node_test
+    json_secure_storage
+    burnconfig
+    trustedpeer
+    securecrdt
+    multisig
+    crdt_globaldb
+    sgns_genius_account
+    rocksdb
+)
+target_include_directories(burnconfig_policy_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+if(MSVC)
+    target_link_options(burnconfig_policy_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(burnconfig_policy_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(burnconfig_policy_e2e_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
 )
@@ -97,6 +135,28 @@ elseif(APPLE)
     target_link_options(bridge_relayer_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(bridge_relayer_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+addtest(registration_transaction_test
+    registration_transaction_test.cpp
+)
+
+target_link_libraries(registration_transaction_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(registration_transaction_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(registration_transaction_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(registration_transaction_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
@@ -167,6 +227,28 @@ else()
     )
 endif()
 
+addtest(transaction_manager_certificate_fallback_test
+    transaction_manager_certificate_fallback_test.cpp
+)
+
+target_link_libraries(transaction_manager_certificate_fallback_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(transaction_manager_certificate_fallback_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )
@@ -185,9 +267,51 @@ else()
     )
 endif()
 
+# Phase 15 (D-01/D-02): private_network_id / network_bootstrap_peers config surface —
+# same link set as network_config_precedence_test.
+addtest(network_config_private_network_test
+    network_config_private_network_test.cpp
+)
+
+target_link_libraries(network_config_private_network_test genius_node json_secure_storage)
+
+if(MSVC)
+    target_link_options(network_config_private_network_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(network_config_private_network_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(network_config_private_network_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(node_type_derivation_test
     node_type_derivation_test.cpp
 )
+
+# Phase 15 (15-05, D-06/D-07 descoped to registry wiring): NetworkRegistry construction
+# in the GeniusNode INITIALIZING_TRANSACTIONS path — same base link set as
+# network_config_private_network_test plus the networkregistry library whose
+# GetCurrentPeers() the membership assertion calls.
+addtest(private_network_registry_binding_test
+    private_network_registry_binding_test.cpp
+)
+
+target_link_libraries(private_network_registry_binding_test genius_node json_secure_storage networkregistry)
+
+if(MSVC)
+    target_link_options(private_network_registry_binding_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(private_network_registry_binding_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(private_network_registry_binding_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
 
 target_link_libraries(node_type_derivation_test genius_node json_secure_storage)
 
@@ -202,3 +326,32 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+addtest(payout_outputs_test
+    payout_outputs_test.cpp
+)
+
+target_link_libraries(payout_outputs_test
+    genius_node_test
+    json_secure_storage
+)
+
+if(MSVC)
+    target_link_options(payout_outputs_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(payout_outputs_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(payout_outputs_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+# Several suites in this directory boot multiple full nodes; running them
+# concurrently starves CPU on smaller CI runners (observed: a genesis creator
+# starved for 30s while eight test binaries ran), stalling startup past any
+# sane timeout. Sharing this lock serializes them against the other
+# node-booting suites while light suites keep running in parallel.
+set_tests_properties(account_management_test
+    PROPERTIES RESOURCE_LOCK genius_node_pool)

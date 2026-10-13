@@ -4,9 +4,14 @@
 #include <string_view>
 #include <thread>
 #include <utility>
+#include "base/gossip_auth.hpp"
 #include "base/sgns_version.hpp"
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <bitswap.hpp>
+#include <nlohmann/json.hpp>
+#include <SgnsProcessing.hpp>
+#include <Generators.hpp>
+#include "FileManager.hpp"
 
 namespace sgns::processing
 {
@@ -15,12 +20,14 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-        std::function<void( const std::string & )>              processingErrorSink ) :
+        std::function<void( const std::string & )>              processingErrorSink,
+        std::shared_ptr<ProcessingCore>                         processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_processingCore( std::move( processingCore ) )
     {
         m_localContext = std::make_shared<boost::asio::io_context>();
         m_localWorkGuard.emplace( m_localContext->get_executor() );
@@ -73,6 +80,18 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
     {
         m_bitswap = std::move( bitswap );
+    }
+
+    void SubTaskQueueAccessorImpl::SetMembershipFilter( sgns::networkregistry::MembershipFilter filter )
+    {
+        std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+        m_membershipFilter = std::move( filter );
+    }
+
+    void SubTaskQueueAccessorImpl::SetGossipSigningKey( std::shared_ptr<const libp2p::crypto::KeyPair> key )
+    {
+        std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+        m_gossipSigningKey = std::move( key );
     }
 
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
@@ -247,7 +266,49 @@ namespace sgns::processing
 
         if ( m_resultChannel )
         {
-            m_resultChannel->Publish( subTaskResult.SerializeAsString() );
+            // Private-network publish sealing (CR-G01): seal under a set
+            // filter with the gossip host keypair; fail closed when a filter
+            // is set but no key is wired. No filter -> raw publish,
+            // byte-identical.
+            const std::string raw_payload = subTaskResult.SerializeAsString();
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+            {
+                std::lock_guard<std::mutex> guard( m_mutexMembershipFilter );
+                membershipFilter = m_membershipFilter;
+                signingKey       = m_gossipSigningKey;
+            }
+            if ( !membershipFilter )
+            {
+                m_resultChannel->Publish( raw_payload );
+            }
+            else if ( !signingKey )
+            {
+                m_logger->error( "Results channel publish FAILED CLOSED: membership filter set but no "
+                                 "gossip signing key wired" );
+            }
+            else
+            {
+                auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                if ( from_bytes.has_error() )
+                {
+                    m_logger->error( "Results channel publish FAILED CLOSED: cannot derive from-bytes "
+                                     "from the gossip signing key" );
+                }
+                else
+                {
+                    auto sealed = sgns::base::SealGossipPayload( *signingKey, from_bytes.value(), sgns::base::detail::StringSpan( raw_payload ) );
+                    if ( sealed.has_error() )
+                    {
+                        m_logger->error( "Results channel publish FAILED CLOSED: sealing failed ({})",
+                                         static_cast<int>( sealed.error() ) );
+                    }
+                    else
+                    {
+                        m_resultChannel->Publish( sealed.value() );
+                    }
+                }
+            }
 
             m_logger->debug( "Published SubTask results to Results Channel" );
         }
@@ -324,7 +385,96 @@ namespace sgns::processing
         const SGProcessing::SubTaskCollection &subTasks,
         std::set<std::string>                 &invalidSubTaskIds )
     {
-        auto validate_res = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        // Real job-parameter resolution (D-03/D-04): look up the originating Task via the SAME
+        // ProcessingTaskQueue mechanism ProcessingCoreImpl::ProcessSubTask already uses
+        // (task_queue_->GetTask(subTask.ipfsblock())), then parse its json_data() for a
+        // schema-declared quantScale/byteQuantMode. Declared here (not in a narrower scope) so the
+        // pointer passed to ValidateResults stays valid for the duration of that call.
+        sgns::SgnsProcessing                parsedProcessing;
+        std::vector<sgns::Parameter>        jobParametersStorage;
+        const std::vector<sgns::Parameter> *jobParameters = nullptr;
+
+        if ( m_processingCore && subTasks.items_size() > 0 )
+        {
+            auto taskQueue = m_processingCore->GetTaskQueue();
+            if ( taskQueue )
+            {
+                auto taskResult = taskQueue->GetTask( subTasks.items( 0 ).ipfsblock() );
+                if ( taskResult.has_value() )
+                {
+                    try
+                    {
+                        auto json = nlohmann::json::parse( taskResult.value().json_data() );
+                        sgns::from_json( json, parsedProcessing );
+                        auto params = parsedProcessing.get_parameters();
+                        if ( params )
+                        {
+                            jobParametersStorage = params.value();
+                            jobParameters        = &jobParametersStorage;
+                        }
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        // T-15-08: malformed/adversarial Task.json_data() must never crash the
+                        // validating node -- log and fall through to jobParameters == nullptr,
+                        // which ValidateResults treats as D-04's fixed-constant fallback.
+                        m_logger->warn( "FinalizeQueueProcessing: failed to resolve job parameters from "
+                                        "Task.json_data(): {}",
+                                        e.what() );
+                        jobParametersStorage.clear();
+                        jobParameters = nullptr;
+                    }
+                }
+            }
+        }
+
+        // Real fetchOutputData capability (D-01): FileManager::LoadASync on a fresh, call-scoped
+        // io_context -- deliberately NOT m_localContext, which already has a permanently-running
+        // background thread (m_localWorkGuard/m_localThread); reusing it here would risk
+        // reset()/run() reentrancy with that already-running loop (T-15-10). Mirrors
+        // ProcessingManager::GetSubCidForProc's exact LoadASync callback shape.
+        auto fetchOutputData =
+            [this]( const std::string &outputUri ) -> outcome::result<std::vector<uint8_t>>
+        {
+            auto        freshContext = std::make_shared<boost::asio::io_context>();
+            std::vector<char> collected;
+            bool        fetchSucceeded = false;
+
+            FileManager::GetInstance().LoadASync(
+                outputUri,
+                false,
+                false,
+                freshContext,
+                [this, &collected, &fetchSucceeded, &outputUri]( FileManager::ResultType buffers )
+                {
+                    if ( buffers )
+                    {
+                        collected.insert( collected.end(),
+                                          buffers.value()->second[0].begin(),
+                                          buffers.value()->second[0].end() );
+                        fetchSucceeded = true;
+                    }
+                    else
+                    {
+                        m_logger->error( "FinalizeQueueProcessing fetchOutputData: failed to obtain {}: {}",
+                                          outputUri,
+                                          buffers.error().message() );
+                    }
+                },
+                "file" );
+
+            // No reset() needed -- this context is used exactly once (fresh per call).
+            freshContext->run();
+
+            if ( !fetchSucceeded || collected.empty() )
+            {
+                return outcome::failure( std::make_error_code( std::errc::io_error ) );
+            }
+            return std::vector<uint8_t>( collected.begin(), collected.end() );
+        };
+
+        auto validate_res =
+            m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds, jobParameters, fetchOutputData );
         bool valid        = !validate_res.has_error();
 
         FinalizationRetVal finalization_ret = FinalizationRetVal::NOT_FINALIZED;
@@ -392,12 +542,51 @@ namespace sgns::processing
             return;
         }
 
+        // Membership gate (15-13) + payload authentication (15-14, CR-G01):
+        // under a set membership filter the message is FIRST authenticated
+        // (OpenGossipPayload: envelope present, embedded key derives the
+        // from-field PeerId, signature covers from+payload) and only THEN
+        // authorized BEFORE any result/mirror handling. Unsigned or
+        // unverifiable messages are denied under a set filter even when
+        // `from` names a member. Empty filter = public pass-through (raw
+        // parse, byte-identical); empty/malformed `from` fails
+        // OpenGossipPayload itself (fail-closed).
+        gsl::span<const uint8_t> result_parse_source;
+        if ( message )
+        {
+            result_parse_source = gsl::span<const uint8_t>( message->data.data(), message->data.size() );
+            sgns::networkregistry::MembershipFilter membershipFilter;
+            {
+                std::lock_guard<std::mutex> guard( _this->m_mutexMembershipFilter );
+                membershipFilter = _this->m_membershipFilter;
+            }
+            if ( membershipFilter )
+            {
+                auto opened = sgns::base::OpenGossipPayload(
+                    gsl::span<const uint8_t>( message->from.data(), message->from.size() ),
+                    result_parse_source );
+                if ( opened.has_error() )
+                {
+                    _this->m_logger->debug( "Results channel message failed payload authentication ({}) -- ignored",
+                                            static_cast<int>( opened.error() ) );
+                    return;
+                }
+                result_parse_source = opened.value().payload;
+                if ( !sgns::networkregistry::AuthorizeGossipSender( membershipFilter, message->from ) )
+                {
+                    _this->m_logger->debug( "Results channel message from unauthorized sender ignored" );
+                    return;
+                }
+            }
+        }
+
         bool rebroadcast_results = false;
 
         if ( message )
         {
             SGProcessing::SubTaskResult result;
-            if ( result.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
+            if ( result.ParseFromArray( result_parse_source.data(),
+                                        static_cast<int>( result_parse_source.size() ) ) )
             {
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
 
@@ -486,7 +675,50 @@ namespace sgns::processing
         {
             if ( m_resultChannel )
             {
-                m_resultChannel->Publish( result.SerializeAsString() );
+                // Private-network publish sealing (CR-G01): seal under a set
+                // filter; fail closed when a filter is set but no key is
+                // wired. No filter -> raw publish, byte-identical.
+                const std::string raw_payload = result.SerializeAsString();
+                sgns::networkregistry::MembershipFilter membershipFilter;
+                std::shared_ptr<const libp2p::crypto::KeyPair> signingKey;
+                {
+                    std::lock_guard<std::mutex> filter_guard( m_mutexMembershipFilter );
+                    membershipFilter = m_membershipFilter;
+                    signingKey       = m_gossipSigningKey;
+                }
+                if ( !membershipFilter )
+                {
+                    m_resultChannel->Publish( raw_payload );
+                }
+                else if ( !signingKey )
+                {
+                    m_logger->error( "Results channel publish FAILED CLOSED: membership filter set but no "
+                                     "gossip signing key wired" );
+                }
+                else
+                {
+                    auto from_bytes = sgns::base::DeriveGossipFromBytes( *signingKey );
+                    if ( from_bytes.has_error() )
+                    {
+                        m_logger->error( "Results channel publish FAILED CLOSED: cannot derive from-bytes "
+                                         "from the gossip signing key" );
+                    }
+                    else
+                    {
+                        auto sealed = sgns::base::SealGossipPayload( *signingKey,
+                                                                    from_bytes.value(),
+                                                                    sgns::base::detail::StringSpan( raw_payload ) );
+                        if ( sealed.has_error() )
+                        {
+                            m_logger->error( "Results channel publish FAILED CLOSED: sealing failed ({})",
+                                             static_cast<int>( sealed.error() ) );
+                        }
+                        else
+                        {
+                            m_resultChannel->Publish( sealed.value() );
+                        }
+                    }
+                }
                 m_logger->debug( "Published existing result for {}", subTaskId );
             }
         }

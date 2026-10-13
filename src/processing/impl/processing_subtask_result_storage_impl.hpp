@@ -1,6 +1,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 
+#include <string>
+
 #include "processing/processing_subtask_result_storage.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 
@@ -15,8 +17,12 @@ namespace sgns::processing
         /** Create a subtask storage.
         * @param db - CRDT GlobalDB to use.
         * @param topic - Topic prefix for result keys.
+        * @param private_network_id - Private-network identity scoping every result key
+        *        (empty = public scope; keys are byte-identical to the legacy results/<id> ones).
         */
-        SubTaskResultStorageImpl( std::shared_ptr<crdt::GlobalDB> db, std::string topic );
+        SubTaskResultStorageImpl( std::shared_ptr<crdt::GlobalDB> db,
+                                  std::string                      topic,
+                                  std::string                      private_network_id = "" );
 
         ~SubTaskResultStorageImpl() override;
 
@@ -38,6 +44,7 @@ namespace sgns::processing
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
         std::string                           m_processing_topic;
+        std::string                           m_private_network_id;
     };
 }
 

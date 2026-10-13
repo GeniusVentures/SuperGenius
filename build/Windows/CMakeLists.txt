@@ -25,6 +25,17 @@ endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
 
+# ccache cannot cache /Zi, because the compiler writes debug info to a side PDB
+# that ccache does not model; it reports every such call as uncacheable. /Z7
+# embeds the same CodeView records in the object file instead. Done by string
+# replacement rather than CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, which needs
+# CMP0141 NEW and so a cmake_minimum_required bump to 3.25.
+foreach(_config_flags
+    CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG
+    CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REPLACE "/Zi" "/Z7" ${_config_flags} "${${_config_flags}}")
+endforeach()
+
 # This is so that the SDK knows which version of Windows to target.
 # Current set to Windows 10
 add_compile_definitions(_WIN32_WINNT=0x0A00)

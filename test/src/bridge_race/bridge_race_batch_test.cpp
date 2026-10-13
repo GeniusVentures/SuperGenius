@@ -106,7 +106,7 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
             }
             return true;
         },
-        BridgeRaceE2ETest::kRaceNodeReadyTimeout,
+        BridgeRaceE2ETest::kRaceMintTimeout,
         "All 11 nodes must independently mint each of the batch burns exactly once",
         nullptr );
 

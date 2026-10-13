@@ -1,0 +1,49 @@
+{
+  "name": "regression-c-output-buffer-zero",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "description": "Regression Bug C: output-buffer-zero fallback — edge case where output tensor has zero elements, triggering a fallback that produced incorrect results",
+  "inputs": [
+    {
+      "name": "zeroInput",
+      "source_uri_param": "file://processing_datatypes/buffer_input.raw",
+      "type": "buffer",
+      "dimensions": { "width": 16, "block_len": 16, "chunk_stride": 16 },
+      "format": "INT8"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "zeroOutput",
+      "source_uri_param": "file://processing_datatypes/regression_c_output.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "output_zero_inference",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/buffer_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:zeroInput",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:zeroOutput",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ]
+}

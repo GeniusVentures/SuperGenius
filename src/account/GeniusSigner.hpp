@@ -5,13 +5,13 @@
 #ifndef SGNS_GENIUS_SIGNER_HPP
 #define SGNS_GENIUS_SIGNER_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <ProofSystem/EthereumKeyGenerator.hpp>
 
 namespace sgns
 {
@@ -21,22 +21,46 @@ namespace sgns
      *
      * GeniusAccount composes this type, while short-lived signing workflows
      * can use it directly without touching secure storage.
+     *
+     * The keypair is held as a raw secp256k1 secret key so that this component
+     * depends only on libsecp256k1, not on the crypto3-based ProofSystem.
      */
     class GeniusSigner
     {
     public:
+        static constexpr size_t PRIVATE_KEY_SIZE = 32;
+
+        /// Big-endian secp256k1 secret key, matching libsecp256k1's own encoding.
+        using PrivateKey = std::array<uint8_t, PRIVATE_KEY_SIZE>;
+
         /**
          * @brief Generate a fresh, in-memory-only keypair.
          */
         static GeniusSigner Generate();
 
         /**
-         * @brief Take ownership of an existing keypair.
+         * @brief Parse a 64-character hex secret key.
+         * @return std::nullopt when the hex is malformed or has the wrong size.
          */
-        explicit GeniusSigner( ethereum::EthereumKeyGenerator keypair );
+        static std::optional<PrivateKey> PrivateKeyFromHex( std::string_view private_key_hex );
+
+        /**
+         * @brief Build a signer from a 64-character hex secret key.
+         * @return std::nullopt when the key is not a valid secp256k1 scalar.
+         */
+        static std::optional<GeniusSigner> FromPrivateKeyHex( std::string_view private_key_hex );
+
+        /**
+         * @brief Take ownership of an existing secret key.
+         */
+        explicit GeniusSigner( const PrivateKey &private_key );
 
         /**
          * @brief Return the 128-character hexadecimal Genius public address.
+         *
+         * The address is the uncompressed public key (X followed by Y, both
+         * big-endian) without the leading 0x04 tag, hex encoded in lower case.
+         * Empty when the secret key is not a valid secp256k1 scalar.
          */
         [[nodiscard]] std::string GetAddress() const;
 
@@ -62,7 +86,8 @@ namespace sgns
     private:
         static constexpr size_t SIGNATURE_SIZE = 64;
 
-        ethereum::EthereumKeyGenerator keypair_;
+        PrivateKey  private_key_;
+        std::string address_; ///< Derived once on construction; empty on an invalid key
     };
 } // namespace sgns
 

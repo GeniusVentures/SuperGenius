@@ -17,18 +17,19 @@ add_library(sgns_genius_account
 target_link_libraries(sgns_genius_account
     PUBLIC
     Boost::headers
-    ProofSystem
     outcome
     logger
     crdt_globaldb
     ipfs-pubsub
     TrustWalletCore
+    SGAccountCommProto
     PRIVATE
     hasher
+    sha
+    OpenSSL::Crypto
     json_secure_storage
     secure_storage
     component_factory
-    SGAccountCommProto
     SGTransactionProto
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
@@ -39,17 +40,15 @@ target_link_libraries(sgns_genius_account
     TrezorCrypto
 )
 
-target_precompile_headers(sgns_genius_account PUBLIC
-    $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
-)
-
 target_include_directories(
     sgns_genius_account
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
-if(MSVC)
+# clang-cl also sets MSVC=1 but ignores /constexpr:steps, silently dropping
+# the raised budget, so restrict it to cl.exe.
+if(MSVC AND NOT CLANG)
     target_compile_options(sgns_genius_account PUBLIC /constexpr:steps1500000)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
@@ -69,75 +68,32 @@ target_link_libraries(burnconfig
 supergenius_install(burnconfig)
 
 set(GENIUS_NODE_SOURCES
+    TrustStartupController.cpp
     GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp
     MigrationTransaction.cpp
+    RegistrationTransaction.cpp
+    RevokeTransaction.cpp
     EscrowTransaction.cpp
     GeniusInputValidator.cpp
     MigrationInputValidator.cpp
     InputValidators.cpp
     PublicChainInputValidator.cpp
-    TransactionManager.cpp
     TokenAmount.cpp
-    GeniusNode.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
 )
 
-set(GENIUS_NODE_LIBS
-    PRIVATE
-    AsyncIOManager
-    component_factory
-    crdt_graphsync_dagsyncer
-    p2p::p2p_basic_host
-    p2p::p2p_default_network
-    p2p::p2p_peer_repository
-    p2p::p2p_inmem_address_repository
-    p2p::p2p_inmem_key_repository
-    p2p::p2p_inmem_protocol_repository
-    p2p::p2p_literals
-    p2p::p2p_kademlia
-    p2p::p2p_identify
-    p2p::p2p_ping
-    ipfs-bitswap-proto
-    ipfs-unixfs-proto
-    ipfs-bitswap-cpp
-    AsyncIOManager
-    Boost::Boost.DI
-    ScaledInteger
-    sgns_version
-    ${WIN_API_LIBRARY}
-    ${USER_ENV_LIBRARY}
-    protobuf::libprotobuf
-    rapidjson
-    coinprices
-    ${WIN_CRYPT_LIBRARY}
-    transfer_proof
-    processing_proof
-    PUBLIC
-    Boost::headers
-    ProofSystem
-    outcome
-    logger
-    crdt_globaldb
-    SGTransactionProto
-    processing_service
-    gnus_upnp
-    blockchain_genesis
-    ProcessingBase
-    evmrelay
-    migration
-    evm_watcher_service
-    sgns_genius_account
-    trustedpeer
-    burnconfig
-)
-
+# Only GeniusNode.cpp differs between the production and test libraries
+# (SGNS_CONSOLE_LOG_TESTS below), so everything else is compiled once here.
+add_library(genius_node_objs OBJECT ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node_objs ${GENIUS_NODE_LIBS})
+target_include_directories(genius_node_objs PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 # Production library — uses OS keychain (Apple/Windows/Linux secure storage)
-add_library(genius_node ${GENIUS_NODE_SOURCES})
+add_library(genius_node GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs> $<TARGET_OBJECTS:genius_transaction_objs>)
 target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
 target_include_directories(
     genius_node
@@ -145,16 +101,29 @@ target_include_directories(
     ${AsyncIOManager_INCLUDE_DIR}
 )
 # Test library — uses in-memory secure storage via DI factory (no keychain prompts)
-add_library(genius_node_test ${GENIUS_NODE_SOURCES})
+add_library(genius_node_test GeniusNode.cpp $<TARGET_OBJECTS:genius_node_objs> $<TARGET_OBJECTS:genius_transaction_objs>)
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
+target_include_directories(genius_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+# SGNS_CONSOLE_LOG_TESTS is consumed by GeniusNode.cpp (InitLoggers), which
+# compiles into THIS library — a definition on the test executable alone never
+# reached it. It forces console sinks (no per-node sgnslog2.log, which pins
+# node directories for the process on Windows and hides the CRDT/graphsync
+# trace from CI console logs) while keeping each build type's log levels.
+# Production genius_node is unchanged.
+target_compile_definitions(genius_node_test PRIVATE SGNS_CONSOLE_LOG_TESTS)
 
 add_dependencies(genius_node rlp)
+add_dependencies(genius_node_objs rlp)
 
-#set_target_properties(genius_node PROPERTIES PU@)
-if(MSVC)
+if(MSVC AND NOT CLANG)
     target_compile_options(genius_node PUBLIC /constexpr:steps1500000)
+    target_compile_options(genius_node_objs PRIVATE /constexpr:steps1500000)
+    target_compile_options(genius_node_objs PRIVATE /bigobj)
+    target_compile_options(genius_node PRIVATE /bigobj)
+    target_compile_options(genius_node_test PRIVATE /bigobj)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
+    target_compile_options(genius_node_objs PRIVATE -fconstexpr-steps=10000000)
 endif()
 
 # Install production library only

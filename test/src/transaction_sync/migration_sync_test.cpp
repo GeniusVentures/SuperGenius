@@ -5,6 +5,8 @@
 #include <system_error>
 #include <chrono>
 #include <atomic>
+#include <optional>
+#include <string>
 
 #include <gtest/gtest.h>
 #include <boost/dll.hpp>
@@ -13,9 +15,13 @@
 #include "account/MigrationInputValidator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "testutil/local_trust_setup.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "testutil/genius_node_test_access.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -25,6 +31,9 @@ using namespace sgns;
 
 TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
 {
+    // Registration is no longer triggered by a static initializer in the
+    // header; production registers via TransactionManager::GetInputValidator.
+    ASSERT_TRUE( MigrationInputValidator::Register() );
     const auto *validator = IInputValidator::Get( "migration" );
     ASSERT_NE( validator, nullptr );
     EXPECT_FALSE( validator->RequiresConsensusUTXOData() );
@@ -45,7 +54,7 @@ class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 protected:
     static inline GeniusNodeConfig DEV_CONFIG = {
         "0xdeef",                             // Addr
-        "0.65",                               // Cut
+        "0.35",                               // DevFraction
         "1.0",                                // TokenValueInGNUS
         sgns::TokenID::FromBytes( { 0x00 } ), // TokenID
         ""                                    // BaseWritePath
@@ -99,10 +108,14 @@ protected:
         }
     }
 
-    static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string &binaryParent,
-                                                                 const std::string &subdir,
-                                                                 const char        *key_hex,
-                                                                 bool               is_full_node = false )
+    /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
+    ///        Full/Light implied by @p is_full_node. Trailing and defaulted so existing call
+    ///        sites are untouched; used to migrate as an "Archive".
+    static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string         &binaryParent,
+                                                                 const std::string         &subdir,
+                                                                 const char                *key_hex,
+                                                                 bool                       is_full_node = false,
+                                                                 std::optional<std::string> nodeTypeOverride = std::nullopt )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
@@ -113,10 +126,11 @@ protected:
         // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
-                                           is_full_node ? "Full" : "Light",
-                                           /*is_processor=*/false,
-                                           /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                               nodeTypeOverride.value_or( is_full_node ? "Full" : "Light" ),
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               key_hex );
 
         auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
         return instance;
@@ -134,7 +148,7 @@ protected:
         fs::create_directories( outPath, ec );
 
         GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
-                                   "0.65",
+                                   "0.35",
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
@@ -142,10 +156,11 @@ protected:
         // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                      /*node_type=*/"Full",
-                                      /*is_processor=*/false,
-                                      /*rpc_catchup=*/false );
+        sgns::test::WriteLocalTrustSgnsConfig( devConfig.BaseWritePath,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               FULL_NODE_KEY );
         auto instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
@@ -167,12 +182,8 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
 
-    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "Full node not synced" );
-    test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  readiness_message );
+    sgns::test::MakeNodeReadyWithLocalTrust( full_node, std::chrono::seconds( 100 ) );
+    sgns::test::MakeNodeReadyWithLocalTrust( node, std::chrono::seconds( 100 ) );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
 }
@@ -216,3 +227,84 @@ INSTANTIATE_TEST_SUITE_P(
                                    "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                    262000000000ULL } ),
     []( const ::testing::TestParamInfo<NodeParams> &info ) { return info.param.subdir; } );
+
+// Exercises an Archive through the full 0.2.0 -> 3.7.0 migration chain. Migration3_4_0To3_5_0
+// constructs a live Blockchain -- and therefore a live ConsensusManager, which subscribes to the
+// consensus topic and starts its round timer inside New() -- and keeps it running for the minutes
+// the migration takes. Until NodeType was plumbed through MigrationManager into that step it
+// defaulted to Full, so a migrating Archive self-voted for that whole window. A client mints
+// throughout so the migration-time manager actually has proposals to act on.
+//
+// SCOPE -- what this does and does not guard.
+// It verifies the Archive survives the migration chain, resolves its role, and is not enrolled as
+// a validator. It does NOT discriminate the fix: removing the node_type_ argument from that step's
+// Blockchain::New still leaves this test passing. Vote-driven enrollment additionally requires
+// certificate and registry-batch machinery that this fixture does not configure
+// (SetCertificatesPerBatch is never called here), so no address is enrolled by voting either way.
+//
+// The fix was verified by log diff instead: with node_type_ passed, the migration-time manager
+// logs "role=archive self-voting=disabled"; without it, "role=full self-voting=enabled". Asserting
+// that structurally would mean reaching into a transient object owned by the migration step, which
+// costs more than it is worth -- see the abstention test in multi_account_sync.cpp for the
+// discriminating coverage of the runtime gate itself.
+TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
+{
+    SetEligibilityCheckEnabled( false );
+
+    static constexpr char CLIENT_KEY[] = "b0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeef1";
+    static constexpr unsigned MAX_MINTS_DURING_MIGRATION = 4;
+
+    auto full_node    = CreateFullNodeInstance();
+    auto binaryParent = boost::dll::program_location().parent_path().string();
+
+    auto client = CreateNodeInstance( binaryParent, "migration_archive_client", CLIENT_KEY );
+    ASSERT_NE( client, nullptr );
+    client->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+
+    sgns::test::MakeNodeReadyWithLocalTrust( full_node, std::chrono::seconds( 100 ) );
+    sgns::test::MakeNodeReadyWithLocalTrust( client, std::chrono::seconds( 100 ) );
+
+    // New() returns before the asynchronous migration finishes, so the mints below overlap it.
+    // Reuses the node10 fixture; RemovePrefixedSubdirs drops previously-migrated DBs and preserves
+    // the legacy 0.2.0 data, so the full chain re-runs here.
+    auto archive = CreateNodeInstance( binaryParent,
+                                       "node10_0_2_0",
+                                       "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                       /*is_full_node=*/false,
+                                       /*nodeTypeOverride=*/std::string( "Archive" ) );
+    ASSERT_NE( archive, nullptr );
+    archive->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+
+    for ( unsigned attempt = 0;
+          attempt < MAX_MINTS_DURING_MIGRATION && archive->GetState() != GeniusNode::NodeState::READY;
+          ++attempt )
+    {
+        (void) client->MintTokens( 100, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
+    }
+
+    sgns::test::MakeNodeReadyWithLocalTrust( archive, std::chrono::seconds( 100 ) );
+
+    ASSERT_EQ( archive->GetNodeType(), GeniusNode::NodeType::Archive );
+
+    auto registry = sgns::GeniusNodeTestAccess::GetValidatorRegistry( full_node );
+    ASSERT_TRUE( registry );
+    test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadCurrentRegistry();
+            return load.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "validator registry not initialized" );
+
+    auto snapshot = registry->LoadCurrentRegistry();
+    ASSERT_TRUE( snapshot.has_value() );
+
+    // The genesis full node is always present, so this only proves the registry is non-empty --
+    // it is not evidence that vote-driven enrollment ran. See the SCOPE note above.
+    EXPECT_TRUE( sgns::ValidatorRegistry::FindValidator( snapshot.value(), full_node->GetAddress() ) )
+        << "registry is empty; the assertion below would be vacuous";
+
+    EXPECT_FALSE( sgns::ValidatorRegistry::FindValidator( snapshot.value(), archive->GetAddress() ) )
+        << "archive was enrolled as a validator, which only casting a vote can cause";
+}

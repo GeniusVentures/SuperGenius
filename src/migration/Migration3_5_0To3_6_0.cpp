@@ -1,7 +1,7 @@
 #include "Migration3_5_0To3_6_0.hpp"
 
 #include "MigrationManager.hpp"
-#include "account/TransactionManager.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -50,7 +50,7 @@ namespace sgns
 
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
-        auto version_ret = db_3_6_0_->GetDataStore()->get( version_key );
+        auto version_ret = db_3_6_0_->GetRaw( version_key );
 
         if ( version_ret.has_error() )
         {
@@ -92,10 +92,16 @@ namespace sgns
             return outcome::success();
         }
 
+        if ( !db_3_6_0_ )
+        {
+            logger_->error( "Target {} DB not initialized", ToVersion() );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
-        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( *db_3_5_1_, *db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( *db_3_5_1_, *db_3_6_0_ ) );
 
         auto                            crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
@@ -186,7 +192,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        BOOST_OUTCOME_TRY( db_3_6_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_6_0_->PutRaw( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();
