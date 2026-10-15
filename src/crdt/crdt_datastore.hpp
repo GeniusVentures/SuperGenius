@@ -438,6 +438,23 @@ namespace sgns::crdt
 
         outcome::result<CID> WaitForJob( const CID &cid );
 
+        /** Pure query: true while the CID is queued as a root job or being processed
+        * by a DAG worker -- used by erase guards.
+        * @param cid CID to check
+        * @return true if pending or active, false otherwise
+        */
+        bool IsRootCIDPendingOrActive( const CID &cid );
+
+        /** Forwards the CRDT-entry staging half of the atomic two-level erase to the
+        * owning CrdtSet (D-01). See CrdtSet::StageEraseElement for the no-hook,
+        * caller-owns-the-commit contract.
+        * @param aDataStore caller-owned batch to stage the removes into
+        * @param aKey key whose CRDT entries are staged for erasure
+        * @return outcome::success on success or outcome::failure otherwise
+        */
+        outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                 const std::string                           &aKey );
+
     private:
         CrdtDatastore() = delete;
 
@@ -459,7 +476,6 @@ namespace sgns::crdt
         /// graphsync_->stop() must run only after they exit or it races their
         /// polling of graphsync request state.
         void StopSyncerAfterWorkerDrain();
-        bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
