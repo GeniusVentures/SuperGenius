@@ -4,26 +4,23 @@
 
 SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
 
-This milestone rebuilds bridge-mint finality from the `develop` baseline. Competing proposals for one external burn must converge on a single canonical finality slot without treating CRDT callback timing or a local message-delivery flag as protocol authority.
+This milestone makes light-node disk usage bounded: spent transaction history (both the CRDT value and its raw ipfs-lite CID block) is physically erased beyond a depth/finality window while the node keeps its unspent UTXO set and stays fully operational. Full and archive nodes keep complete history.
 
 ## Core Value
 
 **One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.**
 
-## Current Milestone: v3.0 Canonical Burn Finality Rebuild
+## Current Milestone: v1.2 Light-node transaction pruning
 
-**Goal:** Implement a minimal, generic canonical-slot certificate path on `develop`, with a durable one-vote-per-slot lock, slot-keyed certificate authority, and safe publication recovery.
+**Goal:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a configurable depth/finality window, while the node keeps its unspent UTXO set and remains fully operational (restart, tip sync, spend/receive).
 
 **Target features:**
-- Canonical external-burn slot identity shared by every competing mint proposal
-- Deterministic winner/finality rules that preserve certificate-to-proposal binding
-- Persisted local vote locks that prohibit a second usable vote for a slot until matching finality or vote expiry
-- Generic slot-keyed certificate storage, persistence-before-advertisement, and safe publication recovery
-- Multi-node regression coverage for contention, delayed CRDT delivery, publisher loss, restart, and exactly-once minting
+- Sliding-window pruner on light nodes: a transaction is erasable when every output is spent AND it is older than a configurable depth/finality window
+- tx→CID bookkeeping (the CID already arrives alongside the transaction key/value but is unused) enabling raw ipfs-lite CID block erasure for pruned transactions
+- Full and archive nodes keep complete history and remain the sync/audit source for fresh nodes
+- A pruned light node stays correct: restart recovery, new-tip sync, and spend/receive all keep working; the unspent UTXO set is never erased
 
-## Concurrent Track (from develop)
-
-Develop carries an active parallel milestone this branch does not touch: **v1.1 Multi-Signature Secure CRDT Storage** (extended with ELM Bridging phases 13-14 as a product-v1.0 pre-ship requirement — see `.planning/MILESTONES.md` and ROADMAP "Track A: EVM Bridge Integration"). This branch (v3.0 canonical burn finality) is independent of that track; both ship together on develop.
+**Non-goals this milestone:** pruning on full/archive nodes; pruning non-transaction CID data (processing-grid results, SecureCRDT values, certificates); light nodes serving historical sync to other peers.
 
 ## Requirements
 
@@ -52,7 +49,10 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- (none — milestone v3.0 scope fully validated)
+- [ ] Light-node sliding-window pruner physically erases a transaction from CRDT storage when all outputs are spent and it is older than a configurable depth/finality window
+- [ ] tx→CID bookkeeping maps pruned transactions to their raw ipfs-lite CID blocks so both storage levels are reclaimed
+- [ ] Full and archive nodes retain complete history (no pruning) and remain the sync/audit source
+- [ ] A pruned light node remains fully operational — restart, new-tip sync, spend/receive, and its unspent UTXO set intact
 - ✓ Standalone `multisig` signature verification and runtime N-of-M quorum evaluation, exercised without a running node or network transport (MSIG-01, MSIG-02, MSIG-03) — **Validated in Phase 8; completion metadata reconciled from Phase 13 evidence**
 - ✓ `ISignedCRDTData` and the static policy registry reject unsigned/under-signed registered writes and transport proposals/approvals over existing CRDT puts and callbacks only (SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04) — **Validated in Phases 9 and 13**
 - ✓ `TrustedPeerRegistry` uses SecureCRDT, starts from an authenticated reviewed genesis manifest, and authorizes membership successors from the current confirmed policy (TPR-01, TPR-02, TPR-03) — **Validated in Phases 10 and 13**
@@ -127,6 +127,9 @@ No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat g
 | v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | Phase 9/10/11 ✓ |
 | v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | Phase 10/13 ✓ |
 | v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | Phase 11/13 ✓ |
+| v1.2: Only light nodes prune; full/archive never erase history | Light nodes are disk-constrained consumers (address-filtered, not history servers); full/archive remain complete sync/audit sources — no new per-node config surface for roles that should never prune | — Pending |
+| v1.2: Erase both levels — CRDT value + raw ipfs-lite block — via a tx→CID bookkeeping map | Value-only erasure leaves the larger raw-block RocksDB untouched; the CID already arrives with the transaction key/value, so the map is incremental bookkeeping | — Pending |
+| v1.2: Erase requires all outputs spent AND depth/finality window elapsed | Spent-ness alone risks erasing transactions still needed for conflict handling or catch-up sync; the window bounds worst-case history any light node must retain | — Pending |
 | v1.0: `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
 | v1.0: `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`) |
 | v1.0: Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
@@ -152,6 +155,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-10-15 after v1.2 milestone start (light-node transaction pruning — sliding-window disk reclamation)*
 *Last updated: 2026-10-05 after v1.1 milestone (shipped with recorded gaps; REQUIREMENTS archived; next milestone not yet planned)*
 *Last updated: 2026-10-02 — Phase 15 (private-network binding) complete: 17/18 plans (15-04 descoped into 15-13), verification cycle 5 passed 11/11, UAT-1 closed by automated E2E (15-18)*
 *Last updated: 2026-09-03 after v3.0 milestone (Canonical Burn Finality Rebuild shipped; 13 acknowledged deferred items in STATE.md; next milestone not yet planned)*

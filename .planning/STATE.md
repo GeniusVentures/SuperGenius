@@ -1,18 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
-current_phase: 15
-status: Awaiting next milestone
-stopped_at: Completed 15-18-PLAN.md
-last_updated: "2026-10-05T17:38:23.386Z"
-last_activity: 2026-10-05 — Milestone v1.1 completed and archived
+milestone: v1.2
+milestone_name: Light-node transaction pruning
+status: planning
+last_updated: "2026-10-15T15:30:36.682Z"
+last_activity: 2026-10-15
 progress:
-  total_phases: 18
-  completed_phases: 6
-  total_plans: 52
-  completed_plans: 37
-  percent: 33
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SuperGenius — Multi-Signature Secure CRDT Storage
@@ -29,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-05 — Milestone v1.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-15 — Milestone v1.2 started
 
 ## Roadmap Snapshot
 
