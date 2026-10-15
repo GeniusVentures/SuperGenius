@@ -464,6 +464,19 @@ namespace sgns::crdt
         return dagService_->removeNode( cid );
     }
 
+    outcome::result<void> GraphsyncDAGSyncer::StageBlockRemoval( const CID                                   &cid,
+                                                                 const std::unique_ptr<storage::BufferBatch> &aBatch )
+    {
+        if ( aBatch == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::lock_guard lock( dagMutex_ );
+        BOOST_OUTCOME_TRY( auto key_bytes, cid.toBytes() );
+        return aBatch->remove( storage::Buffer( std::move( key_bytes ) ) );
+    }
+
     outcome::result<size_t> GraphsyncDAGSyncer::select(
         gsl::span<const uint8_t>                                                     root_cid,
         gsl::span<const uint8_t>                                                     selector,
