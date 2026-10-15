@@ -256,24 +256,30 @@ namespace sgns::crdt
         std::shared_ptr<ipfs_lite::rocksdb>                ipfsDb;    ///< vendored facade, same DB
         std::shared_ptr<ipfs_lite::ipfs::RocksdbDatastore> ipfsStore; ///< vendored block-bytes datastore
         std::shared_ptr<GraphsyncDAGSyncer>                dagSyncer; ///< never-started staging surface
-        std::shared_ptr<CrdtSet>                            crdtSet;   ///< CRDT-entry owner, same DB
+        std::shared_ptr<CrdtSet>                           crdtSet;   ///< CRDT-entry owner, same DB
     };
 
     TEST_F( EraseAtomicityTest, OneBatchErasesAllThreeLevels )
     {
-        const auto         cid         = makeSha256Cid( "4123456789ABCDEF0123456789ABCDEF"_unhex );
-        const auto         sibling     = makeSha256Cid( "5123456789ABCDEF0123456789ABCDEF"_unhex );
-        const std::string  key         = "atomic_target";
-        const std::string  sibling_key = "atomic_sibling";
-        const std::string  map_key     = "/tx/map/atomic_target";
+        const auto        cid         = makeSha256Cid( "4123456789ABCDEF0123456789ABCDEF"_unhex );
+        const auto        sibling     = makeSha256Cid( "5123456789ABCDEF0123456789ABCDEF"_unhex );
+        const std::string key         = "atomic_target";
+        const std::string sibling_key = "atomic_sibling";
+        const std::string map_key     = "/tx/map/atomic_target";
 
-        // Seed CRDT element+value for both keys through the public set path.
-        Buffer target_value;
-        target_value.put( std::string( "TARGET_VALUE" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtSet->SetValue( key, "ID_ATOMIC", target_value, 21 ) );
-        Buffer sibling_value;
-        sibling_value.put( std::string( "SIBLING_VALUE" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtSet->SetValue( sibling_key, "ID_SIBLING", sibling_value, 22 ) );
+        // Seed CRDT element+value for both keys through the public set path
+        // (delta + PutElems: the exact write shape a merged delta performs,
+        // populating the /s/ elems family plus value and priority).
+        auto target_delta = crdtSet->CreateDeltaToAdd( key, std::string( "TARGET_VALUE" ) );
+        ASSERT_TRUE( target_delta );
+        std::vector<CrdtSet::Element> target_elements( target_delta.value()->elements().begin(),
+                                                       target_delta.value()->elements().end() );
+        EXPECT_OUTCOME_TRUE_1( crdtSet->PutElems( target_elements, "ID_ATOMIC", 21 ) );
+        auto sibling_delta = crdtSet->CreateDeltaToAdd( sibling_key, std::string( "SIBLING_VALUE" ) );
+        ASSERT_TRUE( sibling_delta );
+        std::vector<CrdtSet::Element> sibling_elements( sibling_delta.value()->elements().begin(),
+                                                        sibling_delta.value()->elements().end() );
+        EXPECT_OUTCOME_TRUE_1( crdtSet->PutElems( sibling_elements, "ID_SIBLING", 22 ) );
 
         // Seed block bytes for both CIDs and seal the target.
         ipfs_lite::Buffer target_bytes;
@@ -336,9 +342,11 @@ namespace sgns::crdt
         const std::string key     = "atomic_target";
         const std::string map_key = "/tx/map/atomic_target";
 
-        Buffer target_value;
-        target_value.put( std::string( "TARGET_VALUE" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtSet->SetValue( key, "ID_ATOMIC", target_value, 21 ) );
+        auto target_delta = crdtSet->CreateDeltaToAdd( key, std::string( "TARGET_VALUE" ) );
+        ASSERT_TRUE( target_delta );
+        std::vector<CrdtSet::Element> target_elements( target_delta.value()->elements().begin(),
+                                                       target_delta.value()->elements().end() );
+        EXPECT_OUTCOME_TRUE_1( crdtSet->PutElems( target_elements, "ID_ATOMIC", 21 ) );
         ipfs_lite::Buffer target_bytes;
         target_bytes.put( std::string( "BLOCK_BYTES_TARGET" ) );
         EXPECT_OUTCOME_TRUE_1( ipfsStore->set( cid, target_bytes ) );
@@ -416,7 +424,7 @@ namespace sgns::crdt
             std::shared_ptr<CrdtDatastore>         datastore;
         };
 
-        static RealStoreNode makeNode( const std::string                             &path,
+        static RealStoreNode makeNode( const std::string                                     &path,
                                        const std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore> &blocks )
         {
             test::removeAllWithRetry( path );
@@ -516,10 +524,9 @@ namespace sgns::crdt
         }
 
         // True while the root job is stalled in the DAG worker.
-        sgns::test::assertWaitForCondition(
-            [&] { return receiver.datastore->IsRootCIDPendingOrActive( root_cid ); },
-            std::chrono::seconds( 10 ),
-            "stalled root job never reported pending/active" );
+        sgns::test::assertWaitForCondition( [&] { return receiver.datastore->IsRootCIDPendingOrActive( root_cid ); },
+                                            std::chrono::seconds( 10 ),
+                                            "stalled root job never reported pending/active" );
         EXPECT_TRUE( receiver.datastore->IsRootCIDPendingOrActive( root_cid ) );
 
         // Release the stall: the root job runs to completion...
@@ -554,7 +561,7 @@ namespace sgns::crdt
         ASSERT_TRUE( db_result );
         auto ipfs_result = ipfs_lite::rocksdb::create( db_result.value()->getDB() );
         ASSERT_TRUE( ipfs_result );
-        auto store    = std::make_shared<ipfs_lite::ipfs::RocksdbDatastore>( ipfs_result.value() );
+        auto store      = std::make_shared<ipfs_lite::ipfs::RocksdbDatastore>( ipfs_result.value() );
         auto dag_syncer = std::make_shared<GraphsyncDAGSyncer>( store, nullptr, nullptr );
 
         const auto cid = makeSha256Cid( "7123456789ABCDEF0123456789ABCDEF"_unhex );
