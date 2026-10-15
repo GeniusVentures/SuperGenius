@@ -342,6 +342,7 @@ namespace sgns::crdt
                                                           generator,
                                                           m_pubsub->GetAsioContext() );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
+        m_dagSyncer    = dagSyncer;
 
         // Start DagSyner listener
         auto startResult = dagSyncer->StartSync();
@@ -782,6 +783,94 @@ namespace sgns::crdt
             return outcome::failure( std::errc::operation_canceled );
         }
         return datastore->query( key_prefix );
+    }
+
+    std::function<bool( int )> GlobalDB::erase_interrupt_hook_for_test_ = nullptr;
+
+    void GlobalDB::SetEraseInterruptHookForTest( std::function<bool( int step )> hook )
+    {
+        erase_interrupt_hook_for_test_ = std::move( hook );
+    }
+
+    outcome::result<void> GlobalDB::EraseEntry( const std::string &key, const CID &cid )
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        auto datastore      = ActiveDataStore();
+        if ( !crdt_datastore || !datastore || !m_dagSyncer )
+        {
+            m_logger->error( "{}: GlobalDB not started", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        // Guards (fail-closed, before any staging): a CID that is in use
+        // anywhere in the live DAG machinery can never be erased here.
+        // (1) Head guard: scan the heads of EVERY topic -- a single-topic
+        //     check would miss the cid being another topic's head.
+        BOOST_OUTCOME_TRY( auto head_list, GetCRDTHeadList() );
+        for ( const auto &[topic, topic_heads] : head_list.first )
+        {
+            if ( topic_heads.count( cid ) > 0 )
+            {
+                m_logger->error( "{}: cid {} is the head of topic {}, refusing erase",
+                                 __func__,
+                                 cid.toString().value(),
+                                 topic );
+                return outcome::failure( Error::INVALID_PARAMETERS );
+            }
+        }
+        // (2) Pending/active root sync job on this CID.
+        if ( crdt_datastore->IsRootCIDPendingOrActive( cid ) )
+        {
+            m_logger->error( "{}: cid {} has a pending or active root job, refusing erase",
+                             __func__,
+                             cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // (3) LRU-cached block.
+        if ( m_dagSyncer->IsCIDInCache( cid ) )
+        {
+            m_logger->error( "{}: cid {} is in the block cache, refusing erase", __func__, cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // (4) The seal marker must exist before erasing (unresolved CID means
+        //     nothing certifies this node ever completed the block).
+        BOOST_OUTCOME_TRY( auto resolved, m_dagSyncer->isResolved( cid ) );
+        if ( !resolved )
+        {
+            m_logger->error( "{}: cid {} is unresolved, refusing erase", __func__, cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+
+        // Compose: one batch, three owner stagings, one commit. Key-layout
+        // knowledge stays in the owners -- this facade only composes.
+        auto batch = datastore->batch();
+        BOOST_OUTCOME_TRY( crdt_datastore->StageEraseElement( batch, key ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 1 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        BOOST_OUTCOME_TRY( m_dagSyncer->StageBlockRemoval( cid, batch ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 2 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        BOOST_OUTCOME_TRY( batch->remove( Buffer{}.put( key ) ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 3 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        BOOST_OUTCOME_TRY( batch->commit() );
+
+        // The seal marker is never staged for removal above; if it is gone
+        // now, something erased it out-of-band -- fail loudly.
+        BOOST_OUTCOME_TRY( auto still_resolved, m_dagSyncer->isResolved( cid ) );
+        if ( !still_resolved )
+        {
+            m_logger->error( "{}: seal marker vanished after erase - seal-addressing bug", __func__ );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+
+        return outcome::success();
     }
 
     std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const
