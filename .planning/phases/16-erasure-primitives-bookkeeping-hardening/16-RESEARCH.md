@@ -360,18 +360,24 @@ static std::function<void( int step )> erase_interrupt_for_test_;  // step: 1=af
 
 **All other claims were verified against source this session** (file:line cited inline).
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four questions were resolved during phase planning (2026-10-15); each resolution is encoded in the cited plan task.
 
 1. **Where does the GlobalDB-level erase test live — extend `globaldb_integration.cpp` or a new file?**
    - What we know: `globaldb_integration_test` links `crdt_globaldb` only; single-node fixtures are established there (`addNode`, ~seconds startup); `crdt_test` has the light fixtures but no GlobalDB (requires pubsub).
    - What's unclear: whether the team prefers a new dedicated `*_test.cpp` in the same target vs. appending to the existing file (discretion item).
    - Recommendation: new file in the `globaldb_integration_test` target (e.g., `globaldb_erase_test.cpp`) — keeps the erase suite isolated per D-C6 fresh-DB discipline; CMake change is one line in an existing `addtest`.
+   - **(RESOLVED)** New dedicated file `globaldb_erase_test.cpp` joining the existing `globaldb_integration_test` target — decided in 16-04 Task 2.
 2. **Does the erase API assert `isResolved` post-commit by re-reading, or return and let tests assert?**
    - What we know: SC-3 says "isResolved asserted before and after erase"; guards cover before; after is a one-line re-read.
    - Recommendation: re-read inside the API (fail loudly if the marker vanished — would indicate a seal-addressing bug) AND test-assert independently.
+   - **(RESOLVED)** Post-commit `isResolved` re-read inside `EraseEntry` (fails loudly) plus independent test assertion — decided in 16-03 Task 1.
 3. **Should `StageEraseElement` return the count of staged deletes (for observability/empty-detection) or void?**
    - Planner discretion (signature-level). An empty result (no elems/tombs/k entries found) is worth surfacing — erasing a nonexistent key should probably be an error or a documented no-op so Phase 17/18 callers can distinguish.
+   - **(RESOLVED)** `outcome::result<void>` with unconditional staging of `ValueKey`/`PriorityKey` (removing an absent key is a harmless staged no-op; empty-detection left to Phase 17/18 callers) — decided in 16-01 Task 1.
 4. **Exact tracked-map-cleanup surface on TransactionManager** (plain-erase method name, whether it also drives the queued-async shape of `ProcessDeletion`): needs a decision balancing "no revert" against reuse of the existing queue plumbing. Recommendation: synchronous plain erase under `tx_mutex_m` for Phase 16 (no production caller; simplest correct shape); Phase 18 revisits if the service needs async.
+   - **(RESOLVED)** Synchronous plain erase under `tx_mutex_m` — `RemoveProcessedTransactionEntry( const std::string &tx_key )`, no queue plumbing — decided in 16-02 Task 2.
 
 ## Environment Availability
 
