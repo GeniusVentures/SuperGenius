@@ -77,7 +77,13 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   3. The block-erase exposure refuses in-use CIDs — head CID, root-CID pending/active, and LRU-cached CIDs are all rejected by guards — and no code path can address a seal marker (`isResolved` asserted before and after erase).
   4. No tombstone path exists in the new surface: erasure writes directly to the shared DB through the `CrdtSet`-owned local primitive, `DeleteKey`/`DeleteTransaction` appear nowhere in the pruner code (grep gate), and the tx→CID map gains a deletion lifecycle with tracked-map cleanup.
   5. The default build and the full existing ctest suite pass green with the pruner unwired — `removeNode`'s first consumer is the test suite, so production behavior is unchanged.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
+- [ ] 16-02-PLAN.md — Guarded DAGSyncer block staging + revert-free tracked-map erase + real-store erase fixture (PRUNE-02, GATE-03)
+- [ ] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
+- [ ] 16-04-PLAN.md — Fresh-DB erase suites (atomicity, seal retention, guards, integration) + ctest source-scan gates + full-suite green (PRUNE-02, GATE-03)
 
 ### Phase 17: Eligibility, Policy & Gating (Dry-Run)
 **Goal**: The pruning policy evaluator decides erasability correctly on live data in dry-run — never erasing in production — and the two correctness dependencies of the first real prune (multi-element block gate, own-frontier survival fix) are implemented and proven before any production erasure exists.
@@ -142,7 +148,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
-| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 0/? | Not started | — |
+| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 0/4 | Not started | — |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
