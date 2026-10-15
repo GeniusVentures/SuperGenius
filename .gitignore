@@ -139,3 +139,4 @@ modules.xml
 
 ### Runtime test databases (left behind by fresh-DB-per-test suites) ###
 supergenius_crdt_set_test_erase_element_staging/
+supergenius_crdt_erase_test_block_staging/
