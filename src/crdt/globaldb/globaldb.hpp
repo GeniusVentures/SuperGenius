@@ -90,6 +90,7 @@ namespace sgns::crdt
             PUBSUB_BROADCASTER_NOT_CREATED, ///< CRDT DataStore not created
             INVALID_PARAMETERS,             ///< Invalid parameters
             GLOBALDB_NOT_STARTED,           ///< Start wasn't called
+            POST_COMMIT_ERASE_ANOMALY,      ///< Erase already committed; post-commit seal re-check failed
         };
 
         /**
@@ -221,7 +222,8 @@ namespace sgns::crdt
          * TxPruner -- RESEARCH Pitfall 7), mirroring the compose-window
          * caveat on CrdtSet::StageEraseElement. The seal marker of @p cid
          * is never addressed and is re-asserted after the commit -- a
-         * vanished seal fails loudly.
+         * vanished seal fails loudly with Error::POST_COMMIT_ERASE_ANOMALY
+         * (a COMMITTED erase -- see @return).
          *
          * Fires NO CRDT hooks and publishes NO tombstones: this is a local
          * prune operation, not a CRDT-logical delete (the network-wide
@@ -237,6 +239,11 @@ namespace sgns::crdt
          *            entries for @p key.
          * @return outcome::success on success, or outcome::failure on a guard
          *         rejection, a staging error, or a commit error.
+         *         Error::POST_COMMIT_ERASE_ANOMALY reports a COMMITTED erase:
+         *         the batch landed, then the post-commit seal re-check
+         *         failed. For that value the data IS erased -- callers must
+         *         not treat it as "nothing was erased" (guard rejections,
+         *         Error::INVALID_PARAMETERS, erase nothing).
          */
         outcome::result<void> EraseEntry( const std::string &key, const CID &cid );
 

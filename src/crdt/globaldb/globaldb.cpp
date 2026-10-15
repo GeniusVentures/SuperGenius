@@ -48,6 +48,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "Invalid parameters provided";
         case ProofError::GLOBALDB_NOT_STARTED:
             return "Start method wasn't called";
+        case ProofError::POST_COMMIT_ERASE_ANOMALY:
+            return "Erase committed, but the post-commit seal re-check failed (data was erased)";
     }
     return "Unknown error";
 }
@@ -865,12 +867,17 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( batch->commit() );
 
         // The seal marker is never staged for removal above; if it is gone
-        // now, something erased it out-of-band -- fail loudly.
+        // now, something erased it out-of-band -- fail loudly with a
+        // DISTINCT error: unlike the pre-staging guard rejections
+        // (Error::INVALID_PARAMETERS -- nothing erased), the commit has
+        // ALREADY landed here, so callers can tell "erased, then anomaly"
+        // apart from "nothing erased".
         BOOST_OUTCOME_TRY( auto still_resolved, m_dagSyncer->isResolved( cid ) );
         if ( !still_resolved )
         {
-            m_logger->error( "{}: seal marker vanished after erase - seal-addressing bug", __func__ );
-            return outcome::failure( Error::INVALID_PARAMETERS );
+            m_logger->error( "{}: seal marker vanished after erase - seal-addressing bug (erase already committed)",
+                             __func__ );
+            return outcome::failure( Error::POST_COMMIT_ERASE_ANOMALY );
         }
 
         return outcome::success();
