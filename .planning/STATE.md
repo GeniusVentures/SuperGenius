@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 16
 status: executing
 stopped_at: Phase 16 context gathered
-last_updated: "2026-10-15T18:33:12.970Z"
-last_activity: 2026-10-15 -- Phase 16 planning complete
+last_updated: "2026-10-15T19:10:45.387Z"
+last_activity: 2026-10-15
 progress:
   total_phases: 23
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 16 — Erasure Primitives & Bookkeeping Hardening (roadmap created; planning not started)
+**Current focus:** Phase 16 — erasure-primitives-bookkeeping-hardening
 
 ## Current Position
 
-Phase: 16 of 20 (Erasure Primitives & Bookkeeping Hardening)
-Plan: — (phase not yet planned)
+Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-15 -- Phase 16 planning complete
+Last activity: 2026-10-15
 
-Progress: [░░░░░░░░░░] 0% (0/5 phases)
+Progress: [███░░░░░░░] 25%
 
 ## Roadmap Snapshot
 
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T17:33:42.551Z
+**Last session:** 2026-10-15T19:10:45.380Z
 **Stopped At:** Phase 16 context gathered
-**Resume File:** .planning/phases/16-erasure-primitives-bookkeeping-hardening/16-CONTEXT.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -136,6 +136,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
+| Phase 16 P01 | 12min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -202,6 +203,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
 - [Phase 15]: Wrong-PSK GlobalDB test nodes must release db (ShutdownNow+reset) and graphsync Network BEFORE pubsub Stop - StopImpl destroys its io_context right after its own host ref, so a host surviving Stop via a retained Network member destroys parked never-negotiated pnet handshake connections against a dead kqueue reactor (15-18 ordered teardown)
 - [Phase 15]: UAT-1 closed by GlobalDB-level composition (no Blockchain/genesis): NetworkMembershipFilterFlowTest case 11 joins real-data-path scoped job replication (TaskQueueImpl+SubTaskResultStorageImpl on the scoped topic), data-level public-node isolation (live public GlobalDB, both-direction dials, multi-key negative window), and deny-all teardown on a still-live GlobalDB - mutation-verified non-vacuous
+- [Phase 16]: Erase-prefix scans carry a trailing '/' so sibling keys sharing a name prefix (key vs key2) are never swept; StageEraseElement stages all four CRDT key families unconditionally into the caller's batch and never fires the delete hook (RevertTransaction hazard).
 
 ## Deferred Items
 

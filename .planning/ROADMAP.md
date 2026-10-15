@@ -84,7 +84,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 Plans:
 **Wave 1**
 
-- [ ] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
+- [x] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
 - [ ] 16-02-PLAN.md — Guarded DAGSyncer block staging + revert-free tracked-map erase + real-store erase fixture (PRUNE-02, GATE-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -170,7 +170,7 @@ Plans:
 | 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
-| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 0/4 | Not started | — |
+| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 1/4 | In Progress|  |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
