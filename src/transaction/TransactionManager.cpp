@@ -4209,6 +4209,23 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> TransactionManager::RemoveProcessedTransactionEntry( const std::string &tx_key )
+    {
+        std::unique_lock tx_lock( tx_mutex_m );
+        auto             it = tx_processed_m.find( tx_key );
+        if ( it != tx_processed_m.end() )
+        {
+            tx_processed_m.erase( it );
+            m_logger->debug( "Erased processed-transaction entry: {}", tx_key );
+        }
+        else
+        {
+            // A pruned key with no tracked entry is a legitimate no-op.
+            m_logger->debug( "Processed-transaction entry not found: {}", tx_key );
+        }
+        return outcome::success();
+    }
+
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
         crdt::CRDTCallbackManager::NewDataPair new_data )
     {
