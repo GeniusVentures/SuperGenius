@@ -4226,6 +4226,36 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    {
+        if ( !globaldb_m )
+        {
+            m_logger->error( "GlobalDB unavailable, cannot erase entry for tx {}", tx_hash );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        // Resolve the CID the tx->CID map holds for this hash: an untracked
+        // tx cannot be erased through this lifecycle.
+        BOOST_OUTCOME_TRY( auto cid_string, GetTransactionCID( tx_hash ) );
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+
+        // The map/element key: the identical key shape StoreTransactionCID
+        // writes (built here, the map owner -- never inside GlobalDB).
+        const auto path = GetTransactionPath( tx_hash );
+
+        // Atomic two-level erase + map-entry delete in one WriteBatch.
+        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid ) );
+
+        // Revert-free tracked-map cleanup after the committed erase; the
+        // entry is memory-only bookkeeping, and a sweep re-runs this driver.
+        if ( auto cleanup = RemoveProcessedTransactionEntry( path ); cleanup.has_error() )
+        {
+            m_logger->warn( "Tracked-map cleanup failed for tx {}: {}", tx_hash, cleanup.error().message() );
+        }
+
+        return outcome::success();
+    }
+
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
         crdt::CRDTCallbackManager::NewDataPair new_data )
     {

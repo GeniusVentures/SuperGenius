@@ -895,6 +895,29 @@ namespace sgns
          */
         outcome::result<void> RemoveProcessedTransactionEntry( const std::string &tx_key );
 
+        /**
+         * @brief Deletion lifecycle driver for the tx->CID map (D-C4):
+         *        physically erases a spent transaction's CRDT entries, raw
+         *        block bytes, and map entry in ONE atomic WriteBatch, then
+         *        drops the local tracked-map entry revert-free.
+         *
+         * Resolves the CID through GetTransactionCID first (an untracked
+         * transaction fails -- it has no physical footprint to erase through
+         * this lifecycle), then delegates to GlobalDB::EraseEntry, whose
+         * in-API guards reject any in-use CID fail-closed before staging.
+         * Never publishes tombstones (D-C2): this is a local prune, and
+         * reverting the transaction or rolling back the peer nonce would
+         * undo the genuine spends that made the transaction prunable.
+         * The production caller is the future TxPruner (Phase 18); Phase 16
+         * ships this unwired.
+         *
+         * @param[in] tx_hash hash of the transaction to erase.
+         * @return outcome::success on success, or outcome::failure when the
+         *         CID cannot be resolved, a guard rejects the erase, or the
+         *         atomic commit fails.
+         */
+        outcome::result<void> EraseTransactionEntry( const std::string &tx_hash );
+
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
