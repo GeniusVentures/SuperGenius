@@ -37,6 +37,7 @@ endif()
 
 addtest(globaldb_integration_test
     globaldb_integration.cpp
+    globaldb_erase_test.cpp
 )
 
 
