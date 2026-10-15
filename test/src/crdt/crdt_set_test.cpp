@@ -299,4 +299,153 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(queryAfterDelete, crdtSet.QueryElements(key, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX));
     EXPECT_TRUE(queryAfterDelete.empty());
   }
+
+  // Fresh temp DB per test for the caller-owned-batch erase primitive
+  // (StageEraseElement). Every test asserts present-before and absent-after
+  // against the same store (D-C6).
+  class EraseElementStagingTest : public ::testing::Test
+  {
+  protected:
+    void SetUp() override
+    {
+      test::removeAllWithRetry(databasePath);
+
+      rocksdb::Options options;
+      options.create_if_missing = true;  // intentionally
+      auto dataStoreResult = rocksdb::create(databasePath, options);
+      dataStore = dataStoreResult.value();
+
+      crdtSet = std::make_shared<CrdtSet>(dataStore, HierarchicalKey("/namespace"));
+    }
+
+    // Raw count of datastore keys starting with aPrefix (bare prefix, so it
+    // catches anything the erase could have missed).
+    size_t countKeysWithPrefix(const std::string& prefix)
+    {
+      Buffer prefixBuffer;
+      prefixBuffer.put(prefix);
+      auto queryResult = dataStore->query(prefixBuffer);
+      EXPECT_TRUE(queryResult);
+      return queryResult.value().size();
+    }
+
+    bool datastoreContains(const std::string& key)
+    {
+      Buffer keyBuffer;
+      keyBuffer.put(key);
+      return dataStore->contains(keyBuffer);
+    }
+
+    const std::string databasePath = "supergenius_crdt_set_test_erase_element_staging";
+    std::shared_ptr<rocksdb> dataStore;
+    std::shared_ptr<CrdtSet> crdtSet;
+  };
+
+  TEST_F(EraseElementStagingTest, StagedEraseRemovesAllFamilies)
+  {
+    const std::string targetKey = "target";
+    const std::string siblingKey = "sibling";
+    const std::string firstId = "ID123";
+    const std::string secondId = "ID456";
+    const uint64_t firstPriority = 11;
+    const uint64_t secondPriority = 12;
+    const std::string targetValue = "TARGET_VALUE";
+    const std::string siblingValue = "SIBLING_VALUE";
+
+    // Seed the target through the public set path: element entry
+    // (/namespace/s/<key>/<id>) plus value and priority.
+    auto firstDeltaResult = crdtSet->CreateDeltaToAdd(targetKey, targetValue);
+    std::vector<CrdtSet::Element> firstElements(firstDeltaResult.value()->elements().begin(),
+                                                firstDeltaResult.value()->elements().end());
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutElems(firstElements, firstId, firstPriority));
+
+    // Seed a tombstone entry (/namespace/t/<key>/<id>) through the public
+    // tombstone path. PutTombs itself fires the delete hook, so it must run
+    // BEFORE the hook is registered below.
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutTombs(firstElements, firstId));
+
+    // Re-add under a second id so the key is live again while the tombstone
+    // from the first id stays present (both must be erased).
+    auto secondDeltaResult = crdtSet->CreateDeltaToAdd(targetKey, targetValue);
+    std::vector<CrdtSet::Element> secondElements(secondDeltaResult.value()->elements().begin(),
+                                                 secondDeltaResult.value()->elements().end());
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutElems(secondElements, secondId, secondPriority));
+
+    // Seed the untouched sibling (control) and snapshot its value bytes.
+    Buffer siblingValueBuffer;
+    siblingValueBuffer.put(siblingValue);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(siblingKey, "ID_SIB", siblingValueBuffer, 5));
+    EXPECT_OUTCOME_TRUE(siblingValueBefore, crdtSet->GetElement(siblingKey));
+    const std::string siblingBytesBefore(siblingValueBefore.toString());
+
+    // Present-before asserts.
+    EXPECT_EQ(2, countKeysWithPrefix(crdtSet->ElemsPrefix(targetKey).GetKey()));
+    EXPECT_EQ(1, countKeysWithPrefix(crdtSet->TombsPrefix(targetKey).GetKey()));
+    EXPECT_TRUE(datastoreContains(crdtSet->ValueKey(targetKey).GetKey()));
+    EXPECT_TRUE(datastoreContains(crdtSet->PriorityKey(targetKey).GetKey()));
+    EXPECT_OUTCOME_TRUE(targetValueBefore, crdtSet->GetElement(targetKey));
+    EXPECT_STRCASEEQ(std::string(targetValueBefore.toString()).c_str(), targetValue.c_str());
+    EXPECT_OUTCOME_EQ(crdtSet->GetPriority(targetKey), secondPriority);
+
+    // The erase primitive must never fire the delete hook.
+    bool deleteHookFired = false;
+    crdtSet->SetDeleteHook(
+        [&deleteHookFired](const std::string& /*k*/, const std::string& /*cid*/) { deleteHookFired = true; });
+
+    // Stage into a caller-owned batch, then commit it ourselves: the caller
+    // owns the single commit.
+    auto batch = dataStore->batch();
+    EXPECT_OUTCOME_TRUE_1(crdtSet->StageEraseElement(batch, targetKey));
+    EXPECT_OUTCOME_TRUE_1(batch->commit());
+
+    // Absent-after asserts: all four families gone.
+    EXPECT_EQ(0, countKeysWithPrefix(crdtSet->ElemsPrefix(targetKey).GetKey()));
+    EXPECT_EQ(0, countKeysWithPrefix(crdtSet->TombsPrefix(targetKey).GetKey()));
+    EXPECT_FALSE(datastoreContains(crdtSet->ValueKey(targetKey).GetKey()));
+    EXPECT_FALSE(datastoreContains(crdtSet->PriorityKey(targetKey).GetKey()));
+    EXPECT_OUTCOME_FALSE_1(crdtSet->GetElement(targetKey));
+    EXPECT_OUTCOME_EQ(crdtSet->GetPriority(targetKey), 0);
+
+    // No hook fired and the sibling is byte-identical.
+    EXPECT_FALSE(deleteHookFired);
+    EXPECT_TRUE(datastoreContains(crdtSet->ValueKey(siblingKey).GetKey()));
+    EXPECT_OUTCOME_TRUE(siblingValueAfter, crdtSet->GetElement(siblingKey));
+    EXPECT_STREQ(siblingBytesBefore.c_str(), std::string(siblingValueAfter.toString()).c_str());
+  }
+
+  TEST_F(EraseElementStagingTest, NullBatchIsRejected)
+  {
+    const std::string key = "key";
+    const std::string value = "V1";
+
+    Buffer valueBuffer;
+    valueBuffer.put(value);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(key, "ID123", valueBuffer, 11));
+
+    EXPECT_OUTCOME_FALSE_1(crdtSet->StageEraseElement(nullptr, key));
+
+    // Nothing was staged or committed: the value is still readable.
+    EXPECT_OUTCOME_TRUE(getElementResult, crdtSet->GetElement(key));
+    EXPECT_STRCASEEQ(std::string(getElementResult.toString()).c_str(), value.c_str());
+  }
+
+  TEST_F(EraseElementStagingTest, UncommittedBatchChangesNothing)
+  {
+    const std::string key = "key";
+    const std::string value = "V1";
+
+    Buffer valueBuffer;
+    valueBuffer.put(value);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(key, "ID123", valueBuffer, 11));
+
+    {
+      auto batch = dataStore->batch();
+      EXPECT_OUTCOME_TRUE_1(crdtSet->StageEraseElement(batch, key));
+      // The batch is deliberately destroyed without commit.
+    }
+
+    // The staged removes died with the batch: the value is still readable.
+    EXPECT_OUTCOME_TRUE(getElementResult, crdtSet->GetElement(key));
+    EXPECT_STRCASEEQ(std::string(getElementResult.toString()).c_str(), value.c_str());
+  }
 }
