@@ -4234,20 +4234,24 @@ namespace sgns
             return outcome::failure( std::errc::bad_file_descriptor );
         }
 
-        // Resolve the CID the tx->CID map holds for this hash: an untracked
-        // tx cannot be erased through this lifecycle.
-        BOOST_OUTCOME_TRY( auto cid_string, GetTransactionCID( tx_hash ) );
-        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
-
-        // The map/element key: the identical key shape StoreTransactionCID
-        // writes (built here, the map owner -- never inside GlobalDB).
-        const auto path = GetTransactionPath( tx_hash );
+        // Resolve the CID the tx->CID map holds for this hash TOGETHER with
+        // the key it was found under: the map spans every monitored network,
+        // so the entry can live under a non-local network's path. Path and
+        // CID always come from the SAME network -- pairing a local-network
+        // path with another network's CID would erase mismatched keys (block
+        // bytes gone while the real network's CRDT entries and raw map entry
+        // survive: the asymmetric partial erase this lifecycle forbids).
+        // An untracked tx cannot be erased through this lifecycle.
+        BOOST_OUTCOME_TRY( auto path_and_cid, ResolveTransactionPathAndCID( tx_hash ) );
+        const auto &path = path_and_cid.first;
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
 
         // Atomic two-level erase + map-entry delete in one WriteBatch.
         BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid ) );
 
-        // Revert-free tracked-map cleanup after the committed erase; the
-        // entry is memory-only bookkeeping, and a sweep re-runs this driver.
+        // Revert-free tracked-map cleanup after the committed erase, keyed on
+        // the SAME path that was erased; the entry is memory-only
+        // bookkeeping, and a sweep re-runs this driver.
         if ( auto cleanup = RemoveProcessedTransactionEntry( path ); cleanup.has_error() )
         {
             m_logger->warn( "Tracked-map cleanup failed for tx {}: {}", tx_hash, cleanup.error().message() );
@@ -4479,6 +4483,13 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::GetTransactionCID( const std::string &tx_hash ) const
     {
+        BOOST_OUTCOME_TRY( auto path_and_cid, ResolveTransactionPathAndCID( tx_hash ) );
+        return path_and_cid.second;
+    }
+
+    outcome::result<std::pair<std::string, std::string>> TransactionManager::ResolveTransactionPathAndCID(
+        const std::string &tx_hash ) const
+    {
         auto datastore = globaldb_m->GetDataStore();
         if ( !datastore )
         {
@@ -4497,7 +4508,11 @@ namespace sgns
             auto value_res = datastore->get( key_buffer );
             if ( value_res.has_value() )
             {
-                return std::string( value_res.value().toString() );
+                // The key travels with the CID so the caller addresses the
+                // SAME entry the CID was resolved from -- mixing a CID from
+                // one network with a path from another erases mismatched
+                // keys (asymmetric partial erase).
+                return std::make_pair( key, std::string( value_res.value().toString() ) );
             }
         }
 
