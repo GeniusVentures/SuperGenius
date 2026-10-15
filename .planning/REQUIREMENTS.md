@@ -76,30 +76,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRUNE-01 | — | Pending |
-| PRUNE-02 | — | Pending |
-| PRUNE-03 | — | Pending |
-| PRUNE-04 | — | Pending |
-| PRUNE-05 | — | Pending |
-| GATE-01 | — | Pending |
-| GATE-02 | — | Pending |
-| GATE-03 | — | Pending |
-| GATE-04 | — | Pending |
-| GATE-05 | — | Pending |
-| GATE-06 | — | Pending |
-| SURV-01 | — | Pending |
-| SURV-02 | — | Pending |
-| SURV-03 | — | Pending |
-| RECL-01 | — | Pending |
-| RECL-02 | — | Pending |
-| RECL-03 | — | Pending |
-| RECL-04 | — | Pending |
+| PRUNE-01 | Phase 17 | Pending |
+| PRUNE-02 | Phase 16 | Pending |
+| PRUNE-03 | Phase 17 | Pending |
+| PRUNE-04 | Phase 18 | Pending |
+| PRUNE-05 | Phase 18 | Pending |
+| GATE-01 | Phase 17 | Pending |
+| GATE-02 | Phase 20 | Pending |
+| GATE-03 | Phase 16 | Pending |
+| GATE-04 | Phase 17 | Pending |
+| GATE-05 | Phase 19 | Pending |
+| GATE-06 | Phase 17 | Pending |
+| SURV-01 | Phase 19 | Pending |
+| SURV-02 | Phase 19 | Pending |
+| SURV-03 | Phase 19 | Pending |
+| RECL-01 | Phase 20 | Pending |
+| RECL-02 | Phase 20 | Pending |
+| RECL-03 | Phase 18 | Pending |
+| RECL-04 | Phase 18 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️ (filled by roadmap creation)
+- Mapped to phases: 18/18 (Phase 16: 2 · Phase 17: 5 · Phase 18: 4 · Phase 19: 4 · Phase 20: 3)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-15*
-*Last updated: 2026-10-15 after initial definition*
+*Last updated: 2026-10-15 — traceability filled by v1.2 roadmap creation (phases 16-20)*

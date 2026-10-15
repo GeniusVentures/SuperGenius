@@ -3,64 +3,74 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 status: planning
-last_updated: "2026-10-15T15:30:36.682Z"
+last_updated: "2026-10-15T16:23:12.000Z"
 last_activity: 2026-10-15
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
 ---
 
-# State: SuperGenius — Multi-Signature Secure CRDT Storage
+# State: SuperGenius — Light-node Transaction Pruning
 
-**Last updated:** 2026-08-12
-**Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 15
+**Last updated:** 2026-10-15
+**Milestone:** v1.2 — Light-node transaction pruning
+**Current Phase:** 16
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-20)
-**Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Milestone complete
+See: .planning/PROJECT.md (updated 2026-10-15)
+**Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
+**Current focus:** Phase 16 — Erasure Primitives & Bookkeeping Hardening (roadmap created; planning not started)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-15 — Milestone v1.2 started
+Phase: 16 of 20 (Erasure Primitives & Bookkeeping Hardening)
+Plan: — (phase not yet planned)
+Status: Roadmap created — ready to plan
+Last activity: 2026-10-15 — v1.2 roadmap created (phases 16-20; 18/18 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0% (0/5 phases)
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 8 | MultiSig Primitive | complete | MSIG-01, MSIG-02, MSIG-03 |
-| 9 | SecureCRDT Layer | complete | SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04 |
-| 10 | TrustedPeerRegistry | complete | TPR-01, TPR-02, TPR-03 |
-| 11 | BurnConfig Quorum Wiring | complete | BURN-01, BURN-02, BURN-03 |
-| 12 | ValidatorRegistry Migration | complete | MIG-05, MIG-06 |
-| 13 | Trusted-peer genesis, quorum policy, and production integration | complete (29/29), ready for verification | BOOT-01..04, POLICY-01, VALID-01, TEST-01 and audited v1.1 closures |
+| 16 | Erasure Primitives & Bookkeeping Hardening | not started | PRUNE-02, GATE-03 |
+| 17 | Eligibility, Policy & Gating (Dry-Run) | not started | PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06 |
+| 18 | TxPruner Service & First Real Prune | not started | PRUNE-04, PRUNE-05, RECL-03, RECL-04 |
+| 19 | Pruned-Node Survival & Recovery Hardening | not started | GATE-05, SURV-01, SURV-02, SURV-03 |
+| 20 | Reclamation Proof & E2E Hardening | not started | GATE-02, RECL-01, RECL-02 |
 
 ## Key Decisions
 
-- Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle — `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance
-- Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks); no new networking/RPC
-- `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) — matches `ValidatorRegistry`'s existing per-type style
-- `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set — different concerns (economic-parameter signers vs. consensus validators)
-- `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback — avoids a CRDT read on every `PayEscrow` call
+Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work (v1.2):
+
+- Only light nodes prune; full/archive never erase history — light nodes are disk-constrained consumers, full/archive remain the complete sync/audit source
+- Erase both levels — CRDT value + raw ipfs-lite block — via the existing tx→CID map (already exists at `TransactionManager.cpp:4322/4433`; extended with a deletion lifecycle, not replaced)
+- Erase requires all outputs genuinely spent (`IsOutPointGenuinelyConsumed`) AND depth/finality window elapsed (priority vs `maxHeight`); `spent_epoch`/`spent_by_txid` are dead schema — never populated, do not build on them
+- Pruning is a local RocksDB operation, never the CRDT tombstone path — `DeleteKey`/`DeleteTransaction` publish network-wide tombstones that would erase history on full/archive nodes too
+- Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch storms on the single DAG worker
+- A delta block erases only when every element it carries is prune-eligible (parse the block at prune time; no persistent reverse index — the block is the source of truth)
+- Ordering invariants: own-frontier survival fix (cert-slot previous_hash resolution) lands before the first real prune; block-parse eligibility gate lands before any block deletion
+- One shared RocksDB, two facades (`globaldb.cpp:322`) — a single WriteBatch erases atomically and a single whole-DB CompactRange reclaims
+- Reclamation is proven in measured bytes (SST/`du` before-vs-after) via explicit `CompactRange` with `bottommost_level_compaction = kForce` — deletes alone reclaim nothing
+- Never trigger prune work from CRDT element callbacks (they fire pre-batch-commit — proven invariant, cert-receipt memory)
 
 ## Notes
 
-- This milestone continues phase numbering from an undocumented prior body of work (`.planning/phases/01` through `07`, bridge-relayer/consensus-voting features). Phases 8-13 in this milestone are unrelated to those directories; do not reuse or renumber them.
-- Precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives.
-- Brownfield codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
-- Sequential dependency chain completed through Phase 12; Phase 13 is the audited production/security closure and depends on Phase 12.
+- Phase numbering continues across milestones: v1.1's highest phase was 15; v1.2 phases are 16-20. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
+- Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence) converged the 5-phase structure; the two hard ordering constraints (block-parse gate before block deletion; own-frontier fix before first real prune) are encoded in the roadmap's execution order.
+- Research flags deeper research during planning for Phases 17 (own-frontier mechanism choice, window definition, lock/re-verify protocol), 18 (re-delivery guard placement and state source), and 19 (checkpoint-rebuild guard mechanism); Phases 16 and 20 follow standard patterns (skip research-phase).
+- `TxPruner` is a new owning module in `src/transaction/` beside `TransactionManager` — not a `GeniusNode` lambda (god-class facade already flagged in CONCERNS.md).
+- Every pruning test uses a fresh temp DB with three-part assertions (present-before, absent-after in both stores, seal-marker-still-present) plus a negative control.
+- Brownfield codebase map exists at `.planning/codebase/`; v1.2 research at `.planning/research/` (SUMMARY, STACK, ARCHITECTURE, PITFALLS, FEATURES).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first phase: /gsd:plan-phase 16
 
 ### Quick Tasks Completed
 
@@ -71,8 +81,8 @@ Last activity: 2026-10-15 — Milestone v1.2 started
 
 ## Session
 
-**Last session:** 2026-10-02T20:25:23.466Z
-**Stopped At:** Completed 15-18-PLAN.md
+**Last session:** 2026-10-15
+**Stopped At:** v1.2 roadmap created (phases 16-20) — ready for /gsd:plan-phase 16
 **Resume File:** None
 
 ## Accumulated Context
@@ -85,6 +95,7 @@ Last activity: 2026-10-15 — Milestone v1.2 started
 
 - Phase 13 added: Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
 - Phase 14 added: Account-generation publication and retired-manager lifecycle safety
+- Milestone v1.2 roadmap created: Phases 16-20 (erasure primitives → dry-run policy/gating → first real prune → survival hardening → reclamation proof)
 
 ### v1.0 History
 
