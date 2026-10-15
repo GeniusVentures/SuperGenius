@@ -208,10 +208,20 @@ namespace sgns::crdt
          * This is the ONLY entry to physical erasure. Guards run inside the
          * API and reject fail-closed (Error::INVALID_PARAMETERS) BEFORE any
          * staging: a CID that is the head of ANY topic, the root of a
-         * pending/active sync job, LRU-cached, or unresolved can never be
-         * erased through this path. The seal marker of @p cid is never
-         * addressed and is re-asserted after the commit -- a vanished seal
-         * fails loudly.
+         * pending/active sync job, LRU-cached, or unresolved is not erased.
+         * These guards are CHECK-THEN-ACT and therefore best-effort under
+         * concurrency: a CID that becomes a topic head, enters a sync job,
+         * or enters the LRU block cache AFTER its check ran but before the
+         * commit lands is erased anyway (the cache would then serve a node
+         * whose bytes are gone); likewise a concurrent PutElems on the same
+         * key can re-create entries between the under-lock staging query
+         * and the outside-the-lock commit. The guarantee is absolute only
+         * in the absence of such concurrent writers; the critical section
+         * that closes this window is owned by the caller (Phase 18's
+         * TxPruner -- RESEARCH Pitfall 7), mirroring the compose-window
+         * caveat on CrdtSet::StageEraseElement. The seal marker of @p cid
+         * is never addressed and is re-asserted after the commit -- a
+         * vanished seal fails loudly.
          *
          * Fires NO CRDT hooks and publishes NO tombstones: this is a local
          * prune operation, not a CRDT-logical delete (the network-wide

@@ -803,7 +803,10 @@ namespace sgns::crdt
         }
 
         // Guards (fail-closed, before any staging): a CID that is in use
-        // anywhere in the live DAG machinery can never be erased here.
+        // anywhere in the live DAG machinery is not erased. These are
+        // check-then-act guards -- best-effort under concurrency; the
+        // caller owns the critical section that closes the window (see the
+        // header contract).
         // (1) Head guard: scan the heads of EVERY topic -- a single-topic
         //     check would miss the cid being another topic's head.
         BOOST_OUTCOME_TRY( auto head_list, GetCRDTHeadList() );
