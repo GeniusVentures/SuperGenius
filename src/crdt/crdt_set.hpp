@@ -260,6 +260,16 @@ namespace sgns::crdt
         * same batch and land in one commit (D-C6 / PRUNE-02) -- erasing only some
         * families skews the add-wins resolution on re-delivery.
         *
+        * @p aKey must be non-empty (an empty key would sweep the whole
+        * elems/tombs namespaces); it fails with std::errc::invalid_argument.
+        * The element/tombstone scans stage only entries whose id is a
+        * TOP-LEVEL id of @p aKey, mirroring CreateDeltaToRemove and
+        * InElemsNotTombstoned: entries of hierarchical DESCENDANT keys (key
+        * "a/b" when erasing "a") are left untouched, so erasing a subtree
+        * root never strips its descendants' families while their own
+        * value/priority records survive -- erase each descendant key through
+        * its own StageEraseElement call.
+        *
         * This is a local prune primitive, NOT the CRDT tombstone path: it stages
         * raw datastore removes and never invokes deleteHookFunc_. Firing the
         * delete hook drives TransactionManager::ProcessDeletion ->
@@ -274,8 +284,12 @@ namespace sgns::crdt
         * holding other modules' locks here.
         * @param aDataStore caller-owned batch to stage the removes into; never
         * committed by this function
-        * @param aKey key whose CRDT entries are staged for erasure
-        * @return outcome::success on success or outcome::failure otherwise
+        * @param aKey key whose CRDT entries are staged for erasure; must be
+        *        non-empty, and only its top-level entries are staged
+        * @return outcome::success on success; outcome::failure with
+        *         std::errc::invalid_argument for an empty @p aKey, or with
+        *         another error on a null batch/store or a query/staging
+        *         failure
         */
         outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                                  const std::string                           &aKey );

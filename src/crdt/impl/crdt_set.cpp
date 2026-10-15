@@ -679,12 +679,25 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
+        // An empty key would degenerate the scans below to the whole
+        // elems/tombs namespaces (every element and tombstone entry in the
+        // set), so it is rejected before any staging.
+        if ( aKey.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
         std::lock_guard lg( this->mutex_ );
 
         // Stage removes for every stored entry of the two per-id families. The
         // scans carry the trailing '/' so a sibling key whose name merely starts
-        // with aKey (e.g. "key" vs "key2") is never matched. Stage-then-commit of
-        // the caller's batch removes them all.
+        // with aKey (e.g. "key" vs "key2") is never matched, and each staged id
+        // must be TOP-LEVEL for aKey (no '/' in it): a hierarchical descendant
+        // key ("a/b" under erased key "a") matches the raw prefix but owns its
+        // own value/priority records, so sweeping its elems/tombs here would be
+        // an asymmetric partial erase. Same IsTopLevel discipline as
+        // CreateDeltaToRemove and InElemsNotTombstoned. Stage-then-commit of the
+        // caller's batch removes the staged entries.
         const auto elemsScanPrefix = this->ElemsPrefix( aKey ).GetKey() + "/";
         const auto tombsScanPrefix = this->TombsPrefix( aKey ).GetKey() + "/";
         for ( const auto &scanPrefix : { elemsScanPrefix, tombsScanPrefix } )
@@ -695,6 +708,13 @@ namespace sgns::crdt
             BOOST_OUTCOME_TRY( auto queryResult, this->dataStore_->query( prefixBuffer ) );
             for ( const auto &entry : queryResult )
             {
+                std::string id( entry.first.toString().substr( scanPrefix.size() ) );
+                if ( !HierarchicalKey( id ).IsTopLevel() )
+                {
+                    // Entry belongs to a descendant key of aKey, not aKey.
+                    CRDTSet()->debug( "StageEraseElement skipping descendant-key entry '{}'", entry.first.toString() );
+                    continue;
+                }
                 BOOST_OUTCOME_TRY( aDataStore->remove( entry.first ) );
             }
         }
