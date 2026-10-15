@@ -1378,6 +1378,17 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
+    outcome::result<void> CrdtDatastore::StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                            const std::string                           &aKey )
+    {
+        if ( set_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        return set_->StageEraseElement( aDataStore, aKey );
+    }
+
     outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey                 &aKey,
                                                 const Buffer                          &aValue,
                                                 const std::unordered_set<std::string> &topics )
