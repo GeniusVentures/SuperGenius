@@ -35,6 +35,14 @@ if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
+# Source root scanned at runtime by EraseSurfaceGateTest (crdt_erase_test.cpp):
+# the repo's production src/ tree. PROJECT_ROOT is the repo root set by
+# build/CommonCompilerOptions.cmake; CMAKE_SOURCE_DIR is NOT used because this
+# repo drives CMake from build/<platform>/ (an out-of-root driver directory).
+target_compile_definitions(crdt_test PRIVATE
+    SUPERGNUS_ERASE_GATE_SRC="${PROJECT_ROOT}/src"
+)
+
 addtest(globaldb_integration_test
     globaldb_integration.cpp
     globaldb_erase_test.cpp
