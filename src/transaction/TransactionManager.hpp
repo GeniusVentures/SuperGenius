@@ -848,6 +848,22 @@ namespace sgns
          */
         outcome::result<void> StoreTransactionCID( const std::string &key, const std::string &cid );
 
+        /**
+         * @brief Resolves a transaction hash to its {tx->CID map key, CID}
+         *        pair, searching every monitored network and returning the
+         *        key the entry was actually found under.
+         *
+         * The key and the CID are resolved TOGETHER so callers address
+         * exactly the entry that was matched -- resolving a CID from one
+         * network while building the key from the local network would pair
+         * mismatched keys on the erase path.
+         * @param[in] tx_hash hash of the transaction to resolve.
+         * @return {path, cid_string} on success, or outcome::failure when no
+         *         monitored network holds the hash.
+         */
+        outcome::result<std::pair<std::string, std::string>> ResolveTransactionPathAndCID(
+            const std::string &tx_hash ) const;
+
         void ProcessDeletion( std::string deleted_key );
         void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
@@ -901,10 +917,13 @@ namespace sgns
          *        block bytes, and map entry in ONE atomic WriteBatch, then
          *        drops the local tracked-map entry revert-free.
          *
-         * Resolves the CID through GetTransactionCID first (an untracked
-         * transaction fails -- it has no physical footprint to erase through
-         * this lifecycle), then delegates to GlobalDB::EraseEntry, whose
-         * in-API guards reject any in-use CID fail-closed before staging.
+         * Resolves the CID and the tx->CID map key it was found under
+         * TOGETHER, across all monitored networks (an untracked transaction
+         * fails -- it has no physical footprint to erase through this
+         * lifecycle), so the erase and the tracked-map cleanup always
+         * address the entry's own network path; then delegates to
+         * GlobalDB::EraseEntry, whose in-API guards reject any in-use CID
+         * fail-closed before staging.
          * Never publishes tombstones (D-C2): this is a local prune, and
          * reverting the transaction or rolling back the peer nonce would
          * undo the genuine spends that made the transaction prunable.
