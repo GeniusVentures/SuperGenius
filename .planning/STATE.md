@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 16
-status: executing
+status: verifying
 stopped_at: None
-last_updated: "2026-10-15T20:17:11.964Z"
+last_updated: "2026-10-15T21:33:28.928Z"
 last_activity: 2026-10-15
 progress:
   total_phases: 23
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 4
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-15
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T20:17:05.527Z
+**Last session:** 2026-10-15T21:33:28.923Z
 **Stopped At:** None
 **Resume File:** None
 
@@ -139,6 +139,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P01 | 12min | 3 tasks | 6 files |
 | Phase 16 P02 | 18min | 3 tasks | 7 files |
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
+| Phase 16 P04 | 71min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -210,6 +211,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: StageBlockRemoval is the one SuperGNUS-side home of the vendored block-key format; RemoveProcessedTransactionEntry is a revert-free plain tracked-map erase (missing key = success no-op).
 - [Phase 16]: EraseEntry composes all four guards (all-topic head scan, pending/active root job, LRU cache, isResolved) fail-closed before staging into ONE BufferBatch with a single sync commit and a post-commit seal re-assert; key shapes are built by the caller — GlobalDB stays generic (D-01).
 - [Phase 16]: EraseTransactionEntry completes the tx->CID map deletion lifecycle (resolve CID, atomic GlobalDB erase, revert-free tracked-map cleanup); the test-only interrupt hook aborts before commit so the dying batch proves all-or-nothing (D-03/D-C4).
+- [Phase 16]: The erase pending/active guard protects the EXTERNAL root path only (pendingRootQueue_/activeRootCID_); self-created Put jobs live in selfCreatedJobList_ — the 16-04 guard proof stalls a mirrored receiver's getNode, the fetch entry the DAG worker reaches with the root job active
+- [Phase 16]: The source-scan gate roots at PROJECT_ROOT, never CMAKE_SOURCE_DIR — this repo drives CMake from build/OSX/ (out-of-root driver), so CMAKE_SOURCE_DIR/src does not exist and would make the gate vacuously green
+- [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
 
 ## Deferred Items
 
