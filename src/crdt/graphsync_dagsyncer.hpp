@@ -9,6 +9,8 @@
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 
+#include <storage/buffer_map_types.hpp>
+
 #include "crdt/dagsyncer.hpp"
 #include "base/logger.hpp"
 
@@ -97,6 +99,30 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode( const CID &cid ) const override;
 
         outcome::result<void> removeNode( const CID &cid ) override;
+
+        /** Stages the removal of a block's raw storage key into the
+        * caller-owned batch. The staged key is exactly CID::toBytes() -- the
+        * block-bytes key of the vendored RocksdbDatastore (its encode() at
+        * thirdparty/ipfs-lite-cpp/ipfs_lite/ipfs/impl/datastore_rocksdb.cpp:14-18);
+        * this method is the ONE SuperGNUS-side home of that key format.
+        *
+        * The seal marker (the vendored seal(), datastore_rocksdb.cpp:48-56) is
+        * a DIFFERENT key and is deliberately never constructed here: it is the
+        * traversal terminator that prevents re-fetch storms on the single DAG
+        * worker, so erasing a block must never erase its seal.
+        *
+        * The immediate node-removal override directly above stays dormant
+        * (zero production callers) because its chain executes its own
+        * standalone db->Delete and cannot join an external WriteBatch;
+        * staging into the caller's batch is what makes the atomic one-commit
+        * erase of PRUNE-02 possible. The caller (the GlobalDB compose) owns
+        * the single commit.
+        * @param cid CID whose block bytes are staged for removal
+        * @param aBatch caller-owned batch to stage the remove into; never
+        * committed by this function
+        * @return outcome::success on success or outcome::failure otherwise
+        */
+        outcome::result<void> StageBlockRemoval( const CID &cid, const std::unique_ptr<storage::BufferBatch> &aBatch );
 
         outcome::result<size_t> select(
             gsl::span<const uint8_t>                                                     root_cid,
