@@ -20,7 +20,10 @@
 #include <libp2p/multi/multihash.hpp>
 
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -571,5 +574,235 @@ namespace sgns::crdt
         EXPECT_FALSE( dag_syncer->IsCIDInCache( cid ) );
         dag_syncer->InitCIDBlock( cid );
         EXPECT_TRUE( dag_syncer->IsCIDInCache( cid ) );
+    }
+
+    namespace
+    {
+        /// Gate input root: the production tree EraseSurfaceGateTest scans.
+        std::filesystem::path gateSourceRoot()
+        {
+#ifdef SUPERGNUS_ERASE_GATE_SRC
+            return std::filesystem::path( SUPERGNUS_ERASE_GATE_SRC );
+#else
+            ADD_FAILURE() << "SUPERGNUS_ERASE_GATE_SRC is not defined -- the source-scan gate "
+                             "cannot run (fix test/src/crdt/CMakeLists.txt)";
+            return {};
+#endif
+        }
+
+        /// Recursive walker over .hpp/.cpp files under @p dir.
+        std::vector<std::filesystem::path> collectSourceFiles( const std::filesystem::path &dir )
+        {
+            std::vector<std::filesystem::path> files;
+            std::error_code                    ec;
+            for ( auto it = std::filesystem::recursive_directory_iterator( dir, ec );
+                  it != std::filesystem::recursive_directory_iterator();
+                  it.increment( ec ) )
+            {
+                if ( ec )
+                {
+                    ADD_FAILURE() << "directory walk failed under " << dir << ": " << ec.message();
+                    ec.clear();
+                    continue;
+                }
+                if ( !it->is_regular_file( ec ) )
+                {
+                    continue;
+                }
+                const auto ext = it->path().extension().string();
+                if ( ext == ".hpp" || ext == ".cpp" )
+                {
+                    files.push_back( it->path() );
+                }
+            }
+            return files;
+        }
+
+        std::string readWholeFile( const std::filesystem::path &path )
+        {
+            std::ifstream      in( path, std::ios::binary );
+            std::ostringstream ss;
+            ss << in.rdbuf();
+            return ss.str();
+        }
+
+        std::string trimCopy( const std::string &line )
+        {
+            const auto first = line.find_first_not_of( " \t\r" );
+            if ( first == std::string::npos )
+            {
+                return {};
+            }
+            const auto last = line.find_last_not_of( " \t\r" );
+            return line.substr( first, last - first + 1 );
+        }
+
+        /// Extracts the function body of the @p qualified_name definition
+        /// (e.g. "GlobalDB::EraseEntry") from @p file_text: the line-scan
+        /// runs from the definition line to the closing brace at the
+        /// definition's own indentation (Allman layout). Fails the test
+        /// loudly when the definition is missing -- a renamed function must
+        /// break the gate, never bypass it.
+        std::string extractFunctionBody( const std::string &file_text, const std::string &qualified_name )
+        {
+            std::istringstream       in( file_text );
+            std::vector<std::string> lines;
+            std::string              line;
+            while ( std::getline( in, line ) )
+            {
+                lines.push_back( line );
+            }
+
+            const std::string definition_marker = qualified_name + "(";
+            for ( size_t i = 0; i < lines.size(); ++i )
+            {
+                if ( lines[i].find( definition_marker ) == std::string::npos )
+                {
+                    continue;
+                }
+                // Opening brace on its own line at the definition's
+                // indentation (repository Allman layout).
+                size_t open_line  = i;
+                bool   found_open = false;
+                for ( ; open_line < lines.size() && open_line < i + 12; ++open_line )
+                {
+                    if ( trimCopy( lines[open_line] ) == "{" )
+                    {
+                        found_open = true;
+                        break;
+                    }
+                }
+                if ( !found_open )
+                {
+                    ADD_FAILURE() << "no Allman opening brace found after " << qualified_name << " definition";
+                    return {};
+                }
+                for ( size_t j = open_line + 1; j < lines.size() && j < open_line + 600; ++j )
+                {
+                    if ( trimCopy( lines[j] ) == "}" )
+                    {
+                        std::string body;
+                        for ( size_t k = i; k <= j; ++k )
+                        {
+                            body += lines[k];
+                            body += '\n';
+                        }
+                        return body;
+                    }
+                }
+                ADD_FAILURE() << "no closing brace found for " << qualified_name << " body";
+                return {};
+            }
+
+            ADD_FAILURE() << "definition of " << qualified_name << " not found -- the gate must be updated on rename";
+            return {};
+        }
+    } // namespace
+
+    /// CI-enforced bans over the production tree (project rule: gates, not
+    /// promises). The scan runs at test runtime against the source root the
+    /// build wired via SUPERGNUS_ERASE_GATE_SRC, so a tampered or missing
+    /// tree fails the gate instead of silently passing.
+    class EraseSurfaceGateTest : public ::testing::Test
+    {
+    protected:
+        /// The base tombstone-erase tokens banned from every new erase
+        /// surface: each publishes or reverts network-wide state and must
+        /// never join the local physical-erase path.
+        static const std::vector<std::string> &baseBannedTokens()
+        {
+            static const std::vector<std::string> tokens = { "DeleteKey",
+                                                             "DeleteTransaction",
+                                                             "removeNode",
+                                                             "DeleteCIDBlock" };
+            return tokens;
+        }
+    };
+
+    TEST_F( EraseSurfaceGateTest, SealKeyHasNoProductionHome )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        for ( const auto &file : collectSourceFiles( root ) )
+        {
+            // The seal suffix literal's one home is the vendored
+            // RocksdbDatastore under thirdparty/ -- outside src/. Production
+            // code must never construct the key (GATE-03).
+            EXPECT_EQ( readWholeFile( file ).find( "\"sealed\"" ), std::string::npos )
+                << "quoted seal-suffix literal must stay in thirdparty/ only: " << file;
+        }
+    }
+
+    TEST_F( EraseSurfaceGateTest, RemoveNodeStaysDormant )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        const std::vector<std::string> owner_suffixes = { "crdt/graphsync_dagsyncer.hpp",
+                                                          "crdt/impl/graphsync_dagsyncer.cpp" };
+        for ( const auto &file : collectSourceFiles( root ) )
+        {
+            const auto generic  = file.generic_string();
+            const auto is_owner = std::any_of(
+                owner_suffixes.begin(),
+                owner_suffixes.end(),
+                [&]( const std::string &s )
+                {
+                    return generic.size() >= s.size() && generic.compare( generic.size() - s.size(), s.size(), s ) == 0;
+                } );
+            if ( is_owner )
+            {
+                continue;
+            }
+            std::istringstream in( readWholeFile( file ) );
+            std::string        line;
+            for ( size_t lineno = 1; std::getline( in, line ); ++lineno )
+            {
+                // The node-removal chain cannot join an external WriteBatch;
+                // its only callers are its own declaration and definition.
+                EXPECT_EQ( line.find( "removeNode(" ), std::string::npos )
+                    << "removeNode call outside its owner files: " << file << ":" << lineno;
+            }
+        }
+    }
+
+    TEST_F( EraseSurfaceGateTest, EraseSurfaceContainsNoTombstones )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+
+        struct FunctionTarget
+        {
+            std::string              file;
+            std::string              qualified_name;
+            std::vector<std::string> extra_banned;
+        };
+
+        const std::vector<FunctionTarget> targets = {
+            { "crdt/globaldb/globaldb.cpp", "GlobalDB::EraseEntry", {} },
+            { "transaction/TransactionManager.cpp",
+              "TransactionManager::EraseTransactionEntry",
+              { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
+            { "transaction/TransactionManager.cpp",
+              "TransactionManager::RemoveProcessedTransactionEntry",
+              { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
+            { "crdt/impl/crdt_set.cpp", "CrdtSet::StageEraseElement", {} },
+            { "crdt/impl/graphsync_dagsyncer.cpp", "GraphsyncDAGSyncer::StageBlockRemoval", {} },
+        };
+
+        for ( const auto &target : targets )
+        {
+            const auto file_path = root / target.file;
+            ASSERT_TRUE( std::filesystem::exists( file_path ) ) << "tracked erase-surface file missing: " << file_path;
+            const auto body = extractFunctionBody( readWholeFile( file_path ), target.qualified_name );
+            ASSERT_FALSE( body.empty() );
+
+            auto banned = baseBannedTokens();
+            banned.insert( banned.end(), target.extra_banned.begin(), target.extra_banned.end() );
+            for ( const auto &token : banned )
+            {
+                EXPECT_EQ( body.find( token ), std::string::npos )
+                    << "banned token '" << token << "' inside " << target.qualified_name;
+            }
+        }
     }
 } // namespace sgns::crdt
