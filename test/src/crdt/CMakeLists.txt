@@ -4,6 +4,7 @@ addtest(crdt_test
     crdt_heads_test.cpp
     crdt_datastore_test.cpp
     crdt_atomic_transaction_test.cpp
+    crdt_erase_test.cpp
     crdt_custom_broadcaster.cpp
     crdt_mirror_broadcaster.cpp
     crdt_custom_dagsyncer.cpp
@@ -20,6 +21,7 @@ target_link_libraries(crdt_test
     database_error
     ipfs-lite-cpp::cid
     ipfs-lite-cpp::ipfs_datastore_in_memory
+    ipfs-lite-cpp::ipfs_datastore_rocksdb
     ipfs-lite-cpp::blake2
     p2p::p2p_cid
     p2p::p2p_multihash
