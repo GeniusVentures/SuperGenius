@@ -461,16 +461,23 @@ namespace sgns::crdt
     const std::string targetValue = "TARGET_VALUE";
     const std::string descendantValue = "DESCENDANT_VALUE";
 
-    Buffer targetValueBuffer;
-    targetValueBuffer.put(targetValue);
-    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(targetKey, "ID_A", targetValueBuffer, 5));
+    // Seed through the public delta path: PutElems writes the elem entry
+    // (/namespace/s/<key>/<id>) plus the value and priority records.
+    auto targetDeltaResult = crdtSet->CreateDeltaToAdd(targetKey, targetValue);
+    std::vector<CrdtSet::Element> targetElements(targetDeltaResult.value()->elements().begin(),
+                                                 targetDeltaResult.value()->elements().end());
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutElems(targetElements, "ID_A", 5));
 
-    Buffer descendantValueBuffer;
-    descendantValueBuffer.put(descendantValue);
-    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(descendantKey, "ID_AB", descendantValueBuffer, 7));
+    auto descendantDeltaResult = crdtSet->CreateDeltaToAdd(descendantKey, descendantValue);
+    std::vector<CrdtSet::Element> descendantElements(descendantDeltaResult.value()->elements().begin(),
+                                                     descendantDeltaResult.value()->elements().end());
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutElems(descendantElements, "ID_AB", 7));
 
     // Present-before: both elem entries share the /namespace/s/a/ prefix.
     EXPECT_EQ(2, countKeysWithPrefix(crdtSet->ElemsPrefix(targetKey).GetKey() + "/"));
+    EXPECT_OUTCOME_TRUE(targetValueBefore, crdtSet->GetElement(targetKey));
+    EXPECT_EQ(targetValue, std::string(targetValueBefore.toString()));
+    EXPECT_OUTCOME_EQ(crdtSet->GetPriority(targetKey), 5);
     EXPECT_OUTCOME_EQ(crdtSet->GetPriority(descendantKey), 7);
 
     auto batch = dataStore->batch();
@@ -496,9 +503,11 @@ namespace sgns::crdt
     const std::string key = "key";
     const std::string value = "V1";
 
-    Buffer valueBuffer;
-    valueBuffer.put(value);
-    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(key, "ID123", valueBuffer, 11));
+    // Seed through the public delta path so the elem family exists too.
+    auto deltaResult = crdtSet->CreateDeltaToAdd(key, value);
+    std::vector<CrdtSet::Element> elements(deltaResult.value()->elements().begin(),
+                                           deltaResult.value()->elements().end());
+    EXPECT_OUTCOME_TRUE_1(crdtSet->PutElems(elements, "ID123", 11));
 
     // An empty key would degenerate the scans to the whole elems/tombs
     // namespaces (every entry in the set), so it must be rejected before any
