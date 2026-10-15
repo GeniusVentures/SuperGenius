@@ -2,11 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
+current_phase: 16
 status: planning
-last_updated: "2026-10-15T16:23:12.000Z"
-last_activity: 2026-10-15
+stopped_at: Phase 16 context gathered
+last_updated: "2026-10-15T17:33:42.562Z"
+last_activity: 2026-10-15 — v1.2 roadmap created (phases 16-20; 18/18 requirements mapped)
 progress:
-  total_phases: 5
+  total_phases: 23
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -81,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15
-**Stopped At:** v1.2 roadmap created (phases 16-20) — ready for /gsd:plan-phase 16
-**Resume File:** None
+**Last session:** 2026-10-15T17:33:42.551Z
+**Stopped At:** Phase 16 context gathered
+**Resume File:** .planning/phases/16-erasure-primitives-bookkeeping-hardening/16-CONTEXT.md
 
 ## Accumulated Context
 
