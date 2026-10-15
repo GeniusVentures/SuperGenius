@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 16
 status: executing
-stopped_at: Phase 16 context gathered
-last_updated: "2026-10-15T19:10:45.387Z"
+stopped_at: None
+last_updated: "2026-10-15T19:31:43.298Z"
 last_activity: 2026-10-15
 progress:
   total_phases: 23
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-15
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T19:10:45.380Z
-**Stopped At:** Phase 16 context gathered
+**Last session:** 2026-10-15T19:31:43.290Z
+**Stopped At:** None
 **Resume File:** None
 
 ## Accumulated Context
@@ -137,6 +137,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
 | Phase 16 P01 | 12min | 3 tasks | 6 files |
+| Phase 16 P02 | 18min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -204,6 +205,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 15]: Wrong-PSK GlobalDB test nodes must release db (ShutdownNow+reset) and graphsync Network BEFORE pubsub Stop - StopImpl destroys its io_context right after its own host ref, so a host surviving Stop via a retained Network member destroys parked never-negotiated pnet handshake connections against a dead kqueue reactor (15-18 ordered teardown)
 - [Phase 15]: UAT-1 closed by GlobalDB-level composition (no Blockchain/genesis): NetworkMembershipFilterFlowTest case 11 joins real-data-path scoped job replication (TaskQueueImpl+SubTaskResultStorageImpl on the scoped topic), data-level public-node isolation (live public GlobalDB, both-direction dials, multi-key negative window), and deny-all teardown on a still-live GlobalDB - mutation-verified non-vacuous
 - [Phase 16]: Erase-prefix scans carry a trailing '/' so sibling keys sharing a name prefix (key vs key2) are never swept; StageEraseElement stages all four CRDT key families unconditionally into the caller's batch and never fires the delete hook (RevertTransaction hazard).
+- [Phase 16]: StageBlockRemoval stages exactly the CID::toBytes() block-bytes key into the caller's batch under dagMutex_; the seal marker is never constructed and the removeNode chain stays dormant (cannot join an external WriteBatch).
+- [Phase 16]: StageBlockRemoval is the one SuperGNUS-side home of the vendored block-key format; RemoveProcessedTransactionEntry is a revert-free plain tracked-map erase (missing key = success no-op).
 
 ## Deferred Items
 
