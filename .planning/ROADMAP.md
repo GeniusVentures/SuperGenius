@@ -68,69 +68,91 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 ## Phase Details (v1.2 — ACTIVE)
 
 ### Phase 16: Erasure Primitives & Bookkeeping Hardening
+
 **Goal**: The physical two-level erasure primitives exist behind owner-module APIs with the safety invariants baked into their shape — seal markers unaddressable, in-use CIDs guarded, one atomic WriteBatch — and the fresh-DB test-fixture rules established, with zero production behavior change.
 **Depends on**: Nothing within v1.2 (first phase of the milestone; numbering continues after v1.1's Phase 15)
 **Requirements**: PRUNE-02, GATE-03
 **Success Criteria** (what must be TRUE):
+
   1. A primitive erase of one transaction on a fresh temp DB passes the three-part assertions — CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`) absent, raw CID block absent from the block store, `<cid>sealed` marker still present — plus the negative control (an untouched sibling key remains byte-identical).
   2. CRDT entries, raw block bytes, and the tx→CID map entry erase in one atomic RocksDB WriteBatch: a crash-injected interrupted batch leaves no partial state (never value-without-block, never block-without-map-entry).
   3. The block-erase exposure refuses in-use CIDs — head CID, root-CID pending/active, and LRU-cached CIDs are all rejected by guards — and no code path can address a seal marker (`isResolved` asserted before and after erase).
   4. No tombstone path exists in the new surface: erasure writes directly to the shared DB through the `CrdtSet`-owned local primitive, `DeleteKey`/`DeleteTransaction` appear nowhere in the pruner code (grep gate), and the tx→CID map gains a deletion lifecycle with tracked-map cleanup.
   5. The default build and the full existing ctest suite pass green with the pruner unwired — `removeNode`'s first consumer is the test suite, so production behavior is unchanged.
-**Plans**: 4 plans
 
+**Plans**: 4 plans
 Plans:
+**Wave 1**
+
 - [ ] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
 - [ ] 16-02-PLAN.md — Guarded DAGSyncer block staging + revert-free tracked-map erase + real-store erase fixture (PRUNE-02, GATE-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 16-04-PLAN.md — Fresh-DB erase suites (atomicity, seal retention, guards, integration) + ctest source-scan gates + full-suite green (PRUNE-02, GATE-03)
 
 ### Phase 17: Eligibility, Policy & Gating (Dry-Run)
+
 **Goal**: The pruning policy evaluator decides erasability correctly on live data in dry-run — never erasing in production — and the two correctness dependencies of the first real prune (multi-element block gate, own-frontier survival fix) are implemented and proven before any production erasure exists.
 **Depends on**: Phase 16
 **Requirements**: PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06
 **Success Criteria** (what must be TRUE):
+
   1. The dry-run evaluator on a live light node reports exactly the truly-eligible set: every output genuinely consumed (`IsOutPointGenuinelyConsumed` — synthesized zero-amount tombstones excluded) AND depth beyond the configured finality window (priority vs `maxHeight`); unspent or in-window transactions are never reported eligible.
   2. The block-parse gate reports a delta block erasable only when every element it carries is prune-eligible (parsed at evaluation time from the block itself, not from "what this node applied") — a multi-element block with any non-eligible sibling (e.g. another account's live element) is never eligible.
   3. With the node's own frontier transaction deep inside the eligible window, outgoing `previous_hash` resolution still completes from cert-slot data (certificates are never pruned) and the cold-start nonce chain is correct — proven by test before any production erasure exists.
   4. Gating fails closed: the evaluator runs only on `NodeType::Light` (full/archive refuse), erasure candidates are confined to the `/bc-<netid>/tx/` prefix allowlist (the verified `TRANSACTION_BASE_FORMAT` constant), and out-of-prefix keys are rejected and ctest-asserted.
   5. Pruning knobs sit beside `node_type` in `sgns_config.json`, default off, with resolved values INFO-logged; a config without the new keys behaves exactly as today.
+
 **Plans**: TBD
 
 ### Phase 18: TxPruner Service & First Real Prune
+
 **Goal**: The `TxPruner` service performs the first real erasure on a light node — an idempotent, crash-consistent cycle that survives re-delivery and resurrection — wired into `GeniusNode` behind default-off config, with per-cycle observability and queryable status.
 **Depends on**: Phase 17
 **Requirements**: PRUNE-04, PRUNE-05, RECL-03, RECL-04
 **Success Criteria** (what must be TRUE):
+
   1. A light node with spent history beyond the window physically erases eligible transactions through the ordered four-step flow (CRDT value → CID lookup → block-eligibility + delete → map entry, in that order) — both storage levels gone, unspent UTXO set untouched.
   2. Crash consistency to a fixed point: killing and restarting the node at any step of the erase flow converges to the same fixed point — no partially-erased transaction survives (no CRDT value without block, no orphan map entry), and re-running the cycle on a clean node is a no-op.
   3. Re-delivery is terminal: re-broadcasting a pruned root and restarting head exchange produce zero pruned-CID fetch attempts and zero re-created elements; the periodic sweep re-prunes resurrected entries (add-wins OR-Set re-merge from lagging peers) back to the fixed point — no re-fetch storm.
   4. The tick loop activates only under Light ∧ `State::READY` ∧ empty `missing_tx_hashes_` ∧ settle-window elapsed; `GeniusNode` constructs/starts/stops the pruner per config, and default-off config erases nothing.
   5. Each cycle emits the observability log (txs examined/erased, watermark advance — the bytes-reclaimed field completes with Phase 20 compaction) and prune status (watermark + last-cycle stats) is queryable.
+
 **Plans**: TBD
 
 ### Phase 19: Pruned-Node Survival & Recovery Hardening
+
 **Goal**: A pruned light node is fully operational — every recovery path written under the "history never disappears" assumption is audited and hardened, and history queries answer "pruned" distinctly and cleanly to both local callers and peers.
 **Depends on**: Phase 18
 **Requirements**: GATE-05, SURV-01, SURV-02, SURV-03
 **Success Criteria** (what must be TRUE):
+
   1. The restart matrix on a pruned node is green: prune → restart → READY with zero pruned-CID fetch attempts → new-tip sync → spend/receive → next outgoing tx `previous_hash`/nonce chain correct.
   2. Boot-time UTXO assembly and the checkpoint-mismatch clear-and-rebuild path treat a missing pruned transaction as not relevant — boot completes without failure, and the rebuild never resurrects spent outputs from remaining history (no double-spend window).
   3. Local history queries on pruned transactions return a distinct "history pruned" answer (never conflated with not-found); peers requesting pruned data get an immediate `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a real pruned node.
   4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
   5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
+
 **Plans**: TBD
 
 ### Phase 20: Reclamation Proof & E2E Hardening
+
 **Goal**: The milestone's headline claim is proven in measured bytes — deleted data physically leaves the disk via scheduled compaction, non-transaction data is provably untouched, and the window-edge races are fault-tested.
 **Depends on**: Phase 19
 **Requirements**: GATE-02, RECL-01, RECL-02
 **Success Criteria** (what must be TRUE):
+
   1. A scheduled light-node-only `CompactRange` over the shared DB (`bottommost_level_compaction = kForce`, off the hot path) runs after prune cycles, and measured SST/`du` bytes drop before-vs-after on a node with known spent history.
   2. The measured-bytes CI gate proves real reclamation — a prune + compaction cycle on a fixture with known block sizes must reclaim the expected byte delta (measured bytes, not key counts) or CI fails.
   3. Non-transaction data is byte-identical across a prune run: certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers (ctest).
   4. Full and archive nodes in the same mesh retain 100% of their transaction history across the light node's prune cycles (ctest).
   5. Window-edge races are fault-tested: a spend arriving during an active prune cycle is never erased (spent-ness re-verified under lock immediately before each erase) and is picked up by the next cycle — verified under debug and release timing.
+
 **Plans**: TBD
 
 ## Progress
@@ -723,9 +745,11 @@ Plans:
 **Depends on**: Nothing within v1.1 (can proceed in parallel with Phase 14; end-to-end proof needs Phase 14's runtime)
 **Requirements**: ELM-01, ELM-02, ELM-03, ELM-08
 **Success Criteria** (what must be TRUE):
+
   1. A job with multiple ELM work items in `Task.json_data` is published and distributed through the existing processing grid with no new task-ownership protocol messages.
   2. Funding is deterministic from the job JSON at the fixed $0.0003/hour rate; no quote/bid/negotiation protocol exists anywhere in the feature.
   3. Every result identifies its ELM work item; GCS aggregates by work-item ID with no SuperGenius-side aggregation.
+
 **Tracking**: GeniusVentures/SuperGenius#369 (corrected scope — see INGEST-CONFLICTS.md auto-resolutions)
 **Depends on (cross-repo)**: GeniusVentures/AsyncIOManager#11 — `ipfspubsub://` URL prefix (gossip pubsub channels as FileManager source/destination), assigned itsafuu; results delivery addresses the results channel as `ipfspubsub://results/<task_id>` with the durable artifact via the `ipfs://` saver (CID)
 **Plans**: none yet
@@ -736,9 +760,11 @@ Plans:
 **Depends on**: Phase 13's job/subtask JSON shape (contract only — development can start in parallel from the manifest spec)
 **Requirements**: ELM-04, ELM-05, ELM-06, ELM-07
 **Success Criteria** (what must be TRUE):
+
   1. A node never executes a model whose manifest or artifact verification failed; cached files are verified before reuse.
   2. A node with an empty cache completes an assigned ELM subtask by downloading the model as part of the job; no protocol message carries node model/cache inventory.
   3. A causal-LM work item produces generated text honoring `max_output_tokens`/`temperature`/`top_p`/`seed` and stop conditions, with accurate token counts; cancellation aborts in-flight generation.
+
 **Tracking**: Executes in the GeniusVentures/SGProcessingManager repo — separate issue, assigned to itsafuu only
 **Plans**: none yet
 
