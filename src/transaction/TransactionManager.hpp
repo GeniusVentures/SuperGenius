@@ -874,6 +874,27 @@ namespace sgns
          *        searching across all monitored networks.
          */
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
+
+        /**
+         * @brief Prune-side tracked-map cleanup: erases the tx_processed_m entry
+         *        for @p tx_key WITHOUT reverting anything.
+         *
+         * Deliberately revert-free. Reverting the transaction or rolling back the
+         * peer-confirmed nonce would undo the genuine spends that made the
+         * transaction prunable, and CRDT-deleting the key would publish the
+         * network-wide tombstone forbidden for a local prune -- neither may
+         * happen on the physical-erase path. A missing entry is a legitimate
+         * no-op (returns success; sweep-style callers re-run this). The CRDT
+         * delete-hook path (ProcessDeletion ->
+         * RemoveTransactionFromProcessedMaps) remains the owner of
+         * CRDT-logical deletion; this method only drops the local bookkeeping
+         * entry.
+         *
+         * @param[in] tx_key  tracked-map key to erase.
+         * @return outcome::success whether or not the key was present.
+         */
+        outcome::result<void> RemoveProcessedTransactionEntry( const std::string &tx_key );
+
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
