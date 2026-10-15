@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <functional>
 #include <mutex>
 #include <unordered_set>
 
@@ -22,6 +23,8 @@
 
 namespace sgns::crdt
 {
+    class GraphsyncDAGSyncer;
+
     class GlobalDB
     {
     public:
@@ -194,6 +197,49 @@ namespace sgns::crdt
          * @return Matching key/value pairs, or `operation_canceled` once shutdown released the store.
          */
         outcome::result<QueryResult> QueryRaw( const Buffer &key_prefix ) const;
+
+        /**
+         * @brief Generic node-local physical erase: removes, in ONE atomic
+         *        RocksDB WriteBatch, the CRDT set entries for @p key (via the
+         *        CrdtSet owner), the raw block bytes for @p cid (via the
+         *        DAGSyncer owner), and the node-local raw bookkeeping entry at
+         *        @p key itself.
+         *
+         * This is the ONLY entry to physical erasure. Guards run inside the
+         * API and reject fail-closed (Error::INVALID_PARAMETERS) BEFORE any
+         * staging: a CID that is the head of ANY topic, the root of a
+         * pending/active sync job, LRU-cached, or unresolved can never be
+         * erased through this path. The seal marker of @p cid is never
+         * addressed and is re-asserted after the commit -- a vanished seal
+         * fails loudly.
+         *
+         * Fires NO CRDT hooks and publishes NO tombstones: this is a local
+         * prune operation, not a CRDT-logical delete (the network-wide
+         * tombstone the CRDT delete path publishes must never fire here).
+         *
+         * @p key addresses both the CRDT element key and the raw map entry;
+         * the caller (TransactionManager::EraseTransactionEntry / the future
+         * TxPruner) builds domain keys -- this facade stays generic.
+         *
+         * @param[in] key CRDT element key == raw bookkeeping key, built by the
+         *            domain owner; never concatenated here.
+         * @param[in] cid CID whose raw block bytes are erased alongside the
+         *            entries for @p key.
+         * @return outcome::success on success, or outcome::failure on a guard
+         *         rejection, a staging error, or a commit error.
+         */
+        outcome::result<void> EraseEntry( const std::string &key, const CID &cid );
+
+        /**
+         * @brief Test-only interruption seam for EraseEntry's compose window.
+         * @param hook invoked after each staging step (1 = after CRDT-entry
+         *        staging, 2 = after block staging, 3 = after raw-map staging);
+         *        a @c true return aborts the erase WITHOUT committing, so the
+         *        dying batch proves all-or-nothing. Pass nullptr to clear.
+         * @note No production caller may invoke this method.
+         */
+        static void SetEraseInterruptHookForTest( std::function<bool( int step )> hook );
+
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
@@ -323,6 +369,10 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>  m_pubsub;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
+        /// Concrete DAGSyncer (never the base interface) so EraseEntry can
+        /// stage through GraphsyncDAGSyncer::StageBlockRemoval -- test doubles
+        /// keep their own implementations untouched.
+        std::shared_ptr<GraphsyncDAGSyncer> m_dagSyncer = nullptr;
         std::atomic_bool                                  started_;
         bool                                              cid_sync_started_;
         bool                                              cid_receiving_started_;
@@ -342,6 +392,10 @@ namespace sgns::crdt
         //std::shared_ptr<libp2p::protocol::HolepunchClientMsgProc> holepunchmsgproc_;
 
         int obsAddrRetries = 0;
+
+        /// Test-only EraseEntry interruption hook; see
+        /// SetEraseInterruptHookForTest. Inert (nullptr) in production.
+        static std::function<bool( int step )> erase_interrupt_hook_for_test_;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
         mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.

@@ -285,6 +285,23 @@ namespace sgns::crdt
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
+        /** Pure query: true while the CID is queued as a root job or being processed
+        * by a DAG worker -- used by erase guards.
+        * @param cid CID to check
+        * @return true if pending or active, false otherwise
+        */
+        bool IsRootCIDPendingOrActive( const CID &cid );
+
+        /** Forwards the CRDT-entry staging half of the atomic two-level erase to the
+        * owning CrdtSet (D-01). See CrdtSet::StageEraseElement for the no-hook,
+        * caller-owns-the-commit contract.
+        * @param aDataStore caller-owned batch to stage the removes into
+        * @param aKey key whose CRDT entries are staged for erasure
+        * @return outcome::success on success or outcome::failure otherwise
+        */
+        outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                 const std::string                           &aKey );
+
     protected:
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
@@ -437,23 +454,6 @@ namespace sgns::crdt
         bool EnqueueRootCID( const CID &cid );
 
         outcome::result<CID> WaitForJob( const CID &cid );
-
-        /** Pure query: true while the CID is queued as a root job or being processed
-        * by a DAG worker -- used by erase guards.
-        * @param cid CID to check
-        * @return true if pending or active, false otherwise
-        */
-        bool IsRootCIDPendingOrActive( const CID &cid );
-
-        /** Forwards the CRDT-entry staging half of the atomic two-level erase to the
-        * owning CrdtSet (D-01). See CrdtSet::StageEraseElement for the no-hook,
-        * caller-owns-the-commit contract.
-        * @param aDataStore caller-owned batch to stage the removes into
-        * @param aKey key whose CRDT entries are staged for erasure
-        * @return outcome::success on success or outcome::failure otherwise
-        */
-        outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
-                                                 const std::string                           &aKey );
 
     private:
         CrdtDatastore() = delete;
