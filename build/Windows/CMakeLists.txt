@@ -36,6 +36,26 @@ foreach(_config_flags
     string(REPLACE "/Zi" "/Z7" ${_config_flags} "${${_config_flags}}")
 endforeach()
 
+# Debug link footprint: every test/example statically links the node plus all
+# thirdparty static libs. With /DEBUG:FULL the linker merges the /Z7 CodeView
+# info from every linked .obj/.lib into each image's PDB (~1.2 GB per test,
+# near-identical content repeated across ~131 test targets). /DEBUG:FASTLINK
+# writes a small index PDB instead and the debugger reads debug info directly
+# from the .obj/.lib files in-tree: full-fidelity LOCAL debugging at ~5-10x
+# smaller PDBs. Caveat: FASTLINK PDBs are not self-contained -- symbolicating
+# dumps on another machine requires a one-off /DEBUG:FULL rebuild.
+# /INCREMENTAL:NO drops the ~1 GB .ilk per image (edit-and-continue is already
+# impractical at this link size) and, as a bonus, removes the MSBuild stale
+# incremental-link failure mode where a refreshed .lib is not re-pulled into
+# the exe.
+foreach(_linker_flags
+    CMAKE_EXE_LINKER_FLAGS_DEBUG
+    CMAKE_SHARED_LINKER_FLAGS_DEBUG
+    CMAKE_MODULE_LINKER_FLAGS_DEBUG)
+    string(REGEX REPLACE "/INCREMENTAL(:[A-Za-z]+)?" "" ${_linker_flags} "${${_linker_flags}}")
+    string(APPEND ${_linker_flags} " /INCREMENTAL:NO /DEBUG:FASTLINK")
+endforeach()
+
 # This is so that the SDK knows which version of Windows to target.
 # Current set to Windows 10
 add_compile_definitions(_WIN32_WINNT=0x0A00)
