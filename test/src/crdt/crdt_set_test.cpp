@@ -448,4 +448,70 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(getElementResult, crdtSet->GetElement(key));
     EXPECT_STRCASEEQ(std::string(getElementResult.toString()).c_str(), value.c_str());
   }
+
+  TEST_F(EraseElementStagingTest, DescendantKeyFamiliesSurviveParentErase)
+  {
+    // "a/b" lives UNDER erased key "a" in the hierarchical key space, so the
+    // raw prefix scan for "a" matches the descendant's entries too. Only
+    // top-level ids of "a" may be swept (same IsTopLevel discipline as
+    // CreateDeltaToRemove): sweeping the descendant's elems/tombs while its
+    // value/priority survive would be an asymmetric partial erase.
+    const std::string targetKey = "a";
+    const std::string descendantKey = "a/b";
+    const std::string targetValue = "TARGET_VALUE";
+    const std::string descendantValue = "DESCENDANT_VALUE";
+
+    Buffer targetValueBuffer;
+    targetValueBuffer.put(targetValue);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(targetKey, "ID_A", targetValueBuffer, 5));
+
+    Buffer descendantValueBuffer;
+    descendantValueBuffer.put(descendantValue);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(descendantKey, "ID_AB", descendantValueBuffer, 7));
+
+    // Present-before: both elem entries share the /namespace/s/a/ prefix.
+    EXPECT_EQ(2, countKeysWithPrefix(crdtSet->ElemsPrefix(targetKey).GetKey() + "/"));
+    EXPECT_OUTCOME_EQ(crdtSet->GetPriority(descendantKey), 7);
+
+    auto batch = dataStore->batch();
+    EXPECT_OUTCOME_TRUE_1(crdtSet->StageEraseElement(batch, targetKey));
+    EXPECT_OUTCOME_TRUE_1(batch->commit());
+
+    // The target is fully erased...
+    EXPECT_OUTCOME_FALSE_1(crdtSet->GetElement(targetKey));
+    EXPECT_FALSE(datastoreContains(crdtSet->ValueKey(targetKey).GetKey()));
+    EXPECT_FALSE(datastoreContains(crdtSet->PriorityKey(targetKey).GetKey()));
+    // ...while the descendant keeps ALL of its families.
+    EXPECT_EQ(1, countKeysWithPrefix(crdtSet->ElemsPrefix(targetKey).GetKey() + "/"));
+    EXPECT_TRUE(datastoreContains(crdtSet->ElemsPrefix(descendantKey).GetKey() + "/ID_AB"));
+    EXPECT_OUTCOME_TRUE(descendantAfter, crdtSet->GetElement(descendantKey));
+    EXPECT_EQ(descendantValue, std::string(descendantAfter.toString()));
+    EXPECT_OUTCOME_EQ(crdtSet->GetPriority(descendantKey), 7);
+    EXPECT_TRUE(datastoreContains(crdtSet->ValueKey(descendantKey).GetKey()));
+    EXPECT_TRUE(datastoreContains(crdtSet->PriorityKey(descendantKey).GetKey()));
+  }
+
+  TEST_F(EraseElementStagingTest, EmptyKeyIsRejected)
+  {
+    const std::string key = "key";
+    const std::string value = "V1";
+
+    Buffer valueBuffer;
+    valueBuffer.put(value);
+    EXPECT_OUTCOME_TRUE_1(crdtSet->SetValue(key, "ID123", valueBuffer, 11));
+
+    // An empty key would degenerate the scans to the whole elems/tombs
+    // namespaces (every entry in the set), so it must be rejected before any
+    // staging happens.
+    auto batch = dataStore->batch();
+    EXPECT_OUTCOME_FALSE_1(crdtSet->StageEraseElement(batch, ""));
+    EXPECT_OUTCOME_TRUE_1(batch->commit());
+
+    // Nothing was staged: the key's families are all still present.
+    EXPECT_OUTCOME_TRUE(getElementResult, crdtSet->GetElement(key));
+    EXPECT_EQ(value, std::string(getElementResult.toString()));
+    EXPECT_EQ(1, countKeysWithPrefix(crdtSet->ElemsPrefix(key).GetKey()));
+    EXPECT_TRUE(datastoreContains(crdtSet->ValueKey(key).GetKey()));
+    EXPECT_TRUE(datastoreContains(crdtSet->PriorityKey(key).GetKey()));
+  }
 }
