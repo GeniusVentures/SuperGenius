@@ -21,10 +21,14 @@ files_reviewed_list:
   - test/src/crdt/crdt_set_test.cpp
   - test/src/crdt/globaldb_erase_test.cpp
 findings:
+  critical: 0
+  warning: 0
+  info: 4
+  total: 4
+fixed:
   critical: 1
   warning: 3
-  info: 4
-  total: 8
+  total: 4
 status: issues_found
 ---
 
@@ -44,6 +48,8 @@ However, the review found one correctness defect in the new `TransactionManager:
 ## Critical Issues
 
 ### CR-01: EraseTransactionEntry resolves the CID across all monitored networks but erases the local-network path only
+
+**Status: FIXED in iteration 1** (commit 55e80f64c; see 16-REVIEW-FIX.md).
 
 **File:** `src/transaction/TransactionManager.cpp:4239-4251`
 **Issue:** `GetTransactionCID(tx_hash)` (`TransactionManager.cpp:4480-4505`) iterates **every** monitored network (`GetMonitoredNetworkIDs()`: local network plus TEST_NET and MAIN_NET on any DEV-net node) and returns the CID stored under the **first** network path that has it — without reporting which network/path matched. `EraseTransactionEntry` then erases `GetTransactionPath(tx_hash)` (`:4244`), which is built from `GetBlockChainBase()` == the **local** network only (`TransactionManager.cpp:2212-2215`). For any transaction whose tx->CID entry lives under a non-local monitored network's path (real state on dev-net nodes — production code reads cross-network tx paths in 10 places, e.g. `:3231`, `:4492`):
@@ -77,6 +83,8 @@ or add an overload of `GetTransactionCID` that returns the resolved key alongsid
 
 ### WR-01: StageEraseElement's prefix scan over-erases hierarchical descendants and is unvalidated against the empty key
 
+**Status: FIXED in iteration 1** (commits 176de6520, 3335739fa; see 16-REVIEW-FIX.md).
+
 **File:** `src/crdt/impl/crdt_set.cpp:688-700` (contract at `src/crdt/crdt_set.hpp:256-281`)
 **Issue:** The scan prefixes are `ElemsPrefix(aKey).GetKey() + "/"` and `TombsPrefix(aKey).GetKey() + "/"`. `HierarchicalKey::ChildString` does **not** escape `/` (`src/crdt/impl/hierarchical_key.cpp`), and this codebase's element keys are genuinely hierarchical (`/bc-0/tx/<hash>` from `TRANSACTION_BASE_FORMAT` + `GetTransactionFullPath`). The trailing slash prevents sibling-suffix matches ("key" vs "key2", as the comment claims) but **not** parent/child matches: erasing key `a` scans `/namespace/s/a/`, which matches every entry of descendant keys `a/b/...` (`/namespace/s/a/b/<id>`), staging their elems/tombs for removal while their `/k/v` and `/k/p` records survive — an asymmetric partial erase of the descendants. With `aKey == ""` the scan prefix degenerates to `/namespace/s/` and `/namespace/t/`, matching **every** element/tombstone entry in the namespace. The sibling read paths (`InElemsNotTombstoned`, `CreateDeltaToRemove`) guard exactly this hazard with `HierarchicalKey(id).IsTopLevel()` (`crdt_set.cpp:153-159, 434-443`); the new scan has no such filter and no input validation, despite being a public primitive documented as generic ("Generic node-local physical erase", `globaldb.hpp:200-231`). No current caller hits it (TransactionManager erases leaf hash paths), but nothing prevents the next caller from erasing a subtree root (e.g. a `reg/<address>` registry key).
 
@@ -99,12 +107,16 @@ if ( !HierarchicalKey( id ).IsTopLevel() )
 
 ### WR-02: EraseEntry's guards are check-then-act with no window protection; header contract states them as absolute
 
+**Status: FIXED in iteration 1** (commit d043b86f4; see 16-REVIEW-FIX.md).
+
 **File:** `src/crdt/globaldb/globaldb.cpp:805-862` (contract at `src/crdt/globaldb/globaldb.hpp:204-231`)
 **Issue:** The four guards (all-topic head scan, `IsRootCIDPendingOrActive`, `IsCIDInCache`, `isResolved`) run before staging, but nothing prevents a concurrent `AddHead`/`EnqueueRootCID`/`AddCIDBlock` (LRU insert from `BlockReceivedCallback`) between the checks and `batch->commit()`. A CID that becomes a topic head or enters the LRU block cache after its guards passed is erased anyway — the cache then serves a node whose bytes are gone. Likewise a concurrent `PutElems` on the same key can commit between `StageEraseElement`'s under-lock query and the caller's outside-the-lock commit, and the erase batch then deletes the re-created value while the post-query elem entries survive. RESEARCH Pitfall 7 documents this window as tolerable **for Phase 16** (no production caller; single-threaded tests), but `EraseEntry` is a shipped public API whose header presently reads as an absolute invariant ("a CID that is ... LRU-cached, or unresolved can **never** be erased through this path") — which is only true single-threaded.
 
 **Fix:** At minimum, amend the `EraseEntry` Doxygen to state the guards are best-effort under concurrency and that Phase 18's TxPruner owns the critical section (the CrdtSet header already carries this caveat for its own half — `crdt_set.hpp:269-275` — the facade should match). When wired, close the window in the pruner (e.g. quiesce the sync worker or re-check guards post-commit and repair).
 
 ### WR-03: Post-commit seal re-check failure returns a guard-equivalent error although the erase already committed
+
+**Status: FIXED in iteration 1** (commit 46cd906ad; see 16-REVIEW-FIX.md).
 
 **File:** `src/crdt/globaldb/globaldb.cpp:862-871`
 **Issue:** If the post-commit `isResolved` re-check fails, `EraseEntry` returns `Error::INVALID_PARAMETERS` — the same error value as every pre-staging guard rejection — even though `batch->commit()` at `:862` has already durably removed the CRDT entries, block bytes, and map entry. A caller cannot distinguish "nothing was erased" from "erased, then an out-of-band anomaly was detected": `EraseTransactionEntry`'s `BOOST_OUTCOME_TRY` (`TransactionManager.cpp:4247`) then skips the tracked-map cleanup and reports failure while the data is gone. (A sweep re-run happens to heal the bookkeeping because re-erasing an already-erased entry passes the guards and commits no-ops — but that is luck, not contract.)
@@ -132,6 +144,12 @@ if ( !HierarchicalKey( id ).IsTopLevel() )
 
 **File:** `test/src/crdt/crdt_set_test.cpp` (new `EraseElementStagingTest` cases: `EXPECT_STRCASEEQ(...)` x2, `EXPECT_STREQ(...)`)
 **Issue:** `EXPECT_STRCASEEQ` is weaker than the intended byte-identical check (a case-differing value would pass). Harmless for identical strings, but it weakens the D-C6 "byte-identical" claim the comments make. Prefer `EXPECT_EQ(std::string(value.toString()), expected)`.
+
+## Fix Summary (iteration 1, 2026-10-15)
+
+All four in-scope findings (CR-01, WR-01, WR-02, WR-03) are fixed; the four
+Info findings (IN-01..IN-04) remain open, out of fix scope. Details, commits,
+and test results in `16-REVIEW-FIX.md`.
 
 ---
 
