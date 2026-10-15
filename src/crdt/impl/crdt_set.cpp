@@ -666,6 +666,56 @@ namespace sgns::crdt
         return true;
     }
 
+    outcome::result<void> CrdtSet::StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                      const std::string                           &aKey )
+    {
+        if ( aDataStore == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        if ( this->dataStore_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::lock_guard lg( this->mutex_ );
+
+        // Stage removes for every stored entry of the two per-id families. The
+        // scans carry the trailing '/' so a sibling key whose name merely starts
+        // with aKey (e.g. "key" vs "key2") is never matched. Stage-then-commit of
+        // the caller's batch removes them all.
+        const auto elemsScanPrefix = this->ElemsPrefix( aKey ).GetKey() + "/";
+        const auto tombsScanPrefix = this->TombsPrefix( aKey ).GetKey() + "/";
+        for ( const auto &scanPrefix : { elemsScanPrefix, tombsScanPrefix } )
+        {
+            Buffer prefixBuffer;
+            prefixBuffer.put( scanPrefix );
+
+            BOOST_OUTCOME_TRY( auto queryResult, this->dataStore_->query( prefixBuffer ) );
+            for ( const auto &entry : queryResult )
+            {
+                BOOST_OUTCOME_TRY( aDataStore->remove( entry.first ) );
+            }
+        }
+
+        // The two single-record families are staged unconditionally: removing an
+        // absent key is a harmless staged no-op, while skipping a present one
+        // would leave an asymmetric partial erase (listed anti-pattern -- it
+        // skews add-wins resolution on re-delivery).
+        Buffer valueKeyBuffer;
+        valueKeyBuffer.put( this->ValueKey( aKey ).GetKey() );
+        BOOST_OUTCOME_TRY( aDataStore->remove( valueKeyBuffer ) );
+
+        Buffer priorityKeyBuffer;
+        priorityKeyBuffer.put( this->PriorityKey( aKey ).GetKey() );
+        BOOST_OUTCOME_TRY( aDataStore->remove( priorityKeyBuffer ) );
+
+        // Deliberately no commit here: the caller owns the single commit of the
+        // batch this function staged into (see the header contract).
+        return outcome::success();
+    }
+
     outcome::result<void> CrdtSet::PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority )
     {
         if ( aElems.empty() )

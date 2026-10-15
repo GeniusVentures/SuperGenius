@@ -253,6 +253,33 @@ namespace sgns::crdt
                                         const Buffer                                &aValue,
                                         uint64_t                                     aPriority );
 
+        /** Stages the LOCAL erasure of every stored CRDT entry for a key into the
+        * caller-owned batch: all element entries under ElemsPrefix(aKey), all
+        * tombstone entries under TombsPrefix(aKey), and the ValueKey(aKey) and
+        * PriorityKey(aKey) records. All four key families MUST be staged into the
+        * same batch and land in one commit (D-C6 / PRUNE-02) -- erasing only some
+        * families skews the add-wins resolution on re-delivery.
+        *
+        * This is a local prune primitive, NOT the CRDT tombstone path: it stages
+        * raw datastore removes and never invokes deleteHookFunc_. Firing the
+        * delete hook drives TransactionManager::ProcessDeletion ->
+        * RevertTransaction, which would revert genuine spends of a pruned
+        * transaction (RESEARCH Pitfall 1).
+        *
+        * Compose window: staging runs under mutex_, but the caller owns the single
+        * commit and performs it OUTSIDE this lock. Between this function returning
+        * and the caller's commit, the key is half-erased to concurrent readers.
+        * The wider critical section around stage + commit must be defined by the
+        * caller (Phase 18's TxPruner, RESEARCH Pitfall 7) -- do not widen it by
+        * holding other modules' locks here.
+        * @param aDataStore caller-owned batch to stage the removes into; never
+        * committed by this function
+        * @param aKey key whose CRDT entries are staged for erasure
+        * @return outcome::success on success or outcome::failure otherwise
+        */
+        outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                 const std::string                           &aKey );
+
         /** putElems adds items to the "elems" set. It will also set current
         * values and priorities for each element. This needs to run in a lock,
         * as otherwise races may occur when reading/writing the priorities, resulting
