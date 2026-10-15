@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 16
 status: executing
 stopped_at: None
-last_updated: "2026-10-15T19:31:43.298Z"
+last_updated: "2026-10-15T20:17:11.964Z"
 last_activity: 2026-10-15
 progress:
   total_phases: 23
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-10-15
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T19:31:43.290Z
+**Last session:** 2026-10-15T20:17:05.527Z
 **Stopped At:** None
 **Resume File:** None
 
@@ -138,6 +138,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
 | Phase 16 P01 | 12min | 3 tasks | 6 files |
 | Phase 16 P02 | 18min | 3 tasks | 7 files |
+| Phase 16 P03 | 40min | 3 tasks | 5 files |
 
 ## Decisions
 
@@ -207,6 +208,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: Erase-prefix scans carry a trailing '/' so sibling keys sharing a name prefix (key vs key2) are never swept; StageEraseElement stages all four CRDT key families unconditionally into the caller's batch and never fires the delete hook (RevertTransaction hazard).
 - [Phase 16]: StageBlockRemoval stages exactly the CID::toBytes() block-bytes key into the caller's batch under dagMutex_; the seal marker is never constructed and the removeNode chain stays dormant (cannot join an external WriteBatch).
 - [Phase 16]: StageBlockRemoval is the one SuperGNUS-side home of the vendored block-key format; RemoveProcessedTransactionEntry is a revert-free plain tracked-map erase (missing key = success no-op).
+- [Phase 16]: EraseEntry composes all four guards (all-topic head scan, pending/active root job, LRU cache, isResolved) fail-closed before staging into ONE BufferBatch with a single sync commit and a post-commit seal re-assert; key shapes are built by the caller — GlobalDB stays generic (D-01).
+- [Phase 16]: EraseTransactionEntry completes the tx->CID map deletion lifecycle (resolve CID, atomic GlobalDB erase, revert-free tracked-map cleanup); the test-only interrupt hook aborts before commit so the dying batch proves all-or-nothing (D-03/D-C4).
 
 ## Deferred Items
 

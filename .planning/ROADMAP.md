@@ -89,7 +89,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
+- [x] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -170,7 +170,7 @@ Plans:
 | 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
-| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 2/4 | In Progress|  |
+| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 3/4 | In Progress|  |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
