@@ -170,7 +170,7 @@ Plans:
 | 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
-| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete   | 2026-10-15 |
+| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
