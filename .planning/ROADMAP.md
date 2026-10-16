@@ -108,7 +108,23 @@ Plans:
   4. Gating fails closed: the evaluator runs only on `NodeType::Light` (full/archive refuse), erasure candidates are confined to the `/bc-<netid>/tx/` prefix allowlist (the verified `TRANSACTION_BASE_FORMAT` constant), and out-of-prefix keys are rejected and ctest-asserted.
   5. Pruning knobs sit beside `node_type` in `sgns_config.json`, default off, with resolved values INFO-logged; a config without the new keys behaves exactly as today.
 
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+
+**Wave 1** *(parallel — no file overlap)*
+
+- [ ] 17-01-PLAN.md — Candidate B spend-recency carrier: `spent_by_txid` populated at ConsumeUTXOs + 4 call sites + read accessor + REQUIREMENTS amendment (PRUNE-01)
+- [ ] 17-02-PLAN.md — CRDT read exposures: GetPriority passthrough chain + GetLocalDeltaKeys sibling (elements AND tombstones) (PRUNE-01, PRUNE-03)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 17-03-PLAN.md — Cert-slot previous_hash generalization (one-line rung relaxation) + SC-3 pruned-frontier proof family (GATE-04)
+- [ ] 17-04-PLAN.md — PruneEligibility evaluator: structured result, Light+allowlist gates, spend-recency window, PruningConfig, SC-1/SC-4 suites (PRUNE-01, GATE-01)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 17-05-PLAN.md — Multi-element block-parse gate (dry-run) + `/prune/` marker design contract + SC-2/marker suites (PRUNE-03, GATE-01)
+- [ ] 17-06-PLAN.md — `pruning.*` config knobs + config-gated dry-run timer + per-cycle INFO summary + SC-5 full-suite gate (GATE-06)
 
 ### Phase 18: TxPruner Service & First Real Prune
 
@@ -171,7 +187,7 @@ Plans:
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
-| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
+| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/6 | Not started | — |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
