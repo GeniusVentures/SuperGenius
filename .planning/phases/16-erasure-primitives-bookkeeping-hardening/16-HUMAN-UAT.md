@@ -1,9 +1,9 @@
 ---
-status: partial
+status: resolved
 phase: 16-erasure-primitives-bookkeeping-hardening
 source: [16-VERIFICATION.md]
 started: 2026-10-15T21:05:00Z
-updated: 2026-10-16T00:00:00Z
+updated: 2026-10-16T00:30:00Z
 ---
 
 ## Current Test
@@ -18,14 +18,14 @@ result: passed — both tests rebuilt against the fixed tree (main build dir, wa
 
 ### 2. Tooling gates acceptance
 expected: clang-tidy (Required checks) and canonical clang-format run clean on the changed files, OR the owner explicitly accepts the compensating evidence (zero-warning rebuilds at -Wall -Wextra; range-scoped format diffs) recorded in `deferred-items.md`. Neither tool is runnable in the execution environment (clang-tidy not on PATH / compile_commands double-job abort; local clang-format 19.1.7 disagrees with the repo formatter on 4,404 pre-existing lines).
-result: [pending]
+result: passed — tools DO run (owner was right to challenge). clang-format: git-clang-format (llvm@22, keg-only) applied to changed lines (commit e88104bc5; re-check clean; v19/v21/v22 verdicts identical — the earlier "formatter disagreement" was a misdiagnosis of pre-existing file drift). clang-tidy 22.1.8: runs via a single-arch filtered compile_commands.json (universal -arch entries need one job per TU); 966 warnings total are pre-existing/naming-config noise, 25 on phase-changed lines — all match established repo conventions (verified against sibling lines; 0 Required-tier findings). Affected suites re-run green post-format (4/4 ctest targets).
 
 ## Summary
 
 total: 2
-passed: 1
+passed: 2
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
