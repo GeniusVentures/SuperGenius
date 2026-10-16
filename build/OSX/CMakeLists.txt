@@ -27,7 +27,9 @@ set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_
 
 set(ABI_SUBFOLDER_NAME "")
 
-set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
-set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework/macos-arm64_x86_64/libMoltenVK.a")
+# MoltenVK static install: single self-contained archive (prelinks
+# ShaderConverter/SPIRV-Cross/SPIRV-Tools) + Vulkan headers.
+set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/include")
+set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/lib/libMoltenVK.a")
 
 include(../CommonBuildParameters.cmake)
