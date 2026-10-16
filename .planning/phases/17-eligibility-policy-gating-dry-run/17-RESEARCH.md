@@ -459,15 +459,22 @@ if ( config_json.HasMember( "pruning" ) && config_json["pruning"].IsObject() )
 
 **All other claims were verified against source this session** (file:line cited inline).
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All five were Claude-discretion items. Each is resolved by the Phase-17 plans (2026-10-16); executors follow the cited plan/task, not a re-derivation.
 
 1. **Evaluator placement — standalone header/class vs TransactionManager-owned section (discretion)**
    - What we know: the rule needs GlobalDB (query/priority/heads/delta-parse), UTXOManager queries, NodeType, config N; TxPruner (18) reuses it.
    - Recommendation: standalone `PruneEligibility` in `src/transaction/` (free functions + result structs; a class only if state justifies it) — keeps TransactionManager un-widened and gives Phase 18 a clean reuse seam. Decide in plan wave 0.
+   - **RESOLVED:** standalone `class PruneEligibility` in `src/transaction/PruneEligibility.{hpp,cpp}` (reference members + construction gates justify the class) — decided by 17-04 Task 1 (contracts) / Task 2 (Evaluate).
 2. **Exact config key names + INFO line format (discretion)** — recommendation above: `pruning.enabled` / `pruning.finality_window` / `pruning.dry_run`.
+   - **RESOLVED:** exactly those three keys; parse/validate centralized in `PruningConfig::FromJSON` (17-04 Task 1), read via the D-C5 LoadSgnsConfig guard+delegation block with one resolved-values INFO line (17-06 Task 1).
 3. **Whether B populates `spent_by_txid` on synthesized zero-amount tombstones** — recommendation: uniform (simpler; discriminator already excludes them); alternative: genuine-only. Either way, test it.
+   - **RESOLVED:** uniform population on BOTH ConsumeUTXOs branches (17-01 Task 2); exclusion from eligibility stays with the amount≠0 discriminator, asserted by 17-01 Task 3 test 2 (SynthesizedTombstoneCarriesSpenderButNotGenuine).
 4. **Priority passthrough surface** — `CrdtDatastore::GetPriority` + `GlobalDB::GetKeyPriority` (recommended, mirrors existing passthroughs) vs exposing `CrdtSet` directly. Planner picks names.
+   - **RESOLVED:** the recommended pair `CrdtDatastore::GetPriority` → `GlobalDB::GetKeyPriority`, copying the GetCRDTHeadList null-guard shape (17-02 Task 1).
 5. **Whether the block-gate exposure extends `GetLocalDeltaKeyValues` (adding tombstones) or adds a sibling (e.g., `GetLocalDeltaKeys`)** — extending changes an existing public function's result set (currently elements-only); a sibling avoids touching existing callers. Recommendation: sibling returning keys-only (elements + tombstones), leaving the precedent untouched (open-closed with evidence: the second use just changed shape).
+   - **RESOLVED:** sibling keys-only `GetLocalDeltaKeys` covering elements AND tombstones; `GetLocalDeltaKeyValues` left byte-identical (17-02 Task 2).
 
 ## Environment Availability
 
@@ -523,13 +530,13 @@ ASVS level 1 (config: `security_enforcement: true`, `security_asvs_level: 1`, `s
 ### Applicable ASVS Categories
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|------------------|
-| V2 Authentication | no | no new network/auth surface (local evaluation only) |
-| V3 Session Management | no | — |
-| V4 Access Control | yes | fail-closed gate ensemble: NodeType==Light at construction (immutable enum, read post-config); allowlist = `TRANSACTION_BASE_FORMAT`-built `/bc-<net>/tx/` prefix over monitored networks only; out-of-prefix rejected with reasons + ctest |
-| V5 Input Validation | yes | config: rapidjson type-checks per key, enabled-without-window fails to disabled; DB inputs: malformed tx values → deserialize failure → ineligible-with-reason (never crash/never eligible); block parse failure → gate fails closed (not erasable); marker records validated on read |
-| V6 Cryptography | no | cert reads use existing `GetCertificateBySlot` validation; no new crypto |
-| V7 Error handling | yes | `outcome::result`/reason enums throughout; no swallowed failures |
-| V8 Data protection | yes (invariant) | dry-run erases NOTHING in production; the only erase-path use is test-side via the guarded Phase-16 API; `/utxo/`, `/cert/`, heads, seals are outside the candidate set by construction |
+5 | V2 Authentication | no | no new network/auth surface (local evaluation only) |
+6 | V3 Session Management | no | — |
+7 | V4 Access Control | yes | fail-closed gate ensemble: NodeType==Light at construction (immutable enum, read post-config); allowlist = `TRANSACTION_BASE_FORMAT`-built `/bc-<net>/tx/` prefix over monitored networks only; out-of-prefix rejected with reasons + ctest |
+8 | V5 Input Validation | yes | config: rapidjson type-checks per key, enabled-without-window fails to disabled; DB inputs: malformed tx values → deserialize failure → ineligible-with-reason (never crash/never eligible); block parse failure → gate fails closed (not erasable); marker records validated on read |
+9 | V6 Cryptography | no | cert reads use existing `GetCertificateBySlot` validation; no new crypto |
+10 | V7 Error handling | yes | `outcome::result`/reason enums throughout; no swallowed failures |
+11 | V8 Data protection | yes (invariant) | dry-run erases NOTHING in production; the only erase-path use is test-side via the guarded Phase-16 API; `/utxo/`, `/cert/`, heads, seals are outside the candidate set by construction |
 
 ### Known Threat Patterns for this stack
 | Pattern | STRIDE | Standard Mitigation |
