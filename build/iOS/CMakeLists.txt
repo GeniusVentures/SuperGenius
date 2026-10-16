@@ -30,7 +30,9 @@ set(ABI_SUBFOLDER_NAME "/aarch64")
 
 set(TESTING OFF)
 
-set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
-set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
+# MoltenVK static install: single self-contained archive (prelinks
+# ShaderConverter/SPIRV-Cross/SPIRV-Tools) + Vulkan headers.
+set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/include")
+set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/lib/libMoltenVK.a")
 
 include(../CommonBuildParameters.cmake)
