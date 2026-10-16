@@ -389,7 +389,7 @@ namespace sgns::crdt
         /// Concrete DAGSyncer (never the base interface) so EraseEntry can
         /// stage through GraphsyncDAGSyncer::StageBlockRemoval -- test doubles
         /// keep their own implementations untouched.
-        std::shared_ptr<GraphsyncDAGSyncer> m_dagSyncer = nullptr;
+        std::shared_ptr<GraphsyncDAGSyncer>               m_dagSyncer = nullptr;
         std::atomic_bool                                  started_;
         bool                                              cid_sync_started_;
         bool                                              cid_receiving_started_;

@@ -140,10 +140,10 @@ namespace sgns::crdt
         std::set<CID>        resolved_cids_;
 
         /// Fast-path flag: zero synchronization cost while never armed.
-        mutable std::atomic_bool            stall_enabled_{ false };
-        mutable std::mutex                  stall_mutex_;
-        mutable std::condition_variable     stall_cv_;
-        mutable bool                        stall_release_requested_{ false };
+        mutable std::atomic_bool        stall_enabled_{ false };
+        mutable std::mutex              stall_mutex_;
+        mutable std::condition_variable stall_cv_;
+        mutable bool                    stall_release_requested_{ false };
     };
 
 } // namespace sgns::crdt
