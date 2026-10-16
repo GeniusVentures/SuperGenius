@@ -28,7 +28,6 @@ target_include_directories(processing_service
 )
 
 if(APPLE)
-    set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
     target_link_libraries(processing_service PRIVATE
         "-framework CoreFoundation"
         "-framework CoreGraphics"
@@ -38,7 +37,8 @@ if(APPLE)
         "-framework Metal"
         "-framework QuartzCore"
 
-        # ${XCFRAMEWORK_PATH}
+        # MoltenVK (static libMoltenVK.a linked via Vulkan::Vulkan) is
+        # implemented on top of the frameworks above.
         "-framework Foundation"
     )
 

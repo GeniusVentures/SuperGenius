@@ -27,10 +27,8 @@ if(APPLE)
         )
     endif()
 
-    set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
     target_link_libraries(mnn_chunkprocess PRIVATE
         ${PLATFORM_SPECIFIC_FRAMEWORKS}
-#        ${XCFRAMEWORK_PATH}
     )
 endif()
 if(ANDROID)
