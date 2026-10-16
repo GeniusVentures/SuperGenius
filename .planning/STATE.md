@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 16
-status: ready_to_plan
-stopped_at: Phase 16 complete (4/4) — ready to discuss Phase 17
-last_updated: 2026-10-16T17:06:15.847Z
-last_activity: 2026-10-15
+current_phase: 17
+status: planning
+stopped_at: Phase 17 context gathered
+last_updated: "2026-10-16T19:09:57.212Z"
+last_activity: 2026-10-16
 progress:
   total_phases: 23
   completed_phases: 1
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T21:33:28.923Z
-**Stopped At:** None
-**Resume File:** None
+**Last session:** 2026-10-16T19:09:57.202Z
+**Stopped At:** Phase 17 context gathered
+**Resume File:** .planning/phases/17-eligibility-policy-gating-dry-run/17-CONTEXT.md
 
 ## Accumulated Context
 
