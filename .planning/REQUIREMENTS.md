@@ -95,6 +95,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RECL-03 | Phase 18 | Pending |
 | RECL-04 | Phase 18 | Pending |
 
+v2 (future) requirements — no phase mapping by design:
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| HIST-01 | — (v2) | Deferred |
+| HIST-02 | — (v2) | Deferred |
+| HIST-03 | — (v2) | Deferred |
+| RTN-01 | — (v2) | Deferred |
+| RTN-02 | — (v2) | Deferred |
+| RTN-03 | — (v2) | Deferred |
+
 **Coverage:**
 - v1 requirements: 18 total
 - Mapped to phases: 18/18 (Phase 16: 2 · Phase 17: 5 · Phase 18: 4 · Phase 19: 4 · Phase 20: 3)
@@ -102,4 +113,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-10-15*
-*Last updated: 2026-10-15 — traceability filled by v1.2 roadmap creation (phases 16-20)*
+*Last updated: 2026-10-16 — Phase 16 complete (PRUNE-02, GATE-03); v2 IDs added to traceability as Deferred*
