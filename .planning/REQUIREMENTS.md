@@ -224,7 +224,19 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | RECL-03 | Phase 18 | Pending |
 | RECL-04 | Phase 18 | Pending |
 
+v2 (future) requirements — no phase mapping by design:
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| HIST-01 | — (v2) | Deferred |
+| HIST-02 | — (v2) | Deferred |
+| HIST-03 | — (v2) | Deferred |
+| RTN-01 | — (v2) | Deferred |
+| RTN-02 | — (v2) | Deferred |
+| RTN-03 | — (v2) | Deferred |
+
 **v1.2 coverage:** 18 requirements, mapped 18/18 (Phase 16: 2 · Phase 17: 5 · Phase 18: 4 · Phase 19: 4 · Phase 20: 3). Unmapped: 0.
 
 ---
 *v1.2 requirements defined: 2026-10-15; traceability filled by v1.2 roadmap creation (phases 16-20). v1.2 section appended 2026-10-20 while rebasing the v1.2 branch onto the v1.3 planning root — both milestones run in parallel.*
+*Last updated: 2026-10-16 — Phase 16 complete (PRUNE-02, GATE-03); v2 IDs added to traceability as Deferred*
