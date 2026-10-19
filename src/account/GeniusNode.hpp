@@ -30,6 +30,7 @@
 #include "account/NodeType.hpp"
 #include "base/buffer.hpp"
 #include "account/PublicChainInputValidator.hpp"
+#include "transaction/PruneEligibility.hpp"
 #include "transaction/TransactionManager.hpp"
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
@@ -1164,6 +1165,8 @@ namespace sgns
         std::unique_ptr<evmwatcher::BridgeCatchupWatcher>
             catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns.
         std::unique_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
+        std::unique_ptr<boost::asio::steady_timer>
+            prune_dry_run_timer_; ///< Periodic timer for the read-only prune dry-run report (GATE-06).
 
         // ───────────────────────────── end ownership order ────────────────────────────
 
@@ -1172,6 +1175,7 @@ namespace sgns
         bool                     autodht_;                       ///< Whether DHT discovery is enabled.
         bool                     isprocessor_;                   ///< Whether processing service should run.
         NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
+        PruningConfig            pruning_config_;                ///< Pruning policy from sgns_config.json (default disabled — GATE-06 consent gate).
         base::Logger             node_logger_;                   ///< Main node logger.
         GeniusNodeConfig         dev_config_;                    ///< Runtime node configuration.
         std::string              ipfs_cache_dir_ = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
@@ -1260,6 +1264,26 @@ namespace sgns
          * @brief Runs one GC pass: evicts expired result files and enforces space cap.
          */
         void RunResultGC();
+
+        /**
+         * @brief Starts the config-gated prune dry-run timer (GATE-06 / SC-5).
+         * @details No-op unless the validated pruning config is enabled. The
+         *          node role (Light-only) and dry-run-mode checks happen inside.
+         *          The timer is node-scoped: an already-running timer means
+         *          return — it survives TransactionManager generation switches
+         *          because the evaluator is constructed per cycle from the
+         *          live members (Phase-13 replaceable-manager lifecycle).
+         */
+        void StartPruneDryRunTimerIfConfigured();
+
+        /**
+         * @brief Runs one read-only prune-eligibility evaluation and INFO-reports it.
+         * @details Constructs PruneEligibility from the CURRENT members each
+         *          tick (never cached across ticks), calls Evaluate(), emits
+         *          the per-cycle dry-run summary (candidates + block verdicts),
+         *          and reschedules. Performs no write or erase of any kind.
+         */
+        void RunPruneDryRunCycle();
 
         /**
          * @brief Initializes application and dependency loggers.

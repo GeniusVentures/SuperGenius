@@ -470,6 +470,23 @@ namespace sgns
             mirror_results_ = true;
             node_logger_->info( "Archive node: defaulting mirror_results=true" );
         }
+        // Pruning policy read (GATE-06 / 17-06). The "pruning" object is the CONSENT
+        // gate — absent keys leave the default-disabled config and today's behavior
+        // untouched: no evaluator, no timer, no log line (SC-5). Member parse and
+        // validation have ONE home: PruningConfig::FromJSON (17-04 fail-closed
+        // contract); this block only guards object-ness and delegates.
+        if ( config_json.HasMember( "pruning" ) && config_json["pruning"].IsObject() )
+        {
+            pruning_config_ = PruningConfig::FromJSON( config_json["pruning"] );
+            if ( pruning_config_.disabled_reason )
+            {
+                node_logger_->warn( "sgns_config.json: {}", *pruning_config_.disabled_reason );
+            }
+            node_logger_->info( "sgns_config.json: pruning enabled={}, finality_window={}, dry_run={}",
+                                pruning_config_.enabled,
+                                pruning_config_.finality_window.value_or( 0 ),
+                                pruning_config_.dry_run );
+        }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
             subnet_id_ = static_cast<uint16_t>( config_json["subnet_id"].GetUint() );
