@@ -3,6 +3,7 @@ title: Bridge Startup Wiring + Mock RPC Endpoints
 date: 2026-06-03
 priority: P1
 source: PR #298 Codex review (June 2) — 3 deferred findings
+resolves_phase: 24
 ---
 
 ## Tasks
