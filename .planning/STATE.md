@@ -3,72 +3,75 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 status: planning
-last_updated: "2026-10-19T15:06:14.367Z"
+last_updated: "2026-10-19T18:00:00.000Z"
 last_activity: 2026-10-19
 progress:
-  total_phases: 0
+  total_phases: 9
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
 ---
 
-# State: SuperGenius — Light-node Transaction Pruning
+# State: SuperGenius — Security Remediation & Network Readiness
 
-**Last updated:** 2026-10-15
-**Milestone:** v1.2 — Light-node transaction pruning
-**Current Phase:** 16
+**Last updated:** 2026-10-19
+**Milestone:** v1.3 — Security Remediation & Network Readiness (all 25 findings from the October 2026 external security assessment)
+**Current Phase:** 21
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-15)
-**Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 16 — Erasure Primitives & Bookkeeping Hardening (roadmap created; planning not started)
+See: .planning/PROJECT.md (updated 2026-10-19)
+**Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart — and nothing an unauthenticated peer sends can change that.
+**Current focus:** Phase 21 — Consensus Trust & Mint Authorization (roadmap revised after review; planning not started)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-19 — Milestone v1.3 started
+Phase: 21 of 29 (Consensus Trust & Mint Authorization)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-10-19 — v1.3 roadmap revised after review (strict numeric order 21→29; REL-02 moved into Phase 22; 27/27 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 16 | Erasure Primitives & Bookkeeping Hardening | not started | PRUNE-02, GATE-03 |
-| 17 | Eligibility, Policy & Gating (Dry-Run) | not started | PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06 |
-| 18 | TxPruner Service & First Real Prune | not started | PRUNE-04, PRUNE-05, RECL-03, RECL-04 |
-| 19 | Pruned-Node Survival & Recovery Hardening | not started | GATE-05, SURV-01, SURV-02, SURV-03 |
-| 20 | Reclamation Proof & E2E Hardening | not started | GATE-02, RECL-01, RECL-02 |
+| 21 | Consensus Trust & Mint Authorization | not started | TRUST-01/02, MINT-02..04 |
+| 22 | Wire & Ingestion Hardening (Fork) | not started | WIRE-01/02, REL-02 |
+| 23 | Gossip & DHT Authentication (Fork) | not started | GOSSIP-01/02 |
+| 24 | Bridge Ingestion Safety | not started | BRIDGE-01/02 |
+| 25 | Verification Spine & Release Gate | not started | VER-01, REL-01, REL-03, EVM-01, SDK-01 |
+| 26 | Processing-Grid Integrity | not started | GRID-01..04, MINT-01 |
+| 27 | Network Topology | not started | TOPO-01 |
+| 28 | Worker Profile, Isolation & Mobile Readiness | not started | SDK-02, PRIV-01, MOB-01 |
+| 29 | Return-Leg Activation (SGNS→EVM) | not started | RET-01 |
 
 ## Key Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work (v1.2):
+Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work (v1.3):
 
-- Only light nodes prune; full/archive never erase history — light nodes are disk-constrained consumers, full/archive remain the complete sync/audit source
-- Erase both levels — CRDT value + raw ipfs-lite block — via the existing tx→CID map (already exists at `TransactionManager.cpp:4322/4433`; extended with a deletion lifecycle, not replaced)
-- Erase requires all outputs genuinely spent (`IsOutPointGenuinelyConsumed`) AND depth/finality window elapsed (priority vs `maxHeight`); `spent_epoch`/`spent_by_txid` are dead schema — never populated, do not build on them
-- Pruning is a local RocksDB operation, never the CRDT tombstone path — `DeleteKey`/`DeleteTransaction` publish network-wide tombstones that would erase history on full/archive nodes too
-- Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch storms on the single DAG worker
-- A delta block erases only when every element it carries is prune-eligible (parse the block at prune time; no persistent reverse index — the block is the source of truth)
-- Ordering invariants: own-frontier survival fix (cert-slot previous_hash resolution) lands before the first real prune; block-parse eligibility gate lands before any block deletion
-- One shared RocksDB, two facades (`globaldb.cpp:322`) — a single WriteBatch erases atomically and a single whole-DB CompactRange reclaims
-- Reclamation is proven in measured bytes (SST/`du` before-vs-after) via explicit `CompactRange` with `bottommost_level_compaction = kForce` — deletes alone reclaim nothing
-- Never trigger prune work from CRDT element callbacks (they fire pre-batch-commit — proven invariant, cert-receipt memory)
+- All 25 assessment findings in scope — vulnerabilities, hardening, and gated capabilities; the milestone driver is public-network exposure readiness
+- Repos = SuperGenius + libp2p fork + GeniusSDK; contracts repo excluded (#12 is an on-chain operational audit only)
+- Adversarial regression suite (VER-01) is the verification spine: every fix test names attacker authority required, expected rejection, actual behavior — paired with a compat twin proving the legitimate pre-upgrade path survives
+- v1.2 executes on a separate branch; this branch plans v1.3 — phase numbering continues at 21 (v1.2 owns 16-20)
+- MINT-01 (escrow entitlement) mapped to Phase 26 with the grid cluster; Phase 21 planning research decides whether an early minimal binding is possible (does a certified task-result record exist on the consensus-certificate path?)
+- EVM-01 and SDK-01 are dependency-free and mapped to Phase 25; they may be pulled forward ad hoc if desired
+- Roadmap revised after review (2026-10-19): execution order is strictly numeric 21→29 with consensus trust first; REL-02 moved into Phase 22 (Wire & Ingestion Hardening) so artifact digest verification lands with or before the phase's first fork-riding change; the verification spine (VER-01/REL-01/REL-03) arrives at Phase 25 — Phases 21-24 carry their own adversarial+compat test pairs in-phase per their criteria
 
 ## Notes
 
-- Phase numbering continues across milestones: v1.1's highest phase was 15; v1.2 phases are 16-20. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
-- Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence) converged the 5-phase structure; the two hard ordering constraints (block-parse gate before block deletion; own-frontier fix before first real prune) are encoded in the roadmap's execution order.
-- Research flags deeper research during planning for Phases 17 (own-frontier mechanism choice, window definition, lock/re-verify protocol), 18 (re-delivery guard placement and state source), and 19 (checkpoint-rebuild guard mechanism); Phases 16 and 20 follow standard patterns (skip research-phase).
-- `TxPruner` is a new owning module in `src/transaction/` beside `TransactionManager` — not a `GeniusNode` lambda (god-class facade already flagged in CONCERNS.md).
-- Every pruning test uses a fresh temp DB with three-part assertions (present-before, absent-after in both stores, seal-marker-still-present) plus a negative control.
-- Brownfield codebase map exists at `.planning/codebase/`; v1.2 research at `.planning/research/` (SUMMARY, STACK, ARCHITECTURE, PITFALLS, FEATURES).
+- Phase numbering continues across milestones: v1.2 owns Phases 16-20 on its execution branch (roadmap snapshot: `.planning/milestones/v1.2-ROADMAP.md`); v1.3 owns 21-29 here. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
+- Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence, 2026-10-19) converged the 9-phase structure. Hard ordering constraints encoded in the roadmap: REL-02 in-phase at Phase 22 (with or before its first fork-riding change); GRID-03 sits in the Phase 26 dependency sink; Phase 27 carries the complete-relay-vs-topology-contract decision gate; RET-01 strictly last (requires TRUST-01 from Phase 21 + BRIDGE-01/02 from Phase 24). Execution order revised after review to strict numeric 21→29 (no planned overlap).
+- Research flags deeper planning research for Phases 21 (MINT-01 minimal path, grandfather rule, verdict-model placement), 23 (fork gossip API extension, per-topic policy schema, benchmark methodology), 26 (GRID-03 determinism preconditions, GRID-02 stored-proof/zkLLVM inventory), 27 (decision-gate inputs, CGNAT emulation), 29 (exporter design, deployed-contract verification). Phases 22, 24, 25, 28 follow standard patterns (skip research-phase).
+- Cross-cutting disciplines from research, first-class in every fix phase: Reject/Defer(bounded)/Accept verdict model (missing CRDT evidence is an ordering problem, never an authorization failure); adversarial+compat test pair as a plan-completeness gate; fork-divergence discipline (FORK-DELTA manifest, upstreamable patches) from the first fork delta.
+- The four-stage fork release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) is why REL-02 sits inside Phase 22: fork fixes ride the pipeline, today's downloads are unverified, and the wire hardening is the first fork-riding change.
+- Brownfield codebase map exists at `.planning/codebase/`; v1.3 research at `.planning/research/` (SUMMARY, STACK, ARCHITECTURE, PITFALLS, FEATURES); assessment response at `.planning/notes/security-assessment-2026-10-response.md`.
 
 ## Operator Next Steps
 
-- Plan the first phase: /gsd:plan-phase 16
+- Plan the first phase: /gsd:plan-phase 21
 
 ### Quick Tasks Completed
 
@@ -79,9 +82,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-15T17:33:42.551Z
-**Stopped At:** Phase 16 context gathered
-**Resume File:** .planning/phases/16-erasure-primitives-bookkeeping-hardening/16-CONTEXT.md
+**Last session:** 2026-10-19
+**Stopped At:** v1.3 roadmap revised after review (strict numeric order; REL-02 → Phase 22); awaiting plan-phase 21
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -91,13 +94,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Roadmap Evolution
 
-- Phase 13 added: Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
-- Phase 14 added: Account-generation publication and retired-manager lifecycle safety
-- Milestone v1.2 roadmap created: Phases 16-20 (erasure primitives → dry-run policy/gating → first real prune → survival hardening → reclamation proof)
+- Milestone v1.2 roadmap created: Phases 16-20 (on the v1.2 branch)
+- Milestone v1.3 roadmap created (this branch): Phases 21-29; revised after review to strict numeric execution order — consensus & mint authorization → wire hardening (+ in-phase REL-02) → gossip/DHT auth → bridge ingestion → verification spine/release gate → grid integrity → topology → worker/isolation/mobile → return-leg activation
+- v1.2 roadmap snapshot archived to `.planning/milestones/v1.2-ROADMAP.md` so numbering and scope stay inspectable on this branch
 
-### v1.0 History
+### History
 
-v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
+v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) shipped 2026-09-03; v1.1 (trusted-peer genesis/quorum policy) shipped 2026-10-05 with recorded gaps — see `.planning/MILESTONES.md`, `.planning/milestones/v1.1-MILESTONE-AUDIT.md`, and per-milestone audit files. Between v1.0 and v1.1, bridge-relayer/consensus-voting work (`.planning/phases/01`..`07`) executed outside formal GSD milestone tracking. Historical decision digests live in git history (STATE.md at v1.1/v1.2 close) and the milestone audit files.
 
 ## Performance Metrics
 
@@ -105,7 +108,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 |-------|------|----------|-------|
 | Phase 13 P01 | 10min | 1 tasks | 7 files |
 | Phase 13 P03 | 27min | 3 tasks | 10 files |
-| Phase 13 P12 | 12 min | 1 tasks | 8 files |
+| Phase 13 P12 | 12min | 1 tasks | 8 files |
 | Phase 13 P02 | 11min | 2 tasks | 5 files |
 | Phase 13 P04 | 22m | 3 tasks | 9 files |
 | Phase 13 P05 | 23min | 3 tasks | 11 files |
@@ -133,72 +136,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
 
-## Decisions
-
-- [Phase 13]: Genesis identity uses SGNS_TRUST_GENESIS_V1 with fixed-width big-endian fields and sorted lowercase 64-byte keys. — This makes the reviewed trust root deterministic and independently verifiable.
-- [Phase 13]: Initial genesis policy is version 1 with burn value 100 and majority/two-thirds safety floors. — Unsafe bootstrap thresholds or ambiguous economic readiness must fail before fingerprinting.
-- [Phase 13]: SecureCrdt owns an isolated registry by default; duplicate same-node patterns fail closed instead of replacing the current owner. — This prevents co-located nodes and duplicate policy owners from replacing signer sources or unregistering one another.
-- [Phase 13]: Quorum policy identity binds distinct predecessor and authorizer hashes in canonical bytes. — Both links must equal the confirmed current policy hash for a successor.
-- [Phase 13]: Membership uses M/2+1 and BurnConfig uses M-M/3 with bounds checked first. — Exact integer formulas avoid percentage drift and overflow.
-- [Phase 13]: Production TPR and BurnConfig select explicit policy-specific validators. — The burn path cannot silently inherit the weaker membership floor.
-- [Phase 13]: Genesis derives version-1 policy and burn records from the canonical signed manifest. — This makes the bootstrap proof independently revalidatable after restart.
-- [Phase 13]: Trust-store loads verify complete policy and burn predecessor chains. — Canonical hashes and quorum proofs, not JSON or arrival order, determine authority.
-- [Phase 13]: Competing same-version trust candidates return STALE_HEAD. — Exact replay/decrease remains distinct while concurrent losers have a stable race outcome.
-- [Phase 13]: Candidate approvals repeat exact canonical core bytes and bind version, content hash, and signer in the storage key. — Self-contained signed bytes and key binding prevent ambiguous reconstruction or cross-candidate approval reuse.
-- [Phase 13]: One CandidateAuthorizationSource snapshot drives local submission and remote filtering. — Both ingress paths must enforce the same live network, predecessor, policy, signer, and resource constraints.
-- [Phase 13]: Current-only candidate listing separates activation eligibility from bounded stale audit visibility. — Predecessor changes must immediately deactivate stale candidates without erasing authenticated audit records.
-- [Phase 13]: Production TPR publishes peers only from durable TrustStateStore snapshots. — Genesis and successor candidates remain separate, and receive callbacks never sign.
-- [Phase 13]: Trust records bind proofs to exact candidate-core authorization bytes with strict legacy decoding. — Restart verification must check the same context operators approved without rejecting prior Phase 13 records.
-- [Phase 13]: Burn v1 uses a domain-separated genesis anchor and current burn quorum. — Economic readiness cannot derive from the bootstrap proof or unconfirmed peers.
-- [Phase 13]: A node-scoped confirmed burn provider publishes only after durable activation. — TransactionManager replacements need one authoritative readiness and value source.
-- [Phase 13]: GlobalDbNetworkComposition validates configuration in Create but defers network and datastore side effects to Start.
-- [Phase 13]: The GlobalDB transport identity stays internal beneath the database path; callers provide no account or private key.
-- [Phase 13]: GlobalDB listen and broadcast topics remain mandatory caller inputs so local trust tools reuse the production CRDT channel.
-- [Phase 13]: sgns-trust consumes canonical GenesisManifest bytes and a caller-supplied existing production CRDT topic. — The reviewed, fingerprinted, signed, submitted, and verified bytes remain identical while the tool reuses the deployed topic.
-- [Phase 13]: Private key material enters only through an owner-controlled 0600 no-symlink file or echo-disabled terminal input and never through argv or environment variables. — This limits secret exposure and permits deterministic cleanse plus success-only deletion.
-- [Phase 13]: Local propose and approve operations attempt durable activation after the explicit signature while receive and list paths remain signer-free. — Explicit operator actions can complete quorum without adding an automatic signing surface.
-- [Phase 13]: TrustStartupController advances only from verified durable records while networking remains live in restricted waiting states.
-- [Phase 13]: Canonical peer ordering is diagnostic-equivalent on restart; actual trust-field conflicts alert while network mismatch remains fatal.
-- [Phase 13]: First-boot verification connects independent production GlobalDB compositions through the reviewed GenesisCeremony path before protected-key deletion.
-- [Phase 13]: Operator manifest construction mirrors the release codec exactly because sgns-trust accepts canonical binary GenesisManifest bytes, not JSON. — This keeps independently reviewed, fingerprinted, submitted, and durably verified bytes identical.
-- [Phase 13]: Durable verified trust state is restart authority; software-only protection excludes restoration of the whole disk and all local anchors. — TPM or OS-keystore monotonic state, or authenticated off-host checkpoints, is required for that threat.
-- [Phase 13]: Canonical v1.1 completion is derived from Plan 13-08's recorded exact 25/25 gate and five additional policy-lifetime passes.
-- [Phase 13]: MIG-05 remains the approved signature-verification-only migration; full ValidatorRegistry ISignedCRDTData adoption remains retired.
-- [Phase 13]: BOOT-04 covers software-visible rollback while whole-disk/all-anchor restoration remains an accepted unsolved boundary without external anchoring.
-- [Phase 13]: Burn readiness is classified from the verified authorization path stored with the current burn head, never from proof count or the current policy threshold.
-- [Phase 13]: While burn v1 is BootstrapOnly, both successor APIs reject before normal validation and writes; only an identical burn-v1/value-100 canonical candidate-core with current-policy burn quorum may replace its proof.
-- [Phase 13]: PayEscrow uses validated quotient/remainder basis-point arithmetic so full-domain uint64_t financial outputs are exact without non-standard wide integers. — Validated bounds make each intermediate and the final sum fit uint64_t while preserving floor semantics.
-- [Phase 13]: One validated signer-set snapshot governs legacy membership, retained-child pruning, the storage bound, and quorum evaluation for each operation.
-- [Phase 13]: Remote legacy signatures must bind to the exact base/sig/canonical-address key before cryptographic verification or persistence.
-- [Phase 13]: Policy successor authorization is available only in ConfirmedReady, and local policy signing preflights BurnConfig economic readiness. — Rejected policy operations must not write or sign before peer-confirmed burn readiness.
-- [Phase 13]: Activation APIs return false only for authenticated below-quorum candidates; actionable validation and durable failures remain errors. — Callers can preserve ordinary pending operations without masking corruption, wrong-head, or commit failures.
-- [Phase 13]: Startup activation failures emit TRUST_ACTIVATION_FAILED with candidate identity and typed error context. — Operators need structured evidence when asynchronous durable activation fails.
-- [Phase 13]: BurnConfig restart publication consumes TrustStateStore's verified PeerQuorum classification and never reconstructs authority from proof cardinality or the current policy threshold.
-- [Phase 13]: Phase 13 gap closure requires focused counterexamples, exact 25-test enumeration/JUnit accounting, and five post-gate lifetime repetitions in one fail-fast chain.
-- [Phase 13]: Public LoadAndVerify holds transition_mutex_ across complete trust verification; lock-owning commit paths use LoadAndVerifyUnlocked. — This serializes coherent durable views without recursively locking commit precondition and post-commit verification.
-- [Phase 13]: Automatic signing is limited to a verified current member and the exact deterministic BootstrapOnly burn-v1/value-100 candidate. — This closes initial-burn liveness without broadening manual approval or successor-signing authority.
-- [Phase 13]: SecureCrdt callbacks queue serialized worker Refresh operations. — Activation writes must not reenter the GlobalDB callback thread.
-- [Phase 13]: Failed candidate IDs are suppressed only for the current controller while authoritative CRDT records remain restart-discoverable. — This prevents tight in-process retries while preserving fault recovery after reconstruction.
-- [Phase 13]: Only remotely authored trusted-peer callback records enter passive activation; explicit local admin paths retain their own activation result. — Prevents synchronous callback activation from racing the explicit administrative decision.
-- [Phase 13]: Policy candidates use the serialized callback worker; teardown joins queued work before owner-safe callback removal. — Keeps GlobalDB writes off callback delivery and queued work within controller lifetime.
-- [Phase 13]: Burn-ready refresh lists and deterministically processes retained successors before ConfirmedReady; only foreign burn approvals enqueue passive activation. — This closes passive divergence while preserving explicit LocalTrustAdmin activation and preventing local callback races.
-- [Phase 13]: GeniusNode serializes complete transitions with a recursive mutex so existing same-thread nested transitions remain valid while concurrent duplicate work is excluded.
-- [Phase 13]: Posted trust transitions carry their source state and lifecycle epoch; ConfirmedReady may initialize transactions only from the two trust waiting states.
-- [Phase 13]: TransactionManager replacement stops and releases prior bridge, state, slot-hash, GlobalDB, and account callback ownership before TransactionManager::New installs a generation-owned replacement.
-- [Phase 13]: Policy replay merges authoritative retained candidates with callback hints deterministically. — Callback delivery is not restart authority; controller-local suppression resets on reconstruction.
-- [Phase 13]: Policy candidates use pending and failed containers distinct from burn candidates. — Their authoritative discovery APIs, retry state, and typed error contexts must not cross domains.
-- [Phase 13]: Actionable retained-policy failure suppression is scoped to one controller lifetime. — This bounds in-process retries while reconstruction can rediscover and retry the retained authenticated record.
-- [Phase 13]: Final Phase 13 closure requires exact source/XML/CTest/JUnit name equality and target-scoped sanitizer proof — Absent two-target instrumentation is NOT_RUN, never PASS.
-- [Phase 13]: Account and TransactionManager owners are copied only as one lifecycle-mutex-protected generation snapshot; a switching generation is unavailable. — This prevents mixed account/manager ownership during live selection.
-- [Phase 13]: SelectAccount invalidates publication before draining watcher/services outside the lifecycle lock, then publishes one complete replacement pair. — Blocking stop and join work must not hold the lifecycle mutex.
-- [Phase 13]: Trusted-peer approval identity is one immutable node-scoped address/signing authority captured together for the controller lifetime. — Selected transaction accounts cannot relabel or change trusted-peer signatures.
-- [Phase 13]: Refresh dispatch state owns serialization, retry timing, cancellation, and diagnostics independently; it locks the weak controller only across one Refresh attempt. — This permits final-owner release from inside dispatched callbacks without self-join, detach, termination, or use-after-free.
-- [Phase 13]: Only policy and burn discovery failures are transient; activation failures remain actionable and controller-scoped candidate suppression is preserved. — Semantic stage classification prevents retries from masking durable, genesis, publication, or candidate-specific activation faults.
-- [Phase 13]: One refresh cycle is exactly attempts 1 through 7 with 100/200/400/800/1600/3200ms delays; duplicate requests coalesce and exhaustion returns the dispatcher to idle. — The fixed cap and exact observability close retry storms while preserving autonomous recovery from transient discovery failures.
-- [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
-- [Phase 15]: Wrong-PSK GlobalDB test nodes must release db (ShutdownNow+reset) and graphsync Network BEFORE pubsub Stop - StopImpl destroys its io_context right after its own host ref, so a host surviving Stop via a retained Network member destroys parked never-negotiated pnet handshake connections against a dead kqueue reactor (15-18 ordered teardown)
-- [Phase 15]: UAT-1 closed by GlobalDB-level composition (no Blockchain/genesis): NetworkMembershipFilterFlowTest case 11 joins real-data-path scoped job replication (TaskQueueImpl+SubTaskResultStorageImpl on the scoped topic), data-level public-node isolation (live public GlobalDB, both-direction dials, multi-key negative window), and deny-all teardown on a still-live GlobalDB - mutation-verified non-vacuous
-
 ## Deferred Items
 
 Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
@@ -206,8 +143,8 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 | Category | Item | Status |
 |----------|------|--------|
 | todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the BOOT-01..04 scope (durable confirmed trust-state, ceremony, policy authority); kept for reference |
-| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track A bridge scope (evmrelay_integration track), not v1.1 |
-| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track A Phase 5 scope (PR #298 findings), not v1.1 |
+| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track A bridge scope (evmrelay_integration track); v1.3 bridge phases (25/29) supersede the ingestion-safety half |
+| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track A Phase 5 scope (PR #298 findings) |
 | quick_task | 11 June-2026 TokenId/InputValidator records (260602-*) | Stale — artifacts no longer on disk |
 | uat | 14-UAT.md (4 open scenarios) | Discarded — phase 14 execution discarded by owner 2026-08; scope unshipped |
 | uat | 15-HUMAN-UAT.md | Resolved 2026-10-02 (status label predates resolve state) |
@@ -215,3 +152,5 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 | verification | 13-VERIFICATION.md (29/32) | Documented — residuals map to discarded phase-14 scope; see v1.1-MILESTONE-AUDIT.md |
 | gap | ELM-01..08 | Dropped from v1.1 — cross-repo SGProcessingManager scope; see v1.1-MILESTONE-AUDIT.md |
 | gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
+
+Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard.

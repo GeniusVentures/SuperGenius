@@ -5,9 +5,16 @@
 - ✅ **v1.0 GeniusNode Construction Refactor** — Phases 1-3 (shipped 2026-07-03)
 - ✅ **v3.0 Canonical Burn Finality Rebuild** — Phases 8-12 (shipped 2026-09-03)
 - ✅ **v1.1 trusted-peer genesis, quorum-policy, and production integration gaps** — Phases 08-15 (shipped 2026-10-05, known gaps recorded)
-- **v1.2 Light-node transaction pruning** — Phases 16-20 (ACTIVE — started 2026-10-15)
+- 🚧 **v1.2 Light-node transaction pruning** — Phases 16-20 (**executing on a separate branch** — not tracked here; snapshot: `.planning/milestones/v1.2-ROADMAP.md`)
+- 🚧 **v1.3 Security Remediation & Network Readiness** — Phases 21-29 (ACTIVE on this branch — started 2026-10-19)
 
 ## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Phase numbering continues across milestones: v1.2 owns 16-20 on its execution branch; this branch's v1.3 owns 21-29. Do not reset or renumber.
 
 <details>
 <summary>✅ v1.0 GeniusNode Construction Refactor (Phases 1-3) — SHIPPED 2026-07-03</summary>
@@ -53,109 +60,150 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
 
-### v1.2 Light-node transaction pruning (ACTIVE — started 2026-10-15)
+<details>
+<summary>🚧 v1.2 Light-node transaction pruning (Phases 16-20) — EXECUTING ON A SEPARATE BRANCH</summary>
 
-**Milestone Goal:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a configurable depth/finality window, while the node keeps its unspent UTXO set and remains fully operational (restart, tip sync, spend/receive). Full and archive nodes keep complete history and remain the sync/audit source for fresh nodes.
+**Milestone Goal:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a configurable depth/finality window, while the node keeps its unspent UTXO set and remains fully operational. Full and archive nodes keep complete history and remain the sync/audit source.
 
-**Execution order:** 16 → 17 → 18 → 19 → 20 (strict sequence). Two hard ordering constraints from research hold: the block-parse eligibility gate (Phase 17) lands before any block deletion (Phase 18), and the own-frontier survival fix (Phase 17) lands before the first real prune (Phase 18). Reclamation proof is deliberately last.
+- **Phase 16: Erasure Primitives & Bookkeeping Hardening** — PRUNE-02, GATE-03
+- **Phase 17: Eligibility, Policy & Gating (Dry-Run)** — PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06
+- **Phase 18: TxPruner Service & First Real Prune** — PRUNE-04, PRUNE-05, RECL-03, RECL-04
+- **Phase 19: Pruned-Node Survival & Recovery Hardening** — GATE-05, SURV-01, SURV-02, SURV-03
+- **Phase 20: Reclamation Proof & E2E Hardening** — GATE-02, RECL-01, RECL-02
 
-- [ ] **Phase 16: Erasure Primitives & Bookkeeping Hardening** - Two-level local erasure primitives behind owner-module APIs; zero production behavior change (PRUNE-02, GATE-03)
-- [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
-- [ ] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
-- [ ] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03)
-- [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
+Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadmap snapshot preserved on this branch: `.planning/milestones/v1.2-ROADMAP.md`.
 
-## Phase Details (v1.2 — ACTIVE)
+</details>
 
-### Phase 16: Erasure Primitives & Bookkeeping Hardening
+### 🚧 v1.3 Security Remediation & Network Readiness (ACTIVE — started 2026-10-19)
 
-**Goal**: The physical two-level erasure primitives exist behind owner-module APIs with the safety invariants baked into their shape — seal markers unaddressable, in-use CIDs guarded, one atomic WriteBatch — and the fresh-DB test-fixture rules established, with zero production behavior change.
-**Depends on**: Nothing within v1.2 (first phase of the milestone; numbering continues after v1.1's Phase 15)
-**Requirements**: PRUNE-02, GATE-03
+**Milestone Goal:** Close all 25 findings from the October 2026 external security assessment (`.planning/notes/security-assessment-2026-10-response.md`) so the network is safe to expose publicly — every fix proven by an adversarial regression suite (VER-01) that names the attacker authority required, the expected rejection, and the actual behavior, paired with a compatibility twin proving the legitimate pre-upgrade path survives.
+
+**Execution order:** strictly 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
+
+- [ ] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
+- [ ] **Phase 22: Wire & Ingestion Hardening (Fork)** - Length and nesting caps before allocation across the three fork readers; error-result hash parsing with fuzz coverage; thirdparty/zkLLVM digest verification + SHA-pinned actions landing with or before the first fork-riding change; first FORK-DELTA manifest + mixed-version interop-matrix run (WIRE-01, WIRE-02, REL-02)
+- [ ] **Phase 23: Gossip & DHT Authentication (Fork)** - Verify-before-forward on public topics with signing-key↔from binding and per-topic policy as data; DHT record validation with admission limits and request-bound nonces; before/after throughput benchmark (GOSSIP-01, GOSSIP-02)
+- [ ] **Phase 24: Bridge Ingestion Safety** - Per-chain confirmation depth/finality as a restart-durable state machine proven under anvil reorg; content-corroborated multi-operator RPC quorum (BRIDGE-01, BRIDGE-02)
+- [ ] **Phase 25: Verification Spine & Release Gate** - Adversarial-suite apparatus promoted to first-class ctest/CI targets, release-before-tests reorder, fork-delta discipline as a standing gate; the dependency-free EVM on-chain audit and GeniusSDK memory-safety tracks ride here (VER-01, REL-01, REL-03, EVM-01, SDK-01)
+- [ ] **Phase 26: Processing-Grid Integrity** - Authenticated queue/result/payout claims; escrow entitlement (certified task result) and independent sufficiency validation; staged removal of the proof-verification bypass; independent result verification before payout on the deterministic/redundant tier (GRID-01, GRID-02, GRID-03, GRID-04, MINT-01)
+- [ ] **Phase 27: Network Topology** - Relay/hole-punch completed limits-first OR the relay-through-full-nodes topology published as an explicit supported contract, decided at a mid-phase gate on fork-divergence cost (TOPO-01)
+- [ ] **Phase 28: Worker Profile, Isolation & Mobile Readiness** - Minimal worker profile with measured duty-cycle controls; honestly-defined job privacy boundary with scoped controls; adaptive resource budgets and demonstrated lifecycle recovery (SDK-02, PRIV-01, MOB-01)
+- [ ] **Phase 29: Return-Leg Activation (SGNS→EVM)** - New bridge exporter module feeding GNUSBridgeAttestor; replay protection; activation checklist with deployed-contract verification — strictly last (RET-01)
+
+## Phase Details (v1.3 — ACTIVE)
+
+### Phase 21: Consensus Trust & Mint Authorization
+**Goal**: The certificate trust anchor holds on a public network — a registry loaded by CID is authorization-verified with a grandfather rule that keeps historical finality re-validating — and every mint/escrow authorization gap from the assessment's highest-credibility findings (#1, #3, #4, #5, #14) closes fail-closed without orphaning legitimate state.
+**Depends on**: Nothing within v1.3 (first phase; numbering continues after v1.2's Phase 20)
+**Requirements**: TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04
 **Success Criteria** (what must be TRUE):
-
-  1. A primitive erase of one transaction on a fresh temp DB passes the three-part assertions — CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`) absent, raw CID block absent from the block store, `<cid>sealed` marker still present — plus the negative control (an untouched sibling key remains byte-identical).
-  2. CRDT entries, raw block bytes, and the tx→CID map entry erase in one atomic RocksDB WriteBatch: a crash-injected interrupted batch leaves no partial state (never value-without-block, never block-without-map-entry).
-  3. The block-erase exposure refuses in-use CIDs — head CID, root-CID pending/active, and LRU-cached CIDs are all rejected by guards — and no code path can address a seal marker (`isResolved` asserted before and after erase).
-  4. No tombstone path exists in the new surface: erasure writes directly to the shared DB through the `CrdtSet`-owned local primitive, `DeleteKey`/`DeleteTransaction` appear nowhere in the pruner code (grep gate), and the tx→CID map gains a deletion lifecycle with tracked-map cleanup.
-  5. The default build and the full existing ctest suite pass green with the pruner unwired — `removeNode`'s first consumer is the test suite, so production behavior is unchanged.
-
-**Plans**: 4 plans
-Plans:
-**Wave 1**
-
-- [ ] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
-- [ ] 16-02-PLAN.md — Guarded DAGSyncer block staging + revert-free tracked-map erase + real-store erase fixture (PRUNE-02, GATE-03)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [ ] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [ ] 16-04-PLAN.md — Fresh-DB erase suites (atomicity, seal retention, guards, integration) + ctest source-scan gates + full-suite green (PRUNE-02, GATE-03)
-
-### Phase 17: Eligibility, Policy & Gating (Dry-Run)
-
-**Goal**: The pruning policy evaluator decides erasability correctly on live data in dry-run — never erasing in production — and the two correctness dependencies of the first real prune (multi-element block gate, own-frontier survival fix) are implemented and proven before any production erasure exists.
-**Depends on**: Phase 16
-**Requirements**: PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06
-**Success Criteria** (what must be TRUE):
-
-  1. The dry-run evaluator on a live light node reports exactly the truly-eligible set: every output genuinely consumed (`IsOutPointGenuinelyConsumed` — synthesized zero-amount tombstones excluded) AND depth beyond the configured finality window (priority vs `maxHeight`); unspent or in-window transactions are never reported eligible.
-  2. The block-parse gate reports a delta block erasable only when every element it carries is prune-eligible (parsed at evaluation time from the block itself, not from "what this node applied") — a multi-element block with any non-eligible sibling (e.g. another account's live element) is never eligible.
-  3. With the node's own frontier transaction deep inside the eligible window, outgoing `previous_hash` resolution still completes from cert-slot data (certificates are never pruned) and the cold-start nonce chain is correct — proven by test before any production erasure exists.
-  4. Gating fails closed: the evaluator runs only on `NodeType::Light` (full/archive refuse), erasure candidates are confined to the `/bc-<netid>/tx/` prefix allowlist (the verified `TRANSACTION_BASE_FORMAT` constant), and out-of-prefix keys are rejected and ctest-asserted.
-  5. Pruning knobs sit beside `node_type` in `sgns_config.json`, default off, with resolved values INFO-logged; a config without the new keys behaves exactly as today.
-
+  1. A certificate path loading a validator registry by CID rejects a forged/self-certified registry (adversarial test: attacker authority = a peer supplying an unauthorized registry CID; expected rejection; actual behavior recorded), while pre-upgrade certificates still re-validate after restart and catch-up sync completes unchanged (compat twin) (TRUST-01)
+  2. The validator admission growth-bounds and cross-certificate equivocation audit is documented with findings and dispositions against the hardened registry path (TRUST-02)
+  3. Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references — adversarial test shows rejection where today's path accepts — and native-mint vs bridge-mint follow explicitly separated per-type consensus rules (MINT-02)
+  4. A newly submitted self-signed legacy-v1 mint is rejected (adversarial test), while pre-cutover outputs remain spendable, a fresh node syncs to READY, and a restart recovers — admission gating only, never deserialization gating (compat twin) (MINT-03)
+  5. A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)
 **Plans**: TBD
 
-### Phase 18: TxPruner Service & First Real Prune
+*Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
-**Goal**: The `TxPruner` service performs the first real erasure on a light node — an idempotent, crash-consistent cycle that survives re-delivery and resurrection — wired into `GeniusNode` behind default-off config, with per-cycle observability and queryable status.
-**Depends on**: Phase 17
-**Requirements**: PRUNE-04, PRUNE-05, RECL-03, RECL-04
+### Phase 22: Wire & Ingestion Hardening (Fork)
+**Goal**: The remote-crash class is closed at the fork parse boundaries — every network-provided length prefix is capped before allocation, nesting depth is bounded, and transaction ingestion returns errors instead of crashing on malformed hashes — shipped as the first fork delta under the divergence discipline with proven old/new-peer interop, riding a release pipeline whose artifacts are verified: the REL-02 digest-verification step lands as an early plan in this phase, with or before the first fork-riding change.
+**Depends on**: Phase 21 (execution order; no hard technical dependency beyond sequencing)
+**Requirements**: WIRE-01, WIRE-02, REL-02
 **Success Criteria** (what must be TRUE):
-
-  1. A light node with spent history beyond the window physically erases eligible transactions through the ordered four-step flow (CRDT value → CID lookup → block-eligibility + delete → map entry, in that order) — both storage levels gone, unspent UTXO set untouched.
-  2. Crash consistency to a fixed point: killing and restarting the node at any step of the erase flow converges to the same fixed point — no partially-erased transaction survives (no CRDT value without block, no orphan map entry), and re-running the cycle on a clean node is a no-op.
-  3. Re-delivery is terminal: re-broadcasting a pruned root and restarting head exchange produce zero pruned-CID fetch attempts and zero re-created elements; the periodic sweep re-prunes resurrected entries (add-wins OR-Set re-merge from lagging peers) back to the fixed point — no re-fetch storm.
-  4. The tick loop activates only under Light ∧ `State::READY` ∧ empty `missing_tx_hashes_` ∧ settle-window elapsed; `GeniusNode` constructs/starts/stops the pruner per config, and default-off config erases nothing.
-  5. Each cycle emits the observability log (txs examined/erased, watermark advance — the bytes-reclaimed field completes with Phase 20 compaction) and prune status (watermark + last-cycle stats) is queryable.
-
+  1. Oversized length prefixes at all three fork readers (uvarint, big-endian, Kademlia) are rejected before allocation with oversized-vs-malformed distinguished as named errors, and nesting depth is capped — adversarial tests exercise each boundary (WIRE-01)
+  2. Transaction deserialization on malformed hashes returns an error result rather than a `.value()` crash on network-derived data, and fuzz coverage of the ingestion path runs in a clang CI leg (WIRE-02)
+  3. CI fails when a thirdparty/zkLLVM artifact digest mismatches the recorded expectation (GitHub digest API or committed checksum manifest), and workflow actions execute only when pinned by commit SHA — in place with or before this phase's first fork-riding change, so no fork delta rides the pipeline on unverified artifacts (REL-02)
+  4. Pre-change and post-change peers interoperate: the mixed-version interop matrix shows large-payload exchange between old and new peers, with the FORK-DELTA manifest updated and the thirdparty superproject bump released through the now-digest-verified pipeline
 **Plans**: TBD
 
-### Phase 19: Pruned-Node Survival & Recovery Hardening
+*In-phase ordering constraint:* the REL-02 digest-verification CI step (GitHub digest API or committed checksum manifest, plus SHA-pinned actions) is an early plan in this phase, landing with or before the first fork-riding change — fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts.
 
-**Goal**: A pruned light node is fully operational — every recovery path written under the "history never disappears" assumption is audited and hardened, and history queries answer "pruned" distinctly and cleanly to both local callers and peers.
-**Depends on**: Phase 18
-**Requirements**: GATE-05, SURV-01, SURV-02, SURV-03
+### Phase 23: Gossip & DHT Authentication (Fork)
+**Goal**: The transport authenticates what it forwards — public-network gossip messages are signature-verified before mesh forwarding and the DHT admits only validated records — at a measured, bounded hot-path cost, so the grid's authenticated claims (Phase 26) ride an authentic transport.
+**Depends on**: Phase 22 (same fork release train; divergence discipline and the REL-02-verified artifact pipeline established on the simpler wire delta)
+**Requirements**: GOSSIP-01, GOSSIP-02
 **Success Criteria** (what must be TRUE):
-
-  1. The restart matrix on a pruned node is green: prune → restart → READY with zero pruned-CID fetch attempts → new-tip sync → spend/receive → next outgoing tx `previous_hash`/nonce chain correct.
-  2. Boot-time UTXO assembly and the checkpoint-mismatch clear-and-rebuild path treat a missing pruned transaction as not relevant — boot completes without failure, and the rebuild never resurrects spent outputs from remaining history (no double-spend window).
-  3. Local history queries on pruned transactions return a distinct "history pruned" answer (never conflated with not-found); peers requesting pruned data get an immediate `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a real pruned node.
-  4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
-  5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
-
+  1. An unsigned or forged-identity gossip message on a public topic is dropped before mesh forwarding (adversarial test: attacker authority = any mesh peer; signing-key↔`from` identity binding and per-topic policy enforced), and a before/after throughput benchmark quantifies the verification cost (GOSSIP-01)
+  2. The DHT stores and serves only validator-passed records under admission/resource limits, and a response nonce cannot answer a request it was not issued for (nonce-poisoning adversarial test) (GOSSIP-02)
+  3. A validly-signed message from a key not entitled to a restricted topic is rejected — authentication-without-authorization is its own adversarial test — and pre-upgrade peers remain functional under the decided mixed-version skew policy (compat twin) (GOSSIP-01)
 **Plans**: TBD
 
-### Phase 20: Reclamation Proof & E2E Hardening
+*Planning note:* research flagged for this phase — the fork gossip API extension shape (signed envelope to the validator hook), per-topic policy table schema, and benchmark methodology.
 
-**Goal**: The milestone's headline claim is proven in measured bytes — deleted data physically leaves the disk via scheduled compaction, non-transaction data is provably untouched, and the window-edge races are fault-tested.
-**Depends on**: Phase 19
-**Requirements**: GATE-02, RECL-01, RECL-02
+### Phase 24: Bridge Ingestion Safety
+**Goal**: Irreversible native issuance happens only on source-chain finality proven by content — per-chain confirmation depth and operator-distinct corroboration — so reorgs, endpoint compromise, and de-facto single providers cannot create or force a mint.
+**Depends on**: Phase 21 (MINT-04's canonical receipt decode is shared); scope is contained to the evidence validator + config
+**Requirements**: BRIDGE-01, BRIDGE-02
 **Success Criteria** (what must be TRUE):
-
-  1. A scheduled light-node-only `CompactRange` over the shared DB (`bottommost_level_compaction = kForce`, off the hot path) runs after prune cycles, and measured SST/`du` bytes drop before-vs-after on a node with known spent history.
-  2. The measured-bytes CI gate proves real reclamation — a prune + compaction cycle on a fixture with known block sizes must reclaim the expected byte delta (measured bytes, not key counts) or CI fails.
-  3. Non-transaction data is byte-identical across a prune run: certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers (ctest).
-  4. Full and archive nodes in the same mesh retain 100% of their transaction history across the light node's prune cycles (ctest).
-  5. Window-edge races are fault-tested: a spend arriving during an active prune cycle is never erased (spent-ness re-verified under lock immediately before each erase) and is picked up by the next cycle — verified under debug and release timing.
-
+  1. A burn below the per-chain confirmation-depth/finality policy produces no irreversible issuance; an anvil simulated-reorg test proves a reorged-out burn never mints, a finalized one does, and the depth-tracking state survives restart (BRIDGE-01)
+  2. RPC corroboration requires agreeing block/event content across distinct operators — an endpoint config that collapses to a single operator fails validation at startup, and below-quorum corroboration defers (bounded), never mints (BRIDGE-02)
+  3. Adversarial: endpoints whose URL-derived success counts agree but whose block/event content disagrees cannot authorize issuance (the fabricated-quorum test) (BRIDGE-02)
 **Plans**: TBD
+
+### Phase 25: Verification Spine & Release Gate
+**Goal**: The security-fix discipline that Phases 21-24 carried in-phase becomes first-class apparatus, and the release pipeline becomes a gate — the adversarial regression suite exists as documented ctest/CI targets that releases gate on, releases publish only after required tests pass, and fork-delta discipline becomes a standing gate; the two dependency-free findings — the on-chain EVM privileged-role audit and GeniusSDK memory safety — close here as parallel tracks that depend on no other phase and may be pulled forward ad hoc if desired.
+**Depends on**: Phases 21-24 (execution order only — nothing in the spine hard-requires the earlier fixes; it formalizes the in-phase test discipline those phases already carried and completes the release-pipeline hardening whose artifact verification began at Phase 22)
+**Requirements**: VER-01, REL-01, REL-03, EVM-01, SDK-01
+**Success Criteria** (what must be TRUE):
+  1. A release tag whose required CI checks have not passed is not published (publish requires the full build+test matrix); deleting and re-pushing a tag cannot replace a published release; the documented hotfix path passes the same required checks (REL-01)
+  2. The adversarial regression suite exists as a first-class ctest target set that CI runs and releases gate on, with the convention documented — each security-fix test names the attacker authority required, the expected rejection, and the actual behavior, paired with a compat test proving the pre-upgrade legitimate path survives — consolidating the in-phase pairs Phases 21-24 already produced into the standing suite (VER-01)
+  3. A fork change (libp2p/ipfs-pubsub) cannot ride the release pipeline without a FORK-DELTA manifest, and the mixed-version interop-matrix harness exists and runs — the per-delta discipline Phases 22-23 carried becomes a standing pipeline gate (REL-03)
+  4. The deployed EVM privileged roles (owner/minter/upgrader) and bridge selectors are audited directly on-chain with a documented findings and remediation list (EVM-01); GeniusSDK's three referenced-but-missing test targets exist and run in CI, and its fixed-buffer copies are length-checked with documented ownership conventions (SDK-01)
+**Plans**: TBD
+
+### Phase 26: Processing-Grid Integrity
+**Goal**: The grid pays only proven work — queue, result, and payout claims are authenticated; escrow release is entitled by certified results and independently validated as sufficient for the workload; proofs actually verify on the ingress path; and worker results are independently verified before payout on the deterministic/redundant tier (ZK/TEE explicitly deferred to v2).
+**Depends on**: Phases 21, 23 (mint/authorization identities from 21; authenticated gossip transport for sealed queue/result messages from 23) plus in-phase siblings — GRID-03 consumes GRID-01/02/04 and MINT-01 within this phase (the dependency sink)
+**Requirements**: GRID-01, GRID-02, GRID-03, GRID-04, MINT-01
+**Success Criteria** (what must be TRUE):
+  1. Queue updates, task-result ownership, payout addresses, and developer splits are authenticated — a self-asserted payout address or a result submitted by a non-owner is rejected (adversarial test) (GRID-01)
+  2. Escrow release requires the entitled authority — a certified task result; a signature from the spending key alone at the lock-address exception is rejected (adversarial test) (MINT-01)
+  3. Proof verification is enforced on the active ingress path (the `valid_proof = true` bypass is removed) after the staged audit → quarantine → enforce rollout — pre-change stored valid proofs are not tombstoned (compat test), invalid proofs are rejected, and the proof-format-drift inventory is documented (GRID-02)
+  4. Worker acceptance independently validates escrow sufficiency against workload dimensions — an overcommittable job is refused before work starts (adversarial test) (GRID-04)
+  5. Payout follows independent verification on the deterministic/redundant tier — a divergent or forged worker result earns no payout (redundant-worker disagreement test) (GRID-03)
+**Plans**: TBD
+
+*Planning note:* research flagged for this phase — GRID-03 determinism preconditions and redundancy cost model; GRID-02's stored-proof/zkLLVM format inventory and per-element verify budget; payout-record schema fixed at agreement time.
+
+### Phase 27: Network Topology
+**Goal**: Mobile/client nodes can actually reach the public network — circuit-relay-v2 is completed limits-first or the relay-through-full-nodes topology is published as an explicit supported contract — decided at a mid-phase gate whose review criterion is the fork-divergence cost of relay completion.
+**Depends on**: Phases 22, 23 (parse caps and gossip authentication before opening a relay surface)
+**Requirements**: TOPO-01
+**Success Criteria** (what must be TRUE):
+  1. A decision record documents the mid-phase gate outcome — complete relay limits-first vs. explicit topology contract — with the fork-divergence cost review as the deciding criterion
+  2. The chosen topology is proven by test: client/mobile nodes join and transact through the documented connectivity path under CGNAT/symmetric-NAT emulation, with DCUtR best-effort punch behavior measured and documented
+  3. Relay exposure is bounded: if relay is completed, reservation ACL and per-peer/IP/duration/data limits are enforced and adversarially tested (a reservation flood is refused); if the contract path is chosen, the published document states relays remain disabled on the stub and why that is safe
+**Plans**: TBD
+
+*Planning note:* research flagged for this phase — the complete-vs-topology decision inputs (circuit-relay-v2 spec-conformance cost vs. divergence cost) and the CGNAT emulation harness.
+
+### Phase 28: Worker Profile, Isolation & Mobile Readiness
+**Goal**: A minimal worker exists with measured duty-cycle control, the job privacy boundary is honestly defined and enforced at its named scope (no confidentiality claims without TEE), and mobile nodes survive real OS lifecycles within adaptive resource budgets.
+**Depends on**: Phase 27 (documented connectivity path); Phase 25 (SDK-01's memory-safe SDK base)
+**Requirements**: SDK-02, PRIV-01, MOB-01
+**Success Criteria** (what must be TRUE):
+  1. A minimal worker profile builds and links without full-node components, and its CPU/GPU duty-cycle controls are measured and documented (SDK-02)
+  2. The job privacy boundary is documented — including the explicit no-confidentiality-without-TEE statement — and the scoped controls for job metadata and input access are enforced and tested at that boundary (PRIV-01)
+  3. A mobile node adapts connection/data budgets to platform state, honors metered-data rules, and demonstrates OS-termination → relaunch → rejoin recovery (MOB-01)
+**Plans**: TBD
+
+### Phase 29: Return-Leg Activation (SGNS→EVM)
+**Goal**: The bridge's return leg goes live on the certificate-based attestor path — a certified SGNS-side event produces exactly one EVM-side effect through the new exporter module — activated only on top of closed and proven trust boundaries, because activating it over an unhardened registry would convert a native trust bug into an EVM mint bug.
+**Depends on**: Phases 21, 24, 25 (TRUST-01 certificate trust anchor; BRIDGE-01/02 burn-fact quality; EVM-01 audit findings) — strictly last
+**Requirements**: RET-01
+**Success Criteria** (what must be TRUE):
+  1. A certified SGNS-side event produces exactly one EVM effect end-to-end through the new exporter module (`src/bridge_exporter/`) feeding GNUSBridgeAttestor via `evmrelay` (RET-01)
+  2. Replay protection holds: re-delivering the same certificate, or reissuing after restart, produces no second EVM effect — nonce/certificate-slot binding proven by adversarial test
+  3. The activation checklist is green and recorded: attestor-set rotation drill, rate/size limits, monitoring, and verification of actually-deployed selectors/roles on the claimed mainnet addresses, folding in Phase 25's EVM-01 audit findings
+**Plans**: TBD
+
+*Planning note:* research flagged for this phase — exporter module design and the deployed-contract state verification method.
 
 ## Progress
+
+**Execution Order (v1.3):** Phases 21 → 29 in strict numeric order (numeric order = execution order; no planned overlap).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -170,19 +218,28 @@ Plans:
 | 13. Close v1.1 gaps | v1.1 | 29/29 | Complete | 2026-09-01 |
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
-| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 0/4 | Not started | — |
-| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 0/? | Not started | — |
-| 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
-| 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
+| 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
+| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (separate branch) | — | In progress (off-branch) | — |
+| 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
+| 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
+| 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
+| 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
+| 25. Verification Spine & Release Gate | v1.3 | 0/? | Not started | — |
+| 26. Processing-Grid Integrity | v1.3 | 0/? | Not started | — |
+| 27. Network Topology | v1.3 | 0/? | Not started | — |
+| 28. Worker Profile, Isolation & Mobile Readiness | v1.3 | 0/? | Not started | — |
+| 29. Return-Leg Activation (SGNS→EVM) | v1.3 | 0/? | Not started | — |
 
 ## Backlog
 
 (v1.0 deferrals: PROP-01 NodeType propagation *(partially delivered by develop role gating)*, PROP-02 Archive/Full split *(delivered: participates_in_consensus_)*, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
+(v2 beyond v1.3, tracked in REQUIREMENTS.md: GRID-V2-01 ZK result verification, GRID-V2-02 TEE attestation, PRIV-V2-01 confidential execution, EVM-V2-01/02 contracts-repo hardening.)
 
 ---
-*Roadmap last updated: 2026-10-15 — v1.2 roadmap created (Phases 16-20); shipped-milestone history and legacy tracks preserved below*
-
+*Roadmap last updated: 2026-10-19 — v1.3 roadmap revised after review (execution order now strictly numeric: consensus trust first, REL-02 moved into Phase 22 with or before its first fork-riding change, verification spine at Phase 25; 27 requirements mapped); v1.2 snapshot archived to `.planning/milestones/v1.2-ROADMAP.md` (executes on separate branch); shipped-milestone history and legacy tracks preserved below*
 ## Track A: EVM Bridge Integration
 
 **Branch:** `evmrelay_integration`

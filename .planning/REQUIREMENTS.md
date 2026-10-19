@@ -95,16 +95,44 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Which phases cover which requirements. Filled by roadmap creation (2026-10-19). Phase numbering continues from v1.2 (Phases 16-20, separate branch).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmapper) | | |
+| TRUST-01 | Phase 21 | Pending |
+| TRUST-02 | Phase 21 | Pending |
+| MINT-02 | Phase 21 | Pending |
+| MINT-03 | Phase 21 | Pending |
+| MINT-04 | Phase 21 | Pending |
+| WIRE-01 | Phase 22 | Pending |
+| WIRE-02 | Phase 22 | Pending |
+| REL-02 | Phase 22 | Pending |
+| GOSSIP-01 | Phase 23 | Pending |
+| GOSSIP-02 | Phase 23 | Pending |
+| BRIDGE-01 | Phase 24 | Pending |
+| BRIDGE-02 | Phase 24 | Pending |
+| VER-01 | Phase 25 | Pending |
+| REL-01 | Phase 25 | Pending |
+| REL-03 | Phase 25 | Pending |
+| EVM-01 | Phase 25 | Pending |
+| SDK-01 | Phase 25 | Pending |
+| GRID-01 | Phase 26 | Pending |
+| GRID-02 | Phase 26 | Pending |
+| GRID-03 | Phase 26 | Pending |
+| GRID-04 | Phase 26 | Pending |
+| MINT-01 | Phase 26 | Pending |
+| TOPO-01 | Phase 27 | Pending |
+| SDK-02 | Phase 28 | Pending |
+| PRIV-01 | Phase 28 | Pending |
+| MOB-01 | Phase 28 | Pending |
+| RET-01 | Phase 29 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️ (roadmap creation pending)
+- v1.3 requirements: 27 total *(corrected 2026-10-19 during roadmap creation — the previously stated count of 26 undercounted by one; the REQ-ID list above contains 27)*
+- Mapped to phases: 27/27 ✓
+- Unmapped: 0
+- Phase mapping notes: REL-02 rides Phase 22 so its digest-verification CI step lands with or before that phase's first fork-riding change (fork changes ride the 4-stage release pipeline that today consumes unverified thirdparty/zkLLVM artifacts); EVM-01 and SDK-01 ride Phase 25 as dependency-free tracks (no hard dependency on other phases — may be pulled forward ad hoc if desired); MINT-01 is mapped to Phase 26 with the grid cluster because GRID-03 (independent result verification before payout) consumes the certified-result entitlement — Phase 21 planning research may validate an earlier minimal binding, but the requirement's completion gate stays in Phase 26.
 
 ---
 *Requirements defined: 2026-10-19 after v1.3 milestone research synthesis*
+*Traceability filled: 2026-10-19 during v1.3 roadmap creation (Phases 21-29); re-mapped same day after roadmap review (strict numeric execution order, REL-02 → Phase 22)*
