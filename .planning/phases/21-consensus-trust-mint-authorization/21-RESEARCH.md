@@ -46,6 +46,7 @@ For MINT-03 (D-02), the risk shape is narrower than the assessment implies and t
 | MINT-02 | Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references; native-mint and bridge-mint follow explicitly separated per-type consensus rules (#3) | Fail-open branches verified (:319-326, :329-334); existing per-type quorum split verified (`IsPublicChainMintChainId`/`IsBridgeMintSubject`/`DecideQuorum`); legitimate local-chain-id users inventoried for the allowlist (escrow scope, genesis, GeniusInputValidator registration) |
 | MINT-03 | Legacy-v1 mint reception disabled via admission gating — never deserialization gating, so boot/sync/history spends keep working (#4) | Ingress map verified (consensus ingress / sync filter / local submission preflight); certificate-gated spendability verified (uncertified outputs unspendable); zero-value migration-mint trap found; `ValidateSubject` is structural-only so consensus-ingress gating does not break cert re-validation |
 | MINT-04 | Burn receipt's token ID, burned amount, destination bound to mint's outputs — honest RPCs cannot authorize a mismatched mint (#5) | Current receipt check verified (status+address+topic0 only, :410-452); canonical burn identity verified (`MintTransactionV2::GetSlotID`); decode assets verified (evmrelay `BridgeEventClaim`, `abi_decoder`, registered event descriptors); single-comparison-home placement analyzed |
+
 </phase_requirements>
 
 ## Project Constraints (from CLAUDE.md)
@@ -228,7 +229,7 @@ The four *internal* call sites (:1111 `TryCreateAndSubmitBatchProposal`, :1183 `
 //   crdt ElementFilterResult               Accept/Reject/Stall              (crdt_data_filter.hpp:54)
 // Existing defer machinery:
 //   CRDTWorkJournal: MarkSeen/MarkStalled(key,backoff)/MarkDone/RecoverStaleProcessing(
-//                    PATTERN, 15s) + ListUnfinished   (Consensus.cpp:4564-4726)
+//                    PATTERN, 15s) + ListUnfinished  (Consensus.cpp:4564-4726)
 //   ValidationResult{ check, dependencies, retry_after }                    (Consensus.hpp ~:790)
 // Bounded-FIFO+eviction precedent to copy for the new helper:
 //   evidence_by_claim_ + evidence_order_ + kMaxCachedEvidence=256, oldest-first
@@ -268,7 +269,7 @@ The four *internal* call sites (:1111 `TryCreateAndSubmitBatchProposal`, :1183 `
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+|---------|-------------|-------------|------|
 | Registry update-chain verification | New verifier | `VerifyUpdateClassified` + `ValidateCertificate(ForUpdate)` | Already handles genesis root, base link, signatures, quorum, time-window toggle [VERIFIED: :1551-1836] |
 | EVM event ABI decode | Manual topic/data slicing | evmrelay `abi_decoder` + `BridgeEventClaim` | Both event versions' descriptors registered; typed fields exist [VERIFIED] |
 | Durable retry/backoff for stalled work | New retry queues | `crdt::CRDTWorkJournal` | Proven on the certificate path incl. restart recovery [VERIFIED: Consensus.cpp:4564-4726] |
@@ -344,7 +345,7 @@ if ( existing.has_value() )
          !ValidateCertificateKey( existing_certificate, key ) ||
          ValidateCertificate( existing_certificate ) != Check::Approve ) { ... }
     if ( SerializedCertificateHash( existing.value().toString() )
-         < SerializedCertificateHash( serialized ) )
+        < SerializedCertificateHash( serialized ) )
     {
         return outcome::success();               // durable record already final
     }
@@ -395,14 +396,21 @@ case UpdateVerification::kInvalid: default:  return ElementFilterResult::Reject(
 
 **All other claims in this research were verified against current source this session (file:line cited inline).**
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All five questions were dispositioned during plan creation (7 plans, 3 waves). Each carries its resolution and the plan reference below.
 
 1. **D-02 sync-admission shape** — implement certificate-conditional Stall at `FilterTransaction` (literal "every ingress") or consensus+local-submission gating with documented inertness of stored uncertified v1? What we know: uncertified v1 outputs are unspendable (verified); Stall stalls whole deltas. Recommendation: surface to user in planning; default to the literal D-02 reading with the defer mechanism, sized by the audit.
    - What's unclear: whether stored-but-inert v1 mints are acceptable network state.
+   - **(RESOLVED)** Option (a) — certificate-conditional Stall at the sync filter, the literal D-02 reading. Plan **21-06** (Wave 3): FilterTransaction returns `ElementFilterResult`; a value-carrying v1 mint without its slot certificate Stalls (bounded by the D-03 defer window, Reject on expiry); since 21-05 blocks new v1 mints from ever obtaining a certificate, "certificate exists" exactly separates history from new submissions. Whole-delta stall cost accepted per the certificate-filter precedent (Consensus.cpp:3360-3371).
 2. **Which internal ValidatorRegistry CID loads go strict in-phase** (:1111/:1183/:1255 are epoch-advancement-critical; :1581 must stay raw). Recommendation: strict for the three, raw core for verification internals.
+   - **(RESOLVED)** As recommended. Plan **21-01**, Task 1 steps 5-6: all three internal sites (:1111 TryCreateAndSubmitBatchProposal, :1183 EvaluateBatchSubject, :1255 HandleBatchCertificate) switch to `LoadVerifiedRegistryByCid` preserving each site's existing load-error handling; the :1581 verification-internal base fetch moves to the raw (unverified) core as the recursion guard.
 3. **Verified-CID memo cache sizing** — current `kRegistryCacheMaxEntries=8` with clear-all eviction is likely too small for history + clears wholesale; recommend bounded LRU-style with a larger cap; planner sets the number.
+   - **(RESOLVED)** Cap 64 with oldest-first single-entry eviction (never clear-all), in both places: the ValidatorRegistry verified-CID memo (`kMaxVerifiedRegistryMemoEntries=64`, plan **21-01** Task 1 step 4) and the ConsensusManager CID cache (`kRegistryCacheMaxEntries` 8→64 + FIFO eviction, plan **21-04** Task 2).
 4. **consensus_certificate_test re-enablement** — is it commented out for a reason (build breakage) that this phase fixes, or should tests go elsewhere?
+   - **(RESOLVED)** Stays disabled — no re-enablement attempted this phase. TRUST-01 integration pairs ride the existing multi-node apparatus (multi_node_finality_fault_test) and fast unit pairs use the static chain-walk helper seam. Plans **21-01** Task 2 (read_first disposition of Pitfall 9) and **21-04** Task 3 (integration pairs); recorded in 21-VALIDATION.md (config-files row).
 5. **Pinned-fingerprint delivery for the folded todo** — config field vs build-time constant vs both; the staging config's `_trust_configuration_notice` already carries a ceremony fingerprint string (example/node_test/sgns_config.json:4) but nothing reads it.
+   - **(RESOLVED)** Config field: new sgns_config.json string `genesis_manifest_fingerprint`, parsed in the trust-field block and enforced at manifest assembly via `GenesisManifest::Fingerprint()` (mismatch → FATAL_TRUST_MISMATCH; empty pin → documented unpinned warning). Build-time constant rejected (breaks private networks); the example config carries the COMPUTED fingerprint and the notice text is updated to match. Plan **21-03**, Task 3 (threat T-21-0302 documents the accepted whole-file-replacement residual).
 
 ## Environment Availability
 
@@ -462,7 +470,7 @@ case UpdateVerification::kInvalid: default:  return ElementFilterResult::Reject(
 
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
-| V2 Authentication | yes (peer/message auth) | Existing `ConsensusAuth`/multisig `VerifyPayloadSignature` — reuse, never add a scheme |
+4 | V2 Authentication | yes (peer/message auth) | Existing `ConsensusAuth`/multisig `VerifyPayloadSignature` — reuse, never add a scheme |
 | V3 Session Management | no | n/a (no user sessions on this path) |
 | V4 Access Control | yes | Admission gating at consensus ingress / sync filter / submission preflight (D-02); type-authorized allowlist (MINT-02) |
 | V5 Input Validation | yes | Fail-closed evidence branches (MINT-02); receipt-fact binding (MINT-04); `outcome::result` error propagation, named errors |
