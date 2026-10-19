@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 17
 status: executing
 stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-10-19T14:33:21.426Z"
+last_updated: "2026-10-19T15:04:17.908Z"
 last_activity: 2026-10-19
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
   percent: 4
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-19
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T14:33:21.420Z
+**Last session:** 2026-10-19T15:02:29.307Z
 **Stopped At:** Completed 17-02-PLAN.md
 **Resume File:** None
 
@@ -142,6 +142,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
 | Phase 17 P01 | 18min | 3 tasks | 5 files |
 | Phase 17 P02 | 15min | 3 tasks | 6 files |
+| Phase 17 P03 | 21min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -220,6 +221,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 17]: Spender expression converts inline via base::Hash256::fromReadableString(...).value() at all four call sites (:2669 precedent); PRUNE-01 checkbox deferred to phase close since the window logic is 17-04's evaluator — Keeps the spender inside the ConsumeUTXOs statement (awk gate-visible) and avoids ticking a phase-level requirement mid-phase (Phase-16 precedent)
 - [Phase 17]: GetLocalDeltaKeys is a sibling of the elements-only GetLocalDeltaKeyValues (precedent byte-identical) covering elements AND tombstones keys-only, parse-at-call-time, strictly local — the 17-05 block-gate exposure
 - [Phase 17]: CrdtDatastore::GetLocalDeltaKeys mirrors its precedent's non-const signature (GetDeltaFromNode is a non-const member); GlobalDB::GetLocalDeltaKeys/GetKeyPriority are const — read-only passthrough chains with the 0-for-missing-key priority caveat documented at both levels
+- [Phase ?]: 17-03: The cert-slot previous_hash rung is the value-independent nonce-chain authority -- the ONE relaxation dropped only the registration-only disjunct (all binding checks + ladder order verbatim), proven against the REAL post-prune state by driving Phase-16 EraseTransactionEntry end-to-end (first test to do so)
+- [Phase ?]: 17-03: Case 4 captures the cert rung directly (friend accessor), not only through the ladder -- with history intact rung 4 backstops the same hash, so a ladder-level assertion cannot bind the rung to the mutation check
 
 ## Deferred Items
 

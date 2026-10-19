@@ -118,7 +118,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 17-03-PLAN.md — Cert-slot previous_hash generalization (one-line rung relaxation) + SC-3 pruned-frontier proof family (GATE-04)
+- [x] 17-03-PLAN.md — Cert-slot previous_hash generalization (one-line rung relaxation) + SC-3 pruned-frontier proof family (GATE-04)
 - [ ] 17-04-PLAN.md — PruneEligibility evaluator: structured result, Light+allowlist gates, spend-recency window, PruningConfig, SC-1/SC-4 suites (PRUNE-01, GATE-01)
 
 **Wave 3** *(blocked on Wave 2)*
@@ -187,7 +187,7 @@ Plans:
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
-| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 2/6 | In Progress|  |
+| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 3/6 | In Progress|  |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
