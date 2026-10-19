@@ -22,10 +22,10 @@ namespace sgns
 {
     namespace
     {
-        /// Fixed operator-facing message when an enabled request lacks
-        /// finality_window and must be fail-closed (GATE-06 / D-02).
+        /// Fixed operator-facing message when an enabled request lacks a
+        /// POSITIVE finality_window and must be fail-closed (GATE-06 / D-02).
         constexpr char kWindowRequiredMessage[] =
-            "pruning.enabled requires pruning.finality_window; pruning disabled (fail closed)";
+            "pruning.enabled requires pruning.finality_window > 0; pruning disabled (fail closed)";
 
         /// Records @p reason on @p target once (per-category evidence, no
         /// duplicates). Works for both verdict structs — each carries a
@@ -78,15 +78,20 @@ namespace sgns
             config.dry_run = pruning_object["dry_run"].GetBool();
         }
 
-        if ( pruning_object.HasMember( "finality_window" ) && pruning_object["finality_window"].IsUint64() )
+        // WR-03: zero is rejected at READ time — N=0 would make the window
+        // predicate vacuously true for every recorded spend — so a degenerate
+        // window is treated exactly like an absent one.
+        if ( pruning_object.HasMember( "finality_window" ) && pruning_object["finality_window"].IsUint64() &&
+             pruning_object["finality_window"].GetUint64() > 0 )
         {
             config.finality_window = pruning_object["finality_window"].GetUint64();
         }
 
         if ( config.enabled && !config.finality_window.has_value() )
         {
-            // Fail closed (D-02): N is required when enabled; there is no default
-            // window, so an enabled request without one disables itself.
+            // Fail closed (D-02): a positive N is required when enabled; there
+            // is no default window, so an enabled request without one (or with
+            // the degenerate 0) disables itself.
             config.enabled         = false;
             config.disabled_reason = std::string( kWindowRequiredMessage );
         }

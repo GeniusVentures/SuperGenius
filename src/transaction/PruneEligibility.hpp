@@ -218,9 +218,11 @@ namespace sgns
          * @brief       Parses and validates a "pruning" JSON object (GATE-06).
          * @details     Per-key type-checked reads with HasMember guards; absent
          *              members keep defaults. Fail-closed rule: enabled=true
-         *              WITHOUT finality_window forces enabled=false and sets
-         *              disabled_reason to the fixed message — N is required
-         *              when enabled (D-02). A non-object value yields defaults.
+         *              WITHOUT a finality_window > 0 forces enabled=false and
+         *              sets disabled_reason to the fixed message — a positive
+         *              N is required when enabled (D-02); a degenerate 0 is
+         *              rejected at read time (WR-03), exactly like an absent
+         *              window. A non-object value yields defaults.
          * @param[in]   pruning_object The "pruning" member of sgns_config.json.
          * @return      The validated configuration.
          */

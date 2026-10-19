@@ -707,6 +707,25 @@ TEST_F( PruneEligibilityTest, PruningConfig_IllTypedValuesKeepDefaults )
     EXPECT_FALSE( config.disabled_reason.has_value() );
 }
 
+/** C5 — enabled WITH a zero window fails closed exactly like a missing one (WR-03). */
+TEST_F( PruneEligibilityTest, PruningConfig_EnabledWithZeroWindowFailsClosed )
+{
+    const auto config = ParseConfig( R"( { "enabled": true, "finality_window": 0 } )" );
+    EXPECT_FALSE( config.enabled );
+    EXPECT_FALSE( config.finality_window.has_value() ); // zero rejected at read time
+    ASSERT_TRUE( config.disabled_reason.has_value() );
+    EXPECT_NE( config.disabled_reason.value().find( "finality_window" ), std::string::npos );
+}
+
+/** C6 — a zero window on a DISABLED request is simply ignored, no fail-close (WR-03 scope). */
+TEST_F( PruneEligibilityTest, PruningConfig_ZeroWindowWhileDisabledStaysUnset )
+{
+    const auto config = ParseConfig( R"( { "finality_window": 0 } )" );
+    EXPECT_FALSE( config.enabled );
+    EXPECT_FALSE( config.finality_window.has_value() );
+    EXPECT_FALSE( config.disabled_reason.has_value() );
+}
+
 // ---------------------------------------------------------------------------
 // Group D: SC-2 — the multi-element block gate (PRUNE-03, D-C3)
 // ---------------------------------------------------------------------------
