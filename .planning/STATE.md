@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 17
 status: executing
-stopped_at: Completed 17-04-PLAN.md
-last_updated: "2026-10-19T15:32:27.824Z"
+stopped_at: Completed 17-05-PLAN.md
+last_updated: "2026-10-19T16:02:30.226Z"
 last_activity: 2026-10-19
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 4
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-19
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T15:32:27.818Z
-**Stopped At:** Completed 17-04-PLAN.md
+**Last session:** 2026-10-19T16:02:30.220Z
+**Stopped At:** Completed 17-05-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -144,6 +144,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P02 | 15min | 3 tasks | 6 files |
 | Phase 17 P03 | 21min | 2 tasks | 3 files |
 | Phase 17 P04 | 26min | 3 tasks | 6 files |
+| Phase 17 P05 | 27min | 3 tasks | 4 files |
 
 ## Decisions
 
@@ -227,6 +228,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase ?]: 17-04: The eligibility window reads ONLY the spender's priority (spend recency, D-02) with existence established via ResolveTransactionPathAndCID BEFORE GetKeyPriority -- the 0-for-missing caveat would satisfy the window vacuously; mutation-verified
 - [Phase ?]: 17-04: PruneEligibility is a friend of TransactionManager (TransactionConsensusHandler same-module precedent) because GetMonitoredNetworkIDs and ResolveTransactionPathAndCID are private despite the plan's interface list -- friendship keeps the public contract small
 - [Phase ?]: 17-04: Empty produced-outputs fail closed as NO_OUTPUTS (vacuous all-outputs-spent must not be eligible); Evaluate without a configured finality_window fails closed with invalid_argument; SPENDER_UNRESOLVED also covers a failed priority read
+- [Phase 17]: 17-05: A delta block erases only when every element AND tombstone key it carries (parsed from the block itself via GetLocalDeltaKeys) is allowlist-conformant and in the eligible set — one BlockGateResult per DISTINCT eligible CID; tx eligibility and block erasability stay separate verdicts (PRUNE-01 vs PRUNE-03) — Block-parse gate lands before any block deletion (roadmap ordering invariant); the block is the source of truth, never 'what this node applied'
+- [Phase 17]: 17-05: SPENDER_PRUNED_WINDOW_SATISFIED is the sole affirmative-evidence reason code — eligible iff no FAILURE reason (HasFailureReason), so a marker-satisfied window is explicit without repudiating evidence; a pruned spender contributes effective spend height 0 (max-over-outputs preserved, window still requires max_height >= N) — D-02/B spec point 5: never-silent window satisfaction for a pruned spender; fail-closed default preserved for NOT_FOUND and invariant violations
+- [Phase 17]: 17-05: D-04 marker contract landed as design — /prune/tx/<hash> key + PrunedTransactionRecord proto + tri-state LookupPrunedEntry (PRUNED / NOT_FOUND / VALUE_PRESENT_INVARIANT_VIOLATION, ERROR-logged) on the node-local raw surface; marker WRITES stay test-only (WritePrunedEntryForTest), joining Phase 18's erase WriteBatch — Value XOR marker must be established atomically with the erase; Phase 19 SURV-02 answers history-pruned vs not-found from the lookup
 
 ## Deferred Items
 

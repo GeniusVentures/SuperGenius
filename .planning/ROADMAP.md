@@ -123,7 +123,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 17-05-PLAN.md — Multi-element block-parse gate (dry-run) + `/prune/` marker design contract + SC-2/marker suites (PRUNE-03, GATE-01)
+- [x] 17-05-PLAN.md — Multi-element block-parse gate (dry-run) + `/prune/` marker design contract + SC-2/marker suites (PRUNE-03, GATE-01)
 - [ ] 17-06-PLAN.md — `pruning.*` config knobs + config-gated dry-run timer + per-cycle INFO summary + SC-5 full-suite gate (GATE-06)
 
 ### Phase 18: TxPruner Service & First Real Prune
@@ -187,7 +187,7 @@ Plans:
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
-| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 4/6 | In Progress|  |
+| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 5/6 | In Progress|  |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
