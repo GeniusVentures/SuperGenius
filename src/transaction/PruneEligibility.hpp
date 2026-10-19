@@ -48,25 +48,25 @@ namespace sgns
      */
     enum class PruneReason : uint8_t
     {
-        UNSPENT_OUTPUT,      ///< An output is not genuinely consumed (D-C2); synthesized
-                             ///< zero-amount tombstones land here — they are not spend evidence.
+        UNSPENT_OUTPUT,       ///< An output is not genuinely consumed (D-C2); synthesized
+                              ///< zero-amount tombstones land here — they are not spend evidence.
         SPENDER_NOT_RECORDED, ///< The output is genuinely consumed but no spending
-                             ///< transaction identity was recorded (spent_by_txid unset).
-        SPENDER_UNRESOLVED,  ///< The recorded spender's tx->CID map entry was not found,
-                             ///< or its priority could not be read (fail closed; refined
-                             ///< to pruned-marker semantics in 17-05). Existence MUST be
-                             ///< established BEFORE any priority read: GetKeyPriority
-                             ///< reports 0 for a missing key, which would satisfy the
-                             ///< window vacuously.
-        SPEND_WITHIN_WINDOW, ///< The most-recent spend is not beyond the finality window
-                             ///< (maxHeight − spend_height &lt; N).
-        NO_OUTPUTS,          ///< The transaction produces no UTXOs (GetProducedUTXOs
-                             ///< nullopt) — no spend evidence can exist (fail closed).
-        OUT_OF_PREFIX,       ///< The candidate key is outside the /bc-&lt;net&gt;/tx/
-                             ///< allowlist (defensive; the enumeration prefix already
-                             ///< excludes such keys — reported, never dropped).
-        DESERIALIZE_FAILED,  ///< The stored value could not be deserialized into a
-                             ///< transaction (fail closed; the scan continues).
+                              ///< transaction identity was recorded (spent_by_txid unset).
+        SPENDER_UNRESOLVED,   ///< The recorded spender's tx->CID map entry was not found,
+                              ///< or its priority could not be read (fail closed; refined
+                              ///< to pruned-marker semantics in 17-05). Existence MUST be
+                              ///< established BEFORE any priority read: GetKeyPriority
+                              ///< reports 0 for a missing key, which would satisfy the
+                              ///< window vacuously.
+        SPEND_WITHIN_WINDOW,  ///< The most-recent spend is not beyond the finality window
+                              ///< (maxHeight − spend_height &lt; N).
+        NO_OUTPUTS,           ///< The transaction produces no UTXOs (GetProducedUTXOs
+                              ///< nullopt) — no spend evidence can exist (fail closed).
+        OUT_OF_PREFIX,        ///< The candidate key is outside the /bc-&lt;net&gt;/tx/
+                              ///< allowlist (defensive; the enumeration prefix already
+                              ///< excludes such keys — reported, never dropped).
+        DESERIALIZE_FAILED,   ///< The stored value could not be deserialized into a
+                              ///< transaction (fail closed; the scan continues).
     };
 
     /**
@@ -112,11 +112,9 @@ namespace sgns
          */
         size_t EligibleCount() const
         {
-            return static_cast<size_t>(
-                std::count_if( candidates.begin(),
-                               candidates.end(),
-                               []( const PruneCandidateResult &c )
-                               { return c.eligible; } ) );
+            return static_cast<size_t>( std::count_if( candidates.begin(),
+                                                       candidates.end(),
+                                                       []( const PruneCandidateResult &c ) { return c.eligible; } ) );
         }
     };
 
@@ -196,10 +194,10 @@ namespace sgns
          * @return      The evaluator, or outcome::failure for a non-Light role.
          */
         static outcome::result<std::shared_ptr<PruneEligibility>> New( crdt::GlobalDB      &globaldb,
-                                                                      TransactionManager &transaction_manager,
-                                                                      UTXOManager        &utxo_manager,
-                                                                      NodeType            node_type,
-                                                                      const PruningConfig &config );
+                                                                       TransactionManager  &transaction_manager,
+                                                                       UTXOManager         &utxo_manager,
+                                                                       NodeType             node_type,
+                                                                       const PruningConfig &config );
 
         /**
          * @brief       THE allowlist (D-C7): exact /bc-<net>/tx/ prefix membership.
@@ -235,10 +233,10 @@ namespace sgns
         outcome::result<PruneEvaluationResult> Evaluate() const;
 
     private:
-        PruneEligibility( crdt::GlobalDB       &globaldb,
-                          TransactionManager   &transaction_manager,
-                          UTXOManager          &utxo_manager,
-                          const PruningConfig  &config );
+        PruneEligibility( crdt::GlobalDB      &globaldb,
+                          TransactionManager  &transaction_manager,
+                          UTXOManager         &utxo_manager,
+                          const PruningConfig &config );
 
         /**
          * @brief       Evaluates one enumerated candidate against every gate.

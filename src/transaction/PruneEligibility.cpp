@@ -62,19 +62,18 @@ namespace sgns
         {
             // Fail closed (D-02): N is required when enabled; there is no default
             // window, so an enabled request without one disables itself.
-            config.enabled        = false;
+            config.enabled         = false;
             config.disabled_reason = std::string( kWindowRequiredMessage );
         }
 
         return config;
     }
 
-    outcome::result<std::shared_ptr<PruneEligibility>> PruneEligibility::New(
-        crdt::GlobalDB       &globaldb,
-        TransactionManager   &transaction_manager,
-        UTXOManager          &utxo_manager,
-        NodeType              node_type,
-        const PruningConfig  &config )
+    outcome::result<std::shared_ptr<PruneEligibility>> PruneEligibility::New( crdt::GlobalDB      &globaldb,
+                                                                              TransactionManager  &transaction_manager,
+                                                                              UTXOManager         &utxo_manager,
+                                                                              NodeType             node_type,
+                                                                              const PruningConfig &config )
     {
         if ( node_type != NodeType::Light )
         {
@@ -264,11 +263,11 @@ namespace sgns
     PruneEligibility::PruneEligibility( crdt::GlobalDB      &globaldb,
                                         TransactionManager  &transaction_manager,
                                         UTXOManager         &utxo_manager,
-                                        const PruningConfig &config )
-        : globaldb_m( globaldb ),
-          transaction_manager_m( transaction_manager ),
-          utxo_manager_m( utxo_manager ),
-          config_m( config )
+                                        const PruningConfig &config ) :
+        globaldb_m( globaldb ),
+        transaction_manager_m( transaction_manager ),
+        utxo_manager_m( utxo_manager ),
+        config_m( config )
     {
     }
 } // namespace sgns

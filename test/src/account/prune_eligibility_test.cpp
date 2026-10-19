@@ -121,8 +121,7 @@ public:
         dag.set_source_addr( account_->GetAddress() );
         dag.set_nonce( nonce );
         dag.set_timestamp( static_cast<int64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch() )
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() ) );
 
         std::vector<OutputDestInfo> destinations;
@@ -143,8 +142,7 @@ public:
         dag.set_source_addr( account_->GetAddress() );
         dag.set_nonce( nonce );
         dag.set_timestamp( static_cast<int64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch() )
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() ) );
         return std::make_shared<RegistrationTransaction>(
             RegistrationTransaction::New( account_->GetAddress(), nonce, {}, std::move( dag ) ) );
@@ -186,17 +184,16 @@ public:
         return ConsumeOutputOpt( transaction, output_idx, SpenderHash( spender ) );
     }
 
-    bool ConsumeOutputOpt( const GeniusTransaction                    &transaction,
-                           uint32_t                                   output_idx,
-                           const std::optional<base::Hash256>        &spender )
+    bool ConsumeOutputOpt( const GeniusTransaction            &transaction,
+                           uint32_t                            output_idx,
+                           const std::optional<base::Hash256> &spender )
     {
         auto txid = base::Hash256::fromReadableString( transaction.GetHash() );
         EXPECT_FALSE( txid.has_error() );
-        auto consumed = account_->GetUTXOManager().ConsumeUTXOs(
-            { { txid.value(), output_idx, {} } },
-            account_->GetAddress(),
-            UTXOManager::UTXOType::UTXO_NORMAL,
-            spender );
+        auto consumed = account_->GetUTXOManager().ConsumeUTXOs( { { txid.value(), output_idx, {} } },
+                                                                 account_->GetAddress(),
+                                                                 UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                 spender );
         EXPECT_TRUE( consumed.has_value() );
         return consumed.has_value() && consumed.value();
     }
@@ -215,7 +212,7 @@ public:
 
     /// Finds the structured verdict of @p transaction in an evaluation result.
     static const PruneCandidateResult *FindVerdict( const PruneEvaluationResult &result,
-                                                    const GeniusTransaction      &transaction )
+                                                    const GeniusTransaction     &transaction )
     {
         const std::string tx_path = TransactionManager::GetTransactionPath( transaction );
         for ( const auto &candidate : result.candidates )
@@ -252,15 +249,15 @@ TEST_F( PruneEligibilityTest, ExactEligibleSet_ThreeWayWindowAndSpendDiscriminat
     constexpr uint64_t kWindow = 2;
 
     // Candidates (creation order sets arrival heights; C and E are ancient).
-    auto counterexample = MakeTransfer( 1, 1 ); // C: ancient creation, spent recently
-    auto eligible_tx    = MakeTransfer( 2, 2 ); // E: ancient creation, spent anciently
-    auto unspent_tx     = MakeTransfer( 3, 2 ); // U: outputs never consumed
-    auto split_tx       = MakeTransfer( 4, 2 ); // P: output0 ancient, output1 recent
-    auto tombstone_tx   = MakeTransfer( 5, 2 ); // T: outputs consumed but never tracked
-    auto nospender_tx   = MakeTransfer( 6, 1 ); // NR: consumed without spender id
-    auto unresolved_tx  = MakeTransfer( 7, 1 ); // SU: spent by a tx with no entry
-    auto registration   = MakeRegistration( 8 ); // R: no UTXO parameters at all
-    auto ancient_spender = MakeTransfer( 9, 0 );  // S_E: ancient (put early, below)
+    auto counterexample   = MakeTransfer( 1, 1 );  // C: ancient creation, spent recently
+    auto eligible_tx      = MakeTransfer( 2, 2 );  // E: ancient creation, spent anciently
+    auto unspent_tx       = MakeTransfer( 3, 2 );  // U: outputs never consumed
+    auto split_tx         = MakeTransfer( 4, 2 );  // P: output0 ancient, output1 recent
+    auto tombstone_tx     = MakeTransfer( 5, 2 );  // T: outputs consumed but never tracked
+    auto nospender_tx     = MakeTransfer( 6, 1 );  // NR: consumed without spender id
+    auto unresolved_tx    = MakeTransfer( 7, 1 );  // SU: spent by a tx with no entry
+    auto registration     = MakeRegistration( 8 ); // R: no UTXO parameters at all
+    auto ancient_spender  = MakeTransfer( 9, 0 );  // S_E: ancient (put early, below)
     auto recent_candidate = MakeTransfer( 10, 1 ); // A3: recent creation, recent spend
     auto recent_spender   = MakeTransfer( 11, 0 ); // S_R: recent (the LAST put)
 
@@ -313,7 +310,7 @@ TEST_F( PruneEligibilityTest, ExactEligibleSet_ThreeWayWindowAndSpendDiscriminat
     // Construction (Light) + evaluation with window N = 2.
     PruningConfig config;
     config.finality_window = kWindow;
-    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
     ASSERT_TRUE( evaluator.has_value() );
     auto evaluation = evaluator.value()->Evaluate();
     ASSERT_TRUE( evaluation.has_value() );
@@ -458,18 +455,17 @@ TEST_F( PruneEligibilityTest, FailClosedGates_AllowlistRejectsCraftedKeys )
 {
     PruningConfig config;
     config.finality_window = 2;
-    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
     ASSERT_TRUE( evaluator.has_value() );
     const auto &allowlist = *evaluator.value();
 
-    const std::string address  = account_->GetAddress();
-    const std::string tx_hash  = std::string( 64, 'a' );
-    const std::string base     = TransactionManager::GetBlockChainBase();
+    const std::string address = account_->GetAddress();
+    const std::string tx_hash = std::string( 64, 'a' );
+    const std::string base    = TransactionManager::GetBlockChainBase();
 
     EXPECT_FALSE( allowlist.IsAllowlistedTxKey( "/cert/" + address + ":41" ) );
     EXPECT_FALSE( allowlist.IsAllowlistedTxKey( base + "reg/" + address ) );
-    EXPECT_FALSE(
-        allowlist.IsAllowlistedTxKey( TransactionManager::GetBlockChainBase( 999 ) + "tx/" + tx_hash ) );
+    EXPECT_FALSE( allowlist.IsAllowlistedTxKey( TransactionManager::GetBlockChainBase( 999 ) + "tx/" + tx_hash ) );
     EXPECT_FALSE( allowlist.IsAllowlistedTxKey( base + "txfoo" ) );
     EXPECT_FALSE( allowlist.IsAllowlistedTxKey( base + "proof/" + tx_hash ) );
 
@@ -524,8 +520,7 @@ TEST_F( PruneEligibilityTest, PruningConfig_EnabledWithoutWindowFailsClosed )
 /** C4 — ill-typed values keep per-key defaults (no partial trust). */
 TEST_F( PruneEligibilityTest, PruningConfig_IllTypedValuesKeepDefaults )
 {
-    const auto config = ParseConfig(
-        R"( { "enabled": "yes", "finality_window": "x", "dry_run": 5 } )" );
+    const auto config = ParseConfig( R"( { "enabled": "yes", "finality_window": "x", "dry_run": 5 } )" );
     EXPECT_FALSE( config.enabled );
     EXPECT_FALSE( config.dry_run );
     EXPECT_FALSE( config.finality_window.has_value() );
