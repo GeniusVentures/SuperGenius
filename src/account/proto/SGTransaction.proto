@@ -63,6 +63,18 @@ message UTXOEntryRecord
     bytes spent_by_txid = 8;
 }
 
+// Node-local marker that a transaction's history was physically pruned
+// (D-04). Key layout: "/prune/tx/" + tx hash on the node-local raw surface;
+// the tx PATH travels in the value because lookups are by hash. Written only
+// in the same WriteBatch as the Phase-18 erase (value XOR marker, atomic).
+message PrunedTransactionRecord
+{
+    string tx_path = 1;
+    string cid = 2;
+    bool has_erased_at_height = 3;
+    uint64 erased_at_height = 4;
+}
+
 message UTXOCheckpointRecord
 {
     string owner_address = 1;

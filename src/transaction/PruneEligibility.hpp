@@ -21,11 +21,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include <rapidjson/document.h>
 
 #include "account/NodeType.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "outcome/outcome.hpp"
@@ -67,6 +70,28 @@ namespace sgns
                               ///< excludes such keys — reported, never dropped).
         DESERIALIZE_FAILED,   ///< The stored value could not be deserialized into a
                               ///< transaction (fail closed; the scan continues).
+    };
+
+    /**
+     * @brief       Tri-state verdict of the pruned-marker lookup (D-04 contract).
+     * @details     The PRUNED-vs-NOT_FOUND distinction is Phase 19 SURV-02's
+     *              answer source: "history pruned on this node" is a distinct,
+     *              reportable state — never conflated with plain not-found. The
+     *              invariant violation (marker AND value both present) is a
+     *              state bug and is reported loudly — never guessed away.
+     */
+    enum class PrunedLookup : uint8_t
+    {
+        PRUNED,                         ///< Marker present AND value absent: the
+                                        ///< transaction's history was physically
+                                        ///< pruned on this node.
+        NOT_FOUND,                      ///< No marker AND no value: the transaction
+                                        ///< is simply unknown here.
+        VALUE_PRESENT_INVARIANT_VIOLATION, ///< Marker AND value both present: violates
+                                        ///< the value-XOR-marker invariant (Phase 18
+                                        ///< writes both sides in ONE batch, so this
+                                        ///< state signals corruption — report, never
+                                        ///< guess which side is right).
     };
 
     /**
@@ -231,6 +256,62 @@ namespace sgns
          *              without N cannot make anything eligible).
          */
         outcome::result<PruneEvaluationResult> Evaluate() const;
+
+        //
+        // Pruned-marker contract (D-04 design — Phase 17 delivers format +
+        // lookup semantics; the production WRITE joins Phase 18's erase batch).
+        //
+
+        /// Node-local marker key namespace (CRDTWorkJournal prefix discipline:
+        /// same shared RocksDB, direct datastore writes, never broadcast).
+        static constexpr std::string_view PRUNE_MARKER_PREFIX = "/prune/tx/";
+
+        /**
+         * @brief       Builds the node-local marker key for @p tx_hash.
+         * @details     PRUNE_MARKER_PREFIX + hash; the tx PATH travels inside
+         *              the record value because lookups are by hash.
+         * @param[in]   tx_hash Transaction hash (readable string form).
+         * @return      "/prune/tx/&lt;tx_hash&gt;".
+         */
+        static std::string BuildPruneMarkerKey( const std::string &tx_hash );
+
+        /**
+         * @brief       Answers "was this transaction's history pruned here?" (D-04).
+         * @details     Reads the marker at BuildPruneMarkerKey(tx_hash) through
+         *              the node-local raw surface, then establishes value
+         *              presence for the record's tx_path through the same
+         *              CRDT-layer query surface the evaluator enumerates —
+         *              both reads share one resolution path (T-17-0503).
+         *              Verdicts: marker ∧ ¬value ⇒ PRUNED (record decoded);
+         *              ¬marker ∧ ¬value ⇒ NOT_FOUND; marker ∧ value ⇒
+         *              VALUE_PRESENT_INVARIANT_VIOLATION (logged at ERROR —
+         *              never guessed). A malformed marker payload is an error
+         *              result, never a silent PRUNED (T-17-0502). Writes
+         *              nothing.
+         * @param[in]   db Committed-state reader (marker + value presence).
+         * @param[in]   tx_hash Transaction hash (readable string form).
+         * @return      (verdict, decoded record when a marker decoded), or
+         *              outcome::failure for a raw-read/decode/presence error.
+         */
+        static outcome::result<std::pair<PrunedLookup, std::optional<SGTransaction::PrunedTransactionRecord>>>
+        LookupPrunedEntry( crdt::GlobalDB &db, const std::string &tx_hash );
+
+        /**
+         * @brief       TEST-ONLY marker writer (the D-04 test seam).
+         * @details     Serializes @p record and writes it at the marker key on
+         *              the node-local raw surface. Production NEVER calls this:
+         *              the real marker write joins Phase 18's erase WriteBatch
+         *              so the value-XOR-marker invariant is established
+         *              atomically with the erase itself.
+         * @note        No production caller may invoke this method.
+         * @param[in]   db Store receiving the marker.
+         * @param[in]   tx_hash Transaction hash the marker is keyed by.
+         * @param[in]   record Marker payload to persist.
+         * @return      outcome::success, or outcome::failure on I/O error.
+         */
+        static outcome::result<void> WritePrunedEntryForTest( crdt::GlobalDB                                &db,
+                                                              const std::string                            &tx_hash,
+                                                              const SGTransaction::PrunedTransactionRecord &record );
 
     private:
         PruneEligibility( crdt::GlobalDB      &globaldb,

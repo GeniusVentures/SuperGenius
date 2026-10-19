@@ -13,6 +13,7 @@
 
 #include "account/UTXOManager.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "storage/database_error.hpp"
 #include "transaction/TransactionManager.hpp"
 
 namespace sgns
@@ -31,6 +32,14 @@ namespace sgns
             {
                 candidate.reasons.push_back( reason );
             }
+        }
+
+        /// Logger for the static marker-contract functions (no instance exists
+        /// in a static member, so the class member logger is out of reach).
+        base::Logger MarkerLogger()
+        {
+            static const base::Logger logger = base::createLogger( "PruneEligibility" );
+            return logger;
         }
     } // anonymous namespace
 
@@ -100,6 +109,87 @@ namespace sgns
             }
         }
         return false;
+    }
+
+    std::string PruneEligibility::BuildPruneMarkerKey( const std::string &tx_hash )
+    {
+        // Node-local prefix discipline (CRDTWorkJournal shape): the hash keys
+        // the entry, the tx PATH travels inside the record value.
+        return std::string( PRUNE_MARKER_PREFIX ) + tx_hash;
+    }
+
+    outcome::result<std::pair<PrunedLookup, std::optional<SGTransaction::PrunedTransactionRecord>>> PruneEligibility::
+        LookupPrunedEntry( crdt::GlobalDB &db, const std::string &tx_hash )
+    {
+        crdt::GlobalDB::Buffer marker_key;
+        marker_key.put( BuildPruneMarkerKey( tx_hash ) );
+        auto marker = db.GetRaw( marker_key );
+        if ( marker.has_error() )
+        {
+            if ( marker.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                // No marker: this node never pruned the transaction.
+                return std::make_pair( PrunedLookup::NOT_FOUND, std::nullopt );
+            }
+            return outcome::failure( marker.error() );
+        }
+
+        SGTransaction::PrunedTransactionRecord record;
+        if ( !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
+        {
+            // T-17-0502: a malformed marker is an ERROR, never a silent PRUNED.
+            MarkerLogger()->error( "Pruned marker for tx {} is malformed", tx_hash );
+            return outcome::failure( std::errc::bad_message );
+        }
+
+        // Value presence through the same CRDT-layer query surface the
+        // evaluator enumerates (T-17-0503: one resolution path for both reads).
+        // Exact-key match — a prefix scan alone would also catch longer
+        // sibling keys sharing the path as a prefix.
+        bool value_present = false;
+        if ( auto entries = db.QueryKeyValues( record.tx_path() ); !entries.has_error() )
+        {
+            for ( const auto &[key, value] : entries.value() )
+            {
+                (void) value; // presence only, the bytes are irrelevant here
+                auto key_string = db.KeyToString( key );
+                if ( !key_string.has_error() && key_string.value() == record.tx_path() )
+                {
+                    value_present = true;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            return outcome::failure( entries.error() );
+        }
+
+        if ( value_present )
+        {
+            // T-17-0503: report loudly, never guess which side is right. The
+            // Phase-18 same-batch write makes this state atomically impossible.
+            MarkerLogger()->error( "Pruned marker AND value both present for tx {} at {} — invariant violation",
+                                   tx_hash,
+                                   record.tx_path() );
+            return std::make_pair( PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION, record );
+        }
+
+        return std::make_pair( PrunedLookup::PRUNED, record );
+    }
+
+    outcome::result<void> PruneEligibility::WritePrunedEntryForTest(
+        crdt::GlobalDB                               &db,
+        const std::string                            &tx_hash,
+        const SGTransaction::PrunedTransactionRecord &record )
+    {
+        // TEST-ONLY (see header): the production write joins Phase 18's erase
+        // WriteBatch so value XOR marker holds atomically.
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( BuildPruneMarkerKey( tx_hash ) );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        return db.PutRaw( key_buffer, value_buffer );
     }
 
     outcome::result<PruneEvaluationResult> PruneEligibility::Evaluate() const
