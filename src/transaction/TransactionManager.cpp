@@ -2637,11 +2637,20 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
+        auto transfer_txid = base::Hash256::fromReadableString( transfer_tx->GetHash() );
+        if ( transfer_txid.has_error() )
+        {
+            // WR-01: data_hash is raw dag bytes that migration seeds or
+            // corruption can leave malformed — fail closed through the
+            // outcome channel, never throw through the processing stack.
+            m_logger->error( "Transfer {} has malformed data_hash", transfer_tx->GetHash() );
+            return outcome::failure( transfer_txid.error() );
+        }
         BOOST_OUTCOME_TRY(
             utxo_mgr.ConsumeUTXOs( inputs,
                                    TransferInputOwner( *transfer_tx ),
                                    sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                                   base::Hash256::fromReadableString( transfer_tx->GetHash() ).value() ) );
+                                   transfer_txid.value() ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
@@ -2660,11 +2669,19 @@ namespace sgns
 
             if ( !params.first.empty() )
             {
+                // WR-01: checked decode — a malformed data_hash is an outcome
+                // failure, never a throw through the processing stack.
+                auto migration_txid = base::Hash256::fromReadableString( migration_tx->GetHash() );
+                if ( migration_txid.has_error() )
+                {
+                    m_logger->error( "Migration {} has malformed data_hash", migration_tx->GetHash() );
+                    return outcome::failure( migration_txid.error() );
+                }
                 BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
                     params.first,
                     migration_tx->GetSrcAddress(),
                     sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                    base::Hash256::fromReadableString( migration_tx->GetHash() ).value() ) );
+                    migration_txid.value() ) );
             }
 
             m_logger->info( "Created tokens (migration), amount {} balance {}",
@@ -2676,7 +2693,18 @@ namespace sgns
         if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+            // WR-01: checked decode — data_hash here is raw dag_st.data_hash(),
+            // which migration-seeded or corrupt records can leave malformed;
+            // surface that as an outcome failure, never std::invalid_argument
+            // through the processing stack. The decoded hash feeds every use
+            // below (replay check, consume, and produced UTXOs).
+            auto mint_v2_hash = base::Hash256::fromReadableString( mint_tx_v2->GetHash() );
+            if ( mint_v2_hash.has_error() )
+            {
+                m_logger->error( "Mint-v2 {} has malformed data_hash", mint_tx_v2->GetHash() );
+                return outcome::failure( mint_v2_hash.error() );
+            }
+            auto hash = mint_v2_hash.value();
 
             // Inputs BEFORE outputs, with two discriminators:
             //  - A genuinely-consumed burn input (CONSUMED with real, non-zero
@@ -2712,7 +2740,7 @@ namespace sgns
                                            inputs,
                                            mint_tx_v2->GetSrcAddress(),
                                            sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
-                                           base::Hash256::fromReadableString( mint_tx_v2->GetHash() ).value() ) );
+                                           hash ) );
                     if ( !consumed )
                     {
                         m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
@@ -2879,11 +2907,19 @@ namespace sgns
 
         if ( !params.first.empty() )
         {
+            // WR-01: checked decode — a malformed data_hash is an outcome
+            // failure, never a throw through the processing stack.
+            auto escrow_txid = base::Hash256::fromReadableString( escrow_tx->GetHash() );
+            if ( escrow_txid.has_error() )
+            {
+                m_logger->error( "Escrow {} has malformed data_hash", escrow_tx->GetHash() );
+                return outcome::failure( escrow_txid.error() );
+            }
             BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
                 params.first,
                 escrow_tx->GetSrcAddress(),
                 sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                base::Hash256::fromReadableString( escrow_tx->GetHash() ).value() ) );
+                escrow_txid.value() ) );
         }
 
         return outcome::success();
