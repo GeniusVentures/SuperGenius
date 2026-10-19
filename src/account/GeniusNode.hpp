@@ -1279,10 +1279,14 @@ namespace sgns
 
         /**
          * @brief Runs one read-only prune-eligibility evaluation and INFO-reports it.
-         * @details Constructs PruneEligibility from the CURRENT members each
-         *          tick (never cached across ticks), calls Evaluate(), emits
-         *          the per-cycle dry-run summary (candidates + block verdicts),
-         *          and reschedules. Performs no write or erase of any kind.
+         * @details Constructs PruneEligibility from a consistent
+         *          SnapshotAccountServices() of the CURRENT members each tick
+         *          (never cached across ticks); the snapshot shared_ptrs are
+         *          held for the whole cycle so the account and its UTXOManager
+         *          outlive the evaluation even across a generation switch
+         *          (CR-01). Calls Evaluate(), emits the per-cycle dry-run
+         *          summary (candidates + block verdicts), and reschedules.
+         *          Performs no write or erase of any kind.
          */
         void RunPruneDryRunCycle();
 

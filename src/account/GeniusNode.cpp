@@ -4913,10 +4913,23 @@ namespace sgns
     void GeniusNode::RunPruneDryRunCycle()
     {
         // Phase-13 generation lifecycle: TransactionManager is replaceable, so the
-        // evaluator is NEVER cached — it is constructed from the CURRENT members on
-        // every tick. A generation switch can momentarily leave a member unset;
-        // skip this tick (read-only, nothing is pending) and keep the cadence.
-        if ( !tx_globaldb_ || !transaction_manager_ || !account_ )
+        // evaluator is NEVER cached — it is constructed from a CONSISTENT snapshot
+        // of the current members on every tick (CR-01). This callback runs on the
+        // io pool, so the account/manager pair must be read under lifecycle_mutex_
+        // (SnapshotAccountServices): an unsynchronized shared_ptr read concurrent
+        // with a SelectAccount/StateTransition reassignment is a data race, not
+        // merely "a member momentarily unset". The snapshot shared_ptrs are held
+        // for the whole cycle so the account (and its UTXOManager, which the
+        // evaluator references) outlives the evaluation even if a generation
+        // switch reassigns the members mid-cycle.
+        //
+        // tx_globaldb_ is deliberately read without the lifecycle lock: it is
+        // assigned once in InitDatabase() before this timer can exist and reset
+        // only in ReleaseRuntimeMembersAfterIoStopped(), after the io pool (this
+        // callback's only executor) has been drained — it is never swapped
+        // concurrently with a cycle.
+        const auto snapshot = SnapshotAccountServices();
+        if ( !tx_globaldb_ || !snapshot.account || !snapshot.manager )
         {
             node_logger_->debug( "Prune dry-run cycle skipped: account-bound members unavailable "
                                  "(generation switch)" );
@@ -4924,8 +4937,8 @@ namespace sgns
         else
         {
             auto evaluator = PruneEligibility::New( *tx_globaldb_,
-                                                    *transaction_manager_,
-                                                    account_->GetUTXOManager(),
+                                                    *snapshot.manager,
+                                                    snapshot.account->GetUTXOManager(),
                                                     node_type_,
                                                     pruning_config_ );
             if ( evaluator.has_error() )
