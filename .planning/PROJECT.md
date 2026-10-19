@@ -4,23 +4,32 @@
 
 SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
 
-This milestone makes light-node disk usage bounded: spent transaction history (both the CRDT value and its raw ipfs-lite CID block) is physically erased beyond a depth/finality window while the node keeps its unspent UTXO set and stays fully operational. Full and archive nodes keep complete history.
+This milestone closes all 25 findings from the October 2026 external security assessment — confirmed vulnerabilities (registry-CID trust bypass, unauthorized mint/escrow paths, ingestion DoS, proof-verification bypass), operational hardening (release gating, supply-chain integrity, SDK memory safety), and the product capabilities they gate (result verification, bridge return leg, NAT traversal, mobile readiness) — across SuperGenius, the libp2p fork, and GeniusSDK. The gate is public-network exposure readiness, proven by an adversarial regression suite. (v1.2 — light-node transaction pruning — executes on a separate branch.)
 
 ## Core Value
 
 **One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart.**
 
-## Current Milestone: v1.2 Light-node transaction pruning
+## Current Milestone: v1.3 Security Remediation & Network Readiness
 
-**Goal:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a configurable depth/finality window, while the node keeps its unspent UTXO set and remains fully operational (restart, tip sync, spend/receive).
+**Goal:** Close all 25 findings from the October 2026 external security assessment (`notes/security-assessment-2026-10-response.md`) so the network is safe to expose publicly — every fix proven by an adversarial regression suite that names the attacker authority required, the expected rejection, and the actual behavior.
 
 **Target features:**
-- Sliding-window pruner on light nodes: a transaction is erasable when every output is spent AND it is older than a configurable depth/finality window
-- tx→CID bookkeeping (the CID already arrives alongside the transaction key/value but is unused) enabling raw ipfs-lite CID block erasure for pruned transactions
-- Full and archive nodes keep complete history and remain the sync/audit source for fresh nodes
-- A pruned light node stays correct: restart recovery, new-tip sync, and spend/receive all keep working; the unspent UTXO set is never erased
+- Consensus trust hardening: registry-CID authorization bypass closed; validator admission/equivocation audited (#1, #14)
+- Mint & escrow authorization: fail-open chain IDs, legacy-v1 mint, receipt-to-mint amount/destination binding, escrow ownership exception (#2–#5)
+- Bridge ingestion safety: confirmation-depth/reorg enforcement, content-corroborated RPC trust (#10, #11)
+- Wire & allocation hardening: length-prefix caps at libp2p parse boundaries; safe hash parsing (#8, #9)
+- Gossip & DHT authentication: receive-path signature verification, DHT admission/validation (#7, #15)
+- Processing-grid integrity: authenticated queue/payout authority, proof verification enforced on ingress, independent result verification before payout, escrow sufficiency validated (#6, #13, #21, #22)
+- GeniusSDK remediation: memory-safe copies, ownership conventions, real test suite, minimal worker profile (#18, #24)
+- Release & supply-chain engineering: releases gated on green CI, content-hash-verified dependencies (#19, #20)
+- Network topology: relay/hole-punch completed or topology explicitly specified (#17)
+- Job privacy & execution isolation controls production-ready (#23)
+- Mobile readiness: adaptive resource budgets, lifecycle management (#25)
+- On-chain EVM privileged-role audit — operational verification only (#12)
+- Bridge return-leg (SGNS→EVM) activation (#16)
 
-**Non-goals this milestone:** pruning on full/archive nodes; pruning non-transaction CID data (processing-grid results, SecureCRDT values, certificates); light nodes serving historical sync to other peers.
+**Non-goals this milestone:** smart-contract code changes in the GNUS contracts repo (#12 is an on-chain audit of deployed roles; contract hardening is a separate change stream); rewriting the consensus architecture; the v1.2 pruning work (executes on its own branch).
 
 ## Requirements
 
@@ -47,7 +56,36 @@ This milestone makes light-node disk usage bounded: spent transaction history (b
 
 ### Active
 
-<!-- This milestone's scope. Hypotheses until shipped. -->
+<!-- v1.3 scope. Hypotheses until shipped. Detailed REQ-IDs in REQUIREMENTS.md. -->
+
+- [ ] A registry loaded by CID for certificate vote tallying is authorization-verified — forged-registry self-certification is rejected (#1)
+- [ ] Escrow spending requires entitled authority (certified task result), not just a signature from the spending key (#2)
+- [ ] Mint paths never fail open on empty/local chain IDs or empty source references (#3)
+- [ ] Legacy-v1 mint reception is disabled or mint authority is enforced (#4)
+- [ ] A burn receipt's token ID, amount, and destination are bound to the mint's outputs (#5)
+- [ ] Irreversible native issuance requires source-chain confirmation depth/finality (#10)
+- [ ] RPC corroboration compares agreeing block/event content, not endpoint-URL success counts (#11)
+- [ ] Network-provided length prefixes are capped before allocation across libp2p parse boundaries (#8)
+- [ ] Transaction deserialization returns errors instead of `.value()`-crashing on malformed hashes (#9)
+- [ ] Public-network gossip messages are signature-verified on the receive path (#7)
+- [ ] DHT admission/validation controls prevent arbitrary-value poisoning (#15)
+- [ ] Queue updates, results, payout addresses, and developer cuts are authenticated, not self-asserted (#13)
+- [ ] Proof verification is enforced on the active ingress path — no `valid_proof = true` bypass (#21)
+- [ ] Worker results are independently verified before payout on the production path (#6)
+- [ ] Escrow sufficiency is independently validated against the workload before worker acceptance (#22)
+- [ ] GeniusSDK copies are length-checked and memory-safe, with documented ownership and a real test suite (#24)
+- [ ] A minimal worker profile exists with measured duty-cycle controls (#18)
+- [ ] Releases are published only after required CI tests pass (#20)
+- [ ] Dependency artifacts are content-hash verified in CI (#19)
+- [ ] Relay/hole-punch is completed or the supported network topology is explicitly specified (#17)
+- [ ] Job inputs/models have scoped privacy and executors run inside a defined execution boundary (#23)
+- [ ] Mobile nodes have adaptive resource budgets and demonstrated lifecycle recovery (#25)
+- [ ] Deployed EVM privileged roles (owner/minter/upgrader) are audited on-chain and documented (#12)
+- [ ] The SGNS→EVM return leg is activated end-to-end (#16)
+
+### Active (v1.2 — in flight on another branch)
+
+The light-node pruning requirements below remain active on the v1.2 execution branch; this branch advanced to v1.3 while v1.2 executes elsewhere.
 
 - [ ] Light-node sliding-window pruner physically erases a transaction from CRDT storage when all outputs are spent and it is older than a configurable depth/finality window
 - [ ] tx→CID bookkeeping maps pruned transactions to their raw ipfs-lite CID blocks so both storage levels are reclaimed
@@ -127,6 +165,10 @@ No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat g
 | v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | Phase 9/10/11 ✓ |
 | v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | Phase 10/13 ✓ |
 | v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | Phase 11/13 ✓ |
+| v1.3: All 25 assessment findings in scope — vulnerabilities, hardening, and gated capabilities | The audit's strongest findings are actionable; deferring the capabilities (#16/#17/#18/#23/#25) leaves the public-network gate open, and the milestone driver is exposure readiness | — Pending |
+| v1.3: Repos = SuperGenius + libp2p fork + GeniusSDK; contracts repo excluded | #8/#15 live in the fork, #24 in the SDK — small deltas under one planning root; contract hardening is a separate change stream, with #12 covered as an on-chain operational audit | — Pending |
+| v1.3: Adversarial regression suite is the verification spine | Every fix test names attacker authority required, expected rejection, actual behavior — the assessment response's own discipline | — Pending |
+| v1.3: v1.2 executes on a separate branch; this branch plans v1.3 | Phases 16–20 artifacts stay on the v1.2 branch and in git history; phase numbering continues at 21 here | — Pending |
 | v1.2: Only light nodes prune; full/archive never erase history | Light nodes are disk-constrained consumers (address-filtered, not history servers); full/archive remain complete sync/audit sources — no new per-node config surface for roles that should never prune | — Pending |
 | v1.2: Erase both levels — CRDT value + raw ipfs-lite block — via a tx→CID bookkeeping map | Value-only erasure leaves the larger raw-block RocksDB untouched; the CID already arrives with the transaction key/value, so the map is incremental bookkeeping | — Pending |
 | v1.2: Erase requires all outputs spent AND depth/finality window elapsed | Spent-ness alone risks erasing transactions still needed for conflict handling or catch-up sync; the window bounds worst-case history any light node must retain | — Pending |
@@ -155,6 +197,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-10-19 after v1.3 milestone start (security remediation & network readiness — all 25 assessment findings; v1.2 continues on its execution branch)*
 *Last updated: 2026-10-15 after v1.2 milestone start (light-node transaction pruning — sliding-window disk reclamation)*
 *Last updated: 2026-10-05 after v1.1 milestone (shipped with recorded gaps; REQUIREMENTS archived; next milestone not yet planned)*
 *Last updated: 2026-10-02 — Phase 15 (private-network binding) complete: 17/18 plans (15-04 descoped into 15-13), verification cycle 5 passed 11/11, UAT-1 closed by automated E2E (15-18)*
