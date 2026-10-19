@@ -26,6 +26,8 @@ findings:
   warning: 5
   info: 4
   total: 10
+fixed: 6
+skipped: 0
 status: issues_found
 ---
 
@@ -35,6 +37,7 @@ status: issues_found
 **Depth:** standard
 **Files Reviewed:** 17
 **Status:** issues_found
+**Fix Run:** 2026-10-19 — 6/10 findings fixed (all 1 Critical + 5 Warnings; 4 Info deferred, out of fix scope). Evidence in 17-REVIEW-FIX.md.
 
 ## Summary
 
@@ -101,6 +104,13 @@ void GeniusNode::RunPruneDryRunCycle()
 swapped concurrently in your wiring, snapshot it under `lifecycle_mutex_` in
 the same call.)
 
+**Status:** Fixed — commit eb1a23adf. Evaluator now built from a consistent
+SnapshotAccountServices() snapshot; the snapshot shared_ptrs are held for the
+whole cycle so the account/UTXOManager outlive the evaluation. `tx_globaldb_`
+is read without the lifecycle lock, with the init-once/reset-after-io-drain
+invariant documented at the site. Requires human verification (concurrency
+logic; no unit seam). Compile gate + all three suites green.
+
 ## Warnings
 
 ### WR-01: Unchecked `.value()` on `fromReadableString(GetHash())` at four new call sites
@@ -129,6 +139,14 @@ BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_
 (apply the same shape at 2667, 2715, 2886; consider a small
 `HashFromTxHash(const std::string&)` helper to stop the duplication).
 
+**Status:** Fixed — commit c93ed120f (format follow-up e8166799b). All four
+sites now check the parse result and fail the transaction path with an
+outcome error (never throw through the processing stack). Requires human
+verification (error-path logic). certificate_fallback + utxo suites green.
+Pre-existing unchecked `.value()` sites deliberately left: :1293 (PayEscrow),
+:2748 (legacy mint in ParseMintTransaction), :2952 (RevertMintTransaction) —
+out of phase-17 scope, flagged for a follow-up.
+
 ### WR-02: A transient evaluation error permanently kills the dry-run timer
 
 **File:** `src/account/GeniusNode.cpp:4940-4948` (with `src/transaction/PruneEligibility.cpp:221-227`)
@@ -155,6 +173,12 @@ if ( evaluation.has_error() )
 }
 ```
 
+**Status:** Fixed — commit 120fffba2. Only the permanent
+`std::errc::invalid_argument` policy error stops the timer; every other
+evaluation error warns and falls through to the reschedule. Requires human
+verification (timer logic; no unit seam). Compile gate + all three suites
+green.
+
 ### WR-03: `finality_window: 0` accepted while `enabled: true`
 
 **File:** `src/transaction/PruneEligibility.cpp:81-92`
@@ -174,6 +198,13 @@ if ( pruning_object.HasMember( "finality_window" ) && pruning_object["finality_w
 // existing enabled-without-window fail-close then also covers explicit 0
 ```
 (and extend the `disabled_reason` message to name `finality_window > 0`).
+
+**Status:** Fixed — commit fe68cba4b. Zero is rejected at READ time (a
+degenerate window is treated exactly like an absent one), so an enabled
+request with `finality_window: 0` fails closed with the extended message.
+Regression tests: PruningConfig_EnabledWithZeroWindowFailsClosed,
+PruningConfig_ZeroWindowWhileDisabledStaysUnset (prune_eligibility_test,
+22/22 green).
 
 ### WR-04: Pruned-marker lookup trusts `record.tx_path()` with no consistency check
 
@@ -198,6 +229,13 @@ if ( record.tx_path().empty()
 }
 ```
 
+**Status:** Fixed — commit 79f95961b. The decoded record's tx_path must end
+with the requested tx_hash (empty payload included); otherwise the lookup
+fails with std::errc::bad_message instead of answering PRUNED for the wrong
+key or prefix-scanning the store. Regression tests:
+PruneMarker_MismatchedPathIsError, PruneMarker_EmptyPayloadIsError (both
+green).
+
 ### WR-05: Eligible candidate with unresolved CID silently skips the block gate
 
 **File:** `src/transaction/PruneEligibility.cpp:270-274`
@@ -221,6 +259,14 @@ if ( !candidate_cid.has_value() )
 }
 ```
 
+**Status:** Fixed — commit 10f6371a2. An eligible candidate whose
+`GetTransactionCID` fails now emits an explicit CID_UNRESOLVED BlockGateResult
+(sentinel cid `<unresolved for <tx path>>`, erasable=false) instead of being
+silently skipped. No unit seam: GetTransactionCID resolves by identity (it
+reconstructs the same path the enumeration read), so the fail state is
+unconstructible through the test fixture — requires human verification.
+Source-audit + compile gate + suites green.
+
 ## Info
 
 ### IN-01: Config log prints a misleading `finality_window=0` when none is set
@@ -233,6 +279,9 @@ confusingly with WR-03).
 **Fix:** Log presence, not a fabricated number (e.g. a separate line or
 `"not set"` when `!has_value()`).
 
+**Status:** Deferred — out of fix scope (fix run covered Critical + Warning
+tiers only).
+
 ### IN-02: Duplicate per-cycle INFO summaries
 
 **File:** `src/transaction/PruneEligibility.cpp:293-297` and `src/account/GeniusNode.cpp:4956-4963`
@@ -243,6 +292,9 @@ report (DRY) and noisy logs.
 **Fix:** Keep exactly one — preferably the node-side dry-run summary, and
 drop the evaluator's (or gate the evaluator's behind `debug`).
 
+**Status:** Deferred — out of fix scope (fix run covered Critical + Warning
+tiers only).
+
 ### IN-03: Whole-store evaluation runs synchronously on an io-pool thread
 
 **File:** `src/account/GeniusNode.cpp:4926-4963` (timer callback)
@@ -251,6 +303,9 @@ monitored network on one `io_context` pool thread every 10 minutes. On a
 large store this stalls other io work on that thread for the duration. It
 matches the `RunResultGC` precedent, so this is a scaling note for the
 Phase-18 reuse (consider posting to a worker/strand when the store grows).
+
+**Status:** Deferred — out of fix scope (fix run covered Critical + Warning
+tiers only).
 
 ### IN-04: Sibling GlobalDB additions return different errors for the same failure
 
@@ -262,6 +317,9 @@ condition — each copied a different pre-existing sibling. Callers cannot
 pattern-match one way.
 **Fix:** Pick one code for "no active CRDT datastore" in GlobalDB facades
 (new code should prefer the typed `Error::CRDT_DATASTORE_NOT_CREATED`).
+
+**Status:** Deferred — out of fix scope (fix run covered Critical + Warning
+tiers only).
 
 ---
 
