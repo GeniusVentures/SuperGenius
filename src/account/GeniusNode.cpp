@@ -4953,11 +4953,21 @@ namespace sgns
             auto evaluation = evaluator.value()->Evaluate();
             if ( evaluation.has_error() )
             {
-                // Fail closed: a failing evaluation is a broken policy state, not a
-                // transient condition — stop instead of spinning on it.
-                node_logger_->error( "Prune dry-run evaluation failed: {} — dry-run cycle stopped",
-                                     evaluation.error().message() );
-                return;
+                if ( evaluation.error() == std::errc::invalid_argument )
+                {
+                    // Permanent: the fail-closed no-window contract is a broken
+                    // policy state no retry can fix — stop instead of spinning
+                    // on it every cycle.
+                    node_logger_->error( "Prune dry-run evaluation failed: {} — dry-run cycle stopped",
+                                         evaluation.error().message() );
+                    return;
+                }
+                // Transient (e.g. ActiveCRDTDataStore momentarily null across a
+                // GlobalDB restart/generation switch surfaces as
+                // operation_canceled): skip this tick and keep the cadence —
+                // the reschedule below still runs.
+                node_logger_->warn( "Prune dry-run evaluation failed: {} — retrying next cycle",
+                                    evaluation.error().message() );
             }
 
             const auto &result          = evaluation.value();
