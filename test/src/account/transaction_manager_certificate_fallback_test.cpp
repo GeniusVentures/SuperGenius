@@ -22,6 +22,7 @@
 #include "transaction/TransactionConsensusHandler.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
+#include "account/RegistrationTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
@@ -102,6 +103,28 @@ namespace sgns
             const std::string  &tx_hash )
         {
             return tm.FetchExactTransactionFromCRDT( tx_hash );
+        }
+
+        static std::string GetOutgoingPreviousHash( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.GetOutgoingPreviousHash( nonce );
+        }
+
+        static std::string GetRegisteredOutgoingPreviousHash( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.GetRegisteredOutgoingPreviousHash( nonce );
+        }
+
+        static std::string QueryOutgoingPreviousHashFromCRDT( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.QueryOutgoingPreviousHashFromCRDT( nonce );
+        }
+
+        static outcome::result<void> StoreTransactionCID( TransactionManager &tm,
+                                                          const std::string  &key,
+                                                          const std::string  &cid )
+        {
+            return tm.StoreTransactionCID( key, cid );
         }
 
         static std::shared_ptr<ConsensusManager> ConsensusManagerOf( Blockchain &blockchain )
@@ -194,6 +217,13 @@ namespace
 
     /// @brief Default proposer ID used in test certificates.
     constexpr const char *kTestProposer = "test-proposer";
+
+    /// @brief The fixture GlobalDB's seeded listen+broadcast topic
+    ///        (base_crdt_test.cpp). Real-topic Puts are load-bearing for the
+    ///        erase lifecycle: an empty-topics Put writes no head and no seal,
+    ///        and EraseTransactionEntry's resolved guard would then reject the
+    ///        erase (Phase-16 empty-topics lesson).
+    constexpr char kSeedTopic[] = "CRDT.Datastore.TEST.Channel";
 
     /**
      * @brief Builds a ConsensusCertificate proto wrapping the given subject.
@@ -530,6 +560,38 @@ public:
             *tm_,
             TransactionManager::GetTransactionPath( *transaction ),
             std::move( serialized ) );
+    }
+
+    /**
+     * @brief Seeds one frontier transaction into the exact state the Phase-16
+     *        erase lifecycle requires (17-03 / GATE-04 SC-3).
+     *
+     * The value goes through a REAL-topic CRDT Put (never the empty-topic
+     * PersistTransaction shape) so the delta CID, its head entry, and its
+     * seal marker exist; a follow-up seed on the same topic retires the
+     * frontier's CID from headship so EraseEntry's head guard accepts; the
+     * raw tx->CID map entry is seeded with the exact StoreTransactionCID
+     * key/value shapes so ResolveTransactionPathAndCID finds the entry's own
+     * network path. The certificate at the frontier's slot is deliberately
+     * NOT seeded here -- each case decides whether the cert authority exists.
+     */
+    void SeedErasableFrontierEntry( const std::shared_ptr<GeniusTransaction> &frontier )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *frontier );
+
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( frontier->SerializeByteVector() );
+        auto put_result = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+        ASSERT_TRUE( put_result.has_value() );
+
+        crdt::GlobalDB::Buffer retire_value;
+        retire_value.put( "retire-" + frontier->GetHash() );
+        ASSERT_TRUE(
+            db_->Put( { "/seed/certslot/" + frontier->GetHash() }, retire_value, { kSeedTopic } ).has_value() );
+
+        ASSERT_TRUE(
+            CertificateFallbackTestAccess::StoreTransactionCID( *tm_, tx_path, put_result.value().toString().value() )
+                .has_value() );
     }
 };
 
@@ -1437,4 +1499,182 @@ TEST_F( CertificateFallbackTest, RepeatedHandlerFailuresEngageBackoffLease )
     EXPECT_TRUE( CertificateFallbackTestAccess::HasLiveBackoffLease( manager, key ) );
 
     CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, false );
+}
+
+// ---------------------------------------------------------------------------
+// Cert-slot previous_hash resolution (17-03 / GATE-04 / SC-3)
+// ---------------------------------------------------------------------------
+
+/**
+ * SC-3 case 1: with the node's own frontier transaction physically erased
+ * (EraseTransactionEntry -- the real guarded erase, not a hand-deleted key)
+ * and its certificate present at the slot, GetOutgoingPreviousHash resolves
+ * the frontier hash from cert-slot data. Pre-erase, the tracked rung answers
+ * first (ladder order preserved); post-erase, only the cert rung can.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_PrunedFrontierResolvesFromCert )
+{
+    constexpr uint64_t kFrontierNonce = 41;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( TransactionManager::CertificateMatchesTransaction( certificate.value(), *frontier ) );
+
+    // Park the round timer AFTER the certificate is built (registry settling
+    // needs default timing): with the timer parked, no async dispatch tracks
+    // the frontier from the durable cert, so after the erase the resolution
+    // provably comes from the cert rung, not from re-tracked state.
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Warm pre-prune state: the frontier is tracked (CONFIRMED -- its cert is
+    // durable) and the tracked rung answers while history is intact.
+    ASSERT_TRUE( FetchAndProcess( frontier ).has_value() );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+
+    // The physical erase: value, block bytes, map entry, and tracked state.
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *frontier ) ).has_error() );
+    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+
+    // Post-prune: the cert at /cert/<addr>:<nonce> still binds the chain link.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+}
+
+/**
+ * SC-3 case 2: cold start after the prune. Nothing was ever tracked, no
+ * local confirmed head exists (the fresh-manager state a restart into a
+ * pruned store presents), the frontier value is physically gone -- the nonce
+ * chain still resolves through the certificate, exactly frontier nonce + 1.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_ColdStartNonceChainAfterPrune )
+{
+    constexpr uint64_t kFrontierNonce = 42;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Cold-start preconditions: no tracked state, no persisted head.
+    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( account_->GetLocalConfirmedTxHash( kFrontierNonce ).has_error() );
+
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( account_->GetLocalConfirmedTxHash( kFrontierNonce ).has_error() );
+
+    // The chain link resolves from the certificate alone.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+    // The derived nonce chain is exactly frontier -> frontier+1: below the
+    // frontier no certificate exists, so resolution fails closed there.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce ), "" );
+}
+
+/**
+ * SC-3 case 3 (negative control): frontier value erased WITHOUT a
+ * certificate at the slot -- resolution must fail closed to the empty
+ * string, never a guessed hash.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_NoCertNoValueFailsClosed )
+{
+    constexpr uint64_t kFrontierNonce = 43;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+    // Deliberately NO certificate at /cert/<addr>:<nonce>.
+
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *frontier ) ).has_error() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ), "" );
+}
+
+/**
+ * SC-3 case 4 (Pitfall 7 equivalence): for a certified NON-registration
+ * predecessor with history intact, rungs 1-2 miss by construction (fresh
+ * manager, timer parked: nothing tracked, no local confirmed head), so the
+ * ladder's answer IS the cert rung's -- and it must equal what the full
+ * CRDT scan (rung 4) finds for the same predecessor.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_CertRungMatchesCRDTScan )
+{
+    constexpr uint64_t kFrontierNonce = 44;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Capture the cert rung DIRECTLY, not only through the ladder: with
+    // history intact the value-dependent rung 4 (CRDT scan) returns the same
+    // hash, so a ladder-level assertion alone could pass while the rung
+    // itself regressed (the same hash from a different source). The direct
+    // capture binds the rung; the ladder assert below then proves the
+    // composed order answers too.
+    const auto cert_rung_answer = CertificateFallbackTestAccess::GetRegisteredOutgoingPreviousHash(
+        *tm_,
+        kFrontierNonce + 1 );
+    ASSERT_EQ( cert_rung_answer, frontier->GetHash() );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+
+    // Pitfall 7 equivalence: the full CRDT scan (rung 4) finds the same hash
+    // for the certified non-registration predecessor.
+    EXPECT_EQ( CertificateFallbackTestAccess::QueryOutgoingPreviousHashFromCRDT( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+}
+
+/**
+ * SC-3 case 5 (regression): a registration-type predecessor still resolves
+ * through its slot certificate -- the pre-17-03 behavior is not regressed by
+ * the generalized rung. Registration values live at reg/{addr}, never under
+ * tx/, so the certificate was always the only authority for this link.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_RegistrationRungStillWorks )
+{
+    constexpr uint64_t kRegistrationNonce = 45;
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( kRegistrationNonce );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+
+    const auto registration = std::make_shared<RegistrationTransaction>(
+        RegistrationTransaction::New( account_->GetAddress(),
+                                      1,
+                                      SGTransaction::RegistrationMetadata{},
+                                      std::move( dag ) ) );
+    ASSERT_FALSE( registration->GetHash().empty() );
+    ASSERT_EQ( registration->GetType(), "registration" );
+
+    const auto certificate = BuildSignedCertificate( registration );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( registration->GetSlotID(), certificate.value() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kRegistrationNonce + 1 ),
+               registration->GetHash() );
 }
