@@ -2257,6 +2257,11 @@ namespace sgns::crdt
         return heads_->GetList();
     }
 
+    outcome::result<uint64_t> CrdtDatastore::GetPriority( const std::string &aKey ) const
+    {
+        return set_->GetPriority( aKey );
+    }
+
     outcome::result<void> CrdtDatastore::RemoveHead( const CID &aCid, const std::string &topic )
     {
         return heads_->Remove( aCid, topic );

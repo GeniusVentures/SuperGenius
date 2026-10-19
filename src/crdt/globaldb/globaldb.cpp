@@ -899,6 +899,16 @@ namespace sgns::crdt
         return crdt_datastore->GetHeadList();
     }
 
+    outcome::result<uint64_t> GlobalDB::GetKeyPriority( const std::string &key ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetPriority( key );
+    }
+
     outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
     {
         auto crdt_datastore = ActiveCRDTDataStore();

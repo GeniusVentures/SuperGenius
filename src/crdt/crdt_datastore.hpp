@@ -262,6 +262,18 @@ namespace sgns::crdt
         void AddTopicName( std::string topic );
 
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
+
+        /** Read the per-key CRDT priority from the owning CrdtSet (read-only).
+        * Contract mirrors CrdtSet::GetPriority (crdt_set.hpp): returns the
+        * stored priority minus 1. A key with NO priority record reads as
+        * success with value 0 -- the NOT_FOUND case is tolerated
+        * (impl/crdt_set.cpp GetPriority) -- so 0 never implies existence;
+        * callers must establish key existence separately. Fails only on
+        * datastore errors other than NOT_FOUND or a malformed record.
+        * @param aKey key string
+        * @return priority of the key or outcome::failure on error
+        */
+        outcome::result<uint64_t>                  GetPriority( const std::string &aKey ) const;
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
         outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
