@@ -4979,8 +4979,7 @@ namespace sgns
                 // summary describes a RETIRED pair — alive via the snapshot but
                 // no longer current. Tag it instead of reporting it as current;
                 // Phase 18's TxPruner inherits this check before any erase.
-                const bool generation_superseded =
-                    ( SnapshotAccountServices().generation != snapshot.generation );
+                const bool generation_superseded = ( SnapshotAccountServices().generation != snapshot.generation );
 
                 const auto &result          = evaluation.value();
                 const auto  eligible        = result.EligibleCount();
