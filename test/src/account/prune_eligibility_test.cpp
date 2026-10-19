@@ -1,7 +1,8 @@
 /**
  * @file       prune_eligibility_test.cpp
- * @brief      SC-1 (exact eligible set) and SC-4 (fail-closed gates) proofs for
- *             the PRUNE-01 dry-run eligibility evaluator.
+ * @brief      SC-1 (exact eligible set), SC-2 (multi-element block gate),
+ *             SC-4 (fail-closed gates), the D-04 pruned-marker contract, and
+ *             the PruningConfig proofs for the PRUNE-01/03 dry-run evaluator.
  * @details    Group A seeds the three-way window discriminator plus every spend
  *             discriminator through the REAL publish path on the fixture's CRDT
  *             topic (never raw local puts — Phase-16 lesson) and asserts the
@@ -11,6 +12,14 @@
  *             age, D-02). Group B proves construction refuses Full/Archive and
  *             the allowlist rejects five crafted out-of-prefix keys. Group C
  *             pins the PruningConfig parse/validate contract (GATE-06).
+ *             Group D proves SC-2: a delta block is erasable ONLY when every
+ *             element AND tombstone key it carries (parsed from the block
+ *             itself) is eligible and allowlist-conformant — real batched
+ *             blocks with block-presence asserted before gating (Pitfall 11).
+ *             Group E pins the D-04 marker contract: PRUNED vs NOT_FOUND vs
+ *             the value-XOR-marker invariant violation, plus the
+ *             spender-pruned window refinement driven through the REAL
+ *             Phase-16 erase flow.
  * @date       2026-10-19
  */
 
@@ -165,6 +174,109 @@ public:
         ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
     }
 
+    /// Commits several transactions' values in ONE delta block (a batched
+    /// AtomicTransaction on the seed topic — the multi-element-block recipe)
+    /// and records each tx->CID map entry against that block's CID.
+    /// Returns the block CID string ("" on failure — callers assert on it).
+    std::string SeedTransactionsInOneBlock( const std::vector<std::shared_ptr<GeniusTransaction>> &transactions )
+    {
+        auto batch = db_->BeginTransaction();
+        EXPECT_NE( batch, nullptr );
+        if ( batch == nullptr )
+        {
+            return "";
+        }
+        for ( const auto &transaction : transactions )
+        {
+            crdt::GlobalDB::Buffer serialized;
+            serialized.put( transaction->SerializeByteVector() );
+            EXPECT_TRUE(
+                batch->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized ).has_value() );
+        }
+        auto commit = batch->Commit( { kSeedTopic } );
+        EXPECT_TRUE( commit.has_value() );
+        if ( !commit.has_value() )
+        {
+            return "";
+        }
+        const std::string block_cid = commit.value().toString().value();
+
+        for ( const auto &transaction : transactions )
+        {
+            crdt::GlobalDB::Buffer key_buffer;
+            key_buffer.put( TransactionManager::GetTransactionPath( *transaction ) );
+            crdt::GlobalDB::Buffer value_buffer;
+            value_buffer.put( block_cid );
+            EXPECT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+        }
+        return block_cid;
+    }
+
+    /// One delta block carrying @p transaction's element PLUS a non-tx
+    /// element at @p extra_key (the out-of-prefix smuggling shape, SC-2 A3).
+    /// Returns the block CID string ("" on failure).
+    std::string SeedBlockWithOutOfPrefixKey( const std::shared_ptr<GeniusTransaction> &transaction,
+                                             const std::string                        &extra_key )
+    {
+        auto batch = db_->BeginTransaction();
+        EXPECT_NE( batch, nullptr );
+        if ( batch == nullptr )
+        {
+            return "";
+        }
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( transaction->SerializeByteVector() );
+        EXPECT_TRUE( batch->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized ).has_value() );
+        crdt::GlobalDB::Buffer extra_value;
+        extra_value.put( "non-tx-payload" );
+        EXPECT_TRUE( batch->Put( { extra_key }, extra_value ).has_value() );
+        auto commit = batch->Commit( { kSeedTopic } );
+        EXPECT_TRUE( commit.has_value() );
+        return commit.has_value() ? commit.value().toString().value() : "";
+    }
+
+    /// One delta block carrying @p transaction's element PLUS a TOMBSTONE of
+    /// @p tombstone_target (previously committed) — the Pitfall-4 shape: an
+    /// elements-only gate would never see the tombstone key.
+    /// Returns the block CID string ("" on failure).
+    std::string SeedBlockWithTombstone( const std::shared_ptr<GeniusTransaction> &transaction,
+                                        const std::string                        &tombstone_target )
+    {
+        auto batch = db_->BeginTransaction();
+        EXPECT_NE( batch, nullptr );
+        if ( batch == nullptr )
+        {
+            return "";
+        }
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( transaction->SerializeByteVector() );
+        EXPECT_TRUE( batch->Put( { TransactionManager::GetTransactionPath( *transaction ) }, serialized ).has_value() );
+        EXPECT_TRUE( batch->Remove( { tombstone_target } ).has_value() );
+        auto commit = batch->Commit( { kSeedTopic } );
+        EXPECT_TRUE( commit.has_value() );
+        return commit.has_value() ? commit.value().toString().value() : "";
+    }
+
+    /// Plain topic Put of a raw string at @p key (driver heights, garbage
+    /// values, tombstone targets) — real publish path, never a local-only put.
+    void PutSeedValue( const std::string &key, const std::string &value )
+    {
+        crdt::GlobalDB::Buffer buffer;
+        buffer.put( value );
+        ASSERT_TRUE( db_->Put( { key }, buffer, { kSeedTopic } ).has_value() );
+    }
+
+    /// Records the tx->CID map entry (StoreTransactionCID shapes) for @p hash
+    /// against @p cid — the block-gate input wiring for hand-built blocks.
+    void SeedTxCidEntry( const std::string &tx_hash, const std::string &cid )
+    {
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( TransactionManager::GetTransactionPath( tx_hash ) );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( cid );
+        ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+    }
+
     /// Tracks a candidate's produced outputs in the UTXO manager (PutProducedUTXOs shape).
     void TrackOutputs( const GeniusTransaction &transaction )
     {
@@ -228,6 +340,24 @@ public:
     static bool HasReason( const PruneCandidateResult &candidate, PruneReason reason )
     {
         return std::find( candidate.reasons.begin(), candidate.reasons.end(), reason ) != candidate.reasons.end();
+    }
+
+    static bool HasReason( const BlockGateResult &report, PruneReason reason )
+    {
+        return std::find( report.reasons.begin(), report.reasons.end(), reason ) != report.reasons.end();
+    }
+
+    /// Finds the block-gate verdict for @p cid in an evaluation result.
+    static const BlockGateResult *FindBlockReport( const PruneEvaluationResult &result, const std::string &cid )
+    {
+        for ( const auto &report : result.block_reports )
+        {
+            if ( report.cid == cid )
+            {
+                return &report;
+            }
+        }
+        return nullptr;
     }
 };
 
@@ -575,4 +705,353 @@ TEST_F( PruneEligibilityTest, PruningConfig_IllTypedValuesKeepDefaults )
     EXPECT_FALSE( config.dry_run );
     EXPECT_FALSE( config.finality_window.has_value() );
     EXPECT_FALSE( config.disabled_reason.has_value() );
+}
+
+// ---------------------------------------------------------------------------
+// Group D: SC-2 — the multi-element block gate (PRUNE-03, D-C3)
+// ---------------------------------------------------------------------------
+
+/**
+ * A1 — two eligible transactions whose elements landed in ONE delta block
+ * (batched commit). The block is erasable: every carried key is
+ * allowlist-conformant and inside the eligible set. Block presence and exact
+ * carried-key set are asserted BEFORE gating (a vacuous pass proves nothing —
+ * Pitfall 11).
+ */
+TEST_F( PruneEligibilityTest, BlockGate_MultiElementBlockAllEligibleIsErasable )
+{
+    constexpr uint64_t kWindow = 2;
+
+    // Ancient spender first, then driver heights, so its arrival height sits
+    // beyond the window below the final head (D-02).
+    auto ancient_spender = MakeTransfer( 1, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/a1-driver-1", "d1" );
+
+    auto tx1 = MakeTransfer( 2, 1 );
+    auto tx2 = MakeTransfer( 3, 1 );
+    TrackOutputs( *tx1 );
+    TrackOutputs( *tx2 );
+    const std::string block_cid = SeedTransactionsInOneBlock( { tx1, tx2 } );
+    ASSERT_TRUE( ConsumeOutput( *tx1, 0, *ancient_spender ) );
+    ASSERT_TRUE( ConsumeOutput( *tx2, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/a1-driver-2", "d2" );
+
+    // Block presence: the committed block carries EXACTLY the two elements.
+    auto carried = db_->GetLocalDeltaKeys( block_cid );
+    ASSERT_TRUE( carried.has_value() );
+    ASSERT_FALSE( carried.value().empty() );
+    std::vector<std::string> sorted_keys = carried.value();
+    std::sort( sorted_keys.begin(), sorted_keys.end() );
+    std::vector<std::string> expected_keys{ TransactionManager::GetTransactionPath( *tx1 ),
+                                            TransactionManager::GetTransactionPath( *tx2 ) };
+    std::sort( expected_keys.begin(), expected_keys.end() );
+    EXPECT_EQ( sorted_keys, expected_keys );
+
+    // Window sanity (D-02): the spender's priority is beyond the window.
+    const auto s_priority = db_->GetKeyPriority( TransactionManager::GetTransactionPath( *ancient_spender ) );
+    const auto heads      = db_->GetCRDTHeadList();
+    ASSERT_TRUE( s_priority.has_value() );
+    ASSERT_TRUE( heads.has_value() );
+    ASSERT_GE( heads.value().second - s_priority.value(), kWindow );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    // Both block-mates are eligible (and the ancient spender reports NO_OUTPUTS).
+    ASSERT_EQ( evaluation.value().candidates.size(), 3u );
+    ASSERT_EQ( evaluation.value().EligibleCount(), 2u );
+    EXPECT_TRUE( FindVerdict( evaluation.value(), *tx1 )->eligible );
+    EXPECT_TRUE( FindVerdict( evaluation.value(), *tx2 )->eligible );
+
+    // ONE block report (distinct CID deduplication), erasable, no reasons.
+    ASSERT_EQ( evaluation.value().block_reports.size(), 1u );
+    const auto &report = evaluation.value().block_reports.front();
+    EXPECT_EQ( report.cid, block_cid );
+    EXPECT_TRUE( report.erasable );
+    EXPECT_TRUE( report.reasons.empty() );
+}
+
+/**
+ * A2 — same block shape, but one carried element belongs to a NON-eligible
+ * transaction (an unspent sibling): the block is NOT erasable and carries
+ * NON_ELIGIBLE_SIBLING. The sibling tx itself stays a separate verdict.
+ */
+TEST_F( PruneEligibilityTest, BlockGate_MultiElementBlockWithLiveSiblingIsNotErasable )
+{
+    constexpr uint64_t kWindow = 2;
+
+    auto ancient_spender = MakeTransfer( 1, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/a2-driver-1", "d1" );
+
+    auto eligible_tx     = MakeTransfer( 2, 1 );
+    auto unspent_sibling = MakeTransfer( 3, 1 ); // outputs never consumed
+    TrackOutputs( *eligible_tx );
+    TrackOutputs( *unspent_sibling );
+    const std::string block_cid = SeedTransactionsInOneBlock( { eligible_tx, unspent_sibling } );
+    ASSERT_TRUE( ConsumeOutput( *eligible_tx, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/a2-driver-2", "d2" );
+
+    // Block presence: BOTH elements are in the block.
+    auto carried = db_->GetLocalDeltaKeys( block_cid );
+    ASSERT_TRUE( carried.has_value() );
+    ASSERT_FALSE( carried.value().empty() );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    // The tx verdicts stay separate: eligible_tx eligible, sibling not.
+    EXPECT_TRUE( FindVerdict( evaluation.value(), *eligible_tx )->eligible );
+    const auto *sibling_verdict = FindVerdict( evaluation.value(), *unspent_sibling );
+    ASSERT_NE( sibling_verdict, nullptr );
+    EXPECT_FALSE( sibling_verdict->eligible );
+    EXPECT_TRUE( HasReason( *sibling_verdict, PruneReason::UNSPENT_OUTPUT ) );
+
+    // The BLOCK verdict: held by the sibling.
+    ASSERT_EQ( evaluation.value().block_reports.size(), 1u );
+    const auto &report = evaluation.value().block_reports.front();
+    EXPECT_EQ( report.cid, block_cid );
+    EXPECT_FALSE( report.erasable );
+    EXPECT_TRUE( HasReason( report, PruneReason::NON_ELIGIBLE_SIBLING ) );
+}
+
+/**
+ * A3 — a non-tx key committed into the same delta as an eligible element:
+ * the block is NOT erasable with OUT_OF_PREFIX (T-17-0504 — nothing smuggles
+ * past the per-key allowlist conformance inside the gate).
+ */
+TEST_F( PruneEligibilityTest, BlockGate_BlockWithOutOfPrefixKeyIsNotErasable )
+{
+    constexpr uint64_t kWindow = 2;
+
+    auto ancient_spender = MakeTransfer( 1, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/a3-driver-1", "d1" );
+
+    auto eligible_tx = MakeTransfer( 2, 1 );
+    TrackOutputs( *eligible_tx );
+    const std::string block_cid = SeedBlockWithOutOfPrefixKey( eligible_tx, "/prune-test/out-of-prefix" );
+    SeedTxCidEntry( eligible_tx->GetHash(), block_cid );
+    ASSERT_TRUE( ConsumeOutput( *eligible_tx, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/a3-driver-2", "d2" );
+
+    // Block presence: the block carries the tx element AND the foreign key.
+    auto carried = db_->GetLocalDeltaKeys( block_cid );
+    ASSERT_TRUE( carried.has_value() );
+    ASSERT_FALSE( carried.value().empty() );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    EXPECT_TRUE( FindVerdict( evaluation.value(), *eligible_tx )->eligible );
+
+    ASSERT_EQ( evaluation.value().block_reports.size(), 1u );
+    const auto &report = evaluation.value().block_reports.front();
+    EXPECT_EQ( report.cid, block_cid );
+    EXPECT_FALSE( report.erasable );
+    EXPECT_TRUE( HasReason( report, PruneReason::OUT_OF_PREFIX ) );
+}
+
+/**
+ * A4 — a block carrying a TOMBSTONE for a key not in the eligible set is NOT
+ * erasable (Pitfall 4: an elements-only gate would wrongly pass this block —
+ * the tombstone key is asserted present in the enumeration, and the
+ * NON_ELIGIBLE_SIBLING reason can only come from it).
+ */
+TEST_F( PruneEligibilityTest, BlockGate_TombstoneKeyHoldsBlockNotErasable )
+{
+    constexpr uint64_t kWindow = 2;
+
+    auto ancient_spender = MakeTransfer( 1, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/a4-driver-1", "d1" );
+
+    // Tombstone target: a tx key with garbage value (a would-be candidate that
+    // can never be eligible) — committed BEFORE the batch so Remove can build
+    // the tombstone delta from the existing element.
+    const std::string garbage_hash = std::string( 64, 'g' );
+    const std::string garbage_path = TransactionManager::GetTransactionPath( garbage_hash );
+    PutSeedValue( garbage_path, std::string( "\xde\xad\xbe\xef" ) );
+
+    auto eligible_tx = MakeTransfer( 2, 1 );
+    TrackOutputs( *eligible_tx );
+    const std::string block_cid = SeedBlockWithTombstone( eligible_tx, garbage_path );
+    SeedTxCidEntry( eligible_tx->GetHash(), block_cid );
+    ASSERT_TRUE( ConsumeOutput( *eligible_tx, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/a4-driver-2", "d2" );
+
+    // Block presence AND tombstone visibility: the enumeration carries the
+    // eligible element AND the tombstone key (elements-only would miss it).
+    auto carried = db_->GetLocalDeltaKeys( block_cid );
+    ASSERT_TRUE( carried.has_value() );
+    ASSERT_FALSE( carried.value().empty() );
+    EXPECT_EQ( std::count( carried.value().begin(), carried.value().end(), garbage_path ), 1u );
+    EXPECT_EQ( std::count( carried.value().begin(),
+                           carried.value().end(),
+                           TransactionManager::GetTransactionPath( *eligible_tx ) ),
+               1u );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    EXPECT_TRUE( FindVerdict( evaluation.value(), *eligible_tx )->eligible );
+
+    // The tombstone key is allowlisted but NOT in the eligible set — the only
+    // source of NON_ELIGIBLE_SIBLING on this block (the element is eligible).
+    ASSERT_EQ( evaluation.value().block_reports.size(), 1u );
+    const auto &report = evaluation.value().block_reports.front();
+    EXPECT_EQ( report.cid, block_cid );
+    EXPECT_FALSE( report.erasable );
+    EXPECT_TRUE( HasReason( report, PruneReason::NON_ELIGIBLE_SIBLING ) );
+    EXPECT_FALSE( HasReason( report, PruneReason::OUT_OF_PREFIX ) );
+}
+
+/** A5 — an unknown CID fails closed: not erasable, DESERIALIZE_FAILED, no crash. */
+TEST_F( PruneEligibilityTest, BlockGate_UnknownCidFailsClosed )
+{
+    PruningConfig config;
+    config.finality_window = 2;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+
+    PruneEvaluationResult empty_eligible;
+    auto                  gate = evaluator.value()->EvaluateDeltaBlockErasable( "not-a-cid", empty_eligible );
+    ASSERT_TRUE( gate.has_value() ); // in-band verdict, never a crash
+    EXPECT_FALSE( gate.value().erasable );
+    EXPECT_TRUE( HasReason( gate.value(), PruneReason::DESERIALIZE_FAILED ) );
+}
+
+// ---------------------------------------------------------------------------
+// Group E: D-04 — the pruned-marker contract on the node-local raw surface
+// ---------------------------------------------------------------------------
+
+/** B1 — marker round-trip preserves tx_path, cid, and the height pair. */
+TEST_F( PruneEligibilityTest, PruneMarker_RoundTripPreservesPathAndCid )
+{
+    EXPECT_EQ( PruneEligibility::BuildPruneMarkerKey( "abc" ), "/prune/tx/abc" );
+
+    // A hash whose tx value was never seeded: marker present, value absent.
+    const std::string                      hash = std::string( 64, 'a' );
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( hash ) );
+    record.set_cid( "bafytestblockcid" );
+    record.set_has_erased_at_height( true );
+    record.set_erased_at_height( 42 );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, hash, record ).has_value() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, hash );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    ASSERT_TRUE( lookup.value().second.has_value() );
+    EXPECT_EQ( lookup.value().second->tx_path(), record.tx_path() );
+    EXPECT_EQ( lookup.value().second->cid(), record.cid() );
+    EXPECT_TRUE( lookup.value().second->has_erased_at_height() );
+    EXPECT_EQ( lookup.value().second->erased_at_height(), 42u );
+}
+
+/** B2 — no marker and no value is NOT_FOUND (Phase 19 SURV-02's other half). */
+TEST_F( PruneEligibilityTest, PruneMarker_NotFoundByDefault )
+{
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, std::string( 64, 'b' ) );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::NOT_FOUND );
+    EXPECT_FALSE( lookup.value().second.has_value() );
+}
+
+/**
+ * B3 — marker AND value both present is the invariant violation: the enum is
+ * reported loudly and is never PRUNED (T-17-0503).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_MarkerAndValueIsInvariantViolation )
+{
+    auto present_tx = MakeTransfer( 1, 1 );
+    SeedTransaction( present_tx ); // the tx value IS still present
+
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( *present_tx ) );
+    record.set_cid( "stale-marker-cid" );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, present_tx->GetHash(), record ).has_value() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, present_tx->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION );
+    EXPECT_NE( lookup.value().first, PrunedLookup::PRUNED );
+}
+
+/**
+ * B4 — a candidate whose spender was ERASED (Phase-16 flow, test-sanctioned)
+ * evaluates eligible with the explicit SPENDER_PRUNED_WINDOW_SATISFIED
+ * evidence code; the control (erased spender, NO marker) stays
+ * SPENDER_UNRESOLVED ineligible (D-02/B spec point 5).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_SpenderPrunedWindowSatisfied )
+{
+    constexpr uint64_t kWindow = 2;
+
+    auto candidate = MakeTransfer( 1, 1 );
+    auto spender   = MakeTransfer( 2, 0 );
+    SeedTransaction( candidate );
+    SeedTransaction( spender );
+    TrackOutputs( *candidate );
+    ASSERT_TRUE( ConsumeOutput( *candidate, 0, *spender ) );
+
+    auto control         = MakeTransfer( 3, 1 );
+    auto control_spender = MakeTransfer( 4, 0 );
+    SeedTransaction( control );
+    SeedTransaction( control_spender );
+    TrackOutputs( *control );
+    ASSERT_TRUE( ConsumeOutput( *control, 0, *control_spender ) );
+
+    // A final topic put AFTER all seeds so no erased block is a topic head.
+    PutSeedValue( "/seed/prune/b4-driver", "d" );
+
+    // The pruned state, via the REAL Phase-16 erase flow (never hand-deletes).
+    ASSERT_TRUE( tm_->EraseTransactionEntry( spender->GetHash() ).has_value() );
+    ASSERT_TRUE( tm_->EraseTransactionEntry( control_spender->GetHash() ).has_value() );
+
+    // Marker ONLY for the first spender: candidate's window is satisfied by
+    // the marker; control's spender is simply gone.
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( *spender ) );
+    record.set_cid( "erased-spender-cid" );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, spender->GetHash(), record ).has_value() );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    // The erased spenders are no longer candidates; both survivors are.
+    ASSERT_EQ( evaluation.value().candidates.size(), 2u );
+
+    const auto *candidate_verdict = FindVerdict( evaluation.value(), *candidate );
+    ASSERT_NE( candidate_verdict, nullptr );
+    EXPECT_TRUE( candidate_verdict->eligible );
+    EXPECT_TRUE( HasReason( *candidate_verdict, PruneReason::SPENDER_PRUNED_WINDOW_SATISFIED ) );
+    ASSERT_TRUE( candidate_verdict->spend_height.has_value() );
+    EXPECT_EQ( candidate_verdict->spend_height.value(), 0u );
+
+    const auto *control_verdict = FindVerdict( evaluation.value(), *control );
+    ASSERT_NE( control_verdict, nullptr );
+    EXPECT_FALSE( control_verdict->eligible );
+    EXPECT_TRUE( HasReason( *control_verdict, PruneReason::SPENDER_UNRESOLVED ) );
 }
