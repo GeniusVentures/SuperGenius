@@ -249,6 +249,30 @@ else()
     )
 endif()
 
+# Phase 17 (17-04): PRUNE-01 dry-run eligibility evaluator — same link set as
+# transaction_manager_certificate_fallback_test (the fixture family it copies).
+addtest(prune_eligibility_test
+    prune_eligibility_test.cpp
+)
+
+target_link_libraries(prune_eligibility_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(prune_eligibility_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(prune_eligibility_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(prune_eligibility_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )
