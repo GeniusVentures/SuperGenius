@@ -4891,7 +4891,7 @@ namespace sgns
             return;
         }
 
-        prune_dry_run_timer_                = std::make_unique<boost::asio::steady_timer>( *io_ );
+        prune_dry_run_timer_               = std::make_unique<boost::asio::steady_timer>( *io_ );
         std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
 
         prune_dry_run_timer_->expires_from_now( std::chrono::minutes( 1 ) );
@@ -4947,12 +4947,12 @@ namespace sgns
                 return;
             }
 
-            const auto &result   = evaluation.value();
-            const auto  eligible = result.EligibleCount();
-            const auto  erasable_blocks =
-                static_cast<size_t>( std::count_if( result.block_reports.begin(),
-                                                    result.block_reports.end(),
-                                                    []( const BlockGateResult &block ) { return block.erasable; } ) );
+            const auto &result          = evaluation.value();
+            const auto  eligible        = result.EligibleCount();
+            const auto  erasable_blocks = static_cast<size_t>( std::count_if( result.block_reports.begin(),
+                                                                             result.block_reports.end(),
+                                                                             []( const BlockGateResult &block )
+                                                                             { return block.erasable; } ) );
             node_logger_->info( "Prune dry-run: {} candidate(s), {} eligible / {} ineligible, {}/{} block(s) "
                                 "erasable ({} held)",
                                 result.candidates.size(),

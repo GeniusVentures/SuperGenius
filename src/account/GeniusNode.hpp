@@ -1175,7 +1175,8 @@ namespace sgns
         bool                     autodht_;                       ///< Whether DHT discovery is enabled.
         bool                     isprocessor_;                   ///< Whether processing service should run.
         NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
-        PruningConfig            pruning_config_;                ///< Pruning policy from sgns_config.json (default disabled — GATE-06 consent gate).
+        PruningConfig
+            pruning_config_; ///< Pruning policy from sgns_config.json (default disabled — GATE-06 consent gate).
         base::Logger             node_logger_;                   ///< Main node logger.
         GeniusNodeConfig         dev_config_;                    ///< Runtime node configuration.
         std::string              ipfs_cache_dir_ = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
