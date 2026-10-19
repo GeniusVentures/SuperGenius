@@ -60,7 +60,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 **Execution order:** 16 → 17 → 18 → 19 → 20 (strict sequence). Two hard ordering constraints from research hold: the block-parse eligibility gate (Phase 17) lands before any block deletion (Phase 18), and the own-frontier survival fix (Phase 17) lands before the first real prune (Phase 18). Reclamation proof is deliberately last.
 
 - [x] **Phase 16: Erasure Primitives & Bookkeeping Hardening** - Two-level local erasure primitives behind owner-module APIs; zero production behavior change (PRUNE-02, GATE-03) (completed 2026-10-15)
-- [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
+- [x] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06) (completed 2026-10-19)
 - [ ] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
 - [ ] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03)
 - [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
@@ -124,7 +124,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2)*
 
 - [x] 17-05-PLAN.md — Multi-element block-parse gate (dry-run) + `/prune/` marker design contract + SC-2/marker suites (PRUNE-03, GATE-01)
-- [ ] 17-06-PLAN.md — `pruning.*` config knobs + config-gated dry-run timer + per-cycle INFO summary + SC-5 full-suite gate (GATE-06)
+- [x] 17-06-PLAN.md — `pruning.*` config knobs + config-gated dry-run timer + per-cycle INFO summary + SC-5 full-suite gate (GATE-06)
 
 ### Phase 18: TxPruner Service & First Real Prune
 
@@ -187,7 +187,7 @@ Plans:
 | 14. Account Generation (discarded) | v1.1 | 0/15 | Discarded | — |
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
-| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 5/6 | In Progress|  |
+| 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 6/6 | Complete   | 2026-10-19 |
 | 18. TxPruner Service & First Real Prune | v1.2 | 0/? | Not started | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |

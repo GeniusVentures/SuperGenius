@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 17
-status: executing
+status: verifying
 stopped_at: Completed 17-05-PLAN.md
-last_updated: "2026-10-19T16:02:30.226Z"
+last_updated: "2026-10-19T17:03:13.843Z"
 last_activity: 2026-10-19
 progress:
   total_phases: 23
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 4
+  completed_plans: 10
+  percent: 9
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-19
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T16:02:30.220Z
+**Last session:** 2026-10-19T17:03:13.837Z
 **Stopped At:** Completed 17-05-PLAN.md
 **Resume File:** None
 
@@ -145,6 +145,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P03 | 21min | 2 tasks | 3 files |
 | Phase 17 P04 | 26min | 3 tasks | 6 files |
 | Phase 17 P05 | 27min | 3 tasks | 4 files |
+| Phase 17 P06 | 55min | 3 tasks | 2 files |
 
 ## Decisions
 
@@ -231,6 +232,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 17]: 17-05: A delta block erases only when every element AND tombstone key it carries (parsed from the block itself via GetLocalDeltaKeys) is allowlist-conformant and in the eligible set — one BlockGateResult per DISTINCT eligible CID; tx eligibility and block erasability stay separate verdicts (PRUNE-01 vs PRUNE-03) — Block-parse gate lands before any block deletion (roadmap ordering invariant); the block is the source of truth, never 'what this node applied'
 - [Phase 17]: 17-05: SPENDER_PRUNED_WINDOW_SATISFIED is the sole affirmative-evidence reason code — eligible iff no FAILURE reason (HasFailureReason), so a marker-satisfied window is explicit without repudiating evidence; a pruned spender contributes effective spend height 0 (max-over-outputs preserved, window still requires max_height >= N) — D-02/B spec point 5: never-silent window satisfaction for a pruned spender; fail-closed default preserved for NOT_FOUND and invariant violations
 - [Phase 17]: 17-05: D-04 marker contract landed as design — /prune/tx/<hash> key + PrunedTransactionRecord proto + tri-state LookupPrunedEntry (PRUNED / NOT_FOUND / VALUE_PRESENT_INVARIANT_VIOLATION, ERROR-logged) on the node-local raw surface; marker WRITES stay test-only (WritePrunedEntryForTest), joining Phase 18's erase WriteBatch — Value XOR marker must be established atomically with the erase; Phase 19 SURV-02 answers history-pruned vs not-found from the lookup
+- [Phase 17]: 17-06: The prune dry-run timer is node-scoped and idempotent (created once, never reassigned until after io shutdown) — the evaluator tracks Phase-13 generation switches via per-tick construction from live members, so no member race is representable
+- [Phase 17]: 17-06: GATE-06 landed as the sgns_config.json pruning object read (one HasMember+IsObject guard wraps the entire read — absent keys execute zero new statements, SC-5), delegating all member parsing to PruningConfig::FromJSON (the 17-04 one parse home); dry_run=false WARNs that real erasure arrives with the Phase-18 TxPruner
 
 ## Deferred Items
 
