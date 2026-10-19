@@ -26,6 +26,7 @@
 #include <rapidjson/document.h>
 
 #include "account/NodeType.hpp"
+#include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "outcome/outcome.hpp"
 
@@ -51,11 +52,12 @@ namespace sgns
                              ///< zero-amount tombstones land here — they are not spend evidence.
         SPENDER_NOT_RECORDED, ///< The output is genuinely consumed but no spending
                              ///< transaction identity was recorded (spent_by_txid unset).
-        SPENDER_UNRESOLVED,  ///< The recorded spender's tx->CID map entry was not found
-                             ///< (fail closed; refined to pruned-marker semantics in 17-05).
-                             ///< Existence MUST be established BEFORE any priority read:
-                             ///< GetKeyPriority reports 0 for a missing key, which would
-                             ///< satisfy the window vacuously.
+        SPENDER_UNRESOLVED,  ///< The recorded spender's tx->CID map entry was not found,
+                             ///< or its priority could not be read (fail closed; refined
+                             ///< to pruned-marker semantics in 17-05). Existence MUST be
+                             ///< established BEFORE any priority read: GetKeyPriority
+                             ///< reports 0 for a missing key, which would satisfy the
+                             ///< window vacuously.
         SPEND_WITHIN_WINDOW, ///< The most-recent spend is not beyond the finality window
                              ///< (maxHeight − spend_height &lt; N).
         NO_OUTPUTS,          ///< The transaction produces no UTXOs (GetProducedUTXOs
@@ -237,6 +239,29 @@ namespace sgns
                           TransactionManager   &transaction_manager,
                           UTXOManager          &utxo_manager,
                           const PruningConfig  &config );
+
+        /**
+         * @brief       Evaluates one enumerated candidate against every gate.
+         * @details     Fail-closed gate order: allowlist, deserialize, outputs,
+         *              then per output genuine-consumption (D-C2) -> spender
+         *              recorded -> spender RESOLVED (existence) -> spender
+         *              priority. Existence is established BEFORE any priority
+         *              read because GetKeyPriority reports 0 for a missing key —
+         *              0 would satisfy the window vacuously (T-17-0403).
+         *              spend_height is the MAX spender priority over outputs
+         *              (the most-recent spend binds).
+         * @param[in]   key Full candidate storage key.
+         * @param[in]   value Serialized transaction bytes.
+         * @param[in]   allowlisted Pre-computed IsAllowlistedTxKey verdict.
+         * @param[in]   max_height Head height for the window comparison.
+         * @param[in]   window Configured finality window N.
+         * @return      The structured per-candidate verdict.
+         */
+        PruneCandidateResult EvaluateCandidate( const std::string  &key,
+                                                const base::Buffer &value,
+                                                bool                allowlisted,
+                                                uint64_t            max_height,
+                                                uint64_t            window ) const;
 
         /// Committed-state reader (enumeration, priorities, head height). Never written.
         crdt::GlobalDB &globaldb_m;
