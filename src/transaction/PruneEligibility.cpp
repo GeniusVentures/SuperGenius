@@ -288,6 +288,15 @@ namespace sgns
             const auto &candidate_cid = candidate.cid;
             if ( !candidate_cid.has_value() )
             {
+                // WR-05: an eligible candidate whose tx->CID map entry could
+                // not be resolved still gets an explicit block verdict —
+                // fail closed, never silently dropped from the report.
+                BlockGateResult ungated;
+                ungated.cid = "<unresolved for " + candidate.tx_path + ">";
+                RecordReason( ungated, PruneReason::CID_UNRESOLVED );
+                logger_->error( "Eligible candidate {} has no resolvable CID — reporting an ungated block verdict",
+                                candidate.tx_path );
+                result.block_reports.push_back( ungated );
                 continue;
             }
             const std::string &cid = candidate_cid.value();

@@ -78,6 +78,12 @@ namespace sgns
                               ///< not in the eligible set — the block holds a sibling
                               ///< that is not itself prunable, so the BLOCK is not
                               ///< erasable (the tx can still be eligible on its own).
+        CID_UNRESOLVED,       ///< PRUNE-03 block gate: an ELIGIBLE candidate's
+                              ///< tx->CID map entry could not be resolved, so no
+                              ///< delta-block verdict can be computed — reported
+                              ///< as an explicit not-erasable block report
+                              ///< (fail closed), never silently dropped from
+                              ///< the report (WR-05).
         SPENDER_PRUNED_WINDOW_SATISFIED, ///< EVIDENCE code (the only non-failure
                                          ///< reason): the spender's own entries are gone because
                                          ///< the spender was pruned (marker present, value
@@ -149,7 +155,10 @@ namespace sgns
      */
     struct BlockGateResult
     {
-        /// CID string of the gated delta block.
+        /// CID string of the gated delta block — or the sentinel
+        /// "&lt;unresolved for &lt;tx path&gt;&gt;" when an ELIGIBLE candidate's
+        /// CID could not be resolved (CID_UNRESOLVED; the verdict is then
+        /// not-erasable by construction, WR-05).
         std::string cid;
 
         /// True only when every carried key passed both checks — reasons is
