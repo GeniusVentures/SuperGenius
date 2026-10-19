@@ -47,7 +47,10 @@ namespace sgns
      * @brief       Why one candidate is (or is not) prune-eligible (D-03 structured result).
      * @details     Every ineligible candidate carries at least one of these codes —
      *              nothing is silently dropped (repudiability). Codes are fail-closed:
-     *              each one names a check whose failure must block erasure.
+     *              each one names a check whose failure must block erasure, EXCEPT
+     *              SPENDER_PRUNED_WINDOW_SATISFIED, the sole affirmative-evidence
+     *              code (it appears on ELIGIBLE verdicts so a satisfied-by-marker
+     *              window is explicit, never silent).
      */
     enum class PruneReason : uint8_t
     {
@@ -56,11 +59,11 @@ namespace sgns
         SPENDER_NOT_RECORDED, ///< The output is genuinely consumed but no spending
                               ///< transaction identity was recorded (spent_by_txid unset).
         SPENDER_UNRESOLVED,   ///< The recorded spender's tx->CID map entry was not found,
-                              ///< or its priority could not be read (fail closed; refined
-                              ///< to pruned-marker semantics in 17-05). Existence MUST be
-                              ///< established BEFORE any priority read: GetKeyPriority
-                              ///< reports 0 for a missing key, which would satisfy the
-                              ///< window vacuously.
+                              ///< or its priority could not be read (fail closed; the
+                              ///< pruned-marker refinement below narrows this). Existence
+                              ///< MUST be established BEFORE any priority read:
+                              ///< GetKeyPriority reports 0 for a missing key, which
+                              ///< would satisfy the window vacuously.
         SPEND_WITHIN_WINDOW,  ///< The most-recent spend is not beyond the finality window
                               ///< (maxHeight − spend_height &lt; N).
         NO_OUTPUTS,           ///< The transaction produces no UTXOs (GetProducedUTXOs
@@ -70,6 +73,18 @@ namespace sgns
                               ///< excludes such keys — reported, never dropped).
         DESERIALIZE_FAILED,   ///< The stored value could not be deserialized into a
                               ///< transaction (fail closed; the scan continues).
+        NON_ELIGIBLE_SIBLING, ///< PRUNE-03 block gate: a key the delta block carries
+                              ///< (element OR tombstone) is allowlist-conformant but
+                              ///< not in the eligible set — the block holds a sibling
+                              ///< that is not itself prunable, so the BLOCK is not
+                              ///< erasable (the tx can still be eligible on its own).
+        SPENDER_PRUNED_WINDOW_SATISFIED, ///< EVIDENCE code (the only non-failure
+                                         ///< reason): the spender's own entries are gone because
+                                         ///< the spender was pruned (marker present, value
+                                         ///< absent). A pruned spender's own window elapsed by
+                                         ///< construction, so this spend is older still — the
+                                         ///< output's window counts as SATISFIED, explicitly
+                                         ///< (D-02/B spec point 5, never silent).
     };
 
     /**
@@ -82,23 +97,25 @@ namespace sgns
      */
     enum class PrunedLookup : uint8_t
     {
-        PRUNED,                         ///< Marker present AND value absent: the
-                                        ///< transaction's history was physically
-                                        ///< pruned on this node.
-        NOT_FOUND,                      ///< No marker AND no value: the transaction
-                                        ///< is simply unknown here.
+        PRUNED,                            ///< Marker present AND value absent: the
+                                           ///< transaction's history was physically
+                                           ///< pruned on this node.
+        NOT_FOUND,                         ///< No marker AND no value: the transaction
+                                           ///< is simply unknown here.
         VALUE_PRESENT_INVARIANT_VIOLATION, ///< Marker AND value both present: violates
-                                        ///< the value-XOR-marker invariant (Phase 18
-                                        ///< writes both sides in ONE batch, so this
-                                        ///< state signals corruption — report, never
-                                        ///< guess which side is right).
+                                           ///< the value-XOR-marker invariant (Phase 18
+                                           ///< writes both sides in ONE batch, so this
+                                           ///< state signals corruption — report, never
+                                           ///< guess which side is right).
     };
 
     /**
      * @brief       Structured verdict for one candidate transaction key.
      * @details     Named-evidence discipline (PublicChainInputValidator shape):
-     *              fields are recorded only after the check that produces them ran;
-     *              an eligible verdict exists only with an empty reasons vector.
+     *              fields are recorded only after the check that produces them
+     *              ran; an eligible verdict carries no FAILURE reasons — the
+     *              only permitted non-empty reasons on an eligible verdict is
+     *              the sole evidence code SPENDER_PRUNED_WINDOW_SATISFIED.
      */
     struct PruneCandidateResult
     {
@@ -108,10 +125,11 @@ namespace sgns
         /// CID of the candidate from the tx->CID map (nullopt when unresolved).
         std::optional<std::string> cid;
 
-        /// True only when every gate passed — reasons is then empty.
+        /// True only when every gate passed — reasons then carries no failure code.
         bool eligible = false;
 
-        /// Every failed check, in evaluation order; empty iff eligible.
+        /// Every failed check, in evaluation order, plus (on eligible verdicts)
+        /// the affirmative SPENDER_PRUNED_WINDOW_SATISFIED evidence if any.
         std::vector<PruneReason> reasons;
 
         /// Diagnostic: the MOST-RECENT spend height (max spender priority over
@@ -120,16 +138,45 @@ namespace sgns
     };
 
     /**
+     * @brief       Structured verdict of the multi-element block gate (PRUNE-03).
+     * @details     A delta block is erasable only when EVERY key it carries —
+     *              elements AND tombstones, parsed from the block itself at
+     *              evaluation time — is allowlist-conformant and inside the
+     *              eligible set (D-C3). Kept SEPARATE from the per-candidate
+     *              eligible flag: a transaction can be eligible (PRUNE-01)
+     *              while its block is held by a non-eligible sibling
+     *              (PRUNE-03) — two verdicts, one report each.
+     */
+    struct BlockGateResult
+    {
+        /// CID string of the gated delta block.
+        std::string cid;
+
+        /// True only when every carried key passed both checks — reasons is
+        /// then empty.
+        bool erasable = false;
+
+        /// Every failed per-key check (deduplicated); empty iff erasable.
+        std::vector<PruneReason> reasons;
+    };
+
+    /**
      * @brief       Structured result of one evaluation pass (D-03).
      * @details     Pure report: the evaluator erased nothing and wrote nothing.
      *              Production dry-run mode derives its per-cycle INFO summary
-     *              from this structure; the Phase-18 TxPruner consumes the
-     *              eligible subset as its work list.
+     *              from this structure (candidates AND block verdicts); the
+     *              Phase-18 TxPruner consumes the eligible subset as its work
+     *              list and consults block_reports before deleting a block.
      */
     struct PruneEvaluationResult
     {
         /// One entry per enumerated candidate key, eligible and ineligible alike.
         std::vector<PruneCandidateResult> candidates;
+
+        /// PRUNE-03 block-gate verdicts, one per DISTINCT CID among the
+        /// eligible candidates (deduplicated — batched commits put several
+        /// eligible transactions into one block).
+        std::vector<BlockGateResult> block_reports;
 
         /**
          * @brief   Number of eligible candidates in this pass.
@@ -198,6 +245,10 @@ namespace sgns
      *                match /bc-<net>/txfoo siblings).
      *              - Evaluate fails closed with std::errc::invalid_argument
      *                when no finality_window is configured.
+     *              - EvaluateDeltaBlockErasable is the PRUNE-03 gate: a block
+     *                erases only when every element AND tombstone key it
+     *                carries is eligible and allowlist-conformant, parsed
+     *                from the block itself (D-C3).
      */
     class PruneEligibility
     {
@@ -257,6 +308,31 @@ namespace sgns
          */
         outcome::result<PruneEvaluationResult> Evaluate() const;
 
+        /**
+         * @brief       THE multi-element block gate (PRUNE-03, D-C3).
+         * @details     Parses the delta block @p cid_string itself, at
+         *              evaluation time, via GlobalDB::GetLocalDeltaKeys
+         *              (elements AND tombstones; "what this node applied" is
+         *              forbidden as an oracle — light nodes store elements
+         *              they never applied). The block is erasable only when
+         *              EVERY carried key is (a) IsAllowlistedTxKey-true and
+         *              (b) present in @p eligible's eligible set (matched by
+         *              tx path). A non-conformant key reports OUT_OF_PREFIX;
+         *              an allowlisted key outside the eligible set reports
+         *              NON_ELIGIBLE_SIBLING (an elements-only gate would miss
+         *              tombstone keys — Pitfall 4). Parse failure fails
+         *              closed: a not-erasable result carrying
+         *              DESERIALIZE_FAILED, never a crash and never a guess.
+         *              Read-only; writes nothing.
+         * @param[in]   cid_string CID of the delta block to gate.
+         * @param[in]   eligible Evaluation whose eligible set (PRUNE-01
+         *              verdicts) the carried keys are matched against.
+         * @return      The block verdict (erasable=false with reasons on any
+         *              miss or parse failure).
+         */
+        outcome::result<BlockGateResult> EvaluateDeltaBlockErasable( const std::string           &cid_string,
+                                                                     const PruneEvaluationResult &eligible ) const;
+
         //
         // Pruned-marker contract (D-04 design — Phase 17 delivers format +
         // lookup semantics; the production WRITE joins Phase 18's erase batch).
@@ -309,7 +385,7 @@ namespace sgns
          * @param[in]   record Marker payload to persist.
          * @return      outcome::success, or outcome::failure on I/O error.
          */
-        static outcome::result<void> WritePrunedEntryForTest( crdt::GlobalDB                                &db,
+        static outcome::result<void> WritePrunedEntryForTest( crdt::GlobalDB                               &db,
                                                               const std::string                            &tx_hash,
                                                               const SGTransaction::PrunedTransactionRecord &record );
 

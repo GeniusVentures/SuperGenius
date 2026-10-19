@@ -11,6 +11,8 @@
 
 #include "transaction/PruneEligibility.hpp"
 
+#include <set>
+
 #include "account/UTXOManager.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "storage/database_error.hpp"
@@ -25,13 +27,27 @@ namespace sgns
         constexpr char kWindowRequiredMessage[] =
             "pruning.enabled requires pruning.finality_window; pruning disabled (fail closed)";
 
-        /// Records @p reason on @p candidate once (per-category evidence, no duplicates).
-        void RecordReason( PruneCandidateResult &candidate, PruneReason reason )
+        /// Records @p reason on @p target once (per-category evidence, no
+        /// duplicates). Works for both verdict structs — each carries a
+        /// reasons vector with identical semantics.
+        template <typename T>
+        void RecordReason( T &target, PruneReason reason )
         {
-            if ( std::find( candidate.reasons.begin(), candidate.reasons.end(), reason ) == candidate.reasons.end() )
+            if ( std::find( target.reasons.begin(), target.reasons.end(), reason ) == target.reasons.end() )
             {
-                candidate.reasons.push_back( reason );
+                target.reasons.push_back( reason );
             }
+        }
+
+        /// True when @p reasons carries any FAILURE code. Every PruneReason is
+        /// a failure except the sole affirmative-evidence code
+        /// SPENDER_PRUNED_WINDOW_SATISFIED (an eligible verdict may carry it).
+        bool HasFailureReason( const std::vector<PruneReason> &reasons )
+        {
+            return std::any_of( reasons.begin(),
+                                reasons.end(),
+                                []( PruneReason reason )
+                                { return reason != PruneReason::SPENDER_PRUNED_WINDOW_SATISFIED; } );
         }
 
         /// Logger for the static marker-contract functions (no instance exists
@@ -239,10 +255,89 @@ namespace sgns
             }
         }
 
-        logger_->info( "Prune evaluation: {} candidates, {} eligible",
+        // PRUNE-03 block gate: one verdict per DISTINCT CID among the eligible
+        // candidates (batched commits share one block, so several eligible
+        // transactions often map to the same CID). Tx eligibility (PRUNE-01)
+        // and block erasability (PRUNE-03) stay SEPARATE verdicts — a block
+        // held by a non-eligible sibling never flips a candidate's flag.
+        std::set<std::string> gated_cids;
+        for ( const auto &candidate : result.candidates )
+        {
+            if ( !candidate.eligible )
+            {
+                continue;
+            }
+            const auto &candidate_cid = candidate.cid;
+            if ( !candidate_cid.has_value() )
+            {
+                continue;
+            }
+            const std::string &cid = candidate_cid.value();
+            if ( !gated_cids.insert( cid ).second )
+            {
+                continue; // this block already gated (shared CID)
+            }
+            auto gate = EvaluateDeltaBlockErasable( cid, result );
+            if ( gate.has_error() )
+            {
+                logger_->error( "Block gate failed for cid {}", cid );
+                continue; // never abort the report for one block
+            }
+            result.block_reports.push_back( gate.value() );
+        }
+
+        const auto erasable_blocks = static_cast<size_t>( std::count_if( result.block_reports.begin(),
+                                                                         result.block_reports.end(),
+                                                                         []( const BlockGateResult &report )
+                                                                         { return report.erasable; } ) );
+        logger_->info( "Prune evaluation: {} candidates, {} eligible, {}/{} blocks erasable",
                        result.candidates.size(),
-                       result.EligibleCount() );
+                       result.EligibleCount(),
+                       erasable_blocks,
+                       result.block_reports.size() );
         return result;
+    }
+
+    outcome::result<BlockGateResult> PruneEligibility::EvaluateDeltaBlockErasable(
+        const std::string           &cid_string,
+        const PruneEvaluationResult &eligible ) const
+    {
+        BlockGateResult report;
+        report.cid = cid_string;
+
+        // The block is the source of truth (D-C3): parse it NOW, keys only,
+        // elements AND tombstones — "what this node applied" is forbidden as
+        // an oracle (light nodes store elements they never applied).
+        auto keys = globaldb_m.GetLocalDeltaKeys( cid_string );
+        if ( keys.has_error() )
+        {
+            // Parse failure fails closed: not erasable, never a crash.
+            logger_->error( "Unable to parse delta block {} for the block gate: {}",
+                            cid_string,
+                            keys.error().message() );
+            RecordReason( report, PruneReason::DESERIALIZE_FAILED );
+            return report;
+        }
+
+        for ( const auto &key : keys.value() )
+        {
+            if ( !IsAllowlistedTxKey( key ) )
+            {
+                RecordReason( report, PruneReason::OUT_OF_PREFIX );
+                continue;
+            }
+            const bool in_eligible_set = std::any_of( eligible.candidates.begin(),
+                                                      eligible.candidates.end(),
+                                                      [&key]( const PruneCandidateResult &candidate )
+                                                      { return candidate.eligible && candidate.tx_path == key; } );
+            if ( !in_eligible_set )
+            {
+                RecordReason( report, PruneReason::NON_ELIGIBLE_SIBLING );
+            }
+        }
+
+        report.erasable = report.reasons.empty();
+        return report;
     }
 
     PruneCandidateResult PruneEligibility::EvaluateCandidate( const std::string  &key,
@@ -308,6 +403,27 @@ namespace sgns
             auto resolved = transaction_manager_m.ResolveTransactionPathAndCID( spender->toReadableString() );
             if ( resolved.has_error() )
             {
+                // Pruned-marker refinement (D-02/B spec point 5): the spender's
+                // own entries may be gone because the spender was ITSELF pruned
+                // (marker present, value absent). A pruned spender's own window
+                // elapsed by construction, so this spend is older still — the
+                // output's window counts as SATISFIED, with the explicit
+                // evidence code (never silent). NOT_FOUND or an invariant
+                // violation keeps SPENDER_UNRESOLVED (fail closed).
+                auto pruned = LookupPrunedEntry( globaldb_m, spender->toReadableString() );
+                if ( !pruned.has_error() && pruned.value().first == PrunedLookup::PRUNED )
+                {
+                    RecordReason( candidate, PruneReason::SPENDER_PRUNED_WINDOW_SATISFIED );
+                    // Effective spend height 0 — the earliest DAG height. The
+                    // max-over-outputs binding is preserved (0 never displaces
+                    // a resolved height), and the window check below still
+                    // requires max_height >= N (fail closed under it).
+                    if ( !spend_height.has_value() )
+                    {
+                        spend_height = 0;
+                    }
+                    continue;
+                }
                 RecordReason( candidate, PruneReason::SPENDER_UNRESOLVED );
                 continue;
             }
@@ -329,10 +445,11 @@ namespace sgns
 
         candidate.spend_height = spend_height;
 
-        if ( !candidate.reasons.empty() )
+        if ( HasFailureReason( candidate.reasons ) )
         {
             // A per-output gate already failed; spend_height stays as the
-            // diagnostic of whatever partial evidence existed.
+            // diagnostic of whatever partial evidence existed. (The evidence
+            // code alone does not fail the candidate.)
             return candidate;
         }
 
