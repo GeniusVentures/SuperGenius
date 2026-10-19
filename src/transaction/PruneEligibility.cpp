@@ -163,6 +163,19 @@ namespace sgns
             return outcome::failure( std::errc::bad_message );
         }
 
+        // WR-04: the record's tx_path must be THE path this hash names (the
+        // hash is the path's terminal segment). A marker pointing elsewhere —
+        // or an empty payload whose tx_path is empty — would otherwise answer
+        // PRUNED for the wrong key (granting SPENDER_PRUNED_WINDOW_SATISFIED)
+        // or prefix-scan the entire store. Fail closed, never guess.
+        const std::string &marker_path = record.tx_path();
+        if ( marker_path.empty() || marker_path.size() < tx_hash.size() ||
+             marker_path.compare( marker_path.size() - tx_hash.size(), tx_hash.size(), tx_hash ) != 0 )
+        {
+            MarkerLogger()->error( "Pruned marker for tx {} carries mismatched path {}", tx_hash, marker_path );
+            return outcome::failure( std::errc::bad_message );
+        }
+
         // Value presence through the same CRDT-layer query surface the
         // evaluator enumerates (T-17-0503: one resolution path for both reads).
         // Exact-key match — a prefix scan alone would also catch longer

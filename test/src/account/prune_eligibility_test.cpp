@@ -1015,6 +1015,40 @@ TEST_F( PruneEligibilityTest, PruneMarker_MarkerAndValueIsInvariantViolation )
 }
 
 /**
+ * WR-04 — a decoded marker whose tx_path does NOT end with the requested
+ * tx_hash is an invariant-violation error, never a silent PRUNED (the
+ * SPENDER_PRUNED_WINDOW_SATISFIED grant depends on this check).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_MismatchedPathIsError )
+{
+    const std::string marker_hash = std::string( 64, 'c' );
+    const std::string other_hash  = std::string( 64, 'd' );
+
+    // Well-formed record — but it names ANOTHER transaction's path.
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( other_hash ) );
+    record.set_cid( "cross-path-cid" );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, marker_hash, record ).has_value() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, marker_hash );
+    ASSERT_TRUE( lookup.has_error() );
+}
+
+/**
+ * WR-04 — an EMPTY marker payload decodes as a record with an empty tx_path;
+ * the lookup must fail closed instead of prefix-scanning the whole store.
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_EmptyPayloadIsError )
+{
+    const std::string                      hash = std::string( 64, 'e' );
+    SGTransaction::PrunedTransactionRecord empty_record;
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, hash, empty_record ).has_value() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, hash );
+    ASSERT_TRUE( lookup.has_error() );
+}
+
+/**
  * B4 — a candidate whose spender was ERASED (Phase-16 flow, test-sanctioned)
  * evaluates eligible with the explicit SPENDER_PRUNED_WINDOW_SATISFIED
  * evidence code; the control (erased spender, NO marker) stays

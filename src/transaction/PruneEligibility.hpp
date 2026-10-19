@@ -364,8 +364,12 @@ namespace sgns
          *              ¬marker ∧ ¬value ⇒ NOT_FOUND; marker ∧ value ⇒
          *              VALUE_PRESENT_INVARIANT_VIOLATION (logged at ERROR —
          *              never guessed). A malformed marker payload is an error
-         *              result, never a silent PRUNED (T-17-0502). Writes
-         *              nothing.
+         *              result, never a silent PRUNED (T-17-0502), and a
+         *              decoded record whose tx_path does not end with the
+         *              requested tx_hash (the empty-payload degenerate case
+         *              included) is an invariant-violation error too — never
+         *              a silent PRUNED and never a whole-store prefix scan
+         *              (WR-04). Writes nothing.
          * @param[in]   db Committed-state reader (marker + value presence).
          * @param[in]   tx_hash Transaction hash (readable string form).
          * @return      (verdict, decoded record when a marker decoded), or
