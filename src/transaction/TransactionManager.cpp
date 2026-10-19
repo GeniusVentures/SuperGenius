@@ -2634,7 +2634,11 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_tx ) ) );
+        BOOST_OUTCOME_TRY(
+            utxo_mgr.ConsumeUTXOs( inputs,
+                                   TransferInputOwner( *transfer_tx ),
+                                   sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                   base::Hash256::fromReadableString( transfer_tx->GetHash() ).value() ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
@@ -2653,8 +2657,11 @@ namespace sgns
 
             if ( !params.first.empty() )
             {
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, migration_tx->GetSrcAddress() ) );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
+                    params.first,
+                    migration_tx->GetSrcAddress(),
+                    sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                    base::Hash256::fromReadableString( migration_tx->GetHash() ).value() ) );
             }
 
             m_logger->info( "Created tokens (migration), amount {} balance {}",
@@ -2697,11 +2704,12 @@ namespace sgns
                             return outcome::failure( std::errc::already_connected );
                         }
                     }
-                    BOOST_OUTCOME_TRY(
-                        auto consumed,
-                        account_m->GetUTXOManager().ConsumeUTXOs( inputs,
-                                                                  mint_tx_v2->GetSrcAddress(),
-                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                    BOOST_OUTCOME_TRY( auto consumed,
+                                       account_m->GetUTXOManager().ConsumeUTXOs(
+                                           inputs,
+                                           mint_tx_v2->GetSrcAddress(),
+                                           sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
+                                           base::Hash256::fromReadableString( mint_tx_v2->GetHash() ).value() ) );
                     if ( !consumed )
                     {
                         m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
@@ -2868,7 +2876,11 @@ namespace sgns
 
         if ( !params.first.empty() )
         {
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
+                params.first,
+                escrow_tx->GetSrcAddress(),
+                sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                base::Hash256::fromReadableString( escrow_tx->GetHash() ).value() ) );
         }
 
         return outcome::success();

@@ -262,9 +262,10 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
-                                                     const std::string                &address,
-                                                     UTXOType                          type )
+    outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo>   &infos,
+                                                     const std::string                  &address,
+                                                     UTXOType                            type,
+                                                     const std::optional<base::Hash256> &consuming_txid )
     {
         bool             consumed = true;
         std::unique_lock lock( utxos_mutex_ );
@@ -285,8 +286,9 @@ namespace sgns
                 if ( ( entry.state == UTXOState::UTXO_READY || entry.state == UTXOState::UTXO_RESERVED ) &&
                      owner_matches && entry.type == type )
                 {
-                    utxo_found  = true;
-                    entry.state = UTXOState::UTXO_CONSUMED;
+                    utxo_found          = true;
+                    entry.state         = UTXOState::UTXO_CONSUMED;
+                    entry.spent_by_txid = consuming_txid;
                 }
             }
 
@@ -305,8 +307,8 @@ namespace sgns
                 utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_CONSUMED,
                                                        consumed_utxo,
                                                        0,
-                                                       std::nullopt,
-                                                       std::nullopt,
+                                                       std::nullopt, // spent_epoch stays dead (D-02 forbids wall-clock)
+                                                       consuming_txid,
                                                        type };
             }
 
@@ -780,6 +782,18 @@ namespace sgns
         auto             it = utxo_outpoints_.find( OutPoint{ utxo_id, output_idx } );
         return it != utxo_outpoints_.end() && it->second.state == UTXOState::UTXO_CONSUMED &&
                it->second.utxo.GetAmount() != 0;
+    }
+
+    std::optional<base::Hash256> UTXOManager::GetOutPointSpender( const base::Hash256 &utxo_id,
+                                                                  uint32_t             output_idx ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        auto             it = utxo_outpoints_.find( OutPoint{ utxo_id, output_idx } );
+        if ( it == utxo_outpoints_.end() )
+        {
+            return std::nullopt;
+        }
+        return it->second.spent_by_txid;
     }
 
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const
