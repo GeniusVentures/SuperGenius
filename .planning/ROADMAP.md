@@ -103,7 +103,16 @@ Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadm
   3. Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references — adversarial test shows rejection where today's path accepts — and native-mint vs bridge-mint follow explicitly separated per-type consensus rules (MINT-02)
   4. A newly submitted self-signed legacy-v1 mint is rejected (adversarial test), while pre-cutover outputs remain spendable, a fresh node syncs to READY, and a restart recovers — admission gating only, never deserialization gating (compat twin) (MINT-03)
   5. A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Verified registry loader (raw core + chain-walk verification + memo cap 64) with unit adversarial/compat pairs (TRUST-01)
+- [ ] 21-02-PLAN.md — MINT-02 fail-closed per-type evidence branches + MINT-04 receipt decode/fact binding at one home + mock-transport test pairs
+- [ ] 21-03-PLAN.md — D-03 BoundedDeferTracker + network_config keys (defer window, admission cap) + folded-todo genesis fingerprint pin + boot tamper tests
+- [ ] 21-04-PLAN.md — TRUST-01 certificate layer: grandfather probe, classified verdicts (Stalled never memoized), verified-only cache, D-03 deadline, multi-node adversarial/compat pairs
+- [ ] 21-05-PLAN.md — MINT-03 ingress gates: consensus-ingress type rule + local/RPC preflight rejection (zero-value exempt) + unit pairs
+- [ ] 21-06-PLAN.md — MINT-03 sync admission: certificate-conditional Stall/Reject with stall-resolution negative control + migration/spendability compat twins
+- [ ] 21-07-PLAN.md — TRUST-02: admission/equivocation audit doc + ACTIVE-cap enforcement + durable-ledger equivocation guard + adversarial/compat pairs
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
@@ -223,7 +232,7 @@ Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadm
 | 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 0/7 | Planned | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
