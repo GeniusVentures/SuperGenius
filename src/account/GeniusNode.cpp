@@ -4974,6 +4974,14 @@ namespace sgns
 
             if ( !evaluation.has_error() )
             {
+                // Generation tag (Phase-13 house pattern, owner-directed):
+                // if an account switch replaced the generation mid-cycle, this
+                // summary describes a RETIRED pair — alive via the snapshot but
+                // no longer current. Tag it instead of reporting it as current;
+                // Phase 18's TxPruner inherits this check before any erase.
+                const bool generation_superseded =
+                    ( SnapshotAccountServices().generation != snapshot.generation );
+
                 const auto &result          = evaluation.value();
                 const auto  eligible        = result.EligibleCount();
                 const auto  erasable_blocks = static_cast<size_t>( std::count_if( result.block_reports.begin(),
@@ -4981,13 +4989,14 @@ namespace sgns
                                                                                  []( const BlockGateResult &block )
                                                                                  { return block.erasable; } ) );
                 node_logger_->info( "Prune dry-run: {} candidate(s), {} eligible / {} ineligible, {}/{} block(s) "
-                                    "erasable ({} held)",
+                                    "erasable ({} held){}",
                                     result.candidates.size(),
                                     eligible,
                                     result.candidates.size() - eligible,
                                     erasable_blocks,
                                     result.block_reports.size(),
-                                    result.block_reports.size() - erasable_blocks );
+                                    result.block_reports.size() - erasable_blocks,
+                                    generation_superseded ? " [generation superseded — retired snapshot]" : "" );
             }
         }
 
