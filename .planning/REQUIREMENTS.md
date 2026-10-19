@@ -67,7 +67,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Value-only erasure (CRDT entries without raw block deletion) | Reclaims nothing meaningful — raw blocks are the bulk of the footprint |
 | CRDT tombstone deletion as the pruning mechanism | `DeleteKey`/`DeleteTransaction` publish network-wide tombstones that would erase history on full/archive nodes too — pruning is a local operation |
 | Vendored ipfs-lite-cpp changes (e.g. `removeSeal`) | Zero vendored changes required; seal markers must be retained anyway |
-| Populating `spent_epoch`/`spent_by_txid` schema fields | Dead schema — never populated at runtime; window comes from height/priority or certificates |
+| Populating `spent_epoch` — remains dead schema (wall-clock-adjacent; D-02 forbids wall-clock semantics). `spent_by_txid` is no longer out of scope: D-02 Candidate B makes it the spend-recency carrier, populated at `UTXOManager::ConsumeUTXOs` (Phase 17) | Candidate A (per-key CRDT priority on CONSUMED entries) failed verification — CONSUMED entries are raw `/utxo/` RocksDB puts outside the CRDT namespace, so no priority exists; the narrow Candidate B amendment is D-02-authorized |
 | New storage dependencies, column-family rework, compaction filters | RocksDB 9.4 + vendored ipfs-lite-cpp already provide the full API surface (STACK.md) |
 
 ## Traceability
@@ -114,3 +114,4 @@ v2 (future) requirements — no phase mapping by design:
 ---
 *Requirements defined: 2026-10-15*
 *Last updated: 2026-10-16 — Phase 16 complete (PRUNE-02, GATE-03); v2 IDs added to traceability as Deferred*
+*Last updated: 2026-10-19 — Phase 17 amendment (D-02 Candidate B): `spent_by_txid` now in scope as the spend-recency carrier populated at `UTXOManager::ConsumeUTXOs`; `spent_epoch` stays out of scope*
