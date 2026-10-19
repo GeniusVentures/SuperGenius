@@ -5,6 +5,7 @@ addtest(crdt_test
     crdt_datastore_test.cpp
     crdt_atomic_transaction_test.cpp
     crdt_erase_test.cpp
+    crdt_priority_delta_keys_test.cpp
     crdt_custom_broadcaster.cpp
     crdt_mirror_broadcaster.cpp
     crdt_custom_dagsyncer.cpp
@@ -17,6 +18,9 @@ include_directories(
 target_link_libraries(crdt_test
     crdt_datastore
     crdt_globaldb_proto
+    # crdt_priority_delta_keys_test.cpp exercises the GlobalDB facade on a
+    # real store; the GlobalDB symbols live only in crdt_globaldb.
+    crdt_globaldb
     rocksdb
     database_error
     ipfs-lite-cpp::cid
