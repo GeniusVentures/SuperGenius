@@ -520,6 +520,21 @@ namespace sgns
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
+
+        /**
+         * @brief Resolves the previous hash for @p nonce from the canonical
+         *        slot certificate at /cert/<addr>:<nonce-1> (GATE-04).
+         *
+         * The certificate is the single authority for the predecessor hash
+         * when tracked/persisted state cannot answer -- a frontier
+         * transaction's value may be pruned, a certificate never is -- with
+         * binding discipline identical to CertificateMatchesTransaction: the
+         * subject must decode, the embedded transaction case must be set, the
+         * certified nonce must equal nonce-1, and the subject account must be
+         * the node's own address. Any certified embedded transaction type
+         * resolves (not only registrations). Fails closed to an empty string
+         * on any failed check.
+         */
         std::string              GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 

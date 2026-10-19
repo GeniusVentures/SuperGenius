@@ -1687,13 +1687,16 @@ namespace sgns
 
     std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
     {
-        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
-        // (SendTransactionItem routes them there), so a nonce chain that passes
-        // through a registration (e.g. RegisterChild then a mint) cannot resolve
-        // its predecessor through the tx/ namespace. Resolve the registration
-        // through its canonical slot certificate: the cert embeds the exact
-        // certified transaction hash, which binds the chain link the same way
-        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        // The canonical slot certificate is the value-independent authority for
+        // the predecessor hash. A tx/ value cannot always answer: registration
+        // transactions persist at reg/{src_addr}, never under tx/{hash}
+        // (SendTransactionItem routes them there), and a pruned frontier
+        // transaction's value is gone from tx/ entirely (GATE-04) -- while a
+        // certificate at /cert/<addr>:<nonce-1> is never pruned. The cert embeds
+        // the exact certified transaction hash, which binds the chain link the
+        // same way CertificateMatchesTransaction does. Any certified embedded
+        // transaction type resolves; every binding check below fails closed to
+        // "" (never a guessed hash).
         if ( nonce == 0 || !globaldb_m )
         {
             return "";
@@ -1717,7 +1720,7 @@ namespace sgns
         }
 
         auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        if ( embedded.has_error() || !embedded.value() )
         {
             return "";
         }
