@@ -703,3 +703,131 @@ TEST_F( UTXOManagerTest, ConsumeUTXOsPersistsConsumedStateUnderStoredOwner )
     ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
     EXPECT_TRUE( reloaded->IsOutPointConsumed( outpoint_hash, 0 ) );
 }
+
+TEST_F( UTXOManagerTest, GenuineConsumeRecordsSpender )
+{
+    /**
+     * D-02 Candidate-B carrier: a genuine ConsumeUTXOs call records the
+     * consuming transaction's hash on the consumed entry, readable through
+     * GetOutPointSpender alongside the genuine-spend discriminator.
+     */
+    const auto        outpoint_hash = base::Hash256::fromReadableString( std::string( 64, 'a' ) ).value();
+    const auto        spender       = base::Hash256::fromReadableString( std::string( 64, 'b' ) ).value();
+    const std::string owner         = "spender-owner";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( outpoint_hash, 0, 100, TOKEN_1 ), owner ).value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_    = outpoint_hash;
+    input.output_idx_   = 0;
+    const auto consumed = utxo_manager->ConsumeUTXOs( { input }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender );
+    ASSERT_TRUE( consumed.has_value() );
+    EXPECT_TRUE( consumed.value() );
+
+    const auto recorded = utxo_manager->GetOutPointSpender( outpoint_hash, 0 );
+    ASSERT_TRUE( recorded.has_value() );
+    EXPECT_EQ( recorded->toReadableString(), spender.toReadableString() );
+    EXPECT_TRUE( utxo_manager->IsOutPointGenuinelyConsumed( outpoint_hash, 0 ) );
+}
+
+TEST_F( UTXOManagerTest, SynthesizedTombstoneCarriesSpenderButNotGenuine )
+{
+    /**
+     * Uniform population: an unknown outpoint synthesizes a zero-amount
+     * CONSUMED tombstone that still carries the spender — but the D-C2
+     * discriminator excludes it from genuine-spend (eligibility) evidence.
+     */
+    const auto unknown = base::Hash256::fromReadableString( std::string( 64, 'c' ) ).value();
+    const auto spender = base::Hash256::fromReadableString( std::string( 64, 'd' ) ).value();
+
+    InputUTXOInfo input;
+    input.txid_hash_    = unknown;
+    input.output_idx_   = 7;
+    const auto consumed = utxo_manager->ConsumeUTXOs( { input },
+                                                      "tombstone-spender",
+                                                      UTXOManager::UTXOType::UTXO_NORMAL,
+                                                      spender );
+    ASSERT_TRUE( consumed.has_value() );
+    EXPECT_FALSE( consumed.value() ); // unknown outpoint: not every input was consumed
+
+    const auto recorded = utxo_manager->GetOutPointSpender( unknown, 7 );
+    ASSERT_TRUE( recorded.has_value() );
+    EXPECT_EQ( recorded->toReadableString(), spender.toReadableString() );
+    EXPECT_FALSE( utxo_manager->IsOutPointGenuinelyConsumed( unknown, 7 ) );
+}
+
+TEST_F( UTXOManagerTest, RestoreConsumedUTXOsResetsSpender )
+{
+    /**
+     * The revert path keeps the carrier symmetric: restoring a consumed
+     * input clears spent_by_txid and makes the outpoint spendable again.
+     */
+    const auto        outpoint_hash = base::Hash256::fromReadableString( std::string( 64, 'e' ) ).value();
+    const auto        spender       = base::Hash256::fromReadableString( std::string( 64, 'f' ) ).value();
+    const std::string owner         = "restore-owner";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( outpoint_hash, 0, 25, TOKEN_1 ), owner ).value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_  = outpoint_hash;
+    input.output_idx_ = 0;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { input }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).has_value() );
+    ASSERT_TRUE( utxo_manager->GetOutPointSpender( outpoint_hash, 0 ).has_value() );
+
+    ASSERT_TRUE(
+        utxo_manager->RestoreConsumedUTXOs( { input }, owner, UTXOManager::UTXOType::UTXO_NORMAL ).has_value() );
+
+    EXPECT_FALSE( utxo_manager->GetOutPointSpender( outpoint_hash, 0 ).has_value() );
+    EXPECT_EQ( utxo_manager->GetOutPointState( outpoint_hash, 0 ).value(), UTXOManager::UTXOState::UTXO_READY );
+}
+
+TEST_F( UTXOManagerTest, SpenderSurvivesBucketRewriteAndReload )
+{
+    /**
+     * Durability of the carrier: a later write to the SAME address bucket
+     * forces StoreUTXOSnapshot's whole-bucket remove+reput, and a fresh
+     * manager LoadUTXOs-ing the same DB still reads the original spender.
+     */
+    const auto        outpoint_hash = base::Hash256::fromReadableString( std::string( 64, '6' ) ).value();
+    const auto        later_hash    = base::Hash256::fromReadableString( std::string( 64, '7' ) ).value();
+    const auto        spender       = base::Hash256::fromReadableString( std::string( 64, '8' ) ).value();
+    const std::string owner         = "rewrite-owner";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( outpoint_hash, 0, 40, TOKEN_1 ), owner ).value() );
+
+    InputUTXOInfo first;
+    first.txid_hash_  = outpoint_hash;
+    first.output_idx_ = 0;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { first }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).has_value() );
+
+    // Second lifecycle on the same bucket: PutUTXO re-stores the whole owner
+    // bucket (remove + reput), then a second consume rewrites it again.
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( later_hash, 1, 60, TOKEN_1 ), owner ).value() );
+    InputUTXOInfo second;
+    second.txid_hash_  = later_hash;
+    second.output_idx_ = 1;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { second }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).has_value() );
+
+    utxo_manager.reset();
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &_, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
+
+    const auto recorded = reloaded->GetOutPointSpender( outpoint_hash, 0 );
+    ASSERT_TRUE( recorded.has_value() );
+    EXPECT_EQ( recorded->toReadableString(), spender.toReadableString() );
+    EXPECT_TRUE( reloaded->IsOutPointGenuinelyConsumed( outpoint_hash, 0 ) );
+}
