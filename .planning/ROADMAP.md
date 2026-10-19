@@ -11,6 +11,7 @@
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -94,118 +95,152 @@ Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadm
 ## Phase Details (v1.3 — ACTIVE)
 
 ### Phase 21: Consensus Trust & Mint Authorization
+
 **Goal**: The certificate trust anchor holds on a public network — a registry loaded by CID is authorization-verified with a grandfather rule that keeps historical finality re-validating — and every mint/escrow authorization gap from the assessment's highest-credibility findings (#1, #3, #4, #5, #14) closes fail-closed without orphaning legitimate state.
 **Depends on**: Nothing within v1.3 (first phase; numbering continues after v1.2's Phase 20)
 **Requirements**: TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04
 **Success Criteria** (what must be TRUE):
+
   1. A certificate path loading a validator registry by CID rejects a forged/self-certified registry (adversarial test: attacker authority = a peer supplying an unauthorized registry CID; expected rejection; actual behavior recorded), while pre-upgrade certificates still re-validate after restart and catch-up sync completes unchanged (compat twin) (TRUST-01)
   2. The validator admission growth-bounds and cross-certificate equivocation audit is documented with findings and dispositions against the hardened registry path (TRUST-02)
   3. Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references — adversarial test shows rejection where today's path accepts — and native-mint vs bridge-mint follow explicitly separated per-type consensus rules (MINT-02)
   4. A newly submitted self-signed legacy-v1 mint is rejected (adversarial test), while pre-cutover outputs remain spendable, a fresh node syncs to READY, and a restart recovers — admission gating only, never deserialization gating (compat twin) (MINT-03)
   5. A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)
-**Plans**: 7 plans
 
+**Plans**: 7 plans
 Plans:
+**Wave 1**
+
 - [ ] 21-01-PLAN.md — Verified registry loader (raw core + chain-walk verification + memo cap 64) with unit adversarial/compat pairs (TRUST-01)
 - [ ] 21-02-PLAN.md — MINT-02 fail-closed per-type evidence branches + MINT-04 receipt decode/fact binding at one home + mock-transport test pairs
 - [ ] 21-03-PLAN.md — D-03 BoundedDeferTracker + network_config keys (defer window, admission cap) + folded-todo genesis fingerprint pin + boot tamper tests
-- [ ] 21-04-PLAN.md — TRUST-01 certificate layer: grandfather probe, classified verdicts (Stalled never memoized), verified-only cache, D-03 deadline, multi-node adversarial/compat pairs
 - [ ] 21-05-PLAN.md — MINT-03 ingress gates: consensus-ingress type rule + local/RPC preflight rejection (zero-value exempt) + unit pairs
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 21-04-PLAN.md — TRUST-01 certificate layer: grandfather probe, classified verdicts (Stalled never memoized), verified-only cache, D-03 deadline, multi-node adversarial/compat pairs
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 21-06-PLAN.md — MINT-03 sync admission: certificate-conditional Stall/Reject with stall-resolution negative control + migration/spendability compat twins
 - [ ] 21-07-PLAN.md — TRUST-02: admission/equivocation audit doc + ACTIVE-cap enforcement + durable-ledger equivocation guard + adversarial/compat pairs
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
 ### Phase 22: Wire & Ingestion Hardening (Fork)
+
 **Goal**: The remote-crash class is closed at the fork parse boundaries — every network-provided length prefix is capped before allocation, nesting depth is bounded, and transaction ingestion returns errors instead of crashing on malformed hashes — shipped as the first fork delta under the divergence discipline with proven old/new-peer interop, riding a release pipeline whose artifacts are verified: the REL-02 digest-verification step lands as an early plan in this phase, with or before the first fork-riding change.
 **Depends on**: Phase 21 (execution order; no hard technical dependency beyond sequencing)
 **Requirements**: WIRE-01, WIRE-02, REL-02
 **Success Criteria** (what must be TRUE):
+
   1. Oversized length prefixes at all three fork readers (uvarint, big-endian, Kademlia) are rejected before allocation with oversized-vs-malformed distinguished as named errors, and nesting depth is capped — adversarial tests exercise each boundary (WIRE-01)
   2. Transaction deserialization on malformed hashes returns an error result rather than a `.value()` crash on network-derived data, and fuzz coverage of the ingestion path runs in a clang CI leg (WIRE-02)
   3. CI fails when a thirdparty/zkLLVM artifact digest mismatches the recorded expectation (GitHub digest API or committed checksum manifest), and workflow actions execute only when pinned by commit SHA — in place with or before this phase's first fork-riding change, so no fork delta rides the pipeline on unverified artifacts (REL-02)
   4. Pre-change and post-change peers interoperate: the mixed-version interop matrix shows large-payload exchange between old and new peers, with the FORK-DELTA manifest updated and the thirdparty superproject bump released through the now-digest-verified pipeline
+
 **Plans**: TBD
 
 *In-phase ordering constraint:* the REL-02 digest-verification CI step (GitHub digest API or committed checksum manifest, plus SHA-pinned actions) is an early plan in this phase, landing with or before the first fork-riding change — fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts.
 
 ### Phase 23: Gossip & DHT Authentication (Fork)
+
 **Goal**: The transport authenticates what it forwards — public-network gossip messages are signature-verified before mesh forwarding and the DHT admits only validated records — at a measured, bounded hot-path cost, so the grid's authenticated claims (Phase 26) ride an authentic transport.
 **Depends on**: Phase 22 (same fork release train; divergence discipline and the REL-02-verified artifact pipeline established on the simpler wire delta)
 **Requirements**: GOSSIP-01, GOSSIP-02
 **Success Criteria** (what must be TRUE):
+
   1. An unsigned or forged-identity gossip message on a public topic is dropped before mesh forwarding (adversarial test: attacker authority = any mesh peer; signing-key↔`from` identity binding and per-topic policy enforced), and a before/after throughput benchmark quantifies the verification cost (GOSSIP-01)
   2. The DHT stores and serves only validator-passed records under admission/resource limits, and a response nonce cannot answer a request it was not issued for (nonce-poisoning adversarial test) (GOSSIP-02)
   3. A validly-signed message from a key not entitled to a restricted topic is rejected — authentication-without-authorization is its own adversarial test — and pre-upgrade peers remain functional under the decided mixed-version skew policy (compat twin) (GOSSIP-01)
+
 **Plans**: TBD
 
 *Planning note:* research flagged for this phase — the fork gossip API extension shape (signed envelope to the validator hook), per-topic policy table schema, and benchmark methodology.
 
 ### Phase 24: Bridge Ingestion Safety
+
 **Goal**: Irreversible native issuance happens only on source-chain finality proven by content — per-chain confirmation depth and operator-distinct corroboration — so reorgs, endpoint compromise, and de-facto single providers cannot create or force a mint.
 **Depends on**: Phase 21 (MINT-04's canonical receipt decode is shared); scope is contained to the evidence validator + config
 **Requirements**: BRIDGE-01, BRIDGE-02
 **Success Criteria** (what must be TRUE):
+
   1. A burn below the per-chain confirmation-depth/finality policy produces no irreversible issuance; an anvil simulated-reorg test proves a reorged-out burn never mints, a finalized one does, and the depth-tracking state survives restart (BRIDGE-01)
   2. RPC corroboration requires agreeing block/event content across distinct operators — an endpoint config that collapses to a single operator fails validation at startup, and below-quorum corroboration defers (bounded), never mints (BRIDGE-02)
   3. Adversarial: endpoints whose URL-derived success counts agree but whose block/event content disagrees cannot authorize issuance (the fabricated-quorum test) (BRIDGE-02)
+
 **Plans**: TBD
 
 ### Phase 25: Verification Spine & Release Gate
+
 **Goal**: The security-fix discipline that Phases 21-24 carried in-phase becomes first-class apparatus, and the release pipeline becomes a gate — the adversarial regression suite exists as documented ctest/CI targets that releases gate on, releases publish only after required tests pass, and fork-delta discipline becomes a standing gate; the two dependency-free findings — the on-chain EVM privileged-role audit and GeniusSDK memory safety — close here as parallel tracks that depend on no other phase and may be pulled forward ad hoc if desired.
 **Depends on**: Phases 21-24 (execution order only — nothing in the spine hard-requires the earlier fixes; it formalizes the in-phase test discipline those phases already carried and completes the release-pipeline hardening whose artifact verification began at Phase 22)
 **Requirements**: VER-01, REL-01, REL-03, EVM-01, SDK-01
 **Success Criteria** (what must be TRUE):
+
   1. A release tag whose required CI checks have not passed is not published (publish requires the full build+test matrix); deleting and re-pushing a tag cannot replace a published release; the documented hotfix path passes the same required checks (REL-01)
   2. The adversarial regression suite exists as a first-class ctest target set that CI runs and releases gate on, with the convention documented — each security-fix test names the attacker authority required, the expected rejection, and the actual behavior, paired with a compat test proving the pre-upgrade legitimate path survives — consolidating the in-phase pairs Phases 21-24 already produced into the standing suite (VER-01)
   3. A fork change (libp2p/ipfs-pubsub) cannot ride the release pipeline without a FORK-DELTA manifest, and the mixed-version interop-matrix harness exists and runs — the per-delta discipline Phases 22-23 carried becomes a standing pipeline gate (REL-03)
   4. The deployed EVM privileged roles (owner/minter/upgrader) and bridge selectors are audited directly on-chain with a documented findings and remediation list (EVM-01); GeniusSDK's three referenced-but-missing test targets exist and run in CI, and its fixed-buffer copies are length-checked with documented ownership conventions (SDK-01)
+
 **Plans**: TBD
 
 ### Phase 26: Processing-Grid Integrity
+
 **Goal**: The grid pays only proven work — queue, result, and payout claims are authenticated; escrow release is entitled by certified results and independently validated as sufficient for the workload; proofs actually verify on the ingress path; and worker results are independently verified before payout on the deterministic/redundant tier (ZK/TEE explicitly deferred to v2).
 **Depends on**: Phases 21, 23 (mint/authorization identities from 21; authenticated gossip transport for sealed queue/result messages from 23) plus in-phase siblings — GRID-03 consumes GRID-01/02/04 and MINT-01 within this phase (the dependency sink)
 **Requirements**: GRID-01, GRID-02, GRID-03, GRID-04, MINT-01
 **Success Criteria** (what must be TRUE):
+
   1. Queue updates, task-result ownership, payout addresses, and developer splits are authenticated — a self-asserted payout address or a result submitted by a non-owner is rejected (adversarial test) (GRID-01)
   2. Escrow release requires the entitled authority — a certified task result; a signature from the spending key alone at the lock-address exception is rejected (adversarial test) (MINT-01)
   3. Proof verification is enforced on the active ingress path (the `valid_proof = true` bypass is removed) after the staged audit → quarantine → enforce rollout — pre-change stored valid proofs are not tombstoned (compat test), invalid proofs are rejected, and the proof-format-drift inventory is documented (GRID-02)
   4. Worker acceptance independently validates escrow sufficiency against workload dimensions — an overcommittable job is refused before work starts (adversarial test) (GRID-04)
   5. Payout follows independent verification on the deterministic/redundant tier — a divergent or forged worker result earns no payout (redundant-worker disagreement test) (GRID-03)
+
 **Plans**: TBD
 
 *Planning note:* research flagged for this phase — GRID-03 determinism preconditions and redundancy cost model; GRID-02's stored-proof/zkLLVM format inventory and per-element verify budget; payout-record schema fixed at agreement time.
 
 ### Phase 27: Network Topology
+
 **Goal**: Mobile/client nodes can actually reach the public network — circuit-relay-v2 is completed limits-first or the relay-through-full-nodes topology is published as an explicit supported contract — decided at a mid-phase gate whose review criterion is the fork-divergence cost of relay completion.
 **Depends on**: Phases 22, 23 (parse caps and gossip authentication before opening a relay surface)
 **Requirements**: TOPO-01
 **Success Criteria** (what must be TRUE):
+
   1. A decision record documents the mid-phase gate outcome — complete relay limits-first vs. explicit topology contract — with the fork-divergence cost review as the deciding criterion
   2. The chosen topology is proven by test: client/mobile nodes join and transact through the documented connectivity path under CGNAT/symmetric-NAT emulation, with DCUtR best-effort punch behavior measured and documented
   3. Relay exposure is bounded: if relay is completed, reservation ACL and per-peer/IP/duration/data limits are enforced and adversarially tested (a reservation flood is refused); if the contract path is chosen, the published document states relays remain disabled on the stub and why that is safe
+
 **Plans**: TBD
 
 *Planning note:* research flagged for this phase — the complete-vs-topology decision inputs (circuit-relay-v2 spec-conformance cost vs. divergence cost) and the CGNAT emulation harness.
 
 ### Phase 28: Worker Profile, Isolation & Mobile Readiness
+
 **Goal**: A minimal worker exists with measured duty-cycle control, the job privacy boundary is honestly defined and enforced at its named scope (no confidentiality claims without TEE), and mobile nodes survive real OS lifecycles within adaptive resource budgets.
 **Depends on**: Phase 27 (documented connectivity path); Phase 25 (SDK-01's memory-safe SDK base)
 **Requirements**: SDK-02, PRIV-01, MOB-01
 **Success Criteria** (what must be TRUE):
+
   1. A minimal worker profile builds and links without full-node components, and its CPU/GPU duty-cycle controls are measured and documented (SDK-02)
   2. The job privacy boundary is documented — including the explicit no-confidentiality-without-TEE statement — and the scoped controls for job metadata and input access are enforced and tested at that boundary (PRIV-01)
   3. A mobile node adapts connection/data budgets to platform state, honors metered-data rules, and demonstrates OS-termination → relaunch → rejoin recovery (MOB-01)
+
 **Plans**: TBD
 
 ### Phase 29: Return-Leg Activation (SGNS→EVM)
+
 **Goal**: The bridge's return leg goes live on the certificate-based attestor path — a certified SGNS-side event produces exactly one EVM-side effect through the new exporter module — activated only on top of closed and proven trust boundaries, because activating it over an unhardened registry would convert a native trust bug into an EVM mint bug.
 **Depends on**: Phases 21, 24, 25 (TRUST-01 certificate trust anchor; BRIDGE-01/02 burn-fact quality; EVM-01 audit findings) — strictly last
 **Requirements**: RET-01
 **Success Criteria** (what must be TRUE):
+
   1. A certified SGNS-side event produces exactly one EVM effect end-to-end through the new exporter module (`src/bridge_exporter/`) feeding GNUSBridgeAttestor via `evmrelay` (RET-01)
   2. Replay protection holds: re-delivering the same certificate, or reissuing after restart, produces no second EVM effect — nonce/certificate-slot binding proven by adversarial test
   3. The activation checklist is green and recorded: attestor-set rotation drill, rate/size limits, monitoring, and verification of actually-deployed selectors/roles on the claimed mainnet addresses, folding in Phase 25's EVM-01 audit findings
+
 **Plans**: TBD
 
 *Planning note:* research flagged for this phase — exporter module design and the deployed-contract state verification method.
@@ -249,6 +284,7 @@ Plans:
 
 ---
 *Roadmap last updated: 2026-10-19 — v1.3 roadmap revised after review (execution order now strictly numeric: consensus trust first, REL-02 moved into Phase 22 with or before its first fork-riding change, verification spine at Phase 25; 27 requirements mapped); v1.2 snapshot archived to `.planning/milestones/v1.2-ROADMAP.md` (executes on separate branch); shipped-milestone history and legacy tracks preserved below*
+
 ## Track A: EVM Bridge Integration
 
 **Branch:** `evmrelay_integration`
