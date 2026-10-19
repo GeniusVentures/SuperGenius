@@ -1,168 +1,161 @@
-# Stack Research — v1.2 Light-node Transaction Pruning (Storage Layer)
+# Stack Research — v1.3 Security Remediation & Network Readiness
 
-**Domain:** Physical erasure + real disk-space reclamation on a C++17 blockchain light node
-**Researched:** 2026-10-15
-**Confidence:** HIGH (every API claim verified against vendored source in this workspace; file paths cited)
+**Domain:** Security remediation + supply-chain/network-readiness engineering for an existing C++17 CMake/CTest blockchain platform
+**Researched:** 2026-10-19
+**Confidence:** HIGH for in-tree claims (every one verified against source in this workspace; file paths cited); MEDIUM for the two new external tool versions (verified against official release pages/changelogs via web)
 
-> Correction to the milestone brief: ipfs-lite-cpp is **not** under `3rdparty/` inside SuperGNUS. It is vendored at the **workspace level** in `/Users/henriqueklein/gnus/thirdparty/ipfs-lite-cpp` (CI downloads the `GeniusVentures/thirdparty` release into `thirdparty/`, see `.github/workflows/cmake.yml:318-328`; there is no `3rdparty/` dir in the repo). RocksDB is vendored at `/Users/henriqueklein/gnus/thirdparty/rocksdb`.
+**Bottom line:** This milestone needs **two new external additions** (one GitHub Action, one Android benchmark library — and the latter only if mobile budget proof is done natively rather than via `dumpsys`). Everything else — fuzzing, sanitizers, adversarial regression testing, reorg/confirmation-depth testing, on-chain role audit, NAT traversal — is **already satisfiable in-tree**. The repo's own constraint ("no new dependency unless research establishes a concrete need") holds for all 25 findings except #19.
+
+---
 
 ## Recommendation Summary
 
-| Need | Recommendation | Confidence |
-|------|----------------|------------|
-| Raw CID-block erasure | Use the **existing** `removeNode(CID)` chain down to `RocksdbDatastore::remove` — no vendored change needed | HIGH |
-| Physical disk-space return | Batched `Delete`/`DeleteRange` + periodic `DB::CompactRange` with `bottommost_level_compaction = kForce`, via the existing `getDB()` accessors — no vendored change | HIGH |
-| tx→CID bookkeeping | New **node-local key prefix in the same single-CF RocksDB**, written directly through `sgns::storage::rocksdb` (pattern: `CRDTWorkJournal`), populated from the **already-firing** put-hook `cid` parameter | HIGH |
-| Vendored ipfs-lite-cpp change | Zero or one tiny addition: `removeSeal(CID)` to clean `<cid>sealed` markers (marker format must keep its one home in vendored code) | MEDIUM |
-| New dependencies | **None.** RocksDB 9.4 already vendored has every API required | HIGH |
+| Finding(s) | Need | Recommendation | New dep? | Confidence |
+|-----------|------|----------------|----------|------------|
+| #8, #9 | Fuzz wire/ingestion parsers | **libFuzzer + ASan** — infra already in-tree (`SGNS_FUZZING`, `addfuzztarget`, 3 working harnesses). Extend coverage; do not adopt another engine | No | HIGH (source-verified) |
+| #24, #9 | SDK memory-safety testing | GTest (already scaffolded in GeniusSDK `test/CMakeLists.txt`) + **`SANITIZE_CODE=address,undefined`** builds (option already in `CommonCompilerOptions.cmake:90-101`) | No | HIGH (source-verified) |
+| #19 | Dependency content-hash verification in CI | **GitHub release-asset SHA-256 `digest` field** via `gh api` + `sha256sum` after each `gh release download` — zero new tooling (gh already authenticated in CI) | No | MEDIUM-HIGH (changelog + API docs) |
+| #19 | Release artifact provenance | **`actions/attest-build-provenance@v4.2.2`** pinned by commit SHA — the one recommended new external dependency; official GitHub action, wraps `actions/attest` | **Yes** | MEDIUM (version verified; self-hosted caveat below) |
+| #20 | Release gating on green CI | Pure `cmake.yml` restructuring — split a `publish` job with `needs: build`; no tooling | No | HIGH (workflow read) |
+| #10 | Reorg/confirmation-depth tests | **Foundry/anvil** — already conditionally integrated (`requires_foundry` ctest label, `test/src/bridge_e2e/anvil_fixture.hpp`); extend, don't add | No | HIGH (source-verified) |
+| #12 | On-chain privileged-role audit | **Foundry `cast`** against deployed mainnet addresses — same existing toolchain; operational runbook, not code | No | HIGH |
+| #17 | NAT relay/hole-punch | **Complete the fork's existing code** — `thirdparty/libp2p/src/protocol/{relay,holepunch,autonat}/` already present; gap is wiring/completion, not missing library | No | HIGH (source-verified) |
+| #18, #25 | Mobile duty-cycle measurement | Platform-native: **androidx.benchmark 1.5.0 / macrobenchmark** in a minimal Android test module, or `dumpsys batterystats` + XCTest metrics with zero libraries | Only if benchmarked via library | MEDIUM |
+| All | Adversarial regression suite (attacker authority / expected rejection / actual behavior) | **GTest + CTest** — the established spine; no new framework | No | HIGH |
 
-## Storage Topology Today (verified)
+---
 
-One **shared RocksDB instance, single default column family**, opened with the single-CF `DB::Open(options, path, &db)` overload:
+## Recommended Stack
 
-- SuperGNUS wrapper: `src/storage/rocksdb/rocksdb.cpp:55`
-- Vendored ipfs-lite wrapper: `ipfs_lite/rocksdb/rocksdb.cpp:46` (thirdparty/ipfs-lite-cpp)
+### Core Technologies (new, external — the short list)
 
-`GlobalDb` opens one DB and wraps the **same** `db_` handle twice (`src/crdt/globaldb/globaldb.cpp:322-344`):
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `actions/attest-build-provenance` | v4.2.2 (latest, Aug 2026; from v4 a thin wrapper on `actions/attest`) | Generate signed SLSA-style provenance attestations for release tarballs in `cmake.yml` (#19) | GitHub-official, actively maintained, works with the existing `gh release upload` flow; consumers verify with `gh attestation verify` (already-available gh CLI ≥2.49). Conservative choice over the heavier `slsa-framework/slsa-github-generator` |
+| androidx.benchmark (incl. macrobenchmark module) | 1.5.0 stable (2026-10-07) | Measured CPU/duty-cycle budgets for the Android worker profile (#18, #25) | Google's standard, widely adopted measurement library; produces reproducible metric reports from instrumentation tests against a release build. Only needed if budget proof is done via library — the zero-dependency `dumpsys batterystats` path is an acceptable first rung |
 
+### In-Tree Capabilities That Already Cover a Need (verified — do NOT re-add)
+
+| Capability | Where It Lives (verified) | Covers Finding(s) |
+|-----------|--------------------------|-------------------|
+| libFuzzer + ASan harness infra | `fuzz/CMakeLists.txt` (`addfuzztarget` targets + CTest smoke runs `-max_total_time=60` + seed corpora); `cmake/functions.cmake:64-71` (`-fsanitize=fuzzer,address -g -O1`); gate `test/CMakeLists.txt:9-12` (`option(SGNS_FUZZING ... OFF)`, Clang-only warning) | #8, #9 — harnesses exist for `decode_log_data`, `parse_burn_event_values`, `mint_transaction_deserialize`; the pattern is proven, extend it |
+| Generic sanitizer builds | `build/CommonCompilerOptions.cmake:90-101` — `SANITIZE_CODE` maps to clang `-fsanitize=` **and** MSVC `/fsanitize=` | #24, #9 — ASan/UBSan SDK and ingestion builds need zero build-system work |
+| GTest + CTest + `addtest`/`addtest_part` | `cmake/functions.cmake`; `test/` tree; GeniusSDK `test/CMakeLists.txt` already references `TransactionDataTest`, `TransactionBlocksTest`, `GeniusSDKTest` — **the .cpp files are missing** (matches finding #24's "only a CMake file") | Adversarial regression suite for all findings — write tests, not infrastructure |
+| Foundry/anvil E2E fixtures | `test/src/bridge_e2e/` (`anvil_fixture.hpp`, `bridge_anvil_e2e_test.cpp`, `bridge_anvil_catchup_e2e_test.cpp`, `bridge_race/`), `requires_foundry` ctest label excluded in CI (`.github/workflows/cmake.yml:604`) | #10 (reorg/depth tests via anvil), #12 (`cast call`/storage inspection of deployed roles) |
+| Circuit-relay / hole-punch / autonat protocol code | `thirdparty/libp2p/src/protocol/holepunch/` (client, server, msg processors, .proto), `src/protocol/relay/` (relay.cpp, relay_msg_processor.cpp), `src/protocol/autonat/`; disabled at the ipfs-pubsub integration layer (`ipfs-pubsub/src/ipfs_pubsub/gossip_pubsub.cpp`) | #17 — finish/enable existing code; DCUtR protocol machinery is not absent |
+| UPnP NAT traversal | `gnus_upnp` (thirdparty; `upnp_enabled` already in `network_config.json`) | #17 — the static-port-forward half of NAT readiness |
+| EVM RPC client stack | `evmrelay/` (go-ethereum integration) + `src/api/` JSON-RPC/WebSocket transport | #10, #11 — confirmation-depth checks and content-corroborated RPC compare agreeing block/event data through existing clients; no new web3 library |
+| libp2p fork GTest suite | `thirdparty/libp2p/test/libp2p/` (per-protocol dirs; existing `varint_prefix_reader_test.cpp`, `multi/utils/uvarint_test.cpp`) | #8 — length-prefix cap tests belong beside these; fork has its own CMake `addtest` heritage |
+| GeniusSDK budget/lifecycle knobs | `GeniusSDK/src/android/background_config.h` (`battery_not_low`, `network_required`, `idle_only`, `thermal_check_enabled`, `inference_idle_timeout_seconds` — parsed at `GeniusSDKInit()` from `background_config.json`) | #25 — the adaptive-budget control surface exists; what's missing is enforcement wiring + demonstrated recovery tests |
+| gh CLI (authenticated) | `GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}` used throughout `cmake.yml`; `gh release download`/`create`/`upload` already core steps | #19, #20 — digest fetch (`gh api --jq .digest`), `gh attestation verify`, and release gating need no new CLI |
+
+### Supporting Libraries (only where a concrete gap exists)
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `actions/attest` | current (v4.x line) | Direct attestations (SBOM, build provenance variants) if a form `attest-build-provenance` doesn't cover is needed later | Only if #19 scope grows beyond release-tarball provenance |
+| Battery Historian (Google) | current web tool | Visualize `dumpsys batterystats` bugreport dumps for the #25 budget evidence | Zero-install analysis aid; not a build dependency |
+| XCTest performance metrics (`XCTCPUMetric`, `XCTMemoryMetric`, `XCTOSSignpostMetric`) | current Xcode (built-in) | iOS duty-cycle/lifecycle-recovery measurement | iOS half of #25; needs only an Xcode test target hosting the SDK |
+
+## Installation / Wiring (this repo's shape — not npm)
+
+```bash
+# Fuzzing (already wired; nothing to install — Clang toolchain only)
+cmake -S build/OSX -B build/OSX/Fuzz -DCMAKE_BUILD_TYPE=Debug -DSGNS_FUZZING=ON ...
+ctest -R '_smoke'                       # 60s-per-harness smoke runs
+
+# SDK memory-safety builds (existing option)
+cmake ... -DSANITIZE_CODE=address,undefined   # clang; MSVC: =address via /fsanitize
+
+# Mobile budget measurement (Android module, if library route chosen)
+# androidx.benchmark 1.5.0 via the module's gradle dependencies block
 ```
-storage::rocksdb (SuperGNUS wrapper, owns DB)          ← CRDT set/heads keys
-  └─ IpfsRocksDb::create(getDB())                       ← same DB handle
-       └─ RocksdbDatastore (CID → raw block bytes)      ← flat binary CID keys
-            └─ GraphsyncDAGSyncer → MerkleDagServiceImpl
-                 └─ CrdtDatastore(HierarchicalKey("crdt"))
-```
 
-**Consequence:** erasing one transaction's footprint means deleting keys in *one* DB — CID-keyed raw block(s), the CRDT set entries, and any bookkeeping — which can be done atomically in a single `WriteBatch`. No cross-database coordination exists or is needed.
+CI wiring points in `.github/workflows/cmake.yml` (all verified against the current file):
 
-### Key map of the shared DB (all prefixes verified)
+1. **Digest verification (#19):** immediately after the `Download thirdparty release` / `Download zkLLVM release` steps (~lines 318-347), add `gh api repos/GeniusVentures/thirdparty/releases/tags/$tag --jq '.assets[] | select(.name=="'$FILE_NAME'") | .digest'` and compare against `shasum -a 256` of the extracted tarball. Digests exist for assets uploaded after June 2025; the `digest` field format is `sha256:<hex>`. Note: the API digest proves the artifact matches what was uploaded; the review-time trust anchor is the pinned tag — record expected digests in a committed manifest when thirdparty re-cuts releases.
+2. **Release gating (#20):** today `Create release tag` (~line 539) and `Upload file` (~line 560) run before `Run tests` (~line 597). Restructure: build job uploads the tarball as a workflow artifact; a separate `publish` job with `needs: build` (every matrix leg) and `if: github.ref_name == 'main' || ...` creates the tag, attests, and uploads. This also removes the current delete-and-recreate-release dance.
+3. **Attestation (#19):** in `publish`, before/with `gh release upload`: `uses: actions/attest-build-provenance@<v4.2.2 commit SHA>` with `subject-name: "${FILE_NAME}"`, `path-to-artifact: <tarball>`; job needs `permissions: id-token: write, attestations: write, contents: write`. Consumers verify: `gh attestation verify <downloaded.tar.gz> --repo GeniusVentures/SuperGenius`.
+4. **Pin actions by commit SHA:** `cmake.yml` currently pins `actions/checkout@v7`, `actions/cache@v6`, `actions/upload-artifact@v7`, `dorny/paths-filter@v3`, `actions/setup-node@v4` by tag. Convert to full-SHA pins (GitHub's own supply-chain guidance) — mechanical, no behavior change.
+5. **Fuzz CI leg:** add a Linux (clang, AlmaLinux container already pins clang via `COMPILER_PIN`) and/or macOS matrix entry with `-DSGNS_FUZZING=ON` running the `_smoke` ctests; Windows `cl.exe` has no libFuzzer, so fuzz targets stay off the MSVC legs.
 
-| Physical key | Content | Written by | Erasable by pruner? |
-|---|---|---|---|
-| `<CID bytes>` (binary) | raw ipfs-lite DAG node block | `RocksdbDatastore::set` | YES — via `removeNode` |
-| `<cid-base58-string>sealed` | "resolved" marker | `seal()` / `markResolved()` | YES (needs `removeSeal`, see below) |
-| `/crdt/s/<key>/<cid>` | OR-Set **elems** (CID embedded in key) | `CrdtSet::PutElems` | YES for pruned tx keys |
-| `/crdt/t/<key>/<cid>` | OR-Set **tombs** | `CrdtSet::PutTombs` | YES for pruned tx keys |
-| `/crdt/k/<key>/v` \| `/p` | current value \| priority | `CrdtSet::SetValue` | YES for pruned tx keys |
-| `/crdt/h/<topic>/<cid>` | CRDT **heads** (DAG tips) | `CrdtHeads::Add` | NO — sync liveness depends on tips |
-| `/crdt/work/...` | node-local work journal | `CRDTWorkJournal` | managed by journal itself |
-| `/utxo`, `/utxo-checkpoint` | **unspent UTXO set + checkpoints** | `UTXOManager` (`src/account/UTXOManager.hpp:481-484`) | **NEVER** |
-| `/bc-<netid>/...` | transactions (`TRANSACTION_BASE_FORMAT = "/bc-%hu/"`, `src/transaction/TransactionManager.hpp:433`) | `TransactionManager` | YES (this is the target) |
-| `:sgns:...` | finality lookup keys | `src/storage/predefined_keys.hpp` | NO |
+## Alternatives Considered
 
-Prefix constants: elems `s` / tombs `t` / keys `k` in `src/crdt/crdt_set.hpp:341-345`; heads namespace in `src/crdt/crdt_datastore.hpp:488`.
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| libFuzzer (in-tree) | AFL++ | Only if a target needs byte-oriented persistent fuzzing libFuzzer can't reach — it doesn't; AFL++ would add a second engine + CI infra for zero coverage gain over the proven `addfuzztarget` pattern |
+| libFuzzer | cargo-fuzz | Never here — it's Rust-only; the libp2p fork and SDK are C++ (only wallet-core is Rust, consumed as a prebuilt) |
+| `actions/attest-build-provenance` | `slsa-framework/slsa-github-generator` | If the project later wants BYO-signing-key SLSA L3+ provenance or container-image provenance as a first-class artifact; the generator is heavier and its runner model fits GitHub-hosted builders best, which this repo's self-hosted fleet isn't |
+| `actions/attest-build-provenance` | In-toto/cosign hand-rolled | Never — re-implements what the official action does, violating the conservative-vendor rule |
+| androidx.benchmark + dumpsys | Commercial mobile profiling (e.g. vendor APM) | Never this milestone — new vendor surface, no added assurance for a duty-cycle budget check |
+| Foundry/anvil (existing) | Hardhat/ethers reorg harness | Never — the bridge E2E suite already standardizes on Foundry; a second EVM toolchain would duplicate fixture logic (DRY violation) |
+| ASan/UBSan (`SANITIZE_CODE`) | Valgrind | Only for leak-only checks where ASan can't run (e.g. some platforms); ASan is faster, already integrated, and CI-friendly |
 
-## What Already Exists — No New Library Needed
+## What NOT to Use
 
-### 1. Raw CID-block deletion is implemented end-to-end (unused)
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| OSS-Fuzz enrollment (now) | Requires fully open-source build integration plus 90-day disclosure cadence the remediation timeline shouldn't inherit; the findings need targeted harnesses this quarter | In-tree libFuzzer smoke + periodic long runs on a self-hosted Linux leg |
+| Any new C++ testing framework (Catch2, doctest, Boost.Test expansion) | GTest is the established framework wired into `addtest`, CTest, and both sibling repos; a second framework fragments the adversarial-suite discipline | GTest/CTest everywhere, including GeniusSDK's missing test sources |
+| New EVM/web3 C++ client library for #10/#11 | `evmrelay` (go-ethereum) + existing JSON-RPC stack already fetch blocks/events; a new client duplicates wire-schema facts | Extend `PublicChainInputValidator` against existing clients |
+| A new NAT/traversal library (or switching to go-libp2p/rust-libp2p) | The fork already vendors relay/holepunch/autonat implementations; go-libp2p has the most mature DCUtR but adopting it is a platform rewrite | Complete and enable the fork's existing protocols; UPnP already covers static mappings |
+| Step-security `harden-runner` or monitoring agents (now) | New vendor surface in every job for marginal gain this milestone | SHA-pinned actions + digest verification + attestations first; revisit if the threat model grows |
+| Bleeding-edge clang (nightly) for fuzzing | Conservative-vendor rule; distro clang (EL8 image) + Xcode clang both ship stable libFuzzer | The toolchains CI already pins |
 
-```
-sgns::crdt::DAGSyncer::removeNode(cid)                          (src/crdt/dagsyncer.hpp — virtual)
-  → GraphsyncDAGSyncer::removeNode                              (src/crdt/impl/graphsync_dagsyncer.cpp:461-464)
-    → MerkleDagServiceImpl::removeNode                          (thirdparty/.../merkledag/impl/merkledag_service_impl.cpp:39-42)
-      → IpfsBlockService / RocksdbDatastore::remove             (thirdparty/.../ipfs/impl/datastore_rocksdb.cpp:78-82)
-        → db_->Delete(key)                                      (thirdparty/.../rocksdb/rocksdb.cpp:131-140)
-```
+## Stack Patterns by Variant
 
-Grep confirms **zero production callers** of `removeNode` today — the path exists but is dormant. The pruner is its first consumer; no behavioral risk to existing flows.
+**If a fuzz target lives in the libp2p fork (#8 varint/uvarint/Kademlia readers):**
+- Add the harness inside the fork's own tree (`thirdparty/libp2p/test/`), copying the `addfuzztarget` pattern from SuperGenius `cmake/functions.cmake:64` (the fork has separate CMake helpers; keep one copy per repo — do not cross-include build logic between repos).
+- Reason: the fork builds standalone with its own GTest suite; harnesses must regenerate when the fork rebuilds in the thirdparty pipeline.
 
-**Trap:** `GraphsyncDAGSyncer::DeleteCIDBlock(cid)` (`graphsync_dagsyncer.cpp:855-862`) sounds like deletion but only evicts the in-memory LRU cache. Do not build on it.
+**If release publishing must stay a single job (minimal #20 change):**
+- Move `Create release tag` + `Upload file` below `Run tests` with `if: success() && env.RELEASE == 'true'` — the two-line variant of the gate.
+- Reason: acceptable first rung; the separate `publish` job is still preferred because it also gates on other matrix legs.
 
-### 2. The "CID arrives with the key/value" claim — verified true, twice over
+**If mobile budget proof is needed without any new library (#25 minimal path):**
+- Android: instrumentation-free `dumpsys batterystats --reset` → run worker workload → `bugreport` → Battery Historian; assert duty-cycle thresholds in a scripted CTest/CI step.
+- iOS: XCTest `measure(metrics:)` with built-in CPU/memory metrics in a minimal test host.
+- Reason: zero new dependencies; androidx.benchmark 1.5.0 is the upgrade path when reproducible CI-grade metrics are required.
 
-- **Put hook:** `putHookFunc_(key, value, aID)` fires for every applied element, local *and* remote origin (`src/crdt/impl/crdt_set.cpp:588-590, 738-742`), and the `aID` **is the DAG-node CID**. It flows to `CRDTCallbackManager::PutDataCallback(key, value, cid)` — the `cid` param TransactionManager callbacks already receive and ignore.
-- **Elems key:** the element version key is `/crdt/s/<key>/<cid-string>` (`crdt_set.cpp:707`), so the CID set for any key is recoverable by a prefix scan of `ElemsPrefix(key)` even with no new map.
+**If Windows must run sanitized tests (#24 on MSVC):**
+- `SANITIZE_CODE=address` already maps to `/fsanitize=address` (MSVC) — but no libFuzzer: keep fuzz targets Linux/macOS-only; run GTest suites sanitized on Windows.
 
-Also `GlobalDB::Put` returns `outcome::result<CID>` (`src/crdt/globaldb/globaldb.hpp:99`).
+## Version Compatibility
 
-### 3. Node-local (non-broadcast) persistence precedent
-
-- `CrdtDatastore::PutKeyLocal` / `GlobalDB::PutLocal` — local-only writes, documented contract for per-node derived state (`src/crdt/crdt_datastore.hpp:160-177`).
-- `CRDTWorkJournal` — a node-local journal written **directly** to the shared `storage::rocksdb` under its own namespace `/crdt/work/` (`src/crdt/globaldb/crdt_work_journal.hpp:117`), never replicated. This is exactly the pattern the tx→CID map should copy.
-
-### 4. Physical per-key erase of CRDT-side keys exists in the SuperGNUS wrapper
-
-`sgns::storage::rocksdb::remove(Buffer)` and `BufferBatch::remove` (`src/storage/rocksdb/rocksdb.hpp:93`, `rocksdb_batch.hpp:21`) are plain `DB::Delete` calls — suitable for physically erasing `/crdt/s|t|k` entries for pruned keys. Note this is deliberately **not** `GlobalDB::Remove` / `CrdtDatastore::DeleteKey`, which is the CRDT *tombstone* path (broadcasts a Remove delta, writes tombs, keeps elems — logical delete only, and it *adds* data).
-
-## RocksDB 9.4 Space-Reclamation Mechanics (core question)
-
-Vendored version: `thirdparty/rocksdb/include/rocksdb/version.h` → `ROCKSDB_MAJOR 9`, `ROCKSDB_MINOR 4`. DB opens with leveled compaction, 32 MB write buffer/target file, bloom(10), `CappedPrefixTransform(3)`, `wo_.sync = true` (`src/crdt/globaldb/globaldb.cpp:194-200`; `src/storage/rocksdb/rocksdb.cpp:38-70`).
-
-### What actually returns space to the OS
-
-| Operation | Mechanism | Space returned immediately? | Where declared (vendored 9.4) |
-|---|---|---|---|
-| `Delete(key)` | point tombstone | **No** — file still holds the key until compaction rewrites it | `db.h` (`DB::Delete`) |
-| `DeleteRange(begin,end)` | range tombstone (cheap bulk delete) | **No** — same as above; tombstones must reach the bottommost level | `db.h:549-560` |
-| `CompactRange(opts, begin, end)` with `bottommost_level_compaction = kForce` | rewrites bottommost SSTs overlapping the range, drops covered deleted keys, obsolete files unlinked | **Yes** (after background completion) | `db.h:1495-1498`, `options.h:2071` |
-| `DeleteFilesInRange(db, cf, begin, end)` | drops whole SSTs **fully contained** in the range | **Yes**, instantly | `convenience.h:443-450` |
-| `DropColumnFamily` | fast bulk reclaim per CF | n/a — **no column families are used** | `db.h` |
-
-External corroboration: RocksDB issue [#8041](https://github.com/facebook/rocksdb/issues/8041) ("not freeing up space after a delete" — resolved by manual compaction), the official [DeleteRange blog](http://rocksdb.org/blog/2018/11/21/delete-range.html) (DeleteFilesInRange before compacting), and the [Manual Compaction wiki](https://github.com/facebook/rocksdb/wiki/Manual-Compaction). Confidence HIGH.
-
-### Recommended reclamation recipe for the pruner
-
-1. **Erase**: per-tx `WriteBatch` (single-CF default handle) containing — for each CID of the tx: `Delete(cid-bytes)` (via `removeNode`, keeping the format knowledge in the vendored layer) and `Delete("<cid>sealed")`; plus `Delete` of `/crdt/s/<txkey>...`, `/crdt/t/<txkey>...`, `/crdt/k/<txkey>/v|p`; plus the bookkeeping-map entries.
-2. **Optionally `DeleteRange`** for the contiguous per-tx key spans (`/crdt/s/<txkey>` → next key) instead of N point deletes when a tx has many element versions. Respect the caveats documented in `db.h:530-548`: accumulated range tombstones degrade reads — flush periodically; `max_open_files = -1` preferred; **incompatible with `row_cache`** (not configured here, verified `create()` sets neither).
-3. **Reclaim**: periodic, light-node-only, low-frequency `CompactRange` over the whole DB (`begin = end = nullptr`) with `CompactRangeOptions{ bottommost_level_compaction = kForce, allow_write_stall = false }`. Whole-DB is right because CID-block keys are binary and scattered (no shared prefix to compact per-tx). The milestone goal is a *bounded* DB, not instant shrink — schedule compaction off the hot path (idle/backoff), not per-batch.
-4. **Verify**: `DB::GetApproximateSizes` (`db.h:1436-1444`) for pruner telemetry and tests asserting bytes-before < bytes-after.
-
-All four steps run through the raw `std::shared_ptr<DB>` that **both wrappers already expose** (`storage::rocksdb::getDB()`, `rocksdb.hpp:100-103`; `ipfs_lite::rocksdb::getDB()`, vendored `rocksdb.hpp:74-77`). **No wrapper or vendored change is required for any of this.** Put the compaction helper in the new pruner module (one owning module for the pruning domain, per project invariant 1).
-
-### Why not the alternatives
-
-| Alternative | Verdict | Why rejected |
-|---|---|---|
-| Rely on automatic compaction alone | Reject | Deletes eventually compact away, but timing is workload-dependent and unbounded; `max_compaction_bytes = 32MB` (`globaldb.cpp:197`) keeps automatic compactions small; a bounded light-node DB needs a deterministic trigger |
-| `DeleteFilesInRange` as primary tool | Reject for v1 | Only drops SSTs *fully* inside the range and can expose older key versions in lower levels; risky on a DB shared with live domains; fine as a future optimization for large contiguous runs |
-| Compaction filter (drop keys during background compaction) | Reject | Implicit GC: fires during *every* compaction, hard to bound/test, can silently drop data on unrelated compactions; milestone wants explicit, gated erasure |
-| Column-family per domain + `DropColumnFamily` | Reject | Both wrappers are single-CF (`DB::Open(options, path, &db)`); CF support means reworking both open paths and the shared-DB wiring in `globaldb.cpp:322` — invasive, zero functional gain for this milestone |
-| New RocksDB version | Reject | 9.4 already provides DeleteRange/CompactRange/GetApproximateSizes/DeleteFilesInRange; constraint says no new dependency |
-| Any new storage engine (SQLite, LMDB, …) | Reject | Everything needed is present; adds a second engine to a codebase that standardizes on RocksDB |
-
-## tx→CID Bookkeeping Map — Where It Lives
-
-**Recommendation: a new node-local key prefix in the same shared DB, written directly via `sgns::storage::rocksdb`, never broadcast — the `CRDTWorkJournal` pattern.**
-
-- **Shape:** forward index `/prune/txcid/<txkey>` → CID-string set; reverse `/prune/cidtx/<cid>` → tx-key set. The reverse direction lets the pruner find all keys sharing a DAG node before erasing the block.
-- **Multiplicity is mandatory, not optional:** `TransactionManager` batches **many Puts into one committed DAG node** (`crdt_transaction->Commit(topicSet)` after a loop of `Put`s, `src/transaction/TransactionManager.cpp:2099-2126`), and a single key can have multiple element versions over time (re-puts). One CID ↔ many tx keys; one tx key ↔ potentially many CIDs. The elems namespace `/crdt/s/<key>/<cid>` already encodes the forward direction and can serve as ground truth/repair source.
-- **Population source:** the existing put hook's `cid` parameter (fires for both self-created and remotely-synced elements — verified `crdt_set.cpp:588-590, 738-742`). No new write-path interception needed; a registered callback (or a small extension where the journal is written) is additive.
-- **Erase atomically** with the other keys of the pruned tx in the same `WriteBatch`.
-
-**Why not:** a new column family (single-CF wrappers, above); a separate RocksDB instance/file (breaks atomic batch erase across the map, the CRDT keys, and the CID block; extra lifecycle; GlobalDB already owns the one DB); an in-memory map (milestone requires restart-safe operation); inside the replicated CRDT namespace via normal `PutKey` (would broadcast and tombstone — the map is per-node bookkeeping, `PutKeyLocal`'s documented rationale covers exactly this case).
-
-## Vendored ipfs-lite-cpp — Minimal Extension Set
-
-The vendored fork is already locally modified relative to upstream (`sgns::ipfs_lite` namespace, the seal/`markResolved` additions in `datastore_rocksdb.cpp:48-65` and `merkledag_service_impl.cpp:23-36`). Extending it is the established pattern; upstream is not consumed.
-
-| Change | File | Why needed | Size |
-|---|---|---|---|
-| **None required** for block erasure or compaction | — | `removeNode` chain + `getDB()` cover it | 0 |
-| `removeSeal(CID)` (sibling of `seal`) on `IpfsDatastore` + `RocksdbDatastore` | `ipfs_lite/ipfs/datastore.hpp`, `ipfs/impl/datastore_rocksdb.{hpp,cpp}` | The `<cid>sealed` marker key format (`cid.toString() + "sealed"`) has one home in vendored code; erasing markers from SuperGNUS would duplicate that format knowledge (DRY invariant). Markers are written for *every* processed root CID and never cleaned — unbounded growth the pruner should also stop | ~10 lines |
-| (Optional) thread `removeSeal` through `MerkleDagServiceImpl`/`DAGSyncer` | merkledag_service_impl, dagsyncer.hpp | Symmetry with `markResolved` so callers never touch the datastore directly | ~5 lines |
-
-**Open question (flag for architecture phase):** confirm the seal-marker lifecycle before erasing them. `isResolved` is consulted in `CrdtDatastore::UpdateCRDTHeads` (`crdt_datastore.cpp:2111+`) to avoid re-marking; if a pruned CID is later re-broadcast, `HandleCIDBroadcast` gating (pending-jobs/heads checks, `IsRootCIDPendingOrActive`) must be shown to tolerate a missing block+marker. If unresolved, keep the markers (they are small) and only erase them for CIDs whose heads have also moved on.
-
-## Integration Inventory (SuperGNUS side)
-
-| Component | File(s) | Addition |
-|---|---|---|
-| New pruner service module (owns the pruning domain) | new, e.g. `src/pruning/` or under `src/transaction/` | Sliding-window eligibility (all-outputs-spent + depth/finality), erase-batch builder, compaction scheduler, `GetApproximateSizes` telemetry |
-| Config | `sgns_config.json` via `LoadSgnsConfig` (`src/account/GeniusNode.cpp:251`) — `node_type` already read here | Light-node-only pruning knobs (window depth, enable flag, compaction cadence); default-off or safe-default per PROJECT.md "only light nodes prune" |
-| GlobalDB facade | `src/crdt/globaldb/globaldb.{hpp,cpp}` | Narrow accessor for the pruner: direct local-storage namespace writes + physical erase of a key's CRDT-side entries (today only the CRDT-tombstone `Remove` exists) |
-| UTXO safety | `src/account/UTXOManager.hpp:481-484` (`/utxo`, `/utxo-checkpoint`) | No change — these prefixes are on the pruner's never-erase list |
-| Backup engine | `globaldb.cpp:237-266, 381-436` | No code change required; note that backups taken before pruning retain old data until `PurgeOldBackups(keep_count)` rotates them out — expected, not a bug |
-
-## What NOT to Add (per constraint: no new dependency without concrete need)
-
-- **No new third-party library of any kind.** RocksDB 9.4 (vendored) + the vendored ipfs-lite-cpp fork provide 100% of the required API surface.
-- **No RocksDB version bump, no column-family rework, no TTL/blob-DB/compaction-filter configuration changes** to the shared DB — those alter behavior for every other domain sharing the DB.
-- **No second storage engine** for bookkeeping.
-- **No GC framework.** A single pruner service with batch + periodic compaction is the smallest shape (KISS/YAGNI).
+| Component | Compatible With | Notes |
+|-----------|----------------|-------|
+| libFuzzer harnesses | Clang (any modern; CI pins clang on Linux, Xcode clang on macOS) | `SGNS_FUZZING=ON` explicitly warns and expects Clang (`test/CMakeLists.txt:11-12`); `cl.exe` cannot build them — exclude from MSVC matrix legs |
+| `actions/attest-build-provenance@v4.2.2` | GitHub-hosted AND self-hosted runners | Works on this repo's self-hosted fleet, but provenance does not record runner identity (community discussion #205663) — attestation proves source→artifact binding, not runner integrity; document this residual in the release process |
+| Release-asset `digest` API field | Assets uploaded after June 2025 | Older thirdparty/zkLLVM releases lack digests; re-upload or fall back to committed checksum manifests |
+| `gh attestation verify` | gh CLI ≥ ~2.49 | Runners already run current gh; verify locally before relying on it in scripts |
+| androidx.benchmark 1.5.0 | Android Gradle Plugin current stable, minSdk per docs (macrobenchmark measurement needs API 29+ device/emulator for full features) | Host module required — see gap note below |
+| Foundry/anvil | Current `foundryup` install | Tests already probe PATH at runtime and `GTEST_SKIP` when absent (`requires_foundry`); keep that pattern for new reorg tests |
 
 ## Sources
 
-- Vendored source (HIGH confidence, primary): `/Users/henriqueklein/gnus/thirdparty/ipfs-lite-cpp/ipfs_lite/{ipfs/datastore.hpp, ipfs/impl/datastore_rocksdb.cpp, ipfs/impl/ipfs_block_service.hpp, rocksdb/rocksdb.cpp, ipfs/merkledag/impl/merkledag_service_impl.cpp}`
-- SuperGNUS source (HIGH): `src/crdt/globaldb/globaldb.cpp`, `src/crdt/crdt_datastore.hpp`, `src/crdt/impl/crdt_set.cpp`, `src/crdt/impl/graphsync_dagsyncer.cpp`, `src/storage/rocksdb/rocksdb.{hpp,cpp}`, `src/transaction/TransactionManager.{hpp,cpp}`, `src/account/UTXOManager.hpp`, `src/crdt/globaldb/crdt_work_journal.hpp`
-- Vendored RocksDB 9.4 headers (HIGH): `thirdparty/rocksdb/include/rocksdb/{db.h, options.h, convenience.h, version.h}`
-- External (MEDIUM corroboration of mechanics): [RocksDB issue #8041](https://github.com/facebook/rocksdb/issues/8041), [DeleteRange blog](http://rocksdb.org/blog/2018/11/21/delete-range.html), [Manual Compaction wiki](https://github.com/facebook/rocksdb/wiki/Manual-Compaction), [Stack Overflow: space after delete](https://stackoverflow.com/questions/66543704/rocksdb-is-not-freeing-up-space-after-a-delete)
+In-tree (HIGH confidence, read directly):
+- `/Users/henriqueklein/gnus/SuperGenius/fuzz/CMakeLists.txt`, `fuzz/fuzz_mint_transaction_deserialize.cpp`, `fuzz/corpus/*`
+- `/Users/henriqueklein/gnus/SuperGenius/cmake/functions.cmake:64` (`addfuzztarget`), `test/CMakeLists.txt:9-12` (`SGNS_FUZZING`)
+- `/Users/henriqueklein/gnus/SuperGenius/build/CommonCompilerOptions.cmake:90-101` (`SANITIZE_CODE`)
+- `/Users/henriqueklein/gnus/SuperGenius/.github/workflows/cmake.yml` (download steps 318-347, release-before-tests ordering 539-564 vs 597, requires_foundry 604)
+- `/Users/henriqueklein/gnus/thirdparty/libp2p/src/protocol/{relay,holepunch,autonat}/`, `thirdparty/libp2p/test/`, `thirdparty/ipfs-pubsub/src/ipfs_pubsub/gossip_pubsub.cpp`
+- `/Users/henriqueklein/gnus/GeniusSDK/test/CMakeLists.txt`, `GeniusSDK/src/android/background_config.h`, `GeniusSDK/build/` (mirrors SuperGenius platform-CMake layout)
+- `.planning/codebase/STACK.md` (2026-05-25 inventory: Boost 1.85, GTest, RocksDB, libp2p v0.1.2, gnus_upnp, etc.)
+
+External (verified via official pages/changelogs):
+- [actions/attest-build-provenance releases](https://github.com/actions/attest-build-provenance/releases) — v4.2.2 latest; v4+ wraps `actions/attest` — MEDIUM
+- [GitHub changelog: releases expose digests for release assets](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets) and [community discussion #23512](https://github.com/orgs/community/discussions/23512) — sha256 `digest` field — MEDIUM-HIGH
+- [gh attestation verify manual](https://cli.github.com/manual/gh_attestation_verify), [GitHub artifact-attestations docs](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds) — MEDIUM
+- [Artifact attestations & self-hosted runners (community discussion #205663)](https://github.com/orgs/community/discussions/205663) — runner-identity caveat — MEDIUM
+- [androidx Benchmark releases](https://developer.android.com/jetpack/androidx/releases/benchmark) — 1.5.0 stable, 2026-10-07 — MEDIUM
+- [libp2p hole-punching spec](https://github.com/libp2p/specs/blob/master/connections/hole-punching.md) — DCUtR reference for completing the fork's implementation — HIGH (spec), fork-completeness assessment is in-tree evidence
+
+## Gaps to Address at Phase Level
+
+- **Android instrumentation host module:** no Gradle app module exists in GeniusSDK or this repo to host androidx.benchmark/instrumentation tests (the Unity wrapper lives in a separate UnityGeniusSDK repo). A phase owning #18/#25 must decide: minimal `test/android/` host module (new but platform-standard) vs. zero-dep `dumpsys` scripting. Not a library choice — an infrastructure placement decision.
+- **thirdparty release digest backfill:** whether GeniusVentures/thirdparty and zkLLVM releases get re-cut so `digest` fields exist, or expected hashes are committed as manifests — a release-engineering decision upstream of the CI change.
+- **Foundry on CI runners:** `requires_foundry` tests currently skip everywhere in CI (PATH probe). #10 reorg tests only gate releases if a runner installs Foundry — decide which leg(s) own it.
+
+---
+*Stack research for: v1.3 Security Remediation & Network Readiness (SuperGenius + libp2p fork + GeniusSDK)*
+*Researched: 2026-10-19*
