@@ -4968,22 +4968,27 @@ namespace sgns
                 // the reschedule below still runs.
                 node_logger_->warn( "Prune dry-run evaluation failed: {} — retrying next cycle",
                                     evaluation.error().message() );
+                // Skip the summary block: the outcome is errored, value() here
+                // would throw bad_result_access into the io-thread loop.
             }
 
-            const auto &result          = evaluation.value();
-            const auto  eligible        = result.EligibleCount();
-            const auto  erasable_blocks = static_cast<size_t>( std::count_if( result.block_reports.begin(),
-                                                                             result.block_reports.end(),
-                                                                             []( const BlockGateResult &block )
-                                                                             { return block.erasable; } ) );
-            node_logger_->info( "Prune dry-run: {} candidate(s), {} eligible / {} ineligible, {}/{} block(s) "
-                                "erasable ({} held)",
-                                result.candidates.size(),
-                                eligible,
-                                result.candidates.size() - eligible,
-                                erasable_blocks,
-                                result.block_reports.size(),
-                                result.block_reports.size() - erasable_blocks );
+            if ( !evaluation.has_error() )
+            {
+                const auto &result          = evaluation.value();
+                const auto  eligible        = result.EligibleCount();
+                const auto  erasable_blocks = static_cast<size_t>( std::count_if( result.block_reports.begin(),
+                                                                                 result.block_reports.end(),
+                                                                                 []( const BlockGateResult &block )
+                                                                                 { return block.erasable; } ) );
+                node_logger_->info( "Prune dry-run: {} candidate(s), {} eligible / {} ineligible, {}/{} block(s) "
+                                    "erasable ({} held)",
+                                    result.candidates.size(),
+                                    eligible,
+                                    result.candidates.size() - eligible,
+                                    erasable_blocks,
+                                    result.block_reports.size(),
+                                    result.block_reports.size() - erasable_blocks );
+            }
         }
 
         if ( !prune_dry_run_timer_ )
