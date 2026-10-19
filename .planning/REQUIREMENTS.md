@@ -10,20 +10,20 @@ Requirements for milestone v1.2. Each maps to roadmap phases.
 
 ### Pruning Core
 
-- [ ] **PRUNE-01**: A transaction is erasable only when every output is genuinely consumed (`IsOutPointGenuinelyConsumed`, not synthesized zero-amount tombstones) AND its depth beyond the current DAG head exceeds the configured finality window
+- [x] **PRUNE-01**: A transaction is erasable only when every output is genuinely consumed (`IsOutPointGenuinelyConsumed`, not synthesized zero-amount tombstones) AND its depth beyond the current DAG head exceeds the configured finality window
 - [x] **PRUNE-02**: Erasure physically deletes, in one atomic RocksDB `WriteBatch`, the CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`), the raw CID block (existing `removeNode` chain), and the tx→CID map entry — never via the CRDT tombstone path (`DeleteKey`/`DeleteTransaction` are forbidden for pruning)
-- [ ] **PRUNE-03**: A delta block is erased only when every element it carries is prune-eligible (parse the block at prune time; deltas are multi-element)
+- [x] **PRUNE-03**: A delta block is erased only when every element it carries is prune-eligible (parse the block at prune time; deltas are multi-element)
 - [ ] **PRUNE-04**: The prune cycle is idempotent and crash-consistent — ordered erase flow (value → CID lookup → block-eligibility+delete → map entry) reaches a fixed point across crashes and restarts
 - [ ] **PRUNE-05**: Re-delivered/resurrected entries (add-wins OR-Set re-merge from lagging peers or restart head exchange) are re-pruned by a periodic sweep, and root processing treats pruned/resolved CIDs as terminal — no re-fetch storm
 
 ### Gating & Safety
 
-- [ ] **GATE-01**: Pruning runs only on `NodeType::Light` (fail-closed gate on the enum) and only within the `/bc-<netid>/tx/` prefix allowlist
+- [x] **GATE-01**: Pruning runs only on `NodeType::Light` (fail-closed gate on the enum) and only within the `/bc-<netid>/tx/` prefix allowlist
 - [ ] **GATE-02**: Non-transaction data is provably untouched — certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers are byte-identical across a prune run (ctest)
 - [x] **GATE-03**: Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch of pruned chains
-- [ ] **GATE-04**: Outgoing `previous_hash` resolution survives pruning of the node's own frontier transaction (cert-slot based resolution; certificates are never pruned) — must land before the first real prune
+- [x] **GATE-04**: Outgoing `previous_hash` resolution survives pruning of the node's own frontier transaction (cert-slot based resolution; certificates are never pruned) — must land before the first real prune
 - [ ] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing pruned transaction as not relevant — skips it and completes boot without failure, and never resurrects spent outputs
-- [ ] **GATE-06**: Pruning config knobs live beside `node_type` in `sgns_config.json`, default off, resolved values INFO-logged
+- [x] **GATE-06**: Pruning config knobs live beside `node_type` in `sgns_config.json`, default off, resolved values INFO-logged
 
 ### Pruned-Node Survival
 
@@ -76,17 +76,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRUNE-01 | Phase 17 | Pending |
+| PRUNE-01 | Phase 17 | Complete |
 | PRUNE-02 | Phase 16 | Complete |
-| PRUNE-03 | Phase 17 | Pending |
+| PRUNE-03 | Phase 17 | Complete |
 | PRUNE-04 | Phase 18 | Pending |
 | PRUNE-05 | Phase 18 | Pending |
-| GATE-01 | Phase 17 | Pending |
+| GATE-01 | Phase 17 | Complete |
 | GATE-02 | Phase 20 | Pending |
 | GATE-03 | Phase 16 | Complete |
-| GATE-04 | Phase 17 | Pending |
+| GATE-04 | Phase 17 | Complete |
 | GATE-05 | Phase 19 | Pending |
-| GATE-06 | Phase 17 | Pending |
+| GATE-06 | Phase 17 | Complete |
 | SURV-01 | Phase 19 | Pending |
 | SURV-02 | Phase 19 | Pending |
 | SURV-03 | Phase 19 | Pending |
@@ -115,3 +115,4 @@ v2 (future) requirements — no phase mapping by design:
 *Requirements defined: 2026-10-15*
 *Last updated: 2026-10-16 — Phase 16 complete (PRUNE-02, GATE-03); v2 IDs added to traceability as Deferred*
 *Last updated: 2026-10-19 — Phase 17 amendment (D-02 Candidate B): `spent_by_txid` now in scope as the spend-recency carrier populated at `UTXOManager::ConsumeUTXOs`; `spent_epoch` stays out of scope*
+*Last updated: 2026-10-19 — Phase 17 complete (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06); substance verified in 17-VERIFICATION.md*
