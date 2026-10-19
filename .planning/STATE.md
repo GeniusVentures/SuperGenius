@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 17
 status: executing
-stopped_at: Phase 17 context gathered
-last_updated: "2026-10-19T14:14:50.487Z"
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-10-19T14:33:21.426Z"
 last_activity: 2026-10-19
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 5
+  completed_plans: 6
   percent: 4
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-10-19
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T14:14:12.773Z
-**Stopped At:** Phase 17 context gathered
+**Last session:** 2026-10-19T14:33:21.420Z
+**Stopped At:** Completed 17-02-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -141,6 +141,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
 | Phase 17 P01 | 18min | 3 tasks | 5 files |
+| Phase 17 P02 | 15min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -217,6 +218,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
 - [Phase 17]: spent_by_txid is the D-02 Candidate-B spend-recency carrier, populated uniformly on both ConsumeUTXOs branches (genuine + synthesized tombstone); spent_epoch stays dead (D-02 forbids wall-clock) — Synthesized tombstones carry a spender yet remain non-genuine per D-C2, so the discriminator, not the field, excludes them from eligibility
 - [Phase 17]: Spender expression converts inline via base::Hash256::fromReadableString(...).value() at all four call sites (:2669 precedent); PRUNE-01 checkbox deferred to phase close since the window logic is 17-04's evaluator — Keeps the spender inside the ConsumeUTXOs statement (awk gate-visible) and avoids ticking a phase-level requirement mid-phase (Phase-16 precedent)
+- [Phase 17]: GetLocalDeltaKeys is a sibling of the elements-only GetLocalDeltaKeyValues (precedent byte-identical) covering elements AND tombstones keys-only, parse-at-call-time, strictly local — the 17-05 block-gate exposure
+- [Phase 17]: CrdtDatastore::GetLocalDeltaKeys mirrors its precedent's non-const signature (GetDeltaFromNode is a non-const member); GlobalDB::GetLocalDeltaKeys/GetKeyPriority are const — read-only passthrough chains with the 0-for-missing-key priority caveat documented at both levels
 
 ## Deferred Items
 
