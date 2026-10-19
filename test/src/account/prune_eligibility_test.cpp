@@ -447,6 +447,56 @@ TEST_F( PruneEligibilityTest, FailClosedGates_EvaluateWithoutWindowFails )
 }
 
 /**
+ * T-17-0405 — a malformed stored value under a tx/ key is reported
+ * DESERIALIZE_FAILED and never crashes the evaluation; the scan continues,
+ * so a well-formed eligible peer still evaluates eligible alongside it.
+ */
+TEST_F( PruneEligibilityTest, FailClosedGates_GarbageValueReportsDeserializeFailed )
+{
+    // A well-formed, fully-eligible peer: candidate first, spender second.
+    auto eligible_tx = MakeTransfer( 1, 1 );
+    SeedTransaction( eligible_tx );
+    TrackOutputs( *eligible_tx );
+    auto spender = MakeTransfer( 2, 0 );
+    SeedTransaction( spender );
+    ASSERT_TRUE( ConsumeOutput( *eligible_tx, 0, *spender ) );
+
+    // Malformed value at a REAL tx path (real-topic Put — only the bytes are garbage).
+    const std::string      garbage_hash = std::string( 64, 'b' );
+    crdt::GlobalDB::Buffer garbage;
+    garbage.put( std::vector<uint8_t>{ 0xde, 0xad, 0xbe, 0xef } );
+    ASSERT_TRUE(
+        db_->Put( { TransactionManager::GetTransactionPath( garbage_hash ) }, garbage, { kSeedTopic } ).has_value() );
+
+    // One more (non-tx) put so the spender sits two heights below maxHeight.
+    crdt::GlobalDB::Buffer driver;
+    driver.put( "head-driver" );
+    ASSERT_TRUE( db_->Put( { "/seed/prune/garbage-case" }, driver, { kSeedTopic } ).has_value() );
+
+    PruningConfig config;
+    config.finality_window = 2;
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() ); // the garbage value did not crash the scan
+
+    // Candidate, spender (empty outputs -> NO_OUTPUTS), and the garbage entry.
+    ASSERT_EQ( evaluation.value().candidates.size(), 3u );
+    const std::string garbage_path = TransactionManager::GetTransactionPath( garbage_hash );
+    const auto        garbage_it   = std::find_if( evaluation.value().candidates.begin(),
+                                          evaluation.value().candidates.end(),
+                                          [&garbage_path]( const PruneCandidateResult &c )
+                                          { return c.tx_path == garbage_path; } );
+    ASSERT_NE( garbage_it, evaluation.value().candidates.end() );
+    EXPECT_FALSE( garbage_it->eligible );
+    EXPECT_TRUE( HasReason( *garbage_it, PruneReason::DESERIALIZE_FAILED ) );
+
+    const auto *eligible_verdict = FindVerdict( evaluation.value(), *eligible_tx );
+    ASSERT_NE( eligible_verdict, nullptr );
+    EXPECT_TRUE( eligible_verdict->eligible ); // the scan continued past the garbage
+}
+
+/**
  * B3 — the one allowlist home rejects every crafted out-of-prefix key
  * (T-17-0401): cert slot, registration path, unmonitored network, slashless
  * sibling, proof key — and accepts a real monitored-network tx key.
