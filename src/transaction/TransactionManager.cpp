@@ -2646,11 +2646,10 @@ namespace sgns
             m_logger->error( "Transfer {} has malformed data_hash", transfer_tx->GetHash() );
             return outcome::failure( transfer_txid.error() );
         }
-        BOOST_OUTCOME_TRY(
-            utxo_mgr.ConsumeUTXOs( inputs,
-                                   TransferInputOwner( *transfer_tx ),
-                                   sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                                   transfer_txid.value() ) );
+        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs,
+                                                  TransferInputOwner( *transfer_tx ),
+                                                  sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                  transfer_txid.value() ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
@@ -2677,11 +2676,10 @@ namespace sgns
                     m_logger->error( "Migration {} has malformed data_hash", migration_tx->GetHash() );
                     return outcome::failure( migration_txid.error() );
                 }
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
-                    params.first,
-                    migration_tx->GetSrcAddress(),
-                    sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                    migration_txid.value() ) );
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                             migration_tx->GetSrcAddress(),
+                                                                             sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                             migration_txid.value() ) );
             }
 
             m_logger->info( "Created tokens (migration), amount {} balance {}",
@@ -2735,12 +2733,12 @@ namespace sgns
                             return outcome::failure( std::errc::already_connected );
                         }
                     }
-                    BOOST_OUTCOME_TRY( auto consumed,
-                                       account_m->GetUTXOManager().ConsumeUTXOs(
-                                           inputs,
-                                           mint_tx_v2->GetSrcAddress(),
-                                           sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
-                                           hash ) );
+                    BOOST_OUTCOME_TRY(
+                        auto consumed,
+                        account_m->GetUTXOManager().ConsumeUTXOs( inputs,
+                                                                  mint_tx_v2->GetSrcAddress(),
+                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
+                                                                  hash ) );
                     if ( !consumed )
                     {
                         m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
@@ -2915,11 +2913,10 @@ namespace sgns
                 m_logger->error( "Escrow {} has malformed data_hash", escrow_tx->GetHash() );
                 return outcome::failure( escrow_txid.error() );
             }
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs(
-                params.first,
-                escrow_tx->GetSrcAddress(),
-                sgns::UTXOManager::UTXOType::UTXO_NORMAL,
-                escrow_txid.value() ) );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                         escrow_tx->GetSrcAddress(),
+                                                                         sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                         escrow_txid.value() ) );
         }
 
         return outcome::success();
