@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 17
 status: executing
-stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-10-19T15:04:17.908Z"
+stopped_at: Completed 17-04-PLAN.md
+last_updated: "2026-10-19T15:32:27.824Z"
 last_activity: 2026-10-19
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 4
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-10-19
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T15:02:29.307Z
-**Stopped At:** Completed 17-02-PLAN.md
+**Last session:** 2026-10-19T15:32:27.818Z
+**Stopped At:** Completed 17-04-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -143,6 +143,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P01 | 18min | 3 tasks | 5 files |
 | Phase 17 P02 | 15min | 3 tasks | 6 files |
 | Phase 17 P03 | 21min | 2 tasks | 3 files |
+| Phase 17 P04 | 26min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -223,6 +224,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 17]: CrdtDatastore::GetLocalDeltaKeys mirrors its precedent's non-const signature (GetDeltaFromNode is a non-const member); GlobalDB::GetLocalDeltaKeys/GetKeyPriority are const — read-only passthrough chains with the 0-for-missing-key priority caveat documented at both levels
 - [Phase ?]: 17-03: The cert-slot previous_hash rung is the value-independent nonce-chain authority -- the ONE relaxation dropped only the registration-only disjunct (all binding checks + ladder order verbatim), proven against the REAL post-prune state by driving Phase-16 EraseTransactionEntry end-to-end (first test to do so)
 - [Phase ?]: 17-03: Case 4 captures the cert rung directly (friend accessor), not only through the ladder -- with history intact rung 4 backstops the same hash, so a ladder-level assertion cannot bind the rung to the mutation check
+- [Phase ?]: 17-04: The eligibility window reads ONLY the spender's priority (spend recency, D-02) with existence established via ResolveTransactionPathAndCID BEFORE GetKeyPriority -- the 0-for-missing caveat would satisfy the window vacuously; mutation-verified
+- [Phase ?]: 17-04: PruneEligibility is a friend of TransactionManager (TransactionConsensusHandler same-module precedent) because GetMonitoredNetworkIDs and ResolveTransactionPathAndCID are private despite the plan's interface list -- friendship keeps the public contract small
+- [Phase ?]: 17-04: Empty produced-outputs fail closed as NO_OUTPUTS (vacuous all-outputs-spent must not be eligible); Evaluate without a configured finality_window fails closed with invalid_argument; SPENDER_UNRESOLVED also covers a failed priority read
 
 ## Deferred Items
 
