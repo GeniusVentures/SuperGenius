@@ -14,7 +14,7 @@ updated: 2026-10-19T18:30:00Z
 
 ### 1. CR-01 concurrency fix concurrence review
 expected: `RunPruneDryRunCycle` builds the evaluator from a `SnapshotAccountServices()` snapshot held for the whole cycle (commit eb1a23adf). No unit seam exists (GeniusNode is not unit-constructible — documented at result_gc_test.cpp:1-14); the invariant is source-audited. A human review of the lock discipline against the Phase-13 generation-lifecycle paths is the residual check.
-result: [pending]
+result: passed — owner-directed generation tag landed (follows the Phase-13 house pattern): the cycle's snapshot generation is re-checked after Evaluate(); a mid-cycle switch tags the summary "[generation superseded — retired snapshot]". No switch blocking needed — verified at the swap site that old generations are only reassigned under lifecycle_mutex_ and die by refcount, with dependencies on the never-swapped node-scoped GlobalDB. Build + format green.
 
 ### 2. Live-node dry-run timer observation
 expected: with `pruning.enabled=true`, `pruning.dry_run=true`, and a `finality_window` set in `sgns_config.json` on a Light node with real history, the per-cycle INFO summary appears every 10 minutes and no data is erased (dry-run never writes). Observational on a live node — no automated harness.
@@ -23,9 +23,9 @@ result: [pending]
 ## Summary
 
 total: 2
-passed: 0
+passed: 1
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
