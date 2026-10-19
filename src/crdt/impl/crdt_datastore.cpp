@@ -2316,4 +2316,26 @@ namespace sgns::crdt
         }
         return result;
     }
+
+    outcome::result<std::vector<std::string>> CrdtDatastore::GetLocalDeltaKeys( const std::string &cid_string )
+    {
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+
+        BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
+
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node, true ) );
+        const auto &delta = filtered.delta;
+
+        std::vector<std::string> keys;
+        keys.reserve( delta.elements().size() + delta.tombstones().size() );
+        for ( const auto &element : delta.elements() )
+        {
+            keys.emplace_back( element.key() );
+        }
+        for ( const auto &tombstone : delta.tombstones() )
+        {
+            keys.emplace_back( tombstone.key() );
+        }
+        return keys;
+    }
 }

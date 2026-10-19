@@ -297,6 +297,20 @@ namespace sgns::crdt
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
+        /** Enumerate the keys a delta block carries -- elements AND
+        * tombstones -- keys-only, values discarded. Parses the block itself
+        * at call time (the block is the source of truth; no persistent
+        * reverse index) and NEVER fetches from the network:
+        * GetNodeWithoutRequest is strictly local, so an unknown CID fails.
+        * Both repeated-Element lists are covered because a block-gate
+        * consumer must reject a block carrying a tombstone for a live key.
+        * Sibling of the elements-only GetLocalDeltaKeyValues, which is left
+        * untouched so existing callers' result sets cannot change.
+        * @param cid_string CID string of the delta block
+        * @return carried keys (element keys then tombstone keys) or outcome::failure
+        */
+        outcome::result<std::vector<std::string>> GetLocalDeltaKeys( const std::string &cid_string );
+
         /** Pure query: true while the CID is queued as a root job or being processed
         * by a DAG worker -- used by erase guards.
         * @param cid CID to check

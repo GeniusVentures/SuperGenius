@@ -360,6 +360,16 @@ namespace sgns::crdt
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
+        /** Enumerate the keys a delta block carries -- elements AND
+        * tombstones -- keys-only, through the CRDT datastore (read-only,
+        * parse-at-call-time, strictly local: never fetches from the network,
+        * unknown CID fails). Elements-only precedent GetLocalDeltaKeyValues
+        * is left untouched.
+        * @param cid_string CID string of the delta block
+        * @return carried keys (element keys then tombstone keys) or outcome::failure
+        */
+        outcome::result<std::vector<std::string>> GetLocalDeltaKeys( const std::string &cid_string ) const;
+
     private:
         /**
          * @brief       Constructs a new Global D B object

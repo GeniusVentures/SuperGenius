@@ -1012,4 +1012,15 @@ namespace sgns::crdt
         return crdt_datastore->GetLocalDeltaKeyValues( cid_string );
     }
 
+    outcome::result<std::vector<std::string>> GlobalDB::GetLocalDeltaKeys( const std::string &cid_string ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return crdt_datastore->GetLocalDeltaKeys( cid_string );
+    }
+
 }
