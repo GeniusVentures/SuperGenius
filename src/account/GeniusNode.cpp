@@ -1152,6 +1152,10 @@ namespace sgns
                     return;
                 }
 
+                // GATE-06 (17-06): config-gated prune dry-run timer — an
+                // absent/disabled pruning config returns immediately (SC-5).
+                StartPruneDryRunTimerIfConfigured();
+
                 ++transaction_manager_construction_count_;
                 uint64_t owner_generation;
                 {
@@ -2449,6 +2453,12 @@ namespace sgns
             gc_timer_->cancel( ignored );
             gc_timer_.reset();
         }
+        if ( prune_dry_run_timer_ )
+        {
+            boost::system::error_code ignored;
+            prune_dry_run_timer_->cancel( ignored );
+            prune_dry_run_timer_.reset();
+        }
 
         // Account-bound services depend on GlobalDB, which in turn depends on
         // GraphSync, the scheduler, PubSub, and the io_context.
@@ -2531,6 +2541,11 @@ namespace sgns
         {
             boost::system::error_code ignored;
             gc_timer_->cancel( ignored );
+        }
+        if ( prune_dry_run_timer_ )
+        {
+            boost::system::error_code ignored;
+            prune_dry_run_timer_->cancel( ignored );
         }
 
         // Unsubscribe from bootstrap disconnect events
@@ -4840,6 +4855,132 @@ namespace sgns
                                 files.size() - deletedCount,
                                 totalBytes );
         }
+    }
+
+    // ── Prune Dry-Run (GATE-06 / 17-06) ──
+
+    void GeniusNode::StartPruneDryRunTimerIfConfigured()
+    {
+        // SC-5 default-off consent gate: an absent/disabled pruning config must
+        // reach nothing below this line — no timer, no evaluator, no log cycle.
+        if ( !pruning_config_.enabled )
+        {
+            return;
+        }
+        // GATE-01 role gate at the wiring (defense in depth — the evaluator
+        // re-checks at construction). Light nodes only; full/archive never erase.
+        if ( node_type_ != NodeType::Light )
+        {
+            node_logger_->warn( "Pruning enabled but node_type={} is not Light — pruning is light-only; "
+                                "dry-run cycle not started",
+                                node_type_ );
+            return;
+        }
+        if ( !pruning_config_.dry_run )
+        {
+            node_logger_->warn( "Pruning enabled with dry_run=false: real erasure arrives with the Phase-18 "
+                                "TxPruner; no cycle is started this phase" );
+            return;
+        }
+        // The timer is node-scoped: StateTransition reaches this wiring once per
+        // account generation, and an already-running timer keeps its cadence (the
+        // evaluator is constructed per cycle from the live members, so it tracks
+        // generation switches without restarting the timer).
+        if ( prune_dry_run_timer_ )
+        {
+            return;
+        }
+
+        prune_dry_run_timer_                = std::make_unique<boost::asio::steady_timer>( *io_ );
+        std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+
+        prune_dry_run_timer_->expires_from_now( std::chrono::minutes( 1 ) );
+        prune_dry_run_timer_->async_wait(
+            [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunPruneDryRunCycle();
+                }
+            } );
+        node_logger_->info( "Prune dry-run timer started: first cycle in 1 min, then every 10 min (read-only)" );
+    }
+
+    void GeniusNode::RunPruneDryRunCycle()
+    {
+        // Phase-13 generation lifecycle: TransactionManager is replaceable, so the
+        // evaluator is NEVER cached — it is constructed from the CURRENT members on
+        // every tick. A generation switch can momentarily leave a member unset;
+        // skip this tick (read-only, nothing is pending) and keep the cadence.
+        if ( !tx_globaldb_ || !transaction_manager_ || !account_ )
+        {
+            node_logger_->debug( "Prune dry-run cycle skipped: account-bound members unavailable "
+                                 "(generation switch)" );
+        }
+        else
+        {
+            auto evaluator = PruneEligibility::New( *tx_globaldb_,
+                                                    *transaction_manager_,
+                                                    account_->GetUTXOManager(),
+                                                    node_type_,
+                                                    pruning_config_ );
+            if ( evaluator.has_error() )
+            {
+                // Fail closed: stop the cycle rather than retry a configuration
+                // that cannot construct the evaluator every 10 minutes.
+                node_logger_->error( "Prune dry-run evaluator construction failed: {} — dry-run cycle stopped",
+                                     evaluator.error().message() );
+                return;
+            }
+
+            auto evaluation = evaluator.value()->Evaluate();
+            if ( evaluation.has_error() )
+            {
+                // Fail closed: a failing evaluation is a broken policy state, not a
+                // transient condition — stop instead of spinning on it.
+                node_logger_->error( "Prune dry-run evaluation failed: {} — dry-run cycle stopped",
+                                     evaluation.error().message() );
+                return;
+            }
+
+            const auto &result   = evaluation.value();
+            const auto  eligible = result.EligibleCount();
+            const auto  erasable_blocks =
+                static_cast<size_t>( std::count_if( result.block_reports.begin(),
+                                                    result.block_reports.end(),
+                                                    []( const BlockGateResult &block ) { return block.erasable; } ) );
+            node_logger_->info( "Prune dry-run: {} candidate(s), {} eligible / {} ineligible, {}/{} block(s) "
+                                "erasable ({} held)",
+                                result.candidates.size(),
+                                eligible,
+                                result.candidates.size() - eligible,
+                                erasable_blocks,
+                                result.block_reports.size(),
+                                result.block_reports.size() - erasable_blocks );
+        }
+
+        if ( !prune_dry_run_timer_ )
+        {
+            return;
+        }
+        std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+        prune_dry_run_timer_->expires_from_now( std::chrono::minutes( 10 ) );
+        prune_dry_run_timer_->async_wait(
+            [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunPruneDryRunCycle();
+                }
+            } );
     }
 
     // ── Bootstrap Fullnode Reconnection ──
