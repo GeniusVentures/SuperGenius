@@ -423,6 +423,9 @@ namespace sgns
         friend class MultiNodeFinalityFaultTestAccess;
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
+        /// Same-module production collaborator (17-04): reads the monitored-network
+        /// list and resolves spender tx->CID entries for the read-only evaluator.
+        friend class PruneEligibility;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
