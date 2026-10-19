@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 17
 status: executing
 stopped_at: Phase 17 context gathered
-last_updated: "2026-10-16T20:22:20.076Z"
-last_activity: 2026-10-16 -- Phase 17 planning complete
+last_updated: "2026-10-19T14:14:50.487Z"
+last_activity: 2026-10-19
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
+  completed_plans: 5
   percent: 4
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 17 — eligibility, policy & gating (dry run)
+**Current focus:** Phase 17 — eligibility-policy-gating-dry-run
 
 ## Current Position
 
-Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
-Plan: Not started
+Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-10-16 -- Phase 17 planning complete
+Last activity: 2026-10-19
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Roadmap Snapshot
 
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-16T19:09:57.202Z
+**Last session:** 2026-10-19T14:14:12.773Z
 **Stopped At:** Phase 17 context gathered
-**Resume File:** .planning/phases/17-eligibility-policy-gating-dry-run/17-CONTEXT.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -140,6 +140,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P02 | 18min | 3 tasks | 7 files |
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
+| Phase 17 P01 | 18min | 3 tasks | 5 files |
 
 ## Decisions
 
@@ -214,6 +215,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: The erase pending/active guard protects the EXTERNAL root path only (pendingRootQueue_/activeRootCID_); self-created Put jobs live in selfCreatedJobList_ — the 16-04 guard proof stalls a mirrored receiver's getNode, the fetch entry the DAG worker reaches with the root job active
 - [Phase 16]: The source-scan gate roots at PROJECT_ROOT, never CMAKE_SOURCE_DIR — this repo drives CMake from build/OSX/ (out-of-root driver), so CMAKE_SOURCE_DIR/src does not exist and would make the gate vacuously green
 - [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
+- [Phase 17]: spent_by_txid is the D-02 Candidate-B spend-recency carrier, populated uniformly on both ConsumeUTXOs branches (genuine + synthesized tombstone); spent_epoch stays dead (D-02 forbids wall-clock) — Synthesized tombstones carry a spender yet remain non-genuine per D-C2, so the discriminator, not the field, excludes them from eligibility
+- [Phase 17]: Spender expression converts inline via base::Hash256::fromReadableString(...).value() at all four call sites (:2669 precedent); PRUNE-01 checkbox deferred to phase close since the window logic is 17-04's evaluator — Keeps the spender inside the ConsumeUTXOs statement (awk gate-visible) and avoids ticking a phase-level requirement mid-phase (Phase-16 precedent)
 
 ## Deferred Items
 
