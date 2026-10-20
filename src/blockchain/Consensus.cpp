@@ -3475,15 +3475,93 @@ namespace sgns
             return Check::Reject;
         }
 
-        auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
-        if ( registry_ret.has_error() )
+        // D-01 grandfather probe: a certificate that already reached durable
+        // finality re-validates under today's semantics. The probe reads the
+        // canonical slot record with the write path's own key derivation
+        // (GetExpectedCertificateSlotKey, the same derivation SubmitCertificate
+        // uses at its PutConvergentImmutable), and records are only ever
+        // written AFTER an Approve -- an attacker cannot pre-seed a record to
+        // buy grandfathering for a certificate that never validated
+        // (Pitfall 4). On a fresh node admitting new certificates the probe
+        // legitimately misses and the strict path below applies.
+        bool grandfathered_final = false;
         {
-            logger_->error( "{}: registry load pending error={} for registry cid {} proposal_id={}",
-                            __func__,
-                            registry_ret.error().message(),
-                            certificate.registry_cid(),
-                            certificate.proposal_id() );
-            return Check::Stalled;
+            const auto durable_slot_record = db_->Get( { GetExpectedCertificateSlotKey( certificate ) } );
+            if ( durable_slot_record.has_value() )
+            {
+                grandfathered_final = true;
+            }
+            else if ( durable_slot_record.error() != storage::DatabaseError::NOT_FOUND )
+            {
+                // The probe itself could not read the store: environmental,
+                // retryable, and never memoized (same discipline as the
+                // missing-dependency Stalled below).
+                logger_->error( "{}: durable slot record probe failed error={} proposal_id={}",
+                                __func__,
+                                durable_slot_record.error().message(),
+                                certificate.proposal_id() );
+                return Check::Stalled;
+            }
+        }
+
+        outcome::result<ValidatorRegistry::Registry> registry_ret = outcome::success( ValidatorRegistry::Registry{} );
+        if ( grandfathered_final )
+        {
+            // Finality is the proof of acceptance: the strict authorization
+            // rule is skipped, and any load error stays retryable exactly as
+            // before the verified loader existed (behavior-preserving for
+            // pre-upgrade final certificates; D-01).
+            registry_ret = registry_->LoadUnverifiedRegistryByCid( certificate.registry_cid() );
+            if ( registry_ret.has_error() )
+            {
+                logger_->error( "{}: registry load pending error={} for registry cid {} proposal_id={}",
+                                __func__,
+                                registry_ret.error().message(),
+                                certificate.registry_cid(),
+                                certificate.proposal_id() );
+                return Check::Stalled;
+            }
+        }
+        else
+        {
+            // Strict path (TRUST-01): a peer-supplied registry CID must verify
+            // against the genesis-rooted update chain.
+            registry_ret = registry_->LoadVerifiedRegistryByCid( certificate.registry_cid() );
+            if ( registry_ret.has_error() )
+            {
+                if ( registry_ret.error() == std::errc::permission_denied )
+                {
+                    logger_->error( "{}: rejected: registry authorization failed for registry cid {} proposal_id={}",
+                                    __func__,
+                                    certificate.registry_cid(),
+                                    certificate.proposal_id() );
+                    return Check::Reject;
+                }
+                // resource_unavailable_try_again: the registry dependency is
+                // not synced yet -- an ordering problem, never an
+                // authorization failure. Stalled stays retryable and is never
+                // memoized by the accepted-scan (Pitfall 1), so out-of-order
+                // sync converges once the ancestor arrives. D-03 bounds the
+                // wait: past the defer window the stall becomes a
+                // deterministic timeout Reject (memoizable, unlike the
+                // dependency-missing Stalled -- a first-seen deadline only
+                // ever crosses, never re-arms).
+                if ( authorization_defer_tracker_.Defer( certificate.registry_cid() ) )
+                {
+                    logger_->error( "{}: rejected: registry authorization defer window elapsed for registry cid {} "
+                                    "proposal_id={}",
+                                    __func__,
+                                    certificate.registry_cid(),
+                                    certificate.proposal_id() );
+                    return Check::Reject;
+                }
+                logger_->error( "{}: registry load pending error={} for registry cid {} proposal_id={}",
+                                __func__,
+                                registry_ret.error().message(),
+                                certificate.registry_cid(),
+                                certificate.proposal_id() );
+                return Check::Stalled;
+            }
         }
         auto &registry = registry_ret.value();
 

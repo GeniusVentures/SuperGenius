@@ -859,6 +859,14 @@ namespace sgns
                             {
                                 registry->SetMaxNewValidatorsPerUpdate( max_new_validators_per_update_ );
                             }
+
+                            // D-03 (21-04): config-wired authorization defer window for the
+                            // consensus manager's strict registry-authorization stall path
+                            // (authorization_defer_window_sec, default 1800s).
+                            if ( auto consensus_manager = blockchain_->GetConsensusManager() )
+                            {
+                                consensus_manager->SetAuthorizationDeferWindow( authorization_defer_window_sec_ );
+                            }
                         }
                         if ( blockchain_ )
                         {

@@ -1053,6 +1053,10 @@ namespace
         {
         }
 
+        /// Genesis authority pinned to the first-started peer (TRUST-01; see
+        /// StartPeer). Fixture-scoped so restarts keep the original.
+        std::string genesis_authority_address_;
+
         Peer StartPeer( const std::string &name, uint16_t port, std::string active_vote_diagnostic_key = {} )
         {
             Peer peer;
@@ -1140,6 +1144,21 @@ namespace
                 return peer;
             }
             EXPECT_TRUE( peer.account->GetUTXOManager().LoadUTXOs( peer.db->GetDataStore() ).has_value() );
+            // TRUST-01 (21-04): ValidateCertificate now roots every
+            // non-grandfathered registry load at the genesis authority, so the
+            // fixture pins the process-global authorized-full-node address to
+            // the FIRST-started peer -- exactly the account StoreRegistry
+            // signs with (validators.front()) and the same wiring
+            // multi_account_sync / policy_lifetime tests apply. Without the
+            // pin every peer's registry constructs with the shipped dev
+            // default and the fixture's honest updates classify as
+            // unauthorized. The fixture member keeps restarts on the original
+            // authority even though the restarted peer builds a fresh account.
+            if ( genesis_authority_address_.empty() )
+            {
+                genesis_authority_address_ = peer.account->GetAddress();
+            }
+            sgns::Blockchain::SetAuthorizedFullNodeAddress( genesis_authority_address_ );
             peer.blockchain = sgns::Blockchain::New( peer.db,
                                                      peer.account,
                                                      peer.pubsub,

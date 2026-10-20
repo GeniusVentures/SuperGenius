@@ -171,6 +171,17 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         /**
+         * @brief Returns the consensus manager owned by this blockchain instance.
+         * @return Shared pointer to the consensus manager, possibly null when
+         *         unavailable. Read-only access for configuration application
+         *         (e.g. GeniusNode wiring the authorization defer window).
+         */
+        std::shared_ptr<ConsensusManager> GetConsensusManager() const
+        {
+            return consensus_manager_;
+        }
+
+        /**
          * @brief Returns the CRDT database used for authoritative transaction evidence.
          * @return Shared GlobalDB instance, or null when the blockchain has no database.
          */
