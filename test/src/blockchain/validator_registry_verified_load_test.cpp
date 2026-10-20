@@ -55,9 +55,9 @@ namespace
     class FakeChain
     {
     public:
-        std::map<uint64_t, UpdateVerification> verdict_by_epoch;
-        std::set<std::string>                  unfetchable_cids;
-        int                                    fetch_calls = 0;
+        std::map<uint64_t, UpdateVerification> verdict_by_epoch_;
+        std::set<std::string>                  unfetchable_cids_;
+        int                                    fetch_calls_ = 0;
 
         void Store( const std::string &cid, sgns::validator::RegistryUpdate update )
         {
@@ -66,8 +66,8 @@ namespace
 
         outcome::result<sgns::validator::RegistryUpdate> Fetch( const std::string &cid )
         {
-            ++fetch_calls;
-            if ( unfetchable_cids.count( cid ) != 0 )
+            ++fetch_calls_;
+            if ( unfetchable_cids_.count( cid ) != 0 )
             {
                 return outcome::failure( std::errc::no_such_file_or_directory );
             }
@@ -79,10 +79,10 @@ namespace
             return it->second;
         }
 
-        UpdateVerification Classify( const sgns::validator::RegistryUpdate &update ) const
+        [[nodiscard]] UpdateVerification Classify( const sgns::validator::RegistryUpdate &update ) const
         {
-            const auto it = verdict_by_epoch.find( update.registry().epoch() );
-            return it == verdict_by_epoch.end() ? UpdateVerification::kInvalid : it->second;
+            const auto it = verdict_by_epoch_.find( update.registry().epoch() );
+            return it == verdict_by_epoch_.end() ? UpdateVerification::kInvalid : it->second;
         }
 
         std::function<outcome::result<sgns::validator::RegistryUpdate>( const std::string & )> Fetcher()
@@ -109,7 +109,7 @@ namespace
         FakeChain chain;
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "attacker" ), "forged-root" ) );
         chain.Store( "forged-root", MakeUpdate( MakeRegistry( 1, "attacker" ), "" ) );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kValid }, { 1, UpdateVerification::kInvalid } };
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid }, { 1, UpdateVerification::kInvalid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -131,9 +131,9 @@ namespace
         chain.Store( "head", MakeUpdate( MakeRegistry( 3, "attacker" ), "a" ) );
         chain.Store( "a", MakeUpdate( MakeRegistry( 2, "attacker" ), "b" ) );
         chain.Store( "b", MakeUpdate( MakeRegistry( 1, "attacker" ), "a" ) );
-        chain.verdict_by_epoch = { { 3, UpdateVerification::kValid },
-                                   { 2, UpdateVerification::kValid },
-                                   { 1, UpdateVerification::kValid } };
+        chain.verdict_by_epoch_ = { { 3, UpdateVerification::kValid },
+                                    { 2, UpdateVerification::kValid },
+                                    { 1, UpdateVerification::kValid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -154,9 +154,9 @@ namespace
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest" ), "weak-mid" ) );
         chain.Store( "weak-mid", MakeUpdate( MakeRegistry( 1, "honest" ), "genesis" ) );
         chain.Store( "genesis", MakeUpdate( MakeRegistry( 0, "genesis-authority" ), "" ) );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kValid },
-                                   { 1, UpdateVerification::kInvalid },
-                                   { 0, UpdateVerification::kValid } };
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid },
+                                    { 1, UpdateVerification::kInvalid },
+                                    { 0, UpdateVerification::kValid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -174,8 +174,8 @@ namespace
     {
         FakeChain chain;
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest" ), "not-synced-yet" ) );
-        chain.unfetchable_cids.insert( "not-synced-yet" );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kValid } };
+        chain.unfetchable_cids_.insert( "not-synced-yet" );
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -194,7 +194,7 @@ namespace
     {
         FakeChain chain;
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest" ), "ancestor" ) );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kMissingDependency } };
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kMissingDependency } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -215,9 +215,9 @@ namespace
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest-head" ), "mid" ) );
         chain.Store( "mid", MakeUpdate( MakeRegistry( 1, "honest-mid" ), "genesis" ) );
         chain.Store( "genesis", MakeUpdate( MakeRegistry( 0, "genesis-authority" ), "" ) );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kValid },
-                                   { 1, UpdateVerification::kValid },
-                                   { 0, UpdateVerification::kValid } };
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid },
+                                    { 1, UpdateVerification::kValid },
+                                    { 0, UpdateVerification::kValid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -243,7 +243,7 @@ namespace
         FakeChain chain;
         chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest-head" ), "genesis" ) );
         chain.Store( "genesis", MakeUpdate( MakeRegistry( 0, "genesis-authority" ), "" ) );
-        chain.verdict_by_epoch = { { 2, UpdateVerification::kValid }, { 0, UpdateVerification::kValid } };
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid }, { 0, UpdateVerification::kValid } };
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    first = ValidatorRegistry::VerifyRegistryChainClassified( "head",
@@ -251,46 +251,55 @@ namespace
                                                                        chain.Classifier(),
                                                                        memo );
         ASSERT_FALSE( first.has_error() );
-        EXPECT_GT( chain.fetch_calls, 0 );
+        EXPECT_GT( chain.fetch_calls_, 0 );
 
-        const int fetches_after_first_walk = chain.fetch_calls;
+        const int fetches_after_first_walk = chain.fetch_calls_;
         auto      second                   = ValidatorRegistry::VerifyRegistryChainClassified( "head",
                                                                         chain.Fetcher(),
                                                                         chain.Classifier(),
                                                                         memo );
         ASSERT_FALSE( second.has_error() );
-        EXPECT_EQ( chain.fetch_calls, fetches_after_first_walk );
+        EXPECT_EQ( chain.fetch_calls_, fetches_after_first_walk );
         EXPECT_EQ( second.value().epoch(), 2U );
 
         // A memoized ANCESTOR also terminates a deeper walk without fetching it.
         FakeChain fresh_chain;
         fresh_chain.Store( "new-head", MakeUpdate( MakeRegistry( 3, "honest-new" ), "head" ) );
-        fresh_chain.verdict_by_epoch = { { 3, UpdateVerification::kValid } };
-        auto third                   = ValidatorRegistry::VerifyRegistryChainClassified( "new-head",
+        fresh_chain.verdict_by_epoch_ = { { 3, UpdateVerification::kValid } };
+        auto third                    = ValidatorRegistry::VerifyRegistryChainClassified( "new-head",
                                                                        fresh_chain.Fetcher(),
                                                                        fresh_chain.Classifier(),
                                                                        memo );
         ASSERT_FALSE( third.has_error() );
         EXPECT_EQ( third.value().epoch(), 3U );
-        EXPECT_EQ( fresh_chain.fetch_calls, 1 );
+        EXPECT_EQ( fresh_chain.fetch_calls_, 1 );
         EXPECT_EQ( memo.Size(), 3U );
     }
 
-    // COMPAT: memo at cap evicts exactly the oldest entry per insertion and
-    // never clears wholesale; the just-inserted CID survives.
-    TEST( ValidatorRegistryVerifiedLoadTest, MemoCapEvictsOldestFirst )
+    // Builds a kMaxVerifiedRegistryMemoEntries + 1 position honest chain:
+    // c0 is the genesis root, c<cap> is the head.
+    FakeChain MakeCapOverflowChain( uint64_t *cap_out, std::string *head_cid_out )
     {
-        // Chain of kMaxVerifiedRegistryMemoEntries + 1 positions: c0 is the
-        // genesis root, c<cap> is the head.
         FakeChain  chain;
         const auto cap = ValidatorRegistry::kMaxVerifiedRegistryMemoEntries;
         for ( uint64_t index = 0; index <= cap; ++index )
         {
             const std::string prev = ( index == 0 ) ? std::string() : "c" + std::to_string( index - 1 );
             chain.Store( "c" + std::to_string( index ), MakeUpdate( MakeRegistry( index, "v" ), prev ) );
-            chain.verdict_by_epoch[index] = UpdateVerification::kValid;
+            chain.verdict_by_epoch_[index] = UpdateVerification::kValid;
         }
-        const std::string head_cid = "c" + std::to_string( cap );
+        *cap_out      = cap;
+        *head_cid_out = "c" + std::to_string( cap );
+        return chain;
+    }
+
+    // COMPAT: memo at cap evicts exactly the oldest entry per insertion and
+    // never clears wholesale; the just-inserted CID survives.
+    TEST( ValidatorRegistryVerifiedLoadTest, MemoCapEvictsOldestFirst )
+    {
+        uint64_t    cap = 0;
+        std::string head_cid;
+        FakeChain   chain = MakeCapOverflowChain( &cap, &head_cid );
 
         ValidatorRegistry::VerifiedRegistryMemo memo;
         auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( head_cid,
@@ -315,5 +324,60 @@ namespace
         EXPECT_TRUE( memo.Contains( "c0" ) );
         EXPECT_FALSE( memo.Contains( "c1" ) );
         EXPECT_TRUE( memo.Contains( head_cid ) );
+    }
+
+    // COMPAT (negative control): the first walk fetches exactly one update per
+    // chain position -- the verified loader must not weaken into redundant
+    // fetching while the memo is cold (fetch-call count asserted).
+    TEST( ValidatorRegistryVerifiedLoadTest, FirstWalkFetchesExactlyOneUpdatePerChainPosition )
+    {
+        FakeChain chain;
+        chain.Store( "head", MakeUpdate( MakeRegistry( 2, "honest-head" ), "mid" ) );
+        chain.Store( "mid", MakeUpdate( MakeRegistry( 1, "honest-mid" ), "genesis" ) );
+        chain.Store( "genesis", MakeUpdate( MakeRegistry( 0, "genesis-authority" ), "" ) );
+        chain.verdict_by_epoch_ = { { 2, UpdateVerification::kValid },
+                                    { 1, UpdateVerification::kValid },
+                                    { 0, UpdateVerification::kValid } };
+
+        ValidatorRegistry::VerifiedRegistryMemo memo;
+        auto                                    result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
+                                                                        chain.Fetcher(),
+                                                                        chain.Classifier(),
+                                                                        memo );
+        ASSERT_FALSE( result.has_error() );
+        EXPECT_EQ( chain.fetch_calls_, 3 );
+    }
+
+    // Determinism: identical chain + identical classifier decisions produce the
+    // identical verdict across independent walks (REQ-DETERM-01 discipline).
+    TEST( ValidatorRegistryVerifiedLoadTest, DecisionIsDeterministicAcrossWalks )
+    {
+        FakeChain honest;
+        honest.Store( "head", MakeUpdate( MakeRegistry( 1, "honest" ), "genesis" ) );
+        honest.Store( "genesis", MakeUpdate( MakeRegistry( 0, "genesis-authority" ), "" ) );
+        honest.verdict_by_epoch_ = { { 1, UpdateVerification::kValid }, { 0, UpdateVerification::kValid } };
+
+        FakeChain forged;
+        forged.Store( "head", MakeUpdate( MakeRegistry( 1, "attacker" ), "genesis" ) );
+        forged.Store( "genesis", MakeUpdate( MakeRegistry( 0, "attacker" ), "" ) );
+        forged.verdict_by_epoch_ = { { 1, UpdateVerification::kValid }, { 0, UpdateVerification::kInvalid } };
+
+        for ( int attempt = 0; attempt < 2; ++attempt )
+        {
+            ValidatorRegistry::VerifiedRegistryMemo honest_memo;
+            auto honest_result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
+                                                                                   honest.Fetcher(),
+                                                                                   honest.Classifier(),
+                                                                                   honest_memo );
+            ASSERT_FALSE( honest_result.has_error() );
+
+            ValidatorRegistry::VerifiedRegistryMemo forged_memo;
+            auto forged_result = ValidatorRegistry::VerifyRegistryChainClassified( "head",
+                                                                                   forged.Fetcher(),
+                                                                                   forged.Classifier(),
+                                                                                   forged_memo );
+            ASSERT_TRUE( forged_result.has_error() );
+            EXPECT_EQ( forged_result.error(), std::errc::permission_denied );
+        }
     }
 } // namespace
