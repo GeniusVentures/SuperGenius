@@ -1,6 +1,6 @@
 {
     "_comment": "SuperGenius network configuration for the STAGING net (net_id 333). Operational fields have defaults; the entry address lives in network_config.json bootstrap_addresses.",
-    "_trust_configuration_notice": "STAGING NET trust fields — real values from the staging net's published ceremony (fingerprint 4f6840f5bdffca6d51d463c4f02d85bde76b5ce88dd3d1ab4ed59e39663a7afb). Quorum floors are derived from the trusted_peers count (4 peers -> 3-of-4). After durable confirmation these JSON trust fields are non-authoritative and persisted verified trust state is authoritative.",
+    "_trust_configuration_notice": "STAGING NET trust fields — real values from the staging net's published ceremony (fingerprint 4f6840f5bdffca6d51d463c4f02d85bde76b5ce88dd3d1ab4ed59e39663a7afb, enforced at boot via genesis_manifest_fingerprint). Quorum floors are derived from the trusted_peers count (4 peers -> 3-of-4). After durable confirmation these JSON trust fields are non-authoritative and persisted verified trust state is authoritative.",
     "net_id": 333,
     "node_type": "Full",
     "subnet_id": 333,
@@ -12,6 +12,7 @@
         "fe412dcde2b0ed942ba9fad260c68774f8dbd3c3eaab88e4406a78301d8df591765cd026a6184426ffc6a2c41bba77444f8e421c4cc3e55a6f3e3dc34711f422"
     ],
     "bootstrapper_node": "4005f03e71463c4083b96c25098b50c3d08c2d0427b144f9a0bfe68ca19b562a6e5b83c896277156f450315d50498f892d0690a3eb1415d06eab21a30a16030f",
+    "genesis_manifest_fingerprint": "4f6840f5bdffca6d51d463c4f02d85bde76b5ce88dd3d1ab4ed59e39663a7afb",
     "ipfs_cache_dir": "ipfs_cache",
     "mirror_results": false,
     "result_retention_hours": 168,

@@ -1205,6 +1205,10 @@ namespace sgns
         std::vector<std::string> bootstrap_fullnodes_;
         std::vector<std::string> trusted_peers_genesis_;     ///< Genesis trusted-peer list (BURN-02/BURN-03).
         std::string              bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
+        /// Ceremony fingerprint pin ("genesis_manifest_fingerprint"): when non-empty,
+        /// the configured genesis manifest must hash to exactly this value on a
+        /// fresh boot or the node fails closed (folded todo residual, T-21-0301).
+        std::string genesis_manifest_fingerprint_;
         /// Quorum threshold for TrustedPeerRegistry membership changes; 0 = unset (defaulted to the
         /// majority floor for the parsed genesis peer count in LoadSgnsConfig()).
         uint64_t trusted_peer_quorum_threshold_ = 0;

@@ -523,6 +523,14 @@ namespace sgns
             burn_config_quorum_threshold_ = config_json["burn_config_quorum_threshold"].GetUint64();
             node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
         }
+        // Presence is logged, never the value: the pin is a trust-root secret in the
+        // same sense as the identity fields it anchors (D-03 privacy precedent).
+        if ( config_json.HasMember( "genesis_manifest_fingerprint" ) &&
+             config_json["genesis_manifest_fingerprint"].IsString() )
+        {
+            genesis_manifest_fingerprint_ = config_json["genesis_manifest_fingerprint"].GetString();
+            node_logger_->info( "sgns_config.json: genesis_manifest_fingerprint pin loaded" );
+        }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)). MembershipQuorumFloor
         // maps an empty peer set to 0; keep the historical default of 1 for that case.
@@ -926,6 +934,39 @@ namespace sgns
                                 configured.membership_threshold    = trusted_peer_quorum_threshold_;
                                 configured.burn_threshold          = burn_config_quorum_threshold_;
                                 manifest                           = std::move( configured );
+                            }
+                            // Folded-todo residual (T-21-0301): anchor the configured trust
+                            // root to the ceremony fingerprint pin on fresh boots. The pin
+                            // catches partial tamper/drift of the mutable JSON trust fields;
+                            // whole-file replacement including the pin implies local write
+                            // control equal to controlling the node (T-21-0302 accepted).
+                            // Post-confirmation restarts are governed by the persisted-state
+                            // checks inside the controller.
+                            if ( has_configured_trust && !genesis_manifest_fingerprint_.empty() )
+                            {
+                                const auto computed = manifest->Fingerprint();
+                                if ( !computed || *computed != genesis_manifest_fingerprint_ )
+                                {
+                                    // Rule name plus truncated digests only — never key values
+                                    // or the full fingerprint (privacy precedent, D-03).
+                                    node_logger_->critical(
+                                        "genesis manifest fingerprint mismatch: configured "
+                                        "trust root does not match the pinned ceremony "
+                                        "fingerprint (pin {}…, computed {}…); refusing to "
+                                        "start",
+                                        genesis_manifest_fingerprint_.substr( 0, 16 ),
+                                        computed ? computed->substr( 0, 16 ) : std::string( "none" ) );
+                                    account_service_switching_ = false;
+                                    StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                                    return;
+                                }
+                                node_logger_->info( "genesis manifest fingerprint pin verified" );
+                            }
+                            else if ( has_configured_trust )
+                            {
+                                node_logger_->warn( "trust root unpinned: no genesis_manifest_fingerprint in "
+                                                    "sgns_config.json; configured trust fields are not "
+                                                    "anchored to a ceremony fingerprint" );
                             }
                             if ( !trust_signer_ )
                             {
