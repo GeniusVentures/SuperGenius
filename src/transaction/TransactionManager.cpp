@@ -2017,6 +2017,21 @@ namespace sgns
         for ( const auto &[transaction, maybe_proof] : transaction_batch )
         {
             (void) maybe_proof;
+
+            // MINT-03 (T-21-0502): admission-side disable of legacy-v1 mints at the
+            // local/RPC submission ingress — the same predicate the consensus-ingress
+            // type rules apply (one home). Runs before serialization and before any
+            // CRDT Put/commit so a rejected mint leaves no partial publish.
+            // Zero-amount fillers and "mint-v2" pass through unchanged.
+            if ( IsValueCarryingLegacyMint( *transaction ) )
+            {
+                m_logger->error( "{}: legacy v1 mint admission disabled (MINT-03), rejecting submission tx={} type={}",
+                                 __func__,
+                                 transaction->GetHash(),
+                                 transaction->GetType() );
+                return outcome::failure( std::errc::operation_not_permitted );
+            }
+
             auto preflight_embedded_tx = transaction->SerializeToEmbeddedTransaction();
             if ( preflight_embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
             {
