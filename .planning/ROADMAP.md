@@ -118,7 +118,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 21-04-PLAN.md — TRUST-01 certificate layer: grandfather probe, classified verdicts (Stalled never memoized), verified-only cache, D-03 deadline, multi-node adversarial/compat pairs
+- [x] 21-04-PLAN.md — TRUST-01 certificate layer: grandfather probe, classified verdicts (Stalled never memoized), verified-only cache, D-03 deadline, multi-node adversarial/compat pairs
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -267,7 +267,7 @@ Plans:
 | 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 4/7 | In Progress|  |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 5/7 | In Progress|  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |

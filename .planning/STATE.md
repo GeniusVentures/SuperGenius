@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
 status: executing
-stopped_at: Completed 21-05-PLAN.md (legacy-v1 mint admission gates; 21-04 still pending - orchestrator ran 05 before 04)
-last_updated: "2026-10-20T21:43:02.063Z"
+stopped_at: Completed 21-04-PLAN.md (consensus-side verified registry consumption; TRUST-01 closed)
+last_updated: "2026-10-20T23:07:48.362Z"
 last_activity: 2026-10-20
 progress:
   total_phases: 27
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 ## Current Position
 
 Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-10-20
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-20T21:43:02.058Z
-**Stopped At:** Completed 21-05-PLAN.md (legacy-v1 mint admission gates; 21-04 still pending - orchestrator ran 05 before 04)
+**Last session:** 2026-10-20T23:07:48.357Z
+**Stopped At:** Completed 21-04-PLAN.md (consensus-side verified registry consumption; TRUST-01 closed)
 **Resume File:** None
 
 ## Accumulated Context
@@ -141,6 +141,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 21 P02 | 40min | 3 tasks | 10 files |
 | Phase 21 P03 | 38min | 3 tasks | 12 files |
 | Phase 21 P05 | 35min | 3 tasks | 6 files |
+| Phase 21 P04 | 68min | 3 tasks | 9 files |
 
 ## Deferred Items
 
@@ -170,3 +171,5 @@ Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintR
 - [Phase 21]: Shared plumbing (21-03): BoundedDeferTracker is mechanism-only (first-seen deadlines, FIFO 4096, single-oldest eviction); D-03/D-04 config keys retained as members because NetworkSettings is InitNetwork-local; negative cap = ill-typed keeps default 10
 - [Phase 21]: Genesis pin (21-03, T-21-0301): fingerprint compare sits between manifest assembly and TrustStartupController::New — tampered manifest never reaches the controller; empty pin warns and proceeds (T-21-0302 residual); example's 4f6840f5 pin probe-verified equal to Fingerprint() of its own fields (RESEARCH Open Question 5 closed)
 - [Phase 21]: Legacy-v1 mint admission (21-05): one-home predicate IsValueCarryingLegacyMint (type 'mint' && amount > 0) shared by consensus type rules and SendTransactionItem preflight (operation_not_permitted before any CRDT Put) — Zero-amount exemption lives in the predicate so migration fillers keep certifying; sync ingress + multi-node twins stay in 21-06, so MINT-03 remains open
+- [Phase 21]: Consensus certificate layer (21-04): ValidateCertificate probes the durable cert slot record before the registry load - final certificates grandfather through LoadUnverifiedRegistryByCid (D-01), everything strict loads verified; permission_denied maps to Reject, missing dependency to Stalled (never memoized), expired first-seen defer deadline to deterministic memoizable Reject (D-03)
+- [Phase 21]: Verified-only CID cache (21-04): LoadRegistryByCidCached fills exclusively from LoadVerifiedRegistryByCid with both failure classes uncached; cap raised 8 to 64 with deque-tracked oldest-first single-entry eviction; deprecated LoadRegistryByCid alias deleted with zero bare references left; multi-node fixtures must pin the genesis authority to their registry signer (per network) or honest updates classify as unauthorized
