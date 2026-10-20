@@ -3503,6 +3503,10 @@ namespace sgns
             if ( durable_slot_record.has_value() )
             {
                 grandfathered_final = true;
+                {
+                    std::lock_guard lock( fault_test_mutex_ );
+                    ++fault_test_counters_.grandfathered_finality_probes;
+                }
             }
             else if ( durable_slot_record.error() != storage::DatabaseError::NOT_FOUND )
             {

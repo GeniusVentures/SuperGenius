@@ -343,6 +343,33 @@ namespace sgns
             transactions->fault_test_cv_.notify_all();
         }
 
+        /// Direct private ValidateCertificate access (TRUST-01 21-04 section).
+        static sgns::ConsensusManager::Check ValidateCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                                                  const ConsensusManager::Certificate     &certificate )
+        {
+            return manager->ValidateCertificate( certificate );
+        }
+
+        /// Number of memoized verdicts the certificate cache holds for one
+        /// durable certificate key (/cert/<slot>). Retryable outcomes (Pending /
+        /// Stalled) must never leave an entry behind (Pitfall 1).
+        static size_t VerdictCacheEntryCount( const std::shared_ptr<ConsensusManager> &manager,
+                                              const std::string                       &certificate_key )
+        {
+            std::lock_guard lock( manager->certificate_verdict_cache_mutex_ );
+            return manager->certificate_verdict_cache_.count( certificate_key );
+        }
+
+        /// D-01 grandfather probes that found a durable final slot record.
+        static uint64_t GrandfatheredFinalityProbes( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            if ( !manager )
+            {
+                return 0;
+            }
+            std::lock_guard lock( manager->fault_test_mutex_ );
+            return manager->fault_test_counters_.grandfathered_finality_probes;
+        }
     };
 } // namespace sgns
 
@@ -1373,6 +1400,129 @@ namespace
             return update;
         }
 
+        // TRUST-01 (21-04) attacker authority: a key that is neither the
+        // pinned genesis authority nor a member of the honest registry.
+        std::shared_ptr<sgns::GeniusAccount> MakeAttackerAccount( const std::string &name )
+        {
+            auto attacker = sgns::GeniusAccount::New( kToken, ( base_path / name ).string() );
+            EXPECT_TRUE( attacker );
+            return attacker;
+        }
+
+        // Self-certified registry update (TRUST-01): genesis shape (empty prev
+        // link), the attacker as its only validator, signed by the attacker --
+        // not rooted in the genesis authority. Raw-put into the DAG at the
+        // registry key (bypassing the element filter exactly like a malicious
+        // peer supplying the delta would) and return the resulting CID.
+        std::string MakeForgedRegistryCid( Peer &peer, const std::shared_ptr<sgns::GeniusAccount> &attacker )
+        {
+            auto registry = peer.blockchain->GetValidatorRegistry();
+            EXPECT_TRUE( registry );
+            sgns::ValidatorRegistry::RegistryUpdate forged;
+            forged.mutable_registry()->set_epoch( 0 );
+            auto *validator_entry = forged.mutable_registry()->add_validators();
+            validator_entry->set_validator_id( attacker->GetAddress() );
+            validator_entry->set_weight( 1 );
+            validator_entry->set_role( sgns::ValidatorRegistry::Role::REGULAR );
+            validator_entry->set_status( sgns::ValidatorRegistry::Status::ACTIVE );
+            forged.clear_prev_registry_hash();
+            sgns::validator::RegistrySigningPayload payload;
+            *payload.mutable_registry() = forged.registry();
+            std::string payload_bytes;
+            EXPECT_TRUE( payload.SerializeToString( &payload_bytes ) );
+            auto  signature = attacker->Sign( std::vector<uint8_t>( payload_bytes.begin(), payload_bytes.end() ) );
+            auto *signature_entry = forged.add_signatures();
+            signature_entry->set_validator_id( attacker->GetAddress() );
+            signature_entry->set_signature( signature.data(), signature.size() );
+
+            std::string serialized_update;
+            EXPECT_TRUE( forged.SerializeToString( &serialized_update ) );
+            sgns::crdt::GlobalDB::Buffer update_buffer;
+            update_buffer.put( serialized_update );
+            auto put = peer.db->Put( { registry->RegistryKeyValue() },
+                                     update_buffer,
+                                     { registry->ValidatorTopicValue() } );
+            EXPECT_FALSE( put.has_error() );
+            if ( put.has_error() )
+            {
+                return {};
+            }
+            const auto cid = put.value().toString();
+            EXPECT_TRUE( cid.has_value() );
+            return cid.has_value() ? cid.value() : std::string{};
+        }
+
+        // Fully signed certificate referencing an arbitrary registry CID/epoch
+        // (same construction the pending-lifecycle harness uses): the proposal
+        // id replicates ConsensusManager::CreateProposalId (hash of the signing
+        // bytes with the id cleared) and the vote is the signer's own approve.
+        sgns::ConsensusManager::Certificate MakeCertificateForRegistry(
+            const std::shared_ptr<sgns::GeniusAccount> &account,
+            const std::string                          &registry_cid,
+            uint64_t                                    nonce,
+            const std::string                          &tx_hash )
+        {
+            const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                           std::chrono::system_clock::now().time_since_epoch() )
+                                                           .count() );
+
+            auto subject = sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                       nonce,
+                                                                       tx_hash,
+                                                                       sgns::EmbeddedTransaction{},
+                                                                       std::nullopt,
+                                                                       std::nullopt );
+            EXPECT_TRUE( subject.has_value() );
+
+            sgns::ConsensusManager::Proposal proposal;
+            *proposal.mutable_subject() = subject.value();
+            proposal.set_proposer_id( account->GetAddress() );
+            proposal.set_registry_cid( registry_cid );
+            proposal.set_registry_epoch( 0 );
+            proposal.set_timestamp( now_ms );
+            sgns::ConsensusManager::Proposal id_copy = proposal;
+            id_copy.clear_proposal_id();
+            auto id_signing = sgns::ConsensusManager::ProposalSigningBytes( id_copy );
+            EXPECT_TRUE( id_signing.has_value() );
+            auto id_hash = sgns::crypto::sha2_256( id_signing.value().data(), id_signing.value().size() );
+            proposal.set_proposal_id(
+                sgns::base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
+            auto proposal_signing = sgns::ConsensusManager::ProposalSigningBytes( proposal );
+            EXPECT_TRUE( proposal_signing.has_value() );
+            auto proposal_signature = account->Sign( proposal_signing.value() );
+            proposal.set_signature( proposal_signature.data(), proposal_signature.size() );
+
+            sgns::ConsensusManager::Vote vote;
+            vote.set_proposal_id( proposal.proposal_id() );
+            vote.set_voter_id( account->GetAddress() );
+            vote.set_approve( true );
+            vote.set_timestamp( now_ms );
+            auto vote_signing = sgns::ConsensusManager::VoteSigningBytes( vote );
+            EXPECT_TRUE( vote_signing.has_value() );
+            auto vote_signature = account->Sign( vote_signing.value() );
+            vote.set_signature( vote_signature.data(), vote_signature.size() );
+
+            sgns::ConsensusManager::Certificate certificate;
+            certificate.set_proposal_id( proposal.proposal_id() );
+            certificate.set_registry_cid( registry_cid );
+            certificate.set_registry_epoch( 0 );
+            certificate.set_total_weight( 50000 );
+            certificate.set_approved_weight( 50000 );
+            certificate.set_timestamp( now_ms );
+            *certificate.add_votes()        = vote;
+            *certificate.mutable_proposal() = proposal;
+            return certificate;
+        }
+
+        // Raw durable-record probe on the peer's store (record-path assertion
+        // for the adversarial case: not just the validation return value).
+        static bool HasDurableCertificateRecord( Peer &peer, const std::string &certificate_key )
+        {
+            sgns::crdt::GlobalDB::Buffer key;
+            key.put( certificate_key );
+            const auto stored = peer.db->GetDataStore()->get( key );
+            return stored.has_value();
+        }
 
         static std::shared_ptr<sgns::MintTransactionV2> MintFor( const Peer &peer, uint64_t timestamp_offset = 0 )
         {
@@ -2591,4 +2741,235 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
                               released( network.passive );
     EXPECT_TRUE( all_released );
     observer.EmitTerminal( all_released );
+}
+
+TEST_F( FinalityFaultNetwork, ForgedRegistryCidCertificateIsRejectedWithNoDurableRecord )
+{
+    /**
+     * TRUST-01 (T-21-0401/T-21-0402) adversarial multi-node pair. Attacker
+     * authority: a peer supplying an unauthorized registry CID -- a
+     * self-certified RegistryUpdate (attacker's own validator and signature,
+     * genesis shape, not rooted in the pinned genesis authority) injected into
+     * the DAG with a raw put that bypasses the element filter. Expected
+     * rejection: the certificate referencing that CID validates Reject and
+     * submission fails WITHOUT writing the durable /cert/<slot> record
+     * (asserted on the record path, not just the return value). Honest
+     * certificates on the same node keep Approving (negative control).
+     */
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "trust01-forged", 54731 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus &&
+                 network.passive.consensus );
+    StoreRegistry( network );
+
+    auto attacker = MakeAttackerAccount( "trust01-forged-attacker" );
+    ASSERT_TRUE( attacker );
+    const auto forged_cid = MakeForgedRegistryCid( network.first, attacker );
+    ASSERT_FALSE( forged_cid.empty() );
+
+    // The forged snapshot is locally fetchable (the attacker supplied the
+    // delta) -- the attack surface is its authorization.
+    auto raw_load = network.first.blockchain->GetValidatorRegistry()->LoadUnverifiedRegistryByCid( forged_cid );
+    ASSERT_TRUE( raw_load.has_value() );
+
+    auto       forged_certificate = MakeCertificateForRegistry( attacker, forged_cid, 211, "0xtrust01-forged-cid" );
+    const auto durable_key        = sgns::ConsensusManager::GetExpectedCertificateSlotKey( forged_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    EXPECT_EQ(
+        sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.first.consensus, forged_certificate ),
+        sgns::ConsensusManager::Check::Reject );
+    EXPECT_TRUE( network.first.consensus->SubmitCertificate( forged_certificate ).has_error() );
+    EXPECT_FALSE( HasDurableCertificateRecord( network.first, durable_key ) );
+    EXPECT_FALSE( network.first.consensus->CheckCertificateForSlot(
+        sgns::MultiNodeFinalityFaultTestAccess::SlotKey( forged_certificate.proposal() ) ) );
+
+    // Negative control on the same node: an honest certificate for the honest
+    // registry still finalizes through the production route.
+    auto winner = MintFor( network.first );
+    ASSERT_TRUE( winner );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( network.first.account->GetAddress(),
+                                                               winner->GetNonce(),
+                                                               winner->GetHash(),
+                                                               winner->SerializeToEmbeddedTransaction(),
+                                                               CommitmentFor( *winner ),
+                                                               sgns::UTXOWitness{} );
+    ASSERT_TRUE( subject.has_value() );
+    auto honest_proposal = network.first.consensus->CreateProposal(
+        subject.value(),
+        network.first.account->GetAddress(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( honest_proposal.has_value() );
+    const auto honest_slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( honest_proposal.value() );
+
+    ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
+    ASSERT_TRUE( network.first.consensus->SubmitProposal( honest_proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return network.first.consensus->CheckCertificateForSlot( honest_slot ); },
+                               std::chrono::seconds( 25 ),
+                               "honest certificate still finalizes alongside the forged rejection",
+                               nullptr );
+
+    StopNetwork( network );
+}
+
+TEST_F( FinalityFaultNetwork, RestartedFinalCertificateRevalidatesThroughGrandfatherProbe )
+{
+    /**
+     * TRUST-01 D-01 compat (restart). A certificate that reached durable
+     * finality re-validates Approve unchanged after the node restarts: the
+     * grandfather probe (durable slot record present) selects the unverified
+     * load, proven by the probe counter incrementing -- the strict
+     * authorization rule is never consulted for finalized history.
+     */
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "trust01-restart", 54741 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus &&
+                 network.passive.consensus );
+    StoreRegistry( network );
+
+    auto winner = MintFor( network.first );
+    ASSERT_TRUE( winner );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( network.first.account->GetAddress(),
+                                                               winner->GetNonce(),
+                                                               winner->GetHash(),
+                                                               winner->SerializeToEmbeddedTransaction(),
+                                                               CommitmentFor( *winner ),
+                                                               sgns::UTXOWitness{} );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = network.first.consensus->CreateProposal(
+        subject.value(),
+        network.first.account->GetAddress(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+    ConnectPeers( { &network.first, &network.second, &network.third, &network.passive } );
+    ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return network.first.consensus->CheckCertificateForSlot( slot ); },
+                               std::chrono::seconds( 25 ),
+                               "honest certificate finalized before the restart",
+                               nullptr );
+    const auto durable_certificate = network.first.consensus->GetCertificateBySlot( slot );
+    ASSERT_TRUE( durable_certificate.has_value() );
+
+    RestartPeer( network.first );
+    ASSERT_TRUE( network.first.consensus );
+    ConnectPeers( Peers( network ) );
+
+    // Durable finality re-reads Approve on the restarted node...
+    ASSERT_WAIT_FOR_CONDITION( [&] { return network.first.consensus->CheckCertificateForSlot( slot ); },
+                               std::chrono::seconds( 25 ),
+                               "restarted node recovered its durable final certificate",
+                               nullptr );
+    // ...through the grandfather probe (strict rule skipped), proven by the
+    // probe counter on the fresh post-restart manager.
+    const auto probes_before = sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes(
+        network.first.consensus );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.first.consensus,
+                                                                            durable_certificate.value() ),
+               sgns::ConsensusManager::Check::Approve );
+    EXPECT_GT( sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes( network.first.consensus ),
+               probes_before );
+
+    StopNetwork( network );
+}
+
+TEST_F( FinalityFaultNetwork, FreshNodeCatchUpStallsThenConvergesWithNoPinnedReject )
+{
+    /**
+     * TRUST-01 compat (catch-up, T-21-0405) + verdict-memo discipline (Pitfall
+     * 1 / T-21-0403). A fresh node that receives certificate knowledge before
+     * the ancestor registry deltas stalls (retryable, never memoized, never
+     * Reject); once the registry arrives through real CRDT gossip the same
+     * node converges to the approved durable record.
+     */
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "trust01-catchup", 54751 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus &&
+                 network.passive.consensus );
+
+    // Registry reaches ONLY the three validators; the passive stays fresh.
+    const auto update = RegistryUpdate( { &network.first, &network.second, &network.third } );
+    for ( auto *peer : { &network.first, &network.second, &network.third } )
+    {
+        ASSERT_TRUE( peer->blockchain->GetValidatorRegistry()->StoreRegistryUpdate( update ).has_value() );
+    }
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return network.first.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+                   network.second.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value() &&
+                   network.third.blockchain->GetValidatorRegistry()->LoadCurrentRegistry().has_value();
+        },
+        std::chrono::seconds( 5 ),
+        "validators durably stored the registry",
+        nullptr );
+
+    auto winner = MintFor( network.first );
+    ASSERT_TRUE( winner );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( network.first.account->GetAddress(),
+                                                               winner->GetNonce(),
+                                                               winner->GetHash(),
+                                                               winner->SerializeToEmbeddedTransaction(),
+                                                               CommitmentFor( *winner ),
+                                                               sgns::UTXOWitness{} );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = network.first.consensus->CreateProposal(
+        subject.value(),
+        network.first.account->GetAddress(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryCid(),
+        network.first.blockchain->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+    const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
+
+    ConnectValidatorPeers( { &network.first, &network.second, &network.third } );
+    ASSERT_TRUE( network.first.consensus->SubmitProposal( proposal.value() ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return network.first.consensus->CheckCertificateForSlot( slot ); },
+                               std::chrono::seconds( 25 ),
+                               "validators finalized the certificate without the passive",
+                               nullptr );
+    const auto finalized_certificate = network.first.consensus->GetCertificateBySlot( slot );
+    ASSERT_TRUE( finalized_certificate.has_value() );
+    const auto durable_key = sgns::ConsensusManager::GetExpectedCertificateSlotKey( finalized_certificate.value() );
+    ASSERT_FALSE( durable_key.empty() );
+
+    // The fresh node holds certificate knowledge before any registry delta:
+    // strict validation stalls on the missing dependency and memoizes no
+    // verdict (a pinned Reject here would never converge).
+    const auto passive_verdicts_before = sgns::MultiNodeFinalityFaultTestAccess::VerdictCacheEntryCount(
+        network.passive.consensus,
+        durable_key );
+    EXPECT_EQ( passive_verdicts_before, 0u );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.passive.consensus,
+                                                                            finalized_certificate.value() ),
+               sgns::ConsensusManager::Check::Stalled );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::VerdictCacheEntryCount( network.passive.consensus, durable_key ),
+               0u );
+
+    // Deliver the missing deltas through the real CRDT gossip path: connect
+    // the fresh node, then have a validator head-broadcast its monitored
+    // topics so the passive graphsync-fetches the registry and certificate
+    // deltas it missed while offline (the production catch-up delivery).
+    ConnectPeers( Peers( network ) );
+    {
+        const auto monitored_result = network.first.db->GetMonitoredTopics();
+        ASSERT_FALSE( monitored_result.has_error() );
+        const auto           &monitored = monitored_result.value();
+        std::set<std::string> topics( monitored.begin(), monitored.end() );
+        ASSERT_FALSE( topics.empty() );
+        ASSERT_FALSE( network.first.db->RequestHeadBroadcast( topics ).has_error() );
+    }
+    ASSERT_WAIT_FOR_CONDITION( [&] { return network.passive.consensus->CheckCertificateForSlot( slot ); },
+                               std::chrono::seconds( 25 ),
+                               "fresh node converged to the approved durable record once the registry synced",
+                               nullptr );
+    const auto converged = network.passive.consensus->GetCertificateBySlot( slot );
+    ASSERT_TRUE( converged.has_value() );
+
+    StopNetwork( network );
 }

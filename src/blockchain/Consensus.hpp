@@ -818,6 +818,10 @@ namespace sgns
             uint64_t accepted_certificate_readbacks        = 0;
             uint64_t active_vote_release_attempts          = 0;
             uint64_t active_vote_release_successes         = 0;
+            /// D-01 grandfather probes that found a durable final slot record
+            /// (21-04): the restart/replay compat assertion point proving the
+            /// strict authorization rule was skipped for finalized history.
+            uint64_t grandfathered_finality_probes = 0;
         };
 
         /** @brief A post-action test pause released only by the friend test accessor. */
@@ -1245,7 +1249,9 @@ namespace sgns
         std::vector<std::string> active_vote_announcements_for_test_; ///< Friend-scoped exact announcement observation.
         mutable std::mutex       fault_test_mutex_; ///< Guards Phase 12 friend-only counters and barriers.
         std::condition_variable  fault_test_cv_;    ///< Wakes friend-only post-durability barrier observers.
-        FinalityFaultCounters    fault_test_counters_;
+        /// Mutable: const validation paths (ValidateCertificate's D-01 probe)
+        /// count grandfather hits under fault_test_mutex_.
+        mutable FinalityFaultCounters fault_test_counters_;
         FinalityFaultBarrier     active_vote_persisted_barrier_;
         FinalityFaultBarrier     certificate_persisted_barrier_;
         FinalityFaultBarrier     accepted_certificate_barrier_;
