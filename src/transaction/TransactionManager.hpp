@@ -48,7 +48,6 @@ namespace sgns
 {
     class MintTransactionV2;
 
-
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -59,10 +58,10 @@ namespace sgns
      */
     struct RegistrationDiscoveryEntry
     {
-        std::string                         child_addr;  ///< Child wallet public address (128-hex)
-        std::string                         main_addr;   ///< Main wallet public address (128-hex)
-        uint64_t                            sequence;    ///< Registration sequence number
-        SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+        std::string                         child_addr; ///< Child wallet public address (128-hex)
+        std::string                         main_addr;  ///< Main wallet public address (128-hex)
+        uint64_t                            sequence;   ///< Registration sequence number
+        SGTransaction::RegistrationMetadata metadata;   ///< Registration metadata
     };
 
     /**
@@ -194,9 +193,7 @@ namespace sgns
         /**
          * @brief Recovers funds from a registered child wallet back to this account (D-60/D-62/CONS-02).
          */
-        outcome::result<std::string> RecoverFromChild( std::string child_address,
-                                                       uint64_t    amount,
-                                                       TokenID     token_id );
+        outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
 
         /**
          * @brief Creates and enqueues a child-initiated Detach transaction (D-35, caller-supplied sequence).
@@ -350,8 +347,7 @@ namespace sgns
             const GeniusTransaction &element ) const;
 
         /** @brief BestHash tie-break: true when @p new_tx outranks @p existing_tx. */
-        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
-                                       const GeniusTransaction &new_tx ) const;
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         /**
          * @brief Idempotent stop. Sets the stopped flag and wakes the tick loop.
@@ -489,7 +485,7 @@ namespace sgns
             std::shared_ptr<GeniusTransaction> tx;
             TransactionStatus                  status;
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
-            bool                               effects_applied = false; ///< Parse effects durably applied (TRACK-01 ordering)
+            bool effects_applied = false;                    ///< Parse effects durably applied (TRACK-01 ordering)
         };
 
         struct AccountUTXOState
@@ -499,20 +495,19 @@ namespace sgns
             bool          initialized{ false };
         };
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            NodeType                                 node_type,
-                            uint16_t                                 subnet_id,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window,
-                            uint64_t                                 initial_burn_basis_points,
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>                                  processing_db,
+                            std::shared_ptr<boost::asio::io_context>                         ctx,
+                            std::shared_ptr<GeniusAccount>                                   account,
+                            std::shared_ptr<Blockchain>                                      blockchain,
+                            NodeType                                                         node_type,
+                            uint16_t                                                         subnet_id,
+                            std::chrono::milliseconds                                        timestamp_tolerance,
+                            std::chrono::milliseconds                                        mutability_window,
+                            uint64_t                                                         initial_burn_basis_points,
                             std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider );
 
         // Parser function pointer alias: returns a set of topic strings or an error
-        using TransactionParserFn =
-            outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
+        using TransactionParserFn = outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
         /** @brief FillDAGStruct variant scoped to @p source_address (child-recovery chains). */
@@ -563,7 +558,7 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const GeniusTransaction &tx );
-        void UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
+        void                  UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -714,8 +709,8 @@ namespace sgns
         /// @brief Node-scoped durable-ready burn state shared by every replacement manager.
         std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider_;
 
-        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
-        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
+        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
+        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -873,10 +868,10 @@ namespace sgns
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
-        outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus new_status );
-        bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
+        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<void>        ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
+                                                             TransactionStatus                         new_status );
+        bool                         HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
 
@@ -929,7 +924,7 @@ namespace sgns
         /// Consensus witness verdicts, evaluated by TransactionConsensusHandler.
         using WitnessValidationResult = TransactionConsensusHandler::WitnessValidationResult;
         /// Replay-protection evaluation outcome, produced by TransactionConsensusHandler.
-        using ReplayProtectionResult  = TransactionConsensusHandler::ReplayProtectionResult;
+        using ReplayProtectionResult = TransactionConsensusHandler::ReplayProtectionResult;
 
         /// @brief Builds the consumed/produced Merkle commitment a nonce subject carries.
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
@@ -989,6 +984,7 @@ namespace sgns
             bool entered  = false;
             bool released = false;
         };
+
         mutable std::mutex      fault_test_mutex_;
         std::condition_variable fault_test_cv_;
         uint64_t                mint_effects_for_test_ = 0;
