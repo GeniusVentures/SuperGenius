@@ -23,9 +23,9 @@
 ### Mint & Escrow Authorization
 
 - [ ] **MINT-01**: Escrow release requires entitled authority (certified task result); a signature from the spending key alone at the lock-address exception is rejected (#2)
-- [ ] **MINT-02**: Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references; native-mint and bridge-mint follow explicitly separated per-type consensus rules (#3)
+- [x] **MINT-02**: Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references; native-mint and bridge-mint follow explicitly separated per-type consensus rules (#3)
 - [ ] **MINT-03**: Legacy-v1 mint reception is disabled or mint authority enforced via admission gating — never deserialization gating, so boot/sync/history spends keep working (#4)
-- [ ] **MINT-04**: A burn receipt's token ID, burned amount, and destination are bound to the mint's outputs — even fully honest RPC endpoints cannot authorize a mismatched mint (#5)
+- [x] **MINT-04**: A burn receipt's token ID, burned amount, and destination are bound to the mint's outputs — even fully honest RPC endpoints cannot authorize a mismatched mint (#5)
 
 ### Bridge Ingestion Safety
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Filled by roadmap creation (2026-10-19). 
 |-------------|-------|--------|
 | TRUST-01 | Phase 21 | Pending |
 | TRUST-02 | Phase 21 | Pending |
-| MINT-02 | Phase 21 | Pending |
+| MINT-02 | Phase 21 | Complete |
 | MINT-03 | Phase 21 | Pending |
-| MINT-04 | Phase 21 | Pending |
+| MINT-04 | Phase 21 | Complete |
 | WIRE-01 | Phase 22 | Pending |
 | WIRE-02 | Phase 22 | Pending |
 | REL-02 | Phase 22 | Pending |
