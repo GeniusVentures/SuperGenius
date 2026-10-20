@@ -1231,6 +1231,13 @@ namespace sgns
         /// ("network_bootstrap_peers", libp2p PeerId base58 strings); consumed when
         /// private_network_id_ is set.
         std::vector<std::string> network_bootstrap_peers_;
+        /// "authorization_defer_window_sec" retained by InitNetwork (D-03); consumed by
+        /// the 21-04 ConsensusManager and 21-06 TransactionManager defer-and-hold
+        /// boundaries (no runtime consumer in this plan yet).
+        std::chrono::seconds authorization_defer_window_sec_{ 1800 };
+        /// "max_new_validators_per_update" retained by InitNetwork (D-04); applied to the
+        /// blockchain's ValidatorRegistry at construction.
+        size_t max_new_validators_per_update_ = ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1328,9 +1335,18 @@ namespace sgns
             ///< "network_bootstrap_peers" offline-provisioned initial NetworkRegistry membership
             ///< (libp2p PeerId base58 strings); consumed when private_network_id is set.
             std::vector<std::string> network_bootstrap_peers;
-            bool valid = true; ///< False when a fatal config divergence (malformed private_network_id
-                               ///< or a half-provisioned private_network_id/network_key pair) must
-                               ///< abort node start instead of silently running a misidentified node.
+            ///< "authorization_defer_window_sec" — D-03 defer-and-hold window for new
+            ///< authorization boundaries; retained to authorization_defer_window_sec_.
+            ///< Consumed by ConsensusManager (21-04) and TransactionManager (21-06);
+            ///< this plan ships the config surface and the safe default only.
+            std::chrono::seconds authorization_defer_window_sec{ 1800 };
+            ///< "max_new_validators_per_update" — D-04 validator-admission cap; retained
+            ///< to max_new_validators_per_update_ and applied to the ValidatorRegistry
+            ///< at blockchain construction.
+            size_t max_new_validators_per_update = ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate;
+            bool   valid = true; ///< False when a fatal config divergence (malformed private_network_id
+                                 ///< or a half-provisioned private_network_id/network_key pair) must
+                                 ///< abort node start instead of silently running a misidentified node.
         };
 
         /**

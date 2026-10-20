@@ -843,6 +843,14 @@ namespace sgns
                                 // Scope this blockchain's validator consensus to the private
                                 // network (empty on public nodes keeps public identifiers).
                                 private_network_id_ );
+
+                            // D-04 (21-03): config-wired cap on validators admitted per registry
+                            // update — the first production caller of the registry setter; the
+                            // enforcement test lands in 21-07.
+                            if ( auto registry = blockchain_->GetValidatorRegistry() )
+                            {
+                                registry->SetMaxNewValidatorsPerUpdate( max_new_validators_per_update_ );
+                            }
                         }
                         if ( blockchain_ )
                         {
@@ -1821,6 +1829,19 @@ namespace sgns
                       reconnect_config_.health_check_disconnected_interval );
         read( "bootstrap_background_multiplier", reconnect_config_.background_multiplier );
 
+        // D-03/D-04 (21-03): authorization deferral window and validator-admission cap,
+        // read beside the reconnect knobs — config-wins with safe defaults (1800 s and
+        // the registry's default cap of 10). A negative cap is ill-typed for its size_t
+        // destination and keeps the default; cap floors are handled by the registry's
+        // existing enforcement.
+        read_seconds( "authorization_defer_window_sec", settings.authorization_defer_window_sec );
+        int max_new_validators = static_cast<int>( settings.max_new_validators_per_update );
+        read( "max_new_validators_per_update", max_new_validators );
+        if ( max_new_validators >= 0 )
+        {
+            settings.max_new_validators_per_update = static_cast<size_t>( max_new_validators );
+        }
+
         return settings;
     }
 
@@ -2030,6 +2051,10 @@ namespace sgns
         // membership. Log the public id only - never the network_key value (D-03).
         private_network_id_      = settings.private_network_id;
         network_bootstrap_peers_ = settings.network_bootstrap_peers;
+        // D-03/D-04 (21-03): retained for the post-InitNetwork consumers (registry cap
+        // applied at blockchain construction; defer windows in 21-04/21-06).
+        authorization_defer_window_sec_ = settings.authorization_defer_window_sec;
+        max_new_validators_per_update_  = settings.max_new_validators_per_update;
         if ( !private_network_id_.empty() )
         {
             node_logger_->info( "network_config.json: private-network identity: {}", private_network_id_ );
