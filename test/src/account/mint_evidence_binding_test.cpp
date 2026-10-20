@@ -98,6 +98,7 @@ namespace
         bool        dest_y_odd = false;
         bool        v2_shape   = false; ///< v2 BridgeOutInitiated vs v1 BridgeSourceBurned
         bool        success    = true;
+        bool        empty_data = false; ///< Serve an undecodable matched log (data "0x")
     };
 
     /**
@@ -120,7 +121,11 @@ namespace
                                                 "1111111111111111111111111111111111111111";
 
         std::string data;
-        if ( facts.v2_shape )
+        if ( facts.empty_data )
+        {
+            data.clear();
+        }
+        else if ( facts.v2_shape )
         {
             data = Uint256Word( facts.token_id ) + Uint256Word( facts.amount ) + Uint256Word( 11155111 ) +
                    Uint256Word( 0 ) + facts.dest_hex + Uint256Word( facts.dest_y_odd ? 1 : 0 );
@@ -338,5 +343,126 @@ namespace
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
         EXPECT_TRUE( evidence.valid ) << "A public-chain mint-v2 with an honest matching receipt must verify";
         EXPECT_EQ( evidence.successful_weight, 75 );
+    }
+
+    // ── MINT-04: burn-receipt facts bind to the mint's own outputs ───────────
+
+    TEST( MintEvidenceBindingTest, ReceiptAmountMismatchRejected )
+    {
+        // Attacker authority: a submitter controlling mint contents mints 7
+        // units against a burn receipt that honestly records 8. Every RPC
+        // endpoint honestly serves the true receipt; only the mint lies.
+        // Expected: rejected. Pre-fix behavior: accepted — the receipt check
+        // verified only status + contract + topic0 (finding #5 / T-21-0202).
+        ReceiptFacts facts;
+        facts.token_id = 0xABCD;
+        facts.amount   = 8;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto validator = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const auto mint = MakeMintV2( 7, kChainId, TokenID::FromBytes( { 0xAB, 0xCD } ), facts.dest_hex );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A mint whose amount differs from the burned receipt must be rejected";
+    }
+
+    TEST( MintEvidenceBindingTest, ReceiptTokenMismatchRejected )
+    {
+        // Attacker authority: a submitter controlling mint contents mints token
+        // ABCD against a burn receipt that honestly records token ABCE.
+        // Expected: rejected. Pre-fix behavior: accepted.
+        ReceiptFacts facts;
+        facts.token_id = 0xABCE;
+        facts.amount   = 7;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto validator = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const auto mint = MakeMintV2( 7, kChainId, TokenID::FromBytes( { 0xAB, 0xCD } ), facts.dest_hex );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A mint whose token differs from the burned receipt must be rejected";
+    }
+
+    TEST( MintEvidenceBindingTest, ReceiptRecipientMismatchRejected )
+    {
+        // Attacker authority: a submitter controlling mint contents pays their
+        // own address while the burn receipt honestly names a different
+        // recipient. Expected: rejected. Pre-fix behavior: accepted.
+        ReceiptFacts facts;
+        facts.token_id = 0xABCD;
+        facts.amount   = 7;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto validator = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const std::string attacker_dest( 128, 'd' );
+        const auto        mint = MakeMintV2( 7, kChainId, TokenID::FromBytes( { 0xAB, 0xCD } ), attacker_dest );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A mint whose recipient differs from the burned receipt must be rejected";
+    }
+
+    TEST( MintEvidenceBindingTest, MatchingV2FactsValidate )
+    {
+        // Compat twin (v2 event shape): a BridgeOutInitiated receipt whose
+        // decompressed destination equals the mint's destination, with token
+        // and amount matching, still validates after fact binding.
+        ReceiptFacts facts;
+        facts.token_id   = 0xABCD;
+        facts.amount     = 7;
+        facts.dest_hex   = kGeneratorX;
+        facts.dest_y_odd = false;
+        facts.v2_shape   = true;
+        auto validator   = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const auto mint = MakeMintV2( 7,
+                                      kChainId,
+                                      TokenID::FromBytes( { 0xAB, 0xCD } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_TRUE( evidence.valid ) << "A v2 receipt whose decoded facts match the mint must verify";
+        EXPECT_EQ( evidence.decoded_amount, 7u ) << "Evidence carries the decoded amount for Phase 24 corroboration";
+        EXPECT_EQ( evidence.decoded_token_id, TokenID::FromBytes( { 0xAB, 0xCD } ) );
+        EXPECT_EQ( evidence.decoded_recipient, std::string( kGeneratorX ) + kGeneratorY );
+    }
+
+    TEST( MintEvidenceBindingTest, V2RecipientParityMismatchRejected )
+    {
+        // Attacker authority (v2 shape): the receipt's destinationYOdd names the
+        // opposite Y parity, so the decompressed recipient is the mirrored
+        // point — not the mint's destination. Expected: rejected.
+        ReceiptFacts facts;
+        facts.token_id   = 0xABCD;
+        facts.amount     = 7;
+        facts.dest_hex   = kGeneratorX;
+        facts.dest_y_odd = true; // generator Y is even — flipped parity decodes a different recipient
+        facts.v2_shape   = true;
+        auto validator   = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const auto mint = MakeMintV2( 7,
+                                      kChainId,
+                                      TokenID::FromBytes( { 0xAB, 0xCD } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A v2 receipt whose parity-decoded recipient differs must be rejected";
+    }
+
+    TEST( MintEvidenceBindingTest, UndecodableMatchedLogRejected )
+    {
+        // Attacker authority (decode-layer bypass attempt): a receipt whose log
+        // matches the bridge contract and topic0 but carries no decodable event
+        // data. Expected: fail closed. Pre-fix behavior: accepted.
+        ReceiptFacts facts;
+        facts.token_id   = 0xABCD;
+        facts.amount     = 7;
+        facts.dest_hex   = std::string( kGeneratorX ) + kGeneratorY;
+        facts.empty_data = true;
+        auto validator   = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const auto mint = MakeMintV2( 7, kChainId, TokenID::FromBytes( { 0xAB, 0xCD } ), facts.dest_hex );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A matched log that cannot be decoded must fail closed (T-21-0204)";
     }
 } // namespace
