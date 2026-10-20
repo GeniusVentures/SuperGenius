@@ -214,13 +214,18 @@ TEST_F( LegacyMintAdmissionTest, SelfSignedValueCarryingV1MintRejectedAtConsensu
 // commitments, so the value-carrying v1 mint was published towards consensus.
 TEST_F( LegacyMintAdmissionTest, SelfSignedValueCarryingV1MintPreflightFailsClosed )
 {
+    auto mint = MakeSignedV1Mint( 1 );
+
     TransactionManager::TransactionItem item;
-    item.first.emplace_back( MakeSignedV1Mint( 1 ), std::nullopt );
+    item.first.emplace_back( mint, std::nullopt );
 
     const auto result = LegacyMintAdmissionTestAccess::SendItem( *tm_, item );
     ASSERT_TRUE( result.has_error() ) << "A value-carrying v1 mint submission must fail";
     EXPECT_EQ( result.error(), std::errc::operation_not_permitted )
         << "The rejection must carry the named MINT-03 errc, not a generic failure";
+
+    EXPECT_FALSE( tm_->KeyExistsInDB( TransactionManager::GetTransactionPath( *mint ) ) )
+        << "The rejection must land before any CRDT Put of the rejected mint";
 }
 
 // VER-01 compat twin of the adversarial preflight case: zero-amount v1 mints
