@@ -100,7 +100,7 @@ namespace sgns
         }
 
         static ConsensusManager::Check ValidateCertificate( const std::shared_ptr<ConsensusManager> &manager,
-                                                             const ConsensusManager::Certificate     &certificate )
+                                                            const ConsensusManager::Certificate     &certificate )
         {
             return manager->ValidateCertificate( certificate );
         }
@@ -129,7 +129,7 @@ namespace sgns
         }
 
         static outcome::result<bool> HasAcceptedCertificateForSlot( const std::shared_ptr<ConsensusManager> &manager,
-                                                                     const std::string                       &slot_key )
+                                                                    const std::string                       &slot_key )
         {
             return manager->HasAcceptedCertificateForSlot( slot_key );
         }
@@ -172,9 +172,8 @@ namespace sgns
             ASSERT_TRUE( manager->db_->Put( { key }, value, {} ).has_value() );
         }
 
-        static ConsensusManager::Proposal ResignWithLaterTimestamp(
-            const std::shared_ptr<sgns::GeniusAccount> &account,
-            ConsensusManager::Proposal                   proposal )
+        static ConsensusManager::Proposal ResignWithLaterTimestamp( const std::shared_ptr<sgns::GeniusAccount> &account,
+                                                                    ConsensusManager::Proposal proposal )
         {
             proposal.set_timestamp( proposal.timestamp() + 1 );
             proposal.clear_signature();
@@ -432,7 +431,7 @@ namespace sgns
         static bool HasActiveVoteLock( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot_key )
         {
             std::lock_guard lock( manager->proposals_mutex_ );
-            auto it = manager->slot_states_.find( slot_key );
+            auto            it = manager->slot_states_.find( slot_key );
             return it != manager->slot_states_.end() && it->second.active_vote_locked;
         }
 
@@ -444,7 +443,7 @@ namespace sgns
         }
 
         static std::size_t PendingCertificateScanCandidateCount( const std::shared_ptr<ConsensusManager> &manager,
-                                                                  const std::string                       &slot_key )
+                                                                 const std::string                       &slot_key )
         {
             auto it = manager->slot_states_.find( slot_key );
             return it == manager->slot_states_.end() ? 0U : it->second.scan_pending_candidates.size();
@@ -457,7 +456,7 @@ namespace sgns
         }
 
         static std::optional<std::string> ReadActiveVoteRecord( const std::shared_ptr<ConsensusManager> &manager,
-                                                                 const std::string                       &slot_key )
+                                                                const std::string                       &slot_key )
         {
             auto store = manager->db_ ? manager->db_->GetDataStore() : nullptr;
             if ( !store )
@@ -526,7 +525,7 @@ namespace sgns
         /// breaking exact announcement-count assertions. Tests that exercise retry
         /// force it due explicitly (ForceActiveVoteRetryDue), which overrides this.
         static void SetActiveVoteRetryInterval( const std::shared_ptr<ConsensusManager> &manager,
-                                                std::chrono::milliseconds               interval )
+                                                std::chrono::milliseconds                interval )
         {
             manager->active_vote_retry_interval_ = interval;
         }
@@ -555,7 +554,7 @@ namespace
         "D-10 retained-byte admission limit",
         "D-11 local capacity refusal without reject vote",
         "D-12 pending TTL expiry" };
-    const std::string kValidatorId = "validator-pending-lifecycle";
+    const std::string     kValidatorId       = "validator-pending-lifecycle";
     constexpr const char *kBindingPrivateKey = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
@@ -601,7 +600,8 @@ namespace
                 { cb( outcome::failure( std::errc::not_supported ) ); } );
             EXPECT_TRUE( registry );
 
-            auto store_result = registry->StoreGenesisRegistry( std::vector<std::string>{ kValidatorId }, DummySignature );
+            auto store_result = registry->StoreGenesisRegistry( std::vector<std::string>{ kValidatorId },
+                                                                DummySignature );
             EXPECT_FALSE( store_result.has_error() );
 
             ASSERT_WAIT_FOR_CONDITION(
@@ -633,8 +633,9 @@ namespace
 
         std::shared_ptr<sgns::GeniusAccount> MakeSigningAccount()
         {
-            auto account = sgns::GeniusAccount::NewFromPrivateKey(
-                sgns::TokenID::FromBytes( { 0x00 } ), kBindingPrivateKey, getPathString() );
+            auto account = sgns::GeniusAccount::NewFromPrivateKey( sgns::TokenID::FromBytes( { 0x00 } ),
+                                                                   kBindingPrivateKey,
+                                                                   getPathString() );
             EXPECT_TRUE( account );
             return account;
         }
@@ -652,9 +653,9 @@ namespace
                 { cb( outcome::failure( std::errc::not_supported ) ); } );
             EXPECT_TRUE( registry );
 
-            auto store_result = registry->StoreGenesisRegistry(
-                { account->GetAddress() },
-                [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+            auto store_result = registry->StoreGenesisRegistry( { account->GetAddress() },
+                                                                [account]( std::vector<uint8_t> payload )
+                                                                { return account->Sign( std::move( payload ) ); } );
             EXPECT_FALSE( store_result.has_error() );
 
             ASSERT_WAIT_FOR_CONDITION(
@@ -680,7 +681,8 @@ namespace
                 [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
                 account->GetAddress() );
             EXPECT_TRUE( manager );
-            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager, std::chrono::minutes( 10 ) );
+            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager,
+                                                                                   std::chrono::minutes( 10 ) );
             return manager;
         }
 
@@ -695,13 +697,16 @@ namespace
             const std::string                          &tx_hash,
             bool                                        tamper_subject = false )
         {
-            const auto now_ms = static_cast<uint64_t>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch() )
-                    .count() );
+            const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                           std::chrono::system_clock::now().time_since_epoch() )
+                                                           .count() );
 
-            auto subject = sgns::ConsensusManager::CreateNonceSubject(
-                { account->GetAddress() }, nonce, tx_hash, sgns::EmbeddedTransaction{}, std::nullopt, std::nullopt );
+            auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
+                                                                       nonce,
+                                                                       tx_hash,
+                                                                       sgns::EmbeddedTransaction{},
+                                                                       std::nullopt,
+                                                                       std::nullopt );
             EXPECT_TRUE( subject.has_value() );
             if ( tamper_subject )
             {
@@ -721,7 +726,8 @@ namespace
             auto id_signing = sgns::ConsensusManager::ProposalSigningBytes( id_copy );
             EXPECT_TRUE( id_signing.has_value() );
             auto id_hash = sgns::crypto::sha2_256( id_signing.value().data(), id_signing.value().size() );
-            proposal.set_proposal_id( sgns::base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
+            proposal.set_proposal_id(
+                sgns::base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
             auto proposal_signing = sgns::ConsensusManager::ProposalSigningBytes( proposal );
             EXPECT_TRUE( proposal_signing.has_value() );
             auto proposal_signature = account->Sign( proposal_signing.value() );
@@ -744,7 +750,7 @@ namespace
             certificate.set_total_weight( 50000 );
             certificate.set_approved_weight( 50000 );
             certificate.set_timestamp( now_ms );
-            *certificate.add_votes() = vote;
+            *certificate.add_votes()        = vote;
             *certificate.mutable_proposal() = proposal;
             return certificate;
         }
@@ -780,9 +786,8 @@ namespace
                 ADD_FAILURE() << "failed to create multi-validator pubsub";
                 return node;
             }
-            const auto start_result = node.pubsub->Start( static_cast<uint16_t>( 54001U + index ),
-                                                          { node.pubsub->GetLocalAddress() } )
-                                          .get();
+            const auto start_result =
+                node.pubsub->Start( static_cast<uint16_t>( 54001U + index ), { node.pubsub->GetLocalAddress() } ).get();
             if ( start_result )
             {
                 ADD_FAILURE() << "failed to start multi-validator pubsub: " << start_result.message();
@@ -793,7 +798,7 @@ namespace
                 std::make_shared<libp2p::basic::AsioSchedulerBackend>( node.io ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
             auto graphsync = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( node.pubsub->GetHost(),
-                                                                                            scheduler );
+                                                                                          scheduler );
             auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
             auto db_result = sgns::crdt::GlobalDB::New( node.io,
                                                         path + "/rocksdb",
@@ -810,8 +815,9 @@ namespace
             node.db = std::move( db_result.value() );
             node.db->Start();
 
-            node.account = sgns::GeniusAccount::NewFromPrivateKey(
-                sgns::TokenID::FromBytes( { 0x00 } ), private_key.c_str(), path + "/account" );
+            node.account = sgns::GeniusAccount::NewFromPrivateKey( sgns::TokenID::FromBytes( { 0x00 } ),
+                                                                   private_key.c_str(),
+                                                                   path + "/account" );
             if ( !node.account )
             {
                 ADD_FAILURE() << "failed to create multi-validator signing account";
@@ -838,17 +844,17 @@ namespace
             payload.set_prev_registry_hash( update.prev_registry_hash() );
             std::string serialized;
             EXPECT_TRUE( payload.SerializeToString( &serialized ) );
-            auto signature = accounts.front()->Sign( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
-            auto *entry    = update.add_signatures();
+            auto  signature = accounts.front()->Sign( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
+            auto *entry     = update.add_signatures();
             entry->set_validator_id( accounts.front()->GetAddress() );
             entry->set_signature( signature.data(), signature.size() );
             return update;
         }
 
         static std::shared_ptr<sgns::ValidatorRegistry> MakeMultiValidatorRegistry(
-            const MultiValidatorNode                                &node,
-            const sgns::ValidatorRegistry::RegistryUpdate           &update,
-            const std::string                                       &genesis_authority )
+            const MultiValidatorNode                      &node,
+            const sgns::ValidatorRegistry::RegistryUpdate &update,
+            const std::string                             &genesis_authority )
         {
             auto registry = sgns::ValidatorRegistry::New(
                 node.db,
@@ -873,17 +879,19 @@ namespace
         }
 
         static std::shared_ptr<sgns::ConsensusManager> MakeMultiValidatorManager(
-            const MultiValidatorNode                        &node,
+            const MultiValidatorNode                       &node,
             const std::shared_ptr<sgns::ValidatorRegistry> &registry )
         {
             auto manager = sgns::ConsensusManager::New(
                 registry,
                 node.db,
                 node.pubsub,
-                [account = node.account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+                [account = node.account]( std::vector<uint8_t> payload )
+                { return account->Sign( std::move( payload ) ); },
                 node.account->GetAddress() );
             EXPECT_TRUE( manager );
-            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager, std::chrono::minutes( 10 ) );
+            sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager,
+                                                                                   std::chrono::minutes( 10 ) );
             return manager;
         }
 
@@ -915,18 +923,18 @@ namespace
             dag.set_type( "mint-v2" );
             dag.set_source_addr( "multi-validator-mint-source" );
             dag.set_nonce( nonce );
-            dag.set_timestamp( static_cast<int64_t>(
-                std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                    .count() ) );
+            dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                         std::chrono::system_clock::now().time_since_epoch() )
+                                                         .count() ) );
             const auto burn_hash = sgns::base::Hash256::fromReadableString( std::string( 64, 'b' ) );
             EXPECT_TRUE( burn_hash.has_value() );
-            return std::make_shared<sgns::MintTransactionV2>( sgns::MintTransactionV2::New(
-                42,
-                "source-chain",
-                sgns::TokenID::FromBytes( { 0x00 } ),
-                std::move( dag ),
-                { { burn_hash.value(), 0, {} } },
-                "multi-validator-mint-destination" ) );
+            return std::make_shared<sgns::MintTransactionV2>(
+                sgns::MintTransactionV2::New( 42,
+                                              "source-chain",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              std::move( dag ),
+                                              { { burn_hash.value(), 0, {} } },
+                                              "multi-validator-mint-destination" ) );
         }
 
         static sgns::UTXOTransitionCommitment MakeTestCommitment()
@@ -972,12 +980,11 @@ namespace
             return proposal_result.value();
         }
 
-        sgns::ConsensusManager::Proposal MakeSigningProposal(
-            const std::shared_ptr<sgns::ConsensusManager>  &manager,
-            const std::shared_ptr<sgns::ValidatorRegistry> &registry,
-            const std::shared_ptr<sgns::GeniusAccount>     &account,
-            uint64_t                                        nonce,
-            const std::string                              &tx_hash )
+        sgns::ConsensusManager::Proposal MakeSigningProposal( const std::shared_ptr<sgns::ConsensusManager>  &manager,
+                                                              const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+                                                              const std::shared_ptr<sgns::GeniusAccount>     &account,
+                                                              uint64_t                                        nonce,
+                                                              const std::string                              &tx_hash )
         {
             auto subject_result = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                               nonce,
@@ -1025,24 +1032,21 @@ TEST_F( ConsensusPendingLifecycleTest, TimerWorkCanReleaseTheLastExternalManager
     std::mutex              release_mutex;
     std::condition_variable release_cv;
     bool                    external_owner_released = false;
-    sgns::ConsensusPendingLifecycleTestAccess::SetTimerWorkHook(
-        manager,
-        [&]()
-        {
-            manager.reset();
-            {
-                std::lock_guard lock( release_mutex );
-                external_owner_released = true;
-            }
-            release_cv.notify_all();
-        } );
+    sgns::ConsensusPendingLifecycleTestAccess::SetTimerWorkHook( manager,
+                                                                 [&]()
+                                                                 {
+                                                                     manager.reset();
+                                                                     {
+                                                                         std::lock_guard lock( release_mutex );
+                                                                         external_owner_released = true;
+                                                                     }
+                                                                     release_cv.notify_all();
+                                                                 } );
     sgns::ConsensusPendingLifecycleTestAccess::RequestTimerWork( manager );
 
     {
         std::unique_lock lock( release_mutex );
-        ASSERT_TRUE( release_cv.wait_for( lock,
-                                          std::chrono::seconds( 5 ),
-                                          [&] { return external_owner_released; } ) );
+        ASSERT_TRUE( release_cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return external_owner_released; } ) );
     }
     ASSERT_WAIT_FOR_CONDITION( [&] { return weak_manager.expired(); },
                                std::chrono::seconds( 2 ),
@@ -1058,10 +1062,10 @@ TEST_F( ConsensusPendingLifecycleTest, ConcurrentCloseCallsTransferTimerOwnershi
     auto manager = MakeManager( registry );
     ASSERT_TRUE( manager );
 
-    constexpr std::size_t kCloseCallers = 8;
-    std::mutex              start_mutex;
-    std::condition_variable start_cv;
-    bool                    start     = false;
+    constexpr std::size_t    kCloseCallers = 8;
+    std::mutex               start_mutex;
+    std::condition_variable  start_cv;
+    bool                     start = false;
     std::atomic<std::size_t> ready{ 0 };
     std::vector<std::thread> closers;
     closers.reserve( kCloseCallers );
@@ -1085,7 +1089,7 @@ TEST_F( ConsensusPendingLifecycleTest, ConcurrentCloseCallsTransferTimerOwnershi
         all_callers_ready = start_cv.wait_for( lock,
                                                std::chrono::seconds( 2 ),
                                                [&] { return ready.load() == kCloseCallers; } );
-        start = true;
+        start             = true;
     }
     start_cv.notify_all();
     for ( auto &closer : closers )
@@ -1204,24 +1208,30 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    const std::string tx_hash = "0xcertificate-binding";
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        { account->GetAddress() }, 71, tx_hash, sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
+    const std::string tx_hash        = "0xcertificate-binding";
+    auto              subject_result = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
+                                                                      71,
+                                                                      tx_hash,
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      MakeTestCommitment(),
+                                                                      MakeTestWitness() );
     ASSERT_TRUE( subject_result.has_value() );
-    auto proposal_result = manager->CreateProposal(
-        subject_result.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                    { account->GetAddress() },
+                                                    registry->GetRegistryCid(),
+                                                    registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal_result.has_value() );
-    auto vote_result = manager->CreateVote(
-        proposal_result.value().proposal_id(),
-        { account->GetAddress() },
-        true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                            { account->GetAddress() },
+                                            true,
+                                            [account]( std::vector<uint8_t> payload )
+                                            { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote_result.has_value() );
     auto certificate_result = manager->CreateCertificate( proposal_result.value(), { vote_result.value() } );
     ASSERT_TRUE( certificate_result.has_value() );
 
-    const auto &certificate = certificate_result.value();
-    const auto canonical_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( certificate.proposal() );
+    const auto &certificate    = certificate_result.value();
+    const auto  canonical_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( certificate.proposal() );
     EXPECT_EQ( std::string( "/cert/" ) + canonical_slot,
                sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate ) );
 
@@ -1238,10 +1248,9 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateIngressRejectsMismatchedLegacy
     mismatched_element.set_value( serialized );
 
     std::atomic<int> handler_calls{ 0 };
-    ASSERT_TRUE( manager->RegisterSubjectHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        []( const sgns::ConsensusManager::Subject & )
-        { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
+    ASSERT_TRUE( manager->RegisterSubjectHandler( sgns::NONCE_SUBJECT_TYPE,
+                                                  []( const sgns::ConsensusManager::Subject & )
+                                                  { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
     ASSERT_TRUE( manager->RegisterCertificateHandler(
         sgns::NONCE_SUBJECT_TYPE,
         [&handler_calls]( const std::string &, const sgns::ConsensusManager::Certificate & )
@@ -1289,19 +1298,20 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
     ASSERT_TRUE( manager );
 
     auto proposal = MakeSigningProposal( manager, registry, account, 90, "0xoccupied-slot-ordering" );
-    auto vote = manager->CreateVote( proposal.proposal_id(),
-                                     { account->GetAddress() },
+    auto vote     = manager->CreateVote( proposal.proposal_id(),
+                                         { account->GetAddress() },
                                      true,
-                                     [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+                                     [account]( std::vector<uint8_t> payload )
+                                     { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
 
-    auto existing = certificate.value();
+    auto        existing = certificate.value();
     std::string existing_serialized;
     ASSERT_TRUE( existing.SerializeToString( &existing_serialized ) );
     sgns::ConsensusManager::Certificate candidate;
-    std::string candidate_serialized;
+    std::string                         candidate_serialized;
     // Search width: the serialized existing hash is uniform, so the chance that
     // NO offset produces a larger hash is ~1/(N+1) — 127 left a ~0.8% flake per
     // run whenever the existing hash landed near the top (seen on Debug CI);
@@ -1331,7 +1341,8 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateRejectsHigherHashOccupie
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults )
+TEST_F( ConsensusPendingLifecycleTest,
+        FilterCertificateTreatsSameMintAlternatesAsNormalAndDifferentMintQuorumsAsFaults )
 {
     constexpr std::array<const char *, 3> private_keys = {
         "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -1342,13 +1353,14 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     {
         nodes[index] = MakeMultiValidatorNode( index + 10, private_keys[index] );
     }
-    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
-        nodes[0].account, nodes[1].account, nodes[2].account };
-    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = { nodes[0].account,
+                                                                           nodes[1].account,
+                                                                           nodes[2].account };
+    const auto                                                update   = MakeThreeValidatorRegistryUpdate( accounts );
     for ( auto &node : nodes )
     {
         node.registry = MakeMultiValidatorRegistry( node, update, accounts.front()->GetAddress() );
-        node.manager = MakeMultiValidatorManager( node, node.registry );
+        node.manager  = MakeMultiValidatorManager( node, node.registry );
         ASSERT_TRUE( node.manager );
     }
     RegisterMintV2SlotKeyHandler();
@@ -1360,25 +1372,29 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     const auto make_proposal = [&]( const std::shared_ptr<sgns::MintTransactionV2> &mint )
     {
         auto subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
-                                                                    mint->GetNonce(),
-                                                                    mint->GetHash(),
-                                                                    mint->SerializeToEmbeddedTransaction(),
-                                                                    std::nullopt,
-                                                                    std::nullopt );
+                                                                   mint->GetNonce(),
+                                                                   mint->GetHash(),
+                                                                   mint->SerializeToEmbeddedTransaction(),
+                                                                   std::nullopt,
+                                                                   std::nullopt );
         EXPECT_TRUE( subject.has_value() );
-        return nodes.front().manager->CreateProposal(
-            subject.value(), accounts.front()->GetAddress(), nodes.front().registry->GetRegistryCid(), 1 );
+        return nodes.front().manager->CreateProposal( subject.value(),
+                                                      accounts.front()->GetAddress(),
+                                                      nodes.front().registry->GetRegistryCid(),
+                                                      1 );
     };
     const auto first_proposal  = make_proposal( first_mint );
     const auto second_proposal = make_proposal( second_mint );
     ASSERT_TRUE( first_proposal.has_value() );
     ASSERT_TRUE( second_proposal.has_value() );
-    const auto sign_vote = [&]( const sgns::ConsensusManager::Proposal &proposal,
-                                const std::shared_ptr<sgns::GeniusAccount> &account )
+    const auto sign_vote =
+        [&]( const sgns::ConsensusManager::Proposal &proposal, const std::shared_ptr<sgns::GeniusAccount> &account )
     {
-        return nodes.front().manager->CreateVote(
-            proposal.proposal_id(), { account->GetAddress() }, true,
-            [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+        return nodes.front().manager->CreateVote( proposal.proposal_id(),
+                                                  { account->GetAddress() },
+                                                  true,
+                                                  [account]( std::vector<uint8_t> payload )
+                                                  { return account->Sign( std::move( payload ) ); } );
     };
 
     // This isolated consensus-fault fixture deliberately overlaps validator 0.
@@ -1394,32 +1410,36 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     EXPECT_EQ( first_vote_0.value().voter_id(), second_vote_0.value().voter_id() );
     EXPECT_NE( first_vote_0.value().proposal_id(), second_vote_0.value().proposal_id() );
     const auto first_certificate = nodes.front().manager->CreateCertificate(
-        first_proposal.value(), { first_vote_0.value(), first_vote_1.value() } );
+        first_proposal.value(),
+        { first_vote_0.value(), first_vote_1.value() } );
     const auto second_certificate = nodes.front().manager->CreateCertificate(
-        second_proposal.value(), { second_vote_0.value(), second_vote_2.value() } );
+        second_proposal.value(),
+        { second_vote_0.value(), second_vote_2.value() } );
     ASSERT_TRUE( first_certificate.has_value() );
     ASSERT_TRUE( second_certificate.has_value() );
     EXPECT_EQ( first_certificate.value().registry_cid(), second_certificate.value().registry_cid() );
     EXPECT_EQ( first_certificate.value().registry_epoch(), second_certificate.value().registry_epoch() );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
-                                                                                first_certificate.value() ),
+                                                                               first_certificate.value() ),
                sgns::ConsensusManager::Check::Approve );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
-                                                                                second_certificate.value() ),
+                                                                               second_certificate.value() ),
                sgns::ConsensusManager::Check::Approve );
 
     std::string first_serialized;
     std::string second_serialized;
     ASSERT_TRUE( first_certificate.value().SerializeToString( &first_serialized ) );
     ASSERT_TRUE( second_certificate.value().SerializeToString( &second_serialized ) );
-    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( first_certificate.value() );
-    ASSERT_EQ( key, sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second_certificate.value() ) );
+    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        first_certificate.value() );
+    ASSERT_EQ( key,
+               sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second_certificate.value() ) );
     // Each direction targets one dedicated node db: the canonical slot key is written
     // exactly once per direction through the production convergent-immutable path, so
     // no direction's outcome can depend on same-priority CRDT overwrite ordering.
     const auto verify_order = [&]( const size_t node_index, const std::string &existing, const std::string &candidate )
     {
-        const auto &manager = nodes[node_index].manager;
+        const auto                         &manager = nodes[node_index].manager;
         sgns::ConsensusManager::Certificate parsed_existing;
         ASSERT_TRUE( parsed_existing.ParseFromString( existing ) );
         ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, parsed_existing ),
@@ -1450,10 +1470,11 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateTreatsSameMintAlternates
     verify_order( 1, second_serialized, first_serialized );
 
     const auto same_mint_alternate = nodes.front().manager->CreateCertificate(
-        first_proposal.value(), { first_vote_1.value(), first_vote_0.value() } );
+        first_proposal.value(),
+        { first_vote_1.value(), first_vote_0.value() } );
     ASSERT_TRUE( same_mint_alternate.has_value() );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
-                                                                                same_mint_alternate.value() ),
+                                                                               same_mint_alternate.value() ),
                sgns::ConsensusManager::Check::Approve );
     std::string same_mint_serialized;
     ASSERT_TRUE( same_mint_alternate.value().SerializeToString( &same_mint_serialized ) );
@@ -1498,8 +1519,12 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
 
     // Valid certificate bound to an unsynced registry CID: the only deferred
     // dependency is the registry snapshot.
-    auto stalled_certificate = MakeCertificateForRegistry( account, "unsynced-registry-cid", 92, "0xstalled-registry-sync" );
-    const auto stalled_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( stalled_certificate );
+    auto       stalled_certificate = MakeCertificateForRegistry( account,
+                                                           "unsynced-registry-cid",
+                                                           92,
+                                                           "0xstalled-registry-sync" );
+    const auto stalled_key         = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        stalled_certificate );
     ASSERT_FALSE( stalled_key.empty() );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, stalled_certificate ),
                sgns::ConsensusManager::Check::Stalled );
@@ -1509,32 +1534,36 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
     sgns::crdt::pb::Element stalled_element;
     stalled_element.set_key( stalled_key );
     stalled_element.set_value( stalled_serialized );
-    const auto stalled_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, stalled_element );
+    const auto stalled_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager,
+                                                                                              stalled_element );
     // Stalled, not stored and not dropped: the delta job fails and the
     // failed-root retry machinery re-evaluates once the registry snapshot syncs.
-    EXPECT_EQ( stalled_filter.decision,
-               sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kStall );
+    EXPECT_EQ( stalled_filter.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kStall );
 
     // A structurally invalid certificate (corrupted subject payload hash) is dropped.
-    auto invalid_certificate = MakeCertificateForRegistry(
-        account, "unsynced-registry-cid", 93, "0xstalled-registry-sync-invalid", true );
-    const auto invalid_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( invalid_certificate );
+    auto       invalid_certificate = MakeCertificateForRegistry( account,
+                                                           "unsynced-registry-cid",
+                                                           93,
+                                                           "0xstalled-registry-sync-invalid",
+                                                           true );
+    const auto invalid_key         = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        invalid_certificate );
     ASSERT_FALSE( invalid_key.empty() );
     std::string invalid_serialized;
     ASSERT_TRUE( invalid_certificate.SerializeToString( &invalid_serialized ) );
     sgns::crdt::pb::Element invalid_element;
     invalid_element.set_key( invalid_key );
     invalid_element.set_value( invalid_serialized );
-    const auto invalid_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, invalid_element );
-    EXPECT_EQ( invalid_filter.decision,
-               sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
+    const auto invalid_filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager,
+                                                                                              invalid_element );
+    EXPECT_EQ( invalid_filter.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
 
     // A stored stalled record (as left by the pre-stall parking policy, written
     // here directly via the test seam) is not yet an approved authority: slot
     // lookup errors and the accepted-scan reports retry-later.
     sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, stalled_key, stalled_serialized );
     const auto stalled_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( stalled_certificate.proposal() );
-    auto stored = manager->GetCertificateBySlot( stalled_slot );
+    auto       stored       = manager->GetCertificateBySlot( stalled_slot );
     EXPECT_TRUE( stored.has_error() );
     auto accepted = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, stalled_slot );
     ASSERT_TRUE( accepted.has_error() );
@@ -1544,7 +1573,8 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
     sgns::base::Buffer stalled_buffer;
     stalled_buffer.put( stalled_serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
-        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ stalled_key, std::move( stalled_buffer ) } );
+        manager,
+        sgns::crdt::CRDTCallbackManager::NewDataPair{ stalled_key, std::move( stalled_buffer ) } );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, stalled_key ) );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, stalled_key ) );
@@ -1556,7 +1586,8 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
     sgns::base::Buffer invalid_buffer;
     invalid_buffer.put( invalid_serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
-        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ invalid_key, std::move( invalid_buffer ) } );
+        manager,
+        sgns::crdt::CRDTCallbackManager::NewDataPair{ invalid_key, std::move( invalid_buffer ) } );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, invalid_key ) );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, invalid_key ) );
@@ -1590,8 +1621,8 @@ TEST_F( ConsensusPendingLifecycleTest, DuplicateCertificateSightingKeepsJournalW
 
     // Certificates referencing an unsynced registry stay journaled for retry,
     // which is what makes a wedged state observable through the journal.
-    auto certificate = MakeCertificateForRegistry( account, "unsynced-registry-cid", 92, "0xduplicate-sighting" );
-    const auto key   = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate );
+    auto       certificate = MakeCertificateForRegistry( account, "unsynced-registry-cid", 92, "0xduplicate-sighting" );
+    const auto key         = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate );
     ASSERT_FALSE( key.empty() );
     std::string serialized;
     ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
@@ -1601,7 +1632,8 @@ TEST_F( ConsensusPendingLifecycleTest, DuplicateCertificateSightingKeepsJournalW
     sgns::base::Buffer buffer;
     buffer.put( serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
-        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ key, buffer } );
+        manager,
+        sgns::crdt::CRDTCallbackManager::NewDataPair{ key, buffer } );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, key ) );
 
     // A duplicate delta's filter acceptance must not regress queued work.
@@ -1610,7 +1642,7 @@ TEST_F( ConsensusPendingLifecycleTest, DuplicateCertificateSightingKeepsJournalW
 
     // A Seen-only entry (filter sighting journaled, element callback skipped on
     // a no-op merge) must still be dispatched by recovery.
-    auto second = MakeCertificateForRegistry( account, "unsynced-registry-cid", 93, "0xseen-only-dispatch" );
+    auto       second   = MakeCertificateForRegistry( account, "unsynced-registry-cid", 93, "0xseen-only-dispatch" );
     const auto seen_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( second );
     ASSERT_FALSE( seen_key.empty() );
     std::string seen_serialized;
@@ -1635,9 +1667,11 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupReturnsOnlyAnAppro
     ASSERT_TRUE( manager );
 
     auto proposal = MakeSigningProposal( manager, registry, account, 91, "0xslot-lookup-approved" );
-    auto vote = manager->CreateVote(
-        proposal.proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto vote     = manager->CreateVote( proposal.proposal_id(),
+                                         { account->GetAddress() },
+                                     true,
+                                     [account]( std::vector<uint8_t> payload )
+                                     { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
@@ -1662,9 +1696,11 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupRejectsLegacyMalfo
     ASSERT_TRUE( manager );
 
     auto proposal = MakeSigningProposal( manager, registry, account, 92, "0xslot-lookup-negative" );
-    auto vote = manager->CreateVote(
-        proposal.proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto vote     = manager->CreateVote( proposal.proposal_id(),
+                                         { account->GetAddress() },
+                                     true,
+                                     [account]( std::vector<uint8_t> payload )
+                                     { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal, { vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
@@ -1674,22 +1710,25 @@ TEST_F( ConsensusPendingLifecycleTest, AuthoritativeSlotLookupRejectsLegacyMalfo
     auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( proposal.subject() );
     ASSERT_TRUE( subject_hash.has_value() );
     const auto canonical_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
-    const auto legacy_key = std::string( "/cert/" ) + subject_hash.value();
-    ASSERT_NE( legacy_key, sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() ) );
+    const auto legacy_key     = std::string( "/cert/" ) + subject_hash.value();
+    ASSERT_NE( legacy_key,
+               sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() ) );
 
     // A valid certificate under a legacy subject-hash suffix does not become authority.
     sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, legacy_key, serialized );
     EXPECT_FALSE( manager->GetCertificateBySlot( canonical_slot ).has_value() );
 
     const std::string malformed_slot = "malformed-authoritative-slot";
-    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey(
-        manager, std::string( "/cert/" ) + malformed_slot, "not-a-certificate" );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager,
+                                                                      std::string( "/cert/" ) + malformed_slot,
+                                                                      "not-a-certificate" );
     EXPECT_FALSE( manager->GetCertificateBySlot( malformed_slot ).has_value() );
     EXPECT_FALSE( manager->CheckCertificateForSlot( malformed_slot ) );
 
     const std::string mismatched_slot = "mismatched-authoritative-slot";
-    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey(
-        manager, std::string( "/cert/" ) + mismatched_slot, serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager,
+                                                                      std::string( "/cert/" ) + mismatched_slot,
+                                                                      serialized );
     EXPECT_FALSE( manager->GetCertificateBySlot( mismatched_slot ).has_value() );
     EXPECT_FALSE( manager->CheckCertificateForSlot( mismatched_slot ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
@@ -1704,17 +1743,23 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        { account->GetAddress() }, 72, "0xunavailable-registry", sgns::EmbeddedTransaction{}, MakeTestCommitment(), MakeTestWitness() );
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
+                                                                      72,
+                                                                      "0xunavailable-registry",
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      MakeTestCommitment(),
+                                                                      MakeTestWitness() );
     ASSERT_TRUE( subject_result.has_value() );
-    auto proposal_result = manager->CreateProposal(
-        subject_result.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                    { account->GetAddress() },
+                                                    registry->GetRegistryCid(),
+                                                    registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal_result.has_value() );
-    auto vote_result = manager->CreateVote(
-        proposal_result.value().proposal_id(),
-        { account->GetAddress() },
-        true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
+                                            { account->GetAddress() },
+                                            true,
+                                            [account]( std::vector<uint8_t> payload )
+                                            { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote_result.has_value() );
     auto certificate_result = manager->CreateCertificate( proposal_result.value(), { vote_result.value() } );
     ASSERT_TRUE( certificate_result.has_value() );
@@ -1728,17 +1773,17 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
     std::string serialized;
     ASSERT_TRUE( malformed.SerializeToString( &serialized ) );
     sgns::crdt::pb::Element element;
-    element.set_key( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate_result.value() ) );
+    element.set_key(
+        sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate_result.value() ) );
     element.set_value( serialized );
 
     auto filter_result = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
     EXPECT_EQ( filter_result.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
 
     std::atomic<int> handler_calls{ 0 };
-    ASSERT_TRUE( manager->RegisterSubjectHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        []( const sgns::ConsensusManager::Subject & )
-        { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
+    ASSERT_TRUE( manager->RegisterSubjectHandler( sgns::NONCE_SUBJECT_TYPE,
+                                                  []( const sgns::ConsensusManager::Subject & )
+                                                  { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
     ASSERT_TRUE( manager->RegisterCertificateHandler(
         sgns::NONCE_SUBJECT_TYPE,
         [&handler_calls]( const std::string &, const sgns::ConsensusManager::Certificate & )
@@ -1747,11 +1792,13 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
             return outcome::success( sgns::ConsensusManager::Check::Approve );
         } ) );
     sgns::ConsensusPendingLifecycleTestAccess::HandleProposal( manager, certificate_result.value().proposal() );
-    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
+    ASSERT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
 
     sgns::ConsensusPendingLifecycleTestAccess::HandleCertificate( manager, malformed );
     EXPECT_EQ( handler_calls.load(), 0 );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
+    EXPECT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
 
     sgns::base::Buffer serialized_buffer;
     serialized_buffer.put( serialized );
@@ -1759,7 +1806,8 @@ TEST_F( ConsensusPendingLifecycleTest, UnavailableRegistryDoesNotAllowMalformedC
         manager,
         sgns::crdt::CRDTCallbackManager::NewDataPair{ element.key(), std::move( serialized_buffer ) } );
     EXPECT_EQ( handler_calls.load(), 0 );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
+    EXPECT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, certificate_result.value().proposal_id() ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
@@ -1886,9 +1934,8 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
                                                                                    "test-reset" ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
 
-    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig(
-        manager,
-        sgns::ConsensusManager::PendingLifecycleConfig{} );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager,
+                                                                 sgns::ConsensusManager::PendingLifecycleConfig{} );
 
     auto retry_proposal    = MakeProposal( manager, registry, 41, "0xpending-retry" );
     auto retry_proposal_id = retry_proposal.proposal_id();
@@ -2095,10 +2142,12 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteFreezesEligibleCandidatesBefore
     sgns::ActiveVoteRecord record;
     ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
     EXPECT_EQ( record.canonical_slot(), slot );
-    EXPECT_EQ( record.vote_bytes(), sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front() );
+    EXPECT_EQ( record.vote_bytes(),
+               sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front() );
     EXPECT_GT( record.acceptance_deadline_ms(), 0U );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, winner.proposal_id() ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, contender.proposal_id() ) );
+    EXPECT_FALSE(
+        sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, contender.proposal_id() ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
@@ -2111,8 +2160,8 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteWriteFailureCannotPublishOrCrea
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 82, "0xwrite-failure" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    auto       proposal = MakeProposal( manager, registry, 82, "0xwrite-failure" );
+    const auto slot     = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
     sgns::ConsensusPendingLifecycleTestAccess::SetActiveVotePersistenceFailure( manager, true );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
@@ -2120,7 +2169,8 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteWriteFailureCannotPublishOrCrea
 
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal.proposal_id() ) );
+    EXPECT_FALSE(
+        sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal.proposal_id() ) );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
@@ -2134,8 +2184,8 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 83, "0xretry-exact" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    auto       proposal = MakeProposal( manager, registry, 83, "0xretry-exact" );
+    const auto slot     = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
@@ -2149,7 +2199,8 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
     sgns::ConsensusPendingLifecycleTestAccess::KeepActiveVoteAcceptanceOpen( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).size(), 1U );
-    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front(), record.vote_bytes() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).front(),
+               record.vote_bytes() );
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
     auto restarted = MakeSigningManager( registry, account );
@@ -2160,7 +2211,8 @@ TEST_F( ConsensusPendingLifecycleTest, ActiveVoteRetriesAndRestartsWithOnlyItsSt
     sgns::ConsensusPendingLifecycleTestAccess::KeepActiveVoteAcceptanceOpen( restarted, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( restarted );
     ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).size(), 1U );
-    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).front(), record.vote_bytes() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( restarted ).front(),
+               record.vote_bytes() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
 }
 
@@ -2180,9 +2232,10 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     {
         nodes[index] = MakeMultiValidatorNode( index, private_keys[index] );
     }
-    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
-        nodes[0].account, nodes[1].account, nodes[2].account };
-    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = { nodes[0].account,
+                                                                           nodes[1].account,
+                                                                           nodes[2].account };
+    const auto                                                update   = MakeThreeValidatorRegistryUpdate( accounts );
 
     std::string shared_registry_cid;
     for ( auto &node : nodes )
@@ -2214,24 +2267,29 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     ASSERT_EQ( first_mint->GetSlotID(), second_mint->GetSlotID() );
     RegisterMintV2SlotKeyHandler();
 
-    const auto first_subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
-                                                                            first_mint->GetNonce(),
-                                                                            first_mint->GetHash(),
-                                                                            first_mint->SerializeToEmbeddedTransaction(),
-                                                                            std::nullopt,
-                                                                            std::nullopt );
-    const auto second_subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
-                                                                             second_mint->GetNonce(),
-                                                                             second_mint->GetHash(),
-                                                                             second_mint->SerializeToEmbeddedTransaction(),
-                                                                             std::nullopt,
-                                                                             std::nullopt );
+    const auto first_subject  = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
+                                                                           first_mint->GetNonce(),
+                                                                           first_mint->GetHash(),
+                                                                           first_mint->SerializeToEmbeddedTransaction(),
+                                                                           std::nullopt,
+                                                                           std::nullopt );
+    const auto second_subject = sgns::ConsensusManager::CreateNonceSubject(
+        accounts.front()->GetAddress(),
+        second_mint->GetNonce(),
+        second_mint->GetHash(),
+        second_mint->SerializeToEmbeddedTransaction(),
+        std::nullopt,
+        std::nullopt );
     ASSERT_TRUE( first_subject.has_value() );
     ASSERT_TRUE( second_subject.has_value() );
-    const auto first_proposal = nodes.front().manager->CreateProposal(
-        first_subject.value(), accounts.front()->GetAddress(), shared_registry_cid, 1 );
-    const auto second_proposal = nodes.front().manager->CreateProposal(
-        second_subject.value(), accounts.front()->GetAddress(), shared_registry_cid, 1 );
+    const auto first_proposal  = nodes.front().manager->CreateProposal( first_subject.value(),
+                                                                       accounts.front()->GetAddress(),
+                                                                       shared_registry_cid,
+                                                                       1 );
+    const auto second_proposal = nodes.front().manager->CreateProposal( second_subject.value(),
+                                                                        accounts.front()->GetAddress(),
+                                                                        shared_registry_cid,
+                                                                        1 );
     ASSERT_TRUE( first_proposal.has_value() );
     ASSERT_TRUE( second_proposal.has_value() );
     ASSERT_NE( first_proposal.value().proposal_id(), second_proposal.value().proposal_id() );
@@ -2244,13 +2302,14 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     for ( auto &node : nodes )
     {
         sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( node.manager, first_proposal.value() );
-        sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( node.manager, second_proposal.value() );
+        sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( node.manager,
+                                                                                 second_proposal.value() );
         sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( node.manager, slot );
         sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( node.manager );
 
         ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).size(), 1U );
         const auto bytes = sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( node.manager ).front();
-        auto record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( node.manager, slot );
+        auto       record_bytes = sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( node.manager, slot );
         ASSERT_TRUE( record_bytes.has_value() );
         sgns::ActiveVoteRecord record;
         ASSERT_TRUE( record.ParseFromString( record_bytes.value() ) );
@@ -2284,10 +2343,10 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     }
 
     const auto &winner = selected_proposal_id == first_proposal.value().proposal_id() ? first_proposal.value()
-                                                                                       : second_proposal.value();
+                                                                                      : second_proposal.value();
     const auto &loser  = selected_proposal_id == first_proposal.value().proposal_id() ? second_proposal.value()
-                                                                                       : first_proposal.value();
-    const auto winner_certificate = nodes.front().manager->CreateCertificate( winner, normal_votes );
+                                                                                      : first_proposal.value();
+    const auto  winner_certificate = nodes.front().manager->CreateCertificate( winner, normal_votes );
     ASSERT_TRUE( winner_certificate.has_value() );
     EXPECT_EQ( winner_certificate.value().approved_weight(), 3U );
     const auto loser_tally = nodes.front().manager->TallyVotes( loser, normal_votes );
@@ -2296,7 +2355,7 @@ TEST_F( ConsensusPendingLifecycleTest, MultiValidatorSameSlotMintContentionPersi
     const auto loser_certificate = nodes.front().manager->CreateCertificate( loser, normal_votes );
     ASSERT_TRUE( loser_certificate.has_value() );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( nodes.front().manager,
-                                                                                loser_certificate.value() ),
+                                                                               loser_certificate.value() ),
                sgns::ConsensusManager::Check::Reject );
 
     for ( auto &node : nodes )
@@ -2332,9 +2391,10 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
     {
         nodes[index] = MakeMultiValidatorNode( index, private_keys[index] );
     }
-    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = {
-        nodes[0].account, nodes[1].account, nodes[2].account };
-    const auto update = MakeThreeValidatorRegistryUpdate( accounts );
+    const std::array<std::shared_ptr<sgns::GeniusAccount>, 3> accounts = { nodes[0].account,
+                                                                           nodes[1].account,
+                                                                           nodes[2].account };
+    const auto                                                update   = MakeThreeValidatorRegistryUpdate( accounts );
 
     std::string shared_registry_cid;
     for ( auto &node : nodes )
@@ -2359,11 +2419,11 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
         const auto mint = MakeMultiValidatorMint( 201 + index );
         ASSERT_TRUE( mint );
         const auto subject = sgns::ConsensusManager::CreateNonceSubject( accounts.front()->GetAddress(),
-                                                                        mint->GetNonce(),
-                                                                        mint->GetHash(),
-                                                                        mint->SerializeToEmbeddedTransaction(),
-                                                                        std::nullopt,
-                                                                        std::nullopt );
+                                                                         mint->GetNonce(),
+                                                                         mint->GetHash(),
+                                                                         mint->SerializeToEmbeddedTransaction(),
+                                                                         std::nullopt,
+                                                                         std::nullopt );
         ASSERT_TRUE( subject.has_value() );
         auto proposal = nodes[index].manager->CreateProposal( subject.value(),
                                                               accounts[index]->GetAddress(),
@@ -2386,8 +2446,8 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
                                                                                  proposals[index] );
         sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( nodes[index].manager, slot );
         sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( nodes[index].manager );
-        const auto announcements =
-            sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( nodes[index].manager );
+        const auto announcements = sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements(
+            nodes[index].manager );
         ASSERT_EQ( announcements.size(), 1U );
         ASSERT_TRUE( first_votes[index].ParseFromString( announcements.front() ) );
         EXPECT_EQ( first_votes[index].proposal_id(), proposals[index].proposal_id() );
@@ -2444,8 +2504,8 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
     {
         sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( nodes[index].manager, slot );
         sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( nodes[index].manager );
-        const auto announcements =
-            sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( nodes[index].manager );
+        const auto announcements = sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements(
+            nodes[index].manager );
         ASSERT_EQ( announcements.size(), 1U );
         ASSERT_TRUE( second_votes[index].ParseFromString( announcements.back() ) );
     }
@@ -2454,13 +2514,13 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
 
     const auto agreed_id = second_votes[0].proposal_id();
     const auto agreed    = std::find_if( proposals.begin(),
-                                         proposals.end(),
-                                         [&agreed_id]( const sgns::ConsensusManager::Proposal &proposal )
-                                         { return proposal.proposal_id() == agreed_id; } );
+                                      proposals.end(),
+                                      [&agreed_id]( const sgns::ConsensusManager::Proposal &proposal )
+                                      { return proposal.proposal_id() == agreed_id; } );
     ASSERT_NE( agreed, proposals.end() );
 
     const std::vector<sgns::ConsensusManager::Vote> agreed_votes( second_votes.begin(), second_votes.end() );
-    const auto tally = nodes.front().manager->TallyVotes( *agreed, agreed_votes );
+    const auto                                      tally = nodes.front().manager->TallyVotes( *agreed, agreed_votes );
     ASSERT_TRUE( tally.has_value() );
     EXPECT_TRUE( tally.value().has_quorum ) << "converged attempt must reach quorum";
     EXPECT_EQ( tally.value().approved_weight, 3U );
@@ -2477,8 +2537,7 @@ TEST_F( ConsensusPendingLifecycleTest, SplitFrozenSlotConvergesOnceTheLocalWinne
         }
         const auto loser_tally = nodes.front().manager->TallyVotes( proposal, all_votes );
         ASSERT_TRUE( loser_tally.has_value() );
-        EXPECT_FALSE( loser_tally.value().has_quorum )
-            << "an abandoned contender must never reach a competing quorum";
+        EXPECT_FALSE( loser_tally.value().has_quorum ) << "an abandoned contender must never reach a competing quorum";
     }
 
     for ( auto &node : nodes )
@@ -2502,7 +2561,7 @@ TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorize
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto corrupt = MakeProposal( manager, registry, 84, "0xcorrupt-record" );
+    auto       corrupt      = MakeProposal( manager, registry, 84, "0xcorrupt-record" );
     const auto corrupt_slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( corrupt );
     sgns::ConsensusPendingLifecycleTestAccess::WriteActiveVoteRecord( manager, corrupt_slot, "not-a-protobuf-record" );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, corrupt );
@@ -2511,8 +2570,8 @@ TEST_F( ConsensusPendingLifecycleTest, CorruptOrExpiredActiveVoteCannotAuthorize
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, corrupt_slot ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ActiveVoteAnnouncements( manager ).empty() );
 
-    auto proposal = MakeProposal( manager, registry, 85, "0xexpired-record" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    auto       proposal = MakeProposal( manager, registry, 85, "0xexpired-record" );
+    const auto slot     = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
@@ -2535,8 +2594,8 @@ TEST_F( ConsensusPendingLifecycleTest, ScanFailureRetainsCandidateUntilTimerCanO
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 86, "0xscan-retry-candidate" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    auto       proposal = MakeProposal( manager, registry, 86, "0xscan-retry-candidate" );
+    const auto slot     = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
 
     sgns::ConsensusPendingLifecycleTestAccess::SetAcceptedCertificateScanFailure( manager, true );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
@@ -2588,9 +2647,9 @@ TEST_F( ConsensusPendingLifecycleTest, ScanRecoveryMergesOnlyPreDeadlineContende
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto higher_ranked = MakeProposal( manager, registry, 87, "z-higher-hash" );
-    auto lower_ranked  = MakeProposal( manager, registry, 87, "a-lower-hash" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( higher_ranked );
+    auto       higher_ranked = MakeProposal( manager, registry, 87, "z-higher-hash" );
+    auto       lower_ranked  = MakeProposal( manager, registry, 87, "a-lower-hash" );
+    const auto slot          = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( higher_ranked );
     ASSERT_EQ( slot, sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( lower_ranked ) );
 
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, higher_ranked );
@@ -2650,9 +2709,9 @@ TEST_F( ConsensusPendingLifecycleTest, ScanRecoveryAfterDeadlineCannotChangeTheF
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto original_winner = MakeProposal( manager, registry, 88, "z-original-hash" );
-    auto retained_later  = MakeProposal( manager, registry, 88, "a-retained-hash" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( original_winner );
+    auto       original_winner = MakeProposal( manager, registry, 88, "z-original-hash" );
+    auto       retained_later  = MakeProposal( manager, registry, 88, "a-retained-hash" );
+    const auto slot            = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( original_winner );
     ASSERT_EQ( slot, sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( retained_later ) );
 
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, original_winner );
@@ -2685,46 +2744,53 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     ASSERT_TRUE( registry );
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
-    ASSERT_TRUE( manager->RegisterCertificateHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        []( const std::string &, const sgns::ConsensusManager::Certificate & )
-        { return outcome::success( sgns::ConsensusManager::Check::Approve ); } ) );
+    ASSERT_TRUE(
+        manager->RegisterCertificateHandler( sgns::NONCE_SUBJECT_TYPE,
+                                             []( const std::string &, const sgns::ConsensusManager::Certificate & )
+                                             { return outcome::success( sgns::ConsensusManager::Check::Approve ); } ) );
 
     auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
-                                                                86,
-                                                                "0xdurable-certificate-release",
-                                                                sgns::EmbeddedTransaction{},
-                                                                MakeTestCommitment(),
-                                                                MakeTestWitness() );
+                                                               86,
+                                                               "0xdurable-certificate-release",
+                                                               sgns::EmbeddedTransaction{},
+                                                               MakeTestCommitment(),
+                                                               MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
-    auto voted_proposal_result = manager->CreateProposal(
-        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto voted_proposal_result = manager->CreateProposal( subject.value(),
+                                                          { account->GetAddress() },
+                                                          registry->GetRegistryCid(),
+                                                          registry->GetRegistryEpoch() );
     ASSERT_TRUE( voted_proposal_result.has_value() );
-    auto voted_proposal = voted_proposal_result.value();
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
+    auto       voted_proposal = voted_proposal_result.value();
+    const auto slot           = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, voted_proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
 
-    auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
+    auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account,
+                                                                                                   voted_proposal );
     ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
-    auto certified_vote = manager->CreateVote(
-        certified_proposal.proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto certified_vote = manager->CreateVote( certified_proposal.proposal_id(),
+                                               { account->GetAddress() },
+                                               true,
+                                               [account]( std::vector<uint8_t> payload )
+                                               { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( certified_vote.has_value() );
     auto certificate = manager->CreateCertificate( certified_proposal, { certified_vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
     auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( certified_proposal.subject() );
     ASSERT_TRUE( subject_hash.has_value() );
-    const auto legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
+    const auto legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        certificate.value() );
     std::string serialized;
     ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
 
     // The CRDT callback occurs before its batch commits, so it can only retain stalled work.
     sgns::base::Buffer callback_value;
     callback_value.put( serialized );
-    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived( manager, { legacy_key, std::move( callback_value ) } );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived( manager,
+                                                                    { legacy_key, std::move( callback_value ) } );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, legacy_key ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
@@ -2736,30 +2802,37 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
 
     // A durable, accepted certificate for another canonical slot cannot release this lock.
     auto other_subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
-                                                                      87,
-                                                                      "0xdurable-certificate-other-slot",
-                                                                      sgns::EmbeddedTransaction{},
-                                                                      MakeTestCommitment(),
-                                                                      MakeTestWitness() );
+                                                                     87,
+                                                                     "0xdurable-certificate-other-slot",
+                                                                     sgns::EmbeddedTransaction{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
     ASSERT_TRUE( other_subject.has_value() );
-    auto other_proposal = manager->CreateProposal(
-        other_subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto other_proposal = manager->CreateProposal( other_subject.value(),
+                                                   { account->GetAddress() },
+                                                   registry->GetRegistryCid(),
+                                                   registry->GetRegistryEpoch() );
     ASSERT_TRUE( other_proposal.has_value() );
-    auto other_vote = manager->CreateVote(
-        other_proposal.value().proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto other_vote = manager->CreateVote( other_proposal.value().proposal_id(),
+                                           { account->GetAddress() },
+                                           true,
+                                           [account]( std::vector<uint8_t> payload )
+                                           { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( other_vote.has_value() );
     auto other_certificate = manager->CreateCertificate( other_proposal.value(), { other_vote.value() } );
     ASSERT_TRUE( other_certificate.has_value() );
-    auto other_subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( other_proposal.value().subject() );
+    auto other_subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash(
+        other_proposal.value().subject() );
     ASSERT_TRUE( other_subject_hash.has_value() );
-    const auto other_legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( other_certificate.value() );
+    const auto other_legacy_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        other_certificate.value() );
     std::string other_serialized;
     ASSERT_TRUE( other_certificate.value().SerializeToString( &other_serialized ) );
     sgns::base::Buffer other_callback_value;
     other_callback_value.put( other_serialized );
     sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
-        manager, { other_legacy_key, std::move( other_callback_value ) } );
+        manager,
+        { other_legacy_key, std::move( other_callback_value ) } );
     sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, other_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, other_legacy_key ) );
@@ -2780,7 +2853,8 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasActiveVoteLock( manager, slot ) );
-    auto accepted_certificate = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot );
+    auto accepted_certificate = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager,
+                                                                                                          slot );
     ASSERT_TRUE( accepted_certificate.has_value() );
     EXPECT_TRUE( accepted_certificate.value() );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
@@ -2821,32 +2895,37 @@ TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistra
     manager->ConfigureCertificateDelay( std::chrono::minutes( 10 ) );
 
     auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
-                                                                88,
-                                                                "0xdurable-before-handler",
-                                                                sgns::EmbeddedTransaction{},
-                                                                MakeTestCommitment(),
-                                                                MakeTestWitness() );
+                                                               88,
+                                                               "0xdurable-before-handler",
+                                                               sgns::EmbeddedTransaction{},
+                                                               MakeTestCommitment(),
+                                                               MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
-    auto voted_proposal_result = manager->CreateProposal(
-        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto voted_proposal_result = manager->CreateProposal( subject.value(),
+                                                          { account->GetAddress() },
+                                                          registry->GetRegistryCid(),
+                                                          registry->GetRegistryEpoch() );
     ASSERT_TRUE( voted_proposal_result.has_value() );
-    auto voted_proposal = voted_proposal_result.value();
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
+    auto       voted_proposal = voted_proposal_result.value();
+    const auto slot           = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( voted_proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, voted_proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::ReadActiveVoteRecord( manager, slot ).has_value() );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( manager ) );
 
-    auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account, voted_proposal );
+    auto certified_proposal = sgns::ConsensusPendingLifecycleTestAccess::ResignWithLaterTimestamp( account,
+                                                                                                   voted_proposal );
     ASSERT_NE( certified_proposal.proposal_id(), voted_proposal.proposal_id() );
-    auto certified_vote = manager->CreateVote(
-        certified_proposal.proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto certified_vote = manager->CreateVote( certified_proposal.proposal_id(),
+                                               { account->GetAddress() },
+                                               true,
+                                               [account]( std::vector<uint8_t> payload )
+                                               { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( certified_vote.has_value() );
     auto certificate = manager->CreateCertificate( certified_proposal, { certified_vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
-    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
+    const auto  key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate.value() );
     std::string serialized;
     ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
 
@@ -2894,18 +2973,22 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegis
     ASSERT_TRUE( manager );
 
     auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
-                                                                89,
-                                                                "0xconcurrent-certificate-recovery",
-                                                                sgns::EmbeddedTransaction{},
-                                                                MakeTestCommitment(),
-                                                                MakeTestWitness() );
+                                                               89,
+                                                               "0xconcurrent-certificate-recovery",
+                                                               sgns::EmbeddedTransaction{},
+                                                               MakeTestCommitment(),
+                                                               MakeTestWitness() );
     ASSERT_TRUE( subject.has_value() );
-    auto proposal = manager->CreateProposal(
-        subject.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    auto proposal = manager->CreateProposal( subject.value(),
+                                             { account->GetAddress() },
+                                             registry->GetRegistryCid(),
+                                             registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal.has_value() );
-    auto vote = manager->CreateVote(
-        proposal.value().proposal_id(), { account->GetAddress() }, true,
-        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    auto vote = manager->CreateVote( proposal.value().proposal_id(),
+                                     { account->GetAddress() },
+                                     true,
+                                     [account]( std::vector<uint8_t> payload )
+                                     { return account->Sign( std::move( payload ) ); } );
     ASSERT_TRUE( vote.has_value() );
     auto certificate = manager->CreateCertificate( proposal.value(), { vote.value() } );
     ASSERT_TRUE( certificate.has_value() );
@@ -2942,7 +3025,9 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateRecoverySerializesHandlerRegis
         } );
 
     std::unique_lock handler_lock( handler_mutex );
-    const bool started = handler_cv.wait_for( handler_lock, std::chrono::seconds( 5 ), [&] { return handler_started; } );
+    const bool       started = handler_cv.wait_for( handler_lock,
+                                              std::chrono::seconds( 5 ),
+                                              [&] { return handler_started; } );
     if ( !started )
     {
         allow_handler = true;
@@ -3005,13 +3090,12 @@ TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVote
         []( const std::string &, std::function<void( outcome::result<std::string> )> cb )
         { cb( outcome::failure( std::errc::not_supported ) ); } );
     ASSERT_TRUE( registry );
-    ASSERT_FALSE( registry
-                      ->StoreGenesisRegistry( { accounts[0]->GetAddress(),
-                                                accounts[1]->GetAddress(),
-                                                accounts[2]->GetAddress() },
-                                              [accounts]( std::vector<uint8_t> payload )
-                                              { return accounts.front()->Sign( std::move( payload ) ); } )
-                      .has_error() );
+    ASSERT_FALSE(
+        registry
+            ->StoreGenesisRegistry( { accounts[0]->GetAddress(), accounts[1]->GetAddress(), accounts[2]->GetAddress() },
+                                    [accounts]( std::vector<uint8_t> payload )
+                                    { return accounts.front()->Sign( std::move( payload ) ); } )
+            .has_error() );
     ASSERT_WAIT_FOR_CONDITION(
         [&registry]()
         {
@@ -3053,17 +3137,19 @@ TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVote
                                                                      std::nullopt,
                                                                      std::nullopt );
     ASSERT_TRUE( subject.has_value() );
-    const auto proposal = manager->CreateProposal(
-        subject.value(), accounts.front()->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    const auto proposal = manager->CreateProposal( subject.value(),
+                                                   accounts.front()->GetAddress(),
+                                                   registry->GetRegistryCid(),
+                                                   registry->GetRegistryEpoch() );
     ASSERT_TRUE( proposal.has_value() );
     ASSERT_TRUE( sgns::ConsensusManager::IsBridgeMintSubject( proposal.value() ) );
 
     const auto now_ms = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch() )
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
             .count() );
-    const auto make_vote = [&]( const std::shared_ptr<sgns::GeniusAccount> &voter, bool corrupt_signature )
-        -> sgns::ConsensusManager::Vote {
+    const auto make_vote = [&]( const std::shared_ptr<sgns::GeniusAccount> &voter,
+                                bool corrupt_signature ) -> sgns::ConsensusManager::Vote
+    {
         sgns::ConsensusManager::Vote vote;
         vote.set_proposal_id( proposal.value().proposal_id() );
         vote.set_voter_id( voter->GetAddress() );
@@ -3082,7 +3168,7 @@ TEST_F( ConsensusPendingLifecycleTest, BridgeMintSlotQuorumRejectsFabricatedVote
         vote.set_signature( signature.data(), signature.size() );
         if ( corrupt_signature )
         {
-            std::string corrupted = vote.signature();
+            std::string corrupted           = vote.signature();
             corrupted[corrupted.size() - 1] = ( corrupted.back() == '\x00' ? '\x01' : '\x00' );
             vote.set_signature( corrupted );
         }
@@ -3135,8 +3221,8 @@ TEST_F( ConsensusPendingLifecycleTest, SubmitCertificateWritesOnlyTheCanonicalSl
     ASSERT_TRUE( manager );
 
     const auto proposal = MakeSigningProposal( manager, registry, account, 94, "0xslot-only-write" );
-    const auto vote = manager->CreateVote( proposal.proposal_id(),
-                                           { account->GetAddress() },
+    const auto vote     = manager->CreateVote( proposal.proposal_id(),
+                                               { account->GetAddress() },
                                            true,
                                            [account]( std::vector<uint8_t> payload )
                                            { return account->Sign( std::move( payload ) ); } );
@@ -3152,8 +3238,7 @@ TEST_F( ConsensusPendingLifecycleTest, SubmitCertificateWritesOnlyTheCanonicalSl
     const auto slot_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
         certificate.value() );
     ASSERT_FALSE( slot_key.empty() );
-    auto stored = manager->GetCertificateBySlot(
-        sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ) );
+    auto stored = manager->GetCertificateBySlot( sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal ) );
     ASSERT_TRUE( stored.has_value() );
 
     // ...while no subject-hash record was created for the v3.0 certificate.
@@ -3189,8 +3274,8 @@ TEST_F( ConsensusPendingLifecycleTest, ExpiredDurableVoteRecoveryDoesNotLockSlot
     auto manager = MakeSigningManager( registry, account );
     ASSERT_TRUE( manager );
 
-    auto proposal = MakeProposal( manager, registry, 95, "0xexpired-recovery" );
-    const auto slot = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
+    auto       proposal = MakeProposal( manager, registry, 95, "0xexpired-recovery" );
+    const auto slot     = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal );
     sgns::ConsensusPendingLifecycleTestAccess::ForceCandidateWindowDue( manager, slot );
     sgns::ConsensusPendingLifecycleTestAccess::ProcessDueVoteWork( manager );
@@ -3202,10 +3287,10 @@ TEST_F( ConsensusPendingLifecycleTest, ExpiredDurableVoteRecoveryDoesNotLockSlot
     // record's own deadline, then restart the manager over the same datastore.
     sgns::ActiveVoteRecord expired;
     ASSERT_TRUE( expired.ParseFromString( bytes.value() ) );
-    const auto past_ms = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch() )
-            .count() ) - 60000;
+    const auto past_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                    std::chrono::system_clock::now().time_since_epoch() )
+                                                    .count() ) -
+                         60000;
     expired.set_acceptance_deadline_ms( past_ms );
     std::string expired_bytes;
     ASSERT_TRUE( expired.SerializeToString( &expired_bytes ) );
