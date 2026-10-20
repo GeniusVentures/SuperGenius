@@ -201,6 +201,49 @@ TEST_F( LegacyMintAdmissionTest, SelfSignedValueCarryingV1MintRejectedAtConsensu
 }
 
 // ---------------------------------------------------------------------------
+// Adversarial: local/RPC submission preflight
+// ---------------------------------------------------------------------------
+
+// VER-01 adversarial case.
+// Attacker authority: ANY account — a plain key pair able to self-sign a
+// transaction and submit it locally or through the RPC submission path (which
+// routes through the same SendTransactionItem preflight).
+// Expected: the submission fails closed with a named error
+// (std::errc::operation_not_permitted) BEFORE any CRDT Put/commit.
+// Actual pre-fix behavior: the preflight loop only checked PubSub size and UTXO
+// commitments, so the value-carrying v1 mint was published towards consensus.
+TEST_F( LegacyMintAdmissionTest, SelfSignedValueCarryingV1MintPreflightFailsClosed )
+{
+    TransactionManager::TransactionItem item;
+    item.first.emplace_back( MakeSignedV1Mint( 1 ), std::nullopt );
+
+    const auto result = LegacyMintAdmissionTestAccess::SendItem( *tm_, item );
+    ASSERT_TRUE( result.has_error() ) << "A value-carrying v1 mint submission must fail";
+    EXPECT_EQ( result.error(), std::errc::operation_not_permitted )
+        << "The rejection must carry the named MINT-03 errc, not a generic failure";
+}
+
+// VER-01 compat twin of the adversarial preflight case: zero-amount v1 mints
+// and mint-v2 submissions take exactly the preflight path they take today —
+// the gate may not introduce a NEW rejection for them. (An unfunded mint-v2
+// still fails the pre-existing UTXO-commitment preflight with invalid_argument,
+// which is precisely today's behavior.)
+TEST_F( LegacyMintAdmissionTest, ZeroValueAndV2SubmissionsTakeTodaysPreflightPath )
+{
+    TransactionManager::TransactionItem filler_item;
+    filler_item.first.emplace_back( MakeSignedV1Mint( 0 ), std::nullopt );
+    const auto filler_result = LegacyMintAdmissionTestAccess::SendItem( *tm_, filler_item );
+    ASSERT_TRUE( !filler_result.has_error() || filler_result.error() != std::errc::operation_not_permitted )
+        << "Zero-amount v1 mint (migration filler) must not hit the MINT-03 rejection";
+
+    TransactionManager::TransactionItem v2_item;
+    v2_item.first.emplace_back( MakeMintV2(), std::nullopt );
+    const auto v2_result = LegacyMintAdmissionTestAccess::SendItem( *tm_, v2_item );
+    ASSERT_TRUE( !v2_result.has_error() || v2_result.error() != std::errc::operation_not_permitted )
+        << "mint-v2 submission must not hit the MINT-03 rejection";
+}
+
+// ---------------------------------------------------------------------------
 // Compat: zero-value migration fillers, mint-v2, non-mint types
 // ---------------------------------------------------------------------------
 
