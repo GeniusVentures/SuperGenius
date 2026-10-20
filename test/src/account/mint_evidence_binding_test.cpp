@@ -465,4 +465,30 @@ namespace
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A matched log that cannot be decoded must fail closed (T-21-0204)";
     }
+
+    TEST( MintEvidenceBindingTest, BogusTopic0ReceiptStillRejected )
+    {
+        // Negative control: a receipt whose log carries a topic0 that is NOT in
+        // the endpoint's accepted set earns no weight. The fact-binding fix must
+        // not weaken the existing receipt-log validation. Behavior is unchanged
+        // by this fix (rejected before and after).
+        ReceiptFacts facts;
+        facts.token_id = 0xABCD;
+        facts.amount   = 7;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto receipt   = BuildBridgeBurnReceiptJson( kSourceRef, facts );
+        // Swap the log's topic0 for one outside the accepted set.
+        const std::string bogus_topic0 = "0x" + std::string( 63, 'c' ) + "1";
+        const auto        topics_pos   = receipt.find( "\"topics\":[" );
+        const auto        first_quote  = receipt.find( '"', topics_pos + 9 ) + 1;
+        const auto        last_quote   = receipt.find( '"', first_quote );
+        receipt                        = receipt.substr( 0, first_quote ) + bogus_topic0 + receipt.substr( last_quote );
+        auto validator                 = MakeValidator( receipt );
+
+        const auto mint = MakeMintV2( 7, kChainId, TokenID::FromBytes( { 0xAB, 0xCD } ), facts.dest_hex );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A receipt with an unknown topic0 must still be rejected";
+        EXPECT_EQ( evidence.successful_weight, 0 ) << "No endpoint may confirm a bogus-topic0 receipt";
+    }
 } // namespace
