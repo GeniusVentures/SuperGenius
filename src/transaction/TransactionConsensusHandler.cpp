@@ -187,12 +187,11 @@ namespace sgns
                 {
                     // The conflicting entry may live under a different network's key
                     // namespace; resolve by value scan before dereferencing.
-                    it = std::find_if( owner_.tx_processed_m.begin(),
-                                       owner_.tx_processed_m.end(),
-                                       [&conflicting_tx]( const auto &kv ) {
-                                           return kv.second.tx &&
-                                                  kv.second.tx->GetHash() == conflicting_tx.value()->GetHash();
-                                       } );
+                    it = std::find_if(
+                        owner_.tx_processed_m.begin(),
+                        owner_.tx_processed_m.end(),
+                        [&conflicting_tx]( const auto &kv )
+                        { return kv.second.tx && kv.second.tx->GetHash() == conflicting_tx.value()->GetHash(); } );
                 }
                 if ( it == owner_.tx_processed_m.end() )
                 {
@@ -219,11 +218,11 @@ namespace sgns
                     // tie-break reverted a certified winner's already-applied effects
                     // and DeleteTransaction'd it from the CRDT while every peer
                     // confirmed it: permanent divergence on exactly this node.
-                    auto conflict_certificate = owner_.GetTransactionCertificate( *conflicting_tx.value() );
-                    const bool conflict_is_certified =
-                        conflict_certificate.has_value() &&
-                        TransactionManager::CertificateMatchesTransaction( conflict_certificate.value(),
-                                                                           *conflicting_tx.value() );
+                    auto       conflict_certificate  = owner_.GetTransactionCertificate( *conflicting_tx.value() );
+                    const bool conflict_is_certified = conflict_certificate.has_value() &&
+                                                       TransactionManager::CertificateMatchesTransaction(
+                                                           conflict_certificate.value(),
+                                                           *conflicting_tx.value() );
                     if ( !conflict_is_certified || owner_.ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
                     {
                         auto result = owner_.ChangeTransactionState( conflicting_tx.value(),
@@ -300,10 +299,10 @@ namespace sgns
              checkpoint_res.has_error() )
         {
             logger_->error( "{}: Failed to create UTXO checkpoint tx={} epoch={} err={}",
-                             __func__,
-                             tx_hash,
-                             registry_epoch,
-                             checkpoint_res.error().message() );
+                            __func__,
+                            tx_hash,
+                            registry_epoch,
+                            checkpoint_res.error().message() );
         }
         logger_->debug( "{}: Transaction approved: {:.8}", __func__, tx_hash );
         return ConsensusManager::Check::Approve;
@@ -312,8 +311,8 @@ namespace sgns
     outcome::result<ConsensusManager::ValidationResult> TransactionConsensusHandler::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
     {
-        constexpr std::string_view FUNC{__func__};
-        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        constexpr std::string_view FUNC{ __func__ };
+        auto                       nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         if ( nonce_subject.has_error() )
         {
             logger_->error( "{}: Received unexpected subject payload", __func__ );
@@ -350,9 +349,9 @@ namespace sgns
             if ( !tx->HasUTXOParameters() )
             {
                 logger_->error( "{}: Subject has UTXO commitment but deserialized tx lacks "
-                                 "UTXO parameters — possible malicious embedding, rejecting tx={}",
-                                 __func__,
-                                 tx_hash );
+                                "UTXO parameters — possible malicious embedding, rejecting tx={}",
+                                __func__,
+                                tx_hash );
                 return ConsensusManager::ValidationResult::Reject();
             }
 
@@ -364,16 +363,16 @@ namespace sgns
                      nonce_subject.value().utxo_commitment().produced_outputs_root() )
             {
                 logger_->error( "{}: Commitment-tx binding mismatch — "
-                                 "reconstructed commitment differs from subject claim for tx={}",
-                                 __func__,
-                                 tx_hash );
+                                "reconstructed commitment differs from subject claim for tx={}",
+                                __func__,
+                                tx_hash );
                 return ConsensusManager::ValidationResult::Reject();
             }
         }
 
         // TRACK-01: Insert temporary tracking entry via ChangeTransactionState lifecycle
-        uint64_t tracked_nonce  = tx->GetNonce();
-        auto     tracked_entry  = owner_.GetTrackedTxByHash( tx_hash );
+        uint64_t tracked_nonce = tx->GetNonce();
+        auto     tracked_entry = owner_.GetTrackedTxByHash( tx_hash );
         if ( !tracked_entry )
         {
             // Go through the state machine so the manager owns every tracking-map write.
@@ -381,9 +380,9 @@ namespace sgns
             if ( create_result.has_error() )
             {
                 logger_->warn( "{}: CREATE failed for embedded tx {}, entry may exist via race: {}",
-                                __func__,
-                                tx_hash,
-                                create_result.error().message() );
+                               __func__,
+                               tx_hash,
+                               create_result.error().message() );
                 // Re-read in case another thread inserted it
                 auto raced_entry = owner_.GetTrackedTxByHash( tx_hash );
                 if ( raced_entry )
@@ -392,7 +391,7 @@ namespace sgns
                     {
                         return ConsensusManager::ValidationResult::Reject();
                     }
-                    tracked_nonce  = raced_entry->cached_nonce;
+                    tracked_nonce = raced_entry->cached_nonce;
                 }
             }
             else
@@ -408,7 +407,7 @@ namespace sgns
         else
         {
             // Entry already exists with higher-status — use its values for downstream checks
-            tracked_nonce  = tracked_entry->cached_nonce;
+            tracked_nonce = tracked_entry->cached_nonce;
         }
 
         auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::ValidationResult
@@ -430,9 +429,9 @@ namespace sgns
                          fail_result.has_error() )
                     {
                         logger_->error( "{}: Failed to mark rejected local tx as FAILED for hash {}: {}",
-                                         FUNC,
-                                         tx_hash,
-                                         fail_result.error().message() );
+                                        FUNC,
+                                        tx_hash,
+                                        fail_result.error().message() );
                     }
                 }
             }
@@ -484,10 +483,10 @@ namespace sgns
             if ( eligibility_result.has_error() )
             {
                 logger_->warn( "{}: Failed to evaluate local migration allowlist tx={} src={} err={}, pending",
-                                __func__,
-                                tx_hash,
-                                migration_tx->GetSrcAddress(),
-                                eligibility_result.error().message() );
+                               __func__,
+                               tx_hash,
+                               migration_tx->GetSrcAddress(),
+                               eligibility_result.error().message() );
                 return ConsensusManager::ValidationResult::Pending();
             }
             if ( !eligibility_result.value() )
@@ -602,10 +601,10 @@ namespace sgns
         if ( tolerance_ms > 0 && drift_ms > tolerance_ms )
         {
             logger_->error( "{}: Timestamp out of tolerance tx={} (elapsed: {} ms, tolerance: {} ms)",
-                             __func__,
-                             tx.GetHash(),
-                             elapsed,
-                             tolerance_ms );
+                            __func__,
+                            tx.GetHash(),
+                            elapsed,
+                            tolerance_ms );
             return false;
         }
 
@@ -632,13 +631,14 @@ namespace sgns
                 if ( !expected_previous_hash.empty() && previous_hash != expected_previous_hash )
                 {
                     logger_->error( "{}: Previous hash does not match local account head tx={}",
-                                     __func__,
-                                     tx.GetHash() );
+                                    __func__,
+                                    tx.GetHash() );
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
             auto previous_transaction_result = TransactionManager::FetchTransaction(
-                *owner_.globaldb_m, TransactionManager::GetTransactionPath( previous_hash ) );
+                *owner_.globaldb_m,
+                TransactionManager::GetTransactionPath( previous_hash ) );
             if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
                  previous_transaction_result.value()->GetHash() != previous_hash )
             {
@@ -652,7 +652,7 @@ namespace sgns
                 // ORIGINAL registration the sender chains to. The immutable
                 // certificate at the predecessor's slot still embeds the original
                 // transaction: resolve through it.
-                const std::string reg_key = TransactionManager::GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
+                const std::string reg_key  = TransactionManager::GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
                 auto              reg_data = owner_.globaldb_m->Get( reg_key );
                 if ( reg_data.has_value() )
                 {
@@ -672,8 +672,7 @@ namespace sgns
                     {
                         auto prev_subject = ConsensusManager::DecodeNonceSubject(
                             prev_cert.value().proposal().subject() );
-                        if ( !prev_subject.has_error() &&
-                             prev_subject.value().tx_hash() == previous_hash &&
+                        if ( !prev_subject.has_error() && prev_subject.value().tx_hash() == previous_hash &&
                              prev_cert.value().proposal().subject().account_id() == tx.GetSrcAddress() )
                         {
                             auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
@@ -753,21 +752,21 @@ namespace sgns
         if ( tx_nonce <= confirmed_nonce )
         {
             logger_->error( "{}: Nonce too low tx={} nonce={} confirmed={}",
-                             __func__,
-                             tx.GetHash(),
-                             tx_nonce,
-                             confirmed_nonce );
+                            __func__,
+                            tx.GetHash(),
+                            tx_nonce,
+                            confirmed_nonce );
             return { ConsensusManager::ValidationResult::Reject() };
         }
 
         if ( tx_nonce > confirmed_nonce + NONCE_WINDOW )
         {
             logger_->error( "{}: Nonce too high tx={} nonce={} confirmed={} window={}",
-                             __func__,
-                             tx.GetHash(),
-                             tx_nonce,
-                             confirmed_nonce,
-                             NONCE_WINDOW );
+                            __func__,
+                            tx.GetHash(),
+                            tx_nonce,
+                            confirmed_nonce,
+                            NONCE_WINDOW );
             return { ConsensusManager::ValidationResult::Reject() };
         }
 
@@ -779,17 +778,17 @@ namespace sgns
                 if ( !tracked.has_value() )
                 {
                     logger_->error( "{}: Missing intermediate nonce {} for address {}",
-                                     __func__,
-                                     n,
-                                     tx.GetSrcAddress() );
+                                    __func__,
+                                    n,
+                                    tx.GetSrcAddress() );
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
                 if ( tracked->status == TransactionStatus::FAILED )
                 {
                     logger_->error( "{}: Intermediate nonce {} invalid for address {}",
-                                     __func__,
-                                     n,
-                                     tx.GetSrcAddress() );
+                                    __func__,
+                                    n,
+                                    tx.GetSrcAddress() );
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
@@ -824,16 +823,16 @@ namespace sgns
     {
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         logger_->debug( "{}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
-                         "has_utxo_params={} has_commitment={} has_witness={}",
-                         __func__,
-                         tx.GetHash(),
-                         tx.GetSrcAddress(),
-                         tx.GetNonce(),
-                         nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
-                         nonce_subject.has_value(),
-                         tx.HasUTXOParameters(),
-                         nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
-                         nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
+                        "has_utxo_params={} has_commitment={} has_witness={}",
+                        __func__,
+                        tx.GetHash(),
+                        tx.GetSrcAddress(),
+                        tx.GetNonce(),
+                        nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
+                        nonce_subject.has_value(),
+                        tx.HasUTXOParameters(),
+                        nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
+                        nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
 
         if ( nonce_subject.has_error() )
         {
@@ -850,9 +849,9 @@ namespace sgns
             if ( nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment() )
             {
                 logger_->error( "{}: Subject has UTXO commitment "
-                                 "but tx has no UTXO params — rejecting tx={}",
-                                 __func__,
-                                 tx.GetHash() );
+                                "but tx has no UTXO params — rejecting tx={}",
+                                __func__,
+                                tx.GetHash() );
                 return WitnessValidationResult::INVALID;
             }
             logger_->debug( "{}: Tx has no UTXO params, accepting tx={}", __func__, tx.GetHash() );
@@ -870,21 +869,21 @@ namespace sgns
              commitment.produced_outputs_root().size() != base::Hash256::size() )
         {
             logger_->error( "{}: Invalid commitment root sizes tx={} consumed_size={} "
-                             "produced_size={} expected={}",
-                             __func__,
-                             tx.GetHash(),
-                             commitment.consumed_outpoints_root().size(),
-                             commitment.produced_outputs_root().size(),
-                             base::Hash256::size() );
+                            "produced_size={} expected={}",
+                            __func__,
+                            tx.GetHash(),
+                            commitment.consumed_outpoints_root().size(),
+                            commitment.produced_outputs_root().size(),
+                            base::Hash256::size() );
             return WitnessValidationResult::INVALID;
         }
         if ( validator.RequiresConsensusUTXOData() && !nonce_subject.value().has_utxo_witness() )
         {
             logger_->error( "{}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
-                             __func__,
-                             tx.GetHash(),
-                             chain_id,
-                             validator.RequiresConsensusUTXOData() );
+                            __func__,
+                            tx.GetHash(),
+                            chain_id,
+                            validator.RequiresConsensusUTXOData() );
             return WitnessValidationResult::INVALID;
         }
 
@@ -896,23 +895,23 @@ namespace sgns
         }
         const auto witness_verdict = validator.ValidateWitness( subject, tx, params_opt.value(), *owner_.blockchain_ );
         logger_->debug( "{}: Validator witness result tx={} chain_id={} result={}",
-                         __func__,
-                         tx.GetHash(),
-                         chain_id,
-                         static_cast<int>( witness_verdict ) );
+                        __func__,
+                        tx.GetHash(),
+                        chain_id,
+                        static_cast<int>( witness_verdict ) );
         switch ( witness_verdict )
         {
-        case IInputValidator::WitnessVerdict::kValid:
-            return WitnessValidationResult::VALID;
-        case IInputValidator::WitnessVerdict::kNotSynced:
-            // Cross-delta arrival order is unordered: a producer's transaction or
-            // certificate legitimately arrives after the spending subject. Retry,
-            // do not reject — rejecting here turned a transient gap into a
-            // validation failure for certificate-first delivery.
-            return WitnessValidationResult::PENDING;
-        case IInputValidator::WitnessVerdict::kInvalid:
-        default:
-            return WitnessValidationResult::INVALID;
+            case IInputValidator::WitnessVerdict::kValid:
+                return WitnessValidationResult::VALID;
+            case IInputValidator::WitnessVerdict::kNotSynced:
+                // Cross-delta arrival order is unordered: a producer's transaction or
+                // certificate legitimately arrives after the spending subject. Retry,
+                // do not reject — rejecting here turned a transient gap into a
+                // validation failure for certificate-first delivery.
+                return WitnessValidationResult::PENDING;
+            case IInputValidator::WitnessVerdict::kInvalid:
+            default:
+                return WitnessValidationResult::INVALID;
         }
     }
 
@@ -1005,9 +1004,9 @@ namespace sgns
             if ( !utxo.has_value() )
             {
                 logger_->error( "{}: Missing input UTXO for transaction {} and key {}",
-                                 __func__,
-                                 tx.GetHash(),
-                                 OutPointKey( input.txid_hash_, input.output_idx_ ) );
+                                __func__,
+                                tx.GetHash(),
+                                OutPointKey( input.txid_hash_, input.output_idx_ ) );
                 return std::nullopt;
             }
             leaves.push_back(
@@ -1058,16 +1057,16 @@ namespace sgns
             if ( !producer_tx )
             {
                 logger_->error( "{}: Missing producer transaction for input {}",
-                                 __func__,
-                                 input.txid_hash_.toReadableString() );
+                                __func__,
+                                input.txid_hash_.toReadableString() );
                 return std::nullopt;
             }
             const auto produced_outputs = producer_tx->GetProducedUTXOs();
             if ( !produced_outputs )
             {
                 logger_->error( "{}: Could not extract produced outputs for producer transaction {}",
-                                 __func__,
-                                 producer_tx->GetHash() );
+                                __func__,
+                                producer_tx->GetHash() );
                 return std::nullopt;
             }
 
@@ -1096,17 +1095,17 @@ namespace sgns
             if ( produced_it == produced_outpoint_to_index.end() )
             {
                 logger_->error( "{}: Missing produced UTXO for transaction {} and key {}",
-                                 __func__,
-                                 tx.GetHash(),
-                                 key );
+                                __func__,
+                                tx.GetHash(),
+                                key );
                 return std::nullopt;
             }
             if ( produced_leaves[produced_it->second].payload != leaves[leaf_index].payload )
             {
                 logger_->error( "{}: Payload mismatch for produced UTXO for transaction {} and key {}",
-                                 __func__,
-                                 tx.GetHash(),
-                                 key );
+                                __func__,
+                                tx.GetHash(),
+                                key );
                 return std::nullopt;
             }
 
