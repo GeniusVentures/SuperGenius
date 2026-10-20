@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
@@ -15,10 +16,15 @@
 #include <base/parse_utility.hpp>
 #include <base/rlp-logger.hpp>
 #include <crypto/hasher.hpp>
+#include <eth/abi_decoder.hpp>
+#include <eth/eth_watch_cli.hpp>
 #include <eth/json_rpc.hpp>
 #include <eth/rpc_http_transport.hpp>
 
+#include "account/BridgeEventTypes.hpp"
+#include "account/BridgeRelayer.hpp"
 #include "account/GeniusTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
@@ -65,6 +71,105 @@ namespace sgns
         {
             const auto type = tx.GetType();
             return type == "mint" || type == "mint-v2";
+        }
+
+        /// Burn facts decoded from a bridge-event receipt log.
+        struct DecodedBurnFacts
+        {
+            TokenID     token_id;
+            uint64_t    amount = 0;
+            std::string recipient;
+        };
+
+        /**
+         * @brief MINT-04 (finding #5): decode a receipt log that already matched
+         *        the bridge contract and an accepted topic0, and bind its burn
+         *        facts — token id, amount, recipient — to the mint's own
+         *        outputs (Wormhole-style exact attestation-payload binding).
+         *
+         * The event shape is selected by the canonical topic0 (v1
+         * BridgeSourceBurned or v2 BridgeOutInitiated) and decoded with the
+         * registered ABI descriptors; the recipient normalization (v1 raw
+         * bytes vs v2 X-only decompression) reuses BridgeRelayer's one home.
+         * Every failure mode fails closed: a matched log that is not a
+         * canonical bridge event, cannot be decoded, or whose facts differ
+         * from the mint's own fields must never confirm the claim.
+         *
+         * @param mint The mint transaction whose own outputs are compared.
+         * @param log The matched receipt log entry.
+         * @param logger Logger for the named-rule failure diagnostics.
+         * @return The decoded facts on exact match, std::nullopt on any failure.
+         */
+        std::optional<DecodedBurnFacts> DecodeAndBindBurnFacts( const MintTransactionV2    &mint,
+                                                                const eth::codec::LogEntry &log,
+                                                                const base::Logger         &logger )
+        {
+            const auto canonical_topic0_hex = []( std::string_view signature )
+            {
+                const auto hash = eth::abi::event_signature_hash( std::string( signature ) );
+                return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+            };
+            static const std::string kSourceBurnedTopic0 = canonical_topic0_hex( kBridgeSourceBurnedSig );
+            static const std::string kOutInitiatedTopic0 = canonical_topic0_hex( kBridgeOutInitiatedSig );
+
+            const std::string log_topic0 = rlp::base::parse::hex_array_string( log.topics.front() );
+            std::string       event_signature;
+            if ( log_topic0 == kSourceBurnedTopic0 )
+            {
+                event_signature = std::string( kBridgeSourceBurnedSig );
+            }
+            else if ( log_topic0 == kOutInitiatedTopic0 )
+            {
+                event_signature = std::string( kBridgeOutInitiatedSig );
+            }
+            else
+            {
+                logger->error( "receipt/mint fact binding failed: matched topic0 is not a canonical "
+                               "bridge event topic (mint tx={})",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+
+            const auto params  = eth::cli::event_registry().params_for( event_signature );
+            const auto decoded = eth::abi::decode_log( log, event_signature, params );
+            if ( !decoded.has_value() )
+            {
+                logger->error( "receipt/mint fact binding failed: matched log is undecodable as {} "
+                               "(mint tx={})",
+                               event_signature,
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+
+            const auto burn = BridgeRelayer::ParseBurnEventValues( decoded.value() );
+            if ( burn.has_error() )
+            {
+                logger->error( "receipt/mint fact binding failed: decoded event values are malformed "
+                               "(mint tx={})",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+
+            const auto &facts = burn.value();
+            if ( facts.token_id != mint.GetTokenID() )
+            {
+                logger->error( "receipt/mint fact binding failed: token mismatch on mint tx={}",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+            if ( facts.amount != mint.GetAmount() )
+            {
+                logger->error( "receipt/mint fact binding failed: amount mismatch on mint tx={}",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+            if ( facts.destination != mint.GetPrimaryDestinationAddress() )
+            {
+                logger->error( "receipt/mint fact binding failed: recipient mismatch on mint tx={}",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+            return DecodedBurnFacts{ facts.token_id, facts.amount, facts.destination };
         }
     } // namespace
 
@@ -344,6 +449,11 @@ namespace sgns
         auto                    logger = InputValidatorLogger();
         RpcVerificationEvidence evidence;
 
+        // MINT-04 fact binding applies to the bridge mint type that carries the
+        // burn-fact accessors. Legacy v1 mints are admission-disabled by the
+        // MINT-03 plans (21-03/21-05/21-06) and keep today's receipt checks.
+        const auto *mint_v2 = dynamic_cast<const MintTransactionV2 *>( &tx );
+
         logger->trace( "GatherVerificationEvidence: tx={} chain_id={} source={}",
                        PreviewValue( tx.GetHash() ),
                        tx.GetChainId(),
@@ -469,7 +579,7 @@ namespace sgns
             // If bridge_contract_address is configured, at least one log must match.
             if ( !ep.bridge_contract_address.empty() )
             {
-                bool log_matched = false;
+                const eth::codec::LogEntry *matched_log = nullptr;
                 for ( const auto &log_entry : receipt->receipt.logs )
                 {
                     std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
@@ -483,11 +593,11 @@ namespace sgns
                     if ( std::find( ep.accepted_topic0_hashes.begin(), ep.accepted_topic0_hashes.end(), log_topic0 ) !=
                          ep.accepted_topic0_hashes.end() )
                     {
-                        log_matched = true;
+                        matched_log = &log_entry;
                         break;
                     }
                 }
-                if ( !log_matched )
+                if ( matched_log == nullptr )
                 {
                     // Per-endpoint topic mismatch must NOT abort the whole
                     // verification. After the private/public endpoint merge, an
@@ -504,6 +614,25 @@ namespace sgns
                                    ep.url,
                                    ep.accepted_topic0_hashes.size() );
                     continue;
+                }
+
+                // MINT-04 (finding #5): a matched log must also carry THIS mint's
+                // burn facts. An honestly-served receipt for a different burn
+                // (token, amount, or recipient differing from the mint's own
+                // outputs) cannot confirm the claim, and an undecodable matched
+                // log fails closed (T-21-0204) — discard all evidence so no slot
+                // can be populated for a mismatched mint, exactly like the
+                // reverted-receipt case above.
+                if ( mint_v2 != nullptr )
+                {
+                    const auto bound_facts = DecodeAndBindBurnFacts( *mint_v2, *matched_log, logger );
+                    if ( !bound_facts.has_value() )
+                    {
+                        return RpcVerificationEvidence{};
+                    }
+                    evidence.decoded_token_id  = bound_facts->token_id;
+                    evidence.decoded_amount    = bound_facts->amount;
+                    evidence.decoded_recipient = bound_facts->recipient;
                 }
             }
 
