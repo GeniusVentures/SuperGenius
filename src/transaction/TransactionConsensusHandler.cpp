@@ -541,7 +541,9 @@ namespace sgns
             logger_->error( "{}: Replay protection failed tx={}", __func__, tx.GetHash() );
             return replay_result.validation;
         }
-        //TODO - Deal with checking the Mint
+        // MINT-03: value-carrying legacy-v1 mints fail CheckTransactionTypeRules
+        // (legacy v1 mint admission disabled); zero-amount nonce fillers and
+        // mint-v2 stay admitted.
         if ( !CheckTransactionTypeRules( tx ) )
         {
             logger_->error( "{}: Type rules failed tx={}", __func__, tx.GetHash() );
@@ -812,6 +814,20 @@ namespace sgns
             return validator.ValidateUTXOParameters( params_opt.value(),
                                                      tx.GetSrcAddress(),
                                                      owner_.account_m->GetUTXOManager() );
+        }
+
+        // MINT-03 (T-21-0501): admission-side disable of legacy-v1 mints. A newly
+        // submitted type "mint" carrying value is rejected here — "mint-v2" is the
+        // authorized mint path. Zero-amount v1 mints (Migration3_4_0To3_5_0 nonce
+        // fillers) and every other type stay admitted. Admission only (D-02):
+        // deserialization, sync, boot and history remain open.
+        if ( TransactionManager::IsValueCarryingLegacyMint( tx ) )
+        {
+            logger_->error( "{}: legacy v1 mint admission disabled (MINT-03) tx={} type={}",
+                            __func__,
+                            tx.GetHash(),
+                            tx.GetType() );
+            return false;
         }
 
         return true;
