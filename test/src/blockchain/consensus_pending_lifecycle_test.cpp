@@ -139,6 +139,16 @@ namespace sgns
             manager->fail_accepted_certificate_scan_for_test_ = fail;
         }
 
+        /// Number of memoized verdicts the certificate cache holds for one
+        /// durable certificate key (/cert/<slot>). Retryable outcomes (Pending /
+        /// Stalled) must never leave an entry behind (Pitfall 1).
+        static size_t VerdictCacheEntryCount( const std::shared_ptr<ConsensusManager> &manager,
+                                              const std::string                       &certificate_key )
+        {
+            std::lock_guard lock( manager->certificate_verdict_cache_mutex_ );
+            return manager->certificate_verdict_cache_.count( certificate_key );
+        }
+
         static void WriteLiveCertificate( const std::shared_ptr<ConsensusManager> &manager,
                                           const ConsensusManager::Certificate     &certificate )
         {
@@ -554,8 +564,9 @@ namespace
         "D-10 retained-byte admission limit",
         "D-11 local capacity refusal without reject vote",
         "D-12 pending TTL expiry" };
-    const std::string     kValidatorId       = "validator-pending-lifecycle";
-    constexpr const char *kBindingPrivateKey = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    const std::string     kValidatorId        = "validator-pending-lifecycle";
+    constexpr const char *kBindingPrivateKey  = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    constexpr const char *kAttackerPrivateKey = "0badc0de0badc0de0badc0de0badc0de0badc0de0badc0de0badc0de0badc0de";
 
     std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
     {
@@ -893,6 +904,59 @@ namespace
             sgns::ConsensusPendingLifecycleTestAccess::SetActiveVoteRetryInterval( manager,
                                                                                    std::chrono::minutes( 10 ) );
             return manager;
+        }
+
+        // Distinct key from kBindingPrivateKey: an attacker authority that is
+        // not the registry's genesis authority and not a member of the honest
+        // registry. Attacker authority for the TRUST-01 adversarial pairs.
+        std::shared_ptr<sgns::GeniusAccount> MakeAttackerAccount()
+        {
+            auto account = sgns::GeniusAccount::NewFromPrivateKey( sgns::TokenID::FromBytes( { 0x00 } ),
+                                                                   kAttackerPrivateKey,
+                                                                   getPathString() + "/attacker" );
+            EXPECT_TRUE( account );
+            return account;
+        }
+
+        // Self-certified registry update (TRUST-01 attacker authority): a
+        // genesis-shaped root (empty prev link) whose only validator is the
+        // attacker and whose signature is the attacker's own -- not rooted in
+        // the registry's genesis authority. Raw-put into the DAG at the
+        // registry key, bypassing the element filter exactly like a malicious
+        // peer supplying the delta would, and return the resulting CID.
+        std::string MakeForgedRegistryCid( const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+                                           const std::shared_ptr<sgns::GeniusAccount>     &attacker )
+        {
+            sgns::ValidatorRegistry::RegistryUpdate forged;
+            forged.mutable_registry()->set_epoch( 0 );
+            auto *validator_entry = forged.mutable_registry()->add_validators();
+            validator_entry->set_validator_id( attacker->GetAddress() );
+            validator_entry->set_weight( 1 );
+            validator_entry->set_role( sgns::ValidatorRegistry::Role::REGULAR );
+            validator_entry->set_status( sgns::ValidatorRegistry::Status::ACTIVE );
+            forged.clear_prev_registry_hash();
+            sgns::validator::RegistrySigningPayload payload;
+            *payload.mutable_registry() = forged.registry();
+            std::string payload_bytes;
+            EXPECT_TRUE( payload.SerializeToString( &payload_bytes ) );
+            auto  signature = attacker->Sign( std::vector<uint8_t>( payload_bytes.begin(), payload_bytes.end() ) );
+            auto *signature_entry = forged.add_signatures();
+            signature_entry->set_validator_id( attacker->GetAddress() );
+            signature_entry->set_signature( signature.data(), signature.size() );
+
+            std::string serialized_update;
+            EXPECT_TRUE( forged.SerializeToString( &serialized_update ) );
+            sgns::crdt::GlobalDB::Buffer update_buffer;
+            update_buffer.put( serialized_update );
+            auto put = db_->Put( { registry->RegistryKeyValue() }, update_buffer, { registry->ValidatorTopicValue() } );
+            EXPECT_FALSE( put.has_error() );
+            if ( put.has_error() )
+            {
+                return {};
+            }
+            const auto cid = put.value().toString();
+            EXPECT_TRUE( cid.has_value() );
+            return cid.has_value() ? cid.value() : std::string{};
         }
 
         /// Slot keys for mint-v2 subjects come from the embedded transaction's slot id, so
@@ -1592,6 +1656,187 @@ TEST_F( ConsensusPendingLifecycleTest, FilterCertificateStallsUnsyncedRegistryCe
     sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, invalid_key ) );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, invalid_key ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ForgedRegistryCertificateIsRejectedWithNoDurableRecord )
+{
+    /**
+     * TRUST-01 (T-21-0401) adversarial pair. Attacker authority: any peer able
+     * to supply a registry CID -- a self-certified registry update (genesis
+     * shape, attacker's own validator and signature, not rooted in the genesis
+     * authority) raw-put into the DAG so it IS locally fetchable. Expected
+     * rejection: ValidateCertificate must return Reject and SubmitCertificate
+     * must fail WITHOUT writing the durable /cert/<slot> record. Actual
+     * pre-fix behavior: the raw load succeeds, the attacker's own vote carries
+     * 100% of the forged registry's weight, and the certificate Approves --
+     * finding #1 (registry-CID trust bypass).
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto attacker = MakeAttackerAccount();
+    ASSERT_TRUE( attacker );
+    const auto forged_cid = MakeForgedRegistryCid( registry, attacker );
+    ASSERT_FALSE( forged_cid.empty() );
+
+    // The forged snapshot must be locally loadable (the attacker supplied the
+    // delta) -- the attack surface is its authorization, not its availability.
+    auto raw_load = registry->LoadUnverifiedRegistryByCid( forged_cid );
+    ASSERT_TRUE( raw_load.has_value() );
+    ASSERT_EQ( raw_load.value().epoch(), 0u );
+
+    auto       forged_certificate = MakeCertificateForRegistry( attacker, forged_cid, 111, "0xforged-registry-cid" );
+    const auto slot_key    = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( forged_certificate.proposal() );
+    const auto durable_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        forged_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, forged_certificate ),
+               sgns::ConsensusManager::Check::Reject );
+
+    // The rejection must never leave a durable slot record behind: submission
+    // fails and the raw store holds no /cert/<slot> bytes.
+    auto submitted = manager->SubmitCertificate( forged_certificate );
+    EXPECT_TRUE( submitted.has_error() );
+    sgns::crdt::GlobalDB::Buffer durable_key_buffer;
+    durable_key_buffer.put( durable_key );
+    const auto stored = db_->GetDataStore()->get( durable_key_buffer );
+    EXPECT_TRUE( stored.has_error() );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, MissingRegistryAncestorStallsWithoutMemoizingAVerdict )
+{
+    /**
+     * TRUST-01 verdict-memo discipline (Pitfall 1 / T-21-0403), compat guard
+     * for the strict authorization path. A certificate whose registry ancestor
+     * is not synced yet is an ORDERING problem, never an authorization
+     * failure: the verdict must be retryable (Stalled) and neither the direct
+     * validation nor the memoized accepted-scan may pin any entry for the
+     * slot, or a node that synced out of order would never converge.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto       stalled_certificate = MakeCertificateForRegistry( account,
+                                                           "unsynced-ancestor-cid",
+                                                           112,
+                                                           "0xmissing-ancestor" );
+    const auto slot_key    = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( stalled_certificate.proposal() );
+    const auto durable_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        stalled_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, stalled_certificate ),
+               sgns::ConsensusManager::Check::Stalled );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::VerdictCacheEntryCount( manager, durable_key ), 0u );
+
+    // Mid-stall durable bytes (the ordering the sync path really produces):
+    // the accepted-scan reports retry-later and still memoizes nothing.
+    std::string stalled_serialized;
+    ASSERT_TRUE( stalled_certificate.SerializeToString( &stalled_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, stalled_serialized );
+    auto accepted = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot_key );
+    ASSERT_TRUE( accepted.has_error() );
+    EXPECT_EQ( accepted.error(), std::errc::resource_unavailable_try_again );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::VerdictCacheEntryCount( manager, durable_key ), 0u );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, DurableFinalCertificateRevalidatesThroughGrandfatherProbe )
+{
+    /**
+     * TRUST-01 D-01 grandfather, compat pair. A certificate that already
+     * reached durable finality (its canonical /cert/<slot> record exists --
+     * exactly what SubmitCertificate writes post-Approve) must re-validate
+     * Approve unchanged even when its registry CID would FAIL the strict
+     * verified loader: finality is the proof of acceptance, so the strict rule
+     * is skipped via the durable slot-record probe. Pre-fix behavior: Approve
+     * (raw load); the probe keeps that verdict bit-for-bit while the strict
+     * path hardens everything without a durable record.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto attacker = MakeAttackerAccount();
+    ASSERT_TRUE( attacker );
+    const auto forged_cid = MakeForgedRegistryCid( registry, attacker );
+    ASSERT_FALSE( forged_cid.empty() );
+
+    auto grandfathered_certificate = MakeCertificateForRegistry( attacker, forged_cid, 113, "0xgrandfather-final" );
+    const auto durable_key         = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        grandfathered_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    // Without the durable record the same certificate is rejected (strict
+    // path); the record is what buys grandfathering, and records are only
+    // ever written after an Approve (Pitfall 4: no pre-seeding).
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, grandfathered_certificate ),
+               sgns::ConsensusManager::Check::Reject );
+
+    std::string grandfathered_serialized;
+    ASSERT_TRUE( grandfathered_certificate.SerializeToString( &grandfathered_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, grandfathered_serialized );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, grandfathered_certificate ),
+               sgns::ConsensusManager::Check::Approve );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, AuthorizationDeferDeadlineTurnsEternalStallIntoDeterministicReject )
+{
+    /**
+     * TRUST-01 D-03 deadline (T-21-0404). A registry dependency that never
+     * arrives must not stall a certificate forever: after the (here
+     * zero-length, test-overridden) defer window elapses, the stall converts
+     * to a deterministic Reject. Unlike the missing-dependency Stalled -- which
+     * stays retryable and is never memoized -- the elapsed-deadline Reject is
+     * deterministic (first-seen anchoring means the deadline only ever
+     * crosses), so memoizing it is sound.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    manager->SetAuthorizationDeferWindow( std::chrono::seconds( 0 ) );
+
+    auto       stalled_certificate = MakeCertificateForRegistry( account,
+                                                           "never-arriving-registry-cid",
+                                                           114,
+                                                           "0xdefer-deadline" );
+    const auto durable_key         = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        stalled_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    // First sight anchors the deadline and stays retryable.
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, stalled_certificate ),
+               sgns::ConsensusManager::Check::Stalled );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::VerdictCacheEntryCount( manager, durable_key ), 0u );
+
+    // Once the window has elapsed the same missing dependency is a
+    // deterministic reject, not an eternal stall.
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, stalled_certificate ),
+               sgns::ConsensusManager::Check::Reject );
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }

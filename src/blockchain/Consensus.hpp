@@ -26,6 +26,7 @@
 
 #include "account/NodeType.hpp"
 #include "base/blob.hpp"
+#include "base/bounded_defer.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -600,6 +601,17 @@ namespace sgns
          * @param[in] delay Delay applied before certificate processing.
          */
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
+        /**
+         * @brief Configures the registry-authorization defer window (D-03).
+         * @param[in] window Time a strict-path registry stall (missing
+         *            dependency) may persist before the certificate is
+         *            deterministically rejected.
+         *
+         * Applies only to keys deferred after this call (first-seen anchoring,
+         * @ref base::BoundedDeferTracker); wired from
+         * `authorization_defer_window_sec` by GeniusNode.
+         */
+        void SetAuthorizationDeferWindow( std::chrono::seconds window );
 
         /**
          * @brief Whether this node takes an active part in consensus.
@@ -1254,6 +1266,15 @@ namespace sgns
         /// Cached LoadRegistryByCid for hot paths (vote receive); falls back to
         /// the direct load on a miss and memoizes the result.
         outcome::result<ValidatorRegistry::Registry> LoadRegistryByCidCached( const std::string &cid ) const;
+
+        /// D-03 default window a strict-path registry-authorization stall may
+        /// persist before the certificate is deterministically rejected; the
+        /// generous default keeps honest out-of-order sync converging.
+        static constexpr std::chrono::minutes kDefaultAuthorizationDeferWindow{ 30 };
+        /// Bounded defer tracker keyed by registry CID for the strict
+        /// authorization path in ValidateCertificate (D-03). Mutable: the
+        /// tracker only records first-seen deadlines, never a verdict.
+        mutable base::BoundedDeferTracker authorization_defer_tracker_;
 
         /// Handler failures at or below this many journal attempts retry on the
         /// next tick; beyond it the stall carries an exponential backoff lease.

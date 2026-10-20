@@ -685,6 +685,16 @@ namespace sgns
         certificate_delay_ms_.store( delay.count(), std::memory_order_relaxed );
     }
 
+    void ConsensusManager::SetAuthorizationDeferWindow( std::chrono::seconds window )
+    {
+        if ( window.count() < 0 )
+        {
+            logger_->warn( "{}: ignoring negative authorization defer window", __func__ );
+            return;
+        }
+        authorization_defer_tracker_.SetWindow( window );
+    }
+
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
     {
         if ( timestamp_ms == 0 )

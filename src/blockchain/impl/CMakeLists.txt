@@ -25,6 +25,7 @@ target_link_libraries(blockchain_genesis
     sgns_genius_account
     ipfs-pubsub
     multisig
+    bounded_defer
     ValidatorRegistryProto
     ConsensusProto
     PRIVATE
