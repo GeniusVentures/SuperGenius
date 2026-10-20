@@ -58,6 +58,17 @@ target_link_libraries(validator_registry_promotion_test
     blockchain_genesis
 )
 
+# Phase 21 (TRUST-01): verified registry CID chain-walk unit tests. Exercises
+# the pure static VerifyRegistryChainClassified helper and its bounded
+# verified-CID memo directly -- no GlobalDB wiring needed (mirrors the
+# EvaluateRegularPromotionStatic pattern).
+addtest(validator_registry_verified_load_test
+    validator_registry_verified_load_test.cpp
+)
+target_link_libraries(validator_registry_verified_load_test
+    blockchain_genesis
+)
+
 # Phase 15 (D-09): instance-scope validator registry identifier tests. Pure
 # identifier-level checks (public byte-stability, scoped suffixing, three-way
 # disjointness) against CRDT-backed registries -- no consensus round needed.
