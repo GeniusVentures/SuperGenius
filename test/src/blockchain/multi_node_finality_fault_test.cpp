@@ -342,6 +342,7 @@ namespace sgns
             transactions->mint_effects_barrier_.released = true;
             transactions->fault_test_cv_.notify_all();
         }
+
     };
 } // namespace sgns
 
@@ -1200,6 +1201,12 @@ namespace
 
         Network StartNetwork( const std::string &prefix, uint16_t first_port )
         {
+            // Per-network authority (TRUST-01): a new network's registries root
+            // at ITS first-started peer. Tests with several in-test networks
+            // (RestartAtVote's boundary segments) must re-pin, or every later
+            // segment's peers would construct registries rooted at the first
+            // segment's authority and fail the strict verified walk.
+            genesis_authority_address_.clear();
             return { StartPeer( prefix + "-validator-one", first_port ),
                      StartPeer( prefix + "-validator-two", static_cast<uint16_t>( first_port + 1 ) ),
                      StartPeer( prefix + "-validator-three", static_cast<uint16_t>( first_port + 2 ) ),
@@ -1365,6 +1372,7 @@ namespace
             entry->set_signature( signature.data(), signature.size() );
             return update;
         }
+
 
         static std::shared_ptr<sgns::MintTransactionV2> MintFor( const Peer &peer, uint64_t timestamp_offset = 0 )
         {
@@ -2404,7 +2412,7 @@ TEST_F( FinalityFaultNetwork, PublisherLossAfterPersistenceUsesDeterministicFail
     ASSERT_TRUE( proposal.has_value() );
     const auto slot = sgns::MultiNodeFinalityFaultTestAccess::SlotKey( proposal.value() );
 
-    const auto proposal_registry = network.first.blockchain->GetValidatorRegistry()->LoadRegistryByCid(
+    const auto proposal_registry = network.first.blockchain->GetValidatorRegistry()->LoadVerifiedRegistryByCid(
         proposal.value().registry_cid() );
     ASSERT_TRUE( proposal_registry.has_value() );
     ASSERT_EQ( proposal_registry.value().epoch(), proposal.value().registry_epoch() );

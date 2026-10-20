@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <mutex>
 #include <condition_variable>
+#include <deque>
 #include <atomic>
 #include <limits>
 
@@ -1255,16 +1256,24 @@ namespace sgns
         /// the map forever.
         static constexpr size_t               kMaxTrackedPendingVoteQueues{ 10000 };
         static constexpr std::chrono::minutes kPendingVoteQueueTTL{ 30 };
-        /// Memo cache for LoadRegistryByCid on the vote-receive hot path: a CID
-        /// names immutable delta content, so the decoded Registry is a pure
-        /// function of the CID and caching is safe by construction. Capped small
-        /// (epochs advance slowly); guarded by registry_cache_mutex_.
-        static constexpr size_t                                              kRegistryCacheMaxEntries{ 8 };
+        /// Verified-only memo cache for the vote-receive hot path (TRUST-01):
+        /// entries are filled exclusively by LoadVerifiedRegistryByCid, so a
+        /// CID names chain-authorized immutable delta content and the decoded
+        /// Registry is a pure function of it -- caching is safe by
+        /// construction, and unauthorized or still-unsynced CIDs never enter.
+        /// Capped at 64 so a catch-up validating N historical certificates
+        /// against M distinct registry CIDs keeps its working set (epochs
+        /// advance slowly, but history walks more than one); guarded by
+        /// registry_cache_mutex_.
+        static constexpr size_t                                              kRegistryCacheMaxEntries{ 64 };
         mutable std::mutex                                                   registry_cache_mutex_;
         mutable std::unordered_map<std::string, ValidatorRegistry::Registry> registry_cache_;
+        /// Insertion order for oldest-first single-entry eviction at cap.
+        mutable std::deque<std::string> registry_cache_order_;
 
-        /// Cached LoadRegistryByCid for hot paths (vote receive); falls back to
-        /// the direct load on a miss and memoizes the result.
+        /// Cached verified registry load for hot paths (vote receive); falls
+        /// back to the verified direct load on a miss and memoizes the
+        /// result. Failure results are returned uncached.
         outcome::result<ValidatorRegistry::Registry> LoadRegistryByCidCached( const std::string &cid ) const;
 
         /// D-03 default window a strict-path registry-authorization stall may

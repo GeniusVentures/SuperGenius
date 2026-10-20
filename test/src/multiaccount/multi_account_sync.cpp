@@ -509,7 +509,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     ASSERT_TRUE( client_registry );
     EXPECT_EQ( node_client->GetAddress(), client_address );
     EXPECT_NE( client_registry->GetRegistryCid(), registry_cid );
-    EXPECT_TRUE( client_registry->LoadRegistryByCid( registry_cid ).has_error() );
+    EXPECT_TRUE( client_registry->LoadVerifiedRegistryByCid( registry_cid ).has_error() );
 
     node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_client );
@@ -517,7 +517,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     sgns::test::assertWaitForCondition(
         [&]()
         {
-            auto loaded = client_registry->LoadRegistryByCid( registry_cid );
+            auto loaded = client_registry->LoadVerifiedRegistryByCid( registry_cid );
             return loaded.has_value();
         },
         std::chrono::milliseconds( 30000 ),

@@ -1462,7 +1462,7 @@ namespace sgns
         {
             return false;
         }
-        auto registry_result = registry_->LoadRegistryByCid( registry_cid );
+        auto registry_result = registry_->LoadVerifiedRegistryByCid( registry_cid );
         if ( registry_result.has_error() )
         {
             return false;
@@ -2483,7 +2483,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
+        auto registry_result = registry_->LoadVerifiedRegistryByCid( proposal.registry_cid() );
         if ( registry_result.has_error() )
         {
             logger_->error( "{}: failed: registry load error={} cid={}",
@@ -2579,7 +2579,11 @@ namespace sgns
                 return it->second;
             }
         }
-        auto loaded = registry_->LoadRegistryByCid( cid );
+        // Verified-only fill (TRUST-01): the cache never serves data the
+        // verified loader refused. Both failure classes return uncached -- a
+        // retryable missing dependency must not pin an error, and
+        // unauthorized data must never be cached at all.
+        auto loaded = registry_->LoadVerifiedRegistryByCid( cid );
         if ( loaded.has_error() )
         {
             return loaded;
@@ -2588,9 +2592,18 @@ namespace sgns
             std::lock_guard lock( registry_cache_mutex_ );
             if ( registry_cache_.size() >= kRegistryCacheMaxEntries )
             {
-                registry_cache_.clear();
+                // Evict exactly the OLDEST entry (never a wholesale clear --
+                // a clear would let per-certificate replays re-walk chains
+                // and re-flood the verified loader; mirrors the 21-01 memo
+                // discipline).
+                const auto &oldest_cid = registry_cache_order_.front();
+                registry_cache_.erase( oldest_cid );
+                registry_cache_order_.pop_front();
             }
-            registry_cache_.emplace( cid, loaded.value() );
+            if ( registry_cache_.emplace( cid, loaded.value() ).second )
+            {
+                registry_cache_order_.push_back( cid );
+            }
         }
         return loaded;
     }
@@ -2823,7 +2836,7 @@ namespace sgns
             return;
         }
 
-        auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
+        auto proposal_registry_result = registry_->LoadVerifiedRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
             logger_->warn(

@@ -311,21 +311,6 @@ namespace sgns
         outcome::result<Registry> LoadUnverifiedRegistryByCid( const std::string &cid ) const;
 
         /**
-         * @brief Loads a registry by CID without update-chain verification.
-         * @deprecated Legacy raw alias for @ref LoadUnverifiedRegistryByCid,
-         *             kept only so existing callers (Consensus certificate
-         *             paths and tests) stay green; every caller is migrated to
-         *             @ref LoadVerifiedRegistryByCid by plan 21-04, after which
-         *             this alias is removed. Do NOT use in new code.
-         * @param[in] cid Registry CID.
-         * @return Registry snapshot or an error.
-         */
-        outcome::result<Registry> LoadRegistryByCid( const std::string &cid ) const
-        {
-            return LoadUnverifiedRegistryByCid( cid );
-        }
-
-        /**
          * @brief Loads the currently active registry update payload.
          * @return Registry update or an error.
          */

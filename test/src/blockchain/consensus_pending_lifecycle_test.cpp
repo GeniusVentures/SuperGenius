@@ -1244,7 +1244,14 @@ TEST( ConsensusPendingLifecycleContractTest, PendingLifecycleConfigDefaultsToThr
 
 TEST_F( ConsensusPendingLifecycleTest, QuorumCertificateWorkClearsWhenLocalNodeNotInProposalRegistry )
 {
-    auto registry = MakeRegistry();
+    // TRUST-01 (21-04): quorum-reached certificate processing loads the
+    // proposal registry through the verified-only cache, so the fixture needs
+    // a genesis-verifiable registry (the DummySignature MakeRegistry fixture
+    // classifies as unauthorized -- exactly the bypass finding #1 closed).
+    // The clearing under test only needs the local node OUTSIDE the registry.
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
     ASSERT_TRUE( registry );
 
     auto observer_manager = MakeManager( registry, "observer-not-validator" );
