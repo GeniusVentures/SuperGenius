@@ -28,3 +28,12 @@ Risks:
 Recommended fix: net-gate or config-gate the bypass; add an explicit
 native-mint authorization policy; close the empty-chain_id sibling;
 defense should be by policy, not by storage topology.
+
+Severity refinement (2026-10-20, live testing): a THIRD gate sits in front —
+SendTransactionItem/BuildUTXOWitness requires the producer transaction of every
+mint-v2 input on the genius chain (observed: "Missing producer transaction for
+input" on Light, send aborted pre-broadcast). Fabricated burn refs cannot pass
+it, so the bypass alone does not yield a certifiable unbacked mint even
+single-node. Exposure remains: quorum-controlled nets, and the incidental
+nature of gates 2/4 (defense by storage topology / witness-builder behavior,
+not by policy).
