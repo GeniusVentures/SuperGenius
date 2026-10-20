@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
 status: executing
-stopped_at: Completed 21-02-PLAN.md (mint evidence fail-closed + receipt binding)
-last_updated: "2026-10-20T20:24:05.282Z"
+stopped_at: Completed 21-03-PLAN.md (bounded defer + config keys + genesis pin)
+last_updated: "2026-10-20T21:05:53.615Z"
 last_activity: 2026-10-20
 progress:
   total_phases: 27
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 ## Current Position
 
 Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-10-20
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-20T20:24:05.277Z
-**Stopped At:** Completed 21-02-PLAN.md (mint evidence fail-closed + receipt binding)
+**Last session:** 2026-10-20T21:05:53.609Z
+**Stopped At:** Completed 21-03-PLAN.md (bounded defer + config keys + genesis pin)
 **Resume File:** None
 
 ## Accumulated Context
@@ -139,6 +139,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
 | Phase 21 P01 | 31min | 2 tasks | 4 files |
 | Phase 21 P02 | 40min | 3 tasks | 10 files |
+| Phase 21 P03 | 38min | 3 tasks | 12 files |
 
 ## Deferred Items
 
@@ -165,3 +166,5 @@ Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintR
 - [Phase 21]: Verified-CID memo (cap 64, single-oldest eviction, ancestor-first insertion) stores cid->Registry for zero-fetch memo hits; TRUST-01 closes only after 21-04 migrates Consensus.cpp callers — Plan's memo contract requires zero fetches on hit; requirement wording covers certificate vote tallying which 21-04 owns
 - [Phase 21]: MINT-04 receipt binding (21-02): decode via eth::abi::decode_log with canonical topic0 selecting the v1/v2 shape, normalize through BridgeRelayer::ParseBurnEventValues (one home), bind token/amount/recipient to MintTransactionV2's own accessors; v1 mints keep today's checks until the MINT-03 admission-disable plans close that window while MINT-02 identity fail-close covers both mint types
 - [Phase 21]: Fact mismatch or undecodable matched log discards ALL gathered evidence (reverted-receipt precedent) so no slot can certify a mismatched mint; RpcVerificationEvidence carries decoded_token_id/amount/recipient for Phase 24 corroboration
+- [Phase 21]: Shared plumbing (21-03): BoundedDeferTracker is mechanism-only (first-seen deadlines, FIFO 4096, single-oldest eviction); D-03/D-04 config keys retained as members because NetworkSettings is InitNetwork-local; negative cap = ill-typed keeps default 10
+- [Phase 21]: Genesis pin (21-03, T-21-0301): fingerprint compare sits between manifest assembly and TrustStartupController::New — tampered manifest never reaches the controller; empty pin warns and proceeds (T-21-0302 residual); example's 4f6840f5 pin probe-verified equal to Fingerprint() of its own fields (RESEARCH Open Question 5 closed)
