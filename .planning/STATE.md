@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
 status: executing
-stopped_at: Phase 21 context gathered
-last_updated: "2026-10-19T22:39:21.097Z"
-last_activity: 2026-10-19 -- Phase 21 planning complete
+stopped_at: Completed 21-01-PLAN.md (verified registry CID loader)
+last_updated: "2026-10-20T19:30:25.256Z"
+last_activity: 2026-10-20
 progress:
   total_phases: 27
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-19)
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart — and nothing an unauthenticated peer sends can change that.
-**Current focus:** Phase 21 — Consensus Trust & Mint Authorization (roadmap revised after review; planning not started)
+**Current focus:** Phase 21 — Consensus Trust & Mint Authorization
 
 ## Current Position
 
-Phase: 21 of 29 (Consensus Trust & Mint Authorization)
-Plan: — (not yet planned)
+Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-10-19 -- Phase 21 planning complete
+Last activity: 2026-10-20
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T19:06:36.166Z
-**Stopped At:** Phase 21 context gathered
-**Resume File:** .planning/phases/21-consensus-trust-mint-authorization/21-CONTEXT.md
+**Last session:** 2026-10-20T19:30:25.251Z
+**Stopped At:** Completed 21-01-PLAN.md (verified registry CID loader)
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -137,6 +137,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
+| Phase 21 P01 | 31min | 2 tasks | 4 files |
 
 ## Deferred Items
 
@@ -156,3 +157,8 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 | gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
 
 Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard.
+
+## Decisions
+
+- [Phase 21]: Verified registry CID loader (21-01): kInvalid maps to permission_denied, kMissingDependency/unfetchable ancestors map to resource_unavailable_try_again; genesis-root termination is cache-independent — Chain walk classifies every prev-registry hop; VerifyUpdateClassified's genesis branch only runs while no cached registry exists, so the walk needs the extracted VerifyGenesisAuthoritySignature
+- [Phase 21]: Verified-CID memo (cap 64, single-oldest eviction, ancestor-first insertion) stores cid->Registry for zero-fetch memo hits; TRUST-01 closes only after 21-04 migrates Consensus.cpp callers — Plan's memo contract requires zero fetches on hit; requirement wording covers certificate vote tallying which 21-04 owns
