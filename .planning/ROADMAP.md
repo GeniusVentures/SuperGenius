@@ -114,7 +114,7 @@ Plans:
 - [x] 21-01-PLAN.md — Verified registry loader (raw core + chain-walk verification + memo cap 64) with unit adversarial/compat pairs (TRUST-01)
 - [x] 21-02-PLAN.md — MINT-02 fail-closed per-type evidence branches + MINT-04 receipt decode/fact binding at one home + mock-transport test pairs
 - [x] 21-03-PLAN.md — D-03 BoundedDeferTracker + network_config keys (defer window, admission cap) + folded-todo genesis fingerprint pin + boot tamper tests
-- [ ] 21-05-PLAN.md — MINT-03 ingress gates: consensus-ingress type rule + local/RPC preflight rejection (zero-value exempt) + unit pairs
+- [x] 21-05-PLAN.md — MINT-03 ingress gates: consensus-ingress type rule + local/RPC preflight rejection (zero-value exempt) + unit pairs
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -267,7 +267,7 @@ Plans:
 | 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 3/7 | In Progress|  |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 4/7 | In Progress|  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
