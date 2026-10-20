@@ -4,7 +4,7 @@ area: correctness
 priority: P1
 date: 2026-10-20
 source: live node-example testing (owner, staging net 333)
-resolves_phase: null
+resolves_phase: 18
 ---
 
 MintFunds' rollback (RollbackUTXOs) fires only on the exception path. When the

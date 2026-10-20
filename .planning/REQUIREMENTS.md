@@ -22,7 +22,7 @@ Requirements for milestone v1.2. Each maps to roadmap phases.
 - [ ] **GATE-02**: Non-transaction data is provably untouched — certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers are byte-identical across a prune run (ctest)
 - [x] **GATE-03**: Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch of pruned chains
 - [x] **GATE-04**: Outgoing `previous_hash` resolution survives pruning of the node's own frontier transaction (cert-slot based resolution; certificates are never pruned) — must land before the first real prune
-- [ ] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing pruned transaction as not relevant — skips it and completes boot without failure, and never resurrects spent outputs
+- [ ] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing OR unresolvable creating transaction (pruned, or never existed — e.g. a fabricated burn reference, live-incident 2026-10-20) as not relevant — skips it, completes boot without failure and without unbounded re-request loops, and never resurrects spent outputs
 - [x] **GATE-06**: Pruning config knobs live beside `node_type` in `sgns_config.json`, default off, resolved values INFO-logged
 
 ### Pruned-Node Survival

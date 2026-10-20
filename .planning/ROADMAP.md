@@ -149,7 +149,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. The restart matrix on a pruned node is green: prune → restart → READY with zero pruned-CID fetch attempts → new-tip sync → spend/receive → next outgoing tx `previous_hash`/nonce chain correct.
-  2. Boot-time UTXO assembly and the checkpoint-mismatch clear-and-rebuild path treat a missing pruned transaction as not relevant — boot completes without failure, and the rebuild never resurrects spent outputs from remaining history (no double-spend window).
+  2. Boot-time UTXO assembly and the checkpoint-mismatch clear-and-rebuild path treat a missing OR unresolvable creating transaction (pruned, or never-existed — live-incident 2026-10-20: a fabricated burn ref wedged boot in INITIALIZING_TRANSACTIONS indefinitely) as not relevant — boot completes without failure and without unbounded re-request loops, and the rebuild never resurrects spent outputs from remaining history (no double-spend window).
   3. Local history queries on pruned transactions return a distinct "history pruned" answer (never conflated with not-found); peers requesting pruned data get an immediate `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a real pruned node.
   4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
   5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
