@@ -21,6 +21,7 @@ namespace sgns
 {
     class GeniusTransaction;
     class TransactionManager;
+    class LegacyMintAdmissionTestAccess;
 
     /**
      * @brief Validates and finalizes transactions on behalf of consensus.
@@ -108,6 +109,8 @@ namespace sgns
         }
 
     private:
+        friend class LegacyMintAdmissionTestAccess;
+
         ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionTimestamp( const GeniusTransaction &tx ) const;

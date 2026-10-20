@@ -4556,6 +4556,16 @@ namespace sgns
         return false;
     }
 
+    bool TransactionManager::IsValueCarryingLegacyMint( const GeniusTransaction &tx )
+    {
+        if ( tx.GetType() != "mint" )
+        {
+            return false;
+        }
+        const auto *legacy_mint = dynamic_cast<const MintTransaction *>( &tx );
+        return legacy_mint != nullptr && legacy_mint->GetAmount() > 0;
+    }
+
     bool TransactionManager::CheckTransactionAuthorization( const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Checking authorization tx={}", __func__, tx.GetHash() );

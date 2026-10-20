@@ -419,6 +419,7 @@ namespace sgns
         friend class MultiNodeFinalityFaultTestAccess;
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
+        friend class LegacyMintAdmissionTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -935,6 +936,20 @@ namespace sgns
 
         /// @brief Evaluates previous-hash/nonce replay protection for a transaction.
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        /**
+         * @brief MINT-03 admission-disable predicate: a legacy-v1 mint (type "mint")
+         *        that carries value (amount > 0).
+         * @details One home for the rule shared by the consensus-ingress type rules
+         *          (TransactionConsensusHandler::CheckTransactionTypeRules) and the
+         *          local/RPC submission preflight (SendTransactionItem). Zero-amount
+         *          v1 mints (Migration3_4_0To3_5_0 nonce fillers), "mint-v2" and
+         *          "migration" types never match. Admission-side only (D-02):
+         *          deserialization, boot, sync and history stay open.
+         * @param[in] tx Transaction to classify.
+         * @return True when @p tx is a value-carrying legacy-v1 mint.
+         */
+        static bool IsValueCarryingLegacyMint( const GeniusTransaction &tx );
 
         /** @brief Whole-transaction signature / authorization check. */
         bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
