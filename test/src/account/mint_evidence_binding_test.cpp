@@ -42,8 +42,8 @@ class PublicChainInputValidatorTestAccess
 {
 public:
     static RpcVerificationEvidence Gather( const PublicChainInputValidator &validator,
-                                           const GeniusTransaction           &tx,
-                                           const std::string                 &source_reference )
+                                           const GeniusTransaction         &tx,
+                                           const std::string               &source_reference )
     {
         return validator.GatherVerificationEvidence( tx, source_reference );
     }
@@ -77,11 +77,11 @@ namespace
     /// @brief 32-byte ABI head word for a uint256 value (64 bare hex chars).
     std::string Uint256Word( uint64_t value )
     {
-        std::string word( 64, '0' );
+        std::string           word( 64, '0' );
         static constexpr char kDigits[] = "0123456789abcdef";
         for ( size_t i = 0; i < sizeof( value ); ++i )
         {
-            const auto byte   = static_cast<uint8_t>( value >> ( 8 * ( sizeof( value ) - 1 - i ) ) );
+            const auto byte = static_cast<uint8_t>( value >> ( 8 * ( sizeof( value ) - 1 - i ) ) );
             word[64 - 2 * sizeof( value ) + 2 * i]     = kDigits[byte >> 4];
             word[64 - 2 * sizeof( value ) + 2 * i + 1] = kDigits[byte & 0x0F];
         }
@@ -92,9 +92,9 @@ namespace
     ///        transaction's own fields are always set independently of these.
     struct ReceiptFacts
     {
-        uint64_t    token_id   = 0;
-        uint64_t    amount     = 1;
-        std::string dest_hex;      ///< v1: bare 128-hex X||Y; v2: bare 64-hex X half
+        uint64_t    token_id = 0;
+        uint64_t    amount   = 1;
+        std::string dest_hex; ///< v1: bare 128-hex X||Y; v2: bare 64-hex X half
         bool        dest_y_odd = false;
         bool        v2_shape   = false; ///< v2 BridgeOutInitiated vs v1 BridgeSourceBurned
         bool        success    = true;
@@ -116,21 +116,23 @@ namespace
     std::string BuildBridgeBurnReceiptJson( const std::string &tx_hash, const ReceiptFacts &facts )
     {
         // 32-byte indexed-address topic: 12 bytes of padding + 20-byte address.
-        static const std::string kSenderTopic = "0x" + std::string( 24, '0' ) + "1111111111111111111111111111111111111111";
+        static const std::string kSenderTopic = "0x" + std::string( 24, '0' ) +
+                                                "1111111111111111111111111111111111111111";
 
         std::string data;
         if ( facts.v2_shape )
         {
-            data = Uint256Word( facts.token_id ) + Uint256Word( facts.amount ) + Uint256Word( 11155111 )
-                 + Uint256Word( 0 ) + facts.dest_hex + Uint256Word( facts.dest_y_odd ? 1 : 0 );
+            data = Uint256Word( facts.token_id ) + Uint256Word( facts.amount ) + Uint256Word( 11155111 ) +
+                   Uint256Word( 0 ) + facts.dest_hex + Uint256Word( facts.dest_y_odd ? 1 : 0 );
         }
         else
         {
-            data = Uint256Word( facts.token_id ) + Uint256Word( facts.amount ) + Uint256Word( 11155111 )
-                 + Uint256Word( 0 ) + Uint256Word( 5 * 32 ) + Uint256Word( 64 ) + facts.dest_hex;
+            data = Uint256Word( facts.token_id ) + Uint256Word( facts.amount ) + Uint256Word( 11155111 ) +
+                   Uint256Word( 0 ) + Uint256Word( 5 * 32 ) + Uint256Word( 64 ) + facts.dest_hex;
         }
 
-        const std::string topic0 = CanonicalTopic0( facts.v2_shape ? sgns::kBridgeOutInitiatedSig : sgns::kBridgeSourceBurnedSig );
+        const std::string topic0 = CanonicalTopic0( facts.v2_shape ? sgns::kBridgeOutInitiatedSig
+                                                                   : sgns::kBridgeSourceBurnedSig );
 
         boost::json::object result;
         result["status"]          = facts.success ? "0x1" : "0x0";
@@ -159,7 +161,9 @@ namespace
     class CannedTransport final : public eth::rpc::JsonRpcTransport
     {
     public:
-        explicit CannedTransport( std::string response ) : response_( std::move( response ) ) {}
+        explicit CannedTransport( std::string response ) : response_( std::move( response ) )
+        {
+        }
 
         std::optional<std::string> call( const boost::json::object & ) override
         {
@@ -190,26 +194,25 @@ namespace
         }
         validator->SetRpcEndpoints( kChainId, std::move( endpoints ) );
         validator->SetTransportFactory(
-            [receipt_json]( const std::string &, std::chrono::seconds ) -> std::unique_ptr<eth::rpc::JsonRpcTransport> {
-                return std::make_unique<CannedTransport>( receipt_json );
-            } );
+            [receipt_json]( const std::string &, std::chrono::seconds ) -> std::unique_ptr<eth::rpc::JsonRpcTransport>
+            { return std::make_unique<CannedTransport>( receipt_json ); } );
         return validator;
     }
 
     /// @brief A mint-v2 whose own fields are set independently of any receipt.
-    std::shared_ptr<MintTransactionV2> MakeMintV2( uint64_t        amount,
-                                                   std::string     chain_id,
-                                                   const TokenID  &token_id,
-                                                   std::string     destination )
+    std::shared_ptr<MintTransactionV2> MakeMintV2( uint64_t       amount,
+                                                   std::string    chain_id,
+                                                   const TokenID &token_id,
+                                                   std::string    destination )
     {
-        auto burn_hash = sgns::base::Hash256::fromReadableString( std::string( 64, 'b' ) );
+        auto                     burn_hash = sgns::base::Hash256::fromReadableString( std::string( 64, 'b' ) );
         SGTransaction::DAGStruct dag;
         return std::make_shared<MintTransactionV2>( MintTransactionV2::New( amount,
-                                                                           std::move( chain_id ),
-                                                                           token_id,
-                                                                           std::move( dag ),
-                                                                           { { burn_hash.value(), 0, {} } },
-                                                                           std::move( destination ) ) );
+                                                                            std::move( chain_id ),
+                                                                            token_id,
+                                                                            std::move( dag ),
+                                                                            { { burn_hash.value(), 0, {} } },
+                                                                            std::move( destination ) ) );
     }
 
     /// @brief A non-mint transaction on the local genius chain (escrow-style):
@@ -217,7 +220,9 @@ namespace
     class LocalEvidenceExemptTx final : public GeniusTransaction
     {
     public:
-        LocalEvidenceExemptTx() : GeniusTransaction( "escrow-hold", SGTransaction::DAGStruct{} ) {}
+        LocalEvidenceExemptTx() : GeniusTransaction( "escrow-hold", SGTransaction::DAGStruct{} )
+        {
+        }
 
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct & ) const override
         {
@@ -250,7 +255,10 @@ namespace
         // Pre-fix behavior: accepted with evidence.valid == true and every slot
         // empty — the empty-identity fail-open (finding #3 / T-21-0201).
         PublicChainInputValidator validator;
-        const auto                mint = MakeMintV2( 1, kChainId, TokenID::FromBytes( { 0x00 } ), std::string( kGeneratorX ) + kGeneratorY );
+        const auto                mint = MakeMintV2( 1,
+                                      kChainId,
+                                      TokenID::FromBytes( { 0x00 } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( validator, *mint, "" );
         EXPECT_FALSE( evidence.valid ) << "A mint-v2 with an empty source reference must be rejected";
@@ -262,7 +270,7 @@ namespace
         // mint-v2 with an EMPTY chain id and a non-empty source reference.
         // Expected: rejected. Pre-fix: accepted (evidence.valid == true).
         PublicChainInputValidator validator;
-        const auto                mint = MakeMintV2( 1, "", TokenID::FromBytes( { 0x00 } ), std::string( kGeneratorX ) + kGeneratorY );
+        const auto mint = MakeMintV2( 1, "", TokenID::FromBytes( { 0x00 } ), std::string( kGeneratorX ) + kGeneratorY );
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A mint-v2 with an empty chain id must be rejected";
@@ -274,7 +282,10 @@ namespace
         // mint-v2 claiming the LOCAL chain id "supergenius".
         // Expected: rejected. Pre-fix: accepted via the local bypass.
         PublicChainInputValidator validator;
-        const auto                mint = MakeMintV2( 1, "supergenius", TokenID::FromBytes( { 0x00 } ), std::string( kGeneratorX ) + kGeneratorY );
+        const auto                mint = MakeMintV2( 1,
+                                      "supergenius",
+                                      TokenID::FromBytes( { 0x00 } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A mint-v2 on the local genius chain id must be rejected";
@@ -289,7 +300,10 @@ namespace
         // Pre-fix: rejected only because no RPC endpoints exist for the chain —
         // the rejection reason was accidental, never the per-type policy.
         PublicChainInputValidator validator;
-        const auto                mint = MakeMintV2( 1, "supergenius/333", TokenID::FromBytes( { 0x00 } ), std::string( kGeneratorX ) + kGeneratorY );
+        const auto                mint = MakeMintV2( 1,
+                                      "supergenius/333",
+                                      TokenID::FromBytes( { 0x00 } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A mint-v2 on a scoped local chain id must be rejected";

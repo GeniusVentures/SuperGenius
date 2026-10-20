@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 
@@ -37,6 +38,34 @@ namespace sgns
             static const auto logger = base::createLogger( "InputValidator" );
             return logger;
         }
+
+        /// Local genius chain id: the unscoped form, the empty form, or a
+        /// ScopedChainId private-network form ("supergenius/<private_net>",
+        /// TransactionManager::ScopedChainId). Scoped forms are matched
+        /// explicitly by prefix, never by stripping the scope.
+        constexpr std::string_view kLocalGeniusChainPrefix = "supergenius/";
+
+        bool IsLocalGeniusChainId( const std::string &chain_id )
+        {
+            return chain_id.empty() || chain_id == "supergenius" || chain_id.rfind( kLocalGeniusChainPrefix, 0 ) == 0;
+        }
+
+        /**
+         * @brief MINT-02 taxonomy: transaction types whose value is created by an
+         *        external public-chain burn and therefore always require
+         *        public-chain evidence (a non-empty source reference and a
+         *        non-local source chain id).
+         *
+         * Every other type routed to this validator (escrow holds, genesis-path
+         * and registration traffic on local chain ids) keeps the local path.
+         * @param tx Transaction whose evidence requirements are being decided.
+         * @return True exactly for the mint types ("mint", "mint-v2").
+         */
+        bool RequiresPublicChainEvidence( const GeniusTransaction &tx )
+        {
+            const auto type = tx.GetType();
+            return type == "mint" || type == "mint-v2";
+        }
     } // namespace
 
     bool PublicChainInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
@@ -44,17 +73,19 @@ namespace sgns
                                                             const UTXOManager      &utxo_manager ) const
     {
         auto logger = InputValidatorLogger();
-        (void)address;
-        (void)utxo_manager;
+        (void) address;
+        (void) utxo_manager;
         logger->trace( "ValidateUTXOParameters(PublicChain): inputs={} outputs={}",
-                       params.first.size(), params.second.size() );
+                       params.first.size(),
+                       params.second.size() );
         // Public-chain claims are not validated against local UTXO ownership.
         // We still require input references and minted outputs to be explicit.
         const bool valid = !params.first.empty() && !params.second.empty();
         if ( valid )
         {
             logger->info( "ValidateUTXOParameters(PublicChain) accepted inputs={} outputs={}",
-                          params.first.size(), params.second.size() );
+                          params.first.size(),
+                          params.second.size() );
         }
         else
         {
@@ -64,12 +95,12 @@ namespace sgns
     }
 
     IInputValidator::WitnessVerdict PublicChainInputValidator::ValidateWitness( const ConsensusSubject  &subject,
-                                                     const GeniusTransaction &tx,
-                                                     const UTXOTxParameters  &params,
-                                                     const Blockchain        &blockchain ) const
+                                                                                const GeniusTransaction &tx,
+                                                                                const UTXOTxParameters  &params,
+                                                                                const Blockchain &blockchain ) const
     {
         auto logger = InputValidatorLogger();
-        (void)blockchain;
+        (void) blockchain;
         logger->trace( "ValidateWitness(PublicChain): tx={} inputs={} outputs={}",
                        PreviewValue( tx.GetHash() ),
                        params.first.size(),
@@ -137,30 +168,31 @@ namespace sgns
                               PreviewValue( tx.GetHash() ) );
             }
             logger->info( "ValidateWitness(PublicChain) succeeded for tx={} source={}",
-                          PreviewValue( tx.GetHash() ), PreviewValue( source_reference ) );
+                          PreviewValue( tx.GetHash() ),
+                          PreviewValue( source_reference ) );
         }
         else
         {
             logger->error( "ValidateWitness(PublicChain) failed for tx={} source={}",
-                           PreviewValue( tx.GetHash() ), PreviewValue( source_reference ) );
+                           PreviewValue( tx.GetHash() ),
+                           PreviewValue( source_reference ) );
         }
         return verified ? IInputValidator::WitnessVerdict::kValid : IInputValidator::WitnessVerdict::kInvalid;
     }
 
-    void PublicChainInputValidator::SetRpcEndpoints( const std::string &chain_id,
-                                                      std::vector<WeightedRpcEndpoint> endpoints )
+    void PublicChainInputValidator::SetRpcEndpoints( const std::string               &chain_id,
+                                                     std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto logger = InputValidatorLogger();
+        auto logger              = InputValidatorLogger();
         rpc_endpoints_[chain_id] = std::move( endpoints );
-        logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
-                      chain_id, rpc_endpoints_[chain_id].size() );
+        logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}", chain_id, rpc_endpoints_[chain_id].size() );
     }
 
-    void PublicChainInputValidator::AddRpcEndpoints( const std::string &chain_id,
-                                                      std::vector<WeightedRpcEndpoint> endpoints )
+    void PublicChainInputValidator::AddRpcEndpoints( const std::string               &chain_id,
+                                                     std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto        logger = InputValidatorLogger();
-        auto       &existing = rpc_endpoints_[chain_id];
+        auto  logger   = InputValidatorLogger();
+        auto &existing = rpc_endpoints_[chain_id];
 
         // The fetched endpoints carry the chain's canonical {v1, v2} topic set
         // (and bridge contract). That set is a per-chain property — every
@@ -192,9 +224,8 @@ namespace sgns
             bool changed = false;
             for ( const auto &h : fetched_topics )
             {
-                if ( std::find( cur.accepted_topic0_hashes.begin(),
-                                cur.accepted_topic0_hashes.end(),
-                                h ) == cur.accepted_topic0_hashes.end() )
+                if ( std::find( cur.accepted_topic0_hashes.begin(), cur.accepted_topic0_hashes.end(), h ) ==
+                     cur.accepted_topic0_hashes.end() )
                 {
                     cur.accepted_topic0_hashes.push_back( h );
                     changed = true;
@@ -203,7 +234,7 @@ namespace sgns
             if ( cur.bridge_contract_address.empty() && !fetched_bridge.empty() )
             {
                 cur.bridge_contract_address = fetched_bridge;
-                changed = true;
+                changed                     = true;
             }
             if ( changed )
             {
@@ -229,7 +260,10 @@ namespace sgns
         }
 
         logger->info( "AddRpcEndpoints: chain_id={} added={} upgraded={} total={}",
-                      chain_id, added, upgraded, existing.size() );
+                      chain_id,
+                      added,
+                      upgraded,
+                      existing.size() );
     }
 
     std::vector<uint8_t> RpcVerificationEvidence::SlotHash( size_t slot_index ) const
@@ -261,8 +295,8 @@ namespace sgns
         return subject_id.value();
     }
 
-    void PublicChainInputValidator::StoreEvidence( const std::string       &claim_key,
-                                                   RpcVerificationEvidence  evidence ) const
+    void PublicChainInputValidator::StoreEvidence( const std::string      &claim_key,
+                                                   RpcVerificationEvidence evidence ) const
     {
         std::lock_guard lock( evidence_mutex_ );
         if ( evidence_by_claim_.emplace( claim_key, std::move( evidence ) ).second )
@@ -282,8 +316,7 @@ namespace sgns
         }
     }
 
-    std::optional<RpcVerificationEvidence>
-        PublicChainInputValidator::TakeEvidence( const std::string &claim_key ) const
+    std::optional<RpcVerificationEvidence> PublicChainInputValidator::TakeEvidence( const std::string &claim_key ) const
     {
         std::lock_guard lock( evidence_mutex_ );
         auto            it = evidence_by_claim_.find( claim_key );
@@ -304,9 +337,9 @@ namespace sgns
         return GatherVerificationEvidence( tx, source_reference ).valid;
     }
 
-    RpcVerificationEvidence
-        PublicChainInputValidator::GatherVerificationEvidence( const GeniusTransaction &tx,
-                                                               const std::string       &source_reference ) const
+    RpcVerificationEvidence PublicChainInputValidator::GatherVerificationEvidence(
+        const GeniusTransaction &tx,
+        const std::string       &source_reference ) const
     {
         auto                    logger = InputValidatorLogger();
         RpcVerificationEvidence evidence;
@@ -318,6 +351,17 @@ namespace sgns
 
         if ( source_reference.empty() )
         {
+            if ( RequiresPublicChainEvidence( tx ) )
+            {
+                // MINT-02 (finding #3): a public-evidence-required mint type with
+                // no source reference names no burn to verify against — the claim
+                // must fail closed instead of certifying with every slot empty.
+                logger->error( "GatherVerificationEvidence rejected empty source reference on "
+                               "public-evidence-required mint type={} tx={}",
+                               tx.GetType(),
+                               PreviewValue( tx.GetHash() ) );
+                return evidence;
+            }
             // Nothing to verify against a public chain: the claim is accepted but
             // no endpoint confirmed anything, so every slot stays empty.
             logger->debug( "GatherVerificationEvidence skipped because source reference is empty" );
@@ -326,6 +370,18 @@ namespace sgns
         }
 
         const auto chain_id = tx.GetChainId();
+        if ( RequiresPublicChainEvidence( tx ) && IsLocalGeniusChainId( chain_id ) )
+        {
+            // MINT-02 (finding #3): a mint type claiming an empty or local genius
+            // chain id (including ScopedChainId private-network forms) has no
+            // public chain to gather evidence from — fail closed.
+            logger->error( "GatherVerificationEvidence rejected local chain id '{}' on "
+                           "public-evidence-required mint type={} tx={}",
+                           chain_id,
+                           tx.GetType(),
+                           PreviewValue( tx.GetHash() ) );
+            return evidence;
+        }
         if ( chain_id.empty() || chain_id == "supergenius" )
         {
             logger->debug( "GatherVerificationEvidence bypassed for local chain_id={}", chain_id );
@@ -348,15 +404,16 @@ namespace sgns
 
         // Resolve transport factory: use injected factory if set (D-07, D-14),
         // otherwise default to real RpcHttpTransport (production path per D-16).
-        auto factory = transport_factory_
-                           ? transport_factory_
-                           : []( const std::string &url, std::chrono::seconds timeout ) {
-                                 eth::rpc::RpcHttpTransportOptions opts;
-                                 opts.timeout = timeout;
-                                 return std::make_unique<eth::rpc::RpcHttpTransport>( url, opts );
-                             };
+        auto factory = transport_factory_ ? transport_factory_
+                                          : []( const std::string &url, std::chrono::seconds timeout )
+        {
+            eth::rpc::RpcHttpTransportOptions opts;
+            opts.timeout = timeout;
+            return std::make_unique<eth::rpc::RpcHttpTransport>( url, opts );
+        };
 
-        const auto hash_url = []( const std::string &url ) {
+        const auto hash_url = []( const std::string &url )
+        {
             const auto digest = crypto::sha2_256( reinterpret_cast<const uint8_t *>( url.data() ), url.size() );
             return std::vector<uint8_t>( digest.begin(), digest.end() );
         };
@@ -403,7 +460,8 @@ namespace sgns
                 // matter what the other endpoints report. Discard any evidence
                 // gathered so far so no slot can be populated for a bad claim.
                 logger->error( "GatherVerificationEvidence receipt status failed for tx={} via url={}",
-                               PreviewValue( source_reference ), ep.url );
+                               PreviewValue( source_reference ),
+                               ep.url );
                 return RpcVerificationEvidence{};
             }
 
@@ -421,11 +479,9 @@ namespace sgns
                     }
                     // Accept any of the configured topic0 hashes (v1 BridgeSourceBurned
                     // or v2 BridgeOutInitiated) — both event versions can back a mint.
-                    const std::string log_topic0 =
-                        rlp::base::parse::hex_array_string( log_entry.topics.front() );
-                    if ( std::find( ep.accepted_topic0_hashes.begin(),
-                                    ep.accepted_topic0_hashes.end(),
-                                    log_topic0 ) != ep.accepted_topic0_hashes.end() )
+                    const std::string log_topic0 = rlp::base::parse::hex_array_string( log_entry.topics.front() );
+                    if ( std::find( ep.accepted_topic0_hashes.begin(), ep.accepted_topic0_hashes.end(), log_topic0 ) !=
+                         ep.accepted_topic0_hashes.end() )
                     {
                         log_matched = true;
                         break;
