@@ -1,7 +1,7 @@
 ---
 phase: 17-eligibility-policy-gating-dry-run
 verified: 2026-10-19T19:40:00Z
-status: human_needed
+status: passed
 score: 9/10 must-haves verified
 overrides_applied: 0
 gaps:
@@ -183,3 +183,7 @@ _Verifier: Claude (gsd-verifier)_
 ## Gap Resolution (2026-10-19)
 
 **Gap 1 (WR-02 transient fall-through crash) — RESOLVED.** The summary block is now guarded by `if ( !evaluation.has_error() )` (fix commit follows the review-fix series); the transient path WARNs and skips to the reschedule, exactly the documented WR-02 contract. Verified: genius_node rebuild clean, git-clang-format clean on the fix, prune_eligibility/utxo_manager/certificate_fallback/crdt suites 4/4 green post-fix. Remaining: the two human_verification items below (CR-01 concurrency concurrence review; live-node dry-run timer observation).
+
+## Human Verification Resolution (2026-10-20)
+
+Owner approval with full knowledge. Item 1 (CR-01 concurrency): resolved by the owner-directed generation tag (Phase-13 house pattern applied to the dry-run cycle — code-level guarantee, build+format green). Item 2 (live dry-run observation): resolved by live staging-net observation 2026-10-20 15:11:36 — the cycle fired with 5 real candidates, correct 0-eligible verdict, CID resolution logged, zero writes. The live grow-then-prune demonstration (eligible>0 + physical deletion + disk reclamation) is Phase 18/20 scope by design and is carried into Phase 18 planning as an explicit gray area (dev-history seeding command). Session byproducts: three incident todos (boot wedge P19, MintFunds leak P18, TM Syncing wedge P19), one security-hardening todo (GENIUS_CHAIN_ID witness bypass), and two example-app fixes (argument transposition, unparseable burn hash). Record: 17-HUMAN-UAT.md (status: resolved, 2/2 passed).
