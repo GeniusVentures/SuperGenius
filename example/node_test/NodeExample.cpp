@@ -424,14 +424,17 @@ static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns
     {
         return;
     }
-    // The previously hardcoded "supergenius" reference cannot parse as a burn
-    // hash: the burn UTXO is never inserted and the claim gate rejects the
-    // mint (kNotClaimable). Dev mints synthesize a unique hash instead; pass
-    // an explicit 64-hex hash to reproduce a specific burn reference.
+    // The previously hardcoded "supergenius" reference was passed as the BURN
+    // hash while chainid stayed empty (canonicalized to "public"), so consensus
+    // demanded public-chain burn evidence and rejected the mint. "supergenius"
+    // is the designated LOCAL chain id — PublicChainInputValidator bypasses
+    // RPC verification for it. Dev mints synthesize a unique burn hash (the
+    // claim gate needs a parseable id to insert the burn UTXO); pass an
+    // explicit 64-hex hash to reproduce a specific burn reference.
     const std::string burn_tx_hash = ( args.size() >= 3 ) ? args[2] : NextDevBurnHash();
     try
     {
-        node->MintTokens( std::stoull( args[1] ), burn_tx_hash, "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node->MintTokens( std::stoull( args[1] ), burn_tx_hash, "supergenius", sgns::TokenID::FromBytes( { 0x00 } ) );
     }
     catch ( const std::exception &e )
     {
