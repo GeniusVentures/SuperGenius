@@ -48,9 +48,10 @@ namespace sgns
      * @details     Every ineligible candidate carries at least one of these codes —
      *              nothing is silently dropped (repudiability). Codes are fail-closed:
      *              each one names a check whose failure must block erasure, EXCEPT
-     *              SPENDER_PRUNED_WINDOW_SATISFIED, the sole affirmative-evidence
-     *              code (it appears on ELIGIBLE verdicts so a satisfied-by-marker
-     *              window is explicit, never silent).
+     *              the two affirmative-EVIDENCE codes, SPENDER_PRUNED_WINDOW_SATISFIED
+     *              and BLOCK_ALREADY_ERASED (they appear on ELIGIBLE/erasable
+     *              verdicts so the evidence behind the verdict is explicit, never
+     *              silent).
      */
     enum class PruneReason : uint8_t
     {
@@ -84,13 +85,23 @@ namespace sgns
                               ///< as an explicit not-erasable block report
                               ///< (fail closed), never silently dropped from
                               ///< the report (WR-05).
-        SPENDER_PRUNED_WINDOW_SATISFIED, ///< EVIDENCE code (the only non-failure
+        SPENDER_PRUNED_WINDOW_SATISFIED, ///< EVIDENCE code (non-failure
                                          ///< reason): the spender's own entries are gone because
                                          ///< the spender was pruned (marker present, value
                                          ///< absent). A pruned spender's own window elapsed by
                                          ///< construction, so this spend is older still — the
                                          ///< output's window counts as SATISFIED, explicitly
                                          ///< (D-02/B spec point 5, never silent).
+        BLOCK_ALREADY_ERASED,            ///< EVIDENCE code (non-failure
+                                         ///< reason): the delta block's BYTES are absent while an
+                                         ///< otherwise-eligible candidate still names it — the
+                                         ///< sibling group was already erased through the
+                                         ///< sanctioned path, so this verdict COMPLETES the
+                                         ///< stranded candidate's erase (value + map entry +
+                                         ///< marker; block staging is an idempotent no-op on the
+                                         ///< absent key). The SPENDER_PRUNED_WINDOW_SATISFIED
+                                         ///< discipline: explicit affirmative evidence, never a
+                                         ///< silent pass and never a fail-closed stranding.
     };
 
     /**
@@ -162,7 +173,10 @@ namespace sgns
         std::string cid;
 
         /// True only when every carried key passed both checks — reasons is
-        /// then empty.
+        /// then empty — OR when the block's bytes are ABSENT while an
+        /// otherwise-eligible candidate still names it (reasons then carries
+        /// the affirmative BLOCK_ALREADY_ERASED evidence; the verdict
+        /// completes the stranded candidate's erase).
         bool erasable = false;
 
         /// Every failed per-key check (deduplicated); empty iff erasable.

@@ -388,6 +388,20 @@ namespace sgns::crdt
         */
         outcome::result<std::vector<std::string>> GetLocalDeltaKeys( const std::string &cid_string ) const;
 
+        /** Byte-level local block presence (read-only): true iff raw block
+        * BYTES exist for @p cid_string in the block store, with NO parse
+        * attempted. Unlike the parse-based read paths (and HasBlock), a
+        * PRESENT-but-corrupt block answers TRUE here -- the erase-side block
+        * gate uses this to tell an ABSENT block (already erased --
+        * erase-completing evidence) from a corrupt one (fail closed).
+        * Delegates to GraphsyncDAGSyncer::HasRawBlockBytes.
+        * @param cid_string CID string of the delta block
+        * @return true when bytes exist; false when absent; failure on a
+        *         malformed CID string, an uninitialized DAG syncer, or a
+        *         store read error (callers fail closed on error)
+        */
+        outcome::result<bool> HasLocalBlock( const std::string &cid_string ) const;
+
     private:
         /**
          * @brief       Constructs a new Global D B object

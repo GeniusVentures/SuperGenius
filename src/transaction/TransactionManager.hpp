@@ -332,6 +332,20 @@ namespace sgns
             return state_m;
         }
 
+        /**
+         * @brief Tick-gate input (D-C2): whether any monitored-network
+         *        transaction hash is still missing locally.
+         * @details True iff the missing set is non-empty — a prune cycle
+         *          refuses to run while history is still catching up. Reads
+         *          emptiness only (no copy of the set).
+         * @return true when at least one tx hash is missing.
+         */
+        bool HasMissingTxHashes() const
+        {
+            std::lock_guard lock( missing_tx_mutex_ );
+            return !missing_tx_hashes_.empty();
+        }
+
         TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
@@ -745,7 +759,7 @@ namespace sgns
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 
-        std::mutex                      missing_tx_mutex_;
+        mutable std::mutex              missing_tx_mutex_;
         std::unordered_set<std::string> missing_tx_hashes_;
 
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
@@ -955,6 +969,25 @@ namespace sgns
          */
         outcome::result<void> EraseTransactionEntry( const std::string &tx_hash );
 
+        /**
+         * @brief Production pruned-erase driver: EraseTransactionEntry plus
+         *        the /prune/tx/&lt;hash&gt; marker.
+         * @details Identical resolve→erase→cleanup sequence as
+         *          EraseTransactionEntry (ONE shared private helper — zero
+         *          forked path/CID resolution), differing only in staging
+         *          the PruneEligibility::BuildPruneMarkerEntry(tx_hash)
+         *          pair into the same atomic WriteBatch, so the completed
+         *          erase answers PRUNED through the tri-state lookup (value
+         *          XOR marker, one commit). The TxPruner (Phase 18) is the
+         *          intended caller; block staging on an already-absent
+         *          block key is an idempotent no-op, so no special-casing
+         *          for BLOCK_ALREADY_ERASED verdicts.
+         * @param[in] tx_hash hash of the transaction to erase and mark.
+         * @return outcome::success on success, or outcome::failure under
+         *         the same conditions as EraseTransactionEntry.
+         */
+        outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash );
+
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
@@ -1034,6 +1067,25 @@ namespace sgns
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
+
+        /**
+         * @brief The ONE resolve→erase→cleanup sequence behind both erase
+         *        drivers (EraseTransactionEntry / EraseTransactionEntryPruned).
+         * @details Resolves the tx path and CID together, erases through
+         *          GlobalDB::EraseEntry (staging @p extra_entry into the
+         *          same WriteBatch when present — the pruned driver passes
+         *          the marker pair, the plain driver passes none), then
+         *          performs the revert-free tracked-map cleanup.
+         * @param[in] tx_hash hash of the transaction to erase.
+         * @param[in] extra_entry optional staged key+value pair joining the
+         *            erase WriteBatch (the prune marker).
+         * @return outcome::success on success, or outcome::failure when the
+         *         CID cannot be resolved, a guard rejects the erase, or the
+         *         atomic commit fails.
+         */
+        outcome::result<void> EraseTransactionEntryWithMarker(
+            const std::string                                                              &tx_hash,
+            const std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> &extra_entry );
 
         /**
          * @brief Derives the escrow chain id for a private-network job scope.

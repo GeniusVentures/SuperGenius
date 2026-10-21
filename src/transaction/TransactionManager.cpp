@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "transaction/TransactionManager.hpp"
+#include "transaction/PruneEligibility.hpp"
 #include "transaction/TransactionConsensusHandler.hpp"
 
 #include <algorithm>
@@ -4276,7 +4277,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker(
+        const std::string                                                              &tx_hash,
+        const std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> &extra_entry )
     {
         if ( !globaldb_m )
         {
@@ -4296,8 +4299,10 @@ namespace sgns
         const auto &path = path_and_cid.first;
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
 
-        // Atomic two-level erase + map-entry delete in one WriteBatch.
-        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid ) );
+        // Atomic two-level erase + map-entry delete in one WriteBatch; the
+        // caller's staged extra entry (the pruned driver's marker pair)
+        // joins the SAME batch, so value XOR marker holds atomically.
+        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entry ) );
 
         // Revert-free tracked-map cleanup after the committed erase, keyed on
         // the SAME path that was erased; the entry is memory-only
@@ -4308,6 +4313,20 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    {
+        // The plain driver: no staged extra entry (existing behavior,
+        // byte-identical).
+        return EraseTransactionEntryWithMarker( tx_hash, std::nullopt );
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash )
+    {
+        // The production driver: the marker pair (built by its one home,
+        // PruneEligibility) joins the erase WriteBatch.
+        return EraseTransactionEntryWithMarker( tx_hash, PruneEligibility::BuildPruneMarkerEntry( tx_hash ) );
     }
 
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(

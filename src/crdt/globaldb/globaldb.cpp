@@ -1048,4 +1048,14 @@ namespace sgns::crdt
         return crdt_datastore->GetLocalDeltaKeys( cid_string );
     }
 
+    outcome::result<bool> GlobalDB::HasLocalBlock( const std::string &cid_string ) const
+    {
+        if ( !m_dagSyncer )
+        {
+            m_logger->error( "{}: DAG syncer not initialized", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+        return m_dagSyncer->HasRawBlockBytes( cid );
+    }
 }

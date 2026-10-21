@@ -40,14 +40,18 @@ namespace sgns
         }
 
         /// True when @p reasons carries any FAILURE code. Every PruneReason is
-        /// a failure except the sole affirmative-evidence code
-        /// SPENDER_PRUNED_WINDOW_SATISFIED (an eligible verdict may carry it).
+        /// a failure except the two affirmative-evidence codes,
+        /// SPENDER_PRUNED_WINDOW_SATISFIED and BLOCK_ALREADY_ERASED (an
+        /// eligible/erasable verdict may carry either).
         bool HasFailureReason( const std::vector<PruneReason> &reasons )
         {
             return std::any_of( reasons.begin(),
                                 reasons.end(),
                                 []( PruneReason reason )
-                                { return reason != PruneReason::SPENDER_PRUNED_WINDOW_SATISFIED; } );
+                                {
+                                    return reason != PruneReason::SPENDER_PRUNED_WINDOW_SATISFIED &&
+                                           reason != PruneReason::BLOCK_ALREADY_ERASED;
+                                } );
         }
 
         /// Logger for the static marker-contract functions (no instance exists
@@ -371,7 +375,38 @@ namespace sgns
         auto keys = globaldb_m.GetLocalDeltaKeys( cid_string );
         if ( keys.has_error() )
         {
-            // Parse failure fails closed: not erasable, never a crash.
+            // Discriminate ABSENT from corrupt: byte presence (no parse) —
+            // a corrupt-but-present block still fails closed below.
+            auto present = globaldb_m.HasLocalBlock( cid_string );
+            if ( present.has_value() && !present.value() )
+            {
+                // The block is ABSENT. Soundness: raw block bytes disappear
+                // ONLY through the sanctioned erase path (EraseEntry's
+                // staged CID::toBytes() removal is the sole production
+                // writer of that deletion — the Phase-16 inventory; the seal
+                // marker is a different key and SURVIVES, so isResolved
+                // still guards re-delivery, GATE-03). Absence therefore
+                // means the sibling group already passed this gate and was
+                // erased; the verdict COMPLETES a stranded sibling's erase
+                // (value + map entry + marker — block staging is an
+                // idempotent no-op on the absent key). It fires ONLY when
+                // this CID is named by an otherwise-ELIGIBLE candidate: the
+                // evidence completes an erase the caller already justified.
+                const bool completes_eligible = std::any_of(
+                    eligible.candidates.begin(),
+                    eligible.candidates.end(),
+                    [&cid_string]( const PruneCandidateResult &candidate )
+                    { return candidate.eligible && candidate.cid.has_value() && *candidate.cid == cid_string; } );
+                if ( completes_eligible )
+                {
+                    RecordReason( report, PruneReason::BLOCK_ALREADY_ERASED );
+                    report.erasable = true;
+                    return report;
+                }
+            }
+            // Corrupt-but-present bytes, an unreadable store, or an absent
+            // block NOT tied to an eligible candidate: parse failure fails
+            // closed — not erasable, never a crash.
             logger_->error( "Unable to parse delta block {} for the block gate: {}",
                             cid_string,
                             keys.error().message() );
