@@ -219,6 +219,19 @@ namespace sgns
         /// Dry-run mode: report only, never erase (Phase 17 production mode).
         bool dry_run = false;
 
+        /// Erase budget per cycle (D-04): at most this many eligible
+        /// transactions erase per tick; the backlog self-drains across
+        /// ticks. Default 100. A degenerate 0 is rejected at read time
+        /// (WR-03 rule: a 0-K cycle can never drain) and the member keeps
+        /// its safe default.
+        uint64_t max_erases_per_cycle = 100;
+
+        /// Settle window in seconds (D-C2): a real cycle fires only once the
+        /// tick gate has held for this long, so a cycle cannot fire during
+        /// initial sync. Default 60. A degenerate 0 is rejected at read time
+        /// and the member keeps its safe default.
+        uint64_t settle_seconds = 60;
+
         /// Set when FromJSON had to fail-close an enabled request (missing
         /// finality_window); carries the operator-facing reason.
         std::optional<std::string> disabled_reason;
@@ -232,6 +245,13 @@ namespace sgns
          *              N is required when enabled (D-02); a degenerate 0 is
          *              rejected at read time (WR-03), exactly like an absent
          *              window. A non-object value yields defaults.
+         *              max_erases_per_cycle (default 100) and settle_seconds
+         *              (default 60) follow the same per-key discipline:
+         *              explicit positive values parse; 0 values are degenerate
+         *              and rejected at read time (a 0-K cycle can never drain,
+         *              a settle-less cycle can fire during initial sync), so
+         *              the members keep their safe defaults; ill-typed members
+         *              keep defaults too.
          * @param[in]   pruning_object The "pruning" member of sgns_config.json.
          * @return      The validated configuration.
          */
@@ -386,6 +406,24 @@ namespace sgns
          */
         static outcome::result<std::pair<PrunedLookup, std::optional<SGTransaction::PrunedTransactionRecord>>>
         LookupPrunedEntry( crdt::GlobalDB &db, const std::string &tx_hash );
+
+        /**
+         * @brief       Builds the production marker entry for @p tx_hash (D-C1).
+         * @details     The production twin of WritePrunedEntryForTest: returns
+         *              the key/value buffer pair — BuildPruneMarkerKey(tx_hash)
+         *              plus a PrunedTransactionRecord carrying the tx path
+         *              named by the hash — instead of writing it. The caller
+         *              stages the pair into the SAME WriteBatch as the erase
+         *              via GlobalDB::EraseEntry's staged-extra-entry
+         *              parameter, so the value-XOR-marker invariant is
+         *              established atomically with the erase (one commit:
+         *              value absent AND marker present, never either alone).
+         *              The key home and record shape live HERE — callers never
+         *              rebuild them.
+         * @param[in]   tx_hash Transaction hash (readable string form).
+         * @return      (marker key buffer, serialized record buffer).
+         */
+        static std::pair<base::Buffer, base::Buffer> BuildPruneMarkerEntry( const std::string &tx_hash );
 
         /**
          * @brief       TEST-ONLY marker writer (the D-04 test seam).

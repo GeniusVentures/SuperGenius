@@ -3,7 +3,9 @@
 
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <unordered_set>
+#include <utility>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
@@ -241,6 +243,16 @@ namespace sgns::crdt
          *            domain owner; never concatenated here.
          * @param[in] cid CID whose raw block bytes are erased alongside the
          *            entries for @p key.
+         * @param[in] extra_entry OPTIONAL caller-built key+value buffer pair
+         *            staged into the SAME batch after the raw-map removal and
+         *            before the single commit (default: none -- existing
+         *            two-arg callers are unchanged). The buffers are OPAQUE:
+         *            GlobalDB stays generic and never inspects or builds key
+         *            shapes. The value-XOR-marker atomicity contract: when
+         *            the caller stages the prune marker here, one commit
+         *            establishes "value absent AND marker present" together
+         *            -- an interrupted batch leaves BOTH sides in their
+         *            pre-erase state, never either alone.
          * @return outcome::success on success, or outcome::failure on a guard
          *         rejection, a staging error, or a commit error.
          *         Error::POST_COMMIT_ERASE_ANOMALY reports a COMMITTED erase:
@@ -249,7 +261,9 @@ namespace sgns::crdt
          *         not treat it as "nothing was erased" (guard rejections,
          *         Error::INVALID_PARAMETERS, erase nothing).
          */
-        outcome::result<void> EraseEntry( const std::string &key, const CID &cid );
+        outcome::result<void> EraseEntry( const std::string                              &key,
+                                          const CID                                      &cid,
+                                          const std::optional<std::pair<Buffer, Buffer>> &extra_entry = std::nullopt );
 
         /**
          * @brief Test-only interruption seam for EraseEntry's compose window.

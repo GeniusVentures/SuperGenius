@@ -1166,7 +1166,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_BuildEntryBytesMatchTestWriter )
     const std::string hash = std::string( 64, 'f' );
 
     const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( hash );
-    EXPECT_EQ( marker_pair.first.toString().value(), "/prune/tx/" + hash );
+    EXPECT_EQ( marker_pair.first.toString(), "/prune/tx/" + hash );
 
     // The record the production builder embeds: the tx path named by the hash
     // (the WR-04 shape LookupPrunedEntry demands), no optional extras.
@@ -1274,9 +1274,9 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
         ASSERT_TRUE( pre_lookup.has_value() );
         ASSERT_EQ( pre_lookup.value().first, PrunedLookup::NOT_FOUND );
 
-        GlobalDB::SetEraseInterruptHookForTest( [step]( int fired ) { return fired == step; } );
+        crdt::GlobalDB::SetEraseInterruptHookForTest( [step]( int fired ) { return fired == step; } );
         auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
-        GlobalDB::SetEraseInterruptHookForTest( nullptr );
+        crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
 
         ASSERT_TRUE( erased.has_error() );
 

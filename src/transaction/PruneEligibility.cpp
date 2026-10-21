@@ -87,6 +87,23 @@ namespace sgns
             config.finality_window = pruning_object["finality_window"].GetUint64();
         }
 
+        // D-04 budget knob: a degenerate 0 is rejected at read time exactly
+        // like a zero window (WR-03 rule — a 0-K cycle can never drain); the
+        // member keeps its safe default.
+        if ( pruning_object.HasMember( "max_erases_per_cycle" ) && pruning_object["max_erases_per_cycle"].IsUint64() &&
+             pruning_object["max_erases_per_cycle"].GetUint64() > 0 )
+        {
+            config.max_erases_per_cycle = pruning_object["max_erases_per_cycle"].GetUint64();
+        }
+
+        // D-C2 settle knob: a degenerate 0 would let a cycle fire during
+        // initial sync; rejected at read time, default retained.
+        if ( pruning_object.HasMember( "settle_seconds" ) && pruning_object["settle_seconds"].IsUint64() &&
+             pruning_object["settle_seconds"].GetUint64() > 0 )
+        {
+            config.settle_seconds = pruning_object["settle_seconds"].GetUint64();
+        }
+
         if ( config.enabled && !config.finality_window.has_value() )
         {
             // Fail closed (D-02): a positive N is required when enabled; there
@@ -210,6 +227,22 @@ namespace sgns
         }
 
         return std::make_pair( PrunedLookup::PRUNED, record );
+    }
+
+    std::pair<base::Buffer, base::Buffer> PruneEligibility::BuildPruneMarkerEntry( const std::string &tx_hash )
+    {
+        // The production twin of WritePrunedEntryForTest's body: the SAME key
+        // home (BuildPruneMarkerKey) and record shape, returned as buffers for
+        // the caller to stage into the erase WriteBatch (value XOR marker in
+        // one commit) instead of written directly.
+        SGTransaction::PrunedTransactionRecord record;
+        record.set_tx_path( TransactionManager::GetTransactionPath( tx_hash ) );
+
+        base::Buffer key_buffer;
+        key_buffer.put( BuildPruneMarkerKey( tx_hash ) );
+        base::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        return { std::move( key_buffer ), std::move( value_buffer ) };
     }
 
     outcome::result<void> PruneEligibility::WritePrunedEntryForTest(

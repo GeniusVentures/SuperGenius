@@ -794,7 +794,9 @@ namespace sgns::crdt
         erase_interrupt_hook_for_test_ = std::move( hook );
     }
 
-    outcome::result<void> GlobalDB::EraseEntry( const std::string &key, const CID &cid )
+    outcome::result<void> GlobalDB::EraseEntry( const std::string                              &key,
+                                                const CID                                      &cid,
+                                                const std::optional<std::pair<Buffer, Buffer>> &extra_entry )
     {
         auto crdt_datastore = ActiveCRDTDataStore();
         auto datastore      = ActiveDataStore();
@@ -878,6 +880,14 @@ namespace sgns::crdt
         if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 3 ) )
         {
             return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // The caller-built extra entry (D-C1: the /prune/tx/<hash> marker)
+        // joins the SAME batch after the raw-map removal, before the single
+        // commit -- value XOR marker is established atomically. The buffers
+        // are opaque; key shapes stay with the caller (Phase-16 D-01).
+        if ( extra_entry.has_value() )
+        {
+            BOOST_OUTCOME_TRY( batch->put( extra_entry->first, extra_entry->second ) );
         }
         BOOST_OUTCOME_TRY( batch->commit() );
 
