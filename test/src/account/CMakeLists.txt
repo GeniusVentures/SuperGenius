@@ -273,6 +273,30 @@ else()
     )
 endif()
 
+# Phase 18 (18-02): D-03 net-scoped dev-mint policy — same link set as
+# prune_eligibility_test (the registration block it copies verbatim).
+addtest(dev_mint_policy_test
+    dev_mint_policy_test.cpp
+)
+
+target_link_libraries(dev_mint_policy_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(dev_mint_policy_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(dev_mint_policy_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(dev_mint_policy_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )
