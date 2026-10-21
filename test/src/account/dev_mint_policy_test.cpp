@@ -60,7 +60,7 @@ namespace
     /// A non-empty external source reference, shaped like a public-chain tx hash.
     const std::string kSourceReference = "0x" + std::string( 64, 'b' );
 
-    std::shared_ptr<GeniusTransaction> MintWithChain( std::string chain_id )
+    std::shared_ptr<MintTransactionV2> MintWithChain( std::string chain_id )
     {
         SGTransaction::DAGStruct dag;
         dag.set_type( "mint-v2" );

@@ -25,6 +25,7 @@
 #include "account/MintTransactionV2.hpp"
 #include "account/MigrationTransaction.hpp"
 #include "account/MigrationInputValidator.hpp"
+#include "account/DevMintInputValidator.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
@@ -71,6 +72,7 @@ namespace sgns
         /// already-claimed chain id must not skip the other built-in.
         [[maybe_unused]] const bool kGeniusValidatorRegistered    = GeniusInputValidator::Register();
         [[maybe_unused]] const bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
+        [[maybe_unused]] const bool kDevMintValidatorRegistered   = DevMintInputValidator::Register();
 
         using utxo_merkle::OutPointKey;
 
