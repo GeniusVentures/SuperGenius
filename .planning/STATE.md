@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
-status: executing
-stopped_at: Completed 21-04-PLAN.md (consensus-side verified registry consumption; TRUST-01 closed)
-last_updated: "2026-10-21T08:42:47.774Z"
+status: verifying
+stopped_at: "Completed 21-07-PLAN.md (TRUST-02 closed: audit + cap enforcement + equivocation guard; Phase 21 plans 7/7 complete)"
+last_updated: "2026-10-21T10:30:22.883Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 27
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 0
+  completed_plans: 7
+  percent: 4
 ---
 
 # State: SuperGenius — Security Remediation & Network Readiness
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 
 Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-21
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T08:42:47.766Z
-**Stopped At:** Completed 21-04-PLAN.md (consensus-side verified registry consumption; TRUST-01 closed)
+**Last session:** 2026-10-21T10:30:22.876Z
+**Stopped At:** Completed 21-07-PLAN.md (TRUST-02 closed: audit + cap enforcement + equivocation guard; Phase 21 plans 7/7 complete)
 **Resume File:** None
 
 ## Accumulated Context
@@ -142,6 +142,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 21 P03 | 38min | 3 tasks | 12 files |
 | Phase 21 P05 | 35min | 3 tasks | 6 files |
 | Phase 21 P04 | 68min | 3 tasks | 9 files |
+| Phase 21 P07 | 100min | 3 tasks | 6 files |
 
 ## Deferred Items
 
@@ -173,3 +174,6 @@ Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintR
 - [Phase 21]: Legacy-v1 mint admission (21-05): one-home predicate IsValueCarryingLegacyMint (type 'mint' && amount > 0) shared by consensus type rules and SendTransactionItem preflight (operation_not_permitted before any CRDT Put) — Zero-amount exemption lives in the predicate so migration fillers keep certifying; sync ingress + multi-node twins stay in 21-06, so MINT-03 remains open
 - [Phase 21]: Consensus certificate layer (21-04): ValidateCertificate probes the durable cert slot record before the registry load - final certificates grandfather through LoadUnverifiedRegistryByCid (D-01), everything strict loads verified; permission_denied maps to Reject, missing dependency to Stalled (never memoized), expired first-seen defer deadline to deterministic memoizable Reject (D-03)
 - [Phase 21]: Verified-only CID cache (21-04): LoadRegistryByCidCached fills exclusively from LoadVerifiedRegistryByCid with both failure classes uncached; cap raised 8 to 64 with deque-tracked oldest-first single-entry eviction; deprecated LoadRegistryByCid alias deleted with zero bare references left; multi-node fixtures must pin the genesis authority to their registry signer (per network) or honest updates classify as unauthorized
+- [Phase 21]: Equivocation guard (21-07, TRUST-02): the durable prior commitment for a signer is its signature-verified vote inside the durably-stored existing certificate - the local ActiveVoteRecord holds only the LOCAL node's vote (decoder enforces voter_id==account_address_), so gating on it would never fire for remote byzantine signers; the ledger is consulted for corroborating evidence only
+- [Phase 21]: Equivocation markers (21-07, audit F4): stored under sibling prefix /consensus/equivocation/<slot>/<signer> reusing the ActiveVoteRecord payload + storage conventions - never under /consensus/vote/ whose RecoverActiveVotes prefix scan would decode-fail every marker with per-boot error logs
+- [Phase 21]: Admission cap (21-07, TRUST-02 audit F1): per-update ACTIVE-addition cap enforcement-proven through the member path (wired value 3 overrides default 10); cross-epoch aggregate growth accepted as governance-bound residual - carried to Phase 25 spine with F3 per-member batch attribution

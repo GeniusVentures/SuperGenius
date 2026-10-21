@@ -18,7 +18,7 @@
 ### Consensus Trust
 
 - [x] **TRUST-01**: Certificate paths loading a validator registry by CID verify the registry's authorization — forged-registry self-certification is rejected — without breaking catch-up sync or historical certificate re-validation (#1)
-- [ ] **TRUST-02**: Validator admission growth bounds and cross-certificate equivocation detection are audited, with findings documented (#14)
+- [x] **TRUST-02**: Validator admission growth bounds and cross-certificate equivocation detection are audited, with findings documented (#14)
 
 ### Mint & Escrow Authorization
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Filled by roadmap creation (2026-10-19). 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TRUST-01 | Phase 21 | Complete |
-| TRUST-02 | Phase 21 | Pending |
+| TRUST-02 | Phase 21 | Complete |
 | MINT-02 | Phase 21 | Complete |
 | MINT-03 | Phase 21 | Complete |
 | MINT-04 | Phase 21 | Complete |
