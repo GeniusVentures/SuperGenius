@@ -425,19 +425,25 @@ namespace sgns
          * @brief       Builds the production marker entry for @p tx_hash (D-C1).
          * @details     The production twin of WritePrunedEntryForTest: returns
          *              the key/value buffer pair — BuildPruneMarkerKey(tx_hash)
-         *              plus a PrunedTransactionRecord carrying the tx path
-         *              named by the hash — instead of writing it. The caller
-         *              stages the pair into the SAME WriteBatch as the erase
-         *              via GlobalDB::EraseEntry's staged-extra-entry
-         *              parameter, so the value-XOR-marker invariant is
-         *              established atomically with the erase (one commit:
-         *              value absent AND marker present, never either alone).
-         *              The key home and record shape live HERE — callers never
-         *              rebuild them.
+         *              plus a PrunedTransactionRecord naming
+         *              @p resolved_tx_path — instead of writing it. The caller
+         *              stages the pair into the SAME WriteBatch as the erase,
+         *              so the value-XOR-marker invariant is established
+         *              atomically with the erase (one commit: value absent AND
+         *              marker present, never either alone). The key home and
+         *              record shape live HERE — callers never rebuild them.
          * @param[in]   tx_hash Transaction hash (readable string form).
+         * @param[in]   resolved_tx_path The tx path RESOLVED by the caller for
+         *              this erase — the path whose value the erase targets.
+         *              The record names THIS path, never a local-network
+         *              formatting of the hash alone, so the lookup's
+         *              value-presence probe queries the key the erase actually
+         *              addressed, whatever monitored network it lives under
+         *              (WR-02). Must end with @p tx_hash (the WR-04 shape).
          * @return      (marker key buffer, serialized record buffer).
          */
-        static std::pair<base::Buffer, base::Buffer> BuildPruneMarkerEntry( const std::string &tx_hash );
+        static std::pair<base::Buffer, base::Buffer> BuildPruneMarkerEntry( const std::string &tx_hash,
+                                                                            const std::string &resolved_tx_path );
 
         /**
          * @brief       TEST-ONLY marker writer (the D-04 test seam).

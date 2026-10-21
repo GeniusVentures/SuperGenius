@@ -4301,9 +4301,8 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker(
-        const std::string                                                              &tx_hash,
-        const std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> &extra_entry )
+    outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker( const std::string &tx_hash,
+                                                                               bool               stage_pruned_marker )
     {
         if ( !globaldb_m )
         {
@@ -4323,9 +4322,22 @@ namespace sgns
         const auto &path = path_and_cid.first;
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
 
+        // The marker pair is built HERE — AFTER resolution — from the SAME
+        // path the erase below targets. Building it from the hash alone would
+        // format the LOCAL network's path even when the entry resolves under
+        // another monitored network, persisting a record whose tx_path names
+        // a key that never existed (WR-02: the lookup's value-presence probe
+        // would then read a vacuously absent path and the invariant detector
+        // could never fire for such markers).
+        std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> extra_entry;
+        if ( stage_pruned_marker )
+        {
+            extra_entry = PruneEligibility::BuildPruneMarkerEntry( tx_hash, path );
+        }
+
         // Atomic two-level erase + map-entry delete in one WriteBatch; the
-        // caller's staged extra entry (the pruned driver's marker pair)
-        // joins the SAME batch, so value XOR marker holds atomically.
+        // staged extra entry (the pruned driver's marker pair) joins the SAME
+        // batch, so value XOR marker holds atomically.
         BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entry ) );
 
         // Revert-free tracked-map cleanup after the committed erase, keyed on
@@ -4341,16 +4353,17 @@ namespace sgns
 
     outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
     {
-        // The plain driver: no staged extra entry (existing behavior,
+        // The plain driver: no staged marker (existing behavior,
         // byte-identical).
-        return EraseTransactionEntryWithMarker( tx_hash, std::nullopt );
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/false );
     }
 
     outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash )
     {
         // The production driver: the marker pair (built by its one home,
-        // PruneEligibility) joins the erase WriteBatch.
-        return EraseTransactionEntryWithMarker( tx_hash, PruneEligibility::BuildPruneMarkerEntry( tx_hash ) );
+        // PruneEligibility, from the RESOLVED path inside the shared helper)
+        // joins the erase WriteBatch.
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/true );
     }
 
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(

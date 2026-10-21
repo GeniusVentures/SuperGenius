@@ -233,14 +233,18 @@ namespace sgns
         return std::make_pair( PrunedLookup::PRUNED, record );
     }
 
-    std::pair<base::Buffer, base::Buffer> PruneEligibility::BuildPruneMarkerEntry( const std::string &tx_hash )
+    std::pair<base::Buffer, base::Buffer> PruneEligibility::BuildPruneMarkerEntry( const std::string &tx_hash,
+                                                                                   const std::string &resolved_tx_path )
     {
         // The production twin of WritePrunedEntryForTest's body: the SAME key
         // home (BuildPruneMarkerKey) and record shape, returned as buffers for
         // the caller to stage into the erase WriteBatch (value XOR marker in
-        // one commit) instead of written directly.
+        // one commit) instead of written directly. The record names the
+        // RESOLVED path the caller's erase targets (WR-02) — never a
+        // local-network formatting of the hash alone, so a cross-network
+        // entry is marked with ITS network's path.
         SGTransaction::PrunedTransactionRecord record;
-        record.set_tx_path( TransactionManager::GetTransactionPath( tx_hash ) );
+        record.set_tx_path( resolved_tx_path );
 
         base::Buffer key_buffer;
         key_buffer.put( BuildPruneMarkerKey( tx_hash ) );

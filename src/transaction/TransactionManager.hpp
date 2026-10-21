@@ -975,8 +975,9 @@ namespace sgns
          * @details Identical resolve→erase→cleanup sequence as
          *          EraseTransactionEntry (ONE shared private helper — zero
          *          forked path/CID resolution), differing only in staging
-         *          the PruneEligibility::BuildPruneMarkerEntry(tx_hash)
-         *          pair into the same atomic WriteBatch, so the completed
+         *          the PruneEligibility::BuildPruneMarkerEntry pair — built
+         *          from the RESOLVED path inside the shared helper (WR-02) —
+         *          into the same atomic WriteBatch, so the completed
          *          erase answers PRUNED through the tri-state lookup (value
          *          XOR marker, one commit). The TxPruner (Phase 18) is the
          *          intended caller; block staging on an already-absent
@@ -1078,15 +1079,18 @@ namespace sgns
          *          the marker pair, the plain driver passes none), then
          *          performs the revert-free tracked-map cleanup.
          * @param[in] tx_hash hash of the transaction to erase.
-         * @param[in] extra_entry optional staged key+value pair joining the
-         *            erase WriteBatch (the prune marker).
+         * @param[in] stage_pruned_marker when true, the prune marker pair is
+         *            built AFTER resolution by its one home
+         *            (PruneEligibility::BuildPruneMarkerEntry) from the SAME
+         *            resolved path the erase targets, and staged into the
+         *            WriteBatch — the persisted record then names the path
+         *            that was actually erased, whatever monitored network it
+         *            lives under (WR-02).
          * @return outcome::success on success, or outcome::failure when the
          *         CID cannot be resolved, a guard rejects the erase, or the
          *         atomic commit fails.
          */
-        outcome::result<void> EraseTransactionEntryWithMarker(
-            const std::string                                                              &tx_hash,
-            const std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> &extra_entry );
+        outcome::result<void> EraseTransactionEntryWithMarker( const std::string &tx_hash, bool stage_pruned_marker );
 
         /**
          * @brief Derives the escrow chain id for a private-network job scope.

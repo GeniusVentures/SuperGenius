@@ -39,6 +39,7 @@
 #include "account/RegistrationTransaction.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/UTXOManager.hpp"
+#include "base/sgns_version.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
@@ -1165,7 +1166,8 @@ TEST_F( PruneEligibilityTest, PruneMarker_BuildEntryBytesMatchTestWriter )
 {
     const std::string hash = std::string( 64, 'f' );
 
-    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( hash );
+    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( hash,
+                                                                      TransactionManager::GetTransactionPath( hash ) );
     EXPECT_EQ( marker_pair.first.toString(), "/prune/tx/" + hash );
 
     // The record the production builder embeds: the tx path named by the hash
@@ -1221,7 +1223,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_EraseWithStagedMarkerCommitsAtomically
 
     auto cid = CID::fromString( block_cid );
     ASSERT_TRUE( cid.has_value() );
-    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
+    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash(), tx_path );
 
     auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
     ASSERT_TRUE( erased.has_value() );
@@ -1264,7 +1266,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
 
     auto cid = CID::fromString( block_cid );
     ASSERT_TRUE( cid.has_value() );
-    auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
+    auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash(), tx_path );
 
     for ( const int step : { 1, 2, 3 } )
     {
@@ -1489,4 +1491,84 @@ TEST_F( PruneEligibilityTest, PrunedEraseDriver_ErasesAndMarksAtomically )
     EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
     ASSERT_TRUE( lookup.value().second.has_value() );
     EXPECT_EQ( lookup.value().second->tx_path(), TransactionManager::GetTransactionPath( *tx ) );
+}
+
+/**
+ * WR-02 (driver-level): the pruned driver marks the RESOLVED network path.
+ * An entry tracked under a NON-local monitored network (the map spans every
+ * monitored network) is erased at ITS path, and the marker's record names
+ * THAT path — never the local network's formatting of the hash (which names
+ * a key that never existed and deafens the invariant detector).
+ */
+TEST_F( PruneEligibilityTest, PrunedEraseDriver_MarksTheResolvedCrossNetworkPath )
+{
+    auto tx = MakeTransfer( 10, 1 );
+
+    const std::string local_path   = TransactionManager::GetTransactionPath( *tx );
+    const std::string foreign_path = TransactionManager::GetTransactionPath( sgns::version::TEST_NET_ID,
+                                                                             tx->GetHash() );
+    ASSERT_NE( foreign_path, local_path );
+
+    // Seed the value + tx->CID map entry ONLY under the foreign network's
+    // path (the SeedTransaction shapes, foreign-path flavour).
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( tx->SerializeByteVector() );
+    auto put_result = db_->Put( { foreign_path }, serialized, { kSeedTopic } );
+    ASSERT_TRUE( put_result.has_value() );
+    const std::string block_cid = put_result.value().toString().value();
+
+    crdt::GlobalDB::Buffer key_buffer;
+    key_buffer.put( foreign_path );
+    crdt::GlobalDB::Buffer value_buffer;
+    value_buffer.put( block_cid );
+    ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+
+    // A later topic put so the seeded block is NOT the topic head (guard 1).
+    PutSeedValue( "/seed/prune/g6-driver", "d" );
+
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( tx->GetHash() ).has_value() );
+
+    // The foreign-network value is gone and the marker names THE RESOLVED path.
+    crdt::GlobalDB::Buffer probe;
+    probe.put( foreign_path );
+    EXPECT_TRUE( db_->GetRaw( probe ).has_error() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    ASSERT_TRUE( lookup.value().second.has_value() );
+    EXPECT_EQ( lookup.value().second->tx_path(), foreign_path );
+}
+
+/**
+ * WR-02 (unit): the production builder carries the RESOLVED path verbatim —
+ * the marker key home is unchanged by network, and a marker naming a
+ * cross-network path whose value still EXISTS trips the invariant violation
+ * through the real probe (a local-network-formatted record would probe a
+ * vacuously absent key and wrongly answer PRUNED).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_CrossNetworkRecordCarriesResolvedPath )
+{
+    const std::string hash = std::string( 64, '2' );
+
+    const std::string local_path   = TransactionManager::GetTransactionPath( hash );
+    const std::string foreign_path = TransactionManager::GetTransactionPath( sgns::version::TEST_NET_ID, hash );
+    ASSERT_NE( foreign_path, local_path );
+
+    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( hash, foreign_path );
+    EXPECT_EQ( marker_pair.first.toString(), "/prune/tx/" + hash ); // key home unchanged by network
+
+    // The value still EXISTS at the resolved path.
+    crdt::GlobalDB::Buffer value;
+    value.put( "survivor-value" );
+    ASSERT_TRUE( db_->Put( { foreign_path }, value, { kSeedTopic } ).has_value() );
+
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( foreign_path );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, hash, record ).has_value() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, hash );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION );
+    EXPECT_NE( lookup.value().first, PrunedLookup::PRUNED );
 }
