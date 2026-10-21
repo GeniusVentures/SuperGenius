@@ -32,6 +32,7 @@
 #include "account/PublicChainInputValidator.hpp"
 #include "transaction/PruneEligibility.hpp"
 #include "transaction/TransactionManager.hpp"
+#include "transaction/TxPruner.hpp"
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
@@ -928,6 +929,17 @@ namespace sgns
         outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
 
         /**
+         * @brief Returns the current prune status (RECL-04, 18-04).
+         * @details Thin delegation to the TxPruner service — the queryable
+         *          surface only; no cycle logic lives here. Returns a
+         *          default (watermark-less, zeroed) status when no pruner
+         *          exists (pruning disabled or dry-run mode, which owns no
+         *          real-erase status).
+         * @return Copy of the watermark + last-cycle counters.
+         */
+        PruneStatus GetPruneStatus() const;
+
+        /**
          * @brief Configures RPC endpoints for a specific EVM chain on the public-chain input validator.
          *
          * Allows callers (including E2E tests) to register RPC endpoints for chains
@@ -1170,6 +1182,14 @@ namespace sgns
 
         // ───────────────────────────── end ownership order ────────────────────────────
 
+        /// Persistent TxPruner service (18-04), constructed once under
+        /// dry_run=false pruning config. Holds ONLY validated config, the node
+        /// role, the mutex-guarded PruneStatus, and the settle clock — no
+        /// CRDT/service references — so keeping it alive across Phase-13
+        /// account-generation switches is generation-safe (D-C4): every cycle
+        /// receives its dependencies from a fresh per-tick snapshot.
+        std::shared_ptr<TxPruner> tx_pruner_;
+
         std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
         static constexpr size_t  kMyTasksMemoryLimit = 50;       ///< Max task IDs kept in @ref my_task_ids_.
         bool                     autodht_;                       ///< Whether DHT discovery is enabled.
@@ -1267,15 +1287,19 @@ namespace sgns
         void RunResultGC();
 
         /**
-         * @brief Starts the config-gated prune dry-run timer (GATE-06 / SC-5).
-         * @details No-op unless the validated pruning config is enabled. The
-         *          node role (Light-only) and dry-run-mode checks happen inside.
-         *          The timer is node-scoped: an already-running timer means
-         *          return — it survives TransactionManager generation switches
-         *          because the evaluator is constructed per cycle from the
-         *          live members (Phase-13 replaceable-manager lifecycle).
+         * @brief Starts the config-gated prune timer (GATE-06 / SC-5 / 18-04).
+         * @details No-op unless the validated pruning config is enabled — the
+         *          enabled guard is the FIRST executable statement, so an
+         *          absent/disabled pruning object reaches nothing below it
+         *          (no timer, no service, no log line). The node role
+         *          (Light-only) check happens next; then the mode split:
+         *          dry_run=true arms the read-only dry-run cycle; dry_run=false
+         *          (18-04) constructs the persistent TxPruner once (holding
+         *          only status/config — generation-safe, D-C4) and arms the
+         *          SAME node-scoped timer pattern driving the REAL erase
+         *          cycle. An already-running timer keeps its cadence.
          */
-        void StartPruneDryRunTimerIfConfigured();
+        void StartPruneTimerIfConfigured();
 
         /**
          * @brief Runs one read-only prune-eligibility evaluation and INFO-reports it.
@@ -1289,6 +1313,26 @@ namespace sgns
          *          Performs no write or erase of any kind.
          */
         void RunPruneDryRunCycle();
+
+        /**
+         * @brief Runs one REAL prune erase cycle through the TxPruner service.
+         * @details The 18-04 real arm (dry_run=false only — this function's
+         *          own first mode gate is the T-18-0404 containment pin: it
+         *          must never erase under dry_run=true). All cycle logic
+         *          lives in TxPruner (this wiring only snapshots, gates, and
+         *          delegates): per tick it takes a consistent
+         *          SnapshotAccountServices() snapshot, null-guard-skips-and-
+         *          reschedules on generation gaps (the 17-06 Deviation-1
+         *          discipline), checks the generation is still current
+         *          BEFORE invoking the service (the :4982 pattern — RunCycle
+         *          is the only erase path, so the check precedes every
+         *          erase; D-C4), then calls TxPruner::RunCycle with the
+         *          snapshot deps + generation. A permanent-class failure
+         *          (TxPruner::IsPermanentStop) stops the cycle; any other
+         *          failure retries next cycle; the per-cycle INFO summary is
+         *          emitted by the service (RECL-03).
+         */
+        void RunPruneCycle();
 
         /**
          * @brief Initializes application and dependency loggers.

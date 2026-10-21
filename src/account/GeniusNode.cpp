@@ -482,10 +482,13 @@ namespace sgns
             {
                 node_logger_->warn( "sgns_config.json: {}", *pruning_config_.disabled_reason );
             }
-            node_logger_->info( "sgns_config.json: pruning enabled={}, finality_window={}, dry_run={}",
+            node_logger_->info( "sgns_config.json: pruning enabled={}, finality_window={}, dry_run={}, "
+                                "max_erases_per_cycle={}, settle_seconds={}",
                                 pruning_config_.enabled,
                                 pruning_config_.finality_window.value_or( 0 ),
-                                pruning_config_.dry_run );
+                                pruning_config_.dry_run,
+                                pruning_config_.max_erases_per_cycle,
+                                pruning_config_.settle_seconds );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
@@ -1152,9 +1155,9 @@ namespace sgns
                     return;
                 }
 
-                // GATE-06 (17-06): config-gated prune dry-run timer — an
+                // GATE-06 (17-06 / 18-04): config-gated prune timer — an
                 // absent/disabled pruning config returns immediately (SC-5).
-                StartPruneDryRunTimerIfConfigured();
+                StartPruneTimerIfConfigured();
 
                 ++transaction_manager_construction_count_;
                 uint64_t owner_generation;
@@ -2459,6 +2462,9 @@ namespace sgns
             prune_dry_run_timer_->cancel( ignored );
             prune_dry_run_timer_.reset();
         }
+        // The TxPruner holds only status/config (no runtime resources) —
+        // release it beside its timer once the io pool is drained (18-04).
+        tx_pruner_.reset();
 
         // Account-bound services depend on GlobalDB, which in turn depends on
         // GraphSync, the scheduler, PubSub, and the io_context.
@@ -4272,6 +4278,19 @@ namespace sgns
         return manager_result.value()->GetState();
     }
 
+    PruneStatus GeniusNode::GetPruneStatus() const
+    {
+        // RECL-04 thin delegation (18-04): the queryable surface only — all
+        // status lives in the service. No pruner (disabled config or dry-run
+        // mode, which owns no real-erase status) yields the default
+        // watermark-less status.
+        if ( !tx_pruner_ )
+        {
+            return PruneStatus{};
+        }
+        return tx_pruner_->GetPruneStatus();
+    }
+
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
     {
         auto manager_result = GetTransactionManager();
@@ -4859,7 +4878,7 @@ namespace sgns
 
     // ── Prune Dry-Run (GATE-06 / 17-06) ──
 
-    void GeniusNode::StartPruneDryRunTimerIfConfigured()
+    void GeniusNode::StartPruneTimerIfConfigured()
     {
         // SC-5 default-off consent gate: an absent/disabled pruning config must
         // reach nothing below this line — no timer, no evaluator, no log cycle.
@@ -4868,19 +4887,31 @@ namespace sgns
             return;
         }
         // GATE-01 role gate at the wiring (defense in depth — the evaluator
-        // re-checks at construction). Light nodes only; full/archive never erase.
+        // and the TxPruner service re-check at construction). Light nodes
+        // only; full/archive never erase.
         if ( node_type_ != NodeType::Light )
         {
             node_logger_->warn( "Pruning enabled but node_type={} is not Light — pruning is light-only; "
-                                "dry-run cycle not started",
+                                "prune cycle not started",
                                 node_type_ );
             return;
         }
-        if ( !pruning_config_.dry_run )
+        // 18-04 real-cycle arm (the former dry_run=false WARN-return): the
+        // persistent TxPruner service is constructed ONCE here. The instance
+        // holds only status/config (no CRDT/service references), so it is
+        // generation-safe to keep alive across account switches — every
+        // cycle receives its dependencies from a fresh per-tick snapshot
+        // (D-C4). Its factory re-checks the Light role fail-closed.
+        if ( !pruning_config_.dry_run && !tx_pruner_ )
         {
-            node_logger_->warn( "Pruning enabled with dry_run=false: real erasure arrives with the Phase-18 "
-                                "TxPruner; no cycle is started this phase" );
-            return;
+            auto pruner = TxPruner::New( node_type_, pruning_config_ );
+            if ( pruner.has_error() )
+            {
+                node_logger_->error( "TxPruner construction failed: {} — prune cycle not started",
+                                     pruner.error().message() );
+                return;
+            }
+            tx_pruner_ = std::move( pruner.value() );
         }
         // The timer is node-scoped: StateTransition reaches this wiring once per
         // account generation, and an already-running timer keeps its cadence (the
@@ -4893,10 +4924,14 @@ namespace sgns
 
         prune_dry_run_timer_               = std::make_unique<boost::asio::steady_timer>( *io_ );
         std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+        // The mode is fixed at config load; capture it so the tick dispatches
+        // to the matching cycle function (distinct functions, distinct gates —
+        // the T-18-0404 mode-confusion mitigation).
+        const bool dry_run_tick = pruning_config_.dry_run;
 
         prune_dry_run_timer_->expires_from_now( std::chrono::minutes( 1 ) );
         prune_dry_run_timer_->async_wait(
-            [weakSelf]( const boost::system::error_code &ec )
+            [weakSelf, dry_run_tick]( const boost::system::error_code &ec )
             {
                 if ( ec )
                 {
@@ -4904,10 +4939,27 @@ namespace sgns
                 }
                 if ( auto self = weakSelf.lock() )
                 {
-                    self->RunPruneDryRunCycle();
+                    if ( dry_run_tick )
+                    {
+                        self->RunPruneDryRunCycle();
+                    }
+                    else
+                    {
+                        self->RunPruneCycle();
+                    }
                 }
             } );
-        node_logger_->info( "Prune dry-run timer started: first cycle in 1 min, then every 10 min (read-only)" );
+        if ( pruning_config_.dry_run )
+        {
+            node_logger_->info( "Prune dry-run timer started: first cycle in 1 min, then every 10 min (read-only)" );
+        }
+        else
+        {
+            node_logger_->info( "Prune timer started: first real cycle in 1 min, then every 10 min (max {} "
+                                "erases per cycle, settle {}s)",
+                                pruning_config_.max_erases_per_cycle,
+                                pruning_config_.settle_seconds );
+        }
     }
 
     void GeniusNode::RunPruneDryRunCycle()
@@ -5015,6 +5067,86 @@ namespace sgns
                 if ( auto self = weakSelf.lock() )
                 {
                     self->RunPruneDryRunCycle();
+                }
+            } );
+    }
+
+    void GeniusNode::RunPruneCycle()
+    {
+        // 18-04 containment gate (T-18-0404, Pattern 6): this is the REAL
+        // erase arm. Its own FIRST mode gate refuses dry_run=true — the real
+        // cycle must never erase in dry-run mode (source-assertable).
+        if ( pruning_config_.dry_run )
+        {
+            node_logger_->error( "Prune real cycle invoked with dry_run=true — refusing to erase; cycle stopped" );
+            return;
+        }
+        // Phase-13 generation lifecycle (CR-01 — the RunPruneDryRunCycle
+        // discipline): the TxPruner receives a CONSISTENT per-tick snapshot
+        // of the current members, never cached state; the snapshot
+        // shared_ptrs are held for the whole cycle so the account (and its
+        // UTXOManager) outlive the erases even if a generation switch
+        // reassigns the members mid-cycle. tx_globaldb_ is deliberately read
+        // without the lifecycle lock (assigned before this timer can exist,
+        // reset only after the io pool has been drained).
+        const auto snapshot = SnapshotAccountServices();
+        if ( !tx_globaldb_ || !snapshot.account || !snapshot.manager )
+        {
+            node_logger_->debug( "Prune cycle skipped: account-bound members unavailable (generation switch)" );
+        }
+        else if ( SnapshotAccountServices().generation != snapshot.generation )
+        {
+            // Generation-superseded BEFORE any erase (the :4982 pattern):
+            // RunCycle is the only erase path, so this check precedes every
+            // erase the cycle would perform (D-C4 — a stale generation must
+            // never erase through a retired pair).
+            node_logger_->debug( "Prune cycle skipped: generation superseded before any erase (retired snapshot)" );
+        }
+        else if ( !tx_pruner_ )
+        {
+            // Defensive: the arm constructs the service at start; a missing
+            // service must never take a fallback path into erase logic here.
+            node_logger_->error( "Prune cycle skipped: TxPruner service unavailable" );
+        }
+        else
+        {
+            auto cycle = tx_pruner_->RunCycle( *tx_globaldb_,
+                                               *snapshot.manager,
+                                               snapshot.account->GetUTXOManager(),
+                                               snapshot.generation );
+            if ( cycle.has_error() )
+            {
+                if ( TxPruner::IsPermanentStop( cycle.error() ) )
+                {
+                    // Permanent (the 17-06 fail-closed split re-hosted): a
+                    // broken policy state no retry can fix — stop instead of
+                    // spinning on it every 10 minutes. The service logged the
+                    // detail.
+                    node_logger_->error( "Prune cycle failed: {} — prune cycle stopped", cycle.error().message() );
+                    return;
+                }
+                // Transient: skip this tick and keep the cadence — the
+                // reschedule below still runs.
+                node_logger_->warn( "Prune cycle failed: {} — retrying next cycle", cycle.error().message() );
+            }
+        }
+
+        if ( !prune_dry_run_timer_ )
+        {
+            return;
+        }
+        const std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+        prune_dry_run_timer_->expires_from_now( std::chrono::minutes( 10 ) );
+        prune_dry_run_timer_->async_wait(
+            [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunPruneCycle();
                 }
             } );
     }
