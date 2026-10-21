@@ -4580,6 +4580,11 @@ namespace sgns
         return legacy_mint != nullptr && legacy_mint->GetAmount() > 0;
     }
 
+    void TransactionManager::SetLegacyMintDeferWindow( std::chrono::seconds window )
+    {
+        legacy_mint_defer_tracker_.SetWindow( window );
+    }
+
     bool TransactionManager::CheckTransactionAuthorization( const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Checking authorization tx={}", __func__, tx.GetHash() );

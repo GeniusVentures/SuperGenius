@@ -31,6 +31,7 @@
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
 #include "account/PublicChainInputValidator.hpp"
+#include "base/bounded_defer.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 
@@ -421,6 +422,7 @@ namespace sgns
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
         friend class LegacyMintAdmissionTestAccess;
+        friend class LegacyMintSyncAdmissionTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -727,6 +729,11 @@ namespace sgns
         std::mutex                      missing_tx_mutex_;
         std::unordered_set<std::string> missing_tx_hashes_;
 
+        /// @brief MINT-03 sync-admission defer deadlines for value-carrying v1
+        ///        mints awaiting their slot certificate (D-03 bounded window,
+        ///        first-seen anchored, FIFO cap with oldest-first eviction).
+        base::BoundedDeferTracker legacy_mint_defer_tracker_;
+
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
         static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
@@ -961,6 +968,13 @@ namespace sgns
         bool CheckParentChildAuthority( const GeniusTransaction &tx ) const;
         /** @brief Replay-protection check expressed as a plain boolean. */
         bool CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        /**
+         * @brief Replaces the MINT-03 sync-admission defer window (D-03).
+         * @param[in] window New window applied to keys deferred AFTER this call;
+         *            existing first-seen deadlines are untouched.
+         */
+        void SetLegacyMintDeferWindow( std::chrono::seconds window );
 
         void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
