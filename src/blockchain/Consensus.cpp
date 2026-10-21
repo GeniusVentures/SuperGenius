@@ -3693,12 +3693,28 @@ namespace sgns
         if ( grandfathered_final )
         {
             // Finality is the proof of acceptance: the strict authorization
-            // rule is skipped, and any load error stays retryable exactly as
-            // before the verified loader existed (behavior-preserving for
-            // pre-upgrade final certificates; D-01).
+            // rule is skipped (the durable record IS this certificate), but
+            // the load failure is bounded exactly like the strict path (CR-03):
+            // the SAME authorization_defer_tracker_ under the SAME registry-CID
+            // key, so one unfetchable CID carries one first-seen bound across
+            // both paths. In-window stays retryable Stalled (never memoized);
+            // past the window the stall becomes a deterministic timeout
+            // Reject. Accepted D-03 residual: with content binding this path
+            // serves only certificates whose bytes are already durable, and a
+            // final certificate whose registry dependency never syncs becomes
+            // Reject past the deliberately generous default window.
             registry_ret = registry_->LoadUnverifiedRegistryByCid( certificate.registry_cid() );
             if ( registry_ret.has_error() )
             {
+                if ( authorization_defer_tracker_.Defer( certificate.registry_cid() ) )
+                {
+                    logger_->error( "{}: rejected: grandfathered registry defer window elapsed for registry cid {} "
+                                    "proposal_id={}",
+                                    __func__,
+                                    certificate.registry_cid(),
+                                    certificate.proposal_id() );
+                    return Check::Reject;
+                }
                 logger_->error( "{}: registry load pending error={} for registry cid {} proposal_id={}",
                                 __func__,
                                 registry_ret.error().message(),
