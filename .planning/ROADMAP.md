@@ -107,7 +107,7 @@ Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadm
   4. A newly submitted self-signed legacy-v1 mint is rejected (adversarial test), while pre-cutover outputs remain spendable, a fresh node syncs to READY, and a restart recovers — admission gating only, never deserialization gating (compat twin) (MINT-03)
   5. A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)
 
-**Plans**: 7 plans
+**Plans**: 9 plans (7 shipped + 2 gap closure)
 Plans:
 **Wave 1**
 
@@ -124,6 +124,11 @@ Plans:
 
 - [x] 21-06-PLAN.md — MINT-03 sync admission: certificate-conditional Stall/Reject with stall-resolution negative control + migration/spendability compat twins
 - [x] 21-07-PLAN.md — TRUST-02: admission/equivocation audit doc + ACTIVE-cap enforcement + durable-ledger equivocation guard + adversarial/compat pairs
+
+**Gap Closure — Wave 1** *(from 21-VERIFICATION.md gaps; parallel plans, disjoint files)*
+
+- [ ] 21-08-PLAN.md — MINT-04 fail-closed completion: exactly-one-output burn-fact binding (CR-01) + bridge-less endpoint no-confirm guard (CR-02) + adversarial/compat pairs
+- [ ] 21-09-PLAN.md — TRUST-01 grandfather-path closure: content-bound probe (WR-01) + defer-bounded grandfathered stall (CR-03) + WR-02 negative-window guard + adversarial/compat pairs
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
