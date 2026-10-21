@@ -158,7 +158,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 18-06-PLAN.md — Service suites: RealPrune/Idempotent, SweepReprunes, SharedBlock stranding, TickGate, Observability/PruneStatus, ComposeLock (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
+- [x] 18-06-PLAN.md — Service suites: RealPrune/Idempotent, SweepReprunes, SharedBlock stranding, TickGate, Observability/PruneStatus, ComposeLock (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -211,7 +211,7 @@ Plans:
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 6/6 | Complete    | 2026-10-20 |
-| 18. TxPruner Service & First Real Prune | v1.2 | 5/7 | In Progress|  |
+| 18. TxPruner Service & First Real Prune | v1.2 | 6/7 | In Progress|  |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
 

@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
-stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-10-21T21:02:56.287Z"
+stopped_at: Completed 18-06-PLAN.md
+last_updated: "2026-10-21T21:32:48.360Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 9
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-10-21
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T21:02:56.281Z
-**Stopped At:** Completed 18-03-PLAN.md
+**Last session:** 2026-10-21T21:32:48.354Z
+**Stopped At:** Completed 18-06-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -150,6 +150,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 18 P02 | 43min | 2 tasks | 9 files |
 | Phase 18 P03 | 64min | 3 tasks | 13 files |
 | Phase 18 P04 | 16min | 2 tasks | 5 files |
+| Phase 18 P06 | 15min | 3 tasks | 2 files |
 
 ## Decisions
 
@@ -251,6 +252,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 18]: 18-04: The block-grouped K budget takes groups WHOLE or defers them WHOLE (held_blocks), and only ERASABLE block reports form groups — erasing a tx value whose block survives a non-eligible sibling would strand the sibling's history (PRUNE-03 two-verdict discipline at the budget level); a partial group behind an exhausted K is structurally impossible, not tested away
 - [Phase 18]: 18-04: The watermark advances only on cycles that ran to completion without hard error regardless of K exhaustion, is monotonic, and PruneStatus carries NO bytes_reclaimed until Phase 20 measures it — no overclaiming (T-18-0406): interrupted/failed cycles leave the status untouched; the RECL-03 log states 'bytes reclaimed: not measured until Phase 20' explicitly -- never a fabricated number
 - [Phase 18]: 18-04: The TxPruner instance owns ONLY config/role/status/settle-clock (generation-safe across Phase-13 switches); every CRDT/service dependency is passed per cycle, and the settle clock restarts whenever the tick gate re-opens — D-C4: no cached evaluator, no cursor (erased txs vanish from enumeration); a cycle can never fire on a stale settle window or during initial sync
+- [Phase ?]: 18-06: The TxPruner suites run as TxPrunerTest (not TxPruner) — a global fixture named TxPruner is ambiguous with sgns::TxPruner under using namespace sgns; the plan's TxPruner.* filters became TxPrunerTest.*
+- [Phase ?]: 18-06: The D-01 proof holds the cycle INSIDE EraseEntry via GlobalDB's erase seam (step 1: guards passed, staged, uncommitted) — the concurrent PutElems racer provably blocks for the whole window, the final state is asserted as a legal serialization (marker committed + add-wins value) with the next cycle re-erasing; the guard-recheck half is the head-guard refusal at erase time (evaluation accepts, compose refuses, never torn)
 
 ## Deferred Items
 
