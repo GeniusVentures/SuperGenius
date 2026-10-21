@@ -149,7 +149,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 18-03-PLAN.md — Substrate hardening: D-01 owner-vended compose lock (WR-02 closed), marker batch-join, config keys, BLOCK_ALREADY_ERASED evidence, accessor + pruned driver (PRUNE-04)
+- [x] 18-03-PLAN.md — Substrate hardening: D-01 owner-vended compose lock (WR-02 closed), marker batch-join, config keys, BLOCK_ALREADY_ERASED evidence, accessor + pruned driver (PRUNE-04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -211,7 +211,7 @@ Plans:
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 6/6 | Complete    | 2026-10-20 |
-| 18. TxPruner Service & First Real Prune | v1.2 | 2/7 | In Progress|  |
+| 18. TxPruner Service & First Real Prune | v1.2 | 3/7 | In Progress|  |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
 

@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-10-21T19:01:03.401Z"
+stopped_at: Completed 18-03-PLAN.md
+last_updated: "2026-10-21T20:10:58.027Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 12
+  completed_plans: 13
   percent: 9
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-10-21
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 76%
 
 ## Roadmap Snapshot
 
@@ -83,8 +83,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T19:01:03.394Z
-**Stopped At:** Completed 18-01-PLAN.md
+**Last session:** 2026-10-21T20:10:58.021Z
+**Stopped At:** Completed 18-03-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -148,6 +148,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P06 | 55min | 3 tasks | 2 files |
 | Phase 18 P01 | 43min | 2 tasks | 3 files |
 | Phase 18 P02 | 43min | 2 tasks | 9 files |
+| Phase 18 P03 | 64min | 3 tasks | 13 files |
 
 ## Decisions
 
@@ -241,6 +242,10 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase ?]: 18-02: Designated dev-mint net set is compile-time constexpr (staging 333 + dev 144 from the named constants) — config can never widen it; DevMintBurnlessPermitted() reads only version::GetNetworkID(), never a tx/proposal field
 - [Phase ?]: 18-02: Both GatherVerificationEvidence bypass legs net-scoped via LocalBypassEvidence helper — refusal returns default-invalid evidence on non-designated nets; the unconditional empty-chain-id hole is closed in released code paths
 - [Phase ?]: 18-02: Dev validator tests drive the full public Blockchain proposal surface (no friend access); refusal proven by 10s negative waitForCondition against the ~6s designated positive
+- [Phase ?]: 18-03: The compose lock is owner-VENDED as a returned unique_lock on the private recursive mutex (CrdtSet::MakeComposeLock) -- the raw mutex stays private; EraseEntry holds it across guards, staging, commit, and the post-commit seal re-assert, closing WR-02 by construction for every caller
+- [Phase ?]: 18-03: Absent-vs-corrupt block discrimination uses BYTE presence (RocksdbDatastore::contains via GraphsyncDAGSyncer::HasRawBlockBytes / GlobalDB::HasLocalBlock), never HasBlock -- HasBlock re-parses so a corrupt block would read as absent; BLOCK_ALREADY_ERASED completes only an otherwise-ELIGIBLE candidate (corrupt and non-eligible ties stay fail-closed DESERIALIZE_FAILED)
+- [Phase ?]: 18-03: The production marker pair (BuildPruneMarkerEntry) joins the erase WriteBatch through EraseEntry's optional staged-extra-entry parameter -- value XOR marker in one commit; the two erase drivers share ONE private EraseTransactionEntryWithMarker (plain = nullopt, byte-identical; pruned = the marker pair)
+- [Phase ?]: 18-03: Degenerate config zeros (max_erases_per_cycle=0, settle_seconds=0) are rejected at read time by keeping safe defaults (100/60) -- no enabled-fail-close like finality_window because the defaults are safe; PRUNE-04 checkbox deferred to 18-04 (the TxPruner cycle), this plan lands the mutation substrate
 
 ## Deferred Items
 
