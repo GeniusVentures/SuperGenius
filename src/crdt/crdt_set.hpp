@@ -279,9 +279,9 @@ namespace sgns::crdt
         * Compose window: staging runs under mutex_, but the caller owns the single
         * commit and performs it OUTSIDE this lock. Between this function returning
         * and the caller's commit, the key is half-erased to concurrent readers.
-        * The wider critical section around stage + commit must be defined by the
-        * caller (Phase 18's TxPruner, RESEARCH Pitfall 7) -- do not widen it by
-        * holding other modules' locks here.
+        * The wider critical section around stage + commit is vended to the caller
+        * as MakeComposeLock (acquire before the first guard, commit inside the
+        * hold) -- do not widen it by holding other modules' locks here.
         * @param aDataStore caller-owned batch to stage the removes into; never
         * committed by this function
         * @param aKey key whose CRDT entries are staged for erasure; must be
@@ -293,6 +293,30 @@ namespace sgns::crdt
         */
         outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                                  const std::string                           &aKey );
+
+        /** Vends the compose critical section for multi-step stage-then-commit
+        * sequences over this CrdtSet (D-01): an owning
+        * std::unique_lock on this set's private recursive mutex_. The raw
+        * mutex stays private -- this guard object IS the vended
+        * critical-section API.
+        *
+        * Acquire it as the FIRST act of a compose, run every guard check and
+        * staging step inside the hold, and let the single commit land before
+        * the guard releases -- the PutElems discipline (PutElems holds
+        * mutex_ across build+commit). StageEraseElement's internal lock is
+        * REENTRANT under this hold (recursive mutex), so it composes
+        * unchanged. With guards, staging, and commit all inside one hold,
+        * a concurrent PutElems can never interleave between a guard check
+        * and the commit: the check-then-act window (WR-02) closes by
+        * construction for every caller.
+        *
+        * Scope each hold to ONE per-tx compose; never hold it across
+        * evaluations or multiple composes (bounded holds -- it serializes
+        * against every PutElems merge) and never hold other modules' locks
+        * while acquiring it.
+        * @return an owning unique_lock on mutex_
+        */
+        std::unique_lock<std::recursive_mutex> MakeComposeLock();
 
         /** putElems adds items to the "elems" set. It will also set current
         * values and priorities for each element. This needs to run in a lock,

@@ -329,6 +329,17 @@ namespace sgns::crdt
         outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                                  const std::string                           &aKey );
 
+        /** Vends the compose critical section from the owning CrdtSet (D-01):
+        * an owning std::unique_lock on the CrdtSet's private recursive mutex.
+        * See CrdtSet::MakeComposeLock for the acquire-before-the-first-guard,
+        * commit-inside-the-hold discipline; StageEraseElement is reentrant
+        * under the hold.
+        * @return an owning unique_lock, or a NON-owning guard when the
+        *         underlying CrdtSet is absent -- callers must fail closed on
+        *         !owns_lock()
+        */
+        std::unique_lock<std::recursive_mutex> MakeComposeLock();
+
         /**
          * @brief       Test-only observable: how many root-CID fetch attempts
          *              EnqueueRootCID actually queued (SC-3's zero-fetch proof).

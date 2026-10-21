@@ -736,6 +736,15 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    std::unique_lock<std::recursive_mutex> CrdtSet::MakeComposeLock()
+    {
+        // The vend: an owning guard on the private recursive mutex. The lock
+        // is taken HERE, so the caller's guard checks, staging steps, and
+        // commit all serialize against every other CrdtSet-mediated write
+        // (PutElems holds the same mutex across build+commit).
+        return std::unique_lock<std::recursive_mutex>( this->mutex_ );
+    }
+
     outcome::result<void> CrdtSet::PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority )
     {
         if ( aElems.empty() )

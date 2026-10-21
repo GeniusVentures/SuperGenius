@@ -210,17 +210,21 @@ namespace sgns::crdt
          * API and reject fail-closed (Error::INVALID_PARAMETERS) BEFORE any
          * staging: a CID that is the head of ANY topic, the root of a
          * pending/active sync job, LRU-cached, or unresolved is not erased.
-         * These guards are CHECK-THEN-ACT and therefore best-effort under
-         * concurrency: a CID that becomes a topic head, enters a sync job,
-         * or enters the LRU block cache AFTER its check ran but before the
-         * commit lands is erased anyway (the cache would then serve a node
-         * whose bytes are gone); likewise a concurrent PutElems on the same
-         * key can re-create entries between the under-lock staging query
-         * and the outside-the-lock commit. The guarantee is absolute only
-         * in the absence of such concurrent writers; the critical section
-         * that closes this window is owned by the caller (Phase 18's
-         * TxPruner -- RESEARCH Pitfall 7), mirroring the compose-window
-         * caveat on CrdtSet::StageEraseElement. The seal marker of @p cid
+         *
+         * Compose critical section (D-01): the ENTIRE compose -- guard
+         * evaluation, staging, the single commit, and the post-commit seal
+         * re-assert -- runs inside one owner-vended CrdtSet critical section
+         * (CrdtDatastore::MakeComposeLock), the same discipline PutElems
+         * already uses across build+commit. The former CHECK-THEN-ACT window
+         * (WR-02 -- a concurrent PutElems re-creating the erased entries
+         * between the under-lock staging and an outside-the-lock commit) is
+         * CLOSED by construction: every CrdtSet-mediated write takes the same
+         * recursive mutex, so a concurrent PutElems can never interleave
+         * between a guard check and the commit. The hold is scoped to this
+         * single per-tx compose (acquired as the first act, released after
+         * the commit and the post-commit seal re-assert) and is NEVER held
+         * across evaluations or multiple composes -- D-01 bounded holds, as
+         * documented on CrdtSet::MakeComposeLock. The seal marker of @p cid
          * is never addressed and is re-asserted after the commit -- a
          * vanished seal fails loudly with Error::POST_COMMIT_ERASE_ANOMALY
          * (a COMMITTED erase -- see @return).

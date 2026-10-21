@@ -804,11 +804,26 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
+        // D-01: the owner-vended compose critical section, acquired as the
+        // compose's FIRST act and held across guard evaluation, staging,
+        // the single commit, and the post-commit seal re-assert -- the
+        // PutElems discipline (crdt_set.cpp holds mutex_ across
+        // build+commit). StageEraseElement's internal lock is reentrant
+        // under this hold. Scoped to this one per-tx compose only; never
+        // held across evaluations or multiple composes (bounded holds).
+        auto compose_lock = crdt_datastore->MakeComposeLock();
+        if ( !compose_lock.owns_lock() )
+        {
+            m_logger->error( "{}: CRDT set not initialized, refusing erase", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
         // Guards (fail-closed, before any staging): a CID that is in use
-        // anywhere in the live DAG machinery is not erased. These are
-        // check-then-act guards -- best-effort under concurrency; the
-        // caller owns the critical section that closes the window (see the
-        // header contract).
+        // anywhere in the live DAG machinery is not erased. Guard
+        // evaluation runs INSIDE the compose critical section, so a
+        // concurrent PutElems cannot interleave between these checks and
+        // the commit (WR-02 closed by construction; see the header
+        // contract).
         // (1) Head guard: scan the heads of EVERY topic -- a single-topic
         //     check would miss the cid being another topic's head.
         BOOST_OUTCOME_TRY( auto head_list, GetCRDTHeadList() );

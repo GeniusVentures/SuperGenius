@@ -1413,6 +1413,17 @@ namespace sgns::crdt
         return set_->StageEraseElement( aDataStore, aKey );
     }
 
+    std::unique_lock<std::recursive_mutex> CrdtDatastore::MakeComposeLock()
+    {
+        if ( set_ == nullptr )
+        {
+            // Non-owning guard -- the caller fails closed on !owns_lock().
+            return std::unique_lock<std::recursive_mutex>{};
+        }
+
+        return set_->MakeComposeLock();
+    }
+
     outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey                 &aKey,
                                                 const Buffer                          &aValue,
                                                 const std::unordered_set<std::string> &topics )
