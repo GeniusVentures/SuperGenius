@@ -1052,9 +1052,17 @@ namespace sgns
         }
         catch ( const std::exception &e )
         {
-            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs,
-                                                       transaction_hash,
-                                                       sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+            // Same end state as the FAILED-transition cleanup: the inserted burn
+            // entry must not survive a mint that never enqueued (release-only
+            // rollback left the dangling UTXO_BRIDGE record the incident showed).
+            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( rollback_inputs, transaction_hash );
+                 removal.has_error() )
+            {
+                m_logger->error( "{}: MintFunds rollback failed to remove burn UTXO for tx_hash={}: {}",
+                                 __func__,
+                                 transaction_hash,
+                                 removal.error().message() );
+            }
             m_logger->error( "{}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
                              __func__,
                              transaction_hash,
@@ -5076,9 +5084,23 @@ namespace sgns
                     {
                         if ( tx->GetType() == "mint-v2" )
                         {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
-                                                                       tx->dag_st.uncle_hash(),
-                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
+                            // Releasing the reservation alone left the MintFunds-inserted
+                            // burn entry READY in memory and on disk — the 2026-10-20
+                            // incident's dangling UTXO_BRIDGE that wedged the next boot.
+                            // RemoveBurnUTXOs releases the reservation AND erases the
+                            // inserted entry (idempotent; CONSUMED entries untouched). A
+                            // store hiccup must not block the FAILED marking: log and stay
+                            // failed — the next FAILED re-fire dedups above, so the leak
+                            // then matches the pre-fix release-only behavior.
+                            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( params_opt->first,
+                                                                                             tx->dag_st.uncle_hash() );
+                                 removal.has_error() )
+                            {
+                                m_logger->error( "{}: Failed to remove burn UTXO for failed mint tx={}: {}",
+                                                 FUNC,
+                                                 tx->GetHash(),
+                                                 removal.error().message() );
+                            }
                         }
                         else
                         {
@@ -5087,14 +5109,6 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
-
-                // Clear bridge mint reservation on failure
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
-                    (void) mint_tx;
-                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );

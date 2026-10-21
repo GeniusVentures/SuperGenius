@@ -347,6 +347,29 @@ namespace sgns
                             UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
+         * @brief       Releases and removes the burn UTXOs a failed local bridge mint inserted.
+         * @details     RollbackUTXOs only returns a reserved outpoint to READY — a
+         *              MintFunds-inserted UTXO_BRIDGE entry then survives the
+         *              failure in memory and on disk (live incident 2026-10-20:
+         *              a consensus-rejected dev burn ref stayed READY, survived
+         *              restart, and wedged boot). This variant owns the
+         *              failed-mint end state: for each input outpoint that is a
+         *              UTXO_BRIDGE entry still in READY or RESERVED state it
+         *              erases the entry, its transient reservation, and the
+         *              address index, then persists the owner's snapshot. A
+         *              RESERVED entry is only taken when its holder id matches
+         *              @p reservation_id; CONSUMED entries are never touched —
+         *              a sibling mint's spend evidence keeps blocking duplicate
+         *              burns. No-op (success) when nothing matches.
+         * @param[in]   inputs The failed mint's input outpoints (the burn reference).
+         * @param[in]   reservation_id The reservation id MintFunds claimed under
+         *              (the burn hash string — the D-18 reservation contract).
+         * @return      Success, or the persistence error; memory is restored on failure.
+         */
+        outcome::result<void> RemoveBurnUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                                               const std::string                &reservation_id );
+
+        /**
          * @brief       Verifies ownership and signatures for UTXO transaction parameters using the default address.
          * @param[in]   params The transaction parameters to verify, including inputs and outputs
          * @return      true if all signatures are valid and correspond to the default address, false otherwise

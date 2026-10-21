@@ -678,6 +678,82 @@ namespace sgns
         }
     }
 
+    outcome::result<void> UTXOManager::RemoveBurnUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                                                        const std::string                &reservation_id )
+    {
+        const std::scoped_lock lock( utxos_mutex_ );
+
+        const auto previous_utxo_outpoints    = utxo_outpoints_;
+        const auto previous_address_outpoints = address_outpoints_;
+        const auto previous_reservations      = local_reservations_;
+
+        std::vector<std::string> owners_to_store;
+        for ( const auto &input_utxo : inputs )
+        {
+            const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
+            auto           entry_it = utxo_outpoints_.find( outpoint );
+            if ( entry_it == utxo_outpoints_.end() || entry_it->second.type != UTXOType::UTXO_BRIDGE ||
+                 entry_it->second.state == UTXOState::UTXO_CONSUMED )
+            {
+                continue;
+            }
+            auto       reservation_it = local_reservations_.find( outpoint );
+            const bool held_by_other  = entry_it->second.state == UTXOState::UTXO_RESERVED &&
+                                       reservation_it != local_reservations_.end() &&
+                                       reservation_it->second != reservation_id;
+            if ( held_by_other )
+            {
+                continue;
+            }
+
+            auto owner = entry_it->second.utxo.GetOwnerAddress();
+            if ( owner.empty() )
+            {
+                owner = address_;
+            }
+            if ( std::find( owners_to_store.begin(), owners_to_store.end(), owner ) == owners_to_store.end() )
+            {
+                owners_to_store.push_back( owner );
+            }
+
+            utxo_outpoints_.erase( entry_it );
+            if ( reservation_it != local_reservations_.end() )
+            {
+                local_reservations_.erase( reservation_it );
+            }
+            if ( auto address_it = address_outpoints_.find( owner ); address_it != address_outpoints_.end() )
+            {
+                auto &outpoints = address_it->second;
+                outpoints.erase( std::remove( outpoints.begin(), outpoints.end(), outpoint ), outpoints.end() );
+                if ( outpoints.empty() )
+                {
+                    address_outpoints_.erase( address_it );
+                }
+            }
+        }
+
+        std::vector<std::string> stored_so_far;
+        for ( const auto &owner : owners_to_store )
+        {
+            if ( auto store_result = StoreUTXOsLocked( owner ); store_result.has_error() )
+            {
+                // Restore memory, then repair every already-stored owner bucket
+                // from the restored state so disk and memory agree on rollback.
+                utxo_outpoints_     = previous_utxo_outpoints;
+                address_outpoints_  = previous_address_outpoints;
+                local_reservations_ = previous_reservations;
+                for ( const auto &repaired : stored_so_far )
+                {
+                    (void) StoreUTXOsLocked( repaired );
+                }
+                return outcome::failure( store_result.error() );
+            }
+            stored_so_far.push_back( owner );
+        }
+
+        return outcome::success();
+    }
+
     bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
     {
         uint64_t expected_amount = 0;

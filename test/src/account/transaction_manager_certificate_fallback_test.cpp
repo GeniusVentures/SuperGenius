@@ -615,8 +615,8 @@ public:
     /// Inserts + claims the burn UTXO exactly as MintFunds does.
     void SeedBurnUtxoAsMintFunds( const base::Hash256 &burn, uint64_t amount );
 
-    /// True while the raw /utxo/<owner>/<burn>:0 record exists on disk.
-    bool BurnRecordOnDisk( const base::Hash256 &burn ) const;
+    /// True while the raw /utxo/<owner>/<outpoint> record exists on disk.
+    bool UtxoRecordOnDisk( const base::Hash256 &txid ) const;
 
     /// Drives the REAL consensus reject (reject_and_maybe_fail_local -> FAILED).
     void RejectLocalTxThroughConsensus( const std::shared_ptr<GeniusTransaction> &tx );
@@ -1776,11 +1776,11 @@ void CertificateFallbackTest::SeedBurnUtxoAsMintFunds( const base::Hash256 &burn
                UTXOManager::OutpointClaim::kClaimed );
 }
 
-bool CertificateFallbackTest::BurnRecordOnDisk( const base::Hash256 &burn ) const
+bool CertificateFallbackTest::UtxoRecordOnDisk( const base::Hash256 &txid ) const
 {
     // The raw persisted record key (UTXOManager's /utxo/<owner>/<txid>:<idx>).
     crdt::GlobalDB::Buffer key_buffer;
-    key_buffer.put( "/utxo/" + account_->GetAddress() + "/" + burn.toReadableString() + ":0" );
+    key_buffer.put( "/utxo/" + account_->GetAddress() + "/" + txid.toReadableString() + ":0" );
     return db_->GetDataStore()->get( key_buffer ).has_value();
 }
 
@@ -1840,7 +1840,7 @@ TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemoves
     // Present-before (three-part assertion, part 1): the incident's starting
     // state -- burn entry inserted and RESERVED, record durable on disk.
     ASSERT_TRUE( utxo_mgr.IsOutPointReserved( burn, 0 ) );
-    ASSERT_TRUE( BurnRecordOnDisk( burn ) );
+    ASSERT_TRUE( UtxoRecordOnDisk( burn ) );
 
     // The REAL trigger: HandleProposal -> HandleNonceConsensusSubject ->
     // reject_and_maybe_fail_local -> ChangeTransactionState(FAILED).
@@ -1855,11 +1855,112 @@ TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemoves
 
     // Absent-after, on disk: the live-incident observable was the record that
     // survived restart ("stays on disk in READY state").
-    EXPECT_FALSE( BurnRecordOnDisk( burn ) );
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
 
     // No lingering reservation under the burn-ref id: a fresh claim for the
     // same burn starts from a clean slate (kNotClaimable = unknown outpoint),
     // so a relayer redelivery can re-mint instead of wedging.
     EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
                UTXOManager::OutpointClaim::kNotClaimable );
+}
+
+/**
+ * Idempotency (T-18-0503): the FAILED cleanup must be safe on re-fire. The
+ * consensus layer re-delivers and the state machine can see the same tx
+ * again — the handler-level guard (previously-FAILED early reject) and the
+ * state machine's FAILED->FAILED dedup must both leave the cleaned state
+ * exactly as the first fire left it: no second rollback, no error, no
+ * resurrection.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_SecondFailedTransitionIsIdempotent )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'c' ) ).value();
+    const auto mint     = MakeLocalBridgeMintV2( burn, kBurnCleanupNonceBase + 1, 10000 );
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    SeedBurnUtxoAsMintFunds( burn, 10000 );
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    {
+        const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+        ASSERT_TRUE( tracked.has_value() );
+        ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+        ASSERT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+        ASSERT_FALSE( UtxoRecordOnDisk( burn ) );
+    }
+
+    // Re-fire 1: the real consensus path again — the handler must see the
+    // previously-FAILED entry and reject WITHOUT re-entering the state machine.
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    // Re-fire 2: a direct second FAILED transition hits the state machine's
+    // FAILED->FAILED dedup (the layer beneath the handler guard).
+    EXPECT_TRUE( tm_->ChangeTransactionState( mint, TransactionManager::TransactionStatus::FAILED ).has_value() );
+
+    // Single-rollback end state: FAILED, entry still gone everywhere.
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
+}
+
+/**
+ * Negative control (T-18-0502): the removal discriminates the bridge-mint
+ * shape exactly. A FAILED normal (non-mint) local transaction releases its
+ * own reserved input back to READY but removes NOTHING — and an unrelated
+ * UTXO_BRIDGE entry is untouched by either leg.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_NormalTxFailedLeavesUtxoEntriesUntouched )
+{
+    auto &utxo_mgr = account_->GetUTXOManager();
+
+    // A real normal-tx input: seeded, owned, ready to spend.
+    const auto spendable = base::Hash256::fromReadableString( std::string( 64, 'd' ) ).value();
+    ASSERT_TRUE(
+        utxo_mgr
+            .PutUTXO( GeniusUTXO( spendable, 0, 500, kTestTokenId, account_->GetAddress() ), account_->GetAddress() )
+            .has_value() );
+    // An unrelated bridge entry that must never be touched by a normal-tx failure.
+    const auto unrelated_burn = base::Hash256::fromReadableString( std::string( 64, 'e' ) ).value();
+    ASSERT_TRUE( utxo_mgr
+                     .PutUTXO( GeniusUTXO( unrelated_burn, 0, 77, kTestTokenId, account_->GetAddress() ),
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+
+    // The TransferFunds shape: params from the seeded UTXO, signed, reserved
+    // under the transfer's hash.
+    auto params = utxo_mgr.CreateTxParameter( 100, account_->GetAddress(), kTestTokenId );
+    ASSERT_TRUE( params.has_value() );
+    auto [inputs, outputs] = params.value();
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "transfer" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( kBurnCleanupNonceBase + 2 );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+    auto transfer = std::make_shared<TransferTransaction>(
+        TransferTransaction::New( inputs, outputs, std::move( dag ) ) );
+    transfer->MakeSignature( *account_ );
+    utxo_mgr.ReserveUTXOs( inputs, transfer->GetHash() );
+    ASSERT_TRUE( utxo_mgr.IsOutPointReserved( spendable, 0 ) );
+
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( transfer ) );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, transfer->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+
+    // The normal tx's own input: reservation RELEASED (READY again) but the
+    // entry itself is NOT removed — release is the pre-existing normal-tx
+    // behavior; removal is mint-only.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( spendable, 0 ), UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_TRUE( UtxoRecordOnDisk( spendable ) );
+
+    // The unrelated bridge entry: untouched in memory and on disk.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( unrelated_burn, 0 ), UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_TRUE( UtxoRecordOnDisk( unrelated_burn ) );
 }
