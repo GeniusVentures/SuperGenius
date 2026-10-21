@@ -215,8 +215,7 @@ namespace sgns
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
-                            strong->FilterTransaction( element ) );
+                        return strong->FilterTransaction( element );
                     }
                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
@@ -3777,8 +3776,7 @@ namespace sgns
         return ret;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterTransaction(
-        const crdt::pb::Element &element )
+    crdt::CRDTDataFilter::ElementFilterResult TransactionManager::FilterTransaction( const crdt::pb::Element &element )
     {
         std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
         bool                                          should_delete = true;
@@ -3836,7 +3834,8 @@ namespace sgns
             maybe_tombstones = additional_elements_to_delete;
         }
 
-        return maybe_tombstones;
+        // nullopt accepts; a tombstone vector rejects (strip + extras).
+        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional( std::move( maybe_tombstones ) );
     }
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )

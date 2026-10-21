@@ -21,6 +21,7 @@
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 
+#include "crdt/crdt_data_filter.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -780,9 +781,12 @@ namespace sgns
          * and checks for nonce conflicts. Rejected elements are returned as
          * tombstones together with their associated proof key.
          *
-         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         * @return Classified verdict: Accept, Reject (carrying the tombstone
+         *         elements to strip), or Stall when a locally missing
+         *         dependency (e.g. a slot certificate not yet synced) must be
+         *         given the retry schedule a chance to arrive.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterTransaction( const crdt::pb::Element &element );
 
         /**
          * @brief CRDT element filter for incoming proofs.
