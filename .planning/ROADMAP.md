@@ -139,7 +139,30 @@ Plans:
   4. The tick loop activates only under Light ∧ `State::READY` ∧ empty `missing_tx_hashes_` ∧ settle-window elapsed; `GeniusNode` constructs/starts/stops the pruner per config, and default-off config erases nothing.
   5. Each cycle emits the observability log (txs examined/erased, watermark advance — the bytes-reclaimed field completes with Phase 20 compaction) and prune status (watermark + last-cycle stats) is queryable.
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 18-01-PLAN.md — D-02 seal-based re-delivery guard + fetch-attempt seam + SC-3 two-node proof (PRUNE-05)
+- [ ] 18-02-PLAN.md — D-03 net-scoped dev-mint policy: validator twin, both bypass legs scoped, designated/refusal suites, todo closure (PRUNE-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 18-03-PLAN.md — Substrate hardening: D-01 owner-vended compose lock (WR-02 closed), marker batch-join, config keys, BLOCK_ALREADY_ERASED evidence, accessor + pruned driver (PRUNE-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 18-04-PLAN.md — TxPruner service (tick gate, block-grouped K budget, per-tx re-verify, PruneStatus/log) + GeniusNode real-cycle arm (PRUNE-04, RECL-03, RECL-04)
+- [ ] 18-05-PLAN.md — MintFunds FAILED-cleanup folded todo: reconciliation-first, narrow fix or evidenced descope (PRUNE-04)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 18-06-PLAN.md — Service suites: RealPrune/Idempotent, SweepReprunes, SharedBlock stranding, TickGate, Observability/PruneStatus, ComposeLock (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 18-07-PLAN.md — SC-2 crash fixed-point seam matrix + containment-gate sanctioned-caller-set rework + full-suite phase gate (PRUNE-04, PRUNE-05)
 
 ### Phase 19: Pruned-Node Survival & Recovery Hardening
 
