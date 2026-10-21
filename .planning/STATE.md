@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 18
-status: executing
+status: verifying
 stopped_at: Completed 18-06-PLAN.md
-last_updated: "2026-10-21T21:32:48.360Z"
+last_updated: "2026-10-21T22:49:27.864Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 16
-  percent: 9
+  completed_plans: 17
+  percent: 13
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-21
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T21:32:48.354Z
+**Last session:** 2026-10-21T22:49:27.858Z
 **Stopped At:** Completed 18-06-PLAN.md
 **Resume File:** None
 
@@ -151,6 +151,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 18 P03 | 64min | 3 tasks | 13 files |
 | Phase 18 P04 | 16min | 2 tasks | 5 files |
 | Phase 18 P06 | 15min | 3 tasks | 2 files |
+| Phase 18 P07 | 73min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -254,6 +255,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 18]: 18-04: The TxPruner instance owns ONLY config/role/status/settle-clock (generation-safe across Phase-13 switches); every CRDT/service dependency is passed per cycle, and the settle clock restarts whenever the tick gate re-opens — D-C4: no cached evaluator, no cursor (erased txs vanish from enumeration); a cycle can never fire on a stale settle window or during initial sync
 - [Phase ?]: 18-06: The TxPruner suites run as TxPrunerTest (not TxPruner) — a global fixture named TxPruner is ambiguous with sgns::TxPruner under using namespace sgns; the plan's TxPruner.* filters became TxPrunerTest.*
 - [Phase ?]: 18-06: The D-01 proof holds the cycle INSIDE EraseEntry via GlobalDB's erase seam (step 1: guards passed, staged, uncommitted) — the concurrent PutElems racer provably blocks for the whole window, the final state is asserted as a legal serialization (marker committed + add-wins value) with the next cycle re-erasing; the guard-recheck half is the head-guard refusal at erase time (evaluation accepts, compose refuses, never torn)
+- [Phase 18]: 18-07: SC-2's crash matrix is the UNION of both seams' interrupt points (8 cases), compose-step kills fire on the SECOND erase for true partial progress, and a crash between same-block erases legally strands the surviving sibling (BLOCK_ALREADY_ERASED-completable) — convergence, not the intermediate state, is the fixed point — a cycle-level abort prevents the compose seam from firing, so only the union is meaningful; the seam-simulated matrix is THE gate (fork true-kill absent-with-note per research A3)
+- [Phase 18]: 18-07: EraseSurfaceGate is now sanctioned-caller-set enumeration — exact caller-file lists, zero PutRaw in the erase path, dry-run full-body pin, real-cycle dry_run==false source-order pin, tick-gate three-conjunct pin; mutation-verified non-vacuous — the 16/17 zero-production-caller absence-proofs retired by design once TxPruner became the first production eraser; extractFullFunctionBody (brace-counting) added because the trim-based extractor truncates at nested closers and cannot support order pins
 
 ## Deferred Items
 
