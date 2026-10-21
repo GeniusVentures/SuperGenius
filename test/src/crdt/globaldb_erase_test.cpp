@@ -19,6 +19,7 @@
 
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/crdt_options.hpp"
+#include "crdt/crdt_datastore.hpp"
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "base/buffer.hpp"
@@ -426,4 +427,14 @@ TEST_F( GlobalDBEraseTest, UnresolvedCidIsRejected )
     EXPECT_EQ( db.GetRaw( sgns::base::Buffer{}.put( entry_a.tx_path ) ).value().toString(),
                entry_a.cid.toString().value() );
     EXPECT_TRUE( rawSealKeyPresent( db, entry_a.cid ) );
+}
+
+TEST_F( GlobalDBEraseTest, RootFetchAttemptsCounterIsAResettableZeroObservable )
+{
+    // SC-3's Wave-0 observable (18-01 Task 1): the fetch-attempt counter must
+    // exist as static test-only accessors on CrdtDatastore, reset to zero, and
+    // be readable without any datastore instance. RED gate: the build fails on
+    // the missing members until EnqueueRootCID's counter lands.
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
 }
