@@ -724,3 +724,363 @@ TEST_F( TxPrunerTest, Idempotent_CycleAfterFullDrainErasesAndMutatesNothing )
         EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
     }
 }
+
+// ---------------------------------------------------------------------------
+// SweepReprunes: the cycle IS the sweep (D-02b, PRUNE-05's second half)
+// ---------------------------------------------------------------------------
+
+/**
+ * A resurrected entry (an add-wins re-merge simulation: the same element
+ * re-published through the REAL topic path after a full erase) is visible as
+ * the marker-plus-value resurrected state, and the NEXT cycle re-erases it —
+ * the evaluation is fresh every cycle (no cached eligible sets), and the
+ * marker is idempotent (exactly one marker entry, no duplicate harm).
+ */
+TEST_F( TxPrunerTest, SweepReprunes_ResurrectedEntryIsReErasedNextCycle )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+    auto unspent  = MakeTransfer( 3, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/sweep-driver-1", "d1" );
+    SeedTransaction( eligible );
+    SeedTransaction( unspent );
+
+    TrackOutputs( *eligible );
+    TrackOutputs( *unspent );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/sweep-driver-2", "d2" );
+
+    const std::string tx_path = TransactionManager::GetTransactionPath( *eligible );
+    const std::string cid_1   = SnapshotMapEntry( tx_path );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    // First cycle: the full erase.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 1u );
+    ASSERT_TRUE( db_->Get( { tx_path } ).has_error() );
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        ASSERT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // The add-wins re-merge simulation: the same element again through the
+    // REAL publish path (a delayed concurrent merge landing after the
+    // erase), plus the map entry re-wired to the new delta.
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( eligible->SerializeByteVector() );
+    auto republish = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+    ASSERT_TRUE( republish.has_value() );
+    const std::string cid_2 = republish.value().toString().value();
+    SeedTxCidEntry( eligible->GetHash(), cid_2 );
+    PutSeedValue( "/seed/txpruner/sweep-driver-3", "d3" ); // retire cid_2 from headship
+
+    // The resurrected state is VISIBLE: value present again while the old
+    // marker survived — the marker-plus-value shape, never a silent pass.
+    ASSERT_TRUE( db_->Get( { tx_path } ).has_value() );
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION );
+    }
+
+    // The sweep: ONE later cycle re-erases the resurrected entry (the
+    // evaluation enumerated it again — no cached eligible set could have).
+    auto sweep = RunCycle( *pruner );
+    ASSERT_TRUE( sweep.has_value() );
+    EXPECT_EQ( sweep.value().examined, 3u ); // spender + resurrected + unspent
+    EXPECT_EQ( sweep.value().eligible, 1u );
+    EXPECT_EQ( sweep.value().erased, 1u );
+    EXPECT_EQ( sweep.value().held_blocks, 0u );
+    EXPECT_EQ( sweep.value().skipped, 0u );
+    EXPECT_EQ( sweep.value().errors, 0u );
+
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+    EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+    EXPECT_EQ( SnapshotBlocks( { cid_1, cid_2 } ).at( cid_2 ), "absent" );
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // No duplicate-marker harm: exactly ONE marker entry for this hash.
+    EXPECT_EQ( SnapshotPrefix( "/prune/tx/" ).size(), 1u );
+}
+
+// ---------------------------------------------------------------------------
+// SharedBlockBudget: the stranding edge (D-04 group-or-defer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Two eligible transactions sharing ONE delta block: with K=1 the group
+ * DEFERS WHOLE (erased==0, held_blocks==1, both txs intact — a partial take
+ * would strand a sibling behind the exhausted budget); with K=2 (a second
+ * pruner instance — K is captured at construction) both erase together: the
+ * shared block is gone once and both markers are present.
+ */
+TEST_F( TxPrunerTest, SharedBlockBudget_K1DefersWholeThenK2TakesWhole )
+{
+    auto spender = MakeTransfer( 1, 0 );
+    auto tx_a    = MakeTransfer( 2, 1 );
+    auto tx_b    = MakeTransfer( 3, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/shared-driver-1", "d1" );
+
+    TrackOutputs( *tx_a );
+    TrackOutputs( *tx_b );
+    SeedTransactionsInOneBlock( { tx_a, tx_b } );
+    ASSERT_TRUE( ConsumeOutput( *tx_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *tx_b, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/shared-driver-2", "d2" );
+
+    const std::string path_a     = TransactionManager::GetTransactionPath( *tx_a );
+    const std::string path_b     = TransactionManager::GetTransactionPath( *tx_b );
+    const std::string shared_cid = SnapshotMapEntry( path_a );
+    ASSERT_EQ( shared_cid, SnapshotMapEntry( path_b ) ); // ONE shared delta
+
+    // K = 1: the 2-tx group does not fit — deferred WHOLE.
+    auto pruner_k1 = MakePruner( 1, kSmallSettleSeconds );
+    ASSERT_NE( pruner_k1, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner_k1, stats );
+    EXPECT_EQ( stats.examined, 3u );
+    EXPECT_EQ( stats.eligible, 2u );
+    EXPECT_EQ( stats.erased, 0u );
+    EXPECT_EQ( stats.held_blocks, 1u );
+    EXPECT_TRUE( db_->Get( { path_a } ).has_value() );
+    EXPECT_TRUE( db_->Get( { path_b } ).has_value() );
+    EXPECT_NE( SnapshotBlocks( { shared_cid } ).at( shared_cid ), "absent" );
+    {
+        auto lookup_a = PruneEligibility::LookupPrunedEntry( *db_, tx_a->GetHash() );
+        ASSERT_TRUE( lookup_a.has_value() );
+        EXPECT_EQ( lookup_a.value().first, PrunedLookup::NOT_FOUND );
+        auto lookup_b = PruneEligibility::LookupPrunedEntry( *db_, tx_b->GetHash() );
+        ASSERT_TRUE( lookup_b.has_value() );
+        EXPECT_EQ( lookup_b.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    // K = 2 (fresh instance): the group fits — both erase TOGETHER.
+    auto pruner_k2 = MakePruner( 2, kSmallSettleSeconds );
+    ASSERT_NE( pruner_k2, nullptr );
+    PruneCycleStats stats_k2;
+    RunSettledCycle( *pruner_k2, stats_k2 );
+    EXPECT_EQ( stats_k2.eligible, 2u );
+    EXPECT_EQ( stats_k2.erased, 2u );
+    EXPECT_EQ( stats_k2.held_blocks, 0u );
+    EXPECT_EQ( stats_k2.errors, 0u );
+
+    EXPECT_TRUE( db_->Get( { path_a } ).has_error() );
+    EXPECT_TRUE( db_->Get( { path_b } ).has_error() );
+    EXPECT_EQ( SnapshotMapEntry( path_a ), "absent" );
+    EXPECT_EQ( SnapshotMapEntry( path_b ), "absent" );
+    EXPECT_EQ( SnapshotBlocks( { shared_cid } ).at( shared_cid ), "absent" ); // gone ONCE
+    for ( const auto &tx : { tx_a.get(), tx_b.get() } )
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+}
+
+/**
+ * The missing-block completion arm: sibling A is erased directly through the
+ * sanctioned Phase-16 driver (deleting the SHARED block), leaving B
+ * stranded; a FRESH evaluation reports the BLOCK_ALREADY_ERASED evidence on
+ * the absent block's report, and the next cycle completes B through that
+ * evidence — nothing strands.
+ */
+TEST_F( TxPrunerTest, SharedBlockBudget_MissingBlockSiblingCompletesViaEvidence )
+{
+    auto spender = MakeTransfer( 1, 0 );
+    auto tx_a    = MakeTransfer( 2, 1 );
+    auto tx_b    = MakeTransfer( 3, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/missing-driver-1", "d1" );
+
+    TrackOutputs( *tx_a );
+    TrackOutputs( *tx_b );
+    SeedTransactionsInOneBlock( { tx_a, tx_b } );
+    ASSERT_TRUE( ConsumeOutput( *tx_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *tx_b, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/missing-driver-2", "d2" );
+
+    const std::string path_b     = TransactionManager::GetTransactionPath( *tx_b );
+    const std::string shared_cid = SnapshotMapEntry( TransactionManager::GetTransactionPath( *tx_a ) );
+
+    // The budget-exhaustion shape: A's sanctioned erase deletes the SHARED
+    // block and strands B (the 18-03 G1 recipe, driven on this fixture).
+    ASSERT_TRUE( tm_->EraseTransactionEntry( tx_a->GetHash() ).has_value() );
+    ASSERT_EQ( SnapshotBlocks( { shared_cid } ).at( shared_cid ), "absent" );
+    ASSERT_TRUE( db_->Get( { path_b } ).has_value() ); // B stranded, value intact
+
+    // The explicit evidence in a FRESH evaluation's block_reports (the
+    // checker-adjusted assertion: the evidence lives in the evaluator result).
+    {
+        PruningConfig config;
+        config.finality_window = kWindow;
+        auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+        ASSERT_TRUE( evaluator.has_value() );
+        auto evaluation = evaluator.value()->Evaluate();
+        ASSERT_TRUE( evaluation.has_value() );
+        const BlockGateResult *report = nullptr;
+        for ( const auto &candidate_report : evaluation.value().block_reports )
+        {
+            if ( candidate_report.cid == shared_cid )
+            {
+                report = &candidate_report;
+            }
+        }
+        ASSERT_NE( report, nullptr );
+        EXPECT_TRUE( report->erasable );
+        const auto evidence_found = std::find( report->reasons.begin(),
+                                               report->reasons.end(),
+                                               PruneReason::BLOCK_ALREADY_ERASED );
+        EXPECT_NE( evidence_found, report->reasons.end() );
+    }
+
+    // The cycle completes B through the evidence: value + map entry + marker.
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    EXPECT_EQ( stats.erased, 1u );
+    EXPECT_EQ( stats.held_blocks, 0u );
+    EXPECT_EQ( stats.errors, 0u );
+
+    EXPECT_TRUE( db_->Get( { path_b } ).has_error() );
+    EXPECT_EQ( SnapshotMapEntry( path_b ), "absent" );
+    auto lookup_b = PruneEligibility::LookupPrunedEntry( *db_, tx_b->GetHash() );
+    ASSERT_TRUE( lookup_b.has_value() );
+    EXPECT_EQ( lookup_b.value().first, PrunedLookup::PRUNED );
+
+    // The plain driver wrote NO marker for A — the pruned marker is the
+    // cycle's alone (the two drivers stay distinguishable).
+    auto lookup_a = PruneEligibility::LookupPrunedEntry( *db_, tx_a->GetHash() );
+    ASSERT_TRUE( lookup_a.has_value() );
+    EXPECT_EQ( lookup_a.value().first, PrunedLookup::NOT_FOUND );
+}
+
+// ---------------------------------------------------------------------------
+// TickGate: SC-4 service-half refusals
+// ---------------------------------------------------------------------------
+
+/** Non-Light roles are refused at construction — the GATE-01 mirror. */
+TEST_F( TxPrunerTest, TickGate_NonLightRolesRefusedAtConstruction )
+{
+    PruningConfig config;
+    config.enabled         = true;
+    config.finality_window = kWindow;
+
+    auto full = sgns::TxPruner::New( NodeType::Full, config );
+    ASSERT_TRUE( full.has_error() );
+    EXPECT_EQ( full.error(), std::errc::operation_not_permitted );
+    EXPECT_TRUE( sgns::TxPruner::IsPermanentStop( full.error() ) );
+
+    auto archive = sgns::TxPruner::New( NodeType::Archive, config );
+    ASSERT_TRUE( archive.has_error() );
+    EXPECT_EQ( archive.error(), std::errc::operation_not_permitted );
+
+    auto light = sgns::TxPruner::New( NodeType::Light, config );
+    EXPECT_TRUE( light.has_value() );
+}
+
+/**
+ * A TransactionManager outside State::READY gate-skips the cycle: zeroed
+ * stats, status untouched, nothing erased — and the same pruner DOES run
+ * once the manager reaches READY (the skip is the gate, not a vacuous pass).
+ */
+TEST_F( TxPrunerTest, TickGate_NotReadySkipsThenRunsWhenReady )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/gate-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/gate-driver-2", "d2" );
+
+    ASSERT_NE( tm_->GetState(), TransactionManager::State::READY ); // still CREATING
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    auto skipped = RunCycle( *pruner );
+    ASSERT_TRUE( skipped.has_value() );
+    EXPECT_EQ( skipped.value().examined, 0u );
+    EXPECT_EQ( skipped.value().eligible, 0u );
+    EXPECT_EQ( skipped.value().erased, 0u );
+    EXPECT_EQ( skipped.value().held_blocks, 0u );
+    EXPECT_EQ( skipped.value().skipped, 0u );
+    EXPECT_EQ( skipped.value().errors, 0u );
+    EXPECT_FALSE( pruner->GetPruneStatus().watermark.has_value() ); // status untouched
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *eligible ) } ).has_value() );
+
+    // Non-vacuous proof: READY reached, the settled cycle erases.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    EXPECT_EQ( stats.erased, 1u );
+    EXPECT_TRUE( pruner->GetPruneStatus().watermark.has_value() );
+}
+
+/**
+ * The settle window: with a large settle the gate holds READY yet skips
+ * twice (clock start, then not elapsed) without touching anything; a second
+ * pruner with the small settle then proves the skip was the settle gate —
+ * its cycle runs and erases.
+ */
+TEST_F( TxPrunerTest, TickGate_SettleWindowNotElapsedSkipsThenAllowsAfterSettle )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/settle-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/settle-driver-2", "d2" );
+
+    auto pruner_large_settle = MakePruner( 10, 3600 ); // settle far beyond the test
+    ASSERT_NE( pruner_large_settle, nullptr );
+    ForceManagerReady();
+
+    for ( int i = 0; i < 2; ++i )
+    {
+        auto skipped = RunCycle( *pruner_large_settle );
+        ASSERT_TRUE( skipped.has_value() );
+        EXPECT_EQ( skipped.value().examined, 0u );
+        EXPECT_EQ( skipped.value().erased, 0u );
+    }
+    EXPECT_FALSE( pruner_large_settle->GetPruneStatus().watermark.has_value() );
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *eligible ) } ).has_value() );
+
+    // The same fixture under a small settle runs: the earlier skips were the
+    // settle window, nothing else.
+    auto pruner_small_settle = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner_small_settle, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner_small_settle, stats );
+    EXPECT_EQ( stats.erased, 1u );
+}
+
+/**
+ * The missing-set conjunct at the accessor level: an empty fixture reports
+ * HasMissingTxHashes()==false, so the gate's third input holds in every
+ * cycle above. Driving a NON-empty missing set has no public seam (it fills
+ * only through the sync scan inside StartCore) — not faked here.
+ */
+TEST_F( TxPrunerTest, TickGate_EmptyMissingSetAtAccessorLevel )
+{
+    const TransactionManager &const_tm = *tm_;
+    EXPECT_FALSE( const_tm.HasMissingTxHashes() );
+}
