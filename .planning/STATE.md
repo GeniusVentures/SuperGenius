@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
 stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-10-21T18:15:14.126Z"
+last_updated: "2026-10-21T19:01:03.401Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 11
+  completed_plans: 12
   percent: 9
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-10-21
 
-Progress: [███████░░░] 65%
+Progress: [███████░░░] 71%
 
 ## Roadmap Snapshot
 
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T18:15:14.119Z
+**Last session:** 2026-10-21T19:01:03.394Z
 **Stopped At:** Completed 18-01-PLAN.md
-**Resume File:** .planning/phases/18-txpruner-service-first-real-prune/18-02-PLAN.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -147,6 +147,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P05 | 27min | 3 tasks | 4 files |
 | Phase 17 P06 | 55min | 3 tasks | 2 files |
 | Phase 18 P01 | 43min | 2 tasks | 3 files |
+| Phase 18 P02 | 43min | 2 tasks | 9 files |
 
 ## Decisions
 
@@ -237,6 +238,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 17]: 17-06: GATE-06 landed as the sgns_config.json pruning object read (one HasMember+IsObject guard wraps the entire read — absent keys execute zero new statements, SC-5), delegating all member parsing to PruningConfig::FromJSON (the 17-04 one parse home); dry_run=false WARNs that real erasure arrives with the Phase-18 TxPruner
 - [Phase ?]: 18-01: D-02 re-delivery guard is one isResolved insertion in HandleCIDBroadcast after the HasBlock miss — seals are the dedup of record; counter rides the SetEraseInterruptHookForTest seam shape
 - [Phase ?]: 18-01: SC-3 proof uses a deaf-broadcaster node A so the pruned root stays A's live head; the in-window tracer fetch (gossip message-cache delivery on join) proves the zero-fetch assertion non-vacuous
+- [Phase ?]: 18-02: Designated dev-mint net set is compile-time constexpr (staging 333 + dev 144 from the named constants) — config can never widen it; DevMintBurnlessPermitted() reads only version::GetNetworkID(), never a tx/proposal field
+- [Phase ?]: 18-02: Both GatherVerificationEvidence bypass legs net-scoped via LocalBypassEvidence helper — refusal returns default-invalid evidence on non-designated nets; the unconditional empty-chain-id hole is closed in released code paths
+- [Phase ?]: 18-02: Dev validator tests drive the full public Blockchain proposal surface (no friend access); refusal proven by 10s negative waitForCondition against the ~6s designated positive
 
 ## Deferred Items
 
