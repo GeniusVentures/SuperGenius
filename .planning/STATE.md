@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
-status: verifying
-stopped_at: "Completed 21-09-PLAN.md (TRUST-01 gap closure: WR-01 content-bound probe + CR-03 defer-bounded grandfathered stall + WR-02 negative-window guard; all 9 phase plans executed, phase awaiting verification)"
-last_updated: "2026-10-21T19:23:00.451Z"
+status: ready_to_plan
+stopped_at: Phase 21 complete (9/9) — ready to discuss Phase 22
+last_updated: 2026-10-21T20:06:36.955Z
 last_activity: 2026-10-21
 progress:
   total_phases: 27
@@ -19,19 +19,19 @@ progress:
 
 **Last updated:** 2026-10-19
 **Milestone:** v1.3 — Security Remediation & Network Readiness (all 25 findings from the October 2026 external security assessment)
-**Current Phase:** 21
+**Current Phase:** 22
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-19)
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart — and nothing an unauthenticated peer sends can change that.
-**Current focus:** Phase 21 — Consensus Trust & Mint Authorization
+**Current focus:** Phase 22 — wire & ingestion hardening (fork)
 
 ## Current Position
 
 Phase: 21 (Consensus Trust & Mint Authorization) — VERIFYING
-Plan: 9 of 9 complete (21-09 TRUST-01 gap closure done; all phase plans executed, awaiting phase verification)
-Status: verifying
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-10-21
 
 Progress: [██████████] 100%

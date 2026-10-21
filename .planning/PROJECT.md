@@ -53,16 +53,18 @@ This milestone closes all 25 findings from the October 2026 external security as
 - ✓ Certificate publication has deterministic verifiable authority, persistence-before-advertisement, and safe failover — **Validated in Phase 10**
 - ✓ Local completion, PubSub receipt, CRDT synchronization, and restart recovery converge through one durable canonical-certificate path; honest validators produce one same-slot winner — **Validated in Phases 9–11**
 - ✓ A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart — production-path regression proof via real PubSub/CRDT/RocksDB/consensus/Mint-ingress (TEST-01..TEST-06) — **Validated in Phase 12**
+- ✓ A registry loaded by CID for certificate vote tallying is authorization-verified — forged-registry self-certification rejected via chain-walk verification, content-bound grandfather probe, and verified-only caching; the grandfathered stall is defer-bounded (TRUST-01, #1) — **Validated in Phase 21 (incl. gap closure)**
+- ✓ Validator admission growth-bounds audited with dispositions, per-update ACTIVE-addition cap enforced, and cross-certificate equivocation rejected with durable markers (TRUST-02, #14) — **Validated in Phase 21**
+- ✓ Public-chain evidence validation fails closed on empty/local chain identifiers and empty source references with per-type consensus rules (MINT-02, #3) — **Validated in Phase 21**
+- ✓ Legacy-v1 mint reception hard-disabled at all three ingresses (consensus, RPC preflight, sync admission) via admission gating only; existing outputs spendable (MINT-03, #4) — **Validated in Phase 21**
+- ✓ A burn receipt's token ID, amount, and destination bound to the mint's outputs — single-output constraint, bridge-less endpoints earn no weight (MINT-04, #5) — **Validated in Phase 21 (incl. gap closure)**
+- ✓ Fresh-node trust roots pinnable to a ceremony fingerprint with fail-closed boot on tamper (folded trusted-peer-genesis-config todo) — **Validated in Phase 21**
 
 ### Active
 
 <!-- v1.3 scope. Hypotheses until shipped. Detailed REQ-IDs in REQUIREMENTS.md. -->
 
-- [ ] A registry loaded by CID for certificate vote tallying is authorization-verified — forged-registry self-certification is rejected (#1)
-- [ ] Escrow spending requires entitled authority (certified task result), not just a signature from the spending key (#2)
-- [ ] Mint paths never fail open on empty/local chain IDs or empty source references (#3)
-- [ ] Legacy-v1 mint reception is disabled or mint authority is enforced (#4)
-- [ ] A burn receipt's token ID, amount, and destination are bound to the mint's outputs (#5)
+- [ ] Escrow spending requires entitled authority (certified task result), not just a signature from the spending key (#2 — MINT-01, Phase 26)
 - [ ] Irreversible native issuance requires source-chain confirmation depth/finality (#10)
 - [ ] RPC corroboration compares agreeing block/event content, not endpoint-URL success counts (#11)
 - [ ] Network-provided length prefixes are capped before allocation across libp2p parse boundaries (#8)
@@ -197,6 +199,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-10-21 — Phase 21 complete (consensus trust & mint authorization: TRUST-01/02, MINT-02/03/04 validated; 9 plans incl. 2 gap-closure)*
 *Last updated: 2026-10-19 after v1.3 milestone start (security remediation & network readiness — all 25 assessment findings; v1.2 continues on its execution branch)*
 *Last updated: 2026-10-15 after v1.2 milestone start (light-node transaction pruning — sliding-window disk reclamation)*
 *Last updated: 2026-10-05 after v1.1 milestone (shipped with recorded gaps; REQUIREMENTS archived; next milestone not yet planned)*
