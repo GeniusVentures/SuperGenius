@@ -179,10 +179,31 @@ namespace
         std::string response_;
     };
 
-    /// @brief Validator wired with three PUBLIC endpoints (3 x 25 = 75 quorum)
-    ///        accepting both canonical bridge topic0 hashes, and a transport
+    /// @brief An honest receipt for an UNRELATED public-chain transaction:
+    ///        status 0x1 with no logs at all. Receipt existence alone must not
+    ///        attest a burn (CR-02 fixture).
+    std::string BuildPlainSuccessReceiptJson( const std::string &tx_hash )
+    {
+        boost::json::object result;
+        result["status"]          = "0x1";
+        result["blockNumber"]     = "0x100000";
+        result["blockHash"]       = "0x" + std::string( 64, '1' );
+        result["transactionHash"] = tx_hash;
+        result["logs"]            = boost::json::array{};
+
+        boost::json::object root;
+        root["jsonrpc"] = "2.0";
+        root["id"]      = 1;
+        root["result"]  = std::move( result );
+        return boost::json::serialize( root );
+    }
+
+    /// @brief Validator with three PUBLIC endpoints (3 x 25 = 75 quorum) whose
+    ///        bridge binding fields are caller-controlled, and a transport
     ///        factory serving @p receipt_json from every endpoint.
-    std::unique_ptr<PublicChainInputValidator> MakeValidator( const std::string &receipt_json )
+    std::unique_ptr<PublicChainInputValidator> MakeValidatorWithBridgeBinding( const std::string &receipt_json,
+                                                                              const std::string &bridge_contract,
+                                                                              std::vector<std::string> topic0_hashes )
     {
         auto validator = std::make_unique<PublicChainInputValidator>();
 
@@ -192,9 +213,8 @@ namespace
             WeightedRpcEndpoint ep;
             ep.url                     = url;
             ep.consensus_weight        = 25;
-            ep.bridge_contract_address = kContract;
-            ep.accepted_topic0_hashes  = { CanonicalTopic0( sgns::kBridgeSourceBurnedSig ),
-                                           CanonicalTopic0( sgns::kBridgeOutInitiatedSig ) };
+            ep.bridge_contract_address = bridge_contract;
+            ep.accepted_topic0_hashes  = topic0_hashes;
             endpoints.push_back( std::move( ep ) );
         }
         validator->SetRpcEndpoints( kChainId, std::move( endpoints ) );
@@ -202,6 +222,16 @@ namespace
             [receipt_json]( const std::string &, std::chrono::seconds ) -> std::unique_ptr<eth::rpc::JsonRpcTransport>
             { return std::make_unique<CannedTransport>( receipt_json ); } );
         return validator;
+    }
+
+    /// @brief Validator with three bridge-configured PUBLIC endpoints (3 x 25
+    ///        = 75 quorum) accepting both canonical bridge topic0 hashes.
+    std::unique_ptr<PublicChainInputValidator> MakeValidator( const std::string &receipt_json )
+    {
+        return MakeValidatorWithBridgeBinding( receipt_json,
+                                               kContract,
+                                               { CanonicalTopic0( sgns::kBridgeSourceBurnedSig ),
+                                                 CanonicalTopic0( sgns::kBridgeOutInitiatedSig ) } );
     }
 
     /// @brief A mint-v2 whose own fields are set independently of any receipt.
@@ -285,6 +315,37 @@ namespace
         std::string GetChainId() const override
         {
             return "supergenius";
+        }
+    };
+
+    /// @brief A non-mint transaction on a PUBLIC chain id (escrow-style): the
+    ///        type family whose bridge-optional confirmation the CR-02 guard
+    ///        must leave untouched (scoping compat).
+    class PublicChainNonMintTx final : public GeniusTransaction
+    {
+    public:
+        PublicChainNonMintTx() : GeniusTransaction( "escrow-hold", SGTransaction::DAGStruct{} )
+        {
+        }
+
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct & ) const override
+        {
+            return {};
+        }
+
+        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct & ) const override
+        {
+            return {};
+        }
+
+        std::string GetTransactionSpecificPath() const override
+        {
+            return GetType();
+        }
+
+        std::string GetChainId() const override
+        {
+            return kChainId;
         }
     };
 
@@ -565,5 +626,72 @@ namespace
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A receipt with an unknown topic0 must still be rejected";
         EXPECT_EQ( evidence.successful_weight, 0 ) << "No endpoint may confirm a bogus-topic0 receipt";
+    }
+
+    // ── CR-02: bridge-less endpoints must not confirm evidence-required mints
+
+    TEST( MintEvidenceBindingTest, BridgelessEndpointQuorumFails )
+    {
+        // Attacker authority: the mint submitter cites ANY successful
+        // public-chain transaction hash as source_reference (here an unrelated
+        // transfer with no bridge logs at all) and gathers >= 75 weight from
+        // endpoints whose bridge_contract_address is empty — endpoints that
+        // never check bridge logs. Expected: quorum fails with zero
+        // successful weight. Pre-fix behavior (CR-02, 21-VERIFICATION gap 2):
+        // valid == true with 75/75 weight credited right after the receipt
+        // status check — the entire log-matching block is nested under a
+        // non-empty bridge address, so every bridge defense was skipped.
+        auto validator = MakeValidatorWithBridgeBinding( BuildPlainSuccessReceiptJson( kSourceRef ), "", {} );
+
+        const auto mint = MakeMintV2( 7,
+                                      kChainId,
+                                      TokenID::FromBytes( { 0xAB, 0xCD } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A quorum of bridge-less endpoints must not confirm a mint (CR-02)";
+        EXPECT_EQ( evidence.successful_weight, 0 ) << "Bridge-less endpoints earn no weight on evidence-required mints";
+    }
+
+    TEST( MintEvidenceBindingTest, EmptyTopic0SetDoesNotConfirm )
+    {
+        // Attacker authority: an endpoint operator (or a merged public
+        // endpoint list) configures the bridge contract but no accepted
+        // topic0 hashes — an endpoint that cannot recognize a bridge event
+        // cannot attest a burn. Expected: no weight credit, quorum fails.
+        // Pre-fix: this shape already earned no weight (no log topic0 can
+        // match an empty accepted set); the case pins the guarantee the CR-02
+        // guard makes explicit for both empty binding fields.
+        ReceiptFacts facts;
+        facts.token_id = 0xABCD;
+        facts.amount   = 7;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto validator = MakeValidatorWithBridgeBinding( BuildBridgeBurnReceiptJson( kSourceRef, facts ), kContract, {} );
+
+        const auto mint = MakeMintV2( 7,
+                                      kChainId,
+                                      TokenID::FromBytes( { 0xAB, 0xCD } ),
+                                      std::string( kGeneratorX ) + kGeneratorY );
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "An endpoint with an empty topic0 set must not confirm a mint";
+        EXPECT_EQ( evidence.successful_weight, 0 ) << "An endpoint that cannot recognize a bridge event earns no weight";
+    }
+
+    TEST( MintEvidenceBindingTest, BridgelessEndpointStillConfirmsNonMintPublicType )
+    {
+        // Compat twin (CR-02 scoping): the no-confirm guard is scoped to
+        // RequiresPublicChainEvidence types ("mint"/"mint-v2"). A non-mint
+        // public-chain type routed to this validator keeps today's
+        // bridge-optional confirmation: bridge-less endpoints honestly
+        // serving a successful receipt still confirm it (unchanged before and
+        // after the fix).
+        auto validator = MakeValidatorWithBridgeBinding( BuildPlainSuccessReceiptJson( kSourceRef ), "", {} );
+
+        PublicChainNonMintTx non_mint_tx;
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, non_mint_tx, kSourceRef );
+        EXPECT_TRUE( evidence.valid ) << "Non-mint public-chain types keep bridge-optional confirmation";
+        EXPECT_EQ( evidence.successful_weight, 75 );
     }
 } // namespace
