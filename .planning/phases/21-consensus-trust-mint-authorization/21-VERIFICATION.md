@@ -1,56 +1,29 @@
 ---
 phase: 21-consensus-trust-mint-authorization
-verified: 2026-10-21T00:00:00Z
-status: gaps_found
-score: 3/5 must-haves verified
+verified: 2026-10-21T17:05:00Z
+status: passed
+score: 5/5 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)"
-    status: failed
-    reason: "CR-01 (code-confirmed): the burn-fact binding compares only the FIRST output of a mint-v2. GetAmount/GetTokenID/GetPrimaryDestinationAddress all return utxo_params_.second.front() (MintTransactionV2.cpp:145-170), FromNew accepts arbitrarily many outputs (only rejects empty, :134), and PublicChainInputValidator::ValidateUTXOParameters requires only !outputs.empty() (PCIV.cpp:188). A submitter crafts output[0] = exactly the attested burn plus output[1..n] carrying extra value: every MINT-04 check passes on output[0] while the mint creates N outputs. No ingress constrains mint-v2 to a single output. Adversarial tests (mint_evidence_binding_test 13/13 green) only construct single-output mints, so the bypass is untested and open. No later milestone phase covers the mint output-set binding (Phase 24 = confirmation depth/corroboration; Phase 26 = escrow entitlement)."
-    artifacts:
-      - path: "src/account/PublicChainInputValidator.cpp"
-        issue: "DecodeAndBindBurnFacts (:103-173) compares decoded facts against front()-only accessors; no output-count or output-set-sum constraint anywhere on the evidence path"
-      - path: "src/account/MintTransactionV2.cpp"
-        issue: "GetAmount/GetTokenID/GetPrimaryDestinationAddress (:145-170) read utxo_params_.second.front() only while FromNew (:118-137) accepts N outputs"
-    missing:
-      - "For evidence-required mint types, require exactly one output at binding/admission, or bind the full output set (sum(outputs.amount) == facts.amount AND every destination == facts.destination AND every token == facts.token)"
-      - "Adversarial test: multi-output mint whose output[0] matches the receipt and output[1] carries extra value must be rejected"
-  - truth: "RPC endpoint confirmation of a mint is conditioned on the bridge burn evidence (MINT-04 support condition)"
-    status: failed
-    reason: "CR-02 (code-confirmed): the entire log-matching block — bridge-contract address check, accepted-topic0 check, and the MINT-04 DecodeAndBindBurnFacts call — is nested under `if ( !ep.bridge_contract_address.empty() )` (PCIV.cpp:580-637). An endpoint configured with an empty bridge contract address skips all of it and is credited full consensus_weight at :640 on a receipt that merely exists with status == 0x1. With sufficient weight from such endpoints, a mint-v2 citing any successful public-chain tx hash gathers valid evidence. Reachable via GeniusNode::ConfigureRpcEndpoint. The MINT-02 fixes close the identity fail-opens but keep this per-endpoint fail-open. Phase 24 BRIDGE-02 (content corroboration, fabricated-quorum test) is adjacent but does not explicitly name this condition — kept as a gap, not deferred."
-    artifacts:
-      - path: "src/account/PublicChainInputValidator.cpp"
-        issue: "Endpoint without bridge_contract_address falls through the guarded block to successful_weight += consensus_weight (:640) without any log/burn-fact check"
-    missing:
-      - "For RequiresPublicChainEvidence transactions, an endpoint with empty bridge_contract_address or empty accepted_topic0_hashes must not confirm (continue, no weight credit)"
-      - "Adversarial test: quorum weight assembled from bridge-less endpoints confirming an unrelated receipt must fail"
-  - truth: "A certificate path loading a validator registry by CID rejects a forged/self-certified registry (TRUST-01) — attack still viable through the grandfather path (WR-01) and the grandfathered stall is unbounded (CR-03)"
-    status: failed
-    reason: "Strict path verified working (Consensus.cpp:3694-3703, permission_denied -> Reject; multi-node adversarial test exists and unit pairs green 37/37). But: (CR-03, code-confirmed) the grandfathered path (:3673-3688) returns Check::Stalled on ANY registry-load error with NO defer bound, while the strict path is bounded (:3714) — any gossip peer can craft a certificate at a slot that already has a durable record referencing a nonexistent registry CID and stall its whole CRDT delta forever, re-opening the exact DoS the D-03 tracker closed. (WR-01, code-confirmed) the grandfather probe (:3650-3658) grants grandfathering by slot-record EXISTENCE only — the stored bytes are never compared to the candidate. An attacker reusing their own already-finalized slot (account:nonce is attacker-controlled) with a newly crafted certificate referencing a FORGED registry skips chain verification entirely, tallies against the unverified registry (:3739 uses the LoadUnverifiedRegistryByCid result), and with disjoint signers the equivocation guard does not fire and the lower-hash rule (:3550) can accept it over the stored winner. The phase goal's 'trust anchor holds on a public network' is therefore not achieved as stated."
-    artifacts:
-      - path: "src/blockchain/Consensus.cpp"
-        issue: "Grandfather probe :3650-3658 is existence-only (no content binding); grandfathered load failure :3679-3687 returns Stalled with no authorization_defer_tracker_ bound"
-    missing:
-      - "Route the grandfathered registry-load failure through authorization_defer_tracker_ (expired -> deterministic Reject) so the stall is bounded exactly like the strict path"
-      - "Bind the probe by content: parse the durable record and require it to be this certificate (serialized-hash equality) before skipping strict authorization, or run the strict verified load on the grandfather path too"
-      - "Adversarial test: newly crafted certificate at an already-finalized slot referencing a forged registry CID must be rejected; conflicting-certificate-at-finalized-slot overwrite must not succeed via lower-hash ordering"
-  - truth: "MINT-04 adversarial evidence covers the attacks a submitter can actually mount (assessment bar: the attack described is actually rejected)"
-    status: partial
-    reason: "Grouped with the two MINT-04 gaps above: single-output, bridge-configured-endpoint mismatches ARE rejected (13/13 tests), but the multi-output (CR-01) and bridge-less-endpoint (CR-02) attacks remain viable, so the requirement's close is not fail-closed against the reviewed attack set."
-    artifacts:
-      - path: "test/src/account/mint_evidence_binding_test.cpp"
-        issue: "All cases construct single-output mints with bridge-configured endpoints; no case exercises CR-01/CR-02 shapes"
-    missing:
-      - "Test coverage for the two bypass shapes once fixed"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 3/5
+  gaps_closed:
+    - "MINT-04 / CR-01 multi-output inflation: DecodeAndBindBurnFacts now requires exactly one output (PCIV.cpp:113-118) before the fact comparisons; nullopt discards ALL evidence; MultiOutputMintFirstOutputMatchesStillRejected adversarial test green"
+    - "MINT-04 / CR-02 bridge-less endpoint: endpoints with empty bridge_contract_address OR empty accepted_topic0_hashes earn zero weight on evidence-required types (PCIV.cpp:598-606, scoped by RequiresPublicChainEvidence); BridgelessEndpointQuorumFails + EmptyTopic0SetDoesNotConfirm green; non-mint bridge-optional compat twin green"
+    - "TRUST-01 / WR-01 existence-only grandfather probe: probe now parses the durable record and requires SerializedCertificateHash equality before grandfathering (Consensus.cpp:3656-3690); CraftedCertificateAtFinalizedSlotRejected and ConflictingLowerHashCertificateAtFinalizedSlotDoesNotOverwrite green; content-equal D-01 compat twin green at unit AND real-socket level"
+    - "TRUST-01 / CR-03 unbounded grandfathered stall: grandfathered registry-load failure routes through authorization_defer_tracker_ under the same registry-CID key as the strict path (Consensus.cpp:3706-3724); expiry -> deterministic Reject; GrandfatheredLoadFailureRejectsAfterDeferWindow + GrandfatheredLoadFailureStallsWithinWindow green"
+    - "MINT-04 adversarial evidence coverage: both bypass shapes now covered by tests naming attacker authority with recorded pre-fix behavior (gap 4, partial -> closed)"
+    - "Adjacent WR-02 (folded into 21-09): negative-window warn-and-ignore guard on SetLegacyMintDeferWindow (TM.cpp:4644-4648); NegativeLegacyMintDeferWindowIgnored green"
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 21: Consensus Trust & Mint Authorization Verification Report
+# Phase 21: Consensus Trust & Mint Authorization Verification Report (Re-Verification)
 
 **Phase Goal:** The certificate trust anchor holds on a public network — a registry loaded by CID is authorization-verified with a grandfather rule that keeps historical finality re-validating — and every mint/escrow authorization gap from the assessment's highest-credibility findings (#1, #3, #4, #5, #14) closes fail-closed without orphaning legitimate state.
-**Verified:** 2026-10-21
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-10-21T17:05:00Z
+**Status:** passed
+**Re-verification:** Yes — after gap closure (21-08, 21-09)
 
 ## Goal Achievement
 
@@ -58,91 +31,101 @@ gaps:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | TRUST-01: certificate path rejects forged/self-certified registry CID; pre-upgrade certs re-validate after restart; catch-up sync unchanged | ✗ FAILED | Strict path works and is tested (Consensus.cpp:3694-3703; consensus_pending_lifecycle 37/37 incl. forged-reject, grandfather twin, deadline; multi-node TEST_Fs exist at multi_node_finality_fault_test.cpp:2746/2817/2881). BUT the grandfather path re-opens the boundary: probe is existence-only with no content binding (:3650-3658, WR-01) and its registry-load failure is Stalled forever with no defer bound (:3679-3687, CR-03). Both independently confirmed in code. The forged-registry attack remains viable for any slot with an existing durable record; the unbounded-stall DoS the D-03 tracker closed is re-opened on the grandfathered path. |
-| 2 | TRUST-02: admission growth-bounds and cross-certificate equivocation audit documented with findings and dispositions | ✓ VERIFIED | .planning/notes/2026-10-validator-admission-equivocation-audit.md exists (68 lines, F1-F4 findings, 5 Disposition entries, file:line evidence, named attacker authorities, Phase 25 residuals named). Cap enforcement proven through the member path (validator_admission_equivocation_test 5/5: over-cap truncates at exactly cap, wired 3 overrides default 10, sub-cap inserts all). Equivocation guard live in FilterCertificate's conflict branch (Consensus.cpp:3517-3547) with dual-signature proof, durable marker under sibling prefix, and disjoint-signer compat twin. |
-| 3 | MINT-02: evidence validation fails closed on empty/local chain ids and empty source references; native vs bridge mint follow separated per-type consensus rules | ✓ VERIFIED | PCIV.cpp:462-479 (empty source_reference on mint types -> fail closed), :483-494 (local/scoped-local chain id on mint types -> fail closed), RequiresPublicChainEvidence covers exactly "mint"/"mint-v2" (:70), non-mint local bypass preserved (:495-500). Consensus-side per-type separation present (IsPublicChainMintChainId Consensus.cpp:57-70 -> DecideQuorum bridge_mint split with D-06 slot model, :2645-2662). mint_evidence_binding_test 13/13 green incl. all four identity adversarial cases + compat twin. Caveat (warning): CR-02 keeps a per-endpoint fail-open in the same function — it does not let an empty-source/local-chain mint through, so this truth holds, but see gap 2. |
-| 4 | MINT-03: newly submitted self-signed legacy-v1 mint rejected at every ingress; pre-cutover outputs spendable; fresh node syncs READY; restart recovers; admission gating only | ✓ VERIFIED | All three ingresses in code: consensus ingress (TransactionConsensusHandler.cpp:824), submission preflight with named errc before any CRDT Put (TransactionManager.cpp:2025-2031), sync admission certificate-conditional Stall/Reject with D-03 bound (TransactionManager.cpp:3808-3846). One-home predicate IsValueCarryingLegacyMint (TM.cpp:4626-4634, zero-amount exempt). legacy_mint_admission_test 6/6 + legacy_mint_sync_admission_test 7/7 green (stall resolves on cert arrival, deadline rejects with tombstone, certified history admits first-pass, migration zero-stall). Parser map untouched (deserialization open). Review's verified-areas section independently calls the sync gate "soundly bound". Multi-node compat suites (multi_account, migration, multi_node_finality_fault) reported green with commits present; not re-run by this verifier (real-socket, serialized, minutes-long). |
-| 5 | MINT-04: mint whose token/amount/destination mismatches the burn receipt rejected even when every RPC endpoint honestly reports the receipt | ✗ FAILED | Binding exists and its tests pass (13/13) — but only for the single-output, bridge-configured shape. CR-01: all three accessors read front() only (MintTransactionV2.cpp:145-170); deserialization and PCIV:188 accept N outputs; a multi-output mint passes every check on output[0] while minting N. CR-02: endpoints without bridge_contract_address skip the entire defense (PCIV.cpp:580) and confirm on receipt existence (:640). Both bypasses code-confirmed; neither covered by tests; no later phase covers the output-set binding. |
+| 1 | TRUST-01: certificate path rejects forged/self-certified registry CID; pre-upgrade certs re-validate after restart; catch-up sync unchanged | ✓ VERIFIED | Strict path intact (Consensus.cpp:3726-3766: verified loader, permission_denied -> Reject, D-03 deadline). WR-01 CLOSED: probe (:3656-3690) parses the durable record via ParseFromArray and grants grandfathered_final ONLY on SerializedCertificateHash( stored bytes ) == SerializedCertificateHash( candidate serialization ); parse failure or hash mismatch fails closed onto the strict path. Write path consistency confirmed: SubmitCertificate stores certificate.SerializeToString bytes at the same key derivation (:2836-2850). CR-03 CLOSED: grandfathered load failure (:3706-3724) calls authorization_defer_tracker_.Defer( registry_cid ) — the SAME tracker and key as the strict path (:3750) — expired -> deadline-named Check::Reject, in-window -> never-memoized Check::Stalled. Tests run by this verifier: consensus_pending_lifecycle 41/41 (incl. CraftedCertificateAtFinalizedSlotRejected, ConflictingLowerHashCertificateAtFinalizedSlotDoesNotOverwrite asserting ValidateCertificate Reject + FilterCertificate kReject + stored bytes intact, both GrandfatheredLoadFailure cases); multi-node real-socket trio 3/3 (ForgedRegistryCidCertificateIsRejectedWithNoDurableRecord 5.7s, RestartedFinalCertificateRevalidatesThroughGrandfatherProbe 7.1s — content-equal restart compat holds at integration level, FreshNodeCatchUpStallsThenConvergesWithNoPinnedReject 7.1s). Consensus.hpp contract rewritten to the content-bound + defer-bound wording (:1189-1195). |
+| 2 | TRUST-02: admission growth-bounds and cross-certificate equivocation audit documented with findings and dispositions | ✓ VERIFIED (regression) | Audit doc intact (.planning/notes/2026-10-validator-admission-equivocation-audit.md, 68 lines, F1-F4 + 5 dispositions). Equivocation guard untouched by gap plans (ProveCrossCertificateEquivocation :1336, wired at :3538-3541). validator_admission_equivocation_test re-run: Passed. |
+| 3 | MINT-02: evidence validation fails closed on empty/local chain ids and empty source references; native vs bridge mint per-type consensus rules | ✓ VERIFIED (regression) | Fail-closed branches intact after 21-08's edits to the same file: empty source_reference on mint types -> fail closed (PCIV.cpp:475-477), local/scoped-local chain id -> fail closed (:496-501), non-mint local bypass preserved (:510). mint_evidence_binding_test 17/17 (all four identity adversarial cases green); public_chain_input_validator_slot_test Passed. |
+| 4 | MINT-03: newly submitted self-signed legacy-v1 mint rejected at every ingress; pre-cutover outputs spendable; fresh node syncs READY; restart recovers; admission gating only | ✓ VERIFIED (regression) | Three ingresses intact (TransactionConsensusHandler.cpp:824, TransactionManager.cpp:2025, TM.cpp:3808); one-home predicate IsValueCarryingLegacyMint (TM.cpp:4626-4634). legacy_mint_admission_test Passed; legacy_mint_sync_admission_test 8/8 (now incl. the WR-02 guard case). Real-socket compat re-run by this verifier under the changed probe: multi_account_test Passed (308.8s), migration_sync_test Passed (90.5s). WR-02 closed: SetLegacyMintDeferWindow negative-window guard (TM.cpp:4644-4648), NegativeLegacyMintDeferWindowIgnored green (Stall retained, then Reject through the retained 1s bound). |
+| 5 | MINT-04: mint whose token/amount/destination mismatches the burn receipt rejected even when every RPC endpoint honestly reports the receipt | ✓ VERIFIED | CR-01 CLOSED: DecodeAndBindBurnFacts rejects GetUTXOParameters().second.size() != 1 at the top (PCIV.cpp:113-118), BEFORE the topic0 selection and the three fact comparisons (:167/:173/:179); caller branch (:656-662) converts nullopt into discarding ALL evidence (reverted-receipt precedent); deserializer stays N-output-open (D-02 discipline). CR-02 CLOSED: guard at :598-606 — RequiresPublicChainEvidence( tx ) && ( bridge_contract_address.empty() \|\| accepted_topic0_hashes.empty() ) -> warn + continue, before the bridge block (:610) and the weight credit (:670); per-endpoint continue semantics mirror the topic-mismatch precedent. Tests run by this verifier, by name: MultiOutputMintFirstOutputMatchesStillRejected (proto-route two-output fixture, output[0] = attested facts + output[1] extra value) OK; BridgelessEndpointQuorumFails (asserts valid == false AND successful_weight == 0) OK; EmptyTopic0SetDoesNotConfirm OK; BridgelessEndpointStillConfirmsNonMintPublicType (scoping compat: valid == true, weight 75) OK; MatchingV2FactsValidate (single-output compat) OK; full matrix 17/17. Adjacent full pipeline bridge_race_fault_rpc_test 2/2 Passed (81s). |
 
-**Score:** 3/5 truths verified
+**Score:** 5/5 truths verified
+
+### Previously-Failed Gap Dispositions (context preserved from initial verification)
+
+| Prior Gap | Prior Status | Disposition | Closure Evidence |
+| --- | --- | --- | --- |
+| Gap 1 — MINT-04 multi-output inflation (CR-01) | failed | CLOSED by 21-08 Task 1 (e357a4c4c RED -> 2132e0b9c GREEN) | PCIV.cpp:113-118 output-count guard before the fact comparisons; MultiOutputMintFirstOutputMatchesStillRejected green (run by name by this verifier) |
+| Gap 2 — MINT-04 bridge-less endpoint (CR-02) | failed | CLOSED by 21-08 Task 2 (2ad50c9f4 RED -> 6b67302de GREEN, hygiene 8aa4759ab) | PCIV.cpp:598-606 scoped no-confirm guard covering BOTH empty fields; BridgelessEndpointQuorumFails + EmptyTopic0SetDoesNotConfirm + non-mint scoping twin green |
+| Gap 3 — TRUST-01 existence-only probe (WR-01) + unbounded grandfathered stall (CR-03) | failed | CLOSED by 21-09 Tasks 1-2 (09c7203f6 -> 886343e96; d72b6d7cb -> 8bb7599bd) | Consensus.cpp:3656-3690 content binding (ParseFromArray + SerializedCertificateHash equality); :3706-3724 defer-bounded failure; four adversarial/compat cases green; multi-node restart/catch-up trio green (re-run by this verifier) |
+| Gap 4 — MINT-04 adversarial evidence coverage | partial | CLOSED by 21-08 | Both bypass shapes covered by VER-01 tests naming attacker authority and recorded pre-fix behavior |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
-| -------- | -------- | ------ | ------- |
-| `src/blockchain/ValidatorRegistry.hpp/.cpp` | Verified+unverified loaders, chain-walk helper, memo cap 64, genesis check | ✓ VERIFIED | LoadVerifiedRegistryByCid (:294), LoadUnverifiedRegistryByCid (:311), VerifiedRegistryMemo (:375), VerifyRegistryChainClassified (:435), kMaxVerifiedRegistryMemoEntries (:69), VerifyGenesisAuthoritySignature (:724). Deprecated alias deleted — 0 bare LoadRegistryByCid( refs in src/+test/. Wired: all Consensus.cpp loads go through the verified loader (cache fill :2712, tally :2612, slot-winner :1591, HandleProposal :2965) except the sanctioned grandfather/verification-internal raw uses. |
-| `src/blockchain/Consensus.hpp/.cpp` | Grandfather probe, classified verdicts, verified-only cache cap 64, defer window, equivocation guard | ✓ VERIFIED (with gaps 3) | All present and wired (probe :3650, strict verdicts :3694-3728, cache cap 64 + deque eviction :1322/:2719-2731, SetAuthorizationDeferWindow :688 with negative guard, equivocation :1336/:1384/:3538-3546). Grandfather-path defects are behavioral gaps, not missing artifacts. |
-| `src/account/PublicChainInputValidator.hpp/.cpp` | Per-type fail-closed branches, receipt decode+bind, decoded_ carriers | ✓ VERIFIED (with gaps 1-2) | RequiresPublicChainEvidence (:70), both fail-closed branches (:462-494), DecodeAndBindBurnFacts (:103-173) via eth::abi::decode_log + BridgeRelayer::ParseBurnEventValues, decoded_token_id/decoded_amount/decoded_recipient carried (:633-635). No GetSlotID re-parse in PCIV. Multi-output and bridge-less-endpoint coverage missing (gaps). |
-| `src/account/MintTransactionV2.hpp/.cpp` | GetTokenID/GetPrimaryDestinationAddress accessors | ✓ VERIFIED (front()-only — root of gap 1) | :145-170. |
-| `src/base/bounded_defer.hpp/.cpp` + test | Generic bounded defer, FIFO cap 4096, injectable clock | ✓ VERIFIED | 193-line test, 8/8 green; mechanism consumer-agnostic; review's verified-areas section independently confirms correctness. |
-| `src/account/GeniusNode.cpp` | Config keys, cap/window wiring, genesis fingerprint pin | ✓ VERIFIED | authorization_defer_window_sec/max_new_validators_per_update read in LoadNetworkConfig; SetMaxNewValidatorsPerUpdate (:860), SetAuthorizationDeferWindow (:868), SetLegacyMintDeferWindow (:1202); genesis_manifest_fingerprint parse (:528) + enforcement before controller construction (:953-968, FATAL_TRUST_MISMATCH; unpinned warn :975). |
-| `.planning/notes/2026-10-validator-admission-equivocation-audit.md` | Findings + dispositions (min 60 lines) | ✓ VERIFIED | 68 lines, F1-F4, 5 dispositions, conclusion names Phase 25 residuals. |
-| Test targets (7 new/extended) | Adversarial+compat pairs | ✓ VERIFIED | All exist, registered, binaries current vs sources, all run green by this verifier (see spot-checks). |
+| --- | --- | --- | --- |
+| `src/account/PublicChainInputValidator.cpp` | Exactly-one-output constraint at binding + bridge-less endpoint no-confirm guard | ✓ VERIFIED | Guards at :113-118 and :598-606; diff vs pre-gap base is +30 lines, 0 deletions — surgical, nothing else changed |
+| `src/blockchain/Consensus.cpp` | Content-bound grandfather probe + defer-bounded grandfathered load failure | ✓ VERIFIED | :3656-3690 and :3706-3724; diff is exactly the two fixes + comments; FilterCertificate/equivocation/lower-hash rule untouched |
+| `src/blockchain/Consensus.hpp` | Content-bound + defer-bound grandfather contract wording | ✓ VERIFIED | :1189-1195 (existence-only claim removed); counter comment :828-834 states content-bound semantics |
+| `src/transaction/TransactionManager.cpp` | Negative-window guard on SetLegacyMintDeferWindow | ✓ VERIFIED | :4644-4648; diff on this file is exactly the 11-line guard |
+| `test/src/account/mint_evidence_binding_test.cpp` | Adversarial cases for both bypass shapes + compat twins | ✓ VERIFIED | 17 cases; proto-route MakeMultiOutputMintV2 fixture (attacker's actual wire shape); MakeValidatorWithBridgeBinding one-home refactor |
+| `test/src/blockchain/consensus_pending_lifecycle_test.cpp` | Crafted-cert-at-finalized-slot, lower-hash-overwrite, grandfathered-deadline, stall-within-window cases | ✓ VERIFIED | 41 cases; all four new cases substantive (real forged-CID raw-put, disjoint signer sets named, lower-hash engineering loop, durable-record byte assertions via ReadCertificateAtKey) |
+| `test/src/transaction_sync/legacy_mint_sync_admission_test.cpp` | Negative-window-ignored guard test | ✓ VERIFIED | 8 cases; guard test discriminates Stall-retained vs pre-fix immediate Reject and re-verifies the retained window still expires |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
-| ---- | --- | --- | ------ | ------- |
-| ValidateCertificate strict path | LoadVerifiedRegistryByCid | classified verdict mapping | ✓ WIRED | :3694-3728; permission_denied->Reject, try_again->Stalled, defer-expired->Reject |
-| ValidateCertificate grandfather path | LoadUnverifiedRegistryByCid | durable-record probe | ⚠️ WIRED (unbounded, unbound-by-content) | :3679-3687 — gaps 3 |
-| LoadRegistryByCidCached | LoadVerifiedRegistryByCid | verified-only fill, cap 64 | ✓ WIRED | :2712-2731; failures uncached; single-oldest eviction; no clear() |
-| FilterTransaction v1 branch | GetCertificateBySlot + CertificateMatchesTransaction | producer-certificate probe | ✓ WIRED | TM.cpp:3808-3846; Clear-on-admit; mismatch defers fail-closed |
-| CheckTransactionTypeRules / SendTransactionItem | IsValueCarryingLegacyMint | one-home predicate | ✓ WIRED | TCH:824, TM:2025-2031, TM:3808 — three sites, one home, zero copies |
-| DecodeAndBindBurnFacts | abi_decoder + mint accessors | fact comparison | ⚠️ WIRED (front()-only) | PCIV:103-173 — gap 1 |
-| Conflict branch | ProveCrossCertificateEquivocation + RecordEquivocationMarker | durable ledger conventions | ✓ WIRED | Consensus.cpp:3538-3546, sibling prefix per audit F4 |
-| GeniusNode | Set*DeferWindow / SetMaxNewValidatorsPerUpdate | config wiring | ✓ WIRED | :860/:868/:1202 |
+| --- | --- | --- | --- | --- |
+| DecodeAndBindBurnFacts (PCIV.cpp:103) | MintTransactionV2::GetUTXOParameters().second.size() | output-count guard before the fact comparisons | ✓ WIRED | :113 rejects != 1; nullopt -> caller :656-662 discards all evidence |
+| GatherVerificationEvidence endpoint loop | RequiresPublicChainEvidence (PCIV.cpp:70) | scoped bridge-less guard continue before weight credit | ✓ WIRED | :598-606 fires only for mint/mint-v2; covers both empty bridge address and empty topic0 set; continue-only, no whole-claim abort |
+| ValidateCertificate grandfather probe | SerializedCertificateHash (stored bytes vs candidate serialization) | hash-equality gate before grandfathered_final = true | ✓ WIRED | :3663-3667; parse failure or mismatch leaves strict path; write path (:2836-2850) stores the same serialization discipline |
+| ValidateCertificate grandfathered load failure | authorization_defer_tracker_.Defer( registry_cid ) | expired -> Check::Reject, else Check::Stalled | ✓ WIRED | :3709 (grandfathered) and :3750 (strict) — same tracker, same key, one first-seen bound per CID across both paths |
+| TransactionManager::SetLegacyMintDeferWindow | count() < 0 warn-and-ignore | mirrored negative-window guard | ✓ WIRED | TM.cpp:4644-4648; zero stays legal |
+| (regression) FilterTransaction v1 branch / three MINT-03 ingresses / equivocation guard / config wiring | — | — | ✓ WIRED | All re-anchored post-gap-fix: TM.cpp:824/:2025/:3808, Consensus.cpp:3538-3541, prior key links unchanged |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
-| -------- | ------- | ------ | ------ |
-| Verified loader rejects forged/cyclic/non-quorum chains; memo cap eviction | `./validator_registry_verified_load_test` | 10/10 PASSED (1 ms) | ✓ PASS |
-| MINT-02/MINT-04 identities + fact mismatches rejected; compat twins | `./mint_evidence_binding_test` | 13/13 PASSED (3 ms) | ✓ PASS |
-| Bounded defer: first-seen anchoring, oldest-first eviction | `./bounded_defer_test` | 8/8 PASSED (2 ms) | ✓ PASS |
-| v1 mint rejected at consensus ingress + preflight (errc by value, no CRDT Put) | `./legacy_mint_admission_test` | 6/6 PASSED (248 ms) | ✓ PASS |
-| Sync admission: stall resolves, deadline rejects w/ tombstone, certified admits | `./legacy_mint_sync_admission_test` | 7/7 PASSED (1.4 s) | ✓ PASS |
-| Cap enforcement (default + wired override + sub-cap) + equivocation reject + disjoint-signer compat | `./validator_admission_equivocation_test` | 5/5 PASSED (210 ms) | ✓ PASS |
-| TRUST-01 unit pairs: forged reject + no durable record, grandfather twin, deadline reject, stall-not-memoized | `./consensus_pending_lifecycle_test` | 37/37 PASSED (4.0 s) | ✓ PASS |
-| Multi-node real-socket suites (TRUST-01 trio, multi_account, migration) | not re-run | real sockets, RUN_SERIAL, minutes-long | ? SKIP — summaries + commits evidence green; binaries and test code verified present |
+| --- | --- | --- | --- |
+| MINT-04 full matrix incl. both new bypass closures + compat twins | `./test_bin/mint_evidence_binding_test` | 17/17 PASSED (1 ms) | ✓ PASS |
+| CR-01/CR-02 new cases by name | `--gtest_filter='*MultiOutput*:*Bridgeless*:*EmptyTopic0*'` | 4/4 OK | ✓ PASS |
+| TRUST-01 unit matrix incl. 4 new grandfather cases | `./test_bin/consensus_pending_lifecycle_test` | 41/41 PASSED (4.3 s) | ✓ PASS |
+| WR-01/CR-03 new cases by name | `--gtest_filter='*Crafted*:*ConflictingLowerHash*:*GrandfatheredLoadFailure*'` | 4/4 OK | ✓ PASS |
+| WR-02 guard case by name | `--gtest_filter='*NegativeLegacyMintDeferWindowIgnored*'` | OK (1.15 s) | ✓ PASS |
+| Multi-node real-socket TRUST-01 trio under content-bound probe | `./test_bin/multi_node_finality_fault_test --gtest_filter='...Forged...:...Restarted...:...FreshNodeCatchUp...'` | 3/3 PASSED (20 s) | ✓ PASS |
+| MINT-03 real-socket compat under changed probe | `ctest -R '^(multi_account_test\|migration_sync_test)$'` | 2/2 Passed (399 s) | ✓ PASS |
+| Adjacent full pipeline (PCIV guards vs 11-node Foundry) | `./test_bin/bridge_race_fault_rpc_test` | 2/2 PASSED (81 s) | ✓ PASS |
+| Regression battery (MINT-02/MINT-03/TRUST-02/D-03/strict loader) | `ctest -R "public_chain_input_validator\|bounded_defer\|validator_registry_verified_load\|legacy_mint_admission\|legacy_mint_sync_admission\|validator_admission_equivocation"` | 7/7 targets Passed | ✓ PASS |
+
+**Tests run by this verifier:** 12 targets / 100+ cases, all passing (every gap-closure case additionally run by name). **Accepted from recorded evidence:** none required for the goal decision — the multi-node suites the initial verification skipped (TRUST-01 trio, multi_account, migration) were re-run directly this time.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
-| ----------- | ----------- | ----------- | ------ | -------- |
-| TRUST-01 | 21-01, 21-03, 21-04 | Registry-by-CID authorization verified; forged self-certification rejected; sync/history unbroken | ✗ BLOCKED | Strict path + tests verified; grandfather-path bypasses (CR-03 unbounded stall, WR-01 existence-only probe) leave the attack viable on finalized slots. REQUIREMENTS.md "Complete" mark not supported for the public-network attack surface. |
-| TRUST-02 | 21-03, 21-07 | Admission growth bounds + equivocation audited, findings documented | ✓ SATISFIED | Audit doc + cap enforcement + equivocation guard, all adversarially/compat tested. WR-05 (local-only marker) is a documented-scope warning, not a requirement failure. |
-| MINT-02 | 21-02 | Fail-closed on empty/local chain ids + empty source refs; per-type consensus rules | ✓ SATISFIED | Code + 13/13 tests; per-type separation present at evidence and consensus layers. CR-02 caveat noted under gap 2 (does not reopen the named identities). |
-| MINT-03 | 21-03, 21-05, 21-06 | Legacy-v1 reception disabled via admission gating only | ✓ SATISFIED | Three ingresses fail-closed; compat twins (zero-value, certified history, migration zero-stall, spendability chain); deserialization untouched. Warnings WR-02/WR-03 do not defeat the security truth. |
-| MINT-04 | 21-02 | Burn receipt facts bound to mint outputs; honest RPCs cannot authorize mismatch | ✗ BLOCKED | CR-01 multi-output bypass + CR-02 bridge-less-endpoint bypass, both code-confirmed and untested. |
+| --- | --- | --- | --- | --- |
+| TRUST-01 | 21-01, 21-03, 21-04, 21-09 | Registry-by-CID authorization verified; forged self-certification rejected; sync/history unbroken | ✓ SATISFIED | Strict path + content-bound probe + defer-bounded grandfathered stall; forged CID rejected with and without durable record; restart/catch-up compat green at unit and real-socket level. REQUIREMENTS.md Complete mark now supported. |
+| TRUST-02 | 21-03, 21-07 | Admission growth bounds + equivocation audited, findings documented | ✓ SATISFIED | Audit doc + cap enforcement + equivocation guard; suite re-run green; untouched by gap plans. |
+| MINT-02 | 21-02 | Fail-closed on empty/local chain ids + empty source refs; per-type consensus rules | ✓ SATISFIED | Fail-closed branches intact post-21-08; 17/17 green. |
+| MINT-03 | 21-03, 21-05, 21-06 | Legacy-v1 reception disabled via admission gating only | ✓ SATISFIED | Three ingresses intact; unit suites green; multi_account + migration real-socket compat re-run green; WR-02 guard closes the misconfiguration data-loss warning. |
+| MINT-04 | 21-02, 21-08 | Burn receipt facts bound to mint outputs; honest RPCs cannot authorize mismatch | ✓ SATISFIED | Single-output identity binding + multi-output closure + bridge-less-endpoint closure; all adversarial and compat cases green. REQUIREMENTS.md Complete mark now supported. |
 
-Orphaned requirements: none — all five phase IDs appear in plan frontmatters and REQUIREMENTS.md.
+Orphaned requirements: none — all five phase IDs appear in plan frontmatters (21-01..21-09) and REQUIREMENTS.md (:102-106).
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
-| ---- | ---- | ------- | -------- | ------ |
-| src/transaction/TransactionManager.cpp | 4636-4639 | SetLegacyMintDeferWindow lacks the negative-window guard its consensus twin has (Consensus.cpp:690-694) | ⚠️ Warning (WR-02) | Negative config value -> immediate reject-on-first-sight for legitimate late-cert v1 history (data loss via misconfiguration) |
-| src/transaction/TransactionManager.cpp | 2025-2032 | Preflight aborts whole submission batch on first v1 mint | ⚠️ Warning (WR-03) | One poisoned entry blocks valid batch members |
-| src/blockchain/ValidatorRegistry.cpp | 806-818, 916-921 | Corrupt local registry delta classified retryable-forever (no distinct error class) | ⚠️ Warning (WR-04) | Permanent local corruption indistinguishable from ordering; unbounded pending/stall at batch sites |
-| src/blockchain/Consensus.cpp | 1384-1448 | Equivocation marker local-only, no protocol consequence | ⚠️ Warning (WR-05) | Signer pays nothing on non-observing nodes; acceptable for 21-07 "cheap guards" scope, header oversells durability |
-| src/transaction/TransactionManager.cpp | 3818-3828 | Expired defer entries never Clear()ed | ℹ️ Info (IN-01) | Capacity hygiene only |
-| test/src/transaction_sync/legacy_mint_sync_admission_test.cpp | 368 | sleep_for(1100ms) in deadline test | ℹ️ Info | Plan itself specified "1 s window + real elapse"; house wait_condition macros used elsewhere |
-| Changed src files (7 scanned) | — | No TBD/FIXME/XXX/TODO/PLACEHOLDER markers; no stub implementations; no console-only handlers | ✓ Clean | — |
+| --- | --- | --- | --- | --- |
+| src/transaction/TransactionManager.cpp | 1548, 3282, 3675, 3906 | Pre-existing TODO markers in legacy regions | ℹ️ Info | Predate phase 21 (git log -S since Oct 1 finds no touching commit; not in gap-plan diff regions — the entire 21-09 TM.cpp diff is the 11-line WR-02 guard). Not blockers. |
+| src/blockchain/Consensus.cpp | 3839 | Pre-existing TODO (reputation) | ℹ️ Info | Dated 2026-09-07 (e74bd8696); outside changed regions. |
+| src/account/PublicChainInputValidator.cpp | — | Pre-existing cognitive-complexity finding raised 52 -> 56 by the mandated inline guard | ⚠️ Warning (documented) | 21-08 recorded this as the sole tidy delta; guard placement mirrors the topic-mismatch precedent — accepted, no NEW finding class. |
+| Residuals WR-03/WR-04/WR-05/IN-01..04 | — | Documented Phase 25 residuals (batch preflight abort, retryable-forever corrupt delta class, local-only equivocation marker, expired-defer capacity hygiene) | ℹ️ Info | Unchanged from initial verification; none defeats a phase truth; named in the audit conclusion and 21-09 summary as Phase 25 scope. |
+
+No TBD/FIXME/XXX markers in any changed region; no stub implementations; no console-only handlers.
 
 ### Human Verification Required
 
-None required for the gap decision — all failing evidence is code-confirmed and reproducible by grep/read. Optional (not blocking): a serialized re-run of the multi-node real-socket suites (`multi_node_finality_fault_test`, `multi_account_test`, `migration_sync_test`) to re-confirm the compat claims this verifier skipped.
+None — all gap closures are code-confirmed and reproduced by this verifier through direct test execution (unit + real-socket), including the multi-node restart/catch-up compat under the content-bound probe.
 
 ### Gaps Summary
 
-The phase did real, well-tested work: the verified registry chain-walk, the MINT-03 three-ingress closure, the MINT-02 identity fail-close, the audit + cap + equivocation guard, and all compat twins are present, wired, and green (76 unit-test cases re-run by this verifier across 7 targets, all passing). But this is a security-remediation phase judged on whether the described attacks are actually rejected, and two of the five requirement boundaries have code-confirmed bypasses surviving from the phase's own code review:
+No gaps remain. The four code-confirmed bypasses from the initial verification are closed fail-closed in the current codebase, each with an adversarial test naming the attacker authority that this verifier executed by name, plus compat twins proving legitimate behavior is unchanged:
 
-1. **MINT-04 does not close fail-closed** (2 blockers): a multi-output mint-v2 inflates past the attested burn because every fact comparison reads the first output only (CR-01), and an endpoint without a configured bridge contract confirms a mint on receipt existence alone (CR-02). The 13 passing binding tests only cover the single-output, bridge-configured shape.
-2. **TRUST-01's anchor does not hold on a public network** (2 blockers, same root cause — the grandfather path): the D-01 probe binds by slot-record existence with no content check, so a newly crafted certificate at any already-finalized slot skips chain verification and can tally against a forged registry (WR-01); and the grandfathered registry-load failure returns Stalled with no defer bound, re-opening the unbounded whole-delta stall DoS the D-03 tracker was built to close (CR-03).
+1. **MINT-04 / CR-01:** the burn-fact binding now requires exactly one output before any fact comparison; the multi-output attack (output[0] = attested burn, output[1] extra value) is rejected with all evidence discarded, while single-output confirmation is byte-unchanged.
+2. **MINT-04 / CR-02:** bridge-less and topic0-less endpoints earn zero confirmation weight on evidence-required mint types (scoped guard, per-endpoint continue), while non-mint public-chain types keep bridge-optional confirmation (pinned by a dedicated compat twin) and the full 11-node Foundry pipeline is undisturbed.
+3. **TRUST-01 / WR-01:** the grandfather probe binds by content — the durable record must parse and hash-equal the candidate's serialization; a newly crafted certificate at an already-finalized slot (forged registry CID, disjoint signer set, even a deliberately engineered lower hash) takes the strict verified path and is Rejected without overwriting the stored winner.
+4. **TRUST-01 / CR-03:** the grandfathered registry-load failure is bounded by the same D-03 tracker and registry-CID key as the strict path — in-window never-memoized Stalled, past-window deterministic Reject — so no certificate shape can stall a CRDT delta forever; the genuine restart/catch-up compat survives at both unit and real-socket level (re-run by this verifier).
 
-MINT-02 and MINT-03 are genuinely closed (their named attacks are rejected and compat survives); TRUST-02's deliverable is satisfied as scoped. Fixes are small and localized: an output-count/set constraint at the binding, a bridge-less-endpoint skip for evidence-required types, a defer bound on the grandfathered load failure, and content binding (hash equality) in the grandfather probe — each with an adversarial test naming the attacker authority.
+The previously verified three (TRUST-02, MINT-02, MINT-03) are intact after the gap fixes: their code anchors are unchanged, their suites re-ran green, and the two real-socket compat suites most exposed to the probe change (multi_account, migration) passed. The adjacent WR-02 warning is also closed. The phase goal — the certificate trust anchor holding on a public network with fail-closed mint/escrow authorization and no orphaned legitimate state — is achieved. All five REQUIREMENTS.md Complete marks for this phase are now supported by verified evidence.
 
 ---
 
-_Verified: 2026-10-21_
+_Verified: 2026-10-21T17:05:00Z_
 _Verifier: Claude (gsd-verifier)_
