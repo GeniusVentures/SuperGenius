@@ -19,10 +19,12 @@
 #include <ipfs_lite/rocksdb/rocksdb.hpp>
 #include <libp2p/multi/multihash.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -441,10 +443,10 @@ namespace sgns::crdt
             node.dagSyncer   = std::make_shared<CustomDagSyncer>( blocks );
             node.broadcaster = std::make_shared<CRDTMirrorBroadcaster>();
             node.datastore   = CrdtDatastore::New( node.db,
-                                                 HierarchicalKey( "/namespace" ),
-                                                 node.dagSyncer,
-                                                 node.broadcaster,
-                                                 CrdtOptions::DefaultOptions() );
+                                                   HierarchicalKey( "/namespace" ),
+                                                   node.dagSyncer,
+                                                   node.broadcaster,
+                                                   CrdtOptions::DefaultOptions() );
             return node;
         }
 
@@ -697,24 +699,146 @@ namespace sgns::crdt
             ADD_FAILURE() << "definition of " << qualified_name << " not found -- the gate must be updated on rename";
             return {};
         }
+
+        /**
+         * Full-body variant of @ref extractFunctionBody for the
+         * source-ORDER pins (18-07): the trim-based original stops at the
+         * first NESTED closing brace that sits alone on its line, so a
+         * position comparison between the top and the bottom of a long
+         * body (mode gate vs erase path) is impossible on its prefix. This
+         * variant counts braces from the definition's opening brace until
+         * the depth returns to zero. The scanned bodies' string literals
+         * carry only balanced '{}' format placeholders, so character
+         * counting is sound here; a rename still fails loudly.
+         */
+        std::string extractFullFunctionBody( const std::string &file_text, const std::string &qualified_name )
+        {
+            std::istringstream       in( file_text );
+            std::vector<std::string> lines;
+            std::string              line;
+            while ( std::getline( in, line ) )
+            {
+                lines.push_back( line );
+            }
+
+            const std::string definition_marker = qualified_name + "(";
+            for ( size_t i = 0; i < lines.size(); ++i )
+            {
+                if ( lines[i].find( definition_marker ) == std::string::npos )
+                {
+                    continue;
+                }
+                size_t open_line  = i;
+                bool   found_open = false;
+                for ( ; open_line < lines.size() && open_line < i + 12; ++open_line )
+                {
+                    if ( lines[open_line].find( '{' ) != std::string::npos )
+                    {
+                        found_open = true;
+                        break;
+                    }
+                }
+                if ( !found_open )
+                {
+                    ADD_FAILURE() << "no opening brace found after " << qualified_name << " definition";
+                    return {};
+                }
+                int depth = 0;
+                for ( size_t j = open_line; j < lines.size() && j < open_line + 1200; ++j )
+                {
+                    depth += static_cast<int>( std::count( lines[j].begin(), lines[j].end(), '{' ) );
+                    depth -= static_cast<int>( std::count( lines[j].begin(), lines[j].end(), '}' ) );
+                    if ( depth <= 0 )
+                    {
+                        std::string body;
+                        for ( size_t k = i; k <= j; ++k )
+                        {
+                            body += lines[k];
+                            body += '\n';
+                        }
+                        return body;
+                    }
+                }
+                ADD_FAILURE() << "no balanced closing brace found for " << qualified_name << " body";
+                return {};
+            }
+
+            ADD_FAILURE() << "definition of " << qualified_name << " not found -- the gate must be updated on rename";
+            return {};
+        }
+
+        /// True when @p file's generic path ends with @p suffix.
+        bool endsWithSuffix( const std::filesystem::path &file, const std::string &suffix )
+        {
+            const auto generic = file.generic_string();
+            return generic.size() >= suffix.size() &&
+                   generic.compare( generic.size() - suffix.size(), suffix.size(), suffix ) == 0;
+        }
+
+        /**
+         * Root-relative paths of every file under @p root whose text contains
+         * @p token, excluding the @p owner_files (the token's sanctioned
+         * declaration/definition homes). THE sanctioned-caller-set primitive:
+         * callers assert the RESULT against an exact expected list (Phase 18
+         * / Pattern 6 -- production erase/marker callers are exactly the
+         * sanctioned set), never merely that it is small or nonempty.
+         */
+        std::set<std::string> filesContainingToken( const std::filesystem::path              &root,
+                                                    const std::vector<std::filesystem::path> &files,
+                                                    const std::string                        &token,
+                                                    const std::vector<std::string>           &owner_files )
+        {
+            std::set<std::string> hits;
+            for ( const auto &file : files )
+            {
+                if ( std::any_of( owner_files.begin(),
+                                  owner_files.end(),
+                                  [&]( const std::string &suffix ) { return endsWithSuffix( file, suffix ); } ) )
+                {
+                    continue;
+                }
+                if ( readWholeFile( file ).find( token ) != std::string::npos )
+                {
+                    std::error_code ec;
+                    const auto      relative = std::filesystem::relative( file, root, ec );
+                    if ( !ec )
+                    {
+                        hits.insert( relative.generic_string() );
+                    }
+                }
+            }
+            return hits;
+        }
     } // namespace
 
     /// CI-enforced bans over the production tree (project rule: gates, not
     /// promises). The scan runs at test runtime against the source root the
     /// build wired via SUPERGNUS_ERASE_GATE_SRC, so a tampered or missing
     /// tree fails the gate instead of silently passing.
+    ///
+    /// Phase-18 invariant (Pattern 6): production erase/marker callers ARE
+    /// legitimately nonzero now (TxPruner is the first production eraser), so
+    /// the 16/17 "zero production caller" absence-proofs are obsolete. The
+    /// destructive surface is instead ENUMERATION-PINNED: the tracked-body
+    /// bans below pin what each mutation surface may contain (zero PutRaw in
+    /// the erase path -- the marker stages via batch puts), and the
+    /// sanctioned-caller greps pin EXACTLY who may call into the surface.
     class EraseSurfaceGateTest : public ::testing::Test
     {
     protected:
-        /// The base tombstone-erase tokens banned from every new erase
-        /// surface: each publishes or reverts network-wide state and must
-        /// never join the local physical-erase path.
+        /// The base tokens banned from every tracked erase-surface body:
+        /// the tombstone erasers each publish or revert network-wide state
+        /// and must never join the local physical-erase path, and PutRaw is
+        /// banned from the erase path entirely (T-17-0406's count shifted to
+        /// exactly zero: the /prune/tx marker stages via the erase
+        /// WriteBatch's batch->put, never a raw direct write).
         static const std::vector<std::string> &baseBannedTokens()
         {
             static const std::vector<std::string> tokens = { "DeleteKey",
                                                              "DeleteTransaction",
                                                              "removeNode",
-                                                             "DeleteCIDBlock" };
+                                                             "DeleteCIDBlock",
+                                                             "PutRaw" };
             return tokens;
         }
     };
@@ -783,10 +907,38 @@ namespace sgns::crdt
               "TransactionManager::EraseTransactionEntry",
               { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
             { "transaction/TransactionManager.cpp",
+              "TransactionManager::EraseTransactionEntryWithMarker",
+              { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
+            { "transaction/TransactionManager.cpp",
+              "TransactionManager::EraseTransactionEntryPruned",
+              { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
+            { "transaction/TransactionManager.cpp",
               "TransactionManager::RemoveProcessedTransactionEntry",
               { "RevertTransaction", "RollBackPeerConfirmedNonce" } },
             { "crdt/impl/crdt_set.cpp", "CrdtSet::StageEraseElement", {} },
             { "crdt/impl/graphsync_dagsyncer.cpp", "GraphsyncDAGSyncer::StageBlockRemoval", {} },
+            // Phase-18 mutation surfaces:
+            { "crdt/impl/crdt_set.cpp",
+              "CrdtSet::MakeComposeLock",
+              // The owner-vended critical section ONLY vends the guard:
+              // staging/raw writes inside the lock helper would bypass the
+              // compose discipline it exists to enforce.
+              { "StageEraseElement", "StageBlockRemoval" } },
+            { "transaction/PruneEligibility.cpp",
+              "PruneEligibility::BuildPruneMarkerEntry",
+              // The marker buffers are CONSTRUCTED here and staged by the
+              // caller into the erase batch. The direct writer
+              // (WritePrunedEntryForTest) is pinned TEST-ONLY by the
+              // sanctioned-caller test below, not by this body scan (its
+              // name legitimately appears in this body's twin-ship comment).
+              {} },
+            { "transaction/TxPruner.cpp", "TxPruner::RunCycle", {} },
+            { "base/DevMintPolicy.hpp",
+              "DevMintBurnlessPermitted",
+              // The policy predicate reads ONLY version::GetNetworkID() --
+              // never a transaction or proposal field (proposer claims are
+              // attacker-chosen; Pitfall 5).
+              { "GetChainId", "GetSrcAddress", "GetNonce", "GetHash", "GetUTXOParameters" } },
         };
 
         for ( const auto &target : targets )
@@ -803,6 +955,174 @@ namespace sgns::crdt
                 EXPECT_EQ( body.find( token ), std::string::npos )
                     << "banned token '" << token << "' inside " << target.qualified_name;
             }
+        }
+    }
+
+    /**
+     * The Phase-18 sanctioned-caller sets (Pattern 6): the 16/17
+     * "zero production erase caller" absence-proofs are obsolete BY DESIGN
+     * this phase -- TxPruner is the first production eraser -- so the gates
+     * now pin the caller files as EXACT lists. A stray production
+     * erase/marker caller (any new file reaching into the destructive
+     * surface) grows a set and fails the gate; deleting a sanctioned caller
+     * shrinks it and fails just as loudly.
+     */
+    TEST_F( EraseSurfaceGateTest, SanctionedCallerSetsAreExact )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        const auto files = collectSourceFiles( root );
+
+        // Named locals for both sides of every EXPECT_EQ: a braced set
+        // inline at the macro call would split the invocation on its commas.
+        const std::vector<std::string> tm_owner    = { "transaction/TransactionManager.hpp",
+                                                       "transaction/TransactionManager.cpp" };
+        const std::vector<std::string> prune_owner = { "transaction/PruneEligibility.hpp",
+                                                       "transaction/PruneEligibility.cpp" };
+        const std::vector<std::string> gdb_owner   = { "crdt/globaldb/globaldb.hpp", "crdt/globaldb/globaldb.cpp" };
+        const std::set<std::string>    empty_set   = {};
+        const std::set<std::string>    pruned_set  = { "transaction/TxPruner.cpp", "transaction/TxPruner.hpp" };
+        const std::set<std::string>    tm_set      = { "transaction/TransactionManager.cpp",
+                                                       "transaction/TransactionManager.hpp" };
+        const std::set<std::string>    compose_set = { "transaction/PruneEligibility.cpp",
+                                                       "transaction/PruneEligibility.hpp",
+                                                       "transaction/TransactionManager.cpp",
+                                                       "transaction/TransactionManager.hpp" };
+
+        // The pruned-erase driver: its only production caller is the TxPruner
+        // cycle (decl docs + the ONE RunCycle call site); tests live outside
+        // src/ (the gate's scan root).
+        const auto pruned_callers = filesContainingToken( root, files, "EraseTransactionEntryPruned", tm_owner );
+        EXPECT_EQ( pruned_set, pruned_callers )
+            << "EraseTransactionEntryPruned callers must be exactly the TxPruner service";
+
+        // The marker pair's one builder: staged ONLY by TransactionManager's
+        // pruned driver (decl docs + the BuildPruneMarkerEntry call).
+        const auto marker_callers = filesContainingToken( root, files, "BuildPruneMarkerEntry", prune_owner );
+        EXPECT_EQ( tm_set, marker_callers ) << "BuildPruneMarkerEntry callers must be exactly the pruned-erase driver";
+
+        // The guarded compose itself: outside its GlobalDB owner files, the
+        // only production presence is PruneEligibility's contract comments
+        // and TransactionManager's ONE composition (WithMarker) -- together
+        // with the marker-pair pin above, exactly the pruned driver passes
+        // the marker into EraseEntry.
+        const auto erase_entry_callers = filesContainingToken( root, files, "EraseEntry", gdb_owner );
+        EXPECT_EQ( compose_set, erase_entry_callers )
+            << "EraseEntry callers outside GlobalDB must be exactly the TransactionManager compose + contract docs";
+
+        // The test-only direct marker writer still has ZERO production
+        // callers (the production twin stages into the erase batch instead).
+        const auto test_writer_callers = filesContainingToken( root, files, "WritePrunedEntryForTest", prune_owner );
+        EXPECT_EQ( empty_set, test_writer_callers ) << "WritePrunedEntryForTest must have zero production callers";
+
+        // DeleteKey/DeleteTransaction stay absent from the pruning surface:
+        // the tombstone erasers are banned from every tracked erase-path
+        // body by EraseSurfaceContainsNoTombstones (the base token set) --
+        // nothing in the Phase-18 surface may reach them.
+    }
+
+    /**
+     * The dry-run guarantee (17-06's manual inventory, now a permanent
+     * gate): RunPruneDryRunCycle's body carries NO erase, marker, staging,
+     * or raw-write token and never touches the TxPruner service -- the
+     * dry-run arm observes and logs, it cannot erase.
+     */
+    TEST_F( EraseSurfaceGateTest, DryRunCycleBodyStaysTokenClean )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        const auto file_path = root / "account/GeniusNode.cpp";
+        ASSERT_TRUE( std::filesystem::exists( file_path ) ) << "GeniusNode.cpp missing from the scan root";
+        const auto body = extractFullFunctionBody( readWholeFile( file_path ), "GeniusNode::RunPruneDryRunCycle" );
+        ASSERT_FALSE( body.empty() );
+
+        auto banned = baseBannedTokens();
+        // tx_pruner_ (the service member) rather than the type name: the
+        // body's comments legitimately REFERENCE TxPruner, but any use of
+        // the service would go through the member.
+        const std::vector<std::string> erase_tokens = { "EraseEntry",
+                                                        "EraseTransactionEntry",
+                                                        "BuildPruneMarkerEntry",
+                                                        "StageEraseElement",
+                                                        "StageBlockRemoval",
+                                                        "MakeComposeLock",
+                                                        "RemoveProcessedTransactionEntry",
+                                                        "tx_pruner_" };
+        banned.insert( banned.end(), erase_tokens.begin(), erase_tokens.end() );
+        for ( const auto &token : banned )
+        {
+            EXPECT_EQ( body.find( token ), std::string::npos )
+                << "erase-path token '" << token << "' inside the dry-run cycle body";
+        }
+    }
+
+    /**
+     * The real-cycle pin (T-18-0404): RunPruneCycle's erase-bearing region
+     * is gated by its OWN dry_run mode check -- the FIRST occurrence of the
+     * mode gate precedes the first occurrence of the erase path (the
+     * TxPruner service invocation) in source order, so the real arm can
+     * never erase in dry-run mode.
+     */
+    TEST_F( EraseSurfaceGateTest, RealCycleIsPinnedToRealModeBeforeAnyErase )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        const auto file_path = root / "account/GeniusNode.cpp";
+        ASSERT_TRUE( std::filesystem::exists( file_path ) ) << "GeniusNode.cpp missing from the scan root";
+        const auto body = extractFullFunctionBody( readWholeFile( file_path ), "GeniusNode::RunPruneCycle" );
+        ASSERT_FALSE( body.empty() );
+
+        const auto mode_gate  = body.find( "pruning_config_.dry_run" );
+        const auto erase_path = body.find( "tx_pruner_->RunCycle(" );
+        ASSERT_NE( mode_gate, std::string::npos ) << "RunPruneCycle lost its dry_run mode gate";
+        ASSERT_NE( erase_path, std::string::npos ) << "RunPruneCycle lost its TxPruner cycle invocation";
+        EXPECT_LT( mode_gate, erase_path ) << "the dry_run mode gate must precede the erase path in source order";
+    }
+
+    /**
+     * The tick-gate conjunct pin (checker W4, gates-not-promises): a cycle
+     * may erase ONLY past TxPruner's tick gate, and the gate must carry ALL
+     * THREE conjuncts -- State::READY, an empty missing-tx set
+     * (HasMissingTxHashes), and the settle-window check (settle_seconds).
+     * RunCycle's body must invoke the gate (TickGateSettled) BEFORE the
+     * first erase token, and the gate helper's body must contain each
+     * conjunct token -- deleting any one conjunct, or the gate call, fails
+     * this gate loudly.
+     */
+    TEST_F( EraseSurfaceGateTest, TxPrunerTickGateConjunctsPrecedeErases )
+    {
+        const auto root = gateSourceRoot();
+        ASSERT_FALSE( root.empty() );
+        const auto txpruner_path = root / "transaction/TxPruner.cpp";
+        ASSERT_TRUE( std::filesystem::exists( txpruner_path ) ) << "TxPruner.cpp missing from the scan root";
+        const auto txpruner_text = readWholeFile( txpruner_path );
+
+        // (1) RunCycle: the gate invocation precedes the erase path. The
+        // erase driver call is mandatory (RunCycle is the only erase path);
+        // any staging token that ever appears must also sit behind the gate.
+        const auto cycle_body = extractFullFunctionBody( txpruner_text, "TxPruner::RunCycle" );
+        ASSERT_FALSE( cycle_body.empty() );
+        const auto gate_call = cycle_body.find( "TickGateSettled(" );
+        ASSERT_NE( gate_call, std::string::npos ) << "RunCycle lost its tick-gate invocation";
+        const auto erase_pos = cycle_body.find( "EraseTransactionEntryPruned" );
+        ASSERT_NE( erase_pos, std::string::npos ) << "RunCycle lost its erase path";
+        EXPECT_LT( gate_call, erase_pos ) << "the tick gate must precede the erase path in RunCycle";
+        for ( const auto *staging_token : { "StageEraseElement", "StageBlockRemoval" } )
+        {
+            const auto staging_pos = cycle_body.find( staging_token );
+            if ( staging_pos != std::string::npos )
+            {
+                EXPECT_LT( gate_call, staging_pos ) << "the tick gate must precede " << staging_token << " in RunCycle";
+            }
+        }
+
+        // (2) The gate helper itself: ALL THREE conjuncts present.
+        const auto gate_body = extractFullFunctionBody( txpruner_text, "TxPruner::TickGateSettled" );
+        ASSERT_FALSE( gate_body.empty() );
+        for ( const auto *conjunct : { "State::READY", "HasMissingTxHashes", "settle_seconds" } )
+        {
+            EXPECT_NE( gate_body.find( conjunct ), std::string::npos )
+                << "tick-gate conjunct '" << conjunct << "' deleted from TickGateSettled";
         }
     }
 } // namespace sgns::crdt
