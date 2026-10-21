@@ -14,7 +14,7 @@ Requirements for milestone v1.2. Each maps to roadmap phases.
 - [x] **PRUNE-02**: Erasure physically deletes, in one atomic RocksDB `WriteBatch`, the CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`), the raw CID block (existing `removeNode` chain), and the tx→CID map entry — never via the CRDT tombstone path (`DeleteKey`/`DeleteTransaction` are forbidden for pruning)
 - [x] **PRUNE-03**: A delta block is erased only when every element it carries is prune-eligible (parse the block at prune time; deltas are multi-element)
 - [ ] **PRUNE-04**: The prune cycle is idempotent and crash-consistent — ordered erase flow (value → CID lookup → block-eligibility+delete → map entry) reaches a fixed point across crashes and restarts
-- [ ] **PRUNE-05**: Re-delivered/resurrected entries (add-wins OR-Set re-merge from lagging peers or restart head exchange) are re-pruned by a periodic sweep, and root processing treats pruned/resolved CIDs as terminal — no re-fetch storm
+- [x] **PRUNE-05**: Re-delivered/resurrected entries (add-wins OR-Set re-merge from lagging peers or restart head exchange) are re-pruned by a periodic sweep, and root processing treats pruned/resolved CIDs as terminal — no re-fetch storm
 
 ### Gating & Safety
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRUNE-02 | Phase 16 | Complete |
 | PRUNE-03 | Phase 17 | Complete |
 | PRUNE-04 | Phase 18 | Pending |
-| PRUNE-05 | Phase 18 | Pending |
+| PRUNE-05 | Phase 18 | Complete |
 | GATE-01 | Phase 17 | Complete |
 | GATE-02 | Phase 20 | Pending |
 | GATE-03 | Phase 16 | Complete |

@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
-stopped_at: Phase 18 context gathered
-last_updated: "2026-10-21T17:27:52.394Z"
-last_activity: 2026-10-21 -- Phase 18 planning complete
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-10-21T18:15:14.126Z"
+last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 10
+  completed_plans: 11
   percent: 9
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 18 — txpruner service & first real prune
+**Current focus:** Phase 18 — txpruner-service-first-real-prune
 
 ## Current Position
 
-Phase: 17 (eligibility-policy-gating-dry-run) — EXECUTING
-Plan: Not started
+Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-10-21 -- Phase 18 planning complete
+Last activity: 2026-10-21
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 65%
 
 ## Roadmap Snapshot
 
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T13:51:02.969Z
-**Stopped At:** Phase 18 context gathered
-**Resume File:** .planning/phases/18-txpruner-service-first-real-prune/18-CONTEXT.md
+**Last session:** 2026-10-21T18:15:14.119Z
+**Stopped At:** Completed 18-01-PLAN.md
+**Resume File:** .planning/phases/18-txpruner-service-first-real-prune/18-02-PLAN.md
 
 ## Accumulated Context
 
@@ -146,6 +146,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 17 P04 | 26min | 3 tasks | 6 files |
 | Phase 17 P05 | 27min | 3 tasks | 4 files |
 | Phase 17 P06 | 55min | 3 tasks | 2 files |
+| Phase 18 P01 | 43min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -234,6 +235,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 17]: 17-05: D-04 marker contract landed as design — /prune/tx/<hash> key + PrunedTransactionRecord proto + tri-state LookupPrunedEntry (PRUNED / NOT_FOUND / VALUE_PRESENT_INVARIANT_VIOLATION, ERROR-logged) on the node-local raw surface; marker WRITES stay test-only (WritePrunedEntryForTest), joining Phase 18's erase WriteBatch — Value XOR marker must be established atomically with the erase; Phase 19 SURV-02 answers history-pruned vs not-found from the lookup
 - [Phase 17]: 17-06: The prune dry-run timer is node-scoped and idempotent (created once, never reassigned until after io shutdown) — the evaluator tracks Phase-13 generation switches via per-tick construction from live members, so no member race is representable
 - [Phase 17]: 17-06: GATE-06 landed as the sgns_config.json pruning object read (one HasMember+IsObject guard wraps the entire read — absent keys execute zero new statements, SC-5), delegating all member parsing to PruningConfig::FromJSON (the 17-04 one parse home); dry_run=false WARNs that real erasure arrives with the Phase-18 TxPruner
+- [Phase ?]: 18-01: D-02 re-delivery guard is one isResolved insertion in HandleCIDBroadcast after the HasBlock miss — seals are the dedup of record; counter rides the SetEraseInterruptHookForTest seam shape
+- [Phase ?]: 18-01: SC-3 proof uses a deaf-broadcaster node A so the pruned root stays A's live head; the in-window tracer fetch (gossip message-cache delivery on join) proves the zero-fetch assertion non-vacuous
 
 ## Deferred Items
 
