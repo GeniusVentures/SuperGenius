@@ -187,6 +187,16 @@ namespace sgns
             ASSERT_TRUE( manager->db_->Put( { key }, value, {} ).has_value() );
         }
 
+        // Raw durable-record read through the same GlobalDB seam the D-01
+        // grandfather probe uses (db_->Get), for byte-exact record assertions.
+        static std::string ReadCertificateAtKey( const std::shared_ptr<ConsensusManager> &manager,
+                                                 const std::string                       &key )
+        {
+            auto record = manager->db_->Get( { key } );
+            EXPECT_FALSE( record.has_error() );
+            return record.has_error() ? std::string{} : std::string( record.value().toString() );
+        }
+
         static ConsensusManager::Proposal ResignWithLaterTimestamp( const std::shared_ptr<sgns::GeniusAccount> &account,
                                                                     ConsensusManager::Proposal proposal )
         {
@@ -713,10 +723,6 @@ namespace
             const std::string                          &tx_hash,
             bool                                        tamper_subject = false )
         {
-            const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                           std::chrono::system_clock::now().time_since_epoch() )
-                                                           .count() );
-
             auto subject = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
                                                                        nonce,
                                                                        tx_hash,
@@ -728,9 +734,28 @@ namespace
             {
                 subject.value().set_payload_hash( std::string( 32, '\x01' ) );
             }
+            return MakeSignedCertificateOverSubject( account, registry_cid, subject.value() );
+        }
+
+        // Certificate-building body shared with MakeCertificateForRegistry: two
+        // certificates proposed over the SAME subject bytes derive the same
+        // /cert/<slot> key while differing in proposer, registry CID, and
+        // signers (the WR-01 crafted-certificate-at-finalized-slot shape).
+        // timestamp_bump shifts every timestamp so repeated calls produce
+        // distinct (still fully signed and valid) serializations.
+        sgns::ConsensusManager::Certificate MakeSignedCertificateOverSubject(
+            const std::shared_ptr<sgns::GeniusAccount> &account,
+            const std::string                          &registry_cid,
+            const sgns::ConsensusManager::Subject      &subject,
+            uint64_t                                    timestamp_bump = 0 )
+        {
+            const auto now_ms = static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                           std::chrono::system_clock::now().time_since_epoch() )
+                                                           .count() ) +
+                                timestamp_bump;
 
             sgns::ConsensusManager::Proposal proposal;
-            *proposal.mutable_subject() = subject.value();
+            *proposal.mutable_subject() = subject;
             proposal.set_proposer_id( account->GetAddress() );
             proposal.set_registry_cid( registry_cid );
             proposal.set_registry_epoch( 0 );
@@ -1828,6 +1853,161 @@ TEST_F( ConsensusPendingLifecycleTest, DurableFinalCertificateRevalidatesThrough
 
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, grandfathered_certificate ),
                sgns::ConsensusManager::Check::Approve );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, CraftedCertificateAtFinalizedSlotRejected )
+{
+    /**
+     * VER-01 adversarial case (21-VERIFICATION gap 3 / WR-01). Attacker
+     * authority: any gossip peer that already finalized one of its own slots
+     * (the subject's account:nonce is attacker-controlled, so a durable
+     * /cert/<slot> record at that slot is trivially the attacker's own doing)
+     * and now crafts a NEW certificate C2 for the same slot: its own proposal
+     * over the same subject bytes (identical GetExpectedCertificateSlotKey),
+     * correctly computed proposal_id, its own signatures, referencing a
+     * raw-put forged/self-certified registry CID, and carrying its own quorum
+     * votes whose signer set is DISJOINT from the stored winner C1's -- so the
+     * cross-certificate equivocation guard (which needs one signer verifying
+     * on BOTH certificates; Consensus.cpp:3517-3547) cannot fire, and this
+     * test proves it is not what rejects C2. Expected rejection:
+     * ValidateCertificate( C2 ) must return Reject through the registry-
+     * authorization rule. Actual pre-fix behavior: the existence-only
+     * grandfather probe (Consensus.cpp:3650-3658) grandfathers C2, the
+     * unverified forged registry loads, the attacker's vote carries the forged
+     * registry's full weight, and the certificate Approves (the WR-01 attack).
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    // Capture the honest genesis CID BEFORE the forged raw-put: the forged
+    // update lands at the same registry CRDT key and advances the registry's
+    // cached CID, so a later GetRegistryCid would hand back the forged one.
+    const auto honest_registry_cid = registry->GetRegistryCid();
+    ASSERT_FALSE( honest_registry_cid.empty() );
+
+    auto attacker = MakeAttackerAccount();
+    ASSERT_TRUE( attacker );
+    const auto forged_cid = MakeForgedRegistryCid( registry, attacker );
+    ASSERT_FALSE( forged_cid.empty() );
+    // The forged snapshot must be locally loadable (the attacker supplied the
+    // delta) -- the attack surface is authorization, not availability.
+    auto raw_load = registry->LoadUnverifiedRegistryByCid( forged_cid );
+    ASSERT_TRUE( raw_load.has_value() );
+
+    // The attacker's own slot: subject bytes shared by the stored winner C1
+    // and the crafted C2 so both derive the same /cert/<slot> key.
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( attacker->GetAddress(),
+                                                               211,
+                                                               "0xcrafted-finalized-slot",
+                                                               sgns::EmbeddedTransaction{},
+                                                               std::nullopt,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    // C1: the honestly finalized winner (honest registry CID, honest signer)
+    // whose bytes sit in the durable slot record -- records only exist
+    // post-Approve (Pitfall 4), so this simulates C1 having reached finality.
+    auto       c1          = MakeSignedCertificateOverSubject( account, honest_registry_cid, subject.value() );
+    const auto durable_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( c1 );
+    ASSERT_FALSE( durable_key.empty() );
+    std::string c1_serialized;
+    ASSERT_TRUE( c1.SerializeToString( &c1_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, c1_serialized );
+
+    // C2: attacker-crafted at the same slot -- forged registry CID, attacker
+    // proposal/vote, signers disjoint from C1's honest signer.
+    auto c2 = MakeSignedCertificateOverSubject( attacker, forged_cid, subject.value() );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( c2 ), durable_key );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, c2 ),
+               sgns::ConsensusManager::Check::Reject );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ConflictingLowerHashCertificateAtFinalizedSlotDoesNotOverwrite )
+{
+    /**
+     * VER-01 adversarial case (21-VERIFICATION gap 3 / T-21-0903). Same
+     * attacker authority as CraftedCertificateAtFinalizedSlotRejected, now
+     * aiming at the lower-hash overwrite rule (Consensus.cpp:3550-3554): a
+     * conflicting certificate whose serialized hash is LOWER than the stored
+     * winner's bytes would replace the durable record if it ever Approves.
+     * Expected rejection: ValidateCertificate( C2 ) == Reject AND CRDT ingress
+     * (FilterCertificate) rejects the element, so the durable record at the
+     * slot key still holds C1's bytes -- the overwrite branch is unreachable
+     * because the candidate never Approves. Actual pre-fix behavior: C2
+     * Approves through the existence-only grandfather probe and the filter's
+     * lower-hash ordering accepts the overwrite (kAccept).
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    // Honest genesis CID captured before the forged raw-put (same ordering
+    // discipline as CraftedCertificateAtFinalizedSlotRejected).
+    const auto honest_registry_cid = registry->GetRegistryCid();
+    ASSERT_FALSE( honest_registry_cid.empty() );
+
+    auto attacker = MakeAttackerAccount();
+    ASSERT_TRUE( attacker );
+    const auto forged_cid = MakeForgedRegistryCid( registry, attacker );
+    ASSERT_FALSE( forged_cid.empty() );
+
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( attacker->GetAddress(),
+                                                               212,
+                                                               "0xlower-hash-finalized-slot",
+                                                               sgns::EmbeddedTransaction{},
+                                                               std::nullopt,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    auto       c1          = MakeSignedCertificateOverSubject( account, honest_registry_cid, subject.value() );
+    const auto durable_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( c1 );
+    ASSERT_FALSE( durable_key.empty() );
+    std::string c1_serialized;
+    ASSERT_TRUE( c1.SerializeToString( &c1_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, c1_serialized );
+
+    // Engineer the overwrite shape: re-sign timestamp-shifted variants of the
+    // conflicting certificate until one serializes to a strictly LOWER hash
+    // than the stored record bytes (each variant is structurally valid; every
+    // draw is an independent coin flip, so a handful of attempts suffices).
+    auto       c2               = MakeSignedCertificateOverSubject( attacker, forged_cid, subject.value() );
+    const auto stored_hash      = SerializedCertificateHash( c1_serialized );
+    bool       lower_hash_found = false;
+    for ( uint64_t bump = 1; bump <= 128 && !lower_hash_found; ++bump )
+    {
+        c2 = MakeSignedCertificateOverSubject( attacker, forged_cid, subject.value(), bump );
+        std::string c2_serialized;
+        ASSERT_TRUE( c2.SerializeToString( &c2_serialized ) );
+        lower_hash_found = SerializedCertificateHash( c2_serialized ) < stored_hash;
+    }
+    ASSERT_TRUE( lower_hash_found ) << "no lower-hash variant found within 128 attempts";
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( c2 ), durable_key );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, c2 ),
+               sgns::ConsensusManager::Check::Reject );
+
+    std::string c2_serialized;
+    ASSERT_TRUE( c2.SerializeToString( &c2_serialized ) );
+    sgns::crdt::pb::Element element;
+    element.set_key( durable_key );
+    element.set_value( c2_serialized );
+    const auto filter = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
+    EXPECT_EQ( filter.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
+
+    // The durable winner is untouched: the record still holds C1's bytes.
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ReadCertificateAtKey( manager, durable_key ), c1_serialized );
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
