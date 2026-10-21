@@ -201,9 +201,10 @@ namespace
     /// @brief Validator with three PUBLIC endpoints (3 x 25 = 75 quorum) whose
     ///        bridge binding fields are caller-controlled, and a transport
     ///        factory serving @p receipt_json from every endpoint.
-    std::unique_ptr<PublicChainInputValidator> MakeValidatorWithBridgeBinding( const std::string       &receipt_json,
-                                                                               const std::string       &bridge_contract,
-                                                                               std::vector<std::string> topic0_hashes )
+    std::unique_ptr<PublicChainInputValidator> MakeValidatorWithBridgeBinding(
+        const std::string              &receipt_json,
+        const std::string              &bridge_contract,
+        const std::vector<std::string> &topic0_hashes )
     {
         auto validator = std::make_unique<PublicChainInputValidator>();
 
@@ -691,7 +692,7 @@ namespace
         // after the fix).
         auto validator = MakeValidatorWithBridgeBinding( BuildPlainSuccessReceiptJson( kSourceRef ), "", {} );
 
-        PublicChainNonMintTx non_mint_tx;
+        const PublicChainNonMintTx non_mint_tx;
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, non_mint_tx, kSourceRef );
         EXPECT_TRUE( evidence.valid ) << "Non-mint public-chain types keep bridge-optional confirmation";
