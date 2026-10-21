@@ -2,10 +2,13 @@
  * @file       tx_pruner_test.cpp
  * @brief      SC-1 (first real erase), cycle idempotence, the sweep-as-cycle
  *             re-prune (D-02b), the stranding-edge budget behavior, the SC-4
- *             tick-gate refusals, and the RECL-03/RECL-04 observability +
- *             status contracts — including the D-01 compose-lock
- *             non-interleaving proof, all against the TxPruner SERVICE on
- *             real stores (GlobalDB + pubsub + temp dir, no GeniusNode).
+ *             tick-gate refusals, the RECL-03/RECL-04 observability +
+ *             status contracts (including the D-01 compose-lock
+ *             non-interleaving proof), and the SC-2 crash matrix — killing
+ *             the cycle at EVERY interrupt point of BOTH seams and reopening
+ *             the database on the same path converges to the same fixed
+ *             point — all against the TxPruner SERVICE on real stores
+ *             (GlobalDB + pubsub + temp dir, no GeniusNode).
  * @details    Every suite targets the service because GeniusNode is not
  *             unit-testable (the established testability split). Seeding
  *             always goes through the REAL publish path on the fixture's
@@ -39,6 +42,11 @@
 #include <thread>
 #include <utility>
 #include <vector>
+
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <libp2p/basic/scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "account/TransferTransaction.hpp"
@@ -387,6 +395,111 @@ public:
     outcome::result<PruneCycleStats> RunCycle( sgns::TxPruner &pruner, uint64_t generation = kTestGeneration )
     {
         return pruner.RunCycle( *db_, *tm_, account_->GetUTXOManager(), generation );
+    }
+
+    //
+    // Crash-matrix helpers (SC-2): the simulated kill tears the whole stack
+    // down in the fixture's own destruction order and rebuilds it on the SAME
+    // database path — the Phase-16 restart discipline (restartNodePending
+    // Start), so every fixed-point assertion reads what survived on disk.
+    //
+
+    /**
+     * Runs cycles until one RUNS (examined > 0) with an interruption seam
+     * already armed — the RunSettledCycle discriminator (watermark turning
+     * set) cannot be used here because seam-interrupted cycles deliberately
+     * leave the status untouched. A gate-skipped tick is side-effect free,
+     * so polling RunCycle is safe with either seam armed.
+     */
+    PruneCycleStats RunUntilCycleRuns( sgns::TxPruner &pruner )
+    {
+        ForceManagerReady();
+        PruneCycleStats           stats;
+        bool                      cycle_failed = false;
+        bool                      ran          = false;
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto result = pruner.RunCycle( *db_, *tm_, account_->GetUTXOManager(), kTestGeneration );
+                if ( result.has_error() )
+                {
+                    cycle_failed = true;
+                    return true; // exit the bounded wait; EXPECT below fails loudly
+                }
+                stats = result.value();
+                ran   = stats.examined > 0;
+                return ran;
+            },
+            std::chrono::milliseconds( kSmallSettleSeconds * 1000 + 8000 ),
+            "tick gate settles and the interrupted prune cycle runs",
+            &waited );
+        EXPECT_FALSE( cycle_failed );
+        EXPECT_TRUE( ran );
+        return stats;
+    }
+
+    /**
+     * Tears the whole stack down (the fixture destructor's own order: both
+     * seams already cleared, blockchain first, db before pubsub) and
+     * reconstructs the GlobalDB + account + blockchain + manager stack on the
+     * SAME database path — the crash/restart of the SC-2 matrix. The pubsub
+     * host and the io pool survive (the Phase-16 makeNode wiring, rebuilt
+     * graphsync network and scheduler over the live host); the manager is
+     * re-driven to READY for the post-restart cycles.
+     */
+    void ReopenStackOnSamePath()
+    {
+        if ( blockchain_ )
+        {
+            (void) blockchain_->Stop();
+        }
+        tm_.reset();
+        blockchain_.reset();
+        account_.reset();
+        if ( db_ )
+        {
+            db_->ShutdownNow();
+        }
+        db_.reset();
+
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubs_->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+        auto graphsync_network = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
+                                                                                              scheduler );
+        auto generator         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+        auto reopened          = crdt::GlobalDB::New( io_,
+                                                      db_path_,
+                                                      pubs_,
+                                                      crdt::CrdtOptions::DefaultOptions(),
+                                                      graphsync_network,
+                                                      scheduler,
+                                                      generator );
+        ASSERT_TRUE( reopened.has_value() );
+        db_ = reopened.value();
+        db_->AddListenTopic( kSeedTopic );
+        db_->AddBroadcastTopic( kSeedTopic );
+        db_->Start();
+
+        account_ = GeniusAccount::New( kTestTokenId, base_path / "account" );
+        ASSERT_NE( account_, nullptr );
+        ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
+
+        blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
+        ASSERT_NE( blockchain_, nullptr );
+        constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
+        constexpr auto kMutabilityWindow   = std::chrono::milliseconds( 600000 );
+        tm_                                = TransactionManager::New( db_,
+                                                                      io_,
+                                                                      account_,
+                                                                      blockchain_,
+                                                                      NodeType::Light,
+                                                                      0,
+                                                                      kTimestampTolerance,
+                                                                      kMutabilityWindow );
+        ASSERT_NE( tm_, nullptr );
+        ForceManagerReady();
     }
 
     //
@@ -1504,3 +1617,309 @@ TEST_F( TxPrunerTest, ComposeLock_HeadGuardRefusesAtEraseTimeNeverTorn )
     ASSERT_TRUE( pruned.has_value() );
     EXPECT_EQ( pruned.value().first, PrunedLookup::PRUNED );
 }
+
+// ---------------------------------------------------------------------------
+// CrashFixedPoint: SC-2 — kill the cycle at ANY interrupt point of BOTH
+// seams, reopen the database, converge to the SAME fixed point
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// One kill point of the crash matrix: which seam, which step, and which
+    /// visit of that step aborts (the GlobalDB seam fires three step visits
+    /// per erase compose; the cycle seam's BeforeErase visit repeats per tx).
+    struct CrashKillPoint
+    {
+        const char *name;
+        /// true: the TxPruner cycle seam; false: GlobalDB's compose seam.
+        bool use_cycle_seam;
+        /// The seam's step constant (GlobalDB steps are literal 1/2/3).
+        int step;
+        /// 1-based visit of @p step that aborts.
+        int invocation;
+        /// Expected: did the killed run still complete its cycle (per-tx
+        /// erase failures and AfterStatus interruptions do)?
+        bool cycle_completes;
+    };
+
+    /**
+     * The full matrix: every cycle-level interruption position and every
+     * GlobalDB compose step. The GlobalDB cases kill the SECOND erase's
+     * compose (the first erase's three step visits pass) — true partial
+     * progress: one tx fully committed, the next tx's batch killed at the
+     * requested step, the cycle itself continuing past the per-tx error
+     * (the sanctioned log-and-continue scan contract).
+     */
+    const std::vector<CrashKillPoint> kCrashKillPoints = {
+        { "CycleAfterEvaluation", true, sgns::TxPruner::kInterruptAfterEvaluation, 1, false },
+        { "CycleBeforeFirstErase", true, sgns::TxPruner::kInterruptBeforeErase, 1, false },
+        { "CycleBetweenErases", true, sgns::TxPruner::kInterruptBeforeErase, 2, false },
+        { "CycleBeforeStatus", true, sgns::TxPruner::kInterruptBeforeStatus, 1, false },
+        { "CycleAfterStatus", true, sgns::TxPruner::kInterruptAfterStatus, 1, true },
+        { "ComposeStep1MidProgress", false, 1, 2, true },
+        { "ComposeStep2MidProgress", false, 2, 2, true },
+        { "ComposeStep3MidProgress", false, 3, 2, true },
+    };
+
+    std::string CrashKillName( const ::testing::TestParamInfo<CrashKillPoint> &info )
+    {
+        return info.param.name;
+    }
+} // namespace
+
+/**
+ * SC-2, the crash-consistency matrix. For every interrupt point of BOTH
+ * seams: seed a mixed fixture (two one-tx blocks and one shared two-tx
+ * block), kill the first cycle at that point, REOPEN the whole stack on the
+ * same database path, and assert (a) the immediate fixed point — every
+ * transaction is in the COMPLETE pre-erase state (value + map entry, no
+ * marker) or the COMPLETE post-erase state (all gone, marker PRUNED), never
+ * a torn mix: never value-without-map-entry, never an orphan map entry,
+ * never marker-plus-value; a same-block sibling MAY legally strand (value
+ * present, its shared block already gone) — the BLOCK_ALREADY_ERASED
+ * evidence completes it; (b) cycles re-run on the reopened node converge to
+ * exactly the uninterrupted run's end state (all eligibles PRUNED, controls
+ * untouched, heads/seals/UTXO byte-identical); and (c) one more cycle on the
+ * fully-drained node is a no-op.
+ *
+ * TRUE-PROCESS-KILL NOTE (research open-question 2 default, plan-sanctioned
+ * stretch): the seam-simulated matrix above IS the SC-2 gate. A fork-based
+ * true-kill case (child opens the fixture DB, _exit(3)s mid-compose inside
+ * the seam, parent reopens) is deliberately ABSENT: the fixture's pubsub
+ * host and asio pool carry live threads whose locks do not survive fork()
+ * (research assumption A3 — the child would deadlock on inherited mutexes
+ * before reaching the compose), and GlobalDB has no pubsub-less
+ * construction path. Documented here so the absence is never silent.
+ */
+class TxPrunerCrashFixedPointTest : public TxPrunerTest, public ::testing::WithParamInterface<CrashKillPoint>
+{
+};
+
+TEST_P( TxPrunerCrashFixedPointTest, KilledCycleReopensToFixedPointAndConverges )
+{
+    const CrashKillPoint kill = GetParam();
+
+    //
+    // Seed the mixed fixture: an ancient spender, TWO eligible one-tx-block
+    // transactions, TWO eligibles sharing ONE multi-tx block, and an unspent
+    // control sibling — every erase-order permutation the cycle can take.
+    //
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1 );
+    auto eligible_b = MakeTransfer( 3, 1 );
+    auto eligible_c = MakeTransfer( 4, 1 );
+    auto unspent    = MakeTransfer( 5, 2 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/crash-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    TrackOutputs( *eligible_a );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    SeedTransactionsInOneBlock( { eligible_b, eligible_c } );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *eligible_c );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_c, 0, *spender ) );
+    SeedTransaction( unspent );
+    TrackOutputs( *unspent ); // deliberately never consumed
+    PutSeedValue( "/seed/txpruner/crash-driver-2", "d2" );
+
+    const std::string path_a = TransactionManager::GetTransactionPath( *eligible_a );
+    const std::string path_b = TransactionManager::GetTransactionPath( *eligible_b );
+    const std::string path_c = TransactionManager::GetTransactionPath( *eligible_c );
+
+    // Block CIDs and the pre-kill byte-identity snapshots.
+    const std::string cid_a      = SnapshotMapEntry( path_a );
+    const std::string shared_cid = SnapshotMapEntry( path_b );
+    const std::string cid_u      = SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) );
+    const std::string cid_s      = SnapshotMapEntry( TransactionManager::GetTransactionPath( *spender ) );
+    ASSERT_NE( cid_a, "absent" );
+    ASSERT_EQ( shared_cid, SnapshotMapEntry( path_c ) ); // ONE shared delta
+    ASSERT_EQ( SnapshotPrefix( "/prune/tx/" ).size(), 0u );
+
+    const RawSnapshot  utxo_before   = SnapshotPrefix( "/utxo/" );
+    uint64_t           max_height    = 0;
+    const HeadSnapshot heads_before  = SnapshotHeads( max_height );
+    const RawSnapshot  seals_before  = SnapshotSeals( { cid_a, shared_cid, cid_u, cid_s } );
+    const RawSnapshot  blocks_before = SnapshotBlocks( { cid_u, cid_s } );
+    const std::string  unspent_value = BytesOf(
+        db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() );
+    const std::string spender_value = BytesOf(
+        db_->Get( { TransactionManager::GetTransactionPath( *spender ) } ).value() );
+
+    //
+    // The kill: arm the requested seam, run cycles until one runs, disarm.
+    // Every captured local lives at FUNCTION scope — the hooks fire inside
+    // RunUntilCycleRuns below, after this arming block's branches close, so
+    // block-scope captures would dangle.
+    //
+    std::atomic<bool> killed{ false };
+    const int         step          = kill.step;
+    const int         invocation    = kill.invocation;
+    const int         fire_at_visit = 3 + kill.step; // GlobalDB seam only
+    int               visits        = 0;
+    if ( kill.use_cycle_seam )
+    {
+        sgns::TxPruner::SetCycleInterruptHookForTest(
+            [&]( int visited )
+            {
+                if ( visited != step )
+                {
+                    return false;
+                }
+                if ( ++visits < invocation )
+                {
+                    return false; // let earlier visits pass (partial progress)
+                }
+                killed.store( true );
+                return true;
+            } );
+    }
+    else
+    {
+        // GlobalDB's seam visits steps 1/2/3 per erase compose: visits 1-3
+        // are the FIRST erase (allowed through — true partial progress),
+        // visit 3+step is the SECOND erase's @p step (the kill).
+        crdt::GlobalDB::SetEraseInterruptHookForTest(
+            [&]( int visited_step )
+            {
+                ++visits;
+                if ( visits == fire_at_visit && visited_step == step )
+                {
+                    killed.store( true );
+                    return true;
+                }
+                return false;
+            } );
+    }
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+    const PruneCycleStats kill_stats = RunUntilCycleRuns( *pruner );
+
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+    crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
+
+    // The kill really landed at the requested point (never vacuous).
+    ASSERT_TRUE( killed.load() ) << "the interrupt point was never reached: " << kill.name;
+    // The status contract held across the kill: a completed run recorded the
+    // watermark, an interrupted run left the status untouched.
+    EXPECT_EQ( pruner->GetPruneStatus().watermark.has_value(), kill.cycle_completes );
+
+    //
+    // The REOPEN: tear the stack down and rebuild it on the same DB path —
+    // every assertion below reads what actually survived on disk.
+    //
+    ASSERT_NO_FATAL_FAILURE( ReopenStackOnSamePath() );
+
+    // (a) The immediate fixed point on the REOPENED node: for every
+    // eligible tx either the complete pre-erase state or the complete
+    // post-erase state — never a torn mix.
+    size_t erased_count = 0;
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get(), eligible_c.get() } )
+    {
+        const std::string tx_path       = TransactionManager::GetTransactionPath( *tx );
+        const bool        value_present = db_->Get( { tx_path } ).has_value();
+        const bool        map_present   = SnapshotMapEntry( tx_path ) != "absent";
+        auto              lookup        = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+
+        // Value and map entry live and die together (one batch).
+        EXPECT_EQ( value_present, map_present ) << kill.name << ": torn value/map mix at " << tx_path;
+        // Never marker-plus-value (the resurrection shape is a loudly
+        // reported invariant violation, not a legal crash state).
+        EXPECT_NE( lookup.value().first, PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+            << kill.name << ": marker AND value both survived at " << tx_path;
+        if ( value_present )
+        {
+            EXPECT_EQ( lookup.value().first, PrunedLookup::NOT_FOUND ) << kill.name << ": marker without erase";
+        }
+        else
+        {
+            EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED ) << kill.name << ": erase without marker";
+            ++erased_count;
+        }
+    }
+    // The one-tx-block tx: its block lives and dies with its own value.
+    EXPECT_EQ( SnapshotBlocks( { cid_a } ).at( cid_a ) == "absent", db_->Get( { path_a } ).has_error() )
+        << kill.name << ": own-block bytes/value diverged";
+    // The shared block: a crash BETWEEN two same-block erases may legally
+    // leave the surviving sibling's value present with the block already
+    // gone (the BLOCK_ALREADY_ERASED-completable state); but BOTH siblings
+    // erased MUST mean the block is gone.
+    if ( db_->Get( { path_b } ).has_error() && db_->Get( { path_c } ).has_error() )
+    {
+        EXPECT_EQ( SnapshotBlocks( { shared_cid } ).at( shared_cid ), "absent" )
+            << kill.name << ": both shared siblings erased but the block survived";
+    }
+    // The controls are untouched by any crash position.
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() ), unspent_value );
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *spender ) } ).value() ), spender_value );
+    EXPECT_EQ( SnapshotBlocks( { cid_u, cid_s } ), blocks_before );
+    EXPECT_EQ( SnapshotPrefix( "/utxo/" ), utxo_before );
+    EXPECT_EQ( SnapshotPrefix( "/prune/tx/" ).size(), erased_count );
+
+    //
+    // (b) Convergence: fresh pruner on the reopened node, cycles until the
+    // drain — the end state equals the UNINTERRUPTED run's end state
+    // (18-06's RealPrune pinned that state: every eligible fully erased +
+    // marked, controls byte-identical, heads/seals/UTXO untouched).
+    //
+    auto converger = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( converger, nullptr );
+    PruneCycleStats conv_stats;
+    RunSettledCycle( *converger, conv_stats );
+    for ( int i = 0; i < 3 && conv_stats.erased > 0; ++i )
+    {
+        auto more = RunCycle( *converger );
+        ASSERT_TRUE( more.has_value() );
+        conv_stats = more.value();
+    }
+
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get(), eligible_c.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() ) << kill.name << ": value survived convergence";
+        EXPECT_TRUE( SnapshotCrdtEntriesContaining( tx_path ).empty() ) << kill.name << ": CRDT footprint survived";
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" ) << kill.name << ": map entry survived convergence";
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+    const RawSnapshot converged_blocks = SnapshotBlocks( { cid_a, shared_cid, cid_u, cid_s } );
+    EXPECT_EQ( converged_blocks.at( cid_a ), "absent" );
+    EXPECT_EQ( converged_blocks.at( shared_cid ), "absent" ); // gone ONCE
+    EXPECT_EQ( converged_blocks.at( cid_u ), blocks_before.at( cid_u ) );
+    EXPECT_EQ( converged_blocks.at( cid_s ), blocks_before.at( cid_s ) );
+    EXPECT_EQ( SnapshotPrefix( "/prune/tx/" ).size(), 3u ); // exactly one marker per eligible
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() ), unspent_value );
+    EXPECT_EQ( SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) ), cid_u );
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *spender ) } ).value() ), spender_value );
+    EXPECT_EQ( SnapshotPrefix( "/utxo/" ), utxo_before );
+    uint64_t           max_height_after = 0;
+    const HeadSnapshot heads_after      = SnapshotHeads( max_height_after );
+    EXPECT_EQ( heads_after, heads_before );
+    EXPECT_EQ( max_height_after, max_height );
+    EXPECT_EQ( SnapshotSeals( { cid_a, shared_cid, cid_u, cid_s } ), seals_before )
+        << "a seal marker changed (GATE-03)";
+
+    //
+    // (c) The clean-node no-op: one more cycle on the drained reopened node
+    // examines the survivors and erases nothing.
+    //
+    const RawSnapshot markers_converged = SnapshotPrefix( "/prune/tx/" );
+    auto              noop              = RunCycle( *converger );
+    ASSERT_TRUE( noop.has_value() );
+    EXPECT_GT( noop.value().examined, 0u ); // spender + unspent sibling remain
+    EXPECT_EQ( noop.value().eligible, 0u );
+    EXPECT_EQ( noop.value().erased, 0u );
+    EXPECT_EQ( noop.value().held_blocks, 0u );
+    EXPECT_EQ( noop.value().errors, 0u );
+    EXPECT_EQ( SnapshotPrefix( "/prune/tx/" ), markers_converged );
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() ), unspent_value );
+}
+
+INSTANTIATE_TEST_SUITE_P( CrashFixedPointMatrix,
+                          TxPrunerCrashFixedPointTest,
+                          ::testing::ValuesIn( kCrashKillPoints ),
+                          CrashKillName );
