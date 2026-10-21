@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
 stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-10-21T20:10:58.027Z"
+last_updated: "2026-10-21T20:35:39.319Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
   percent: 9
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-10-21
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 82%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T20:10:58.021Z
+**Last session:** 2026-10-21T20:35:39.313Z
 **Stopped At:** Completed 18-03-PLAN.md
 **Resume File:** None
 
@@ -149,6 +149,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 18 P01 | 43min | 2 tasks | 3 files |
 | Phase 18 P02 | 43min | 2 tasks | 9 files |
 | Phase 18 P03 | 64min | 3 tasks | 13 files |
+| Phase 18 P04 | 16min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -246,6 +247,10 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase ?]: 18-03: Absent-vs-corrupt block discrimination uses BYTE presence (RocksdbDatastore::contains via GraphsyncDAGSyncer::HasRawBlockBytes / GlobalDB::HasLocalBlock), never HasBlock -- HasBlock re-parses so a corrupt block would read as absent; BLOCK_ALREADY_ERASED completes only an otherwise-ELIGIBLE candidate (corrupt and non-eligible ties stay fail-closed DESERIALIZE_FAILED)
 - [Phase ?]: 18-03: The production marker pair (BuildPruneMarkerEntry) joins the erase WriteBatch through EraseEntry's optional staged-extra-entry parameter -- value XOR marker in one commit; the two erase drivers share ONE private EraseTransactionEntryWithMarker (plain = nullopt, byte-identical; pruned = the marker pair)
 - [Phase ?]: 18-03: Degenerate config zeros (max_erases_per_cycle=0, settle_seconds=0) are rejected at read time by keeping safe defaults (100/60) -- no enabled-fail-close like finality_window because the defaults are safe; PRUNE-04 checkbox deferred to 18-04 (the TxPruner cycle), this plan lands the mutation substrate
+- [Phase 18]: 18-04: TxPruner::RunCycle returns outcome::result<PruneCycleStats> with IsPermanentStop (invalid_argument + operation_not_permitted) as the ONE permanent-vs-transient classification home — the 17-06 fail-closed split re-hosted; the wiring stops on permanent-class, reschedules on transient
+- [Phase 18]: 18-04: The block-grouped K budget takes groups WHOLE or defers them WHOLE (held_blocks), and only ERASABLE block reports form groups — erasing a tx value whose block survives a non-eligible sibling would strand the sibling's history (PRUNE-03 two-verdict discipline at the budget level); a partial group behind an exhausted K is structurally impossible, not tested away
+- [Phase 18]: 18-04: The watermark advances only on cycles that ran to completion without hard error regardless of K exhaustion, is monotonic, and PruneStatus carries NO bytes_reclaimed until Phase 20 measures it — no overclaiming (T-18-0406): interrupted/failed cycles leave the status untouched; the RECL-03 log states 'bytes reclaimed: not measured until Phase 20' explicitly -- never a fabricated number
+- [Phase 18]: 18-04: The TxPruner instance owns ONLY config/role/status/settle-clock (generation-safe across Phase-13 switches); every CRDT/service dependency is passed per cycle, and the settle clock restarts whenever the tick gate re-opens — D-C4: no cached evaluator, no cursor (erased txs vanish from enumeration); a cycle can never fire on a stale settle window or during initial sync
 
 ## Deferred Items
 
