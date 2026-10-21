@@ -104,6 +104,19 @@ namespace sgns
                                                                 const eth::codec::LogEntry &log,
                                                                 const base::Logger         &logger )
         {
+            // MINT-04 (CR-01): the burn facts attest exactly one output, and the
+            // mint's fact accessors read that first output — a multi-output mint
+            // whose output[0] matches the burn would pass every comparison below
+            // while minting extra outputs. The evidence boundary rejects it (the
+            // deserializer stays open for historical data; this is where the
+            // burn facts authorize the output set).
+            if ( mint.GetUTXOParameters().second.size() != 1 )
+            {
+                logger->error( "receipt/mint fact binding failed: multi-output mint tx={}",
+                               PreviewValue( mint.GetHash() ) );
+                return std::nullopt;
+            }
+
             const auto canonical_topic0_hex = []( std::string_view signature )
             {
                 const auto hash = eth::abi::event_signature_hash( std::string( signature ) );

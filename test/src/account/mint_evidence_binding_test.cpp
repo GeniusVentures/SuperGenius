@@ -255,8 +255,7 @@ namespace
 
         std::string serialized;
         proto.SerializeToString( &serialized );
-        return MintTransactionV2::DeSerializeByteVector(
-            std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
+        return MintTransactionV2::DeSerializeByteVector( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
     }
 
     /// @brief A non-mint transaction on the local genius chain (escrow-style):
@@ -469,10 +468,12 @@ namespace
         ASSERT_NE( mint, nullptr ) << "The proto route must deserialize the two-output mint";
         ASSERT_EQ( mint->GetUTXOParameters().second.size(), 2u ) << "Fixture must carry the multi-output attack shape";
         EXPECT_EQ( mint->GetAmount(), 7u ) << "Primary output reads the attested amount";
-        EXPECT_EQ( mint->GetPrimaryDestinationAddress(), facts.dest_hex ) << "Primary output reads the attested destination";
+        EXPECT_EQ( mint->GetPrimaryDestinationAddress(), facts.dest_hex )
+            << "Primary output reads the attested destination";
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
-        EXPECT_FALSE( evidence.valid ) << "A multi-output mint whose output[0] matches the burn must be rejected (CR-01)";
+        EXPECT_FALSE( evidence.valid )
+            << "A multi-output mint whose output[0] matches the burn must be rejected (CR-01)";
     }
 
     TEST( MintEvidenceBindingTest, MatchingV2FactsValidate )
