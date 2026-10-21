@@ -3643,18 +3643,38 @@ namespace sgns
         // uses at its PutConvergentImmutable), and records are only ever
         // written AFTER an Approve -- an attacker cannot pre-seed a record to
         // buy grandfathering for a certificate that never validated
-        // (Pitfall 4). On a fresh node admitting new certificates the probe
-        // legitimately misses and the strict path below applies.
+        // (Pitfall 4). The record must BE this certificate: grandfathering is
+        // granted by CONTENT (serialized-hash equality, the same
+        // SerializedCertificateHash discipline SubmitCertificate and
+        // FilterCertificate apply), never by slot-record existence -- an
+        // already-finalized slot proves nothing about a DIFFERENT certificate
+        // crafted for the same account:nonce (WR-01). A record that fails to
+        // parse or hashes differently leaves the candidate on the strict
+        // verified-registry path below (fail-closed). On a fresh node
+        // admitting new certificates the probe legitimately misses and the
+        // strict path below applies.
         bool grandfathered_final = false;
         {
             const auto durable_slot_record = db_->Get( { GetExpectedCertificateSlotKey( certificate ) } );
             if ( durable_slot_record.has_value() )
             {
-                grandfathered_final = true;
+                Certificate stored_certificate;
+                std::string candidate_serialized;
+                if ( stored_certificate.ParseFromArray( durable_slot_record.value().data(),
+                                                        durable_slot_record.value().size() ) &&
+                     certificate.SerializeToString( &candidate_serialized ) &&
+                     SerializedCertificateHash( durable_slot_record.value().toString() ) ==
+                         SerializedCertificateHash( candidate_serialized ) )
                 {
-                    std::lock_guard lock( fault_test_mutex_ );
-                    ++fault_test_counters_.grandfathered_finality_probes;
+                    grandfathered_final = true;
+                    {
+                        std::lock_guard lock( fault_test_mutex_ );
+                        ++fault_test_counters_.grandfathered_finality_probes;
+                    }
                 }
+                // Parse failure or hash mismatch: the record that is not THIS
+                // certificate proves nothing about the candidate, so the
+                // strict verified-registry path applies (fail-closed).
             }
             else if ( durable_slot_record.error() != storage::DatabaseError::NOT_FOUND )
             {

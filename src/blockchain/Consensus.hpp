@@ -825,9 +825,12 @@ namespace sgns
             uint64_t accepted_certificate_readbacks        = 0;
             uint64_t active_vote_release_attempts          = 0;
             uint64_t active_vote_release_successes         = 0;
-            /// D-01 grandfather probes that found a durable final slot record
-            /// (21-04): the restart/replay compat assertion point proving the
-            /// strict authorization rule was skipped for finalized history.
+            /// D-01 grandfather probes that content-bound matched a durable
+            /// final slot record (21-04; content binding added in 21-09/WR-01:
+            /// the stored bytes must BE the certificate under
+            /// SerializedCertificateHash equality, not merely exist): the
+            /// restart/replay compat assertion point proving the strict
+            /// authorization rule was skipped for finalized history.
             uint64_t grandfathered_finality_probes = 0;
         };
 
@@ -1182,6 +1185,14 @@ namespace sgns
          * @brief Validates a certificate semantic and quorum constraints.
          * @param[in] certificate Certificate to validate.
          * @return Validation result enum.
+         *
+         * Grandfather contract (D-01, WR-01): the strict verified-registry
+         * authorization is skipped ONLY for the certificate whose own bytes
+         * are already durably final -- the probe parses the canonical slot
+         * record and requires SerializedCertificateHash equality with the
+         * candidate's serialization, so a different certificate crafted for
+         * the same finalized slot takes the strict path. Any registry-load
+         * failure (either path) is bounded by the authorization defer window.
          */
         ConsensusManager::Check ValidateCertificate( const Certificate &certificate ) const;
         /**
