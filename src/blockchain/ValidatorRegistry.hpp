@@ -621,6 +621,7 @@ namespace sgns
 
     protected:
         friend class sgns::Migration3_5_0To3_6_0;
+        friend class ValidatorAdmissionEquivocationTestAccess;
 
         /**
          * @brief Migrates registry-related CIDs from old to new datastore.

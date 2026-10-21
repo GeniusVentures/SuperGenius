@@ -1327,6 +1327,12 @@ namespace sgns
         return std::string( ACTIVE_VOTE_BASE_PATH_KEY ) + std::string( slot_key );
     }
 
+    std::string ConsensusManager::EquivocationRecordStorageKey( std::string_view slot_key, std::string_view voter_id )
+    {
+        return std::string( EQUIVOCATION_RECORD_BASE_PATH_KEY ) + std::string( slot_key ) + "/" +
+               std::string( voter_id );
+    }
+
     outcome::result<bool> ConsensusManager::HasAcceptedCertificateForSlot( const std::string &slot_key ) const
     {
         if ( slot_key.empty() || !db_ )

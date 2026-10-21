@@ -711,6 +711,7 @@ namespace sgns
         friend class ConsensusSlotKeyTestAccess;
         friend class CertificateFallbackTestAccess;
         friend class MultiNodeFinalityFaultTestAccess;
+        friend class ValidatorAdmissionEquivocationTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
@@ -740,6 +741,12 @@ namespace sgns
             "/cert/"; ///< Datastore key prefix for certificates.
         static constexpr std::string_view ACTIVE_VOTE_BASE_PATH_KEY =
             "/consensus/vote/"; ///< Private local RocksDB prefix for durable active votes.
+        static constexpr std::string_view EQUIVOCATION_RECORD_BASE_PATH_KEY =
+            "/consensus/equivocation/"; ///< Private local RocksDB prefix for durable
+                                        ///< cross-certificate equivocation markers
+                                        ///< (TRUST-02). Sibling of @ref
+                                        ///< ACTIVE_VOTE_BASE_PATH_KEY so the active-vote
+                                        ///< recovery scan never decodes markers.
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes(
             5 ); ///< Default timestamp acceptance window.
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION = std::chrono::milliseconds(
@@ -1014,6 +1021,13 @@ namespace sgns
         void                              RecoverActiveVotes();
         std::string                       ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**
+         * @brief Derives the durable equivocation-marker key for one signer at one slot.
+         * @param[in] slot_key Canonical slot the equivocation was proven at.
+         * @param[in] voter_id Signer proven to have committed to two certificates.
+         * @return Storage key under @ref EQUIVOCATION_RECORD_BASE_PATH_KEY.
+         */
+        static std::string EquivocationRecordStorageKey( std::string_view slot_key, std::string_view voter_id );
+        /**
          * @brief Checks the authoritative certificate value for a canonical slot.
          * @details The definitive verdict (Approve/Reject) is memoized per slot
          *          keyed by the durable certificate bytes' digest: validation is
@@ -1251,10 +1265,10 @@ namespace sgns
         std::condition_variable  fault_test_cv_;    ///< Wakes friend-only post-durability barrier observers.
         /// Mutable: const validation paths (ValidateCertificate's D-01 probe)
         /// count grandfather hits under fault_test_mutex_.
-        mutable FinalityFaultCounters fault_test_counters_;
-        FinalityFaultBarrier     active_vote_persisted_barrier_;
-        FinalityFaultBarrier     certificate_persisted_barrier_;
-        FinalityFaultBarrier     accepted_certificate_barrier_;
+        mutable FinalityFaultCounters                      fault_test_counters_;
+        FinalityFaultBarrier                               active_vote_persisted_barrier_;
+        FinalityFaultBarrier                               certificate_persisted_barrier_;
+        FinalityFaultBarrier                               accepted_certificate_barrier_;
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_; ///< Pending votes keyed by proposal id.
         /// Orphaned pending-vote queues (proposal never seen locally) are evicted
         /// once the map exceeds this bound and a queue's newest vote outlives the

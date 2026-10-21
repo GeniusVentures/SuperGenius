@@ -115,6 +115,22 @@ target_link_libraries(validator_registry_batch_slot_test
     base_crdt_test
 )
 
+# Phase 21 (TRUST-02): D-04 ACTIVE-addition cap enforcement + cross-certificate
+# equivocation guard proofs. Cap cases drive the ValidatorRegistry member path
+# on a CRDTFixture GlobalDB (config-wired setter value proven to flow);
+# equivocation cases drive FilterCertificate at the conflicting-certificate
+# branch with durable /cert/<slot> records (single-node harness, multi-node
+# evidence shape — the 21-06 durable-cert-writer precedent).
+addtest(validator_admission_equivocation_test
+    validator_admission_equivocation_test.cpp
+)
+target_link_libraries(validator_admission_equivocation_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 # Phase 12 real-socket battery (smoke + fault test + process-ownership runner)
 # is macOS-proven only: the runner needs POSIX process-session primitives plus
 # CMake 3.29+ TEST_LAUNCHER, and the battery's fixed-port behavior is verified
