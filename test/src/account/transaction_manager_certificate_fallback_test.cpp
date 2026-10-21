@@ -143,6 +143,14 @@ namespace sgns
             manager->RecoverPendingCertificateWork();
         }
 
+        /// Drives the real proposal-ingress validation path (CheckProposal ->
+        /// subject handlers -> HandleNonceConsensusSubject) synchronously.
+        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                    const ConsensusManager::Proposal        &proposal )
+        {
+            manager->HandleProposal( proposal );
+        }
+
         /// Parks the manager's round timer (the periodic dispatcher that
         /// replays durable certificate work) for tests that drive certificate
         /// ingress explicitly and must not race timer-thread dispatch. The
@@ -593,6 +601,25 @@ public:
             CertificateFallbackTestAccess::StoreTransactionCID( *tm_, tx_path, put_result.value().toString().value() )
                 .has_value() );
     }
+
+    // --- Burn-cleanup helpers (folded todo mintfunds-leaks-burn-utxo-on-consensus-reject) ---
+
+    /// Seeds the validator registry once so signed proposals pass CheckProposal.
+    void EnsureGenesisRegistryForBurnCleanup();
+
+    /// Builds a signed local MintFunds-shaped mint-v2 (uncle_hash = burn ref string).
+    std::shared_ptr<MintTransactionV2> MakeLocalBridgeMintV2( const base::Hash256 &burn,
+                                                              uint64_t             nonce,
+                                                              uint64_t             amount );
+
+    /// Inserts + claims the burn UTXO exactly as MintFunds does.
+    void SeedBurnUtxoAsMintFunds( const base::Hash256 &burn, uint64_t amount );
+
+    /// True while the raw /utxo/<owner>/<burn>:0 record exists on disk.
+    bool BurnRecordOnDisk( const base::Hash256 &burn ) const;
+
+    /// Drives the REAL consensus reject (reject_and_maybe_fail_local -> FAILED).
+    void RejectLocalTxThroughConsensus( const std::shared_ptr<GeniusTransaction> &tx );
 };
 
 // ---------------------------------------------------------------------------
@@ -1677,4 +1704,162 @@ TEST_F( CertificateFallbackTest, CertSlotPreviousHash_RegistrationRungStillWorks
 
     EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kRegistrationNonce + 1 ),
                registration->GetHash() );
+}
+
+// ---------------------------------------------------------------------------
+// Burn-UTXO cleanup on consensus-rejected local mints (folded todo
+// mintfunds-leaks-burn-utxo-on-consensus-reject, live incident 2026-10-20)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Nonce base for the BurnCleanup cases (avoids every other case's range).
+    constexpr uint64_t kBurnCleanupNonceBase = 210;
+}
+
+void CertificateFallbackTest::EnsureGenesisRegistryForBurnCleanup()
+{
+    auto registry = blockchain_->GetValidatorRegistry();
+    ASSERT_NE( registry, nullptr );
+    ASSERT_FALSE( registry
+                      ->StoreGenesisRegistry( { account_->GetAddress() },
+                                              [account = account_]( std::vector<uint8_t> payload )
+                                              { return account->Sign( std::move( payload ) ); } )
+                      .has_error() );
+    ASSERT_TRUE( ::waitForCondition(
+        [&registry]()
+        {
+            auto current = registry->LoadCurrentRegistry();
+            return current.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 2000 ),
+        nullptr ) );
+}
+
+std::shared_ptr<MintTransactionV2> CertificateFallbackTest::MakeLocalBridgeMintV2( const base::Hash256 &burn,
+                                                                                   uint64_t             nonce,
+                                                                                   uint64_t             amount )
+{
+    // MintFunds shape (TransactionManager::MintFunds): FillDAGStruct(transaction_hash)
+    // carries the burn ref string as dag.uncle_hash -- the SAME string MintFunds
+    // claims the burn outpoint under (the D-18 reservation-id contract).
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "mint-v2" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( nonce );
+    dag.set_uncle_hash( burn.toReadableString() );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+
+    auto mint = std::make_shared<MintTransactionV2>( MintTransactionV2::New( amount,
+                                                                             "public",
+                                                                             kTestTokenId,
+                                                                             std::move( dag ),
+                                                                             { { burn, 0, {} } },
+                                                                             account_->GetAddress() ) );
+    mint->MakeSignature( *account_ );
+    return mint;
+}
+
+void CertificateFallbackTest::SeedBurnUtxoAsMintFunds( const base::Hash256 &burn, uint64_t amount )
+{
+    // The exact MintFunds burn seeding: insert the UTXO_BRIDGE burn entry, then
+    // atomically claim it under the burn ref string.
+    auto &utxo_mgr = account_->GetUTXOManager();
+    ASSERT_TRUE( utxo_mgr
+                     .PutUTXO( GeniusUTXO( burn, 0, amount, kTestTokenId, account_->GetAddress() ),
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    ASSERT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, burn.toReadableString(), UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kClaimed );
+}
+
+bool CertificateFallbackTest::BurnRecordOnDisk( const base::Hash256 &burn ) const
+{
+    // The raw persisted record key (UTXOManager's /utxo/<owner>/<txid>:<idx>).
+    crdt::GlobalDB::Buffer key_buffer;
+    key_buffer.put( "/utxo/" + account_->GetAddress() + "/" + burn.toReadableString() + ":0" );
+    return db_->GetDataStore()->get( key_buffer ).has_value();
+}
+
+void CertificateFallbackTest::RejectLocalTxThroughConsensus( const std::shared_ptr<GeniusTransaction> &tx )
+{
+    EnsureGenesisRegistryForBurnCleanup();
+
+    auto signing_manager = ConsensusManager::New(
+        blockchain_->GetValidatorRegistry(),
+        db_,
+        pubs_,
+        [account = account_]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+        account_->GetAddress() );
+    ASSERT_NE( signing_manager, nullptr );
+
+    // The subject nonce deliberately mismatches the embedded tx nonce: the
+    // deterministic consensus reject. (The live incident's reject reason was the
+    // witness/type-rules leg; both legs fire the SAME reject_and_maybe_fail_local
+    // -> ChangeTransactionState(FAILED) trigger, and the cleanup branch is
+    // reason-agnostic.)
+    auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                         tx->GetNonce() + 1,
+                                                         tx->GetHash(),
+                                                         tx->SerializeToEmbeddedTransaction(),
+                                                         std::nullopt,
+                                                         std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = signing_manager->CreateProposal( subject.value(),
+                                                     account_->GetAddress(),
+                                                     blockchain_->GetValidatorRegistry()->GetRegistryCid(),
+                                                     blockchain_->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+
+    CertificateFallbackTestAccess::HandleProposal( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ),
+                                                   proposal.value() );
+    signing_manager->Close();
+}
+
+/**
+ * Folded todo (live incident 2026-10-20, staging net): a locally-originated
+ * bridge mint rejected by consensus left the MintFunds-inserted UTXO_BRIDGE
+ * burn entry dangling -- READY in memory AND on disk (it survived restart via
+ * LoadUTXOs and wedged boot). The FAILED transition's mint-v2 rollback only
+ * RELEASES the reservation (RESERVED -> READY, memory-only): it never removes
+ * the inserted entry. After the real consensus-reject -> FAILED transition,
+ * the burn entry must be GONE everywhere and nothing may linger under the
+ * burn-ref reservation id.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemovesBurnUtxoAndReservation )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'b' ) ).value();
+    const auto mint     = MakeLocalBridgeMintV2( burn, kBurnCleanupNonceBase, 10000 );
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    SeedBurnUtxoAsMintFunds( burn, 10000 );
+
+    // Present-before (three-part assertion, part 1): the incident's starting
+    // state -- burn entry inserted and RESERVED, record durable on disk.
+    ASSERT_TRUE( utxo_mgr.IsOutPointReserved( burn, 0 ) );
+    ASSERT_TRUE( BurnRecordOnDisk( burn ) );
+
+    // The REAL trigger: HandleProposal -> HandleNonceConsensusSubject ->
+    // reject_and_maybe_fail_local -> ChangeTransactionState(FAILED).
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+
+    // Absent-after, in memory: no UTXO_BRIDGE entry at the burn outpoint.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+
+    // Absent-after, on disk: the live-incident observable was the record that
+    // survived restart ("stays on disk in READY state").
+    EXPECT_FALSE( BurnRecordOnDisk( burn ) );
+
+    // No lingering reservation under the burn-ref id: a fresh claim for the
+    // same burn starts from a clean slate (kNotClaimable = unknown outpoint),
+    // so a relayer redelivery can re-mint instead of wedging.
+    EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kNotClaimable );
 }
