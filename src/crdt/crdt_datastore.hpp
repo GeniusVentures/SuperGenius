@@ -11,6 +11,7 @@
 
 #include <shared_mutex>
 #include <future>
+#include <atomic>
 #include <chrono>
 #include <queue>
 #include <unordered_set>
@@ -328,7 +329,31 @@ namespace sgns::crdt
         outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                                  const std::string                           &aKey );
 
+        /**
+         * @brief       Test-only observable: how many root-CID fetch attempts
+         *              EnqueueRootCID actually queued (SC-3's zero-fetch proof).
+         * @return      The number of EnqueueRootCID calls that pushed a CID onto
+         *              the pending root queue (the return-true branch).
+         * @note        No production reader; production behavior never consults
+         *              this counter.
+         */
+        static uint64_t GetRootFetchAttemptsForTest();
+
+        /**
+         * @brief       Test-only: resets the fetch-attempt counter to zero.
+         * @note        No production caller; tests bracket delivery windows
+         *              with reset + delta reads.
+         */
+        static void ResetRootFetchAttemptsForTest();
+
     protected:
+        /// Test-only fetch-attempt counter (SC-3): increments once per
+        /// EnqueueRootCID call that actually pushes onto pendingRootQueue_
+        /// (the return-true branch). Zero production readers; defined at file
+        /// scope in crdt_datastore.cpp. Static-member seam shape mirrors
+        /// GlobalDB::erase_interrupt_hook_for_test_.
+        static std::atomic<uint64_t> root_fetch_attempts_for_test_;
+
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
         friend class ::sgns::ValidatorRegistry;

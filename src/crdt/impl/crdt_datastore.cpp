@@ -7,6 +7,7 @@
 #include "storage/database_error.hpp"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <atomic>
 #include <thread>
 #include <utility>
 #include <boost/format.hpp>
@@ -713,6 +714,29 @@ namespace sgns::crdt
                 {
                     // cid is known. Skip walking tree
                     logger_->trace( "{}: Already processed block {}", __func__, bCastHeadCID.toString().value() );
+                    continue;
+                }
+
+                // D-02 re-delivery guard: the block is absent (HasBlock miss
+                // above) but the never-erased seal marker may still record a
+                // root this node processed and later pruned. Such a root is
+                // terminal -- re-fetching it would resurrect pruned state on
+                // the single DAG worker, so skip before any cache, pending, or
+                // enqueue consult. The seal markers are the dedup of record;
+                // no new durable state.
+                auto resolved_result = dagSyncer_->isResolved( bCastHeadCID );
+                if ( resolved_result.has_failure() )
+                {
+                    logger_->error( "{}: error checking resolved state for CID {}",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
+                    continue;
+                }
+                if ( resolved_result.value() )
+                {
+                    logger_->trace( "{}: Pruned root {} re-delivered - terminal, skipping",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
                     continue;
                 }
 
@@ -2235,6 +2259,10 @@ namespace sgns::crdt
         return false;
     }
 
+    /// Test-only fetch-attempt counter (SC-3); declared in the header beside
+    /// its accessors. Relaxed ordering suffices: tests only read deltas.
+    std::atomic<uint64_t> CrdtDatastore::root_fetch_attempts_for_test_{ 0 };
+
     bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
@@ -2249,7 +2277,20 @@ namespace sgns::crdt
         {
             pending_jobs_[cid] = JobStatus::PENDING;
         }
+        // Test-only observable (SC-3): count only fetch attempts that actually
+        // reached the pending root queue (this return-true branch).
+        root_fetch_attempts_for_test_.fetch_add( 1, std::memory_order_relaxed );
         return true;
+    }
+
+    uint64_t CrdtDatastore::GetRootFetchAttemptsForTest()
+    {
+        return root_fetch_attempts_for_test_.load( std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ResetRootFetchAttemptsForTest()
+    {
+        root_fetch_attempts_for_test_.store( 0, std::memory_order_relaxed );
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
