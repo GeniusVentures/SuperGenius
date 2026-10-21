@@ -1084,3 +1084,423 @@ TEST_F( TxPrunerTest, TickGate_EmptyMissingSetAtAccessorLevel )
     const TransactionManager &const_tm = *tm_;
     EXPECT_FALSE( const_tm.HasMissingTxHashes() );
 }
+
+// ---------------------------------------------------------------------------
+// Observability: RECL-03 — per-cycle fields match the fixture exactly
+// ---------------------------------------------------------------------------
+
+/**
+ * The per-cycle observability contract: every PruneCycleStats counter equals
+ * the fixture's known actions, the generation tag travels onto the stats and
+ * the queryable status, the watermark equals the maxHeight the completed
+ * cycle observed, and status.last_cycle carries the same counters. There is
+ * deliberately NO bytes-reclaimed field anywhere (the RECL-03 INFO line
+ * states "not measured until Phase 20" — the status can never carry a
+ * fabricated number).
+ */
+TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
+{
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1 );
+    auto eligible_b = MakeTransfer( 3, 1 );
+    auto unspent    = MakeTransfer( 4, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/obs-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    SeedTransaction( unspent );
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *unspent );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/obs-driver-2", "d2" );
+
+    uint64_t max_height = 0;
+    SnapshotHeads( max_height );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    // Counters == the fixture's actions, nothing approximate.
+    EXPECT_EQ( stats.examined, 4u );
+    EXPECT_EQ( stats.eligible, 2u );
+    EXPECT_EQ( stats.erased, 2u );
+    EXPECT_EQ( stats.held_blocks, 0u );
+    EXPECT_EQ( stats.skipped, 0u );
+    EXPECT_EQ( stats.errors, 0u );
+    EXPECT_EQ( stats.generation, kTestGeneration );
+    EXPECT_FALSE( stats.generation_superseded ); // caller-owned: ships false (D-C4)
+
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.watermark.has_value() );
+    EXPECT_EQ( status.watermark.value(), max_height ); // the observed maxHeight
+    EXPECT_EQ( status.last_cycle.examined, stats.examined );
+    EXPECT_EQ( status.last_cycle.eligible, stats.eligible );
+    EXPECT_EQ( status.last_cycle.erased, stats.erased );
+    EXPECT_EQ( status.last_cycle.held_blocks, stats.held_blocks );
+    EXPECT_EQ( status.last_cycle.skipped, stats.skipped );
+    EXPECT_EQ( status.last_cycle.errors, stats.errors );
+    EXPECT_EQ( status.last_cycle.generation, stats.generation );
+    EXPECT_EQ( status.last_cycle.duration_ms, stats.duration_ms );
+
+    // The generation tag travels on every invocation's stats (a
+    // generation-superseded caller would see ITS tag here).
+    auto noop = RunCycle( *pruner, kTestGeneration + 2 );
+    ASSERT_TRUE( noop.has_value() );
+    EXPECT_EQ( noop.value().generation, kTestGeneration + 2 );
+    EXPECT_EQ( pruner->GetPruneStatus().last_cycle.generation, kTestGeneration + 2 );
+}
+
+// ---------------------------------------------------------------------------
+// PruneStatus: RECL-04 — the watermark contract
+// ---------------------------------------------------------------------------
+
+/**
+ * The watermark is the maxHeight of the last cycle that ran to completion
+ * without hard error: an INTERRUPTED cycle (seam-held before its first
+ * erase) leaves both the watermark and last_cycle untouched, and the next
+ * completed cycle advances the watermark monotonically to the current head.
+ */
+TEST_F( TxPrunerTest, PruneStatus_InterruptedCycleLeavesWatermarkUntouched )
+{
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/wm-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    TrackOutputs( *eligible_a );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/wm-driver-2", "d2" );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats first;
+    RunSettledCycle( *pruner, first );
+    ASSERT_EQ( first.erased, 1u );
+    const auto status_first = pruner->GetPruneStatus();
+    ASSERT_TRUE( status_first.watermark.has_value() );
+    const uint64_t watermark_first = status_first.watermark.value();
+
+    // New heights and NEW eligible work past the first watermark.
+    PutSeedValue( "/seed/txpruner/wm-driver-3", "d3" );
+    auto eligible_b = MakeTransfer( 3, 1 );
+    SeedTransaction( eligible_b );
+    TrackOutputs( *eligible_b );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/wm-driver-4", "d4" );
+    uint64_t max_height_now = 0;
+    SnapshotHeads( max_height_now );
+    ASSERT_GT( max_height_now, watermark_first );
+
+    // Interrupt the next cycle BEFORE its first erase: status untouched.
+    sgns::TxPruner::SetCycleInterruptHookForTest( []( int step )
+                                                  { return step == sgns::TxPruner::kInterruptBeforeErase; } );
+    auto interrupted = RunCycle( *pruner );
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+    ASSERT_TRUE( interrupted.has_value() );
+    EXPECT_GT( interrupted.value().examined, 0u ); // it evaluated — and still did not advance
+    EXPECT_EQ( interrupted.value().erased, 0u );
+
+    const auto status_interrupted = pruner->GetPruneStatus();
+    ASSERT_TRUE( status_interrupted.watermark.has_value() );
+    EXPECT_EQ( status_interrupted.watermark.value(), watermark_first ); // NOT advanced
+    EXPECT_EQ( status_interrupted.last_cycle.erased, first.erased );    // last_cycle still cycle 1's
+
+    // The next completed cycle advances monotonically to the current head.
+    auto completed = RunCycle( *pruner );
+    ASSERT_TRUE( completed.has_value() );
+    EXPECT_EQ( completed.value().erased, 1u );
+    const auto status_done = pruner->GetPruneStatus();
+    ASSERT_TRUE( status_done.watermark.has_value() );
+    EXPECT_EQ( status_done.watermark.value(), max_height_now );
+    EXPECT_GE( status_done.watermark.value(), watermark_first );
+}
+
+/**
+ * A CONCURRENT GetPruneStatus() during a running cycle returns coherent
+ * snapshots without deadlock: a reader thread spins on the status while the
+ * cycle is seam-held mid-flight, releases it only after many successful
+ * reads, and both sides complete.
+ */
+TEST_F( TxPrunerTest, PruneStatus_ConcurrentReadDuringCycleIsCoherent )
+{
+    auto spender = MakeTransfer( 1, 0 );
+    auto unspent = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/conc-driver-1", "d1" );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    // Prime: a completed watermark-carrying cycle with no eligible work.
+    PruneCycleStats prime;
+    RunSettledCycle( *pruner, prime );
+    ASSERT_EQ( prime.erased, 0u );
+    ASSERT_TRUE( pruner->GetPruneStatus().watermark.has_value() );
+
+    // New eligible work so the raced cycle has an erase to perform.
+    auto eligible = MakeTransfer( 3, 1 );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/conc-driver-2", "d2" );
+
+    std::atomic<bool>   hook_entered{ false };
+    std::atomic<bool>   release_cycle{ false };
+    std::atomic<bool>   stop_reader{ false };
+    std::atomic<size_t> reads{ 0 };
+    std::atomic<bool>   watermark_seen{ false };
+
+    // Reader: spin on GetPruneStatus the whole time; after enough concurrent
+    // reads INSIDE the held window, release the cycle thread.
+    std::thread reader(
+        [&]
+        {
+            while ( !stop_reader.load() )
+            {
+                const auto snapshot = pruner->GetPruneStatus();
+                ++reads;
+                if ( snapshot.watermark.has_value() )
+                {
+                    watermark_seen.store( true );
+                }
+                if ( hook_entered.load() && reads.load() > 200 )
+                {
+                    release_cycle.store( true );
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+            release_cycle.store( true ); // never leave the cycle held on exit
+        } );
+
+    sgns::TxPruner::SetCycleInterruptHookForTest(
+        [&]( int step )
+        {
+            if ( step == sgns::TxPruner::kInterruptAfterEvaluation )
+            {
+                hook_entered.store( true );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+                while ( !release_cycle.load() && std::chrono::steady_clock::now() < deadline )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+                return false; // continue the cycle (the hold was the point)
+            }
+            return false;
+        } );
+
+    auto raced = RunCycle( *pruner ); // returns only once the reader released it
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+    stop_reader.store( true );
+    reader.join();
+
+    ASSERT_TRUE( raced.has_value() );
+    EXPECT_EQ( raced.value().erased, 1u );
+    EXPECT_GT( reads.load(), 200u );      // the concurrent reads really happened
+    EXPECT_TRUE( watermark_seen.load() ); // every snapshot was coherent (a full copy)
+}
+
+// ---------------------------------------------------------------------------
+// ComposeLock: the D-01 non-interleaving proof
+// ---------------------------------------------------------------------------
+
+/**
+ * The critical-section capstone. The cycle is held INSIDE the erase compose
+ * (GlobalDB's own seam step 1: guards passed, CRDT staged, commit pending —
+ * the compose lock HELD) while a concurrent PutElems re-add races on the
+ * SAME key: the merge provably cannot interleave (it blocks on the
+    * owner-vended lock until the erase commits), and the final state is a
+ * legal serialization — the marker exists (the erase committed atomically)
+ * and the re-added value is the add-wins resurrected shape. The next cycle
+ * re-erases it (the sweep closes the race). NEVER a torn mix: value absent
+ * without a marker is unreachable.
+ */
+TEST_F( TxPrunerTest, ComposeLock_ConcurrentMergeSerializesNeverTorn )
+{
+    auto spender = MakeTransfer( 1, 0 );
+    auto unspent = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/cl-driver-1", "d1" );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    // Prime the settle clock with a completed no-work cycle (fresh-instance
+    // contract of RunSettledCycle), so the raced cycle runs immediately.
+    PruneCycleStats prime;
+    RunSettledCycle( *pruner, prime );
+    ASSERT_EQ( prime.erased, 0u );
+
+    // The erase target: eligible, sealed, retired from headship.
+    auto eligible = MakeTransfer( 3, 1 );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/cl-driver-2", "d2" );
+
+    const std::string tx_path = TransactionManager::GetTransactionPath( *eligible );
+    const std::string cid_1   = SnapshotMapEntry( tx_path );
+
+    // Hold the cycle thread inside the compose (guards passed, staged, NOT
+    // committed) via GlobalDB's erase seam; release only from this thread.
+    std::promise<void> entered_promise;
+    std::future<void>  entered_future = entered_promise.get_future();
+    std::promise<void> release_promise;
+    std::future<void>  release_future = release_promise.get_future();
+    crdt::GlobalDB::SetEraseInterruptHookForTest(
+        [&]( int step )
+        {
+            if ( step == 1 )
+            {
+                entered_promise.set_value();
+                release_future.wait_for( std::chrono::seconds( 5 ) );
+            }
+            return false; // continue: the HOLD is the deterministic window
+        } );
+
+    std::optional<outcome::result<PruneCycleStats>> cycle_result;
+    std::thread                                     cycle_thread( [&] { cycle_result = RunCycle( *pruner ); } );
+
+    ASSERT_TRUE( entered_future.wait_for( std::chrono::seconds( 5 ) ) == std::future_status::ready )
+        << "the cycle never reached the erase compose";
+
+    // The racer: a concurrent merge re-adding the SAME element through the
+    // real publish path (PutElems build+commit under the same CrdtSet mutex).
+    std::atomic<bool>          racer_done{ false };
+    std::optional<std::string> racer_cid;
+    crdt::GlobalDB::Buffer     serialized;
+    serialized.put( eligible->SerializeByteVector() );
+    std::thread racer(
+        [&]
+        {
+            auto put = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+            if ( put.has_value() )
+            {
+                racer_cid = put.value().toString().value();
+            }
+            racer_done.store( true );
+        } );
+
+    // The non-interleaving proof: while the compose lock is held, the merge
+    // cannot complete (bounded observation — it is blocked on the lock).
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 300 );
+        while ( std::chrono::steady_clock::now() < deadline && !racer_done.load() )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+        }
+        EXPECT_FALSE( racer_done.load() ) << "the merge interleaved with the held erase compose";
+    }
+
+    // Release: the erase commits first, the merge serializes after it.
+    release_promise.set_value();
+    {
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return racer_done.load(); },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "the merge completes after the compose lock frees",
+                                   &waited );
+    }
+    racer.join();
+    cycle_thread.join();
+    crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
+
+    ASSERT_TRUE( cycle_result.has_value() && cycle_result.value().has_value() );
+    EXPECT_EQ( cycle_result.value().value().erased, 1u );
+    ASSERT_TRUE( racer_cid.has_value() );
+
+    // The legal serialization (this ordering: erase committed, THEN the
+    // merge's add-wins re-add): the marker EXISTS (the erase never commits
+    // partially) and the value is present again — never a torn mix.
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_NE( lookup.value().first, PrunedLookup::NOT_FOUND );     // the marker committed
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );             // the merge won the value
+    EXPECT_EQ( SnapshotBlocks( { cid_1 } ).at( cid_1 ), "absent" ); // the erased block stays gone
+
+    // The sweep closes the race: re-wire the map entry to the merged delta,
+    // retire it from headship, and the next cycle re-erases.
+    SeedTxCidEntry( eligible->GetHash(), racer_cid.value() );
+    PutSeedValue( "/seed/txpruner/cl-driver-3", "d3" );
+    auto sweep = RunCycle( *pruner );
+    ASSERT_TRUE( sweep.has_value() );
+    EXPECT_EQ( sweep.value().erased, 1u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+    auto final_lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+    ASSERT_TRUE( final_lookup.has_value() );
+    EXPECT_EQ( final_lookup.value().first, PrunedLookup::PRUNED );
+}
+
+/**
+ * The guards are evaluated INSIDE the critical section at erase time: an
+ * otherwise-eligible candidate whose delta block is the LIVE topic head is
+ * refused by the compose's head guard — the evaluation and the block gate
+ * accepted it, the erase refused — leaving value AND marker both in the
+ * pre-erase state (never torn), counted as a per-tx error on a cycle that
+ * still completes. Once the headship retires, the next cycle erases cleanly.
+ */
+TEST_F( TxPrunerTest, ComposeLock_HeadGuardRefusesAtEraseTimeNeverTorn )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/hg-driver-1", "d1" );
+    SeedTransaction( eligible ); // its delta IS the topic's live head
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    // NO later put: the eligible tx's block stays the head.
+
+    const std::string tx_path = TransactionManager::GetTransactionPath( *eligible );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    // The evaluation accepted it (eligible), the compose refused it (guard):
+    // a per-tx error, nothing erased, nothing written.
+    EXPECT_EQ( stats.examined, 2u );
+    EXPECT_EQ( stats.eligible, 1u );
+    EXPECT_EQ( stats.erased, 0u );
+    EXPECT_EQ( stats.errors, 1u );
+    EXPECT_EQ( stats.held_blocks, 0u );
+    EXPECT_EQ( stats.skipped, 0u );
+
+    // Never torn: the value is untouched AND no marker exists.
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    EXPECT_NE( SnapshotMapEntry( tx_path ), "absent" );
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::NOT_FOUND );
+
+    // The cycle still ran to completion (per-tx errors never block): the
+    // watermark advanced despite the refusal.
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.watermark.has_value() );
+
+    // Retire the headship: the next cycle erases cleanly — the refusal was
+    // the live guard, not a permanent fault.
+    PutSeedValue( "/seed/txpruner/hg-driver-2", "d2" );
+    auto retry = RunCycle( *pruner );
+    ASSERT_TRUE( retry.has_value() );
+    EXPECT_EQ( retry.value().erased, 1u );
+    EXPECT_EQ( retry.value().errors, 0u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+    auto pruned = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+    ASSERT_TRUE( pruned.has_value() );
+    EXPECT_EQ( pruned.value().first, PrunedLookup::PRUNED );
+}
