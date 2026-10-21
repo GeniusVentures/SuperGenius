@@ -29,12 +29,15 @@
 #include "testutil/remove_all.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
+#include <libp2p/host/host.hpp>
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/multi/multihash.hpp>
+
+#include "base/sgns_version.hpp"
 
 namespace
 {
@@ -99,39 +102,112 @@ public:
             sgns::test::removeAllWithRetry( basePath );
             boost::filesystem::create_directories( basePath );
 
+            EraseNode node = makeNode( basePath, /*start=*/true );
+            if ( node.db )
+            {
+                nodes_.push_back( std::move( node ) );
+            }
+        }
+
+        /// Tears node @p index down (db FIRST, then pubsub -- the graphsync
+        /// chain co-owns the host wired from the pubsub, so releasing the db
+        /// before pubsub->Stop() is the only teardown order that never
+        /// deregisters a connection against a dead reactor) and recreates it
+        /// on the SAME base path WITHOUT db->Start(). The caller reconnects
+        /// peers and then Start()s, so the restarted head exchange's first
+        /// RebroadcastHeads publishes into a live connection (an immediate
+        /// start would broadcast into an empty peer set and the next cycle
+        /// only fires after the 60s default interval).
+        void restartNodePendingStart( size_t index )
+        {
+            ASSERT_LT( index, nodes_.size() );
+            EraseNode &old = nodes_[index];
+            if ( old.db )
+            {
+                old.db->ShutdownNow();
+            }
+            old.db.reset();
+            if ( old.pubsub )
+            {
+                old.pubsub->Stop();
+            }
+            const std::string basePath = old.basePath;
+            nodes_[index]              = makeNode( basePath, /*start=*/false );
+        }
+
+        /// Dials @p to_idx from @p from_idx (ONE direction only: two dials
+        /// inside the same gossip heartbeat collide on the shared source
+        /// tuple, the multi_node_finality_fault_test ConnectAndWaitForPeers
+        /// lesson) and waits for a connected host pair.
+        void connectNodes( size_t fromIdx, size_t toIdx )
+        {
+            ASSERT_LT( fromIdx, nodes_.size() );
+            ASSERT_LT( toIdx, nodes_.size() );
+            auto &from = nodes_[fromIdx];
+            auto &to   = nodes_[toIdx];
+            ASSERT_TRUE( from.pubsub && to.pubsub );
+            from.pubsub->AddPeers( { to.pubsub->GetInterfaceAddress() } );
+            auto from_host = from.pubsub->GetHost();
+            auto to_info   = to.pubsub->GetHost()->getPeerInfo();
+            ASSERT_WAIT_FOR_CONDITION(
+                [&] { return from_host->connectedness( to_info ) == libp2p::Host::Connectedness::CONNECTED; },
+                std::chrono::seconds( 10 ),
+                "redelivery nodes form one connected libp2p pair",
+                nullptr );
+        }
+
+        /// Creates one GlobalDB node (key file + pubsub + graphsync + db) on
+        /// the given base path. The pubsub advertises the loopback address:
+        /// the broadcast message carries the sender's PeerInfo and a
+        /// wildcard-only listener yields no addresses, so every Broadcast
+        /// would silently drop ("No addresses found",
+        /// pubsub_broadcaster_ext.cpp) and receivers could never fetch.
+        /// Returns a node with a null db on creation failure.
+        EraseNode makeNode( const std::string &basePath, bool start )
+        {
+            EraseNode node;
+            node.basePath = basePath;
+
             sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
-            auto                           keyPair    = keyStore.GetKeyPair().value();
-            auto                           pubsub     = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
-            const std::string              listenIp   = "0.0.0.0";
-            const auto                     startError = pubsub->Start( 0, {}, listenIp, {} ).get();
-            ASSERT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
+            auto                           keyPair = keyStore.GetKeyPair().value();
+            node.pubsub                            = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
+            const std::string listenIp             = "0.0.0.0";
+            const auto        startError           = node.pubsub->Start( 0, {}, listenIp, { "127.0.0.1" } ).get();
+            EXPECT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
+            if ( startError )
+            {
+                return node;
+            }
 
             // GraphSync writes to libp2p streams from its scheduler thread, and libp2p
             // is single-threaded per host, so the scheduler has to run on the host's
             // io_context. A private one here races yamux's WriteQueue.
-            auto io        = pubsub->GetAsioContext();
+            auto io        = node.pubsub->GetAsioContext();
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
-                std::make_shared<libp2p::basic::AsioSchedulerBackend>( pubsub->GetAsioContext() ),
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( node.pubsub->GetAsioContext() ),
                 libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
-            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
+            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( node.pubsub->GetHost(),
                                                                                                  scheduler );
             auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
 
             auto globaldb_ret = sgns::crdt::GlobalDB::New( io,
                                                            basePath + "/CommonKey",
-                                                           pubsub,
+                                                           node.pubsub,
                                                            sgns::crdt::CrdtOptions::DefaultOptions(),
                                                            graphsyncnetwork,
                                                            scheduler,
                                                            generator );
             if ( globaldb_ret.has_error() )
             {
-                return;
+                return node;
             }
-            auto db = std::move( globaldb_ret.value() );
+            node.db = std::move( globaldb_ret.value() );
 
-            db->Start();
-            nodes_.push_back( EraseNode{ basePath, pubsub, db } );
+            if ( start )
+            {
+                node.db->Start();
+            }
+            return node;
         }
 
         ~EraseNodeCollection()
@@ -437,4 +513,242 @@ TEST_F( GlobalDBEraseTest, RootFetchAttemptsCounterIsAResettableZeroObservable )
     // the missing members until EnqueueRootCID's counter lands.
     sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
     EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+}
+
+/// SC-3 (PRUNE-05, D-02): a node that erased a root must treat the root's
+/// re-delivery as terminal -- zero fetch attempts, zero re-created CRDT
+/// elements -- through BOTH delivery modes (peer head re-broadcast and the
+/// restarted head exchange), while unpruned roots still fetch.
+///
+/// Topology invariant: node A is DEAF (broadcast topics only, never a listen
+/// topic on the prune topic), so nothing B broadcasts can advance A's heads.
+/// That keeps the pruned root CID A's LIVE head forever -- exactly the
+/// lagging-peer shape that re-delivers pruned roots in production.
+class GlobalDBEraseRedeliveryTest : public GlobalDBEraseTest
+{
+protected:
+    static constexpr char kTracerTopic[] = "erase_e2e_tracer_topic";
+
+    /// The gossip-level topic name: the broadcaster appends the net/version
+    /// appendix internally, and getPeerCount speaks the full name.
+    static std::string fullTopicName( const std::string &topic )
+    {
+        return topic + sgns::version::GetNetAndVersionAppendix();
+    }
+
+    /// Seeds one value through the public CRDT path on an explicit topic
+    /// (SeedEntry is fixed to the erase topic).
+    static SeededEntry SeedEntryOn( sgns::crdt::GlobalDB                  &db,
+                                    const std::string                     &tx_path,
+                                    const std::string                     &value,
+                                    const std::unordered_set<std::string> &topics )
+    {
+        sgns::base::Buffer value_buffer;
+        value_buffer.put( value );
+        auto put_result = db.Put( sgns::crdt::HierarchicalKey( tx_path ), value_buffer, topics );
+        EXPECT_TRUE( put_result.has_value() );
+        return { put_result.value(), tx_path, value };
+    }
+
+    /// Seeds the shared prune shape: A (node 0) puts entryA on the prune
+    /// topic; B (node 1) receives, applies, and seals it; B's own entryB put
+    /// retires entryA on B ONLY (A is deaf and never hears it); B erases
+    /// entryA through the one facade API. Returns the erased entry through
+    /// @p entry_a. After this helper: A's live head IS the pruned root, and B
+    /// holds value-less, block-less, map-less state with the seal intact.
+    void seedPrunedRoot( EraseNodeCollection &nodes, const std::string &dbPrefix, SeededEntry &entry_a )
+    {
+        nodes.addNode( dbPrefix + "_a" );
+        nodes.addNode( dbPrefix + "_b" );
+        ASSERT_EQ( nodes.getNodes().size(), 2 );
+        nodes.connectNodes( 0, 1 );
+        auto &a_db = *nodes.getNodes()[0].db;
+        auto &b_db = *nodes.getNodes()[1].db;
+
+        ASSERT_FALSE( a_db.AddBroadcastTopic( kTopic ).has_error() );
+        ASSERT_FALSE( b_db.AddBroadcastTopic( kTopic ).has_error() );
+        b_db.AddListenTopic( kTopic );
+
+        entry_a = SeedEntry( a_db, "/redel/entryA", "VALUE_A" );
+
+        // B received, applied, and sealed the root.
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto value = b_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) );
+                return value.has_value() && value.value().toString() == entry_a.value &&
+                       rawSealKeyPresent( b_db, entry_a.cid ) && headListContains( b_db, entry_a.cid );
+            },
+            WAIT_TIMEOUT,
+            "seeding put reached the receiving node and wrote its seal",
+            nullptr );
+
+        // B's own put retires entryA on B; A (deaf) keeps it as a live head.
+        const auto entry_b = SeedEntry( b_db, "/redel/entryB", "VALUE_B" );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&] { return headListContains( b_db, entry_b.cid ) && !headListContains( b_db, entry_a.cid ); },
+            WAIT_TIMEOUT,
+            "retiring put advanced the receiving node's head past the pruned root",
+            nullptr );
+        EXPECT_TRUE( headListContains( a_db, entry_a.cid ) );
+        EXPECT_FALSE( headListContains( a_db, entry_b.cid ) );
+
+        // The tx->CID map entry in the exact StoreTransactionCID shape.
+        ASSERT_TRUE( b_db.PutRaw( sgns::base::Buffer{}.put( entry_a.tx_path ),
+                                  sgns::base::Buffer{}.put( entry_a.cid.toString().value() ) )
+                         .has_value() );
+
+        EXPECT_OUTCOME_TRUE_1( b_db.EraseEntry( entry_a.tx_path, entry_a.cid ) );
+
+        // Absent-after on every level; the seal survives (GATE-03).
+        EXPECT_TRUE( b_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+        EXPECT_EQ( countCrdtRawEntries( b_db, "redel/entryA" ), 0 );
+        EXPECT_TRUE( b_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+        EXPECT_TRUE( b_db.GetRaw( sgns::base::Buffer{}.put( entry_a.tx_path ) ).has_error() );
+        EXPECT_TRUE( rawSealKeyPresent( b_db, entry_a.cid ) );
+    }
+
+    /// Post-delivery invariants: the erased element was not re-created on any
+    /// level, and the seal marker is still the terminal record.
+    void assertNothingResurrected( sgns::crdt::GlobalDB &b_db, const SeededEntry &entry_a )
+    {
+        EXPECT_TRUE( b_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+        EXPECT_EQ( countCrdtRawEntries( b_db, "redel/entryA" ), 0 );
+        EXPECT_TRUE( b_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+        EXPECT_TRUE( b_db.GetRaw( sgns::base::Buffer{}.put( entry_a.tx_path ) ).has_error() );
+        EXPECT_TRUE( rawSealKeyPresent( b_db, entry_a.cid ) );
+    }
+};
+
+/// Case 1 -- peer head re-broadcast of a pruned root: A's explicit head
+/// broadcast re-delivers the pruned root CID to B on the topic B has been
+/// subscribed to all along; the guard makes it terminal (zero fetch
+/// attempts). The never-erased tracer head rides the SAME broadcast on a
+/// topic B only joins afterwards -- gossip's message cache delivers it to B
+/// on join, and its fetch proves B's intake is alive and still fetching
+/// (non-vacuous zero), so the window's fetch-attempt delta must be exactly
+/// one.
+TEST_F( GlobalDBEraseRedeliveryTest, RebroadcastRedeliveryOfPrunedRootMakesZeroFetchAttempts )
+{
+    auto        testNodes = std::make_unique<EraseNodeCollection>();
+    SeededEntry entry_a;
+    seedPrunedRoot( *testNodes, "globaldb_redel_rebroadcast", entry_a );
+    auto &a_db = *testNodes->getNodes()[0].db;
+    auto &b_db = *testNodes->getNodes()[1].db;
+
+    // The tracer head lives on a second topic B never joined, so B has
+    // neither its block nor its seal: its delivery is a guaranteed fetch.
+    ASSERT_FALSE( a_db.AddBroadcastTopic( kTracerTopic ).has_error() );
+    const auto tracer = SeedEntryOn( a_db, "/redel/tracer", "TRACER_VALUE", { kTracerTopic } );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    EXPECT_OUTCOME_TRUE_1( a_db.GetCRDTDataStore()->BroadcastHeadsForTopics( { kTopic, kTracerTopic } ) );
+
+    // Joining the tracer topic now lets the cached tracer broadcast through
+    // to B -- the in-window fetch that proves the intake is live.
+    b_db.AddListenTopic( kTracerTopic );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest() >= 1; },
+                               WAIT_TIMEOUT,
+                               "tracer head re-delivered through the same broadcast was fetched",
+                               nullptr );
+
+    // Exactly one fetch (the tracer). The pruned root's re-broadcast in the
+    // same delivery window contributed ZERO.
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
+    assertNothingResurrected( b_db, entry_a );
+}
+
+/// Case 2 -- restarted head exchange: node A (whose persisted heads still
+/// name the pruned root, because A never heard the retiring delta) restarts;
+/// its first RebroadcastHeads re-delivers the pruned root to B through the
+/// one guarded intake. Same zero-fetch, zero-re-creation outcome.
+TEST_F( GlobalDBEraseRedeliveryTest, RestartHeadExchangeRedeliveryOfPrunedRootMakesZeroFetchAttempts )
+{
+    auto        testNodes = std::make_unique<EraseNodeCollection>();
+    SeededEntry entry_a;
+    seedPrunedRoot( *testNodes, "globaldb_redel_restart", entry_a );
+    auto &b_db = *testNodes->getNodes()[1].db;
+
+    // A also holds a tracer head on a topic B never joined: after the
+    // restart, the same first RebroadcastHeads delivers BOTH heads, and the
+    // tracer's fetch proves the delivery reached B's live intake.
+    auto &a_db = *testNodes->getNodes()[0].db;
+    ASSERT_FALSE( a_db.AddBroadcastTopic( kTracerTopic ).has_error() );
+    const auto tracer = SeedEntryOn( a_db, "/redel/tracer", "TRACER_VALUE", { kTracerTopic } );
+
+    // Tear A down and recreate it on the same base path, un-started: the
+    // persisted heads (still naming the pruned root) survive, and the test
+    // controls when the restarted head exchange first broadcasts.
+    testNodes->restartNodePendingStart( 0 );
+    auto &a_restarted = testNodes->getNodes()[0];
+    ASSERT_TRUE( a_restarted.db );
+    ASSERT_FALSE( a_restarted.db->AddBroadcastTopic( kTopic ).has_error() );
+    ASSERT_FALSE( a_restarted.db->AddBroadcastTopic( kTracerTopic ).has_error() );
+    a_restarted.db->AddTopicName( kTopic );
+    a_restarted.db->AddTopicName( kTracerTopic );
+
+    // Non-vacuity: the pruned root is still the restarted node's live head.
+    ASSERT_TRUE( headListContains( *a_restarted.db, entry_a.cid ) );
+
+    // B joins the tracer topic before the reconnect so its subscriptions are
+    // announced when the pair reconnects.
+    b_db.AddListenTopic( kTracerTopic );
+    testNodes->connectNodes( 0, 1 );
+    auto a_pubsub = a_restarted.pubsub;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return a_pubsub->getPeerCount( fullTopicName( kTopic ) ) >= 1 &&
+                   a_pubsub->getPeerCount( fullTopicName( kTracerTopic ) ) >= 1;
+        },
+        WAIT_TIMEOUT,
+        "restarted node learned the receiver's topic subscriptions",
+        nullptr );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    a_restarted.db->Start();
+
+    ASSERT_WAIT_FOR_CONDITION( [&] { return sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest() >= 1; },
+                               WAIT_TIMEOUT,
+                               "tracer head re-delivered by the restarted head exchange was fetched",
+                               nullptr );
+
+    // Exactly one fetch (the tracer); the pruned root's re-delivery through
+    // the restarted head exchange contributed ZERO.
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
+    assertNothingResurrected( b_db, entry_a );
+}
+
+/// Case 3 -- negative control: nothing on B is pruned; a head B has never
+/// seen arrives through the same intake and B DOES fetch it. The guard must
+/// not suppress normal fetches.
+TEST_F( GlobalDBEraseRedeliveryTest, RedeliveryOfUnprunedRootStillFetches )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_redel_control_a" );
+    testNodes->addNode( "globaldb_redel_control_b" );
+    ASSERT_EQ( testNodes->getNodes().size(), 2 );
+    testNodes->connectNodes( 0, 1 );
+    auto &a_db = *testNodes->getNodes()[0].db;
+    auto &b_db = *testNodes->getNodes()[1].db;
+
+    ASSERT_FALSE( a_db.AddBroadcastTopic( kTracerTopic ).has_error() );
+    b_db.AddListenTopic( kTracerTopic );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    const auto tracer = SeedEntryOn( a_db, "/redel/tracer", "TRACER_VALUE", { kTracerTopic } );
+
+    // The delivery drives exactly one fetch attempt, and the value lands.
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            auto value = b_db.Get( sgns::crdt::HierarchicalKey( tracer.tx_path ) );
+            return value.has_value() && value.value().toString() == tracer.value &&
+                   rawSealKeyPresent( b_db, tracer.cid ) &&
+                   sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest() >= 1;
+        },
+        WAIT_TIMEOUT,
+        "unpruned root delivery still fetches and applies",
+        nullptr );
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
 }
