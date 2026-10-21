@@ -220,6 +220,45 @@ namespace
                                                                             std::move( destination ) ) );
     }
 
+    /// @brief A multi-output mint-v2 built through the attacker's actual
+    ///        route: a serialized MintTxV2 proto whose utxo_params.outputs
+    ///        carries the primary (fact-matching) output plus one extra-value
+    ///        output. DeSerializeByteVector accepts N outputs (only an empty
+    ///        output set is backfilled with one), and the constructor is
+    ///        private — the proto route IS the multi-output wire shape.
+    std::shared_ptr<MintTransactionV2> MakeMultiOutputMintV2( uint64_t       amount,
+                                                              std::string    chain_id,
+                                                              const TokenID &token_id,
+                                                              std::string    primary_dest,
+                                                              uint64_t       extra_amount,
+                                                              std::string    extra_dest )
+    {
+        SGTransaction::MintTxV2 proto;
+        proto.set_chain_id( chain_id );
+        proto.set_amount( amount );
+        proto.set_token_id( token_id.bytes().data(), token_id.size() );
+
+        auto *utxo_params = proto.mutable_utxo_params();
+        auto *input       = utxo_params->add_inputs();
+        input->set_tx_id_hash( std::string( 64, 'b' ) );
+        input->set_output_index( 0 );
+
+        auto *primary = utxo_params->add_outputs();
+        primary->set_encrypted_amount( amount );
+        primary->set_dest_addr( std::move( primary_dest ) );
+        primary->set_token_id( token_id.bytes().data(), token_id.size() );
+
+        auto *extra = utxo_params->add_outputs();
+        extra->set_encrypted_amount( extra_amount );
+        extra->set_dest_addr( std::move( extra_dest ) );
+        extra->set_token_id( token_id.bytes().data(), token_id.size() );
+
+        std::string serialized;
+        proto.SerializeToString( &serialized );
+        return MintTransactionV2::DeSerializeByteVector(
+            std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
+    }
+
     /// @brief A non-mint transaction on the local genius chain (escrow-style):
     ///        the type family MINT-02 must keep exempt from the local bypass.
     class LocalEvidenceExemptTx final : public GeniusTransaction
@@ -399,6 +438,41 @@ namespace
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "A mint whose recipient differs from the burned receipt must be rejected";
+    }
+
+    TEST( MintEvidenceBindingTest, MultiOutputMintFirstOutputMatchesStillRejected )
+    {
+        // Attacker authority: the mint submitter crafting outputs beyond the
+        // attested burn builds a mint-v2 whose output[0] carries exactly the
+        // receipt's decoded facts (token, amount, destination) and whose
+        // output[1] carries extra value to any destination. Every fact
+        // comparison reads output[0] only, so even honest bridge-configured
+        // endpoints serving the true receipt must not confirm the claim: the
+        // burn attests exactly one output, not "output[0] plus anything".
+        // Expected: rejected (all evidence discarded).
+        // Pre-fix behavior (CR-01, 21-VERIFICATION gap 1): valid == true with
+        // weight 75/75 — every check passed on output[0] while the mint
+        // creates two outputs.
+        ReceiptFacts facts;
+        facts.token_id = 0xABCD;
+        facts.amount   = 7;
+        facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
+        auto validator = MakeValidator( BuildBridgeBurnReceiptJson( kSourceRef, facts ) );
+
+        const std::string attacker_dest( 128, 'e' );
+        const auto        mint = MakeMultiOutputMintV2( 7,
+                                                 kChainId,
+                                                 TokenID::FromBytes( { 0xAB, 0xCD } ),
+                                                 facts.dest_hex,
+                                                 1000,
+                                                 attacker_dest );
+        ASSERT_NE( mint, nullptr ) << "The proto route must deserialize the two-output mint";
+        ASSERT_EQ( mint->GetUTXOParameters().second.size(), 2u ) << "Fixture must carry the multi-output attack shape";
+        EXPECT_EQ( mint->GetAmount(), 7u ) << "Primary output reads the attested amount";
+        EXPECT_EQ( mint->GetPrimaryDestinationAddress(), facts.dest_hex ) << "Primary output reads the attested destination";
+
+        const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
+        EXPECT_FALSE( evidence.valid ) << "A multi-output mint whose output[0] matches the burn must be rejected (CR-01)";
     }
 
     TEST( MintEvidenceBindingTest, MatchingV2FactsValidate )
