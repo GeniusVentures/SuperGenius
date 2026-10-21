@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 17
-status: ready_to_plan
-stopped_at: Phase 17 complete (6/6) — ready to discuss Phase 18
-last_updated: 2026-10-20T18:27:56.441Z
-last_activity: 2026-10-19
+current_phase: 18
+status: planning
+stopped_at: Phase 18 context gathered
+last_updated: "2026-10-21T13:51:02.979Z"
+last_activity: 2026-10-20
 progress:
   total_phases: 23
   completed_phases: 2
@@ -83,9 +83,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19T17:03:13.837Z
-**Stopped At:** Completed 17-05-PLAN.md
-**Resume File:** None
+**Last session:** 2026-10-21T13:51:02.969Z
+**Stopped At:** Phase 18 context gathered
+**Resume File:** .planning/phases/18-txpruner-service-first-real-prune/18-CONTEXT.md
 
 ## Accumulated Context
 
