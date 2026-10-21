@@ -5,6 +5,8 @@ priority: P1
 date: 2026-10-20
 source: live node-example testing on staging net (owner + session analysis)
 resolves_phase: 18
+resolved: 2026-10-21
+resolution: resolved-by-design
 ---
 
 The chain_id == "supergenius" (and empty chain_id) bypass in
@@ -39,3 +41,35 @@ it, so the bypass alone does not yield a certifiable unbacked mint even
 single-node. Exposure remains: quorum-controlled nets, and the incidental
 nature of gates 2/4 (defense by storage topology / witness-builder behavior,
 not by policy).
+
+## Resolution (Phase 18, plan 18-02 — resolved-by-design)
+
+The D-03 net-scoped dev-mint policy replaces the global bypass (commits
+9f802a1f1, f8d65d1c on gsd/phase-18-txpruner-service-first-real-prune):
+
+- **Both bypass legs net-scoped** (`PublicChainInputValidator::GatherVerificationEvidence`,
+  via the `LocalBypassEvidence` helper): the empty-source-reference leg and the
+  empty/`"supergenius"`-chain-id leg each consult `DevMintBurnlessPermitted()`;
+  on non-designated nets both return default-invalid evidence (the
+  no-endpoints reject shape) instead of certifying. The unconditional bypass
+  no longer exists in released code paths on test/main nets.
+- **`DevMintPolicy.hpp`** (beside the sgns_version net constants): the
+  designated set `{staging 333, dev 144}` is `inline constexpr` — config can
+  never widen it; the predicate reads ONLY `version::GetNetworkID()` (the
+  validator's own net), never a tx/proposal field.
+- **`DevMintInputValidator`** registered for the literal chain id `"dev"`
+  (`IInputValidator` registry, `kDevMintValidatorRegistered` anchor beside the
+  genius anchor): `kValid` iff the validator's own net is designated — the
+  explicit allowance AND the refusal; full consensus (proposal, quorum,
+  certificate) still applies on the designated nets.
+- **Proofs** (`test/src/account/dev_mint_policy_test.cpp`, 11 tests): both
+  bypass legs × both non-designated nets refuse (the empty-chain-id leg
+  explicitly asserted); identical witness bytes refused on 963/369, permitted
+  on 333/144; a `"dev"`-chain burn-less mint certifies through REAL quorum on
+  net 333 with its produced UTXO landing on every peer; the identical subject
+  and the empty-chain-id mint never certify on net 963.
+
+The recommended fix below ("net-gate or config-gate the bypass") is superseded
+by the locked design: constant set, not config (config would weaken validator
+refusal to a per-node opt-in). Defense is now by policy, exactly as the todo
+asked.
