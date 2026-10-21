@@ -424,6 +424,38 @@ namespace
         EXPECT_TRUE( ValidatorRegistry::FindValidator( next, "wired-cap-validator-3" ) == nullptr );
     }
 
+    // VER-01 compat twin (F1).
+    // Honest admission flow: a sub-cap certified update (two new validators
+    // under the wired cap of three) must insert ALL of its candidates — the
+    // cap truncates only over-cap stacking, never honest growth. Expected: both
+    // validators enter as REGULAR/ACTIVE with the weight policy's REGULAR
+    // weight and the vote-derived penalty bookkeeping (approve -> penalty 0,
+    // reject -> penalty 1). Actual behavior: unchanged by the cap proof — this
+    // is the F1 guard's no-false-truncation proof.
+    TEST_F( ValidatorAdmissionEquivocationTest, SubCapHonestUpdateInsertsAllNewValidators )
+    {
+        registry_->SetMaxNewValidatorsPerUpdate( 3 );
+
+        std::unordered_map<std::string, bool> unregistered_votes;
+        unregistered_votes.emplace( "honest-validator-yes", true );
+        unregistered_votes.emplace( "honest-validator-no", false );
+
+        ValidatorRegistry::Registry next;
+        ValidatorAdmissionEquivocationTestAccess::InsertNewValidators( *registry_, next, unregistered_votes );
+
+        ASSERT_EQ( next.validators_size(), 2 );
+        const auto *yes_entry = ValidatorRegistry::FindValidator( next, "honest-validator-yes" );
+        ASSERT_TRUE( yes_entry != nullptr );
+        EXPECT_EQ( yes_entry->status(), validator::ACTIVE );
+        EXPECT_EQ( yes_entry->role(), validator::REGULAR );
+        EXPECT_EQ( yes_entry->penalty_score(), 0 );
+        const auto *no_entry = ValidatorRegistry::FindValidator( next, "honest-validator-no" );
+        ASSERT_TRUE( no_entry != nullptr );
+        EXPECT_EQ( no_entry->status(), validator::ACTIVE );
+        EXPECT_EQ( no_entry->role(), validator::REGULAR );
+        EXPECT_EQ( no_entry->penalty_score(), 1 );
+    }
+
     // -------------------------------------------------------------------------
     // F2: cross-certificate equivocation guard
     // -------------------------------------------------------------------------
