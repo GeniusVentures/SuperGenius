@@ -1064,6 +1064,7 @@ namespace sgns
 
         void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
+        void SetMintFundsPostMoveExceptionHookForTest( std::function<void()> hook );
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
@@ -1115,6 +1116,7 @@ namespace sgns
 
         bool                  fail_bridge_executed_marker_write_for_test_ = false;
         std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
+        std::function<void()> mint_funds_post_move_exception_hook_for_test_;
 
         struct FinalityFaultBarrier
         {

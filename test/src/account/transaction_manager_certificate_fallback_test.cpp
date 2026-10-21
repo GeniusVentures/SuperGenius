@@ -13,6 +13,7 @@
 #include <chrono>
 #include <functional>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -214,6 +215,19 @@ namespace sgns
         static void SetPutUTXOBeforeStoreHook( UTXOManager &utxo_manager, std::function<void()> hook )
         {
             utxo_manager.SetPutUTXOBeforeStoreHookForTest( std::move( hook ) );
+        }
+
+        /// Drives the manager into State::READY (the MintFunds entry gate; no
+        /// public API reaches READY deterministically in this fixture).
+        static void ChangeState( TransactionManager &manager, TransactionManager::State state )
+        {
+            manager.ChangeState( state );
+        }
+
+        /// Arms the MintFunds post-move exception seam (CR-01 regression).
+        static void SetMintFundsPostMoveExceptionHook( TransactionManager &tm, std::function<void()> hook )
+        {
+            tm.SetMintFundsPostMoveExceptionHookForTest( std::move( hook ) );
         }
     };
 } // namespace sgns
@@ -1963,4 +1977,44 @@ TEST_F( CertificateFallbackTest, BurnCleanup_NormalTxFailedLeavesUtxoEntriesUnto
     // The unrelated bridge entry: untouched in memory and on disk.
     EXPECT_EQ( utxo_mgr.GetOutPointState( unrelated_burn, 0 ), UTXOManager::UTXOState::UTXO_READY );
     EXPECT_TRUE( UtxoRecordOnDisk( unrelated_burn ) );
+}
+
+/**
+ * CR-01 regression: the MintFunds catch-path rollback must run under the
+ * burn reservation id captured BEFORE the try block. The mint construction
+ * moves transaction_hash into the DAG payload, so a post-move throw used to
+ * reach the handler with an EMPTY id — and RemoveBurnUTXOs reads a mismatched
+ * holder as "held by another", silently skipping the entry: the burn UTXO
+ * stayed RESERVED forever (re-delivery rejected with already_connected while
+ * no mint was ever enqueued). The post-move exception seam makes the failure
+ * deterministic; the moved-from-empty-id failure mode fails every assertion
+ * below (the entry still present in memory and on disk).
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_MintFundsCatchPathRemovesBurnUtxoAfterPostMoveThrow )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'f' ) ).value();
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    CertificateFallbackTestAccess::ChangeState( *tm_, TransactionManager::State::READY );
+    CertificateFallbackTestAccess::SetMintFundsPostMoveExceptionHook(
+        *tm_,
+        [] { throw std::runtime_error( "CR-01 post-move seam" ); } );
+
+    // MintFunds inserts the burn UTXO and claims it under the burn ref, then
+    // the seam throws inside the try — the exact catch-path shape.
+    const auto minted = tm_->MintFunds( 10000, burn.toReadableString(), "public", kTestTokenId, "" );
+    CertificateFallbackTestAccess::SetMintFundsPostMoveExceptionHook( *tm_, nullptr );
+
+    ASSERT_TRUE( minted.has_error() );
+
+    // Absent-after, in memory: the burn entry was REMOVED, not merely skipped.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+
+    // Absent-after, on disk (the incident's restart-surviving observable).
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
+
+    // Re-delivery unblocked: the outpoint is unknown again (kNotClaimable =
+    // clean slate), so a relayer redelivery can re-mint instead of wedging.
+    EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kNotClaimable );
 }

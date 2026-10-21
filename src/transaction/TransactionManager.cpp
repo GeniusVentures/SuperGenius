@@ -1034,6 +1034,14 @@ namespace sgns
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
+        // The reservation id must be COPIED before the try block: the mint
+        // construction below moves transaction_hash into the DAG payload
+        // (FillDAGStruct's optional<string> parameter move-constructs the
+        // heap-backed hash string), so the catch path would otherwise roll
+        // back under an EMPTY id — RemoveBurnUTXOs reads a mismatched holder
+        // as "held by another" and silently skips the entry, leaving the
+        // dangling UTXO_BRIDGE record this cleanup exists to close.
+        const std::string burn_reservation_id = transaction_hash;
 
         auto txId = std::string{};
         try
@@ -1047,6 +1055,14 @@ namespace sgns
                                         destination ) );
 
             mint_transaction->MakeSignature( *account_m );
+            // TEST SEAM (CR-01 regression): fires AFTER transaction_hash was
+            // moved into the mint payload, deterministically driving the catch
+            // path (no natural throw site exists in this try). Throw from the
+            // hook to exercise the rollback.
+            if ( mint_funds_post_move_exception_hook_for_test_ )
+            {
+                mint_funds_post_move_exception_hook_for_test_();
+            }
             txId = mint_transaction->GetHash();
             EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
         }
@@ -1055,17 +1071,17 @@ namespace sgns
             // Same end state as the FAILED-transition cleanup: the inserted burn
             // entry must not survive a mint that never enqueued (release-only
             // rollback left the dangling UTXO_BRIDGE record the incident showed).
-            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( rollback_inputs, transaction_hash );
+            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( rollback_inputs, burn_reservation_id );
                  removal.has_error() )
             {
                 m_logger->error( "{}: MintFunds rollback failed to remove burn UTXO for tx_hash={}: {}",
                                  __func__,
-                                 transaction_hash,
+                                 burn_reservation_id,
                                  removal.error().message() );
             }
             m_logger->error( "{}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
                              __func__,
-                             transaction_hash,
+                             burn_reservation_id,
                              e.what() );
             return outcome::failure( std::errc::operation_canceled );
         }
@@ -4752,6 +4768,11 @@ namespace sgns
     void TransactionManager::SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook )
     {
         fetch_and_process_before_state_change_hook_for_test_ = std::move( hook );
+    }
+
+    void TransactionManager::SetMintFundsPostMoveExceptionHookForTest( std::function<void()> hook )
+    {
+        mint_funds_post_move_exception_hook_for_test_ = std::move( hook );
     }
 
     outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
