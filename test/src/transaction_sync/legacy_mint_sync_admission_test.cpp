@@ -428,3 +428,53 @@ TEST_F( LegacyMintSyncAdmissionTest, MintV2AndTransferKeepUnchangedSyncVerdicts 
     EXPECT_EQ( Filter( *transfer ).decision, FilterDecision::kAccept )
         << "transfer sync admission must be unchanged by the v1 gate";
 }
+
+// ---------------------------------------------------------------------------
+// Compat: producer-path spendability of certified v1 history
+// ---------------------------------------------------------------------------
+
+// VER-01 compat twin (MINT-03 must-have: pre-cutover v1 outputs remain
+// spendable). GeniusInputValidator.cpp:476-512 runs one producer-path chain
+// for every native input: FetchTransaction(producer path) ->
+// blockchain.GetCertificateBySlot(producer slot) ->
+// TransactionManager::CertificateMatchesTransaction — missing producer or
+// certificate maps to kNotSynced (retryable ordering gap), a mismatch to
+// kInvalid. This test drives exactly that chain for a v1-mint producer across
+// the gate: before the certificate lands the probe fails retryably (ordering
+// gate, never a broken spend); after the gate admitted the certified mint and
+// the record is durable, all three calls succeed — the certificate binding
+// that gates spendability survives the sync admission gate. (v1 mints carry
+// balance-model value and produce no UTXO outputs, so the witness half of the
+// mechanism has no v1 surface; the producer/certificate half is the invariant
+// this plan owns.)
+TEST_F( LegacyMintSyncAdmissionTest, CertifiedV1MintProducerPathStaysSpendable )
+{
+    auto       mint    = MakeSignedV1Mint( 1 );
+    const auto tx_path = TransactionManager::GetTransactionPath( *mint );
+
+    // Pre-sync state: neither the producer transaction nor its certificate has
+    // arrived — both producer-path lookups fail retryably (the kNotSynced
+    // mapping at GeniusInputValidator.cpp:480-505 upstream).
+    EXPECT_TRUE( TransactionManager::FetchTransaction( *blockchain_->GetGlobalDB(), tx_path ).has_error() );
+    EXPECT_TRUE( blockchain_->GetCertificateBySlot( mint->GetSlotID() ).has_error() );
+
+    // The certificate delta lands; the gate admits the same element...
+    WriteMatchingCertificateFor( *mint );
+    ASSERT_EQ( Filter( *mint ).decision, FilterDecision::kAccept );
+
+    // ...the transaction delta lands (stored where the producer fetch looks)...
+    const auto             bytes = mint->SerializeByteVector();
+    crdt::GlobalDB::Buffer stored_value;
+    stored_value.put( bytes );
+    ASSERT_TRUE( db_->Put( { tx_path }, stored_value, {} ).has_value() );
+
+    // ...and the producer-path chain succeeds end to end.
+    auto producer = TransactionManager::FetchTransaction( *blockchain_->GetGlobalDB(), tx_path );
+    ASSERT_TRUE( producer.has_value() && producer.value() );
+    EXPECT_EQ( producer.value()->GetHash(), mint->GetHash() );
+
+    const auto certificate = blockchain_->GetCertificateBySlot( producer.value()->GetSlotID() );
+    ASSERT_FALSE( certificate.has_error() );
+    EXPECT_TRUE( TransactionManager::CertificateMatchesTransaction( certificate.value(), *producer.value() ) )
+        << "The admitted history's certificate must keep certifying its producer transaction";
+}
