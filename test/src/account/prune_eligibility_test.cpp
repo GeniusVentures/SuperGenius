@@ -19,7 +19,10 @@
  *             Group E pins the D-04 marker contract: PRUNED vs NOT_FOUND vs
  *             the value-XOR-marker invariant violation, plus the
  *             spender-pruned window refinement driven through the REAL
- *             Phase-16 erase flow.
+ *             Phase-16 erase flow. Group F proves the production marker
+ *             join (D-C1): BuildPruneMarkerEntry's buffers, the staged-entry
+ *             EraseEntry atomicity (one commit: value gone, block gone,
+ *             marker PRUNED), and the seam-interrupted all-or-nothing proof.
  * @date       2026-10-19
  */
 
@@ -726,6 +729,47 @@ TEST_F( PruneEligibilityTest, PruningConfig_ZeroWindowWhileDisabledStaysUnset )
     EXPECT_FALSE( config.disabled_reason.has_value() );
 }
 
+/** C7 — absent budget/settle members keep their defaults (100 erases / 60s). */
+TEST_F( PruneEligibilityTest, PruningConfig_EraseBudgetAndSettleDefaultWhenAbsent )
+{
+    const auto empty = ParseConfig( "{}" );
+    EXPECT_EQ( empty.max_erases_per_cycle, 100u );
+    EXPECT_EQ( empty.settle_seconds, 60u );
+
+    // A fully-specified enabled request with neither new key: defaults too.
+    const auto enabled = ParseConfig( R"( { "enabled": true, "finality_window": 100 } )" );
+    EXPECT_EQ( enabled.max_erases_per_cycle, 100u );
+    EXPECT_EQ( enabled.settle_seconds, 60u );
+}
+
+/** C8 — explicit positive budget/settle values parse verbatim. */
+TEST_F( PruneEligibilityTest, PruningConfig_EraseBudgetAndSettleExplicitValuesParse )
+{
+    const auto config = ParseConfig( R"( { "max_erases_per_cycle": 250, "settle_seconds": 45 } )" );
+    EXPECT_EQ( config.max_erases_per_cycle, 250u );
+    EXPECT_EQ( config.settle_seconds, 45u );
+}
+
+/**
+ * C9 — zero budget and zero settle are DEGENERATE and rejected at read time:
+ * a 0-K cycle can never drain (WR-03 rule) and a settle-less cycle can fire
+ * during initial sync. The members keep their safe defaults.
+ */
+TEST_F( PruneEligibilityTest, PruningConfig_ZeroEraseBudgetAndSettleKeepDefaults )
+{
+    const auto config = ParseConfig( R"( { "max_erases_per_cycle": 0, "settle_seconds": 0 } )" );
+    EXPECT_EQ( config.max_erases_per_cycle, 100u );
+    EXPECT_EQ( config.settle_seconds, 60u );
+}
+
+/** C10 — ill-typed budget/settle members keep defaults (no partial trust). */
+TEST_F( PruneEligibilityTest, PruningConfig_IllTypedBudgetAndSettleKeepDefaults )
+{
+    const auto config = ParseConfig( R"( { "max_erases_per_cycle": "many", "settle_seconds": true } )" );
+    EXPECT_EQ( config.max_erases_per_cycle, 100u );
+    EXPECT_EQ( config.settle_seconds, 60u );
+}
+
 // ---------------------------------------------------------------------------
 // Group D: SC-2 — the multi-element block gate (PRUNE-03, D-C3)
 // ---------------------------------------------------------------------------
@@ -1107,4 +1151,140 @@ TEST_F( PruneEligibilityTest, PruneMarker_SpenderPrunedWindowSatisfied )
     ASSERT_NE( control_verdict, nullptr );
     EXPECT_FALSE( control_verdict->eligible );
     EXPECT_TRUE( HasReason( *control_verdict, PruneReason::SPENDER_UNRESOLVED ) );
+}
+
+// ---------------------------------------------------------------------------
+// Group F: D-C1 — the production marker write joins the erase WriteBatch
+// ---------------------------------------------------------------------------
+
+/**
+ * F1 — BuildPruneMarkerEntry produces byte-identical buffers to the
+ * test-only writer's PutRaw pair (one key home, one record shape).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_BuildEntryBytesMatchTestWriter )
+{
+    const std::string hash = std::string( 64, 'f' );
+
+    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( hash );
+    EXPECT_EQ( marker_pair.first.toString().value(), "/prune/tx/" + hash );
+
+    // The record the production builder embeds: the tx path named by the hash
+    // (the WR-04 shape LookupPrunedEntry demands), no optional extras.
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( hash ) );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, hash, record ).has_value() );
+
+    auto written = db_->GetRaw( marker_pair.first );
+    ASSERT_TRUE( written.has_value() );
+    EXPECT_EQ( written.value().toString(), marker_pair.second.toString() );
+
+    // The staged pair decodes to a PRUNED verdict against a value that never
+    // existed (path named by the hash, value absent).
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, hash );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+}
+
+/**
+ * F2 — an erase invoked WITH the staged marker pair lands value, block, and
+ * marker in ONE commit: value absent, block absent, marker PRUNED (the
+ * value-XOR-marker invariant holds atomically).
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_EraseWithStagedMarkerCommitsAtomically )
+{
+    auto tx = MakeTransfer( 1, 1 );
+    const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( tx->SerializeByteVector() );
+    auto put_result = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+    ASSERT_TRUE( put_result.has_value() );
+    const std::string block_cid = put_result.value().toString().value();
+
+    crdt::GlobalDB::Buffer map_key;
+    map_key.put( tx_path );
+    crdt::GlobalDB::Buffer map_value;
+    map_value.put( block_cid );
+    ASSERT_TRUE( db_->GetDataStore()->put( map_key, map_value ).has_value() );
+
+    // A later topic put so the seeded block is NOT the topic head (guard 1).
+    PutSeedValue( "/seed/prune/f2-driver", "d" );
+
+    // Pre-state: value present, block present, marker absent.
+    ASSERT_TRUE( db_->GetRaw( map_key ).has_value() );
+    auto carried = db_->GetLocalDeltaKeys( block_cid );
+    ASSERT_TRUE( carried.has_value() );
+    ASSERT_FALSE( carried.value().empty() );
+    auto pre_lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+    ASSERT_TRUE( pre_lookup.has_value() );
+    EXPECT_EQ( pre_lookup.value().first, PrunedLookup::NOT_FOUND );
+
+    auto cid = CID::fromString( block_cid );
+    ASSERT_TRUE( cid.has_value() );
+    const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
+
+    auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
+    ASSERT_TRUE( erased.has_value() );
+
+    // One commit, both sides: value gone, block gone, marker present.
+    auto raw_after = db_->GetRaw( map_key );
+    ASSERT_TRUE( raw_after.has_error() );
+    EXPECT_TRUE( db_->GetLocalDeltaKeys( block_cid ).has_error() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    ASSERT_TRUE( lookup.value().second.has_value() );
+    EXPECT_EQ( lookup.value().second->tx_path(), tx_path );
+}
+
+/**
+ * F3 — a seam-interrupted batch (every pre-commit step) leaves BOTH sides in
+ * the pre-erase state: the value is untouched AND no marker exists. Value
+ * XOR marker is never observable mid-flight.
+ */
+TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUntouched )
+{
+    auto tx = MakeTransfer( 2, 1 );
+    const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+
+    crdt::GlobalDB::Buffer serialized;
+    serialized.put( tx->SerializeByteVector() );
+    auto put_result = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+    ASSERT_TRUE( put_result.has_value() );
+    const std::string block_cid = put_result.value().toString().value();
+
+    crdt::GlobalDB::Buffer map_key;
+    map_key.put( tx_path );
+    crdt::GlobalDB::Buffer map_value;
+    map_value.put( block_cid );
+    ASSERT_TRUE( db_->GetDataStore()->put( map_key, map_value ).has_value() );
+
+    PutSeedValue( "/seed/prune/f3-driver", "d" );
+
+    auto cid          = CID::fromString( block_cid );
+    ASSERT_TRUE( cid.has_value() );
+    auto marker_pair  = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
+
+    for ( const int step : { 1, 2, 3 } )
+    {
+        // Reset to the pre-erase state before each interrupted attempt.
+        ASSERT_TRUE( db_->GetRaw( map_key ).has_value() );
+        auto pre_lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( pre_lookup.has_value() );
+        ASSERT_EQ( pre_lookup.value().first, PrunedLookup::NOT_FOUND );
+
+        GlobalDB::SetEraseInterruptHookForTest( [step]( int fired ) { return fired == step; } );
+        auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
+        GlobalDB::SetEraseInterruptHookForTest( nullptr );
+
+        ASSERT_TRUE( erased.has_error() );
+
+        // Both sides untouched: the value is still present and no marker
+        // was written (the dying batch proved all-or-nothing).
+        EXPECT_TRUE( db_->GetRaw( map_key ).has_value() );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::NOT_FOUND );
+    }
 }
