@@ -82,7 +82,7 @@ Live status, plans, and phase artifacts live on the v1.2 execution branch. Roadm
 
 **Execution order:** strictly 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
 
-- [x] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04) (completed 2026-10-21)
+- [ ] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
 - [ ] **Phase 22: Wire & Ingestion Hardening (Fork)** - Length and nesting caps before allocation across the three fork readers; error-result hash parsing with fuzz coverage; thirdparty/zkLLVM digest verification + SHA-pinned actions landing with or before the first fork-riding change; first FORK-DELTA manifest + mixed-version interop-matrix run (WIRE-01, WIRE-02, REL-02)
 - [ ] **Phase 23: Gossip & DHT Authentication (Fork)** - Verify-before-forward on public topics with signing-key↔from binding and per-topic policy as data; DHT record validation with admission limits and request-bound nonces; before/after throughput benchmark (GOSSIP-01, GOSSIP-02)
 - [ ] **Phase 24: Bridge Ingestion Safety** - Per-chain confirmation depth/finality as a restart-durable state machine proven under anvil reorg; content-corroborated multi-operator RPC quorum (BRIDGE-01, BRIDGE-02)
@@ -127,7 +127,7 @@ Plans:
 
 **Gap Closure — Wave 1** *(from 21-VERIFICATION.md gaps; parallel plans, disjoint files)*
 
-- [ ] 21-08-PLAN.md — MINT-04 fail-closed completion: exactly-one-output burn-fact binding (CR-01) + bridge-less endpoint no-confirm guard (CR-02) + adversarial/compat pairs
+- [x] 21-08-PLAN.md — MINT-04 fail-closed completion: exactly-one-output burn-fact binding (CR-01) + bridge-less endpoint no-confirm guard (CR-02) + adversarial/compat pairs
 - [ ] 21-09-PLAN.md — TRUST-01 grandfather-path closure: content-bound probe (WR-01) + defer-bounded grandfathered stall (CR-03) + WR-02 negative-window guard + adversarial/compat pairs
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
@@ -272,7 +272,7 @@ Plans:
 | 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 7/7 | Complete   | 2026-10-21 |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 8/9 | In Progress|  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |

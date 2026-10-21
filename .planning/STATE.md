@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
 status: executing
-stopped_at: "Completed 21-07-PLAN.md (TRUST-02 closed: audit + cap enforcement + equivocation guard; Phase 21 plans 7/7 complete)"
-last_updated: "2026-10-21T17:08:58.232Z"
-last_activity: 2026-10-21 -- Phase 21 planning complete
+stopped_at: "Completed 21-08-PLAN.md (MINT-04 gap closure: CR-01 multi-output + CR-02 bridge-less endpoint both closed; next: 21-09 TRUST-01 gap closure)"
+last_updated: "2026-10-21T18:44:58.610Z"
+last_activity: 2026-10-21
 progress:
   total_phases: 27
   completed_phases: 0
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 ## Current Position
 
 Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
-Plan: 7 of 7
-Status: Ready to execute
-Last activity: 2026-10-21 -- Phase 21 planning complete
+Plan: 8 of 9 complete (21-08 done; next: 21-09 TRUST-01 gap closure)
+Status: Executing — gap-closure plans
+Last activity: 2026-10-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T10:30:22.876Z
-**Stopped At:** Completed 21-07-PLAN.md (TRUST-02 closed: audit + cap enforcement + equivocation guard; Phase 21 plans 7/7 complete)
+**Last session:** 2026-10-21T18:44:58.602Z
+**Stopped At:** Completed 21-08-PLAN.md (MINT-04 gap closure: CR-01 multi-output + CR-02 bridge-less endpoint both closed; next: 21-09 TRUST-01 gap closure)
 **Resume File:** None
 
 ## Accumulated Context
@@ -143,6 +143,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 21 P05 | 35min | 3 tasks | 6 files |
 | Phase 21 P04 | 68min | 3 tasks | 9 files |
 | Phase 21 P07 | 100min | 3 tasks | 6 files |
+| Phase 21 P08 | 17min | 2 tasks tasks | 2 files files |
 
 ## Deferred Items
 
@@ -177,3 +178,5 @@ Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintR
 - [Phase 21]: Equivocation guard (21-07, TRUST-02): the durable prior commitment for a signer is its signature-verified vote inside the durably-stored existing certificate - the local ActiveVoteRecord holds only the LOCAL node's vote (decoder enforces voter_id==account_address_), so gating on it would never fire for remote byzantine signers; the ledger is consulted for corroborating evidence only
 - [Phase 21]: Equivocation markers (21-07, audit F4): stored under sibling prefix /consensus/equivocation/<slot>/<signer> reusing the ActiveVoteRecord payload + storage conventions - never under /consensus/vote/ whose RecoverActiveVotes prefix scan would decode-fail every marker with per-boot error logs
 - [Phase 21]: Admission cap (21-07, TRUST-02 audit F1): per-update ACTIVE-addition cap enforcement-proven through the member path (wired value 3 overrides default 10); cross-epoch aggregate growth accepted as governance-bound residual - carried to Phase 25 spine with F3 per-member batch attribution
+- [Phase 21]: MINT-04 gap closure (21-08, CR-01): exactly-one-output guard at DecodeAndBindBurnFacts before the topic0 selection and fact comparisons - deserialization stays N-output-open (D-02), the evidence boundary is the one home where burn facts authorize the output set; multi-output mints discard all evidence via the reverted-receipt precedent branch
+- [Phase 21]: MINT-04 gap closure (21-08, CR-02): endpoint no-confirm guard before the bridge block, scoped by RequiresPublicChainEvidence and covering BOTH empty bridge_contract_address and empty accepted_topic0_hashes - continue-only semantics mirror the topic-mismatch precedent; non-mint public-chain types keep bridge-optional confirmation byte-identically (compat twin pinned)
