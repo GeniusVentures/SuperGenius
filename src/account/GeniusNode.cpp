@@ -4955,10 +4955,16 @@ namespace sgns
         }
         else
         {
-            node_logger_->info( "Prune timer started: first real cycle in 1 min, then every 10 min (max {} "
-                                "erases per cycle, settle {}s)",
-                                pruning_config_.max_erases_per_cycle,
-                                pruning_config_.settle_seconds );
+            // The settle clock stamps on the first tick where the gate holds
+            // (TickGateSettled), so the first REAL cycle lands on the first
+            // tick after the settle window — ~11 min out at the default
+            // cadence, not "in 1 min" (WR-03: the old line sent operators
+            // hunting for a cycle that could not exist yet).
+            node_logger_->info( "Prune timer started: first real cycle on the first tick after the {}s settle "
+                                "window has elapsed from the gate hold (≈11 min at the default cadence), "
+                                "then every 10 min (max {} erases per cycle)",
+                                pruning_config_.settle_seconds,
+                                pruning_config_.max_erases_per_cycle );
         }
     }
 
