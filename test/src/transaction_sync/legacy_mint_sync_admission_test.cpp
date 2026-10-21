@@ -383,6 +383,45 @@ TEST_F( LegacyMintSyncAdmissionTest, DeferWindowExpiryRejectsWithProofKeyTombsto
         << "The tombstone must strip the associated proof key per the filter's existing structure";
 }
 
+// VER-01 misconfiguration guard (WR-02, mirrors the consensus twin
+// ConsensusManager::SetAuthorizationDeferWindow). Attacker authority: none --
+// this is operator-safety, not an attack: network_config.json feeds plain
+// integers into SetLegacyMintDeferWindow (GeniusNode.cpp:1892 read_seconds),
+// and a NEGATIVE window would anchor every first-seen defer deadline in the
+// past, so legitimate late-certificate v1 history insta-rejects (with its
+// proof-key tombstone) on the first re-evaluation -- data loss via
+// misconfiguration. Expected: the negative value is warned-and-ignored and the
+// previously armed window is RETAINED. Actual pre-fix behavior: the second
+// evaluation immediately Rejects through the negative window's elapsed
+// deadline.
+TEST_F( LegacyMintSyncAdmissionTest, NegativeLegacyMintDeferWindowIgnored )
+{
+    // Arm the previous window, then feed the misconfigured negative value.
+    tm_->SetLegacyMintDeferWindow( std::chrono::seconds( 1 ) );
+    tm_->SetLegacyMintDeferWindow( std::chrono::seconds( -1 ) );
+
+    auto mint = MakeSignedV1Mint( 1 );
+
+    const auto first = Filter( *mint );
+    EXPECT_EQ( first.decision, FilterDecision::kStall )
+        << "First sight anchors the defer deadline regardless of the window value";
+
+    // Immediate re-evaluation must still defer: the negative window was
+    // ignored and the 1 s window is retained (pre-fix this is the immediate
+    // deadline Reject + proof-key tombstone).
+    const auto second = Filter( *mint );
+    EXPECT_EQ( second.decision, FilterDecision::kStall )
+        << "A negative defer window must be ignored -- the previous window is retained";
+
+    // The retained window still bounds the stall exactly as armed: past the
+    // original 1 s the same element rejects through the deadline rule,
+    // proving the guard neither zeroed nor default-replaced the window.
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1100 ) );
+    const auto third = Filter( *mint );
+    EXPECT_EQ( third.decision, FilterDecision::kReject )
+        << "The retained (1 s) window still applies after the misconfiguration was ignored";
+}
+
 // ---------------------------------------------------------------------------
 // Compat: certified history, migration fillers, v2, transfers
 // ---------------------------------------------------------------------------
