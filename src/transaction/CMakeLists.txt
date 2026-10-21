@@ -11,6 +11,7 @@ add_library(genius_transaction_objs OBJECT
     TransactionManager.cpp
     TransactionConsensusHandler.cpp
     PruneEligibility.cpp
+    TxPruner.cpp
 )
 
 target_link_libraries(genius_transaction_objs ${GENIUS_NODE_LIBS})
