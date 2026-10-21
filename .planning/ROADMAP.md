@@ -154,7 +154,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 18-04-PLAN.md — TxPruner service (tick gate, block-grouped K budget, per-tx re-verify, PruneStatus/log) + GeniusNode real-cycle arm (PRUNE-04, RECL-03, RECL-04)
-- [ ] 18-05-PLAN.md — MintFunds FAILED-cleanup folded todo: reconciliation-first, narrow fix or evidenced descope (PRUNE-04)
+- [x] 18-05-PLAN.md — MintFunds FAILED-cleanup folded todo: reconciliation-first, narrow fix or evidenced descope (PRUNE-04)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -211,7 +211,7 @@ Plans:
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 | 4/4 | Complete    | 2026-10-16 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 | 6/6 | Complete    | 2026-10-20 |
-| 18. TxPruner Service & First Real Prune | v1.2 | 4/7 | In Progress|  |
+| 18. TxPruner Service & First Real Prune | v1.2 | 5/7 | In Progress|  |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 | 0/? | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 | 0/? | Not started | — |
 

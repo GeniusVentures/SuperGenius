@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 18
 status: executing
 stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-10-21T20:35:39.319Z"
+last_updated: "2026-10-21T21:02:56.287Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 23
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
   percent: 9
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 18 (txpruner-service-first-real-prune) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-10-21
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 88%
 
 ## Roadmap Snapshot
 
@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T20:35:39.313Z
+**Last session:** 2026-10-21T21:02:56.281Z
 **Stopped At:** Completed 18-03-PLAN.md
 **Resume File:** None
 
