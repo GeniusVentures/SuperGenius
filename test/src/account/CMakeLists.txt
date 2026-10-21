@@ -396,6 +396,30 @@ else()
     )
 endif()
 
+# Phase 18 (18-06): TxPruner service suites — same link set as
+# prune_eligibility_test (the fixture family it copies).
+addtest(tx_pruner_test
+    tx_pruner_test.cpp
+)
+
+target_link_libraries(tx_pruner_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(tx_pruner_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(tx_pruner_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(tx_pruner_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 # Several suites in this directory boot multiple full nodes; running them
 # concurrently starves CPU on smaller CI runners (observed: a genesis creator
 # starved for 30s while eight test binaries ran), stalling startup past any
