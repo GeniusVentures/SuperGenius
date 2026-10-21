@@ -2012,6 +2012,96 @@ TEST_F( ConsensusPendingLifecycleTest, ConflictingLowerHashCertificateAtFinalize
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, GrandfatheredLoadFailureRejectsAfterDeferWindow )
+{
+    /**
+     * VER-01 adversarial case (21-VERIFICATION gap 3 / CR-03). Attacker
+     * authority: any gossip peer able to put a certificate whose bytes are
+     * already durably final (its own finalized slot -- content-equal, so the
+     * content-bound probe legitimately grandfathers it) while its registry
+     * dependency never syncs to this node. The grandfathered registry-load
+     * failure must be BOUNDED exactly like the strict path: with the defer
+     * window forced to zero, the second evaluation is a deterministic
+     * deadline-named Reject. Actual pre-fix behavior: Check::Stalled forever
+     * on ANY load error with no defer bound -- re-opening the whole-delta
+     * stall DoS the D-03 tracker was built to close.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    manager->SetAuthorizationDeferWindow( std::chrono::seconds( 0 ) );
+
+    // Content-equal genuine final certificate whose registry CID is not
+    // loadable from this store at all (the dependency never syncs).
+    auto       final_certificate = MakeCertificateForRegistry( account,
+                                                         "never-syncing-grandfather-cid",
+                                                         213,
+                                                         "0xgrandfather-load-failure" );
+    const auto durable_key       = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        final_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+    std::string final_serialized;
+    ASSERT_TRUE( final_certificate.SerializeToString( &final_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, final_serialized );
+
+    // First sight anchors the defer deadline (Stalled even at a zero window).
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, final_certificate ),
+               sgns::ConsensusManager::Check::Stalled );
+    // Past the window the same grandfathered stall is a deterministic Reject.
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, final_certificate ),
+               sgns::ConsensusManager::Check::Reject );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, GrandfatheredLoadFailureStallsWithinWindow )
+{
+    /**
+     * Bounded-stall compat half (Pitfall 1 discipline). Inside the (default
+     * 30 min) defer window the grandfathered registry-load failure stays a
+     * retryable, never-memoized Stalled -- late-arriving registry
+     * dependencies keep their generous catch-up window (D-03) and neither
+     * the direct validation nor the accepted-scan pins a verdict entry.
+     */
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    auto       final_certificate = MakeCertificateForRegistry( account,
+                                                         "slow-syncing-grandfather-cid",
+                                                         214,
+                                                         "0xgrandfather-stall-in-window" );
+    const auto slot_key    = sgns::ConsensusPendingLifecycleTestAccess::GetSlotKey( final_certificate.proposal() );
+    const auto durable_key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey(
+        final_certificate );
+    ASSERT_FALSE( durable_key.empty() );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, final_certificate ),
+               sgns::ConsensusManager::Check::Stalled );
+    // The verdict cache is keyed by the bare slot key; a Stalled outcome must
+    // never leave an entry behind.
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::VerdictCacheEntryCount( manager, slot_key ), 0u );
+
+    // Mid-stall durable bytes: the accepted-scan reports retry-later and
+    // still memoizes nothing.
+    std::string final_serialized;
+    ASSERT_TRUE( final_certificate.SerializeToString( &final_serialized ) );
+    sgns::ConsensusPendingLifecycleTestAccess::WriteCertificateAtKey( manager, durable_key, final_serialized );
+    auto accepted = sgns::ConsensusPendingLifecycleTestAccess::HasAcceptedCertificateForSlot( manager, slot_key );
+    ASSERT_TRUE( accepted.has_error() );
+    EXPECT_EQ( accepted.error(), std::errc::resource_unavailable_try_again );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::VerdictCacheEntryCount( manager, slot_key ), 0u );
+
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, AuthorizationDeferDeadlineTurnsEternalStallIntoDeterministicReject )
 {
     /**
