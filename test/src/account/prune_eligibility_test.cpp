@@ -1288,3 +1288,205 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
         EXPECT_EQ( lookup.value().first, PrunedLookup::NOT_FOUND );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Group G: stranding-edge evidence + tick-gate input + the pruned-erase driver
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Test-fabricated well-formed CID (never published, never sealed) — the
+    /// absent-block shape (globaldb_erase_test makeUnseenCid recipe).
+    sgns::CID MakeUnseenCid( const std::vector<uint8_t> &digest )
+    {
+        using libp2p::multi::HashType;
+        using libp2p::multi::Multihash;
+        return sgns::CID( sgns::CID::Version::V1,
+                          sgns::CID::Multicodec::SHA2_256,
+                          Multihash::create( HashType::sha256, digest ).value() );
+    }
+} // namespace
+
+/**
+ * G1 — the stranding edge closed at the gate: after one sibling's sanctioned
+ * erase deleted the SHARED delta block (the exhausted-budget shape), the
+ * surviving eligible sibling's block gate sees the ABSENT block and returns
+ * an ERASABLE verdict carrying the explicit BLOCK_ALREADY_ERASED evidence —
+ * never a fail-closed stranding.
+ */
+TEST_F( PruneEligibilityTest, BlockGate_AbsentBlockCompletesEligibleSibling )
+{
+    constexpr uint64_t kWindow = 2;
+
+    auto ancient_spender = MakeTransfer( 1, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/g1-driver-1", "d1" );
+
+    auto tx1 = MakeTransfer( 2, 1 );
+    auto tx2 = MakeTransfer( 3, 1 );
+    TrackOutputs( *tx1 );
+    TrackOutputs( *tx2 );
+    const std::string shared_cid = SeedTransactionsInOneBlock( { tx1, tx2 } );
+    ASSERT_FALSE( shared_cid.empty() );
+    ASSERT_TRUE( ConsumeOutput( *tx1, 0, *ancient_spender ) );
+    ASSERT_TRUE( ConsumeOutput( *tx2, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/g1-driver-2", "d2" );
+
+    PruningConfig config;
+    config.finality_window = kWindow;
+    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    {
+        // Both siblings eligible before the erase (the A1 recipe).
+        auto evaluation = evaluator.value()->Evaluate();
+        ASSERT_TRUE( evaluation.has_value() );
+        ASSERT_NE( FindVerdict( evaluation.value(), *tx1 ), nullptr );
+        EXPECT_TRUE( FindVerdict( evaluation.value(), *tx1 )->eligible );
+        ASSERT_NE( FindVerdict( evaluation.value(), *tx2 ), nullptr );
+        EXPECT_TRUE( FindVerdict( evaluation.value(), *tx2 )->eligible );
+    }
+
+    // The budget-exhaustion shape: tx1's sanctioned erase deletes the SHARED
+    // block; tx2 is left behind stranded.
+    ASSERT_TRUE( tm_->EraseTransactionEntry( tx1->GetHash() ).has_value() );
+    ASSERT_TRUE( db_->GetLocalDeltaKeys( shared_cid ).has_error() ); // block gone
+
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+    const auto *tx2_verdict = FindVerdict( evaluation.value(), *tx2 );
+    ASSERT_NE( tx2_verdict, nullptr );
+    EXPECT_TRUE( tx2_verdict->eligible );
+
+    const auto *report = FindBlockReport( evaluation.value(), shared_cid );
+    ASSERT_NE( report, nullptr );
+    EXPECT_TRUE( report->erasable );
+    EXPECT_TRUE( HasReason( *report, PruneReason::BLOCK_ALREADY_ERASED ) );
+}
+
+/**
+ * G2 — the discrimination case: a block whose BYTES are present but
+ * unparseable still fails closed with DESERIALIZE_FAILED — the
+ * absent-block evidence never fires for a corrupt block (byte presence,
+ * not parse success, decides absence).
+ */
+TEST_F( PruneEligibilityTest, BlockGate_CorruptBlockStillFailsClosed )
+{
+    auto ancient_spender = MakeTransfer( 4, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/g2-driver-1", "d1" );
+
+    auto tx = MakeTransfer( 5, 1 );
+    TrackOutputs( *tx );
+    const std::string block_cid = SeedTransactionsInOneBlock( { tx } );
+    ASSERT_FALSE( block_cid.empty() );
+    ASSERT_TRUE( ConsumeOutput( *tx, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/g2-driver-2", "d2" );
+
+    // Corrupt the block bytes in place: present-but-unparseable. The key is
+    // exactly CID::toBytes() (the StageBlockRemoval / RocksdbDatastore
+    // encode shape).
+    auto cid = CID::fromString( block_cid );
+    ASSERT_TRUE( cid.has_value() );
+    auto key_bytes = cid.value().toBytes();
+    ASSERT_TRUE( key_bytes.has_value() );
+    crdt::GlobalDB::Buffer block_key( std::move( key_bytes.value() ) );
+    crdt::GlobalDB::Buffer garbage;
+    garbage.put( std::string( "corrupt-block-bytes-not-a-dag-node" ) );
+    ASSERT_TRUE( db_->GetDataStore()->put( block_key, garbage ).has_value() );
+
+    // The corruption is observable: the local parse path fails.
+    ASSERT_TRUE( db_->GetLocalDeltaKeys( block_cid ).has_error() );
+
+    PruningConfig config;
+    config.finality_window = 2;
+    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    const auto *report = FindBlockReport( evaluation.value(), block_cid );
+    ASSERT_NE( report, nullptr );
+    EXPECT_FALSE( report->erasable );
+    EXPECT_TRUE( HasReason( *report, PruneReason::DESERIALIZE_FAILED ) );
+    EXPECT_FALSE( HasReason( *report, PruneReason::BLOCK_ALREADY_ERASED ) );
+}
+
+/**
+ * G3 — the evidence only COMPLETES an otherwise-eligible erase: an absent
+ * block tied to a NON-eligible candidate stays not-erasable (fail closed).
+ */
+TEST_F( PruneEligibilityTest, BlockGate_AbsentBlockNonEligibleCandidateNotErasable )
+{
+    // A candidate that is NOT eligible: its only output was spent RECENTLY.
+    auto candidate       = MakeTransfer( 6, 1 );
+    auto recent_spender  = MakeTransfer( 7, 0 );
+    SeedTransaction( candidate );
+    SeedTransaction( recent_spender );
+    TrackOutputs( *candidate );
+    ASSERT_TRUE( ConsumeOutput( *candidate, 0, *recent_spender ) );
+
+    // A well-formed CID whose block never existed here — the absent shape —
+    // fabricated into the map entry (the gate's input wiring).
+    const std::string absent_cid = MakeUnseenCid( { 0x11, 0x22, 0x33 } ).toString().value();
+    SeedTxCidEntry( candidate->GetHash(), absent_cid );
+    PutSeedValue( "/seed/prune/g3-driver", "d" );
+
+    PruningConfig config;
+    config.finality_window = 2;
+    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    ASSERT_TRUE( evaluator.has_value() );
+    auto evaluation = evaluator.value()->Evaluate();
+    ASSERT_TRUE( evaluation.has_value() );
+
+    const auto *verdict = FindVerdict( evaluation.value(), *candidate );
+    ASSERT_NE( verdict, nullptr );
+    EXPECT_FALSE( verdict->eligible );
+
+    // Direct gate call: absent block tied only to the NON-eligible candidate.
+    auto gate = evaluator.value()->EvaluateDeltaBlockErasable( absent_cid, evaluation.value() );
+    ASSERT_TRUE( gate.has_value() );
+    EXPECT_FALSE( gate.value().erasable );
+    EXPECT_FALSE( HasReason( gate.value(), PruneReason::BLOCK_ALREADY_ERASED ) );
+}
+
+/** G4 — the tick-gate input: HasMissingTxHashes is const and false when the missing set is empty. */
+TEST_F( PruneEligibilityTest, TickGate_HasMissingTxHashesFalseWhenEmpty )
+{
+    const TransactionManager &const_tm = *tm_;
+    EXPECT_FALSE( const_tm.HasMissingTxHashes() );
+}
+
+/**
+ * G5 — the production pruned-erase driver: resolves and erases exactly like
+ * EraseTransactionEntry (one resolution home) AND stages the marker pair, so
+ * the completed erase answers PRUNED through the tri-state lookup.
+ */
+TEST_F( PruneEligibilityTest, PrunedEraseDriver_ErasesAndMarksAtomically )
+{
+    auto ancient_spender = MakeTransfer( 8, 0 );
+    SeedTransaction( ancient_spender );
+    PutSeedValue( "/seed/prune/g5-driver-1", "d1" );
+
+    auto tx = MakeTransfer( 9, 1 );
+    TrackOutputs( *tx );
+    SeedTransaction( tx );
+    ASSERT_TRUE( ConsumeOutput( *tx, 0, *ancient_spender ) );
+    PutSeedValue( "/seed/prune/g5-driver-2", "d2" );
+
+    auto pre = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+    ASSERT_TRUE( pre.has_value() );
+    EXPECT_EQ( pre.value().first, PrunedLookup::NOT_FOUND );
+
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( tx->GetHash() ).has_value() );
+
+    // Value and map entry gone; the marker answers PRUNED.
+    crdt::GlobalDB::Buffer map_key;
+    map_key.put( TransactionManager::GetTransactionPath( *tx ) );
+    EXPECT_TRUE( db_->GetRaw( map_key ).has_error() );
+
+    auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+    ASSERT_TRUE( lookup.has_value() );
+    EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    ASSERT_TRUE( lookup.value().second.has_value() );
+    EXPECT_EQ( lookup.value().second->tx_path(), TransactionManager::GetTransactionPath( *tx ) );
+}
