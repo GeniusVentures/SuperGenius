@@ -4,7 +4,7 @@ area: security
 priority: P1
 date: 2026-10-20
 source: live node-example testing on staging net (owner + session analysis)
-resolves_phase: null
+resolves_phase: 18
 ---
 
 The chain_id == "supergenius" (and empty chain_id) bypass in
@@ -24,6 +24,8 @@ Risks:
   no code modification (magic chain id).
 - If /utxo ever becomes replicated or type-rules is loosened, the bypass
   silently becomes an unrestricted mint path.
+
+RESOLUTION LOCKED (2026-10-21, 18-CONTEXT D-03): net-scoped dev-mint policy — the allowance becomes explicitly net-scoped (staging + local dev) with validators refusing certification elsewhere. Supersedes the generic recommendation below.
 
 Recommended fix: net-gate or config-gate the bypass; add an explicit
 native-mint authorization policy; close the empty-chain_id sibling;
