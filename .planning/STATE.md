@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21
-status: executing
-stopped_at: "Completed 21-08-PLAN.md (MINT-04 gap closure: CR-01 multi-output + CR-02 bridge-less endpoint both closed; next: 21-09 TRUST-01 gap closure)"
-last_updated: "2026-10-21T18:44:58.610Z"
+status: verifying
+stopped_at: "Completed 21-09-PLAN.md (TRUST-01 gap closure: WR-01 content-bound probe + CR-03 defer-bounded grandfathered stall + WR-02 negative-window guard; all 9 phase plans executed, phase awaiting verification)"
+last_updated: "2026-10-21T19:23:00.451Z"
 last_activity: 2026-10-21
 progress:
   total_phases: 27
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 8
-  percent: 0
+  completed_plans: 9
+  percent: 4
 ---
 
 # State: SuperGenius — Security Remediation & Network Readiness
@@ -29,18 +29,18 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 
 ## Current Position
 
-Phase: 21 (Consensus Trust & Mint Authorization) — EXECUTING
-Plan: 8 of 9 complete (21-08 done; next: 21-09 TRUST-01 gap closure)
-Status: Executing — gap-closure plans
+Phase: 21 (Consensus Trust & Mint Authorization) — VERIFYING
+Plan: 9 of 9 complete (21-09 TRUST-01 gap closure done; all phase plans executed, awaiting phase verification)
+Status: verifying
 Last activity: 2026-10-21
 
-Progress: [█████████░] 89%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 21 | Consensus Trust & Mint Authorization | not started | TRUST-01/02, MINT-02..04 |
+| 21 | Consensus Trust & Mint Authorization | verifying | TRUST-01/02, MINT-02..04 |
 | 22 | Wire & Ingestion Hardening (Fork) | not started | WIRE-01/02, REL-02 |
 | 23 | Gossip & DHT Authentication (Fork) | not started | GOSSIP-01/02 |
 | 24 | Bridge Ingestion Safety | not started | BRIDGE-01/02 |
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-21T18:44:58.602Z
-**Stopped At:** Completed 21-08-PLAN.md (MINT-04 gap closure: CR-01 multi-output + CR-02 bridge-less endpoint both closed; next: 21-09 TRUST-01 gap closure)
+**Last session:** 2026-10-21T19:21:36.048Z
+**Stopped At:** Completed 21-09-PLAN.md (TRUST-01 gap closure: WR-01 content-bound probe + CR-03 defer-bounded grandfathered stall + WR-02 negative-window guard; all 9 phase plans executed, phase awaiting verification)
 **Resume File:** None
 
 ## Accumulated Context
@@ -144,6 +144,7 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 21 P04 | 68min | 3 tasks | 9 files |
 | Phase 21 P07 | 100min | 3 tasks | 6 files |
 | Phase 21 P08 | 17min | 2 tasks tasks | 2 files files |
+| Phase 21 P09 | 31min | 3 tasks tasks | 6 files files |
 
 ## Deferred Items
 
@@ -180,3 +181,6 @@ Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintR
 - [Phase 21]: Admission cap (21-07, TRUST-02 audit F1): per-update ACTIVE-addition cap enforcement-proven through the member path (wired value 3 overrides default 10); cross-epoch aggregate growth accepted as governance-bound residual - carried to Phase 25 spine with F3 per-member batch attribution
 - [Phase 21]: MINT-04 gap closure (21-08, CR-01): exactly-one-output guard at DecodeAndBindBurnFacts before the topic0 selection and fact comparisons - deserialization stays N-output-open (D-02), the evidence boundary is the one home where burn facts authorize the output set; multi-output mints discard all evidence via the reverted-receipt precedent branch
 - [Phase 21]: MINT-04 gap closure (21-08, CR-02): endpoint no-confirm guard before the bridge block, scoped by RequiresPublicChainEvidence and covering BOTH empty bridge_contract_address and empty accepted_topic0_hashes - continue-only semantics mirror the topic-mismatch precedent; non-mint public-chain types keep bridge-optional confirmation byte-identically (compat twin pinned)
+- [Phase ?]: TRUST-01 gap closure (21-09, WR-01): the D-01 grandfather probe binds by CONTENT - parse the durable record and require SerializedCertificateHash equality with the candidate serialization (SubmitCertificate discipline) before skipping strict authorization; parse failure or hash mismatch fails closed to the strict verified path, which also closes the lower-hash overwrite vector (the conflicting candidate never Approves)
+- [Phase ?]: TRUST-01 gap closure (21-09, CR-03): the grandfathered registry-load failure routes through the same authorization_defer_tracker_ under the same registry-CID key as the strict path - one unfetchable CID carries one first-seen bound across both; expired -> deterministic Reject, in-window -> never-memoized Stalled; accepted residual: final cert with never-syncing dependency rejects past the generous default window
+- [Phase ?]: WR-02 closure (21-09): SetLegacyMintDeferWindow warns-and-ignores negative windows at the setter (mirroring its consensus twin), retaining the current window - misconfigured config can no longer insta-tombstone late-cert v1 history; zero stays the sanctioned test override
