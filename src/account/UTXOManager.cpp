@@ -744,7 +744,18 @@ namespace sgns
                 local_reservations_ = previous_reservations;
                 for ( const auto &repaired : stored_so_far )
                 {
-                    (void) StoreUTXOsLocked( repaired );
+                    if ( auto re_store = StoreUTXOsLocked( repaired ); re_store.has_error() )
+                    {
+                        // A failed repair leaves this owner's persisted snapshot
+                        // in the post-removal state while memory holds the
+                        // pre-removal state — divergence invisible until
+                        // restart. Never swallow it (WR-01): log loudly, keep
+                        // the no-throw rollback contract.
+                        logger_->error( "RemoveBurnUTXOs rollback: failed to repair owner {} snapshot: {} — "
+                                        "persisted state may diverge from memory",
+                                        repaired,
+                                        re_store.error().message() );
+                    }
                 }
                 return outcome::failure( store_result.error() );
             }
