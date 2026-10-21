@@ -3778,9 +3778,9 @@ namespace sgns
 
     crdt::CRDTDataFilter::ElementFilterResult TransactionManager::FilterTransaction( const crdt::pb::Element &element )
     {
-        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          should_delete = true;
-        std::shared_ptr<GeniusTransaction>            new_tx;
+        bool                               should_delete = true;
+        bool                               should_stall  = false;
+        std::shared_ptr<GeniusTransaction> new_tx;
         do
         {
             auto maybe_new_tx = DeSerializeTransaction( element.value() );
@@ -3796,6 +3796,55 @@ namespace sgns
                 m_logger->error( "Could not validate signature of transaction {}", element.key() );
                 break;
             }
+
+            // MINT-03 sync admission (third ingress beside 21-05's consensus
+            // ingress and submission preflight — which is exactly why a NEW
+            // value-carrying v1 mint can never present a certificate): deltas
+            // arrive unordered, so "the slot certificate already exists locally"
+            // separates historical certified v1 mints from new submissions.
+            // Defer on a missing/mismatched certificate instead of blocking the
+            // type (D-02 keeps deserialization, boot, sync and history open);
+            // zero-amount v1 fillers never enter the branch.
+            if ( IsValueCarryingLegacyMint( *new_tx ) )
+            {
+                const auto slot_id            = new_tx->GetSlotID();
+                auto       certificate_result = blockchain_->GetCertificateBySlot( slot_id );
+                if ( !certificate_result.has_error() &&
+                     CertificateMatchesTransaction( certificate_result.value(), *new_tx ) )
+                {
+                    // Historical certified v1: continue through today's checks.
+                    legacy_mint_defer_tracker_.Clear( slot_id );
+                }
+                else if ( legacy_mint_defer_tracker_.Defer( slot_id ) )
+                {
+                    // D-03 bound: the first-seen deadline elapsed, so the
+                    // certificate is provably not arriving — reject through the
+                    // existing tombstone structure below.
+                    m_logger->error( "{}: legacy v1 mint sync admission defer expired (MINT-03) tx={} slot={}",
+                                     __func__,
+                                     new_tx->GetHash(),
+                                     slot_id );
+                    ++legacy_mint_deadline_reject_count_;
+                    break;
+                }
+                else
+                {
+                    // Whole-delta stall cost is accepted by design — the
+                    // certificate filter already stalls its whole delta the same
+                    // way (Consensus.cpp FilterCertificate): the element is
+                    // stripped unjournaled and re-evaluated once later deltas
+                    // land the certificate.
+                    m_logger->debug( "{}: legacy v1 mint sync admission deferred, waiting for certificate tx={} "
+                                     "slot={}",
+                                     __func__,
+                                     new_tx->GetHash(),
+                                     slot_id );
+                    ++legacy_mint_stall_count_;
+                    should_stall = true;
+                    break;
+                }
+            }
+
             if ( KeyExistsInDB( GetTransactionPath( *new_tx ) ) )
             {
                 m_logger->debug( "New transaction {} would overwrite an existing one. Preventing that",
@@ -3805,6 +3854,11 @@ namespace sgns
             should_delete = false;
 
         } while ( 0 );
+
+        if ( should_stall )
+        {
+            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
+        }
 
         if ( should_delete )
         {
@@ -3831,11 +3885,10 @@ namespace sgns
                 additional_elements_to_delete.push_back( proof_element );
             }
 
-            maybe_tombstones = additional_elements_to_delete;
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject( std::move( additional_elements_to_delete ) );
         }
 
-        // nullopt accepts; a tombstone vector rejects (strip + extras).
-        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional( std::move( maybe_tombstones ) );
+        return crdt::CRDTDataFilter::ElementFilterResult::Accept();
     }
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )

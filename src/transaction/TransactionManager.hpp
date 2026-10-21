@@ -10,6 +10,7 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <mutex>
@@ -733,6 +734,9 @@ namespace sgns
         ///        mints awaiting their slot certificate (D-03 bounded window,
         ///        first-seen anchored, FIFO cap with oldest-first eviction).
         base::BoundedDeferTracker legacy_mint_defer_tracker_;
+        /// @brief MINT-03 observability counters (stalls / deadline rejections).
+        std::atomic<uint64_t> legacy_mint_stall_count_{ 0 };
+        std::atomic<uint64_t> legacy_mint_deadline_reject_count_{ 0 };
 
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
@@ -975,6 +979,20 @@ namespace sgns
          *            existing first-seen deadlines are untouched.
          */
         void SetLegacyMintDeferWindow( std::chrono::seconds window );
+
+        /// @brief MINT-03 observability: sync evaluations of value-carrying v1
+        ///        mints that stalled awaiting their slot certificate.
+        uint64_t GetLegacyMintSyncStallCount() const
+        {
+            return legacy_mint_stall_count_.load( std::memory_order_relaxed );
+        }
+
+        /// @brief MINT-03 observability: sync elements of value-carrying v1
+        ///        mints rejected after the defer window expired (T-21-0602).
+        uint64_t GetLegacyMintSyncDeadlineRejectCount() const
+        {
+            return legacy_mint_deadline_reject_count_.load( std::memory_order_relaxed );
+        }
 
         void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );

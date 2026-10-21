@@ -1195,6 +1195,12 @@ namespace sgns
                             return;
                         }
 
+                        // MINT-03 (21-06): the sync-admission defer window for
+                        // value-carrying v1 mints is the shared D-03
+                        // authorization_defer_window_sec (21-03), the same window
+                        // the consensus certificate layer consumes above.
+                        transaction_manager_->SetLegacyMintDeferWindow( authorization_defer_window_sec_ );
+
                         ++transaction_manager_construction_count_;
                         uint64_t owner_generation;
                         {
