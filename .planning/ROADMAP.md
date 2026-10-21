@@ -122,7 +122,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 21-06-PLAN.md — MINT-03 sync admission: certificate-conditional Stall/Reject with stall-resolution negative control + migration/spendability compat twins
+- [x] 21-06-PLAN.md — MINT-03 sync admission: certificate-conditional Stall/Reject with stall-resolution negative control + migration/spendability compat twins
 - [ ] 21-07-PLAN.md — TRUST-02: admission/equivocation audit doc + ACTIVE-cap enforcement + durable-ledger equivocation guard + adversarial/compat pairs
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
@@ -267,7 +267,7 @@ Plans:
 | 18. TxPruner Service & First Real Prune | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (separate branch) | — | In progress (off-branch) | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 5/7 | In Progress|  |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 6/7 | In Progress|  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
