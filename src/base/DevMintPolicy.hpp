@@ -28,8 +28,7 @@ namespace sgns
 {
     /// Nets where burn-less dev mints may certify through full consensus
     /// (D-03). Built from the named net-id constants — the only net literals.
-    inline constexpr std::array<uint16_t, 2> kDevMintPermittedNets{ version::STAGING_NET_ID,
-                                                                    version::DEV_NET_ID };
+    inline constexpr std::array<uint16_t, 2> kDevMintPermittedNets{ version::STAGING_NET_ID, version::DEV_NET_ID };
 
     /**
      * @brief True iff THIS process's own net may certify burn-less dev mints.

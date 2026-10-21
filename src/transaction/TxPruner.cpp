@@ -298,8 +298,8 @@ namespace sgns
 
     bool TxPruner::TickGateSettled( TransactionManager &transaction_manager, std::chrono::steady_clock::time_point now )
     {
-        const bool gate_holds = transaction_manager.GetState() == TransactionManager::State::READY &&
-                                !transaction_manager.HasMissingTxHashes();
+        const bool             gate_holds = transaction_manager.GetState() == TransactionManager::State::READY &&
+                                            !transaction_manager.HasMissingTxHashes();
         const std::scoped_lock lock( status_mutex_ );
         if ( !gate_holds )
         {

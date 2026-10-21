@@ -617,9 +617,9 @@ TEST_F( PruneEligibilityTest, FailClosedGates_GarbageValueReportsDeserializeFail
     ASSERT_EQ( evaluation.value().candidates.size(), 3u );
     const std::string garbage_path = TransactionManager::GetTransactionPath( garbage_hash );
     const auto        garbage_it   = std::find_if( evaluation.value().candidates.begin(),
-                                          evaluation.value().candidates.end(),
-                                          [&garbage_path]( const PruneCandidateResult &c )
-                                          { return c.tx_path == garbage_path; } );
+                                                   evaluation.value().candidates.end(),
+                                                   [&garbage_path]( const PruneCandidateResult &c )
+                                                   { return c.tx_path == garbage_path; } );
     ASSERT_NE( garbage_it, evaluation.value().candidates.end() );
     EXPECT_FALSE( garbage_it->eligible );
     EXPECT_TRUE( HasReason( *garbage_it, PruneReason::DESERIALIZE_FAILED ) );
@@ -1192,7 +1192,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_BuildEntryBytesMatchTestWriter )
  */
 TEST_F( PruneEligibilityTest, PruneMarker_EraseWithStagedMarkerCommitsAtomically )
 {
-    auto tx = MakeTransfer( 1, 1 );
+    auto              tx      = MakeTransfer( 1, 1 );
     const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
 
     crdt::GlobalDB::Buffer serialized;
@@ -1245,7 +1245,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_EraseWithStagedMarkerCommitsAtomically
  */
 TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUntouched )
 {
-    auto tx = MakeTransfer( 2, 1 );
+    auto              tx      = MakeTransfer( 2, 1 );
     const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
 
     crdt::GlobalDB::Buffer serialized;
@@ -1262,9 +1262,9 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
 
     PutSeedValue( "/seed/prune/f3-driver", "d" );
 
-    auto cid          = CID::fromString( block_cid );
+    auto cid = CID::fromString( block_cid );
     ASSERT_TRUE( cid.has_value() );
-    auto marker_pair  = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
+    auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash() );
 
     for ( const int step : { 1, 2, 3 } )
     {
@@ -1334,7 +1334,7 @@ TEST_F( PruneEligibilityTest, BlockGate_AbsentBlockCompletesEligibleSibling )
 
     PruningConfig config;
     config.finality_window = kWindow;
-    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
     ASSERT_TRUE( evaluator.has_value() );
     {
         // Both siblings eligible before the erase (the A1 recipe).
@@ -1399,7 +1399,7 @@ TEST_F( PruneEligibilityTest, BlockGate_CorruptBlockStillFailsClosed )
 
     PruningConfig config;
     config.finality_window = 2;
-    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
     ASSERT_TRUE( evaluator.has_value() );
     auto evaluation = evaluator.value()->Evaluate();
     ASSERT_TRUE( evaluation.has_value() );
@@ -1418,8 +1418,8 @@ TEST_F( PruneEligibilityTest, BlockGate_CorruptBlockStillFailsClosed )
 TEST_F( PruneEligibilityTest, BlockGate_AbsentBlockNonEligibleCandidateNotErasable )
 {
     // A candidate that is NOT eligible: its only output was spent RECENTLY.
-    auto candidate       = MakeTransfer( 6, 1 );
-    auto recent_spender  = MakeTransfer( 7, 0 );
+    auto candidate      = MakeTransfer( 6, 1 );
+    auto recent_spender = MakeTransfer( 7, 0 );
     SeedTransaction( candidate );
     SeedTransaction( recent_spender );
     TrackOutputs( *candidate );
@@ -1433,7 +1433,7 @@ TEST_F( PruneEligibilityTest, BlockGate_AbsentBlockNonEligibleCandidateNotErasab
 
     PruningConfig config;
     config.finality_window = 2;
-    auto evaluator = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
+    auto evaluator         = PruneEligibility::New( *db_, *tm_, account_->GetUTXOManager(), NodeType::Light, config );
     ASSERT_TRUE( evaluator.has_value() );
     auto evaluation = evaluator.value()->Evaluate();
     ASSERT_TRUE( evaluation.has_value() );

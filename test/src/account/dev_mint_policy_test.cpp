@@ -60,8 +60,8 @@ class PublicChainInputValidatorTestAccess
 {
 public:
     static RpcVerificationEvidence Gather( const PublicChainInputValidator &validator,
-                                           const GeniusTransaction          &tx,
-                                           const std::string                &source_reference )
+                                           const GeniusTransaction         &tx,
+                                           const std::string               &source_reference )
     {
         return validator.GatherVerificationEvidence( tx, source_reference );
     }
@@ -84,9 +84,12 @@ namespace
         dag.set_type( "mint-v2" );
         const auto burn_hash = base::Hash256::fromReadableString( kBurnHashReadable );
         dag.set_uncle_hash( burn_hash.value().toReadableString() );
-        return std::make_shared<MintTransactionV2>( MintTransactionV2::New(
-            42, std::move( chain_id ), kDevMintToken, std::move( dag ), { { burn_hash.value(), 0, {} } },
-            "dev-mint-destination" ) );
+        return std::make_shared<MintTransactionV2>( MintTransactionV2::New( 42,
+                                                                            std::move( chain_id ),
+                                                                            kDevMintToken,
+                                                                            std::move( dag ),
+                                                                            { { burn_hash.value(), 0, {} } },
+                                                                            "dev-mint-destination" ) );
     }
 } // namespace
 
@@ -105,10 +108,8 @@ public:
     void SetUp() override
     {
         saved_net_ = version::GetNetworkID();
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage> {
-                return std::make_shared<MemorySecureStorage>( identifier );
-            } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
         account_ = GeniusAccount::New( kDevMintToken, base_path / "account" );
         ASSERT_NE( account_, nullptr );
         blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
@@ -182,7 +183,7 @@ TEST_F( DevMintPolicyUnitTest, EvidenceBypassEmptySourceReferencePermitsOnlyOnDe
 
 TEST_F( DevMintPolicyUnitTest, EvidenceBypassEmptyChainIdPermitsOnlyOnDesignatedNets )
 {
-    const PublicChainInputValidator validator; // no RPC endpoints wired
+    const PublicChainInputValidator validator;                  // no RPC endpoints wired
     const auto                      mint = MintWithChain( "" ); // the actually-reachable hole
 
     for ( const auto designated : { version::STAGING_NET_ID, version::DEV_NET_ID } )
@@ -228,14 +229,12 @@ TEST_F( DevMintPolicyUnitTest, DevValidatorWitnessVerdictFollowsOwnNetRegardless
     for ( const auto designated : { version::STAGING_NET_ID, version::DEV_NET_ID } )
     {
         version::SetNetworkId( designated );
-        EXPECT_EQ( DevValidatorVerdictFor( *mint ), IInputValidator::WitnessVerdict::kValid )
-            << "net " << designated;
+        EXPECT_EQ( DevValidatorVerdictFor( *mint ), IInputValidator::WitnessVerdict::kValid ) << "net " << designated;
     }
     for ( const auto refused : { version::TEST_NET_ID, version::MAIN_NET_ID } )
     {
         version::SetNetworkId( refused );
-        EXPECT_EQ( DevValidatorVerdictFor( *mint ), IInputValidator::WitnessVerdict::kInvalid )
-            << "net " << refused;
+        EXPECT_EQ( DevValidatorVerdictFor( *mint ), IInputValidator::WitnessVerdict::kInvalid ) << "net " << refused;
     }
 }
 
@@ -407,9 +406,9 @@ public:
     {
         version::SetNetworkId( net );
         network_         = Network{ StartPeer( prefix + "-validator-one", kPeerPorts[0] ),
-                            StartPeer( prefix + "-validator-two", kPeerPorts[1] ),
-                            StartPeer( prefix + "-validator-three", kPeerPorts[2] ),
-                            StartPeer( prefix + "-passive", kPeerPorts[3] ) };
+                                    StartPeer( prefix + "-validator-two", kPeerPorts[1] ),
+                                    StartPeer( prefix + "-validator-three", kPeerPorts[2] ),
+                                    StartPeer( prefix + "-passive", kPeerPorts[3] ) };
         network_started_ = true;
         ASSERT_TRUE( network_.first.blockchain && network_.second.blockchain && network_.third.blockchain &&
                      network_.passive.blockchain );
@@ -468,10 +467,10 @@ public:
         {
             const auto &output = params.second[index];
             GeniusUTXO  produced( mint_hash.value(),
-                                 index,
-                                 output.encrypted_amount,
-                                 output.token_id,
-                                 output.dest_address );
+                                  index,
+                                  output.encrypted_amount,
+                                  output.token_id,
+                                  output.dest_address );
             auto       *committed = commitment.add_produced_outputs();
             committed->set_tx_id_hash( mint_hash.value().data(), mint_hash.value().size() );
             committed->set_output_index( index );
@@ -570,12 +569,12 @@ private:
                                                                                       scheduler );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto db        = sgns::crdt::GlobalDB::New( peer.io,
-                                             peer.root + "/rocksdb",
-                                             peer.pubsub,
-                                             sgns::crdt::CrdtOptions::DefaultOptions(),
-                                             graphsync,
-                                             scheduler,
-                                             generator );
+                                                    peer.root + "/rocksdb",
+                                                    peer.pubsub,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsync,
+                                                    scheduler,
+                                                    generator );
         EXPECT_TRUE( db.has_value() );
         if ( db.has_error() )
         {

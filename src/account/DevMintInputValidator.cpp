@@ -29,10 +29,10 @@ namespace sgns
         return !params.first.empty() && !params.second.empty();
     }
 
-    IInputValidator::WitnessVerdict DevMintInputValidator::ValidateWitness( const ConsensusSubject &subject,
+    IInputValidator::WitnessVerdict DevMintInputValidator::ValidateWitness( const ConsensusSubject  &subject,
                                                                             const GeniusTransaction &tx,
                                                                             const UTXOTxParameters  &params,
-                                                                            const Blockchain &blockchain ) const
+                                                                            const Blockchain        &blockchain ) const
     {
         (void) subject;
         (void) tx;
