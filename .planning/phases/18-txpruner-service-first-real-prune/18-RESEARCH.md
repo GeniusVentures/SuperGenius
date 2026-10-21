@@ -507,7 +507,9 @@ struct PruneStatus
 
 **All other claims were verified against source this session** (file:line cited inline).
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four adopted by the plans: Q1 settle knob → 18-04 (settle_seconds=60); Q2 true-kill → 18-07 (seam matrix is the gate, one optional true-kill); Q3 missing-block depth → both mitigations (18-03-T3 + 18-04-T1); Q4 validator strictness → 18-02 (ctest twin shape).
 
 1. **Settle-window knob name and default** (discretion)
    - What we know: D-C2 requires a settle window; the dry-run timer uses 1-min first tick / 10-min cadence; SC-4 needs "settle elapsed" as a gate conjunct.
