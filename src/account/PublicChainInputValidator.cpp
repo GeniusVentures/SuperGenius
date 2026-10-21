@@ -588,6 +588,23 @@ namespace sgns
                 return RpcVerificationEvidence{};
             }
 
+            // MINT-04 (CR-02): an endpoint with no bridge contract or no
+            // accepted topic0 set cannot check bridge evidence at all — for an
+            // evidence-required mint it must not confirm on receipt existence
+            // alone. Scoped to the mint types: every other routed type keeps
+            // the bridge-optional confirmation. Like the topic-mismatch case
+            // below, the endpoint earns no weight and no slot while quorum
+            // evaluation continues over the remaining endpoints.
+            if ( RequiresPublicChainEvidence( tx ) &&
+                 ( ep.bridge_contract_address.empty() || ep.accepted_topic0_hashes.empty() ) )
+            {
+                logger->warn(
+                    "GatherVerificationEvidence endpoint lacks bridge binding for chain_id={} url={} — not confirming",
+                    chain_id,
+                    ep.url );
+                continue;
+            }
+
             // Defense-in-depth: verify receipt logs match expected bridge contract and event topic0.
             // If bridge_contract_address is configured, at least one log must match.
             if ( !ep.bridge_contract_address.empty() )

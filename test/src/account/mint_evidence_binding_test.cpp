@@ -201,9 +201,9 @@ namespace
     /// @brief Validator with three PUBLIC endpoints (3 x 25 = 75 quorum) whose
     ///        bridge binding fields are caller-controlled, and a transport
     ///        factory serving @p receipt_json from every endpoint.
-    std::unique_ptr<PublicChainInputValidator> MakeValidatorWithBridgeBinding( const std::string &receipt_json,
-                                                                              const std::string &bridge_contract,
-                                                                              std::vector<std::string> topic0_hashes )
+    std::unique_ptr<PublicChainInputValidator> MakeValidatorWithBridgeBinding( const std::string       &receipt_json,
+                                                                               const std::string       &bridge_contract,
+                                                                               std::vector<std::string> topic0_hashes )
     {
         auto validator = std::make_unique<PublicChainInputValidator>();
 
@@ -228,10 +228,10 @@ namespace
     ///        = 75 quorum) accepting both canonical bridge topic0 hashes.
     std::unique_ptr<PublicChainInputValidator> MakeValidator( const std::string &receipt_json )
     {
-        return MakeValidatorWithBridgeBinding( receipt_json,
-                                               kContract,
-                                               { CanonicalTopic0( sgns::kBridgeSourceBurnedSig ),
-                                                 CanonicalTopic0( sgns::kBridgeOutInitiatedSig ) } );
+        return MakeValidatorWithBridgeBinding(
+            receipt_json,
+            kContract,
+            { CanonicalTopic0( sgns::kBridgeSourceBurnedSig ), CanonicalTopic0( sgns::kBridgeOutInitiatedSig ) } );
     }
 
     /// @brief A mint-v2 whose own fields are set independently of any receipt.
@@ -666,7 +666,9 @@ namespace
         facts.token_id = 0xABCD;
         facts.amount   = 7;
         facts.dest_hex = std::string( kGeneratorX ) + kGeneratorY;
-        auto validator = MakeValidatorWithBridgeBinding( BuildBridgeBurnReceiptJson( kSourceRef, facts ), kContract, {} );
+        auto validator = MakeValidatorWithBridgeBinding( BuildBridgeBurnReceiptJson( kSourceRef, facts ),
+                                                         kContract,
+                                                         {} );
 
         const auto mint = MakeMintV2( 7,
                                       kChainId,
@@ -675,7 +677,8 @@ namespace
 
         const auto evidence = PublicChainInputValidatorTestAccess::Gather( *validator, *mint, kSourceRef );
         EXPECT_FALSE( evidence.valid ) << "An endpoint with an empty topic0 set must not confirm a mint";
-        EXPECT_EQ( evidence.successful_weight, 0 ) << "An endpoint that cannot recognize a bridge event earns no weight";
+        EXPECT_EQ( evidence.successful_weight, 0 )
+            << "An endpoint that cannot recognize a bridge event earns no weight";
     }
 
     TEST( MintEvidenceBindingTest, BridgelessEndpointStillConfirmsNonMintPublicType )
