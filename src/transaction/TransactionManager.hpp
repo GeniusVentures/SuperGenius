@@ -977,6 +977,10 @@ namespace sgns
          * @brief Replaces the MINT-03 sync-admission defer window (D-03).
          * @param[in] window New window applied to keys deferred AFTER this call;
          *            existing first-seen deadlines are untouched.
+         *
+         * Negative windows are warned-and-ignored (WR-02, mirroring the
+         * consensus twin): the current window is retained so a misconfigured
+         * value cannot insta-reject late-certificate v1 history.
          */
         void SetLegacyMintDeferWindow( std::chrono::seconds window );
 

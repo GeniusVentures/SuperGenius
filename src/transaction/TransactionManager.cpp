@@ -4635,6 +4635,17 @@ namespace sgns
 
     void TransactionManager::SetLegacyMintDeferWindow( std::chrono::seconds window )
     {
+        // WR-02: mirrors the consensus twin (ConsensusManager::
+        // SetAuthorizationDeferWindow). A negative window would anchor every
+        // first-seen defer deadline in the past, insta-rejecting legitimate
+        // late-certificate v1 history on its first re-evaluation; warn and
+        // keep the current window instead. Zero stays legal (the sanctioned
+        // test override).
+        if ( window.count() < 0 )
+        {
+            m_logger->warn( "{}: ignoring negative legacy mint defer window", __func__ );
+            return;
+        }
         legacy_mint_defer_tracker_.SetWindow( window );
     }
 
