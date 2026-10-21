@@ -139,6 +139,11 @@ namespace sgns
             manager->fail_accepted_certificate_scan_for_test_ = fail;
         }
 
+        static std::string EquivocationRecordStorageKey( std::string_view slot_key, std::string_view voter_id )
+        {
+            return ConsensusManager::EquivocationRecordStorageKey( slot_key, voter_id );
+        }
+
         /// Number of memoized verdicts the certificate cache holds for one
         /// durable certificate key (/cert/<slot>). Retryable outcomes (Pending /
         /// Stalled) must never leave an entry behind (Pitfall 1).
@@ -1508,7 +1513,10 @@ TEST_F( ConsensusPendingLifecycleTest,
     // Each direction targets one dedicated node db: the canonical slot key is written
     // exactly once per direction through the production convergent-immutable path, so
     // no direction's outcome can depend on same-priority CRDT overwrite ordering.
-    const auto verify_order = [&]( const size_t node_index, const std::string &existing, const std::string &candidate )
+    const auto verify_order = [&]( const size_t       node_index,
+                                   const std::string &existing,
+                                   const std::string &candidate,
+                                   const std::string &equivocating_voter = {} )
     {
         const auto                         &manager = nodes[node_index].manager;
         sgns::ConsensusManager::Certificate parsed_existing;
@@ -1526,7 +1534,22 @@ TEST_F( ConsensusPendingLifecycleTest,
         element.set_key( key );
         element.set_value( candidate );
         const auto filtered = sgns::ConsensusPendingLifecycleTestAccess::FilterCertificate( manager, element );
-        if ( SerializedCertificateHash( existing ) < SerializedCertificateHash( candidate ) )
+        if ( !equivocating_voter.empty() )
+        {
+            // 21-07 (TRUST-02): the conflicting certificate shares a signer that
+            // provably committed to BOTH certificates' proposals at this slot.
+            // The equivocation reject takes precedence over hash ordering in
+            // BOTH directions and leaves a durable marker naming the signer.
+            EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
+            auto datastore = nodes[node_index].db->GetDataStore();
+            ASSERT_TRUE( datastore != nullptr );
+            sgns::crdt::GlobalDB::Buffer marker_key;
+            marker_key.put(
+                sgns::ConsensusPendingLifecycleTestAccess::EquivocationRecordStorageKey( slot, equivocating_voter ) );
+            auto marker = datastore->get( marker_key );
+            EXPECT_FALSE( marker.has_error() ) << "durable equivocation marker must exist for the proven signer";
+        }
+        else if ( SerializedCertificateHash( existing ) < SerializedCertificateHash( candidate ) )
         {
             EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kReject );
         }
@@ -1535,10 +1558,12 @@ TEST_F( ConsensusPendingLifecycleTest,
             EXPECT_EQ( filtered.decision, sgns::crdt::CRDTDataFilter::ElementFilterResult::Decision::kAccept );
         }
     };
-    // Both directions execute the critical Mint-equivocation diagnostic while
-    // retaining the normal lower-hash CRDT decision.
-    verify_order( 0, first_serialized, second_serialized );
-    verify_order( 1, second_serialized, first_serialized );
+    // Both directions carry the deliberate validator-0 overlap (the byzantine
+    // shape): since 21-07 the proven cross-certificate equivocation rejects the
+    // conflicting certificate outright with a durable marker, replacing the
+    // log-only diagnostic + lower-hash ordering this fixture originally pinned.
+    verify_order( 0, first_serialized, second_serialized, accounts[0]->GetAddress() );
+    verify_order( 1, second_serialized, first_serialized, accounts[0]->GetAddress() );
 
     const auto same_mint_alternate = nodes.front().manager->CreateCertificate(
         first_proposal.value(),

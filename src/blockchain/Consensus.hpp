@@ -1028,6 +1028,40 @@ namespace sgns
          */
         static std::string EquivocationRecordStorageKey( std::string_view slot_key, std::string_view voter_id );
         /**
+         * @brief Proves cross-certificate equivocation from two competing certificates.
+         * @details A signer equivocated when its vote signature verifies on BOTH
+         *          certificates over their respective (different) proposals. The
+         *          existing certificate is the durable prior commitment: its bytes
+         *          were read from the local store by the caller. Votes copied
+         *          verbatim between certificates (same proposal id) are not a
+         *          second commitment and never match.
+         * @param[in] existing_certificate Durable certificate already stored at the slot.
+         * @param[in] candidate Conflicting candidate certificate for the same slot.
+         * @return The signer's verified prior vote when equivocation is provable,
+         *         otherwise nullopt (including disjoint signer sets).
+         */
+        std::optional<Vote> ProveCrossCertificateEquivocation( const Certificate &existing_certificate,
+                                                               const Certificate &candidate ) const;
+        /**
+         * @brief Writes the durable equivocation marker and logs the proven offense.
+         * @details Reuses the active-vote ledger's storage conventions: one
+         *          ActiveVoteRecord-shaped payload (the signer's verified prior
+         *          vote as the durable prior commitment) under @ref
+         *          EQUIVOCATION_RECORD_BASE_PATH_KEY — never under
+         *          @ref ACTIVE_VOTE_BASE_PATH_KEY, whose recovery prefix scan
+         *          must not decode markers. Cost bound (D-04): one ledger read
+         *          (the local active-vote consult) plus one ledger write, on the
+         *          conflicting-certificate branch only.
+         * @param[in] slot_key Canonical slot the equivocation was proven at.
+         * @param[in] prior_vote Signer's signature-verified vote from the existing certificate.
+         * @param[in] existing_certificate Durable prior commitment certificate.
+         * @param[in] candidate Rejected conflicting certificate.
+         */
+        void RecordEquivocationMarker( const std::string &slot_key,
+                                       const Vote        &prior_vote,
+                                       const Certificate &existing_certificate,
+                                       const Certificate &candidate );
+        /**
          * @brief Checks the authoritative certificate value for a canonical slot.
          * @details The definitive verdict (Approve/Reject) is memoized per slot
          *          keyed by the durable certificate bytes' digest: validation is

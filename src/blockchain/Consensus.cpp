@@ -1333,6 +1333,126 @@ namespace sgns
                std::string( voter_id );
     }
 
+    std::optional<ConsensusManager::Vote> ConsensusManager::ProveCrossCertificateEquivocation(
+        const Certificate &existing_certificate,
+        const Certificate &candidate ) const
+    {
+        if ( existing_certificate.proposal_id() == candidate.proposal_id() )
+        {
+            // Different verified mint hashes imply different proposals; equal ids
+            // mean the caller cannot be comparing two commitments.
+            return std::nullopt;
+        }
+        std::unordered_map<std::string, const Vote *> candidate_votes;
+        candidate_votes.reserve( static_cast<size_t>( candidate.votes_size() ) );
+        for ( const auto &vote : candidate.votes() )
+        {
+            candidate_votes.emplace( vote.voter_id(), &vote );
+        }
+        for ( const auto &prior_vote : existing_certificate.votes() )
+        {
+            const auto later = candidate_votes.find( prior_vote.voter_id() );
+            if ( later == candidate_votes.end() || later->second->proposal_id() == prior_vote.proposal_id() )
+            {
+                // Not a common signer, or a verbatim copy of the same vote —
+                // copying is not a second commitment.
+                continue;
+            }
+            const auto prior_signing = VoteSigningBytes( prior_vote );
+            const auto later_signing = VoteSigningBytes( *later->second );
+            if ( prior_signing.has_error() || later_signing.has_error() )
+            {
+                continue;
+            }
+            if ( !GeniusAccount::VerifySignature( prior_vote.voter_id(),
+                                                  prior_vote.signature(),
+                                                  prior_signing.value() ) ||
+                 !GeniusAccount::VerifySignature( later->second->voter_id(),
+                                                  later->second->signature(),
+                                                  later_signing.value() ) )
+            {
+                continue;
+            }
+            // Same signer, two signature-verified commitments to different
+            // proposals: provable equivocation. The existing certificate is the
+            // durable prior commitment (its bytes came from the local store).
+            return prior_vote;
+        }
+        return std::nullopt;
+    }
+
+    void ConsensusManager::RecordEquivocationMarker( const std::string &slot_key,
+                                                     const Vote        &prior_vote,
+                                                     const Certificate &existing_certificate,
+                                                     const Certificate &candidate )
+    {
+        auto datastore = db_ ? db_->GetDataStore() : nullptr;
+        if ( !datastore || slot_key.empty() )
+        {
+            logger_->error( "{}: equivocation marker skipped (no local datastore) slot={}", __func__, slot_key );
+            return;
+        }
+
+        // Consult the durable one-vote-per-slot ledger for a local prior
+        // commitment to the earlier certificate's content. Evidence for the
+        // marker's log line only: the reject itself stands on the two verified
+        // signatures (the existing certificate's bytes came from the local
+        // store; the candidate's bytes are in hand).
+        bool local_ledger_commitment = false;
+        {
+            crdt::GlobalDB::Buffer ledger_key;
+            ledger_key.put( ActiveVoteStorageKey( slot_key ) );
+            auto ledger_bytes = datastore->get( ledger_key );
+            if ( ledger_bytes.has_value() )
+            {
+                auto decoded            = DecodeActiveVoteRecord( slot_key, ledger_bytes.value().toString() );
+                local_ledger_commitment = !decoded.has_error() &&
+                                          decoded.value().proposal.proposal_id() == existing_certificate.proposal_id();
+            }
+        }
+
+        // Marker payload reuses the ledger's own record type: the signer's
+        // verified vote from the earlier certificate IS the durable prior
+        // commitment. Stored under a sibling private prefix (see header note)
+        // so the active-vote recovery scan never trips over audit markers.
+        const auto now_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+        auto record = BuildActiveVoteRecord( slot_key, existing_certificate.proposal(), prior_vote, now_ms );
+        if ( record.has_error() )
+        {
+            logger_->error( "{}: equivocation marker build failed slot={} error={}",
+                            __func__,
+                            slot_key,
+                            record.error().message() );
+            return;
+        }
+        std::string encoded;
+        if ( !record.value().SerializeToString( &encoded ) )
+        {
+            logger_->error( "{}: equivocation marker serialization failed slot={}", __func__, slot_key );
+            return;
+        }
+
+        crdt::GlobalDB::Buffer key;
+        key.put( EquivocationRecordStorageKey( slot_key, prior_vote.voter_id() ) );
+        crdt::GlobalDB::Buffer value;
+        value.put( encoded );
+        auto put = datastore->put( key, value );
+        logger_->error( "{}: cross-certificate equivocation proven slot={} signer={} "
+                        "prior_proposal={} conflicting_proposal={} prior_tx_hash={} "
+                        "conflicting_tx_hash={} local_ledger_commitment={} marker_durable={}",
+                        __func__,
+                        slot_key,
+                        prior_vote.voter_id().substr( 0, 16 ),
+                        existing_certificate.proposal_id().substr( 0, 8 ),
+                        candidate.proposal_id().substr( 0, 8 ),
+                        VerifiedMintV2TransactionHash( existing_certificate ).value_or( "" ),
+                        VerifiedMintV2TransactionHash( candidate ).value_or( "" ),
+                        local_ledger_commitment,
+                        !put.has_error() );
+    }
+
     outcome::result<bool> ConsensusManager::HasAcceptedCertificateForSlot( const std::string &slot_key ) const
     {
         if ( slot_key.empty() || !db_ )
@@ -3403,6 +3523,28 @@ namespace sgns
                                element.key(),
                                *existing_mint_hash,
                                *candidate_mint_hash );
+
+            // TRUST-02 (21-07): the critical log above used to be the ONLY
+            // response — the conflicting certificate then competed under
+            // lower-hash ordering and the equivocator paid nothing. A signer
+            // whose vote signature verifies on BOTH certificates durably
+            // committed to two different proposals in this one canonical slot
+            // (the durable record above holds its first commitment); that is
+            // provable equivocation, not honest contention. Reject the
+            // candidate and leave a durable marker for the audit trail.
+            // Cost bound (D-04): one ledger read + one ledger write, on this
+            // conflict branch only — no scanning, no quorum recomputation.
+            const auto slot_key         = GetSlotKey( certificate.proposal() );
+            const auto prior_commitment = ProveCrossCertificateEquivocation( existing_certificate, certificate );
+            if ( prior_commitment.has_value() )
+            {
+                RecordEquivocationMarker( slot_key, prior_commitment.value(), existing_certificate, certificate );
+                logger_->error( "{}: rejected: cross-certificate equivocation proven signer={} slot={}",
+                                __func__,
+                                prior_commitment.value().voter_id().substr( 0, 16 ),
+                                slot_key );
+                return crdt::CRDTDataFilter::ElementFilterResult::Reject();
+            }
         }
 
         if ( SerializedCertificateHash( existing_serialized ) < SerializedCertificateHash( element.value() ) )
