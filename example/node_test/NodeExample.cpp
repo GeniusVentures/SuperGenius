@@ -424,17 +424,20 @@ static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns
     {
         return;
     }
-    // The previously hardcoded "supergenius" reference was passed as the BURN
-    // hash while chainid stayed empty (canonicalized to "public"), so consensus
-    // demanded public-chain burn evidence and rejected the mint. "supergenius"
-    // is the designated LOCAL chain id — PublicChainInputValidator bypasses
-    // RPC verification for it. Dev mints synthesize a unique burn hash (the
-    // claim gate needs a parseable id to insert the burn UTXO); pass an
-    // explicit 64-hex hash to reproduce a specific burn reference.
+    // Dev mints ride the Phase-18 net-scoped dev-mint policy: chain id "dev"
+    // routes to DevMintInputValidator (the ctest twin — no UTXO-witness build,
+    // so a fabricated burn reference passes the send gate) and goes through
+    // FULL consensus; it certifies on designated nets (staging 333 / dev 144)
+    // and validators refuse it everywhere else. Do NOT use the "supergenius"
+    // chain id here: it routes to GeniusInputValidator, which requires a
+    // witness whose producer transaction a fabricated reference can never
+    // have ("Missing producer transaction" at send time). The unique burn
+    // hash satisfies MintFunds' claim/dedup gate; pass an explicit 64-hex
+    // hash to reproduce a specific burn reference.
     const std::string burn_tx_hash = ( args.size() >= 3 ) ? args[2] : NextDevBurnHash();
     try
     {
-        node->MintTokens( std::stoull( args[1] ), burn_tx_hash, "supergenius", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node->MintTokens( std::stoull( args[1] ), burn_tx_hash, "dev", sgns::TokenID::FromBytes( { 0x00 } ) );
     }
     catch ( const std::exception &e )
     {
