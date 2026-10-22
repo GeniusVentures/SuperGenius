@@ -171,6 +171,17 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry> GetValidatorRegistry() const;
 
         /**
+         * @brief Returns the consensus manager owned by this blockchain instance.
+         * @return Shared pointer to the consensus manager, possibly null when
+         *         unavailable. Read-only access for configuration application
+         *         (e.g. GeniusNode wiring the authorization defer window).
+         */
+        std::shared_ptr<ConsensusManager> GetConsensusManager() const
+        {
+            return consensus_manager_;
+        }
+
+        /**
          * @brief Returns the CRDT database used for authoritative transaction evidence.
          * @return Shared GlobalDB instance, or null when the blockchain has no database.
          */
@@ -518,7 +529,7 @@ namespace sgns
          * peer was reachable, with its failure swallowed by an empty callback. This
          * restores the symmetry.
          */
-        void                  RequestValidatorRegistryWhileDeferred();
+        void RequestValidatorRegistryWhileDeferred();
 
         static constexpr std::string_view BLOCKCHAIN_TOPIC =
             "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
@@ -531,7 +542,7 @@ namespace sgns
         static constexpr std::string_view ACCOUNT_CREATION_KEY_PREFIX =
             "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
         static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX =
-            "gnus-account-creation-cid-";                          ///< Prefix for account-creation CID keys.
+            "gnus-account-creation-cid-"; ///< Prefix for account-creation CID keys.
         static constexpr std::chrono::milliseconds TIMEOUT_GENESIS_BLOCK = std::chrono::seconds(
             8 ); ///< Genesis CID download timeout.
         /// Floor between direct registry-CID re-requests. Above TIMEOUT_GENESIS_BLOCK because
@@ -609,7 +620,8 @@ namespace sgns
 
         std::shared_ptr<ValidatorRegistry> validator_registry_; ///< Validator registry component.
 
-        std::string network_scope_; ///< Private-network identity forwarded to the validator registry ("" = public scope).
+        std::string
+            network_scope_; ///< Private-network identity forwarded to the validator registry ("" = public scope).
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 

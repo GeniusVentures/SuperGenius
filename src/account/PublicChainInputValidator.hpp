@@ -78,6 +78,14 @@ namespace sgns
         /// Summed consensus_weight of the successful endpoints only.
         int32_t successful_weight = 0;
 
+        /// MINT-04: burn facts decoded from the receipt log that confirmed the
+        /// claim (one fact, one field). Populated only by endpoints whose log
+        /// also matched the mint's own outputs; Phase 24's content-digest
+        /// corroboration consumes this decode instead of re-decoding.
+        TokenID     decoded_token_id{};
+        uint64_t    decoded_amount = 0;
+        std::string decoded_recipient;
+
         /**
          * @brief Returns the hash for a vote slot, drawn solely from successful endpoints.
          *
@@ -173,11 +181,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service; currently unused by public-chain validation.
          * @return True when @p tx is present, @p params are non-empty, and the source reference verification succeeds.
          */
-        IInputValidator::WitnessVerdict ValidateWitness(
-            const ConsensusSubject  &subject,
-            const GeniusTransaction &tx,
-            const UTXOTxParameters  &params,
-            const Blockchain        &blockchain ) const override;
+        IInputValidator::WitnessVerdict ValidateWitness( const ConsensusSubject  &subject,
+                                                         const GeniusTransaction &tx,
+                                                         const UTXOTxParameters  &params,
+                                                         const Blockchain        &blockchain ) const override;
 
         /**
          * @brief Public-chain validation does not require local UTXO witness data.
@@ -288,8 +295,7 @@ namespace sgns
          * @param[in] source_reference Public-chain transaction hash or external source reference.
          * @return True when the weighted consensus threshold is met.
          */
-        bool VerifyPublicChainSmartContract( const GeniusTransaction &tx,
-                                             const std::string                        &source_reference ) const;
+        bool VerifyPublicChainSmartContract( const GeniusTransaction &tx, const std::string &source_reference ) const;
 
         /**
          * @brief Runs the weighted RPC quorum and reports which endpoints confirmed the claim.

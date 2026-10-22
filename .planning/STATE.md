@@ -2,43 +2,45 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
-status: planning
-last_updated: "2026-10-19T18:00:00.000Z"
-last_activity: 2026-10-19
+current_phase: 21
+status: ready_to_plan
+stopped_at: Phase 21 complete (9/9) — ready to discuss Phase 22
+last_updated: 2026-10-21T20:06:36.955Z
+last_activity: 2026-10-21
 progress:
-  total_phases: 9
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 27
+  completed_phases: 1
+  total_plans: 9
+  completed_plans: 9
+  percent: 4
 ---
 
 # State: SuperGenius — Security Remediation & Network Readiness
 
 **Last updated:** 2026-10-19
 **Milestone:** v1.3 — Security Remediation & Network Readiness (all 25 findings from the October 2026 external security assessment)
-**Current Phase:** 21
+**Current Phase:** 22
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-19)
 **Core value:** One external burn must produce at most one authoritative certificate and one mint effect, even when proposals, certificates, and CRDT data arrive in different orders or nodes restart — and nothing an unauthenticated peer sends can change that.
-**Current focus:** Phase 21 — Consensus Trust & Mint Authorization (roadmap revised after review; planning not started)
+**Current focus:** Phase 22 — wire & ingestion hardening (fork)
 
 ## Current Position
 
-Phase: 21 of 29 (Consensus Trust & Mint Authorization)
-Plan: — (not yet planned)
+Phase: 21 (Consensus Trust & Mint Authorization) — VERIFYING
+Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-19 — v1.3 roadmap revised after review (strict numeric order 21→29; REL-02 moved into Phase 22; 27/27 requirements mapped)
+Last activity: 2026-10-21
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 21 | Consensus Trust & Mint Authorization | not started | TRUST-01/02, MINT-02..04 |
+| 21 | Consensus Trust & Mint Authorization | verifying | TRUST-01/02, MINT-02..04 |
 | 22 | Wire & Ingestion Hardening (Fork) | not started | WIRE-01/02, REL-02 |
 | 23 | Gossip & DHT Authentication (Fork) | not started | GOSSIP-01/02 |
 | 24 | Bridge Ingestion Safety | not started | BRIDGE-01/02 |
@@ -82,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-19
-**Stopped At:** v1.3 roadmap revised after review (strict numeric order; REL-02 → Phase 22); awaiting plan-phase 21
+**Last session:** 2026-10-21T19:21:36.048Z
+**Stopped At:** Completed 21-09-PLAN.md (TRUST-01 gap closure: WR-01 content-bound probe + CR-03 defer-bounded grandfathered stall + WR-02 negative-window guard; all 9 phase plans executed, phase awaiting verification)
 **Resume File:** None
 
 ## Accumulated Context
@@ -135,6 +137,14 @@ v1.0 (construction refactor) shipped 2026-07-03; v3.0 (canonical burn finality) 
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
+| Phase 21 P01 | 31min | 2 tasks | 4 files |
+| Phase 21 P02 | 40min | 3 tasks | 10 files |
+| Phase 21 P03 | 38min | 3 tasks | 12 files |
+| Phase 21 P05 | 35min | 3 tasks | 6 files |
+| Phase 21 P04 | 68min | 3 tasks | 9 files |
+| Phase 21 P07 | 100min | 3 tasks | 6 files |
+| Phase 21 P08 | 17min | 2 tasks tasks | 2 files files |
+| Phase 21 P09 | 31min | 3 tasks tasks | 6 files files |
 
 ## Deferred Items
 
@@ -154,3 +164,23 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 | gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
 
 Standing deferred (v3.0 close, still open): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard.
+
+## Decisions
+
+- [Phase 21]: Verified registry CID loader (21-01): kInvalid maps to permission_denied, kMissingDependency/unfetchable ancestors map to resource_unavailable_try_again; genesis-root termination is cache-independent — Chain walk classifies every prev-registry hop; VerifyUpdateClassified's genesis branch only runs while no cached registry exists, so the walk needs the extracted VerifyGenesisAuthoritySignature
+- [Phase 21]: Verified-CID memo (cap 64, single-oldest eviction, ancestor-first insertion) stores cid->Registry for zero-fetch memo hits; TRUST-01 closes only after 21-04 migrates Consensus.cpp callers — Plan's memo contract requires zero fetches on hit; requirement wording covers certificate vote tallying which 21-04 owns
+- [Phase 21]: MINT-04 receipt binding (21-02): decode via eth::abi::decode_log with canonical topic0 selecting the v1/v2 shape, normalize through BridgeRelayer::ParseBurnEventValues (one home), bind token/amount/recipient to MintTransactionV2's own accessors; v1 mints keep today's checks until the MINT-03 admission-disable plans close that window while MINT-02 identity fail-close covers both mint types
+- [Phase 21]: Fact mismatch or undecodable matched log discards ALL gathered evidence (reverted-receipt precedent) so no slot can certify a mismatched mint; RpcVerificationEvidence carries decoded_token_id/amount/recipient for Phase 24 corroboration
+- [Phase 21]: Shared plumbing (21-03): BoundedDeferTracker is mechanism-only (first-seen deadlines, FIFO 4096, single-oldest eviction); D-03/D-04 config keys retained as members because NetworkSettings is InitNetwork-local; negative cap = ill-typed keeps default 10
+- [Phase 21]: Genesis pin (21-03, T-21-0301): fingerprint compare sits between manifest assembly and TrustStartupController::New — tampered manifest never reaches the controller; empty pin warns and proceeds (T-21-0302 residual); example's 4f6840f5 pin probe-verified equal to Fingerprint() of its own fields (RESEARCH Open Question 5 closed)
+- [Phase 21]: Legacy-v1 mint admission (21-05): one-home predicate IsValueCarryingLegacyMint (type 'mint' && amount > 0) shared by consensus type rules and SendTransactionItem preflight (operation_not_permitted before any CRDT Put) — Zero-amount exemption lives in the predicate so migration fillers keep certifying; sync ingress + multi-node twins stay in 21-06, so MINT-03 remains open
+- [Phase 21]: Consensus certificate layer (21-04): ValidateCertificate probes the durable cert slot record before the registry load - final certificates grandfather through LoadUnverifiedRegistryByCid (D-01), everything strict loads verified; permission_denied maps to Reject, missing dependency to Stalled (never memoized), expired first-seen defer deadline to deterministic memoizable Reject (D-03)
+- [Phase 21]: Verified-only CID cache (21-04): LoadRegistryByCidCached fills exclusively from LoadVerifiedRegistryByCid with both failure classes uncached; cap raised 8 to 64 with deque-tracked oldest-first single-entry eviction; deprecated LoadRegistryByCid alias deleted with zero bare references left; multi-node fixtures must pin the genesis authority to their registry signer (per network) or honest updates classify as unauthorized
+- [Phase 21]: Equivocation guard (21-07, TRUST-02): the durable prior commitment for a signer is its signature-verified vote inside the durably-stored existing certificate - the local ActiveVoteRecord holds only the LOCAL node's vote (decoder enforces voter_id==account_address_), so gating on it would never fire for remote byzantine signers; the ledger is consulted for corroborating evidence only
+- [Phase 21]: Equivocation markers (21-07, audit F4): stored under sibling prefix /consensus/equivocation/<slot>/<signer> reusing the ActiveVoteRecord payload + storage conventions - never under /consensus/vote/ whose RecoverActiveVotes prefix scan would decode-fail every marker with per-boot error logs
+- [Phase 21]: Admission cap (21-07, TRUST-02 audit F1): per-update ACTIVE-addition cap enforcement-proven through the member path (wired value 3 overrides default 10); cross-epoch aggregate growth accepted as governance-bound residual - carried to Phase 25 spine with F3 per-member batch attribution
+- [Phase 21]: MINT-04 gap closure (21-08, CR-01): exactly-one-output guard at DecodeAndBindBurnFacts before the topic0 selection and fact comparisons - deserialization stays N-output-open (D-02), the evidence boundary is the one home where burn facts authorize the output set; multi-output mints discard all evidence via the reverted-receipt precedent branch
+- [Phase 21]: MINT-04 gap closure (21-08, CR-02): endpoint no-confirm guard before the bridge block, scoped by RequiresPublicChainEvidence and covering BOTH empty bridge_contract_address and empty accepted_topic0_hashes - continue-only semantics mirror the topic-mismatch precedent; non-mint public-chain types keep bridge-optional confirmation byte-identically (compat twin pinned)
+- [Phase ?]: TRUST-01 gap closure (21-09, WR-01): the D-01 grandfather probe binds by CONTENT - parse the durable record and require SerializedCertificateHash equality with the candidate serialization (SubmitCertificate discipline) before skipping strict authorization; parse failure or hash mismatch fails closed to the strict verified path, which also closes the lower-hash overwrite vector (the conflicting candidate never Approves)
+- [Phase ?]: TRUST-01 gap closure (21-09, CR-03): the grandfathered registry-load failure routes through the same authorization_defer_tracker_ under the same registry-CID key as the strict path - one unfetchable CID carries one first-seen bound across both; expired -> deterministic Reject, in-window -> never-memoized Stalled; accepted residual: final cert with never-syncing dependency rejects past the generous default window
+- [Phase ?]: WR-02 closure (21-09): SetLegacyMintDeferWindow warns-and-ignores negative windows at the setter (mirroring its consensus twin), retaining the current window - misconfigured config can no longer insta-tombstone late-cert v1 history; zero stays the sanctioned test override

@@ -30,6 +30,22 @@ namespace sgns
             return node ? node->reconnect_config_.background_multiplier : 0.0;
         }
 
+        /// "authorization_defer_window_sec" retained by InitNetwork (D-03, 21-03). The
+        /// runtime consumers land in 21-04/21-06; until then a test accessor is the only
+        /// way to observe the config resolution.
+        static std::chrono::seconds AuthorizationDeferWindow( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->authorization_defer_window_sec_ : std::chrono::seconds{};
+        }
+
+        /// "max_new_validators_per_update" retained by InitNetwork (D-04, 21-03) and
+        /// applied to the blockchain's ValidatorRegistry; the retained config value is
+        /// what tests of the config read assert (the registry carries the applied copy).
+        static size_t MaxNewValidatorsPerUpdate( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->max_new_validators_per_update_ : 0;
+        }
+
         /// "private_network_id" retained by InitNetwork (empty = public node). No public getter
         /// exists yet because the value's consumers (NetworkRegistry, scoped CRDT paths) land in
         /// later Phase-15 plans; a test accessor is the only way to observe retention.
@@ -61,8 +77,8 @@ namespace sgns
         /// it. No public getter exists because this observes private wiring state.
         static bool BroadcasterMembershipFilterInstalled( const std::shared_ptr<GeniusNode> &node )
         {
-            return node && node->tx_globaldb_ && node->tx_globaldb_->GetBroadcaster()
-                 && node->tx_globaldb_->GetBroadcaster()->HasMembershipFilter();
+            return node && node->tx_globaldb_ && node->tx_globaldb_->GetBroadcaster() &&
+                   node->tx_globaldb_->GetBroadcaster()->HasMembershipFilter();
         }
 
         /// The node's GlobalDB broadcaster, captured BY VALUE so the shared_ptr keeps
@@ -178,7 +194,7 @@ namespace sgns
             manifest.peers                   = node->trusted_peers_genesis_;
             manifest.membership_threshold    = node->trusted_peer_quorum_threshold_;
             manifest.burn_threshold          = node->burn_config_quorum_threshold_;
-            const auto canonical = manifest.Canonicalized();
+            const auto canonical             = manifest.Canonicalized();
             if ( !canonical )
             {
                 fprintf( stderr, "ApproveConfiguredTrustGenesis: Canonicalized failed\n" );
@@ -192,9 +208,8 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            securecrdt::CandidateCore core = trustedpeer::GenesisCandidateCore(
-                *canonical, *payload, *fingerprint );
-            const auto bytes = core.CanonicalBytes();
+            securecrdt::CandidateCore core  = trustedpeer::GenesisCandidateCore( *canonical, *payload, *fingerprint );
+            const auto                bytes = core.CanonicalBytes();
             if ( !bytes )
             {
                 fprintf( stderr, "ApproveConfiguredTrustGenesis: core bytes failed\n" );
@@ -223,7 +238,7 @@ namespace sgns
         {
             if ( node && node->trust_startup_controller_ )
             {
-                (void)node->trust_startup_controller_->Refresh();
+                (void) node->trust_startup_controller_->Refresh();
             }
         }
     };

@@ -10,6 +10,7 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <mutex>
@@ -21,6 +22,7 @@
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 
+#include "crdt/crdt_data_filter.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -30,6 +32,7 @@
 #include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
 #include "account/PublicChainInputValidator.hpp"
+#include "base/bounded_defer.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 
@@ -48,7 +51,6 @@ namespace sgns
 {
     class MintTransactionV2;
 
-
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -59,10 +61,10 @@ namespace sgns
      */
     struct RegistrationDiscoveryEntry
     {
-        std::string                         child_addr;  ///< Child wallet public address (128-hex)
-        std::string                         main_addr;   ///< Main wallet public address (128-hex)
-        uint64_t                            sequence;    ///< Registration sequence number
-        SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+        std::string                         child_addr; ///< Child wallet public address (128-hex)
+        std::string                         main_addr;  ///< Main wallet public address (128-hex)
+        uint64_t                            sequence;   ///< Registration sequence number
+        SGTransaction::RegistrationMetadata metadata;   ///< Registration metadata
     };
 
     /**
@@ -194,9 +196,7 @@ namespace sgns
         /**
          * @brief Recovers funds from a registered child wallet back to this account (D-60/D-62/CONS-02).
          */
-        outcome::result<std::string> RecoverFromChild( std::string child_address,
-                                                       uint64_t    amount,
-                                                       TokenID     token_id );
+        outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
 
         /**
          * @brief Creates and enqueues a child-initiated Detach transaction (D-35, caller-supplied sequence).
@@ -350,8 +350,7 @@ namespace sgns
             const GeniusTransaction &element ) const;
 
         /** @brief BestHash tie-break: true when @p new_tx outranks @p existing_tx. */
-        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
-                                       const GeniusTransaction &new_tx ) const;
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         /**
          * @brief Idempotent stop. Sets the stopped flag and wakes the tick loop.
@@ -423,6 +422,8 @@ namespace sgns
         friend class MultiNodeFinalityFaultTestAccess;
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
+        friend class LegacyMintAdmissionTestAccess;
+        friend class LegacyMintSyncAdmissionTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -489,7 +490,7 @@ namespace sgns
             std::shared_ptr<GeniusTransaction> tx;
             TransactionStatus                  status;
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
-            bool                               effects_applied = false; ///< Parse effects durably applied (TRACK-01 ordering)
+            bool effects_applied = false;                    ///< Parse effects durably applied (TRACK-01 ordering)
         };
 
         struct AccountUTXOState
@@ -499,20 +500,19 @@ namespace sgns
             bool          initialized{ false };
         };
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<Blockchain>              blockchain,
-                            NodeType                                 node_type,
-                            uint16_t                                 subnet_id,
-                            std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window,
-                            uint64_t                                 initial_burn_basis_points,
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>                                  processing_db,
+                            std::shared_ptr<boost::asio::io_context>                         ctx,
+                            std::shared_ptr<GeniusAccount>                                   account,
+                            std::shared_ptr<Blockchain>                                      blockchain,
+                            NodeType                                                         node_type,
+                            uint16_t                                                         subnet_id,
+                            std::chrono::milliseconds                                        timestamp_tolerance,
+                            std::chrono::milliseconds                                        mutability_window,
+                            uint64_t                                                         initial_burn_basis_points,
                             std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider );
 
         // Parser function pointer alias: returns a set of topic strings or an error
-        using TransactionParserFn =
-            outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
+        using TransactionParserFn = outcome::result<void> ( TransactionManager::* )( const GeniusTransaction & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
         /** @brief FillDAGStruct variant scoped to @p source_address (child-recovery chains). */
@@ -563,7 +563,7 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const GeniusTransaction &tx );
-        void UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
+        void                  UpdateAccountUTXOState( const GeniusTransaction &tx, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -714,8 +714,8 @@ namespace sgns
         /// @brief Node-scoped durable-ready burn state shared by every replacement manager.
         std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider_;
 
-        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
-        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
+        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
+        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -729,6 +729,14 @@ namespace sgns
 
         std::mutex                      missing_tx_mutex_;
         std::unordered_set<std::string> missing_tx_hashes_;
+
+        /// @brief MINT-03 sync-admission defer deadlines for value-carrying v1
+        ///        mints awaiting their slot certificate (D-03 bounded window,
+        ///        first-seen anchored, FIFO cap with oldest-first eviction).
+        base::BoundedDeferTracker legacy_mint_defer_tracker_;
+        /// @brief MINT-03 observability counters (stalls / deadline rejections).
+        std::atomic<uint64_t> legacy_mint_stall_count_{ 0 };
+        std::atomic<uint64_t> legacy_mint_deadline_reject_count_{ 0 };
 
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
@@ -784,9 +792,12 @@ namespace sgns
          * and checks for nonce conflicts. Rejected elements are returned as
          * tombstones together with their associated proof key.
          *
-         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         * @return Classified verdict: Accept, Reject (carrying the tombstone
+         *         elements to strip), or Stall when a locally missing
+         *         dependency (e.g. a slot certificate not yet synced) must be
+         *         given the retry schedule a chance to arrive.
          */
-        std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
+        crdt::CRDTDataFilter::ElementFilterResult FilterTransaction( const crdt::pb::Element &element );
 
         /**
          * @brief CRDT element filter for incoming proofs.
@@ -873,10 +884,10 @@ namespace sgns
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
-        outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus new_status );
-        bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
+        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<void>        ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
+                                                             TransactionStatus                         new_status );
+        bool                         HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
 
@@ -929,7 +940,7 @@ namespace sgns
         /// Consensus witness verdicts, evaluated by TransactionConsensusHandler.
         using WitnessValidationResult = TransactionConsensusHandler::WitnessValidationResult;
         /// Replay-protection evaluation outcome, produced by TransactionConsensusHandler.
-        using ReplayProtectionResult  = TransactionConsensusHandler::ReplayProtectionResult;
+        using ReplayProtectionResult = TransactionConsensusHandler::ReplayProtectionResult;
 
         /// @brief Builds the consumed/produced Merkle commitment a nonce subject carries.
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment( const GeniusTransaction &tx ) const;
@@ -941,12 +952,51 @@ namespace sgns
         /// @brief Evaluates previous-hash/nonce replay protection for a transaction.
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
 
+        /**
+         * @brief MINT-03 admission-disable predicate: a legacy-v1 mint (type "mint")
+         *        that carries value (amount > 0).
+         * @details One home for the rule shared by the consensus-ingress type rules
+         *          (TransactionConsensusHandler::CheckTransactionTypeRules) and the
+         *          local/RPC submission preflight (SendTransactionItem). Zero-amount
+         *          v1 mints (Migration3_4_0To3_5_0 nonce fillers), "mint-v2" and
+         *          "migration" types never match. Admission-side only (D-02):
+         *          deserialization, boot, sync and history stay open.
+         * @param[in] tx Transaction to classify.
+         * @return True when @p tx is a value-carrying legacy-v1 mint.
+         */
+        static bool IsValueCarryingLegacyMint( const GeniusTransaction &tx );
+
         /** @brief Whole-transaction signature / authorization check. */
         bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
         /** @brief Parent-child registration authority check (transfers from certified children, revokes). */
         bool CheckParentChildAuthority( const GeniusTransaction &tx ) const;
         /** @brief Replay-protection check expressed as a plain boolean. */
         bool CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
+
+        /**
+         * @brief Replaces the MINT-03 sync-admission defer window (D-03).
+         * @param[in] window New window applied to keys deferred AFTER this call;
+         *            existing first-seen deadlines are untouched.
+         *
+         * Negative windows are warned-and-ignored (WR-02, mirroring the
+         * consensus twin): the current window is retained so a misconfigured
+         * value cannot insta-reject late-certificate v1 history.
+         */
+        void SetLegacyMintDeferWindow( std::chrono::seconds window );
+
+        /// @brief MINT-03 observability: sync evaluations of value-carrying v1
+        ///        mints that stalled awaiting their slot certificate.
+        uint64_t GetLegacyMintSyncStallCount() const
+        {
+            return legacy_mint_stall_count_.load( std::memory_order_relaxed );
+        }
+
+        /// @brief MINT-03 observability: sync elements of value-carrying v1
+        ///        mints rejected after the defer window expired (T-21-0602).
+        uint64_t GetLegacyMintSyncDeadlineRejectCount() const
+        {
+            return legacy_mint_deadline_reject_count_.load( std::memory_order_relaxed );
+        }
 
         void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
@@ -989,6 +1039,7 @@ namespace sgns
             bool entered  = false;
             bool released = false;
         };
+
         mutable std::mutex      fault_test_mutex_;
         std::condition_variable fault_test_cv_;
         uint64_t                mint_effects_for_test_ = 0;

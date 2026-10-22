@@ -665,9 +665,9 @@ namespace sgns
          * @param[in] sequence      Registration sequence number.
          * @return Registration transaction hash on success.
          */
-        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
-                                                    SGTransaction::RegistrationMetadata  metadata,
-                                                    uint64_t                             sequence );
+        outcome::result<std::string> RegisterChild( const std::string                  &main_address,
+                                                    SGTransaction::RegistrationMetadata metadata,
+                                                    uint64_t                            sequence );
 
         /**
          * @brief Registers this node as a child of main_address with auto-derived sequence.
@@ -680,8 +680,8 @@ namespace sgns
          * @param[in] metadata      Optional registration metadata.
          * @return Registration transaction hash on success.
          */
-        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
-                                                    SGTransaction::RegistrationMetadata  metadata );
+        outcome::result<std::string> RegisterChild( const std::string                  &main_address,
+                                                    SGTransaction::RegistrationMetadata metadata );
 
         /**
          * @brief Recovers funds from a registered child wallet back to this node's own address and
@@ -735,10 +735,10 @@ namespace sgns
          * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
          * @return Transaction hash on success.
          */
-        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
-                                                  SGTransaction::RegistrationMetadata  metadata,
-                                                  uint64_t                             sequence,
-                                                  uint64_t                             supersedes_sequence );
+        outcome::result<std::string> ReplaceMain( const std::string                  &new_main_address,
+                                                  SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
 
         /**
          * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
@@ -746,8 +746,8 @@ namespace sgns
          * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
          * @return Transaction hash on success.
          */
-        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
-                                                  SGTransaction::RegistrationMetadata  metadata );
+        outcome::result<std::string> ReplaceMain( const std::string                  &new_main_address,
+                                                  SGTransaction::RegistrationMetadata metadata );
 
         /**
          * @brief Revokes a registered child wallet and waits for the transaction to finalize (D-36).
@@ -1025,7 +1025,7 @@ namespace sgns
             uint64_t                            generation = 0;
             /// Catchup-callback owner generation sampled under the same lifecycle
             /// lock as the rest of the tuple — always consistent with `generation`.
-            uint64_t                            catchup_generation = 0;
+            uint64_t catchup_generation = 0;
         };
 
         /** Immutable address/key binding used by node-scoped trust policy. Pins the
@@ -1070,7 +1070,7 @@ namespace sgns
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap; borrows the PubSub host and the bus.
 
-        std::shared_ptr<crdt::GlobalDB>   tx_globaldb_;       ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB> tx_globaldb_; ///< Transaction/global state CRDT DB.
         /// Serializes lifecycle work while permitting the existing synchronous nested transitions.
         mutable std::recursive_mutex lifecycle_mutex_;
         /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
@@ -1085,12 +1085,12 @@ namespace sgns
         /// processed. Dedicated mutex (NOT lifecycle_mutex_) so the drain
         /// condition_variable never waits on the recursive lifecycle lock.
         /// @note Lock order: lifecycle_mutex_ -> submission_lease_mutex_ only.
-        void AcquireSubmissionLease();
-        void ReleaseSubmissionLease();
-        bool WaitForSubmissionLeasesToDrain( std::chrono::milliseconds timeout );
-        std::mutex              submission_lease_mutex_;
-        std::condition_variable submission_leases_cv_;
-        size_t                  active_submission_leases_      = 0;
+        void                      AcquireSubmissionLease();
+        void                      ReleaseSubmissionLease();
+        bool                      WaitForSubmissionLeasesToDrain( std::chrono::milliseconds timeout );
+        std::mutex                submission_lease_mutex_;
+        std::condition_variable   submission_leases_cv_;
+        size_t                    active_submission_leases_ = 0;
         std::chrono::milliseconds submission_lease_drain_timeout_{ std::chrono::milliseconds( 30000 ) };
 
         /// RAII holder for one submission lease. Acquire() is called while
@@ -1100,7 +1100,10 @@ namespace sgns
         class SubmissionLease
         {
         public:
-            explicit SubmissionLease( GeniusNode &node ) : node_( node ) {}
+            explicit SubmissionLease( GeniusNode &node ) : node_( node )
+            {
+            }
+
             ~SubmissionLease()
             {
                 if ( held_ )
@@ -1108,28 +1111,32 @@ namespace sgns
                     node_.ReleaseSubmissionLease();
                 }
             }
+
             SubmissionLease( const SubmissionLease & )            = delete;
             SubmissionLease &operator=( const SubmissionLease & ) = delete;
+
             void Acquire()
             {
                 node_.AcquireSubmissionLease();
                 held_ = true;
             }
+
         private:
             GeniusNode &node_;
             bool        held_ = false;
         };
+
         /// State currently executing inside StateTransition; nested transitions temporarily replace it.
         std::optional<NodeState> transition_in_progress_;
         /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
         uint64_t transition_epoch_ = 0;
         /// Per-node diagnostics and callback ownership generation for TransactionManager lifetimes.
-        std::atomic<uint64_t> transaction_manager_construction_count_{ 0 };
-        std::atomic<uint64_t> transaction_manager_start_count_{ 0 };
-        std::atomic<uint64_t> transaction_manager_owner_generation_{ 0 };
-        std::atomic<uint64_t> account_transaction_callback_owner_generation_{ 0 };
-        std::atomic<uint64_t> blockchain_slot_hash_owner_generation_{ 0 };
-        std::atomic<uint64_t> catchup_callback_owner_generation_{ 0 };
+        std::atomic<uint64_t>             transaction_manager_construction_count_{ 0 };
+        std::atomic<uint64_t>             transaction_manager_start_count_{ 0 };
+        std::atomic<uint64_t>             transaction_manager_owner_generation_{ 0 };
+        std::atomic<uint64_t>             account_transaction_callback_owner_generation_{ 0 };
+        std::atomic<uint64_t>             blockchain_slot_hash_owner_generation_{ 0 };
+        std::atomic<uint64_t>             catchup_callback_owner_generation_{ 0 };
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
 
@@ -1187,10 +1194,10 @@ namespace sgns
         mutable std::mutex catchup_mutex_;
         std::function<std::optional<std::string>()>
             chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
-        std::string           gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string           processing_channel_topic_;     ///< Processing task channel topic.
-        std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
-        uint16_t              subnet_id_ = 0;                ///< Subnet ID from sgns_config.json (reserved).
+        std::string gnus_network_full_path_;       ///< Versioned network DB path.
+        std::string processing_channel_topic_;     ///< Processing task channel topic.
+        std::string processing_grid_chanel_topic_; ///< Processing grid topic.
+        uint16_t    subnet_id_ = 0;                ///< Subnet ID from sgns_config.json (reserved).
         /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
         bool rpc_catchup_ = true;
 
@@ -1198,6 +1205,10 @@ namespace sgns
         std::vector<std::string> bootstrap_fullnodes_;
         std::vector<std::string> trusted_peers_genesis_;     ///< Genesis trusted-peer list (BURN-02/BURN-03).
         std::string              bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
+        /// Ceremony fingerprint pin ("genesis_manifest_fingerprint"): when non-empty,
+        /// the configured genesis manifest must hash to exactly this value on a
+        /// fresh boot or the node fails closed (folded todo residual, T-21-0301).
+        std::string genesis_manifest_fingerprint_;
         /// Quorum threshold for TrustedPeerRegistry membership changes; 0 = unset (defaulted to the
         /// majority floor for the parsed genesis peer count in LoadSgnsConfig()).
         uint64_t trusted_peer_quorum_threshold_ = 0;
@@ -1224,6 +1235,13 @@ namespace sgns
         /// ("network_bootstrap_peers", libp2p PeerId base58 strings); consumed when
         /// private_network_id_ is set.
         std::vector<std::string> network_bootstrap_peers_;
+        /// "authorization_defer_window_sec" retained by InitNetwork (D-03); consumed by
+        /// the 21-04 ConsensusManager and 21-06 TransactionManager defer-and-hold
+        /// boundaries (no runtime consumer in this plan yet).
+        std::chrono::seconds authorization_defer_window_sec_{ 1800 };
+        /// "max_new_validators_per_update" retained by InitNetwork (D-04); applied to the
+        /// blockchain's ValidatorRegistry at construction.
+        size_t max_new_validators_per_update_ = ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate;
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1321,9 +1339,18 @@ namespace sgns
             ///< "network_bootstrap_peers" offline-provisioned initial NetworkRegistry membership
             ///< (libp2p PeerId base58 strings); consumed when private_network_id is set.
             std::vector<std::string> network_bootstrap_peers;
-            bool valid = true; ///< False when a fatal config divergence (malformed private_network_id
-                               ///< or a half-provisioned private_network_id/network_key pair) must
-                               ///< abort node start instead of silently running a misidentified node.
+            ///< "authorization_defer_window_sec" — D-03 defer-and-hold window for new
+            ///< authorization boundaries; retained to authorization_defer_window_sec_.
+            ///< Consumed by ConsensusManager (21-04) and TransactionManager (21-06);
+            ///< this plan ships the config surface and the safe default only.
+            std::chrono::seconds authorization_defer_window_sec{ 1800 };
+            ///< "max_new_validators_per_update" — D-04 validator-admission cap; retained
+            ///< to max_new_validators_per_update_ and applied to the ValidatorRegistry
+            ///< at blockchain construction.
+            size_t max_new_validators_per_update = ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate;
+            bool   valid = true; ///< False when a fatal config divergence (malformed private_network_id
+                                 ///< or a half-provisioned private_network_id/network_key pair) must
+                                 ///< abort node start instead of silently running a misidentified node.
         };
 
         /**
@@ -1586,7 +1613,8 @@ namespace sgns
          */
         libp2p::Host::Connectedness HostConnectedness( const libp2p::peer::PeerInfo &peer ) const;
 
-        std::shared_ptr<LocalPriceManager> priceManager_{}; ///< Lazily constructed on first GetCoinprice (D-05); owns its own ioc+thread; explicitly reset early in ~GeniusNode.
+        std::shared_ptr<LocalPriceManager>
+            priceManager_{}; ///< Lazily constructed on first GetCoinprice (D-05); owns its own ioc+thread; explicitly reset early in ~GeniusNode.
 
         /// @brief Lazily construct the LocalPriceManager on first use.
         /// Reads SGNS_COINGECKO_URL / SGNS_PRICE_FALLBACK_URL at construction

@@ -122,27 +122,28 @@ namespace sgns
               { &TransactionManager::ParseRevokeTransaction, &TransactionManager::RevertRevokeTransaction } } };
 
     std::shared_ptr<TransactionManager> TransactionManager::New(
-        std::shared_ptr<crdt::GlobalDB>          processing_db,
-        std::shared_ptr<boost::asio::io_context> ctx,
-        std::shared_ptr<GeniusAccount>           account,
-        std::shared_ptr<Blockchain>              blockchain,
-        NodeType                                 node_type,
-        uint16_t                                 subnet_id,
-        std::chrono::milliseconds                timestamp_tolerance,
-        std::chrono::milliseconds                mutability_window,
-        uint64_t                                 initial_burn_basis_points,
+        std::shared_ptr<crdt::GlobalDB>                                  processing_db,
+        std::shared_ptr<boost::asio::io_context>                         ctx,
+        std::shared_ptr<GeniusAccount>                                   account,
+        std::shared_ptr<Blockchain>                                      blockchain,
+        NodeType                                                         node_type,
+        uint16_t                                                         subnet_id,
+        std::chrono::milliseconds                                        timestamp_tolerance,
+        std::chrono::milliseconds                                        mutability_window,
+        uint64_t                                                         initial_burn_basis_points,
         std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider )
     {
-        auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
-                                                                                     std::move( ctx ),
-                                                                                     std::move( account ),
-                                                                                     std::move( blockchain ),
-                                                                                     node_type,
-                                                                                     subnet_id,
-                                                                                     timestamp_tolerance,
-                                                                                     mutability_window,
-                                                                                     initial_burn_basis_points,
-                                                                                     std::move( confirmed_burn_provider ) ) );
+        auto instance = std::shared_ptr<TransactionManager>(
+            new TransactionManager( std::move( processing_db ),
+                                    std::move( ctx ),
+                                    std::move( account ),
+                                    std::move( blockchain ),
+                                    node_type,
+                                    subnet_id,
+                                    timestamp_tolerance,
+                                    mutability_window,
+                                    initial_burn_basis_points,
+                                    std::move( confirmed_burn_provider ) ) );
 
         instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
@@ -214,8 +215,7 @@ namespace sgns
                 {
                     if ( auto strong = weak_ptr.lock() )
                     {
-                        return crdt::CRDTDataFilter::ElementFilterResult::FromOptional(
-                            strong->FilterTransaction( element ) );
+                        return strong->FilterTransaction( element );
                     }
                     return crdt::CRDTDataFilter::ElementFilterResult::Accept();
                 } );
@@ -241,8 +241,8 @@ namespace sgns
             }
 
             // Register the reg/ element filter for child-wallet registrations
-            const std::string reg_pattern = "^/?" + blockchain_base + "reg/[^/]+";
-            const bool reg_filter_registered = instance->globaldb_m->RegisterElementFilter(
+            const std::string reg_pattern           = "^/?" + blockchain_base + "reg/[^/]+";
+            const bool        reg_filter_registered = instance->globaldb_m->RegisterElementFilter(
                 reg_pattern,
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const crdt::pb::Element &element )
                 {
@@ -306,17 +306,17 @@ namespace sgns
         return instance;
     }
 
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                                            std::shared_ptr<boost::asio::io_context> ctx,
-                                            std::shared_ptr<GeniusAccount>           account,
-                                            std::shared_ptr<Blockchain>              blockchain,
-                                            NodeType                                 node_type,
-                                            uint16_t                                 subnet_id,
-                                            std::chrono::milliseconds                timestamp_tolerance,
-                                            std::chrono::milliseconds                mutability_window,
-                                            uint64_t initial_burn_basis_points,
-                                            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider>
-                                                confirmed_burn_provider ) :
+    TransactionManager::TransactionManager(
+        std::shared_ptr<crdt::GlobalDB>                                  processing_db,
+        std::shared_ptr<boost::asio::io_context>                         ctx,
+        std::shared_ptr<GeniusAccount>                                   account,
+        std::shared_ptr<Blockchain>                                      blockchain,
+        NodeType                                                         node_type,
+        uint16_t                                                         subnet_id,
+        std::chrono::milliseconds                                        timestamp_tolerance,
+        std::chrono::milliseconds                                        mutability_window,
+        uint64_t                                                         initial_burn_basis_points,
+        std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
@@ -499,7 +499,7 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_           = now;
+        last_loop_time_ = now;
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
@@ -727,25 +727,25 @@ namespace sgns
         return recover_transaction->GetHash();
     }
 
-    outcome::result<std::string> TransactionManager::RegisterChild(
-        std::string                         main_address,
-        SGTransaction::RegistrationMetadata metadata,
-        uint64_t                            sequence )
+    outcome::result<std::string> TransactionManager::RegisterChild( std::string                         main_address,
+                                                                    SGTransaction::RegistrationMetadata metadata,
+                                                                    uint64_t                            sequence )
     {
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto tx = std::make_shared<RegistrationTransaction>(
-            RegistrationTransaction::New( std::move( main_address ), sequence, std::move( metadata ), FillDAGStruct() ) );
+        auto tx = std::make_shared<RegistrationTransaction>( RegistrationTransaction::New( std::move( main_address ),
+                                                                                           sequence,
+                                                                                           std::move( metadata ),
+                                                                                           FillDAGStruct() ) );
         tx->MakeSignature( *account_m );
         EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
         return tx->GetHash();
     }
 
-    outcome::result<std::string> TransactionManager::RegisterChild(
-        std::string                         main_address,
-        SGTransaction::RegistrationMetadata metadata )
+    outcome::result<std::string> TransactionManager::RegisterChild( std::string                         main_address,
+                                                                    SGTransaction::RegistrationMetadata metadata )
     {
         if ( GetState() != State::READY )
         {
@@ -777,8 +777,8 @@ namespace sgns
     }
 
     outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata,
-                                                                   uint64_t                            sequence,
-                                                                   uint64_t                            supersedes_sequence )
+                                                                  uint64_t                            sequence,
+                                                                  uint64_t supersedes_sequence )
     {
         if ( GetState() != State::READY )
         {
@@ -788,11 +788,11 @@ namespace sgns
         static const std::string kZeroAddress( 128, '0' );
 
         auto tx = std::make_shared<RegistrationTransaction>( RegistrationTransaction::New( kZeroAddress,
-                                                                                            sequence,
-                                                                                            std::move( metadata ),
-                                                                                            FillDAGStruct(),
-                                                                                            /*detach_flag=*/true,
-                                                                                            supersedes_sequence ) );
+                                                                                           sequence,
+                                                                                           std::move( metadata ),
+                                                                                           FillDAGStruct(),
+                                                                                           /*detach_flag=*/true,
+                                                                                           supersedes_sequence ) );
         tx->MakeSignature( *account_m );
         EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
         return tx->GetHash();
@@ -828,9 +828,9 @@ namespace sgns
     }
 
     outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
-                                                                   SGTransaction::RegistrationMetadata metadata,
-                                                                   uint64_t                            sequence,
-                                                                   uint64_t                            supersedes_sequence )
+                                                                  SGTransaction::RegistrationMetadata metadata,
+                                                                  uint64_t                            sequence,
+                                                                  uint64_t supersedes_sequence )
     {
         if ( GetState() != State::READY )
         {
@@ -850,7 +850,7 @@ namespace sgns
     }
 
     outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
-                                                                   SGTransaction::RegistrationMetadata metadata )
+                                                                  SGTransaction::RegistrationMetadata metadata )
     {
         if ( GetState() != State::READY )
         {
@@ -1013,11 +1013,10 @@ namespace sgns
         // reserved. ReserveUTXOs was additionally silent when the SAME id — the
         // burn hash is the reservation id — already held the reservation, so the
         // duplicate read as a successful claim and both mints applied effects.
-        const auto claim = account_m->GetUTXOManager().TryReserveOutpoint(
-            source_input_hash,
-            0,
-            transaction_hash,
-            sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+        const auto claim = account_m->GetUTXOManager().TryReserveOutpoint( source_input_hash,
+                                                                           0,
+                                                                           transaction_hash,
+                                                                           sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
         if ( claim != sgns::UTXOManager::OutpointClaim::kClaimed )
         {
             m_logger->warn( "{}: Bridge burn not claimable (claim={}), rejecting duplicate mint for chain={} "
@@ -1086,7 +1085,7 @@ namespace sgns
 
     outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                                             const std::string &job_id,
-                                                                                            std::string        network_scope )
+                                                                                            std::string network_scope )
     {
         if ( stopped_.load() || GetState() != State::READY )
         {
@@ -1146,7 +1145,7 @@ namespace sgns
 
         // One malformed entry must never block the payout: honest peers get paid, the bad entry
         // gets nothing.
-        std::unordered_set<std::string>                   seen_subtask_ids;
+        std::unordered_set<std::string>                  seen_subtask_ids;
         std::vector<const SGProcessing::SubTaskResult *> valid_results;
         for ( const auto &result : task_result.subtask_results() )
         {
@@ -1189,8 +1188,8 @@ namespace sgns
         std::map<std::pair<std::string, std::string>, uint64_t> developer_amounts;
         for ( const auto *result : valid_results )
         {
-            const auto dev_amount = static_cast<uint64_t>(
-                static_cast<uint128_t>( per_result ) * result->developer_cut() / DEVELOPER_CUT_SCALE );
+            const auto dev_amount = static_cast<uint64_t>( static_cast<uint128_t>( per_result ) *
+                                                           result->developer_cut() / DEVELOPER_CUT_SCALE );
             developer_amounts[{ result->developer_address(), result->token_id() }] += dev_amount;
 
             const auto peer_amount = static_cast<uint64_t>( per_result ) - dev_amount;
@@ -1699,15 +1698,14 @@ namespace sgns
             return "";
         }
 
-        const std::string slot_key = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
-        auto certificate_result = blockchain_->GetCertificateBySlot( slot_key );
+        const std::string slot_key           = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
+        auto              certificate_result = blockchain_->GetCertificateBySlot( slot_key );
         if ( certificate_result.has_error() )
         {
             return "";
         }
 
-        auto nonce_subject = ConsensusManager::DecodeNonceSubject(
-            certificate_result.value().proposal().subject() );
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( certificate_result.value().proposal().subject() );
         if ( nonce_subject.has_error() ||
              nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET ||
              nonce_subject.value().nonce() != ( nonce - 1 ) ||
@@ -1754,8 +1752,7 @@ namespace sgns
                 {
                     continue;
                 }
-                candidates.emplace_back( tracked.tx->GetHash(),
-                                         tracked.status == TransactionStatus::CONFIRMED );
+                candidates.emplace_back( tracked.tx->GetHash(), tracked.status == TransactionStatus::CONFIRMED );
             }
         }
 
@@ -2019,6 +2016,21 @@ namespace sgns
         for ( const auto &[transaction, maybe_proof] : transaction_batch )
         {
             (void) maybe_proof;
+
+            // MINT-03 (T-21-0502): admission-side disable of legacy-v1 mints at the
+            // local/RPC submission ingress — the same predicate the consensus-ingress
+            // type rules apply (one home). Runs before serialization and before any
+            // CRDT Put/commit so a rejected mint leaves no partial publish.
+            // Zero-amount fillers and "mint-v2" pass through unchanged.
+            if ( IsValueCarryingLegacyMint( *transaction ) )
+            {
+                m_logger->error( "{}: legacy v1 mint admission disabled (MINT-03), rejecting submission tx={} type={}",
+                                 __func__,
+                                 transaction->GetHash(),
+                                 transaction->GetType() );
+                return outcome::failure( std::errc::operation_not_permitted );
+            }
+
             auto preflight_embedded_tx = transaction->SerializeToEmbeddedTransaction();
             if ( preflight_embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
             {
@@ -2609,19 +2621,16 @@ namespace sgns
         if ( std::any_of( inputs.begin(),
                           inputs.end(),
                           [&utxo_mgr]( const InputUTXOInfo &input )
-                          {
-                              return utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ );
-                          } ) )
+                          { return utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ); } ) )
         {
-            const auto outputs  = transfer_tx->GetProducedUTXOs();
-            const bool replayed = outputs && !outputs->empty() &&
-                           std::all_of( outputs->begin(),
-                                        outputs->end(),
-                                        [&utxo_mgr]( const GeniusUTXO &output )
-                                        {
-                                            return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
-                                                .has_value();
-                                        } );
+            const auto outputs = transfer_tx->GetProducedUTXOs();
+            const bool replayed =
+                outputs && !outputs->empty() &&
+                std::all_of(
+                    outputs->begin(),
+                    outputs->end(),
+                    [&utxo_mgr]( const GeniusUTXO &output )
+                    { return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() ).has_value(); } );
             if ( !replayed )
             {
                 m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
@@ -2679,9 +2688,8 @@ namespace sgns
             //    sibling spend.
             //  - Outputs of THIS transaction already present means its effects
             //    applied once: idempotent redelivery succeeds without re-applying.
-            const bool already_applied =
-                !outputs.empty() &&
-                account_m->GetUTXOManager().GetUnconsumedUTXO( hash, 0 ).has_value();
+            const bool already_applied = !outputs.empty() &&
+                                         account_m->GetUTXOManager().GetUnconsumedUTXO( hash, 0 ).has_value();
             if ( !already_applied )
             {
                 if ( !inputs.empty() )
@@ -2689,7 +2697,7 @@ namespace sgns
                     for ( const auto &input : inputs )
                     {
                         if ( account_m->GetUTXOManager().IsOutPointGenuinelyConsumed( input.txid_hash_,
-                                                                                     input.output_idx_ ) )
+                                                                                      input.output_idx_ ) )
                         {
                             m_logger->error( "Mint-v2 {} burn input already consumed by a sibling mint — "
                                              "duplicate burn, refusing to apply effects",
@@ -2718,8 +2726,7 @@ namespace sgns
             }
             else
             {
-                m_logger->debug( "Mint-v2 {} outputs already present; idempotent redelivery",
-                                 mint_tx_v2->GetHash() );
+                m_logger->debug( "Mint-v2 {} outputs already present; idempotent redelivery", mint_tx_v2->GetHash() );
             }
 
             m_logger->info( "Created tokens (mint-v2), amount {} balance {}",
@@ -2801,11 +2808,11 @@ namespace sgns
         updated_dag.set_source_addr( revoke_tx->GetChildAddress() );
 
         auto updated_reg = RegistrationTransaction::New( existing_reg->GetMainAddress(),
-                                                          existing_reg->GetSequence(),
-                                                          existing_reg->GetMetadata(),
-                                                          updated_dag,
-                                                          /*detach_flag=*/true,
-                                                          existing_reg->GetSupersedesSequence() );
+                                                         existing_reg->GetSequence(),
+                                                         existing_reg->GetMetadata(),
+                                                         updated_dag,
+                                                         /*detach_flag=*/true,
+                                                         existing_reg->GetSupersedesSequence() );
 
         auto put_result = globaldb_m->PutLocal( crdt::HierarchicalKey( reg_key ),
                                                 base::Buffer( updated_reg.SerializeByteVector() ),
@@ -3619,7 +3626,7 @@ namespace sgns
         for ( auto network_id : GetMonitoredNetworkIDs() )
         {
             const std::string query_path = GetBlockChainBase( network_id ) + "reg";
-            auto reg_list = globaldb_m->QueryKeyValues( query_path );
+            auto              reg_list   = globaldb_m->QueryKeyValues( query_path );
             if ( reg_list.has_error() )
             {
                 m_logger->error( "Unable to query registrations on {}", query_path );
@@ -3769,12 +3776,11 @@ namespace sgns
         return ret;
     }
 
-    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterTransaction(
-        const crdt::pb::Element &element )
+    crdt::CRDTDataFilter::ElementFilterResult TransactionManager::FilterTransaction( const crdt::pb::Element &element )
     {
-        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          should_delete = true;
-        std::shared_ptr<GeniusTransaction>            new_tx;
+        bool                               should_delete = true;
+        bool                               should_stall  = false;
+        std::shared_ptr<GeniusTransaction> new_tx;
         do
         {
             auto maybe_new_tx = DeSerializeTransaction( element.value() );
@@ -3790,6 +3796,55 @@ namespace sgns
                 m_logger->error( "Could not validate signature of transaction {}", element.key() );
                 break;
             }
+
+            // MINT-03 sync admission (third ingress beside 21-05's consensus
+            // ingress and submission preflight — which is exactly why a NEW
+            // value-carrying v1 mint can never present a certificate): deltas
+            // arrive unordered, so "the slot certificate already exists locally"
+            // separates historical certified v1 mints from new submissions.
+            // Defer on a missing/mismatched certificate instead of blocking the
+            // type (D-02 keeps deserialization, boot, sync and history open);
+            // zero-amount v1 fillers never enter the branch.
+            if ( IsValueCarryingLegacyMint( *new_tx ) )
+            {
+                const auto slot_id            = new_tx->GetSlotID();
+                auto       certificate_result = blockchain_->GetCertificateBySlot( slot_id );
+                if ( !certificate_result.has_error() &&
+                     CertificateMatchesTransaction( certificate_result.value(), *new_tx ) )
+                {
+                    // Historical certified v1: continue through today's checks.
+                    legacy_mint_defer_tracker_.Clear( slot_id );
+                }
+                else if ( legacy_mint_defer_tracker_.Defer( slot_id ) )
+                {
+                    // D-03 bound: the first-seen deadline elapsed, so the
+                    // certificate is provably not arriving — reject through the
+                    // existing tombstone structure below.
+                    m_logger->error( "{}: legacy v1 mint sync admission defer expired (MINT-03) tx={} slot={}",
+                                     __func__,
+                                     new_tx->GetHash(),
+                                     slot_id );
+                    ++legacy_mint_deadline_reject_count_;
+                    break;
+                }
+                else
+                {
+                    // Whole-delta stall cost is accepted by design — the
+                    // certificate filter already stalls its whole delta the same
+                    // way (Consensus.cpp FilterCertificate): the element is
+                    // stripped unjournaled and re-evaluated once later deltas
+                    // land the certificate.
+                    m_logger->debug( "{}: legacy v1 mint sync admission deferred, waiting for certificate tx={} "
+                                     "slot={}",
+                                     __func__,
+                                     new_tx->GetHash(),
+                                     slot_id );
+                    ++legacy_mint_stall_count_;
+                    should_stall = true;
+                    break;
+                }
+            }
+
             if ( KeyExistsInDB( GetTransactionPath( *new_tx ) ) )
             {
                 m_logger->debug( "New transaction {} would overwrite an existing one. Preventing that",
@@ -3799,6 +3854,11 @@ namespace sgns
             should_delete = false;
 
         } while ( 0 );
+
+        if ( should_stall )
+        {
+            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
+        }
 
         if ( should_delete )
         {
@@ -3825,10 +3885,10 @@ namespace sgns
                 additional_elements_to_delete.push_back( proof_element );
             }
 
-            maybe_tombstones = additional_elements_to_delete;
+            return crdt::CRDTDataFilter::ElementFilterResult::Reject( std::move( additional_elements_to_delete ) );
         }
 
-        return maybe_tombstones;
+        return crdt::CRDTDataFilter::ElementFilterResult::Accept();
     }
 
     std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )
@@ -3921,7 +3981,7 @@ namespace sgns
             }
             std::shared_ptr<RegistrationTransaction> existing_reg;
             std::string                              reg_key = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
-            auto existing_data = globaldb_m->Get( reg_key );
+            auto                                     existing_data = globaldb_m->Get( reg_key );
             if ( existing_data.has_value() )
             {
                 auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
@@ -4563,6 +4623,32 @@ namespace sgns
         return false;
     }
 
+    bool TransactionManager::IsValueCarryingLegacyMint( const GeniusTransaction &tx )
+    {
+        if ( tx.GetType() != "mint" )
+        {
+            return false;
+        }
+        const auto *legacy_mint = dynamic_cast<const MintTransaction *>( &tx );
+        return legacy_mint != nullptr && legacy_mint->GetAmount() > 0;
+    }
+
+    void TransactionManager::SetLegacyMintDeferWindow( std::chrono::seconds window )
+    {
+        // WR-02: mirrors the consensus twin (ConsensusManager::
+        // SetAuthorizationDeferWindow). A negative window would anchor every
+        // first-seen defer deadline in the past, insta-rejecting legitimate
+        // late-certificate v1 history on its first re-evaluation; warn and
+        // keep the current window instead. Zero stays legal (the sanctioned
+        // test override).
+        if ( window.count() < 0 )
+        {
+            m_logger->warn( "{}: ignoring negative legacy mint defer window", __func__ );
+            return;
+        }
+        legacy_mint_defer_tracker_.SetWindow( window );
+    }
+
     bool TransactionManager::CheckTransactionAuthorization( const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Checking authorization tx={}", __func__, tx.GetHash() );
@@ -4594,7 +4680,8 @@ namespace sgns
     }
 
     TransactionManager::WitnessValidationResult TransactionManager::ValidateWitnessForConsensus(
-        const ConsensusSubject &subject, const GeniusTransaction &tx ) const
+        const ConsensusSubject  &subject,
+        const GeniusTransaction &tx ) const
     {
         return consensus_m_->ValidateWitnessForConsensus( subject, tx );
     }
@@ -4664,9 +4751,9 @@ namespace sgns
         mint_effects_barrier_.entered = true;
         fault_test_cv_.notify_all();
         (void) fault_test_cv_.wait_for(
-            lock, std::chrono::seconds( 30 ), [&] {
-                return mint_effects_barrier_.released || !mint_effects_barrier_.armed || stopped_.load();
-            } );
+            lock,
+            std::chrono::seconds( 30 ),
+            [&] { return mint_effects_barrier_.released || !mint_effects_barrier_.armed || stopped_.load(); } );
         mint_effects_barrier_.entered = false;
         return !stopped_.load();
     }
@@ -4781,8 +4868,7 @@ namespace sgns
                         // concurrent redelivery of the sibling record must observe the
                         // reservation and skip straight to the idempotent marker write
                         // instead of racing a second ParseTransaction.
-                        tx_processed_m[key] =
-                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
                     }
 
                     if ( apply_effects )
@@ -4793,8 +4879,7 @@ namespace sgns
                             // Release the reservation so a certificate-work retry re-applies
                             // the effects; nothing was durably changed for this entry yet.
                             std::unique_lock tx_lock( tx_mutex_m );
-                            tx_processed_m[key] =
-                                TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                            tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
                             return parse_result;
                         }
                     }
@@ -4852,9 +4937,8 @@ namespace sgns
                                         FUNC,
                                         tx->GetHash() );
                     }
-                    apply_effects = it == tx_processed_m.end() || !it->second.effects_applied;
-                    tx_processed_m[key] =
-                        TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
+                    apply_effects       = it == tx_processed_m.end() || !it->second.effects_applied;
+                    tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), true };
                 }
 
                 if ( apply_effects )
@@ -4865,8 +4949,7 @@ namespace sgns
                         // Nothing durably changed for this entry yet; keep it
                         // retryable instead of stranding CONFIRMED-without-effects.
                         std::unique_lock tx_lock( tx_mutex_m );
-                        tx_processed_m[key] =
-                            TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
+                        tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce(), false };
                         // Wake observers even when applying its account-side effects fails.
                         NotifyTransactionStatusChanged( tx->GetHash() );
                         return parse_result;

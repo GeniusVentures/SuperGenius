@@ -59,7 +59,7 @@ namespace sgns
 
     EmbeddedTransaction MintTransactionV2::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
     {
-        EmbeddedTransaction embedded;
+        EmbeddedTransaction     embedded;
         SGTransaction::MintTxV2 tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_chain_id( chain_id_ );
@@ -115,18 +115,20 @@ namespace sgns
                 return nullptr;
             }
 
-            inputs.push_back( { maybe_hash.value(),
-                                input_proto.output_index(),
-                                std::vector<uint8_t>( input_proto.signature().cbegin(), input_proto.signature().cend() ) } );
+            inputs.push_back(
+                { maybe_hash.value(),
+                  input_proto.output_index(),
+                  std::vector<uint8_t>( input_proto.signature().cbegin(), input_proto.signature().cend() ) } );
         }
 
         std::vector<OutputDestInfo> outputs;
         for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
             const auto &output_proto = utxo_proto_params->outputs( i );
-            outputs.push_back( { output_proto.encrypted_amount(),
-                                 output_proto.dest_addr(),
-                                 TokenID::FromBytes( output_proto.token_id().data(), output_proto.token_id().size() ) } );
+            outputs.push_back(
+                { output_proto.encrypted_amount(),
+                  output_proto.dest_addr(),
+                  TokenID::FromBytes( output_proto.token_id().data(), output_proto.token_id().size() ) } );
         }
 
         if ( outputs.empty() )
@@ -156,6 +158,15 @@ namespace sgns
             return token_id_;
         }
         return utxo_params_.second.front().token_id;
+    }
+
+    std::string MintTransactionV2::GetPrimaryDestinationAddress() const
+    {
+        if ( utxo_params_.second.empty() )
+        {
+            return {};
+        }
+        return utxo_params_.second.front().dest_address;
     }
 
     std::string MintTransactionV2::GetChainId() const
@@ -188,12 +199,12 @@ namespace sgns
         return topics;
     }
 
-    MintTransactionV2 MintTransactionV2::New( uint64_t                 new_amount,
-                                               std::string              chain_id,
-                                               TokenID                  token_id,
-                                               SGTransaction::DAGStruct dag,
-                                               std::vector<InputUTXOInfo> mint_inputs,
-                                               std::string              mint_destination )
+    MintTransactionV2 MintTransactionV2::New( uint64_t                   new_amount,
+                                              std::string                chain_id,
+                                              TokenID                    token_id,
+                                              SGTransaction::DAGStruct   dag,
+                                              std::vector<InputUTXOInfo> mint_inputs,
+                                              std::string                mint_destination )
     {
         if ( mint_destination.empty() )
         {
@@ -202,9 +213,9 @@ namespace sgns
 
         std::vector<OutputDestInfo> mint_outputs{ { new_amount, mint_destination, token_id } };
         MintTransactionV2           instance( { std::move( mint_inputs ), std::move( mint_outputs ) },
-                                     std::move( chain_id ),
-                                     std::move( token_id ),
-                                     std::move( dag ) );
+                                    std::move( chain_id ),
+                                    std::move( token_id ),
+                                    std::move( dag ) );
         instance.FillHash();
         return instance;
     }

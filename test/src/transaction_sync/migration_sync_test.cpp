@@ -15,6 +15,7 @@
 #include "account/MigrationInputValidator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "testutil/local_trust_setup.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -64,7 +65,7 @@ protected:
     static constexpr int              STARTUP_DELAY_MS = 1000;
     static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
     static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
-    static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
+    static constexpr char FULL_NODE_KEY[] = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
 
     void SetEligibilityCheckEnabled( bool enabled )
     {
@@ -111,11 +112,12 @@ protected:
     /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
     ///        Full/Light implied by @p is_full_node. Trailing and defaulted so existing call
     ///        sites are untouched; used to migrate as an "Archive".
-    static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string         &binaryParent,
-                                                                 const std::string         &subdir,
-                                                                 const char                *key_hex,
-                                                                 bool                       is_full_node = false,
-                                                                 std::optional<std::string> nodeTypeOverride = std::nullopt )
+    static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance(
+        const std::string         &binaryParent,
+        const std::string         &subdir,
+        const char                *key_hex,
+        bool                       is_full_node     = false,
+        std::optional<std::string> nodeTypeOverride = std::nullopt )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
@@ -148,10 +150,10 @@ protected:
         fs::create_directories( outPath, ec );
 
         GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
-                                   "0.35",
-                                   "1.0",
-                                   TokenID::FromBytes( { 0x00 } ),
-                                   outPath };
+                                       "0.35",
+                                       "1.0",
+                                       TokenID::FromBytes( { 0x00 } ),
+                                       outPath };
 
         // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
@@ -186,6 +188,22 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     sgns::test::MakeNodeReadyWithLocalTrust( node, std::chrono::seconds( 100 ) );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
+
+    // MINT-03 (21-06) compat twin: the zero-value v1 nonce fillers
+    // Migration3_4_0To3_5_0 synthesizes (MintTransaction::New(0, ...)) must
+    // traverse the sync-admission filter on every peer that received them with
+    // zero v1-related stalls or deadline rejections — the value-carrying gate
+    // may never touch the exempt fillers.
+    for ( sgns::GeniusNode *peer : { full_node.get(), node.get() } )
+    {
+        ASSERT_NE( peer, nullptr );
+        auto manager_result = peer->GetTransactionManager();
+        ASSERT_TRUE( manager_result.has_value() ) << "TransactionManager not constructed";
+        EXPECT_EQ( manager_result.value()->GetLegacyMintSyncStallCount(), 0u )
+            << "zero-value migration fillers must never stall the v1 sync gate";
+        EXPECT_EQ( manager_result.value()->GetLegacyMintSyncDeadlineRejectCount(), 0u )
+            << "zero-value migration fillers must never be rejected by the v1 sync gate";
+    }
 }
 
 TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
@@ -251,7 +269,7 @@ TEST_F( MigrationParamTest, ArchiveSurvivesMigrationWithoutJoiningRegistry )
 {
     SetEligibilityCheckEnabled( false );
 
-    static constexpr char CLIENT_KEY[] = "b0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeef1";
+    static constexpr char     CLIENT_KEY[] = "b0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeefb0bbeef1";
     static constexpr unsigned MAX_MINTS_DURING_MIGRATION = 4;
 
     auto full_node    = CreateFullNodeInstance();
