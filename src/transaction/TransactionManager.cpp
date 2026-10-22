@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "transaction/TransactionManager.hpp"
+#include "transaction/PruneEligibility.hpp"
 #include "transaction/TransactionConsensusHandler.hpp"
 
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include "account/MintTransactionV2.hpp"
 #include "account/MigrationTransaction.hpp"
 #include "account/MigrationInputValidator.hpp"
+#include "account/DevMintInputValidator.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
@@ -71,6 +73,7 @@ namespace sgns
         /// already-claimed chain id must not skip the other built-in.
         [[maybe_unused]] const bool kGeniusValidatorRegistered    = GeniusInputValidator::Register();
         [[maybe_unused]] const bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
+        [[maybe_unused]] const bool kDevMintValidatorRegistered   = DevMintInputValidator::Register();
 
         using utxo_merkle::OutPointKey;
 
@@ -1031,6 +1034,14 @@ namespace sgns
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
+        // The reservation id must be COPIED before the try block: the mint
+        // construction below moves transaction_hash into the DAG payload
+        // (FillDAGStruct's optional<string> parameter move-constructs the
+        // heap-backed hash string), so the catch path would otherwise roll
+        // back under an EMPTY id — RemoveBurnUTXOs reads a mismatched holder
+        // as "held by another" and silently skips the entry, leaving the
+        // dangling UTXO_BRIDGE record this cleanup exists to close.
+        const std::string burn_reservation_id = transaction_hash;
 
         auto txId = std::string{};
         try
@@ -1044,17 +1055,33 @@ namespace sgns
                                         destination ) );
 
             mint_transaction->MakeSignature( *account_m );
+            // TEST SEAM (CR-01 regression): fires AFTER transaction_hash was
+            // moved into the mint payload, deterministically driving the catch
+            // path (no natural throw site exists in this try). Throw from the
+            // hook to exercise the rollback.
+            if ( mint_funds_post_move_exception_hook_for_test_ )
+            {
+                mint_funds_post_move_exception_hook_for_test_();
+            }
             txId = mint_transaction->GetHash();
             EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
         }
         catch ( const std::exception &e )
         {
-            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs,
-                                                       transaction_hash,
-                                                       sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+            // Same end state as the FAILED-transition cleanup: the inserted burn
+            // entry must not survive a mint that never enqueued (release-only
+            // rollback left the dangling UTXO_BRIDGE record the incident showed).
+            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( rollback_inputs, burn_reservation_id );
+                 removal.has_error() )
+            {
+                m_logger->error( "{}: MintFunds rollback failed to remove burn UTXO for tx_hash={}: {}",
+                                 __func__,
+                                 burn_reservation_id,
+                                 removal.error().message() );
+            }
             m_logger->error( "{}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
                              __func__,
-                             transaction_hash,
+                             burn_reservation_id,
                              e.what() );
             return outcome::failure( std::errc::operation_canceled );
         }
@@ -1687,13 +1714,16 @@ namespace sgns
 
     std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
     {
-        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
-        // (SendTransactionItem routes them there), so a nonce chain that passes
-        // through a registration (e.g. RegisterChild then a mint) cannot resolve
-        // its predecessor through the tx/ namespace. Resolve the registration
-        // through its canonical slot certificate: the cert embeds the exact
-        // certified transaction hash, which binds the chain link the same way
-        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        // The canonical slot certificate is the value-independent authority for
+        // the predecessor hash. A tx/ value cannot always answer: registration
+        // transactions persist at reg/{src_addr}, never under tx/{hash}
+        // (SendTransactionItem routes them there), and a pruned frontier
+        // transaction's value is gone from tx/ entirely (GATE-04) -- while a
+        // certificate at /cert/<addr>:<nonce-1> is never pruned. The cert embeds
+        // the exact certified transaction hash, which binds the chain link the
+        // same way CertificateMatchesTransaction does. Any certified embedded
+        // transaction type resolves; every binding check below fails closed to
+        // "" (never a guessed hash).
         if ( nonce == 0 || !globaldb_m )
         {
             return "";
@@ -1717,7 +1747,7 @@ namespace sgns
         }
 
         auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        if ( embedded.has_error() || !embedded.value() )
         {
             return "";
         }
@@ -2634,7 +2664,19 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_tx ) ) );
+        auto transfer_txid = base::Hash256::fromReadableString( transfer_tx->GetHash() );
+        if ( transfer_txid.has_error() )
+        {
+            // WR-01: data_hash is raw dag bytes that migration seeds or
+            // corruption can leave malformed — fail closed through the
+            // outcome channel, never throw through the processing stack.
+            m_logger->error( "Transfer {} has malformed data_hash", transfer_tx->GetHash() );
+            return outcome::failure( transfer_txid.error() );
+        }
+        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs,
+                                                  TransferInputOwner( *transfer_tx ),
+                                                  sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                  transfer_txid.value() ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
@@ -2653,8 +2695,18 @@ namespace sgns
 
             if ( !params.first.empty() )
             {
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, migration_tx->GetSrcAddress() ) );
+                // WR-01: checked decode — a malformed data_hash is an outcome
+                // failure, never a throw through the processing stack.
+                auto migration_txid = base::Hash256::fromReadableString( migration_tx->GetHash() );
+                if ( migration_txid.has_error() )
+                {
+                    m_logger->error( "Migration {} has malformed data_hash", migration_tx->GetHash() );
+                    return outcome::failure( migration_txid.error() );
+                }
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                             migration_tx->GetSrcAddress(),
+                                                                             sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                             migration_txid.value() ) );
             }
 
             m_logger->info( "Created tokens (migration), amount {} balance {}",
@@ -2666,7 +2718,18 @@ namespace sgns
         if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+            // WR-01: checked decode — data_hash here is raw dag_st.data_hash(),
+            // which migration-seeded or corrupt records can leave malformed;
+            // surface that as an outcome failure, never std::invalid_argument
+            // through the processing stack. The decoded hash feeds every use
+            // below (replay check, consume, and produced UTXOs).
+            auto mint_v2_hash = base::Hash256::fromReadableString( mint_tx_v2->GetHash() );
+            if ( mint_v2_hash.has_error() )
+            {
+                m_logger->error( "Mint-v2 {} has malformed data_hash", mint_tx_v2->GetHash() );
+                return outcome::failure( mint_v2_hash.error() );
+            }
+            auto hash = mint_v2_hash.value();
 
             // Inputs BEFORE outputs, with two discriminators:
             //  - A genuinely-consumed burn input (CONSUMED with real, non-zero
@@ -2701,7 +2764,8 @@ namespace sgns
                         auto consumed,
                         account_m->GetUTXOManager().ConsumeUTXOs( inputs,
                                                                   mint_tx_v2->GetSrcAddress(),
-                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
+                                                                  hash ) );
                     if ( !consumed )
                     {
                         m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
@@ -2868,7 +2932,18 @@ namespace sgns
 
         if ( !params.first.empty() )
         {
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
+            // WR-01: checked decode — a malformed data_hash is an outcome
+            // failure, never a throw through the processing stack.
+            auto escrow_txid = base::Hash256::fromReadableString( escrow_tx->GetHash() );
+            if ( escrow_txid.has_error() )
+            {
+                m_logger->error( "Escrow {} has malformed data_hash", escrow_tx->GetHash() );
+                return outcome::failure( escrow_txid.error() );
+            }
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                         escrow_tx->GetSrcAddress(),
+                                                                         sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                         escrow_txid.value() ) );
         }
 
         return outcome::success();
@@ -3145,11 +3220,24 @@ namespace sgns
         return TransactionStatus::INVALID;
     }
 
+    std::atomic<uint8_t> TransactionManager::missing_tx_max_attempts_for_test_{ k_init_tx_request_max_attempts };
+
+    void TransactionManager::SetMissingTxMaxAttemptsForTest( uint8_t max_attempts )
+    {
+        missing_tx_max_attempts_for_test_.store( max_attempts );
+    }
+
+    uint8_t TransactionManager::GetMissingTxMaxAttemptsForTest()
+    {
+        return missing_tx_max_attempts_for_test_.load();
+    }
+
     void TransactionManager::InitializeUTXOs()
     {
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.clear();
+            missing_tx_attempts_.clear();
         }
         m_logger->debug( "Initializing UTXOs" );
 
@@ -3272,10 +3360,17 @@ namespace sgns
             return;
         }
 
-        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
-        return;
-
-        m_logger->info( "Missing {} transactions during init", missing_count );
+        // GATE-05 (live incidents 2026-10-20/22): a missing or unresolvable
+        // creating transaction must NOT block boot. The durable UTXO set is
+        // authoritative; the creating tx is auxiliary witness material. The
+        // state transition above runs identically with or without missing
+        // hashes, and the recovery below is bounded background work: hashes
+        // that never resolve are dropped after the attempt budget so
+        // HasMissingTxHashes() cannot wedge readiness (or the TxPruner tick)
+        // forever. This path writes no UTXO state — a tx that arrives later
+        // is still processed and erased from the missing set by the regular
+        // CRDT arrival path, and nothing spent is ever resurrected.
+        m_logger->info( "Missing {} transactions during init (proceeding; bounded recovery)", missing_count );
 
         auto now = std::chrono::steady_clock::now();
         if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
@@ -3289,8 +3384,31 @@ namespace sgns
         const auto request_timeout = k_init_tx_request_cooldown_ms;
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
-            m_logger->debug( "Requesting transaction with hash {} (this: {})",
+            uint8_t attempts = 0;
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                attempts = missing_tx_attempts_[tx_hash];
+            }
+            if ( attempts >= GetMissingTxMaxAttemptsForTest() )
+            {
+                m_logger->warn( "Dropping unresolvable creating transaction {} after {} recovery attempts "
+                                "(fabricated reference, pruned elsewhere, or corrupt history); "
+                                "UTXO set remains authoritative",
+                                tx_hash,
+                                attempts );
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                missing_tx_hashes_.erase( tx_hash );
+                missing_tx_attempts_.erase( tx_hash );
+                continue;
+            }
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                ++missing_tx_attempts_[tx_hash];
+            }
+            m_logger->debug( "Requesting transaction with hash {} (attempt {}/{}, this: {})",
                              tx_hash,
+                             attempts + 1,
+                             GetMissingTxMaxAttemptsForTest(),
                              reinterpret_cast<uint64_t>( this ) );
             auto request_result = account_m->RequestTransaction( request_timeout, tx_hash );
             if ( request_result.has_error() )
@@ -4226,7 +4344,8 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker( const std::string &tx_hash,
+                                                                               bool               stage_pruned_marker )
     {
         if ( !globaldb_m )
         {
@@ -4246,8 +4365,23 @@ namespace sgns
         const auto &path = path_and_cid.first;
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
 
-        // Atomic two-level erase + map-entry delete in one WriteBatch.
-        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid ) );
+        // The marker pair is built HERE — AFTER resolution — from the SAME
+        // path the erase below targets. Building it from the hash alone would
+        // format the LOCAL network's path even when the entry resolves under
+        // another monitored network, persisting a record whose tx_path names
+        // a key that never existed (WR-02: the lookup's value-presence probe
+        // would then read a vacuously absent path and the invariant detector
+        // could never fire for such markers).
+        std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> extra_entry;
+        if ( stage_pruned_marker )
+        {
+            extra_entry = PruneEligibility::BuildPruneMarkerEntry( tx_hash, path );
+        }
+
+        // Atomic two-level erase + map-entry delete in one WriteBatch; the
+        // staged extra entry (the pruned driver's marker pair) joins the SAME
+        // batch, so value XOR marker holds atomically.
+        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entry ) );
 
         // Revert-free tracked-map cleanup after the committed erase, keyed on
         // the SAME path that was erased; the entry is memory-only
@@ -4258,6 +4392,21 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    {
+        // The plain driver: no staged marker (existing behavior,
+        // byte-identical).
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/false );
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash )
+    {
+        // The production driver: the marker pair (built by its one home,
+        // PruneEligibility, from the RESOLVED path inside the shared helper)
+        // joins the erase WriteBatch.
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/true );
     }
 
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
@@ -4677,6 +4826,11 @@ namespace sgns
         fetch_and_process_before_state_change_hook_for_test_ = std::move( hook );
     }
 
+    void TransactionManager::SetMintFundsPostMoveExceptionHookForTest( std::function<void()> hook )
+    {
+        mint_funds_post_move_exception_hook_for_test_ = std::move( hook );
+    }
+
     outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
     {
         if ( fail_bridge_executed_marker_write_for_test_ )
@@ -4886,6 +5040,7 @@ namespace sgns
                     {
                         std::lock_guard missing_lock( missing_tx_mutex_ );
                         missing_tx_hashes_.erase( tx->GetHash() );
+                        missing_tx_attempts_.erase( tx->GetHash() );
                     }
                     break;
                 }
@@ -4948,6 +5103,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
                 break;
             }
@@ -5007,9 +5163,23 @@ namespace sgns
                     {
                         if ( tx->GetType() == "mint-v2" )
                         {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
-                                                                       tx->dag_st.uncle_hash(),
-                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
+                            // Releasing the reservation alone left the MintFunds-inserted
+                            // burn entry READY in memory and on disk — the 2026-10-20
+                            // incident's dangling UTXO_BRIDGE that wedged the next boot.
+                            // RemoveBurnUTXOs releases the reservation AND erases the
+                            // inserted entry (idempotent; CONSUMED entries untouched). A
+                            // store hiccup must not block the FAILED marking: log and stay
+                            // failed — the next FAILED re-fire dedups above, so the leak
+                            // then matches the pre-fix release-only behavior.
+                            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( params_opt->first,
+                                                                                             tx->dag_st.uncle_hash() );
+                                 removal.has_error() )
+                            {
+                                m_logger->error( "{}: Failed to remove burn UTXO for failed mint tx={}: {}",
+                                                 FUNC,
+                                                 tx->GetHash(),
+                                                 removal.error().message() );
+                            }
                         }
                         else
                         {
@@ -5018,14 +5188,6 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
-
-                // Clear bridge mint reservation on failure
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
-                    (void) mint_tx;
-                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
@@ -5037,6 +5199,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
             }
 

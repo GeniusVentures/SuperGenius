@@ -11,6 +11,7 @@
 
 #include <shared_mutex>
 #include <future>
+#include <atomic>
 #include <chrono>
 #include <queue>
 #include <unordered_set>
@@ -262,6 +263,18 @@ namespace sgns::crdt
         void AddTopicName( std::string topic );
 
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
+
+        /** Read the per-key CRDT priority from the owning CrdtSet (read-only).
+        * Contract mirrors CrdtSet::GetPriority (crdt_set.hpp): returns the
+        * stored priority minus 1. A key with NO priority record reads as
+        * success with value 0 -- the NOT_FOUND case is tolerated
+        * (impl/crdt_set.cpp GetPriority) -- so 0 never implies existence;
+        * callers must establish key existence separately. Fails only on
+        * datastore errors other than NOT_FOUND or a malformed record.
+        * @param aKey key string
+        * @return priority of the key or outcome::failure on error
+        */
+        outcome::result<uint64_t>                  GetPriority( const std::string &aKey ) const;
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
         outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
@@ -285,6 +298,20 @@ namespace sgns::crdt
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
+        /** Enumerate the keys a delta block carries -- elements AND
+        * tombstones -- keys-only, values discarded. Parses the block itself
+        * at call time (the block is the source of truth; no persistent
+        * reverse index) and NEVER fetches from the network:
+        * GetNodeWithoutRequest is strictly local, so an unknown CID fails.
+        * Both repeated-Element lists are covered because a block-gate
+        * consumer must reject a block carrying a tombstone for a live key.
+        * Sibling of the elements-only GetLocalDeltaKeyValues, which is left
+        * untouched so existing callers' result sets cannot change.
+        * @param cid_string CID string of the delta block
+        * @return carried keys (element keys then tombstone keys) or outcome::failure
+        */
+        outcome::result<std::vector<std::string>> GetLocalDeltaKeys( const std::string &cid_string );
+
         /** Pure query: true while the CID is queued as a root job or being processed
         * by a DAG worker -- used by erase guards.
         * @param cid CID to check
@@ -302,7 +329,42 @@ namespace sgns::crdt
         outcome::result<void> StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                                  const std::string                           &aKey );
 
+        /** Vends the compose critical section from the owning CrdtSet (D-01):
+        * an owning std::unique_lock on the CrdtSet's private recursive mutex.
+        * See CrdtSet::MakeComposeLock for the acquire-before-the-first-guard,
+        * commit-inside-the-hold discipline; StageEraseElement is reentrant
+        * under the hold.
+        * @return an owning unique_lock, or a NON-owning guard when the
+        *         underlying CrdtSet is absent -- callers must fail closed on
+        *         !owns_lock()
+        */
+        std::unique_lock<std::recursive_mutex> MakeComposeLock();
+
+        /**
+         * @brief       Test-only observable: how many root-CID fetch attempts
+         *              EnqueueRootCID actually queued (SC-3's zero-fetch proof).
+         * @return      The number of EnqueueRootCID calls that pushed a CID onto
+         *              the pending root queue (the return-true branch).
+         * @note        No production reader; production behavior never consults
+         *              this counter.
+         */
+        static uint64_t GetRootFetchAttemptsForTest();
+
+        /**
+         * @brief       Test-only: resets the fetch-attempt counter to zero.
+         * @note        No production caller; tests bracket delivery windows
+         *              with reset + delta reads.
+         */
+        static void ResetRootFetchAttemptsForTest();
+
     protected:
+        /// Test-only fetch-attempt counter (SC-3): increments once per
+        /// EnqueueRootCID call that actually pushes onto pendingRootQueue_
+        /// (the return-true branch). Zero production readers; defined at file
+        /// scope in crdt_datastore.cpp. Static-member seam shape mirrors
+        /// GlobalDB::erase_interrupt_hook_for_test_.
+        static std::atomic<uint64_t> root_fetch_attempts_for_test_;
+
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
         friend class ::sgns::ValidatorRegistry;

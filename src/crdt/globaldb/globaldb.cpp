@@ -794,7 +794,9 @@ namespace sgns::crdt
         erase_interrupt_hook_for_test_ = std::move( hook );
     }
 
-    outcome::result<void> GlobalDB::EraseEntry( const std::string &key, const CID &cid )
+    outcome::result<void> GlobalDB::EraseEntry( const std::string                              &key,
+                                                const CID                                      &cid,
+                                                const std::optional<std::pair<Buffer, Buffer>> &extra_entry )
     {
         auto crdt_datastore = ActiveCRDTDataStore();
         auto datastore      = ActiveDataStore();
@@ -804,11 +806,26 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
+        // D-01: the owner-vended compose critical section, acquired as the
+        // compose's FIRST act and held across guard evaluation, staging,
+        // the single commit, and the post-commit seal re-assert -- the
+        // PutElems discipline (crdt_set.cpp holds mutex_ across
+        // build+commit). StageEraseElement's internal lock is reentrant
+        // under this hold. Scoped to this one per-tx compose only; never
+        // held across evaluations or multiple composes (bounded holds).
+        auto compose_lock = crdt_datastore->MakeComposeLock();
+        if ( !compose_lock.owns_lock() )
+        {
+            m_logger->error( "{}: CRDT set not initialized, refusing erase", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
         // Guards (fail-closed, before any staging): a CID that is in use
-        // anywhere in the live DAG machinery is not erased. These are
-        // check-then-act guards -- best-effort under concurrency; the
-        // caller owns the critical section that closes the window (see the
-        // header contract).
+        // anywhere in the live DAG machinery is not erased. Guard
+        // evaluation runs INSIDE the compose critical section, so a
+        // concurrent PutElems cannot interleave between these checks and
+        // the commit (WR-02 closed by construction; see the header
+        // contract).
         // (1) Head guard: scan the heads of EVERY topic -- a single-topic
         //     check would miss the cid being another topic's head.
         BOOST_OUTCOME_TRY( auto head_list, GetCRDTHeadList() );
@@ -864,6 +881,14 @@ namespace sgns::crdt
         {
             return outcome::failure( Error::INVALID_PARAMETERS );
         }
+        // The caller-built extra entry (D-C1: the /prune/tx/<hash> marker)
+        // joins the SAME batch after the raw-map removal, before the single
+        // commit -- value XOR marker is established atomically. The buffers
+        // are opaque; key shapes stay with the caller (Phase-16 D-01).
+        if ( extra_entry.has_value() )
+        {
+            BOOST_OUTCOME_TRY( batch->put( extra_entry->first, extra_entry->second ) );
+        }
         BOOST_OUTCOME_TRY( batch->commit() );
 
         // The seal marker is never staged for removal above; if it is gone
@@ -897,6 +922,16 @@ namespace sgns::crdt
             return outcome::failure( std::errc::operation_canceled );
         }
         return crdt_datastore->GetHeadList();
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetKeyPriority( const std::string &key ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetPriority( key );
     }
 
     outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
@@ -1002,4 +1037,25 @@ namespace sgns::crdt
         return crdt_datastore->GetLocalDeltaKeyValues( cid_string );
     }
 
+    outcome::result<std::vector<std::string>> GlobalDB::GetLocalDeltaKeys( const std::string &cid_string ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return crdt_datastore->GetLocalDeltaKeys( cid_string );
+    }
+
+    outcome::result<bool> GlobalDB::HasLocalBlock( const std::string &cid_string ) const
+    {
+        if ( !m_dagSyncer )
+        {
+            m_logger->error( "{}: DAG syncer not initialized", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+        return m_dagSyncer->HasRawBlockBytes( cid );
+    }
 }

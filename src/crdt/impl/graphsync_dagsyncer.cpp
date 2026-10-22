@@ -58,6 +58,7 @@ namespace sgns::crdt
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
+        block_datastore_( block_datastore ),
         dagService_(
             std::make_shared<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl>( std::move( block_datastore ) ) ),
         graphsync_( std::move( graphsync ) ),
@@ -475,6 +476,15 @@ namespace sgns::crdt
         std::lock_guard lock( dagMutex_ );
         BOOST_OUTCOME_TRY( auto key_bytes, cid.toBytes() );
         return aBatch->remove( storage::Buffer( std::move( key_bytes ) ) );
+    }
+
+    outcome::result<bool> GraphsyncDAGSyncer::HasRawBlockBytes( const CID &cid ) const
+    {
+        if ( block_datastore_ == nullptr )
+        {
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
+        return block_datastore_->contains( cid );
     }
 
     outcome::result<size_t> GraphsyncDAGSyncer::select(

@@ -124,6 +124,21 @@ namespace sgns::crdt
         */
         outcome::result<void> StageBlockRemoval( const CID &cid, const std::unique_ptr<storage::BufferBatch> &aBatch );
 
+        /** Byte-level block presence: true iff raw block BYTES exist for
+        * @p cid in the block store, with NO parse attempted. This is the
+        * discriminator HasBlock cannot provide (HasBlock = parse success of
+        * the node OR an LRU hit, so a PRESENT-but-corrupt block answers
+        * false there); the erase-side block gate uses it to tell an ABSENT
+        * block (erased -- erase-completing evidence) from a corrupt one
+        * (fail closed). Consults the same CID::toBytes() keying as
+        * StageBlockRemoval (the one block-key home) through the vendored
+        * RocksdbDatastore::contains.
+        * @param cid CID whose raw block bytes are probed
+        * @return true when bytes exist; false when absent; failure only on
+        *         a store read error (fail closed at the caller)
+        */
+        outcome::result<bool> HasRawBlockBytes( const CID &cid ) const;
+
         outcome::result<size_t> select(
             gsl::span<const uint8_t>                                                     root_cid,
             gsl::span<const uint8_t>                                                     selector,
@@ -235,6 +250,10 @@ namespace sgns::crdt
         std::vector<CID> unexpected_blocks;
 
         mutable std::mutex                                                dagMutex_;
+        /// The block-bytes store the DAG service was built on (kept for the
+        /// raw byte-presence probe HasRawBlockBytes; same instance as the
+        /// service's).
+        std::shared_ptr<IpfsDatastore>                                    block_datastore_;
         std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl> dagService_;
         // ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
         std::shared_ptr<Graphsync> graphsync_;
