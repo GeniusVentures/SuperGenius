@@ -761,10 +761,23 @@ namespace sgns
 
         mutable std::mutex              missing_tx_mutex_;
         std::unordered_set<std::string> missing_tx_hashes_;
+        /// Per-hash recovery attempt counts (GATE-05 bounded recovery).
+        std::unordered_map<std::string, uint8_t> missing_tx_attempts_;
+        /// Process-wide test override for the recovery attempt cap (GATE-05).
+        static std::atomic<uint8_t> missing_tx_max_attempts_for_test_;
 
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
         static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
+        /// GATE-05: bounded recovery — hashes still missing after this many
+        /// request rounds are dropped (WARN) so boot and the prune tick cannot
+        /// wedge on an unresolvable creating transaction.
+        static constexpr uint8_t k_init_tx_request_max_attempts{ 12 };
+
+        /// Test-only override for the recovery attempt cap (0 = drop on the
+        /// first recovery round). No production caller may invoke this.
+        static void    SetMissingTxMaxAttemptsForTest( uint8_t max_attempts );
+        static uint8_t GetMissingTxMaxAttemptsForTest();
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";

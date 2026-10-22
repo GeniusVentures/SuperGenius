@@ -3220,11 +3220,24 @@ namespace sgns
         return TransactionStatus::INVALID;
     }
 
+    std::atomic<uint8_t> TransactionManager::missing_tx_max_attempts_for_test_{ k_init_tx_request_max_attempts };
+
+    void TransactionManager::SetMissingTxMaxAttemptsForTest( uint8_t max_attempts )
+    {
+        missing_tx_max_attempts_for_test_.store( max_attempts );
+    }
+
+    uint8_t TransactionManager::GetMissingTxMaxAttemptsForTest()
+    {
+        return missing_tx_max_attempts_for_test_.load();
+    }
+
     void TransactionManager::InitializeUTXOs()
     {
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.clear();
+            missing_tx_attempts_.clear();
         }
         m_logger->debug( "Initializing UTXOs" );
 
@@ -3347,10 +3360,17 @@ namespace sgns
             return;
         }
 
-        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
-        return;
-
-        m_logger->info( "Missing {} transactions during init", missing_count );
+        // GATE-05 (live incidents 2026-10-20/22): a missing or unresolvable
+        // creating transaction must NOT block boot. The durable UTXO set is
+        // authoritative; the creating tx is auxiliary witness material. The
+        // state transition above runs identically with or without missing
+        // hashes, and the recovery below is bounded background work: hashes
+        // that never resolve are dropped after the attempt budget so
+        // HasMissingTxHashes() cannot wedge readiness (or the TxPruner tick)
+        // forever. This path writes no UTXO state — a tx that arrives later
+        // is still processed and erased from the missing set by the regular
+        // CRDT arrival path, and nothing spent is ever resurrected.
+        m_logger->info( "Missing {} transactions during init (proceeding; bounded recovery)", missing_count );
 
         auto now = std::chrono::steady_clock::now();
         if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
@@ -3364,8 +3384,31 @@ namespace sgns
         const auto request_timeout = k_init_tx_request_cooldown_ms;
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
-            m_logger->debug( "Requesting transaction with hash {} (this: {})",
+            uint8_t attempts = 0;
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                attempts = missing_tx_attempts_[tx_hash];
+            }
+            if ( attempts >= GetMissingTxMaxAttemptsForTest() )
+            {
+                m_logger->warn( "Dropping unresolvable creating transaction {} after {} recovery attempts "
+                                "(fabricated reference, pruned elsewhere, or corrupt history); "
+                                "UTXO set remains authoritative",
+                                tx_hash,
+                                attempts );
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                missing_tx_hashes_.erase( tx_hash );
+                missing_tx_attempts_.erase( tx_hash );
+                continue;
+            }
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                ++missing_tx_attempts_[tx_hash];
+            }
+            m_logger->debug( "Requesting transaction with hash {} (attempt {}/{}, this: {})",
                              tx_hash,
+                             attempts + 1,
+                             GetMissingTxMaxAttemptsForTest(),
                              reinterpret_cast<uint64_t>( this ) );
             auto request_result = account_m->RequestTransaction( request_timeout, tx_hash );
             if ( request_result.has_error() )
@@ -4997,6 +5040,7 @@ namespace sgns
                     {
                         std::lock_guard missing_lock( missing_tx_mutex_ );
                         missing_tx_hashes_.erase( tx->GetHash() );
+                        missing_tx_attempts_.erase( tx->GetHash() );
                     }
                     break;
                 }
@@ -5059,6 +5103,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
                 break;
             }
@@ -5154,6 +5199,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
             }
 
