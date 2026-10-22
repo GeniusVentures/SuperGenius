@@ -9,6 +9,17 @@
  * integrity (D-C6 erase fixture; PRUNE-02 atomicity / GATE-03 seal).
  */
 
+// MSVC: the vendored ipfs-lite rocksdb headers pulled in below include
+// <windows.h>, which by default also includes winsock.h (v1); boost.asio
+// headers included later require winsock2 and fail with
+// "WinSock.h has already been included". WIN32_LEAN_AND_MEAN excludes
+// winsock.h from windows.h (NOMINMAX is already set project-wide).
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
+
 #include <gtest/gtest.h>
 #include <testutil/literals.hpp>
 #include <testutil/outcome.hpp>
@@ -543,8 +554,13 @@ namespace sgns::crdt
             std::chrono::seconds( 10 ),
             "released root job never completed" );
 
-        // ...and the guard is false again.
-        EXPECT_FALSE( receiver.datastore->IsRootCIDPendingOrActive( root_cid ) );
+        // ...and the guard is false again. Job completion and the
+        // pending/active bookkeeping clear are separate steps (loaded CI
+        // runners regularly land in the window between them) — wait for the
+        // guard itself to flip, do not assert on it immediately.
+        sgns::test::assertWaitForCondition( [&] { return !receiver.datastore->IsRootCIDPendingOrActive( root_cid ); },
+                                            std::chrono::seconds( 10 ),
+                                            "completed root job still reported pending/active" );
 
         // The job genuinely processed the delta, not just drained a queue.
         EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( HierarchicalKey( "/guard/key" ) ), true );
