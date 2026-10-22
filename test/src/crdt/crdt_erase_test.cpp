@@ -988,9 +988,9 @@ namespace sgns::crdt
         // TransactionManager::EraseTransactionEntryWithMarker; PruneEligibility
         // no longer references EraseEntry, so the sanctioned compose set is
         // the 3 files below (was 4 with PruneEligibility.hpp).
-        const std::set<std::string>    compose_set = { "transaction/PruneEligibility.cpp",
-                                                       "transaction/TransactionManager.cpp",
-                                                       "transaction/TransactionManager.hpp" };
+        const std::set<std::string> compose_set = { "transaction/PruneEligibility.cpp",
+                                                    "transaction/TransactionManager.cpp",
+                                                    "transaction/TransactionManager.hpp" };
 
         // The pruned-erase driver: its only production caller is the TxPruner
         // cycle (decl docs + the ONE RunCycle call site); tests live outside
