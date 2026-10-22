@@ -13,6 +13,7 @@
 #include <chrono>
 #include <functional>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -22,6 +23,7 @@
 #include "transaction/TransactionConsensusHandler.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
+#include "account/RegistrationTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
@@ -104,6 +106,28 @@ namespace sgns
             return tm.FetchExactTransactionFromCRDT( tx_hash );
         }
 
+        static std::string GetOutgoingPreviousHash( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.GetOutgoingPreviousHash( nonce );
+        }
+
+        static std::string GetRegisteredOutgoingPreviousHash( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.GetRegisteredOutgoingPreviousHash( nonce );
+        }
+
+        static std::string QueryOutgoingPreviousHashFromCRDT( const TransactionManager &tm, uint64_t nonce )
+        {
+            return tm.QueryOutgoingPreviousHashFromCRDT( nonce );
+        }
+
+        static outcome::result<void> StoreTransactionCID( TransactionManager &tm,
+                                                          const std::string  &key,
+                                                          const std::string  &cid )
+        {
+            return tm.StoreTransactionCID( key, cid );
+        }
+
         static std::shared_ptr<ConsensusManager> ConsensusManagerOf( Blockchain &blockchain )
         {
             return blockchain.consensus_manager_;
@@ -118,6 +142,14 @@ namespace sgns
         static void RecoverPendingCertificateWork( const std::shared_ptr<ConsensusManager> &manager )
         {
             manager->RecoverPendingCertificateWork();
+        }
+
+        /// Drives the real proposal-ingress validation path (CheckProposal ->
+        /// subject handlers -> HandleNonceConsensusSubject) synchronously.
+        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                    const ConsensusManager::Proposal        &proposal )
+        {
+            manager->HandleProposal( proposal );
         }
 
         /// Parks the manager's round timer (the periodic dispatcher that
@@ -184,6 +216,19 @@ namespace sgns
         {
             utxo_manager.SetPutUTXOBeforeStoreHookForTest( std::move( hook ) );
         }
+
+        /// Drives the manager into State::READY (the MintFunds entry gate; no
+        /// public API reaches READY deterministically in this fixture).
+        static void ChangeState( TransactionManager &manager, TransactionManager::State state )
+        {
+            manager.ChangeState( state );
+        }
+
+        /// Arms the MintFunds post-move exception seam (CR-01 regression).
+        static void SetMintFundsPostMoveExceptionHook( TransactionManager &tm, std::function<void()> hook )
+        {
+            tm.SetMintFundsPostMoveExceptionHookForTest( std::move( hook ) );
+        }
     };
 } // namespace sgns
 
@@ -194,6 +239,13 @@ namespace
 
     /// @brief Default proposer ID used in test certificates.
     constexpr const char *kTestProposer = "test-proposer";
+
+    /// @brief The fixture GlobalDB's seeded listen+broadcast topic
+    ///        (base_crdt_test.cpp). Real-topic Puts are load-bearing for the
+    ///        erase lifecycle: an empty-topics Put writes no head and no seal,
+    ///        and EraseTransactionEntry's resolved guard would then reject the
+    ///        erase (Phase-16 empty-topics lesson).
+    constexpr char kSeedTopic[] = "CRDT.Datastore.TEST.Channel";
 
     /**
      * @brief Builds a ConsensusCertificate proto wrapping the given subject.
@@ -531,6 +583,57 @@ public:
             TransactionManager::GetTransactionPath( *transaction ),
             std::move( serialized ) );
     }
+
+    /**
+     * @brief Seeds one frontier transaction into the exact state the Phase-16
+     *        erase lifecycle requires (17-03 / GATE-04 SC-3).
+     *
+     * The value goes through a REAL-topic CRDT Put (never the empty-topic
+     * PersistTransaction shape) so the delta CID, its head entry, and its
+     * seal marker exist; a follow-up seed on the same topic retires the
+     * frontier's CID from headship so EraseEntry's head guard accepts; the
+     * raw tx->CID map entry is seeded with the exact StoreTransactionCID
+     * key/value shapes so ResolveTransactionPathAndCID finds the entry's own
+     * network path. The certificate at the frontier's slot is deliberately
+     * NOT seeded here -- each case decides whether the cert authority exists.
+     */
+    void SeedErasableFrontierEntry( const std::shared_ptr<GeniusTransaction> &frontier )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *frontier );
+
+        crdt::GlobalDB::Buffer serialized;
+        serialized.put( frontier->SerializeByteVector() );
+        auto put_result = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+        ASSERT_TRUE( put_result.has_value() );
+
+        crdt::GlobalDB::Buffer retire_value;
+        retire_value.put( "retire-" + frontier->GetHash() );
+        ASSERT_TRUE(
+            db_->Put( { "/seed/certslot/" + frontier->GetHash() }, retire_value, { kSeedTopic } ).has_value() );
+
+        ASSERT_TRUE(
+            CertificateFallbackTestAccess::StoreTransactionCID( *tm_, tx_path, put_result.value().toString().value() )
+                .has_value() );
+    }
+
+    // --- Burn-cleanup helpers (folded todo mintfunds-leaks-burn-utxo-on-consensus-reject) ---
+
+    /// Seeds the validator registry once so signed proposals pass CheckProposal.
+    void EnsureGenesisRegistryForBurnCleanup();
+
+    /// Builds a signed local MintFunds-shaped mint-v2 (uncle_hash = burn ref string).
+    std::shared_ptr<MintTransactionV2> MakeLocalBridgeMintV2( const base::Hash256 &burn,
+                                                              uint64_t             nonce,
+                                                              uint64_t             amount );
+
+    /// Inserts + claims the burn UTXO exactly as MintFunds does.
+    void SeedBurnUtxoAsMintFunds( const base::Hash256 &burn, uint64_t amount );
+
+    /// True while the raw /utxo/<owner>/<outpoint> record exists on disk.
+    bool UtxoRecordOnDisk( const base::Hash256 &txid ) const;
+
+    /// Drives the REAL consensus reject (reject_and_maybe_fail_local -> FAILED).
+    void RejectLocalTxThroughConsensus( const std::shared_ptr<GeniusTransaction> &tx );
 };
 
 // ---------------------------------------------------------------------------
@@ -1437,4 +1540,481 @@ TEST_F( CertificateFallbackTest, RepeatedHandlerFailuresEngageBackoffLease )
     EXPECT_TRUE( CertificateFallbackTestAccess::HasLiveBackoffLease( manager, key ) );
 
     CertificateFallbackTestAccess::SetBridgeExecutedMarkerWriteFailure( *tm_, false );
+}
+
+// ---------------------------------------------------------------------------
+// Cert-slot previous_hash resolution (17-03 / GATE-04 / SC-3)
+// ---------------------------------------------------------------------------
+
+/**
+ * SC-3 case 1: with the node's own frontier transaction physically erased
+ * (EraseTransactionEntry -- the real guarded erase, not a hand-deleted key)
+ * and its certificate present at the slot, GetOutgoingPreviousHash resolves
+ * the frontier hash from cert-slot data. Pre-erase, the tracked rung answers
+ * first (ladder order preserved); post-erase, only the cert rung can.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_PrunedFrontierResolvesFromCert )
+{
+    constexpr uint64_t kFrontierNonce = 41;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( TransactionManager::CertificateMatchesTransaction( certificate.value(), *frontier ) );
+
+    // Park the round timer AFTER the certificate is built (registry settling
+    // needs default timing): with the timer parked, no async dispatch tracks
+    // the frontier from the durable cert, so after the erase the resolution
+    // provably comes from the cert rung, not from re-tracked state.
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Warm pre-prune state: the frontier is tracked (CONFIRMED -- its cert is
+    // durable) and the tracked rung answers while history is intact.
+    ASSERT_TRUE( FetchAndProcess( frontier ).has_value() );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+
+    // The physical erase: value, block bytes, map entry, and tracked state.
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *frontier ) ).has_error() );
+    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+
+    // Post-prune: the cert at /cert/<addr>:<nonce> still binds the chain link.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+}
+
+/**
+ * SC-3 case 2: cold start after the prune. Nothing was ever tracked, no
+ * local confirmed head exists (the fresh-manager state a restart into a
+ * pruned store presents), the frontier value is physically gone -- the nonce
+ * chain still resolves through the certificate, exactly frontier nonce + 1.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_ColdStartNonceChainAfterPrune )
+{
+    constexpr uint64_t kFrontierNonce = 42;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Cold-start preconditions: no tracked state, no persisted head.
+    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( account_->GetLocalConfirmedTxHash( kFrontierNonce ).has_error() );
+
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( account_->GetLocalConfirmedTxHash( kFrontierNonce ).has_error() );
+
+    // The chain link resolves from the certificate alone.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+    // The derived nonce chain is exactly frontier -> frontier+1: below the
+    // frontier no certificate exists, so resolution fails closed there.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce ), "" );
+}
+
+/**
+ * SC-3 case 3 (negative control): frontier value erased WITHOUT a
+ * certificate at the slot -- resolution must fail closed to the empty
+ * string, never a guessed hash.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_NoCertNoValueFailsClosed )
+{
+    constexpr uint64_t kFrontierNonce = 43;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+    // Deliberately NO certificate at /cert/<addr>:<nonce>.
+
+    ASSERT_TRUE( tm_->EraseTransactionEntry( frontier->GetHash() ).has_value() );
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *frontier ) ).has_error() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ), "" );
+}
+
+/**
+ * SC-3 case 4 (Pitfall 7 equivalence): for a certified NON-registration
+ * predecessor with history intact, rungs 1-2 miss by construction (fresh
+ * manager, timer parked: nothing tracked, no local confirmed head), so the
+ * ladder's answer IS the cert rung's -- and it must equal what the full
+ * CRDT scan (rung 4) finds for the same predecessor.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_CertRungMatchesCRDTScan )
+{
+    constexpr uint64_t kFrontierNonce = 44;
+    const auto         frontier       = MakeTransfer( account_->GetAddress(), kFrontierNonce );
+    ASSERT_FALSE( frontier->GetHash().empty() );
+
+    SeedErasableFrontierEntry( frontier );
+
+    const auto certificate = BuildSignedCertificate( frontier );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( frontier->GetSlotID(), certificate.value() );
+
+    // Capture the cert rung DIRECTLY, not only through the ladder: with
+    // history intact the value-dependent rung 4 (CRDT scan) returns the same
+    // hash, so a ladder-level assertion alone could pass while the rung
+    // itself regressed (the same hash from a different source). The direct
+    // capture binds the rung; the ladder assert below then proves the
+    // composed order answers too.
+    const auto cert_rung_answer = CertificateFallbackTestAccess::GetRegisteredOutgoingPreviousHash(
+        *tm_,
+        kFrontierNonce + 1 );
+    ASSERT_EQ( cert_rung_answer, frontier->GetHash() );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+
+    // Pitfall 7 equivalence: the full CRDT scan (rung 4) finds the same hash
+    // for the certified non-registration predecessor.
+    EXPECT_EQ( CertificateFallbackTestAccess::QueryOutgoingPreviousHashFromCRDT( *tm_, kFrontierNonce + 1 ),
+               frontier->GetHash() );
+}
+
+/**
+ * SC-3 case 5 (regression): a registration-type predecessor still resolves
+ * through its slot certificate -- the pre-17-03 behavior is not regressed by
+ * the generalized rung. Registration values live at reg/{addr}, never under
+ * tx/, so the certificate was always the only authority for this link.
+ */
+TEST_F( CertificateFallbackTest, CertSlotPreviousHash_RegistrationRungStillWorks )
+{
+    constexpr uint64_t kRegistrationNonce = 45;
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( kRegistrationNonce );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+
+    const auto registration = std::make_shared<RegistrationTransaction>(
+        RegistrationTransaction::New( account_->GetAddress(),
+                                      1,
+                                      SGTransaction::RegistrationMetadata{},
+                                      std::move( dag ) ) );
+    ASSERT_FALSE( registration->GetHash().empty() );
+    ASSERT_EQ( registration->GetType(), "registration" );
+
+    const auto certificate = BuildSignedCertificate( registration );
+    ASSERT_TRUE( certificate.has_value() );
+
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( registration->GetSlotID(), certificate.value() );
+
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kRegistrationNonce + 1 ),
+               registration->GetHash() );
+}
+
+// ---------------------------------------------------------------------------
+// Burn-UTXO cleanup on consensus-rejected local mints (folded todo
+// mintfunds-leaks-burn-utxo-on-consensus-reject, live incident 2026-10-20)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Nonce base for the BurnCleanup cases (avoids every other case's range).
+    constexpr uint64_t kBurnCleanupNonceBase = 210;
+}
+
+void CertificateFallbackTest::EnsureGenesisRegistryForBurnCleanup()
+{
+    auto registry = blockchain_->GetValidatorRegistry();
+    ASSERT_NE( registry, nullptr );
+    ASSERT_FALSE( registry
+                      ->StoreGenesisRegistry( { account_->GetAddress() },
+                                              [account = account_]( std::vector<uint8_t> payload )
+                                              { return account->Sign( std::move( payload ) ); } )
+                      .has_error() );
+    ASSERT_TRUE( ::waitForCondition(
+        [&registry]()
+        {
+            auto current = registry->LoadCurrentRegistry();
+            return current.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 2000 ),
+        nullptr ) );
+}
+
+std::shared_ptr<MintTransactionV2> CertificateFallbackTest::MakeLocalBridgeMintV2( const base::Hash256 &burn,
+                                                                                   uint64_t             nonce,
+                                                                                   uint64_t             amount )
+{
+    // MintFunds shape (TransactionManager::MintFunds): FillDAGStruct(transaction_hash)
+    // carries the burn ref string as dag.uncle_hash -- the SAME string MintFunds
+    // claims the burn outpoint under (the D-18 reservation-id contract).
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "mint-v2" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( nonce );
+    dag.set_uncle_hash( burn.toReadableString() );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+
+    auto mint = std::make_shared<MintTransactionV2>( MintTransactionV2::New( amount,
+                                                                             "public",
+                                                                             kTestTokenId,
+                                                                             std::move( dag ),
+                                                                             { { burn, 0, {} } },
+                                                                             account_->GetAddress() ) );
+    mint->MakeSignature( *account_ );
+    return mint;
+}
+
+void CertificateFallbackTest::SeedBurnUtxoAsMintFunds( const base::Hash256 &burn, uint64_t amount )
+{
+    // The exact MintFunds burn seeding: insert the UTXO_BRIDGE burn entry, then
+    // atomically claim it under the burn ref string.
+    auto &utxo_mgr = account_->GetUTXOManager();
+    ASSERT_TRUE( utxo_mgr
+                     .PutUTXO( GeniusUTXO( burn, 0, amount, kTestTokenId, account_->GetAddress() ),
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    ASSERT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, burn.toReadableString(), UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kClaimed );
+}
+
+bool CertificateFallbackTest::UtxoRecordOnDisk( const base::Hash256 &txid ) const
+{
+    // The raw persisted record key (UTXOManager's /utxo/<owner>/<txid>:<idx>).
+    crdt::GlobalDB::Buffer key_buffer;
+    key_buffer.put( "/utxo/" + account_->GetAddress() + "/" + txid.toReadableString() + ":0" );
+    return db_->GetDataStore()->get( key_buffer ).has_value();
+}
+
+void CertificateFallbackTest::RejectLocalTxThroughConsensus( const std::shared_ptr<GeniusTransaction> &tx )
+{
+    EnsureGenesisRegistryForBurnCleanup();
+
+    auto signing_manager = ConsensusManager::New(
+        blockchain_->GetValidatorRegistry(),
+        db_,
+        pubs_,
+        [account = account_]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); },
+        account_->GetAddress() );
+    ASSERT_NE( signing_manager, nullptr );
+
+    // The subject nonce deliberately mismatches the embedded tx nonce: the
+    // deterministic consensus reject. (The live incident's reject reason was the
+    // witness/type-rules leg; both legs fire the SAME reject_and_maybe_fail_local
+    // -> ChangeTransactionState(FAILED) trigger, and the cleanup branch is
+    // reason-agnostic.)
+    auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                         tx->GetNonce() + 1,
+                                                         tx->GetHash(),
+                                                         tx->SerializeToEmbeddedTransaction(),
+                                                         std::nullopt,
+                                                         std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+    auto proposal = signing_manager->CreateProposal( subject.value(),
+                                                     account_->GetAddress(),
+                                                     blockchain_->GetValidatorRegistry()->GetRegistryCid(),
+                                                     blockchain_->GetValidatorRegistry()->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal.has_value() );
+
+    CertificateFallbackTestAccess::HandleProposal( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ),
+                                                   proposal.value() );
+    signing_manager->Close();
+}
+
+/**
+ * Folded todo (live incident 2026-10-20, staging net): a locally-originated
+ * bridge mint rejected by consensus left the MintFunds-inserted UTXO_BRIDGE
+ * burn entry dangling -- READY in memory AND on disk (it survived restart via
+ * LoadUTXOs and wedged boot). The FAILED transition's mint-v2 rollback only
+ * RELEASES the reservation (RESERVED -> READY, memory-only): it never removes
+ * the inserted entry. After the real consensus-reject -> FAILED transition,
+ * the burn entry must be GONE everywhere and nothing may linger under the
+ * burn-ref reservation id.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemovesBurnUtxoAndReservation )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'b' ) ).value();
+    const auto mint     = MakeLocalBridgeMintV2( burn, kBurnCleanupNonceBase, 10000 );
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    SeedBurnUtxoAsMintFunds( burn, 10000 );
+
+    // Present-before (three-part assertion, part 1): the incident's starting
+    // state -- burn entry inserted and RESERVED, record durable on disk.
+    ASSERT_TRUE( utxo_mgr.IsOutPointReserved( burn, 0 ) );
+    ASSERT_TRUE( UtxoRecordOnDisk( burn ) );
+
+    // The REAL trigger: HandleProposal -> HandleNonceConsensusSubject ->
+    // reject_and_maybe_fail_local -> ChangeTransactionState(FAILED).
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+
+    // Absent-after, in memory: no UTXO_BRIDGE entry at the burn outpoint.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+
+    // Absent-after, on disk: the live-incident observable was the record that
+    // survived restart ("stays on disk in READY state").
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
+
+    // No lingering reservation under the burn-ref id: a fresh claim for the
+    // same burn starts from a clean slate (kNotClaimable = unknown outpoint),
+    // so a relayer redelivery can re-mint instead of wedging.
+    EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kNotClaimable );
+}
+
+/**
+ * Idempotency (T-18-0503): the FAILED cleanup must be safe on re-fire. The
+ * consensus layer re-delivers and the state machine can see the same tx
+ * again — the handler-level guard (previously-FAILED early reject) and the
+ * state machine's FAILED->FAILED dedup must both leave the cleaned state
+ * exactly as the first fire left it: no second rollback, no error, no
+ * resurrection.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_SecondFailedTransitionIsIdempotent )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'c' ) ).value();
+    const auto mint     = MakeLocalBridgeMintV2( burn, kBurnCleanupNonceBase + 1, 10000 );
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    SeedBurnUtxoAsMintFunds( burn, 10000 );
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    {
+        const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+        ASSERT_TRUE( tracked.has_value() );
+        ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+        ASSERT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+        ASSERT_FALSE( UtxoRecordOnDisk( burn ) );
+    }
+
+    // Re-fire 1: the real consensus path again — the handler must see the
+    // previously-FAILED entry and reject WITHOUT re-entering the state machine.
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( mint ) );
+
+    // Re-fire 2: a direct second FAILED transition hits the state machine's
+    // FAILED->FAILED dedup (the layer beneath the handler guard).
+    EXPECT_TRUE( tm_->ChangeTransactionState( mint, TransactionManager::TransactionStatus::FAILED ).has_value() );
+
+    // Single-rollback end state: FAILED, entry still gone everywhere.
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, mint->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
+}
+
+/**
+ * Negative control (T-18-0502): the removal discriminates the bridge-mint
+ * shape exactly. A FAILED normal (non-mint) local transaction releases its
+ * own reserved input back to READY but removes NOTHING — and an unrelated
+ * UTXO_BRIDGE entry is untouched by either leg.
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_NormalTxFailedLeavesUtxoEntriesUntouched )
+{
+    auto &utxo_mgr = account_->GetUTXOManager();
+
+    // A real normal-tx input: seeded, owned, ready to spend.
+    const auto spendable = base::Hash256::fromReadableString( std::string( 64, 'd' ) ).value();
+    ASSERT_TRUE(
+        utxo_mgr
+            .PutUTXO( GeniusUTXO( spendable, 0, 500, kTestTokenId, account_->GetAddress() ), account_->GetAddress() )
+            .has_value() );
+    // An unrelated bridge entry that must never be touched by a normal-tx failure.
+    const auto unrelated_burn = base::Hash256::fromReadableString( std::string( 64, 'e' ) ).value();
+    ASSERT_TRUE( utxo_mgr
+                     .PutUTXO( GeniusUTXO( unrelated_burn, 0, 77, kTestTokenId, account_->GetAddress() ),
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+
+    // The TransferFunds shape: params from the seeded UTXO, signed, reserved
+    // under the transfer's hash.
+    auto params = utxo_mgr.CreateTxParameter( 100, account_->GetAddress(), kTestTokenId );
+    ASSERT_TRUE( params.has_value() );
+    auto [inputs, outputs] = params.value();
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "transfer" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( kBurnCleanupNonceBase + 2 );
+    dag.set_timestamp( static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() ) );
+    auto transfer = std::make_shared<TransferTransaction>(
+        TransferTransaction::New( inputs, outputs, std::move( dag ) ) );
+    transfer->MakeSignature( *account_ );
+    utxo_mgr.ReserveUTXOs( inputs, transfer->GetHash() );
+    ASSERT_TRUE( utxo_mgr.IsOutPointReserved( spendable, 0 ) );
+
+    ASSERT_NO_FATAL_FAILURE( RejectLocalTxThroughConsensus( transfer ) );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, transfer->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    ASSERT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+
+    // The normal tx's own input: reservation RELEASED (READY again) but the
+    // entry itself is NOT removed — release is the pre-existing normal-tx
+    // behavior; removal is mint-only.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( spendable, 0 ), UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_TRUE( UtxoRecordOnDisk( spendable ) );
+
+    // The unrelated bridge entry: untouched in memory and on disk.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( unrelated_burn, 0 ), UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_TRUE( UtxoRecordOnDisk( unrelated_burn ) );
+}
+
+/**
+ * CR-01 regression: the MintFunds catch-path rollback must run under the
+ * burn reservation id captured BEFORE the try block. The mint construction
+ * moves transaction_hash into the DAG payload, so a post-move throw used to
+ * reach the handler with an EMPTY id — and RemoveBurnUTXOs reads a mismatched
+ * holder as "held by another", silently skipping the entry: the burn UTXO
+ * stayed RESERVED forever (re-delivery rejected with already_connected while
+ * no mint was ever enqueued). The post-move exception seam makes the failure
+ * deterministic; the moved-from-empty-id failure mode fails every assertion
+ * below (the entry still present in memory and on disk).
+ */
+TEST_F( CertificateFallbackTest, BurnCleanup_MintFundsCatchPathRemovesBurnUtxoAfterPostMoveThrow )
+{
+    const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'f' ) ).value();
+    auto      &utxo_mgr = account_->GetUTXOManager();
+
+    CertificateFallbackTestAccess::ChangeState( *tm_, TransactionManager::State::READY );
+    CertificateFallbackTestAccess::SetMintFundsPostMoveExceptionHook(
+        *tm_,
+        [] { throw std::runtime_error( "CR-01 post-move seam" ); } );
+
+    // MintFunds inserts the burn UTXO and claims it under the burn ref, then
+    // the seam throws inside the try — the exact catch-path shape.
+    const auto minted = tm_->MintFunds( 10000, burn.toReadableString(), "public", kTestTokenId, "" );
+    CertificateFallbackTestAccess::SetMintFundsPostMoveExceptionHook( *tm_, nullptr );
+
+    ASSERT_TRUE( minted.has_error() );
+
+    // Absent-after, in memory: the burn entry was REMOVED, not merely skipped.
+    EXPECT_EQ( utxo_mgr.GetOutPointState( burn, 0 ), std::nullopt );
+
+    // Absent-after, on disk (the incident's restart-surviving observable).
+    EXPECT_FALSE( UtxoRecordOnDisk( burn ) );
+
+    // Re-delivery unblocked: the outpoint is unknown again (kNotClaimable =
+    // clean slate), so a relayer redelivery can re-mint instead of wedging.
+    EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
+               UTXOManager::OutpointClaim::kNotClaimable );
 }

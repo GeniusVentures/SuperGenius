@@ -78,6 +78,7 @@ set(GENIUS_NODE_SOURCES
     RevokeTransaction.cpp
     EscrowTransaction.cpp
     GeniusInputValidator.cpp
+    DevMintInputValidator.cpp
     MigrationInputValidator.cpp
     InputValidators.cpp
     PublicChainInputValidator.cpp
