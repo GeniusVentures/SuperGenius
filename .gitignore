@@ -145,3 +145,6 @@ supergenius_crdt_erase_test_guard_sender/
 supergenius_crdt_erase_test_guard_receiver/
 supergenius_crdt_erase_test_guard_blocks/
 supergenius_crdt_erase_test_guard_lru/
+
+# Test-binary RocksDB residue (created in CWD when suites run from repo root)
+supergenius_*/
