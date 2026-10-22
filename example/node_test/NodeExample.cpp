@@ -401,15 +401,43 @@ static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::
     node->PrintDataStore();
 }
 
+static std::string NextDevBurnHash()
+{
+    // Dev mints have no external burn event: synthesize a unique 64-hex-char
+    // reference so each mint claims a distinct burn outpoint. MintFunds only
+    // dedups by this reference (no burn-evidence check inside it), so an
+    // unknown unique id passes the claim gate.
+    static std::mt19937_64             rng( std::random_device{}() );
+    std::uniform_int_distribution<int> nibble( 0, 15 );
+    std::string                        hash;
+    hash.reserve( 64 );
+    for ( size_t i = 0; i < 64; ++i )
+    {
+        hash.push_back( "0123456789abcdef"[nibble( rng )] );
+    }
+    return hash;
+}
+
 static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
-    if ( !check_arg_count( args, 2, "mint <amount>" ) )
+    if ( !check_arg_count( args, 2, "mint <amount> [burn_tx_hash]" ) )
     {
         return;
     }
+    // Dev mints ride the Phase-18 net-scoped dev-mint policy: chain id "dev"
+    // routes to DevMintInputValidator (the ctest twin — no UTXO-witness build,
+    // so a fabricated burn reference passes the send gate) and goes through
+    // FULL consensus; it certifies on designated nets (staging 333 / dev 144)
+    // and validators refuse it everywhere else. Do NOT use the "supergenius"
+    // chain id here: it routes to GeniusInputValidator, which requires a
+    // witness whose producer transaction a fabricated reference can never
+    // have ("Missing producer transaction" at send time). The unique burn
+    // hash satisfies MintFunds' claim/dedup gate; pass an explicit 64-hex
+    // hash to reproduce a specific burn reference.
+    const std::string burn_tx_hash = ( args.size() >= 3 ) ? args[2] : NextDevBurnHash();
     try
     {
-        node->MintTokens( std::stoull( args[1] ), "supergenius", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node->MintTokens( std::stoull( args[1] ), burn_tx_hash, "dev", sgns::TokenID::FromBytes( { 0x00 } ) );
     }
     catch ( const std::exception &e )
     {
@@ -510,7 +538,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  listchildren [addr]      List children registered to <addr> (default: own address), with balances\n"
               << "  registerchild <addr>     Register this node as a child of <addr>\n"
               << "  ds                       Print the data store\n"
-              << "  mint <amount>            Mint tokens\n"
+              << "  mint <amount> [burn_tx_hash]  Mint tokens (unique dev burn ref by default)\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
               << "  price <token1> [tokens]  Get coin prices\n"
               << "  process                  Submit a processing job\n"

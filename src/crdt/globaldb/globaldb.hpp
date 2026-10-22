@@ -1,8 +1,11 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <functional>
 #include <mutex>
+#include <optional>
 #include <unordered_set>
+#include <utility>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
@@ -22,6 +25,8 @@
 
 namespace sgns::crdt
 {
+    class GraphsyncDAGSyncer;
+
     class GlobalDB
     {
     public:
@@ -87,6 +92,7 @@ namespace sgns::crdt
             PUBSUB_BROADCASTER_NOT_CREATED, ///< CRDT DataStore not created
             INVALID_PARAMETERS,             ///< Invalid parameters
             GLOBALDB_NOT_STARTED,           ///< Start wasn't called
+            POST_COMMIT_ERASE_ANOMALY,      ///< Erase already committed; post-commit seal re-check failed
         };
 
         /**
@@ -194,6 +200,81 @@ namespace sgns::crdt
          * @return Matching key/value pairs, or `operation_canceled` once shutdown released the store.
          */
         outcome::result<QueryResult> QueryRaw( const Buffer &key_prefix ) const;
+
+        /**
+         * @brief Generic node-local physical erase: removes, in ONE atomic
+         *        RocksDB WriteBatch, the CRDT set entries for @p key (via the
+         *        CrdtSet owner), the raw block bytes for @p cid (via the
+         *        DAGSyncer owner), and the node-local raw bookkeeping entry at
+         *        @p key itself.
+         *
+         * This is the ONLY entry to physical erasure. Guards run inside the
+         * API and reject fail-closed (Error::INVALID_PARAMETERS) BEFORE any
+         * staging: a CID that is the head of ANY topic, the root of a
+         * pending/active sync job, LRU-cached, or unresolved is not erased.
+         *
+         * Compose critical section (D-01): the ENTIRE compose -- guard
+         * evaluation, staging, the single commit, and the post-commit seal
+         * re-assert -- runs inside one owner-vended CrdtSet critical section
+         * (CrdtDatastore::MakeComposeLock), the same discipline PutElems
+         * already uses across build+commit. The former CHECK-THEN-ACT window
+         * (WR-02 -- a concurrent PutElems re-creating the erased entries
+         * between the under-lock staging and an outside-the-lock commit) is
+         * CLOSED by construction: every CrdtSet-mediated write takes the same
+         * recursive mutex, so a concurrent PutElems can never interleave
+         * between a guard check and the commit. The hold is scoped to this
+         * single per-tx compose (acquired as the first act, released after
+         * the commit and the post-commit seal re-assert) and is NEVER held
+         * across evaluations or multiple composes -- D-01 bounded holds, as
+         * documented on CrdtSet::MakeComposeLock. The seal marker of @p cid
+         * is never addressed and is re-asserted after the commit -- a
+         * vanished seal fails loudly with Error::POST_COMMIT_ERASE_ANOMALY
+         * (a COMMITTED erase -- see @return).
+         *
+         * Fires NO CRDT hooks and publishes NO tombstones: this is a local
+         * prune operation, not a CRDT-logical delete (the network-wide
+         * tombstone the CRDT delete path publishes must never fire here).
+         *
+         * @p key addresses both the CRDT element key and the raw map entry;
+         * the caller (TransactionManager::EraseTransactionEntry / the future
+         * TxPruner) builds domain keys -- this facade stays generic.
+         *
+         * @param[in] key CRDT element key == raw bookkeeping key, built by the
+         *            domain owner; never concatenated here.
+         * @param[in] cid CID whose raw block bytes are erased alongside the
+         *            entries for @p key.
+         * @param[in] extra_entry OPTIONAL caller-built key+value buffer pair
+         *            staged into the SAME batch after the raw-map removal and
+         *            before the single commit (default: none -- existing
+         *            two-arg callers are unchanged). The buffers are OPAQUE:
+         *            GlobalDB stays generic and never inspects or builds key
+         *            shapes. The value-XOR-marker atomicity contract: when
+         *            the caller stages the prune marker here, one commit
+         *            establishes "value absent AND marker present" together
+         *            -- an interrupted batch leaves BOTH sides in their
+         *            pre-erase state, never either alone.
+         * @return outcome::success on success, or outcome::failure on a guard
+         *         rejection, a staging error, or a commit error.
+         *         Error::POST_COMMIT_ERASE_ANOMALY reports a COMMITTED erase:
+         *         the batch landed, then the post-commit seal re-check
+         *         failed. For that value the data IS erased -- callers must
+         *         not treat it as "nothing was erased" (guard rejections,
+         *         Error::INVALID_PARAMETERS, erase nothing).
+         */
+        outcome::result<void> EraseEntry( const std::string                              &key,
+                                          const CID                                      &cid,
+                                          const std::optional<std::pair<Buffer, Buffer>> &extra_entry = std::nullopt );
+
+        /**
+         * @brief Test-only interruption seam for EraseEntry's compose window.
+         * @param hook invoked after each staging step (1 = after CRDT-entry
+         *        staging, 2 = after block staging, 3 = after raw-map staging);
+         *        a @c true return aborts the erase WITHOUT committing, so the
+         *        dying batch proves all-or-nothing. Pass nullptr to clear.
+         * @note No production caller may invoke this method.
+         */
+        static void SetEraseInterruptHookForTest( std::function<bool( int step )> hook );
+
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
@@ -263,6 +344,17 @@ namespace sgns::crdt
 
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
 
+        /** Read a key's per-key CRDT priority through the CRDT datastore
+        * (read-only). Contract mirrors CrdtDatastore::GetPriority /
+        * CrdtSet::GetPriority: returns the stored priority minus 1, and a key
+        * with NO priority record reads as success with value 0 (the NOT_FOUND
+        * case is tolerated) -- 0 never implies existence; callers must
+        * establish key existence separately.
+        * @param key key string
+        * @return priority of the key or outcome::failure on error
+        */
+        outcome::result<uint64_t> GetKeyPriority( const std::string &key ) const;
+
         outcome::result<uint64_t> GetCRDTHeadHeight( const CID &aCid, const std::string &topic );
         outcome::result<void>     CRDTHeadRemove( const CID &aCid, const std::string &topic );
         outcome::result<void>     CRDTHeadAdd( const CID &aCid, const std::string &topic, uint64_t priority );
@@ -285,6 +377,30 @@ namespace sgns::crdt
 
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
+
+        /** Enumerate the keys a delta block carries -- elements AND
+        * tombstones -- keys-only, through the CRDT datastore (read-only,
+        * parse-at-call-time, strictly local: never fetches from the network,
+        * unknown CID fails). Elements-only precedent GetLocalDeltaKeyValues
+        * is left untouched.
+        * @param cid_string CID string of the delta block
+        * @return carried keys (element keys then tombstone keys) or outcome::failure
+        */
+        outcome::result<std::vector<std::string>> GetLocalDeltaKeys( const std::string &cid_string ) const;
+
+        /** Byte-level local block presence (read-only): true iff raw block
+        * BYTES exist for @p cid_string in the block store, with NO parse
+        * attempted. Unlike the parse-based read paths (and HasBlock), a
+        * PRESENT-but-corrupt block answers TRUE here -- the erase-side block
+        * gate uses this to tell an ABSENT block (already erased --
+        * erase-completing evidence) from a corrupt one (fail closed).
+        * Delegates to GraphsyncDAGSyncer::HasRawBlockBytes.
+        * @param cid_string CID string of the delta block
+        * @return true when bytes exist; false when absent; failure on a
+        *         malformed CID string, an uninitialized DAG syncer, or a
+        *         store read error (callers fail closed on error)
+        */
+        outcome::result<bool> HasLocalBlock( const std::string &cid_string ) const;
 
     private:
         /**
@@ -323,6 +439,10 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>  m_pubsub;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
+        /// Concrete DAGSyncer (never the base interface) so EraseEntry can
+        /// stage through GraphsyncDAGSyncer::StageBlockRemoval -- test doubles
+        /// keep their own implementations untouched.
+        std::shared_ptr<GraphsyncDAGSyncer>               m_dagSyncer = nullptr;
         std::atomic_bool                                  started_;
         bool                                              cid_sync_started_;
         bool                                              cid_receiving_started_;
@@ -342,6 +462,10 @@ namespace sgns::crdt
         //std::shared_ptr<libp2p::protocol::HolepunchClientMsgProc> holepunchmsgproc_;
 
         int obsAddrRetries = 0;
+
+        /// Test-only EraseEntry interruption hook; see
+        /// SetEraseInterruptHookForTest. Inert (nullptr) in production.
+        static std::function<bool( int step )> erase_interrupt_hook_for_test_;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
         mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.

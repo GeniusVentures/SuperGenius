@@ -4,6 +4,8 @@ addtest(crdt_test
     crdt_heads_test.cpp
     crdt_datastore_test.cpp
     crdt_atomic_transaction_test.cpp
+    crdt_erase_test.cpp
+    crdt_priority_delta_keys_test.cpp
     crdt_custom_broadcaster.cpp
     crdt_mirror_broadcaster.cpp
     crdt_custom_dagsyncer.cpp
@@ -16,10 +18,14 @@ include_directories(
 target_link_libraries(crdt_test
     crdt_datastore
     crdt_globaldb_proto
+    # crdt_priority_delta_keys_test.cpp exercises the GlobalDB facade on a
+    # real store; the GlobalDB symbols live only in crdt_globaldb.
+    crdt_globaldb
     rocksdb
     database_error
     ipfs-lite-cpp::cid
     ipfs-lite-cpp::ipfs_datastore_in_memory
+    ipfs-lite-cpp::ipfs_datastore_rocksdb
     ipfs-lite-cpp::blake2
     p2p::p2p_cid
     p2p::p2p_multihash
@@ -33,8 +39,17 @@ if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
+# Source root scanned at runtime by EraseSurfaceGateTest (crdt_erase_test.cpp):
+# the repo's production src/ tree. PROJECT_ROOT is the repo root set by
+# build/CommonCompilerOptions.cmake; CMAKE_SOURCE_DIR is NOT used because this
+# repo drives CMake from build/<platform>/ (an out-of-root driver directory).
+target_compile_definitions(crdt_test PRIVATE
+    SUPERGNUS_ERASE_GATE_SRC="${PROJECT_ROOT}/src"
+)
+
 addtest(globaldb_integration_test
     globaldb_integration.cpp
+    globaldb_erase_test.cpp
 )
 
 

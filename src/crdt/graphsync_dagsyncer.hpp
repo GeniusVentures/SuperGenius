@@ -9,6 +9,8 @@
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 
+#include <storage/buffer_map_types.hpp>
+
 #include "crdt/dagsyncer.hpp"
 #include "base/logger.hpp"
 
@@ -97,6 +99,45 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode( const CID &cid ) const override;
 
         outcome::result<void> removeNode( const CID &cid ) override;
+
+        /** Stages the removal of a block's raw storage key into the
+        * caller-owned batch. The staged key is exactly CID::toBytes() -- the
+        * block-bytes key of the vendored RocksdbDatastore (its encode() at
+        * thirdparty/ipfs-lite-cpp/ipfs_lite/ipfs/impl/datastore_rocksdb.cpp:14-18);
+        * this method is the ONE SuperGNUS-side home of that key format.
+        *
+        * The seal marker (the vendored seal(), datastore_rocksdb.cpp:48-56) is
+        * a DIFFERENT key and is deliberately never constructed here: it is the
+        * traversal terminator that prevents re-fetch storms on the single DAG
+        * worker, so erasing a block must never erase its seal.
+        *
+        * The immediate node-removal override directly above stays dormant
+        * (zero production callers) because its chain executes its own
+        * standalone db->Delete and cannot join an external WriteBatch;
+        * staging into the caller's batch is what makes the atomic one-commit
+        * erase of PRUNE-02 possible. The caller (the GlobalDB compose) owns
+        * the single commit.
+        * @param cid CID whose block bytes are staged for removal
+        * @param aBatch caller-owned batch to stage the remove into; never
+        * committed by this function
+        * @return outcome::success on success or outcome::failure otherwise
+        */
+        outcome::result<void> StageBlockRemoval( const CID &cid, const std::unique_ptr<storage::BufferBatch> &aBatch );
+
+        /** Byte-level block presence: true iff raw block BYTES exist for
+        * @p cid in the block store, with NO parse attempted. This is the
+        * discriminator HasBlock cannot provide (HasBlock = parse success of
+        * the node OR an LRU hit, so a PRESENT-but-corrupt block answers
+        * false there); the erase-side block gate uses it to tell an ABSENT
+        * block (erased -- erase-completing evidence) from a corrupt one
+        * (fail closed). Consults the same CID::toBytes() keying as
+        * StageBlockRemoval (the one block-key home) through the vendored
+        * RocksdbDatastore::contains.
+        * @param cid CID whose raw block bytes are probed
+        * @return true when bytes exist; false when absent; failure only on
+        *         a store read error (fail closed at the caller)
+        */
+        outcome::result<bool> HasRawBlockBytes( const CID &cid ) const;
 
         outcome::result<size_t> select(
             gsl::span<const uint8_t>                                                     root_cid,
@@ -209,6 +250,10 @@ namespace sgns::crdt
         std::vector<CID> unexpected_blocks;
 
         mutable std::mutex                                                dagMutex_;
+        /// The block-bytes store the DAG service was built on (kept for the
+        /// raw byte-presence probe HasRawBlockBytes; same instance as the
+        /// service's).
+        std::shared_ptr<IpfsDatastore>                                    block_datastore_;
         std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl> dagService_;
         // ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
         std::shared_ptr<Graphsync> graphsync_;

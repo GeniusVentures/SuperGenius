@@ -332,6 +332,20 @@ namespace sgns
             return state_m;
         }
 
+        /**
+         * @brief Tick-gate input (D-C2): whether any monitored-network
+         *        transaction hash is still missing locally.
+         * @details True iff the missing set is non-empty — a prune cycle
+         *          refuses to run while history is still catching up. Reads
+         *          emptiness only (no copy of the set).
+         * @return true when at least one tx hash is missing.
+         */
+        bool HasMissingTxHashes() const
+        {
+            std::lock_guard lock( missing_tx_mutex_ );
+            return !missing_tx_hashes_.empty();
+        }
+
         TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
@@ -423,6 +437,9 @@ namespace sgns
         friend class MultiNodeFinalityFaultTestAccess;
         friend class MultiAccountTestAccess;
         friend class TransactionConsensusHandler;
+        /// Same-module production collaborator (17-04): reads the monitored-network
+        /// list and resolves spender tx->CID entries for the read-only evaluator.
+        friend class PruneEligibility;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -520,6 +537,21 @@ namespace sgns
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
+
+        /**
+         * @brief Resolves the previous hash for @p nonce from the canonical
+         *        slot certificate at /cert/<addr>:<nonce-1> (GATE-04).
+         *
+         * The certificate is the single authority for the predecessor hash
+         * when tracked/persisted state cannot answer -- a frontier
+         * transaction's value may be pruned, a certificate never is -- with
+         * binding discipline identical to CertificateMatchesTransaction: the
+         * subject must decode, the embedded transaction case must be set, the
+         * certified nonce must equal nonce-1, and the subject account must be
+         * the node's own address. Any certified embedded transaction type
+         * resolves (not only registrations). Fails closed to an empty string
+         * on any failed check.
+         */
         std::string              GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
@@ -727,12 +759,25 @@ namespace sgns
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 
-        std::mutex                      missing_tx_mutex_;
+        mutable std::mutex              missing_tx_mutex_;
         std::unordered_set<std::string> missing_tx_hashes_;
+        /// Per-hash recovery attempt counts (GATE-05 bounded recovery).
+        std::unordered_map<std::string, uint8_t> missing_tx_attempts_;
+        /// Process-wide test override for the recovery attempt cap (GATE-05).
+        static std::atomic<uint8_t> missing_tx_max_attempts_for_test_;
 
         std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
         static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
+        /// GATE-05: bounded recovery — hashes still missing after this many
+        /// request rounds are dropped (WARN) so boot and the prune tick cannot
+        /// wedge on an unresolvable creating transaction.
+        static constexpr uint8_t k_init_tx_request_max_attempts{ 12 };
+
+        /// Test-only override for the recovery attempt cap (0 = drop on the
+        /// first recovery round). No production caller may invoke this.
+        static void    SetMissingTxMaxAttemptsForTest( uint8_t max_attempts );
+        static uint8_t GetMissingTxMaxAttemptsForTest();
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
@@ -848,6 +893,22 @@ namespace sgns
          */
         outcome::result<void> StoreTransactionCID( const std::string &key, const std::string &cid );
 
+        /**
+         * @brief Resolves a transaction hash to its {tx->CID map key, CID}
+         *        pair, searching every monitored network and returning the
+         *        key the entry was actually found under.
+         *
+         * The key and the CID are resolved TOGETHER so callers address
+         * exactly the entry that was matched -- resolving a CID from one
+         * network while building the key from the local network would pair
+         * mismatched keys on the erase path.
+         * @param[in] tx_hash hash of the transaction to resolve.
+         * @return {path, cid_string} on success, or outcome::failure when no
+         *         monitored network holds the hash.
+         */
+        outcome::result<std::pair<std::string, std::string>> ResolveTransactionPathAndCID(
+            const std::string &tx_hash ) const;
+
         void ProcessDeletion( std::string deleted_key );
         void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
@@ -874,6 +935,73 @@ namespace sgns
          *        searching across all monitored networks.
          */
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
+
+        /**
+         * @brief Prune-side tracked-map cleanup: erases the tx_processed_m entry
+         *        for @p tx_key WITHOUT reverting anything.
+         *
+         * Deliberately revert-free. Reverting the transaction or rolling back the
+         * peer-confirmed nonce would undo the genuine spends that made the
+         * transaction prunable, and CRDT-deleting the key would publish the
+         * network-wide tombstone forbidden for a local prune -- neither may
+         * happen on the physical-erase path. A missing entry is a legitimate
+         * no-op (returns success; sweep-style callers re-run this). The CRDT
+         * delete-hook path (ProcessDeletion ->
+         * RemoveTransactionFromProcessedMaps) remains the owner of
+         * CRDT-logical deletion; this method only drops the local bookkeeping
+         * entry.
+         *
+         * @param[in] tx_key  tracked-map key to erase.
+         * @return outcome::success whether or not the key was present.
+         */
+        outcome::result<void> RemoveProcessedTransactionEntry( const std::string &tx_key );
+
+        /**
+         * @brief Deletion lifecycle driver for the tx->CID map (D-C4):
+         *        physically erases a spent transaction's CRDT entries, raw
+         *        block bytes, and map entry in ONE atomic WriteBatch, then
+         *        drops the local tracked-map entry revert-free.
+         *
+         * Resolves the CID and the tx->CID map key it was found under
+         * TOGETHER, across all monitored networks (an untracked transaction
+         * fails -- it has no physical footprint to erase through this
+         * lifecycle), so the erase and the tracked-map cleanup always
+         * address the entry's own network path; then delegates to
+         * GlobalDB::EraseEntry, whose in-API guards reject any in-use CID
+         * fail-closed before staging.
+         * Never publishes tombstones (D-C2): this is a local prune, and
+         * reverting the transaction or rolling back the peer nonce would
+         * undo the genuine spends that made the transaction prunable.
+         * The production caller is the future TxPruner (Phase 18); Phase 16
+         * ships this unwired.
+         *
+         * @param[in] tx_hash hash of the transaction to erase.
+         * @return outcome::success on success, or outcome::failure when the
+         *         CID cannot be resolved, a guard rejects the erase, or the
+         *         atomic commit fails.
+         */
+        outcome::result<void> EraseTransactionEntry( const std::string &tx_hash );
+
+        /**
+         * @brief Production pruned-erase driver: EraseTransactionEntry plus
+         *        the /prune/tx/&lt;hash&gt; marker.
+         * @details Identical resolve→erase→cleanup sequence as
+         *          EraseTransactionEntry (ONE shared private helper — zero
+         *          forked path/CID resolution), differing only in staging
+         *          the PruneEligibility::BuildPruneMarkerEntry pair — built
+         *          from the RESOLVED path inside the shared helper (WR-02) —
+         *          into the same atomic WriteBatch, so the completed
+         *          erase answers PRUNED through the tri-state lookup (value
+         *          XOR marker, one commit). The TxPruner (Phase 18) is the
+         *          intended caller; block staging on an already-absent
+         *          block key is an idempotent no-op, so no special-casing
+         *          for BLOCK_ALREADY_ERASED verdicts.
+         * @param[in] tx_hash hash of the transaction to erase and mark.
+         * @return outcome::success on success, or outcome::failure under
+         *         the same conditions as EraseTransactionEntry.
+         */
+        outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash );
+
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
@@ -950,9 +1078,32 @@ namespace sgns
 
         void SetBridgeExecutedMarkerWriteFailureForTest( bool fail );
         void SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook );
+        void SetMintFundsPostMoveExceptionHookForTest( std::function<void()> hook );
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
+
+        /**
+         * @brief The ONE resolve→erase→cleanup sequence behind both erase
+         *        drivers (EraseTransactionEntry / EraseTransactionEntryPruned).
+         * @details Resolves the tx path and CID together, erases through
+         *          GlobalDB::EraseEntry (staging @p extra_entry into the
+         *          same WriteBatch when present — the pruned driver passes
+         *          the marker pair, the plain driver passes none), then
+         *          performs the revert-free tracked-map cleanup.
+         * @param[in] tx_hash hash of the transaction to erase.
+         * @param[in] stage_pruned_marker when true, the prune marker pair is
+         *            built AFTER resolution by its one home
+         *            (PruneEligibility::BuildPruneMarkerEntry) from the SAME
+         *            resolved path the erase targets, and staged into the
+         *            WriteBatch — the persisted record then names the path
+         *            that was actually erased, whatever monitored network it
+         *            lives under (WR-02).
+         * @return outcome::success on success, or outcome::failure when the
+         *         CID cannot be resolved, a guard rejects the erase, or the
+         *         atomic commit fails.
+         */
+        outcome::result<void> EraseTransactionEntryWithMarker( const std::string &tx_hash, bool stage_pruned_marker );
 
         /**
          * @brief Derives the escrow chain id for a private-network job scope.
@@ -982,6 +1133,7 @@ namespace sgns
 
         bool                  fail_bridge_executed_marker_write_for_test_ = false;
         std::function<void()> fetch_and_process_before_state_change_hook_for_test_;
+        std::function<void()> mint_funds_post_move_exception_hook_for_test_;
 
         struct FinalityFaultBarrier
         {

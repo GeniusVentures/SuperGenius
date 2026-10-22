@@ -53,6 +53,21 @@ namespace sgns
             manager.TickOnce();
         }
 
+        static void RunInitializeUTXOs( TransactionManager &manager )
+        {
+            manager.InitializeUTXOs();
+        }
+
+        static void RunInitTransactions( TransactionManager &manager )
+        {
+            manager.InitTransactions();
+        }
+
+        static void SetMissingTxMaxAttempts( uint8_t max_attempts )
+        {
+            TransactionManager::SetMissingTxMaxAttemptsForTest( max_attempts );
+        }
+
         static outcome::result<void> ChangeTransactionState( TransactionManager                       &manager,
                                                              const std::shared_ptr<GeniusTransaction> &transaction,
                                                              TransactionManager::TransactionStatus     status )
@@ -945,4 +960,42 @@ TEST_F( TransactionManagerPreviousHashTest, EscrowChainIdDefaultAndScopedOverrid
     // Public-node equivalence: the PUBLIC ScopedChainId value equals the TransactionManager
     // genius chain id, so an empty-scope HoldEscrow keeps routing unchanged.
     EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" ), "supergenius" );
+}
+
+// GATE-05 live incident (2026-10-20/22): a READY UTXO whose creating
+// transaction never existed (a fabricated burn reference leaked before the
+// 18-05 fix) used to wedge the TransactionManager in INITIALIZING forever —
+// InitTransactions unconditionally returned below a TODO comment, never
+// requesting the missing tx and never transitioning. Bounded recovery must
+// reach READY and drop the unresolvable hash so neither boot nor the prune
+// tick (HasMissingTxHashes gate) stays wedged.
+TEST_F( TransactionManagerRecoveryTest, MissingCreatingTxDoesNotWedgeBoot )
+{
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetMissingTxMaxAttempts( 0 );
+
+    const auto fake_hash_result = sgns::base::Hash256::fromReadableString( std::string( 64, 'a' ) );
+    ASSERT_TRUE( fake_hash_result.has_value() );
+    const auto fake_tx_hash = fake_hash_result.value();
+
+    ASSERT_TRUE( account_->GetUTXOManager()
+                     .PutUTXO( sgns::GeniusUTXO( fake_tx_hash, 0, 30000, kTokenId, account_->GetAddress() ) )
+                     .has_value() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
+                                                                     sgns::TransactionManager::State::INITIALIZING );
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *manager_ );
+    EXPECT_TRUE( manager_->HasMissingTxHashes() );
+
+    // This fixture has no messenger, so CheckNonce cannot pass here — the
+    // READY transition is the fixture's own SetUp idiom (direct ChangeState).
+    // The GATE-05 property under test is the wedge fix itself: the recovery
+    // path below the former dead return now runs and DROPS the unresolvable
+    // hash, so neither boot nor the HasMissingTxHashes-gated prune tick can
+    // stay wedged. (Live READY acceptance: the operator's previously-wedged
+    // staging node boots with this fix — 18-HUMAN-UAT item 1.)
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunInitTransactions( *manager_ );
+
+    EXPECT_FALSE( manager_->HasMissingTxHashes() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetMissingTxMaxAttempts( 12 );
 }

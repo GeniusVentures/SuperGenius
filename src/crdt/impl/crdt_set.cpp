@@ -666,6 +666,85 @@ namespace sgns::crdt
         return true;
     }
 
+    outcome::result<void> CrdtSet::StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                      const std::string                           &aKey )
+    {
+        if ( aDataStore == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        if ( this->dataStore_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // An empty key would degenerate the scans below to the whole
+        // elems/tombs namespaces (every element and tombstone entry in the
+        // set), so it is rejected before any staging.
+        if ( aKey.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::lock_guard lg( this->mutex_ );
+
+        // Stage removes for every stored entry of the two per-id families. The
+        // scans carry the trailing '/' so a sibling key whose name merely starts
+        // with aKey (e.g. "key" vs "key2") is never matched, and each staged id
+        // must be TOP-LEVEL for aKey (no '/' in it): a hierarchical descendant
+        // key ("a/b" under erased key "a") matches the raw prefix but owns its
+        // own value/priority records, so sweeping its elems/tombs here would be
+        // an asymmetric partial erase. Same IsTopLevel discipline as
+        // CreateDeltaToRemove and InElemsNotTombstoned. Stage-then-commit of the
+        // caller's batch removes the staged entries.
+        const auto elemsScanPrefix = this->ElemsPrefix( aKey ).GetKey() + "/";
+        const auto tombsScanPrefix = this->TombsPrefix( aKey ).GetKey() + "/";
+        for ( const auto &scanPrefix : { elemsScanPrefix, tombsScanPrefix } )
+        {
+            Buffer prefixBuffer;
+            prefixBuffer.put( scanPrefix );
+
+            BOOST_OUTCOME_TRY( auto queryResult, this->dataStore_->query( prefixBuffer ) );
+            for ( const auto &entry : queryResult )
+            {
+                std::string id( entry.first.toString().substr( scanPrefix.size() ) );
+                if ( !HierarchicalKey( id ).IsTopLevel() )
+                {
+                    // Entry belongs to a descendant key of aKey, not aKey.
+                    CRDTSet()->debug( "StageEraseElement skipping descendant-key entry '{}'", entry.first.toString() );
+                    continue;
+                }
+                BOOST_OUTCOME_TRY( aDataStore->remove( entry.first ) );
+            }
+        }
+
+        // The two single-record families are staged unconditionally: removing an
+        // absent key is a harmless staged no-op, while skipping a present one
+        // would leave an asymmetric partial erase (listed anti-pattern -- it
+        // skews add-wins resolution on re-delivery).
+        Buffer valueKeyBuffer;
+        valueKeyBuffer.put( this->ValueKey( aKey ).GetKey() );
+        BOOST_OUTCOME_TRY( aDataStore->remove( valueKeyBuffer ) );
+
+        Buffer priorityKeyBuffer;
+        priorityKeyBuffer.put( this->PriorityKey( aKey ).GetKey() );
+        BOOST_OUTCOME_TRY( aDataStore->remove( priorityKeyBuffer ) );
+
+        // Deliberately no commit here: the caller owns the single commit of the
+        // batch this function staged into (see the header contract).
+        return outcome::success();
+    }
+
+    std::unique_lock<std::recursive_mutex> CrdtSet::MakeComposeLock()
+    {
+        // The vend: an owning guard on the private recursive mutex. The lock
+        // is taken HERE, so the caller's guard checks, staging steps, and
+        // commit all serialize against every other CrdtSet-mediated write
+        // (PutElems holds the same mutex across build+commit).
+        return std::unique_lock<std::recursive_mutex>( this->mutex_ );
+    }
+
     outcome::result<void> CrdtSet::PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority )
     {
         if ( aElems.empty() )

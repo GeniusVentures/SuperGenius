@@ -91,6 +91,9 @@ The light-node pruning requirements below remain active on the v1.2 execution br
 - [ ] tx→CID bookkeeping maps pruned transactions to their raw ipfs-lite CID blocks so both storage levels are reclaimed
 - [ ] Full and archive nodes retain complete history (no pruning) and remain the sync/audit source
 - [ ] A pruned light node remains fully operational — restart, new-tip sync, spend/receive, and its unspent UTXO set intact
+
+**v1.2 Phase 16 complete (2026-10-16):** the two-level erasure substrate exists and is proven — `CrdtSet::StageEraseElement` (four key families, no hooks, no commit), `GraphsyncDAGSyncer::StageBlockRemoval` (CID-bytes-only staging; the dormant `removeNode` chain stays untouched), and the single-entry `GlobalDB::EraseEntry` (four fail-closed in-use guards, three owner stagings, ONE sync commit, post-commit seal re-assert), plus the map deletion lifecycle (`EraseTransactionEntry`, network-consistent path+CID resolution). Zero production callers — the TxPruner (Phase 18) is the first wiring. Verified: 17/17 must-haves, review cycle fixed (1 critical + 3 warnings), format/tidy canonical on changed lines, full suite green.
+
 - ✓ Standalone `multisig` signature verification and runtime N-of-M quorum evaluation, exercised without a running node or network transport (MSIG-01, MSIG-02, MSIG-03) — **Validated in Phase 8; completion metadata reconciled from Phase 13 evidence**
 - ✓ `ISignedCRDTData` and the static policy registry reject unsigned/under-signed registered writes and transport proposals/approvals over existing CRDT puts and callbacks only (SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04) — **Validated in Phases 9 and 13**
 - ✓ `TrustedPeerRegistry` uses SecureCRDT, starts from an authenticated reviewed genesis manifest, and authorizes membership successors from the current confirmed policy (TPR-01, TPR-02, TPR-03) — **Validated in Phases 10 and 13**
@@ -198,6 +201,7 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 *Last updated: 2026-10-19 after v1.3 milestone start (security remediation & network readiness — all 25 assessment findings; v1.2 continues on its execution branch)*
+*Last updated: 2026-10-16 — Phase 16 (erasure primitives & bookkeeping hardening) complete on the v1.2 branch*
 *Last updated: 2026-10-15 after v1.2 milestone start (light-node transaction pruning — sliding-window disk reclamation)*
 *Last updated: 2026-10-05 after v1.1 milestone (shipped with recorded gaps; REQUIREMENTS archived; next milestone not yet planned)*
 *Last updated: 2026-10-02 — Phase 15 (private-network binding) complete: 17/18 plans (15-04 descoped into 15-13), verification cycle 5 passed 11/11, UAT-1 closed by automated E2E (15-18)*

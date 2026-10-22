@@ -48,6 +48,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "Invalid parameters provided";
         case ProofError::GLOBALDB_NOT_STARTED:
             return "Start method wasn't called";
+        case ProofError::POST_COMMIT_ERASE_ANOMALY:
+            return "Erase committed, but the post-commit seal re-check failed (data was erased)";
     }
     return "Unknown error";
 }
@@ -342,6 +344,7 @@ namespace sgns::crdt
                                                           generator,
                                                           m_pubsub->GetAsioContext() );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
+        m_dagSyncer    = dagSyncer;
 
         // Start DagSyner listener
         auto startResult = dagSyncer->StartSync();
@@ -784,6 +787,127 @@ namespace sgns::crdt
         return datastore->query( key_prefix );
     }
 
+    std::function<bool( int )> GlobalDB::erase_interrupt_hook_for_test_ = nullptr;
+
+    void GlobalDB::SetEraseInterruptHookForTest( std::function<bool( int step )> hook )
+    {
+        erase_interrupt_hook_for_test_ = std::move( hook );
+    }
+
+    outcome::result<void> GlobalDB::EraseEntry( const std::string                              &key,
+                                                const CID                                      &cid,
+                                                const std::optional<std::pair<Buffer, Buffer>> &extra_entry )
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        auto datastore      = ActiveDataStore();
+        if ( !crdt_datastore || !datastore || !m_dagSyncer )
+        {
+            m_logger->error( "{}: GlobalDB not started", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        // D-01: the owner-vended compose critical section, acquired as the
+        // compose's FIRST act and held across guard evaluation, staging,
+        // the single commit, and the post-commit seal re-assert -- the
+        // PutElems discipline (crdt_set.cpp holds mutex_ across
+        // build+commit). StageEraseElement's internal lock is reentrant
+        // under this hold. Scoped to this one per-tx compose only; never
+        // held across evaluations or multiple composes (bounded holds).
+        auto compose_lock = crdt_datastore->MakeComposeLock();
+        if ( !compose_lock.owns_lock() )
+        {
+            m_logger->error( "{}: CRDT set not initialized, refusing erase", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        // Guards (fail-closed, before any staging): a CID that is in use
+        // anywhere in the live DAG machinery is not erased. Guard
+        // evaluation runs INSIDE the compose critical section, so a
+        // concurrent PutElems cannot interleave between these checks and
+        // the commit (WR-02 closed by construction; see the header
+        // contract).
+        // (1) Head guard: scan the heads of EVERY topic -- a single-topic
+        //     check would miss the cid being another topic's head.
+        BOOST_OUTCOME_TRY( auto head_list, GetCRDTHeadList() );
+        for ( const auto &[topic, topic_heads] : head_list.first )
+        {
+            if ( topic_heads.count( cid ) > 0 )
+            {
+                m_logger->error( "{}: cid {} is the head of topic {}, refusing erase",
+                                 __func__,
+                                 cid.toString().value(),
+                                 topic );
+                return outcome::failure( Error::INVALID_PARAMETERS );
+            }
+        }
+        // (2) Pending/active root sync job on this CID.
+        if ( crdt_datastore->IsRootCIDPendingOrActive( cid ) )
+        {
+            m_logger->error( "{}: cid {} has a pending or active root job, refusing erase",
+                             __func__,
+                             cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // (3) LRU-cached block.
+        if ( m_dagSyncer->IsCIDInCache( cid ) )
+        {
+            m_logger->error( "{}: cid {} is in the block cache, refusing erase", __func__, cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // (4) The seal marker must exist before erasing (unresolved CID means
+        //     nothing certifies this node ever completed the block).
+        BOOST_OUTCOME_TRY( auto resolved, m_dagSyncer->isResolved( cid ) );
+        if ( !resolved )
+        {
+            m_logger->error( "{}: cid {} is unresolved, refusing erase", __func__, cid.toString().value() );
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+
+        // Compose: one batch, three owner stagings, one commit. Key-layout
+        // knowledge stays in the owners -- this facade only composes.
+        auto batch = datastore->batch();
+        BOOST_OUTCOME_TRY( crdt_datastore->StageEraseElement( batch, key ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 1 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        BOOST_OUTCOME_TRY( m_dagSyncer->StageBlockRemoval( cid, batch ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 2 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        BOOST_OUTCOME_TRY( batch->remove( Buffer{}.put( key ) ) );
+        if ( erase_interrupt_hook_for_test_ && erase_interrupt_hook_for_test_( 3 ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        // The caller-built extra entry (D-C1: the /prune/tx/<hash> marker)
+        // joins the SAME batch after the raw-map removal, before the single
+        // commit -- value XOR marker is established atomically. The buffers
+        // are opaque; key shapes stay with the caller (Phase-16 D-01).
+        if ( extra_entry.has_value() )
+        {
+            BOOST_OUTCOME_TRY( batch->put( extra_entry->first, extra_entry->second ) );
+        }
+        BOOST_OUTCOME_TRY( batch->commit() );
+
+        // The seal marker is never staged for removal above; if it is gone
+        // now, something erased it out-of-band -- fail loudly with a
+        // DISTINCT error: unlike the pre-staging guard rejections
+        // (Error::INVALID_PARAMETERS -- nothing erased), the commit has
+        // ALREADY landed here, so callers can tell "erased, then anomaly"
+        // apart from "nothing erased".
+        BOOST_OUTCOME_TRY( auto still_resolved, m_dagSyncer->isResolved( cid ) );
+        if ( !still_resolved )
+        {
+            m_logger->error( "{}: seal marker vanished after erase - seal-addressing bug (erase already committed)",
+                             __func__ );
+            return outcome::failure( Error::POST_COMMIT_ERASE_ANOMALY );
+        }
+
+        return outcome::success();
+    }
+
     std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const
     {
         auto crdt_datastore = ActiveCRDTDataStore();
@@ -798,6 +922,16 @@ namespace sgns::crdt
             return outcome::failure( std::errc::operation_canceled );
         }
         return crdt_datastore->GetHeadList();
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetKeyPriority( const std::string &key ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return crdt_datastore->GetPriority( key );
     }
 
     outcome::result<uint64_t> GlobalDB::GetCRDTHeadHeight( const CID &aCid, const std::string &topic )
@@ -903,4 +1037,25 @@ namespace sgns::crdt
         return crdt_datastore->GetLocalDeltaKeyValues( cid_string );
     }
 
+    outcome::result<std::vector<std::string>> GlobalDB::GetLocalDeltaKeys( const std::string &cid_string ) const
+    {
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return crdt_datastore->GetLocalDeltaKeys( cid_string );
+    }
+
+    outcome::result<bool> GlobalDB::HasLocalBlock( const std::string &cid_string ) const
+    {
+        if ( !m_dagSyncer )
+        {
+            m_logger->error( "{}: DAG syncer not initialized", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+        return m_dagSyncer->HasRawBlockBytes( cid );
+    }
 }
