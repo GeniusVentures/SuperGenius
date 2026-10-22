@@ -984,8 +984,11 @@ namespace sgns::crdt
         const std::set<std::string>    pruned_set  = { "transaction/TxPruner.cpp", "transaction/TxPruner.hpp" };
         const std::set<std::string>    tm_set      = { "transaction/TransactionManager.cpp",
                                                        "transaction/TransactionManager.hpp" };
+        // WR-02 (review fix b0fad55b6) moved marker construction into
+        // TransactionManager::EraseTransactionEntryWithMarker; PruneEligibility
+        // no longer references EraseEntry, so the sanctioned compose set is
+        // the 3 files below (was 4 with PruneEligibility.hpp).
         const std::set<std::string>    compose_set = { "transaction/PruneEligibility.cpp",
-                                                       "transaction/PruneEligibility.hpp",
                                                        "transaction/TransactionManager.cpp",
                                                        "transaction/TransactionManager.hpp" };
 
