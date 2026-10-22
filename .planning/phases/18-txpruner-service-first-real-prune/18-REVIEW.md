@@ -36,7 +36,12 @@ findings:
   warning: 3
   info: 5
   total: 9
-status: issues_found
+  fixed: 4
+  skipped: 0
+fixed_at: 2026-10-21T23:45:40Z
+fix_scope: critical_warning
+fix_report: 18-REVIEW-FIX.md
+status: fixed
 ---
 
 # Phase 18: Code Review Report
@@ -44,7 +49,7 @@ status: issues_found
 **Reviewed:** 2026-10-21T23:09:00Z
 **Depth:** standard (diff base `706a142ad^`, cross-referenced into surrounding full-file context and callee implementations)
 **Files Reviewed:** 28
-**Status:** issues_found
+**Status:** fixed — all 4 critical/warning findings fixed (5 Info items out of fix scope; evidence in 18-REVIEW-FIX.md)
 
 ## Summary
 
@@ -59,6 +64,7 @@ Verification notes: no build, clang-format, or clang-tidy run was performed in t
 ### CR-01: Use-after-move of `transaction_hash` makes the MintFunds catch-path rollback a silent no-op (and blocks re-delivery permanently)
 
 **File:** `src/transaction/TransactionManager.cpp:1045` (the move) and `:1058` (the moved-from use)
+**Status:** FIXED (commit 08421f54a) — reservation id captured as `burn_reservation_id` before the try; catch path rolls back under it; regression `BurnCleanup_MintFundsCatchPathRemovesBurnUtxoAfterPostMoveThrow` drives the post-move throw and passes. Logic fix: requires human verification per fix protocol (see 18-REVIEW-FIX.md).
 **Issue:** Inside the `try`, the hash is moved out:
 
 ```cpp
@@ -103,6 +109,7 @@ catch ( const std::exception &e )
 ### WR-01: `RemoveBurnUTXOs` rollback swallows repair-store failures silently — disk/memory divergence with no log
 
 **File:** `src/account/UTXOManager.cpp:745-748`
+**Status:** FIXED (commit 4bda1178a) — each failed repair store is logged at ERROR with the owner and the error value; the rollback path's no-throw contract is unchanged. (The pre-existing sibling at UTXOManager.cpp:357-360 in the consume-rollback path was left untouched — out of this phase's diff and this finding's scope.)
 **Issue:** When a per-owner `StoreUTXOsLocked` fails mid-loop, memory is restored from the entry-time copies and already-stored owners are "repaired":
 
 ```cpp
@@ -130,12 +137,14 @@ for ( const auto &repaired : stored_so_far )
 ### WR-02: Prune marker record names the local-network path even when the erase resolves under a different monitored network
 
 **File:** `src/transaction/PruneEligibility.cpp:243` (`BuildPruneMarkerEntry`), consumed at `src/transaction/TransactionManager.cpp:4337` (`EraseTransactionEntryPruned`)
+**Status:** FIXED (commit b0fad55b6) — `BuildPruneMarkerEntry(tx_hash, resolved_tx_path)` now names the caller-resolved path; marker construction moved INTO `EraseTransactionEntryWithMarker` (single resolution, no pre/post-resolution divergence window); cross-network driver test `PrunedEraseDriver_MarksTheResolvedCrossNetworkPath` and unit test `PruneMarker_CrossNetworkRecordCarriesResolvedPath` pass.
 **Issue:** `EraseTransactionEntryWithMarker` deliberately resolves the entry under ANY monitored network — its own comment (TransactionManager.cpp:4298-4305) stresses that "the map spans every monitored network, so the entry can live under a non-local network's path", and the erase correctly uses `path_and_cid.first`. But the marker is built beforehand from `tx_hash` alone: `BuildPruneMarkerEntry` calls `TransactionManager::GetTransactionPath( tx_hash )`, whose single-arg overload uses `GetBlockChainBase()` = `GetBlockChainBase( version::GetNetworkID() )` (TransactionManager.cpp:2258-2261) — the node's own network. For a cross-network entry, the persisted `PrunedTransactionRecord.tx_path` names a key that never existed, and `LookupPrunedEntry`'s value-presence probe (PruneEligibility.cpp:205-217) then queries that wrong path: it is vacuously absent, so (a) the `VALUE_PRESENT_INVARIANT_VIOLATION` detector can never fire for such markers, and (b) the D-04 forensic record ("the tx path named by the hash") is inaccurate. The PRUNED verdict itself remains correct today only because the wrong-path value is always absent.
 **Fix:** build the marker from the resolved path — e.g. an overload `BuildPruneMarkerEntry( const std::string &tx_hash, const std::string &resolved_tx_path )` with `record.set_tx_path( resolved_tx_path )`, called from `EraseTransactionEntryPruned` after `ResolveTransactionPathAndCID` (i.e., move marker construction into `EraseTransactionEntryWithMarker` using `path`).
 
 ### WR-03: The "first real cycle in 1 min" operator log is wrong — settle-window semantics defer the first erase to ~11 minutes
 
 **File:** `src/account/GeniusNode.cpp:4956-4961` (log), interacting with `src/transaction/TxPruner.cpp:299-319` (`TickGateSettled`)
+**Status:** FIXED (commit 56a73ab05) — the real-arm log now states the effective schedule ("first real cycle on the first tick after the {settle}s settle window has elapsed from the gate hold (≈11 min at the default cadence)"); the stamp semantics were confirmed intended (settle-from-gate-hold), and the TickGate tests already encoded exactly those semantics, so no test change was needed. Dry-run arm untouched (its "first cycle in 1 min" is accurate — it does not gate).
 **Issue:** The first timer tick (t=1 min) reaches `TickGateSettled` with no prior `gate_held_since_`, which stamps the clock and refuses the cycle (TxPruner.cpp:312-315); the first cycle that can actually run is the second tick at t≈11 min (10-minute cadence). The INFO line states "first real cycle in 1 min, then every 10 min", so an operator verifying the prune feature 5 minutes after start sees no cycle and no status — a false-negative operational signal on the exact surface (RECL-03/RECL-04) this phase builds for observability.
 **Fix:** either state the effective schedule in the log ("first real cycle after the first tick + {settle}s settle window (≈11 min at the default cadence)"), or have `RunPruneCycle`'s skip branch log at INFO once (the service already debug-logs the skip at TxPruner.cpp:95-97, which is below default visibility).
 
