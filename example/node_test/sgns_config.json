@@ -2,7 +2,7 @@
     "_comment": "SuperGenius network configuration for the STAGING net (net_id 333). Operational fields have defaults; the entry address lives in network_config.json bootstrap_addresses.",
     "_trust_configuration_notice": "STAGING NET trust fields — real values from the staging net's published ceremony (fingerprint 4f6840f5bdffca6d51d463c4f02d85bde76b5ce88dd3d1ab4ed59e39663a7afb). Quorum floors are derived from the trusted_peers count (4 peers -> 3-of-4). After durable confirmation these JSON trust fields are non-authoritative and persisted verified trust state is authoritative.",
     "net_id": 333,
-    "node_type": "Full",
+    "node_type": "Light",
     "subnet_id": 333,
     "authorized_full_node": "9798e85e31bcb9ee077d9152c30af391ea0a555ff4680e17bede5a09a1183dd2c158a6da9e626f3c0527b23bef57d95b82f47a6ffb43f4efa07fedd7c8509b16",
     "trusted_peers": [
@@ -15,5 +15,6 @@
     "ipfs_cache_dir": "ipfs_cache",
     "mirror_results": false,
     "result_retention_hours": 168,
-    "result_retention_max_mb": 0
+    "result_retention_max_mb": 0,
+    "pruning": { "enabled": true, "dry_run": false, "finality_window": 5 }
 }
