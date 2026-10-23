@@ -401,6 +401,43 @@ static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::
     node->PrintDataStore();
 }
 
+static void cmd_tx( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "tx <tx_hash>" ) )
+    {
+        return;
+    }
+    auto lookup = node->LookupTransaction( args[1] );
+    if ( lookup.has_error() )
+    {
+        logger->error( "tx {}: lookup failed ({})", args[1], lookup.error().message() );
+        return;
+    }
+    const auto &result = lookup.value();
+    // Verdict-to-text mapping only (invariant 3): the tri-state decision is
+    // the TransactionManager's; this boundary never computes it.
+    if ( result.tx )
+    {
+        logger->info( "tx {}: found", args[1] );
+    }
+    switch ( result.verdict )
+    {
+        case sgns::PrunedLookup::PRUNED:
+            logger->info( "tx {}: history pruned", args[1] );
+            break;
+        case sgns::PrunedLookup::NOT_FOUND:
+            if ( !result.tx )
+            {
+                logger->info( "tx {}: not found", args[1] );
+            }
+            break;
+        case sgns::PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION:
+            logger->error( "tx {}: pruned marker and value both present - invariant violation (reported, not guessed)",
+                           args[1] );
+            break;
+    }
+}
+
 static std::string NextDevBurnHash()
 {
     // Dev mints have no external burn event: synthesize a unique 64-hex-char
@@ -519,6 +556,7 @@ static const std::map<std::string, CmdFunc> COMMANDS = {
     { "listchildren", cmd_listchildren },
     { "registerchild", cmd_registerchild },
     { "ds", cmd_ds },
+    { "tx", cmd_tx },
     { "mint", cmd_mint },
     { "transfer", cmd_transfer },
     { "price", cmd_price },
@@ -538,6 +576,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  listchildren [addr]      List children registered to <addr> (default: own address), with balances\n"
               << "  registerchild <addr>     Register this node as a child of <addr>\n"
               << "  ds                       Print the data store\n"
+              << "  tx <tx_hash>            Look up a tx: found / not found / history pruned\n"
               << "  mint <amount> [burn_tx_hash]  Mint tokens (unique dev burn ref by default)\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
               << "  price <token1> [tokens]  Get coin prices\n"

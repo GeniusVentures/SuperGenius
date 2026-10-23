@@ -4678,6 +4678,17 @@ namespace sgns
         return manager_result.value()->GetTransactionStatusByTxId( txId );
     }
 
+    outcome::result<TransactionLookupResult> GeniusNode::LookupTransaction( const std::string &txId ) const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            node_logger_->error( "{}: Transactions not ready", __func__ );
+            return outcome::failure( std::errc::not_connected );
+        }
+        return manager_result.value()->LookupTransaction( txId );
+    }
+
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
     {
         node_logger_->info( "Transaction Manager state changed from {} to {}", old_state, new_state );
