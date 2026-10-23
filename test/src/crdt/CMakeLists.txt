@@ -46,3 +46,20 @@ if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
+# Cold-storage link proof (INTG-01, v1.1 Phase 7): registered ONLY under
+# SGNS_COLD_STORAGE because it links sgns-blockstore::sgns-blockstore.
+# LABELS "Tier1" is the fail-closed hermetic-lane assignment transplanted
+# from thirdparty/sgns-blockstore/docs/testing-tiers.md (addtest() itself
+# has no LABELS support, so set_tests_properties is mandatory).
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_link_proof_test
+    cold_storage_link_proof_test.cpp
+)
+
+target_link_libraries(cold_storage_link_proof_test
+    sgns-blockstore::sgns-blockstore
+)
+
+set_tests_properties(cold_storage_link_proof_test PROPERTIES LABELS "Tier1")
+endif()
+
