@@ -179,7 +179,24 @@ Plans:
   4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
   5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+
+**Wave 1** *(parallel — no file overlap)*
+
+- [ ] 19-01-PLAN.md — UTXOManager consumed-preserving clear (D-01 substrate) + KeepConsumed unit suites (GATE-05)
+- [ ] 19-02-PLAN.md — D-02 send-wedge fix: typed pre-broadcast error + READY-preserving TickOnce branch + bounded SYNCING exit + lifecycle suites + folded todo closed (SURV-01)
+- [ ] 19-03-PLAN.md — SC-5 recovery-audit guards: RetryDueFailedRoots isResolved guard + stalled-delta/cert/AccountMessenger verify tests (GATE-05, SURV-01)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 19-04-PLAN.md — D-01 checkpoint-rebuild guard: preserve-clear swap + PRUNED marker consult + own-replay recognition + gap-fill crosscheck + RebuildGuard suites (GATE-05)
+- [ ] 19-07-PLAN.md — SURV-02 peer refusal/failover + SURV-03/D-04 three-node pruned-mesh E2E (SURV-02, SURV-03)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
+- [ ] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
 
 ### Phase 20: Reclamation Proof & E2E Hardening
 
@@ -326,7 +343,7 @@ Plans:
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | — | Not started | — |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 0/7 | Planned (planning complete) | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
