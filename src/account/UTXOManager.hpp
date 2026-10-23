@@ -277,6 +277,24 @@ namespace sgns
         }
 
         /**
+         * @brief       Clears unspent UTXOs for an address while preserving consumed spend evidence.
+         * @details     D-01 substrate (GATE-05 checkpoint-rebuild half): unlike
+         *              SetUTXOs — which wipes every entry for the address,
+         *              including CONSUMED records and their spent_by_txid
+         *              evidence — this clear drops READY and RESERVED entries
+         *              and their transient reservations but keeps every
+         *              UTXO_CONSUMED entry (spender binding intact) in memory
+         *              and on disk, so a checkpoint-mismatch rebuild can never
+         *              resurrect a spent output (PutUTXO's existing-entry check
+         *              refuses re-creation by construction). Preservation is
+         *              unconditional: consumed evidence is never wrong to keep.
+         *              Existing SetUTXOs callers keep wipe-everything semantics.
+         * @param[in]   address The address whose unspent entries are cleared
+         * @return      Success, or the persistence error; in-memory state is restored on failure
+         */
+        outcome::result<void> ClearUnspentKeepConsumed( const std::string &address );
+
+        /**
          * @brief       Create the input and output parameters for a single-output transfer, selecting from available UTXOs.
          * @param[in]   amount The amount to transfer
          * @param[in]   dest_address The destination address for the transfer

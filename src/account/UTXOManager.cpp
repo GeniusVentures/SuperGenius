@@ -532,6 +532,49 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> UTXOManager::ClearUnspentKeepConsumed( const std::string &address )
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        const auto       previous_utxo_outpoints    = utxo_outpoints_;
+        const auto       previous_address_outpoints = address_outpoints_;
+        const auto       previous_reservations      = local_reservations_;
+
+        size_t kept_consumed = 0;
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+        {
+            std::vector<OutPoint> consumed_survivors;
+            consumed_survivors.reserve( address_it->second.size() );
+            for ( const auto &outpoint : address_it->second )
+            {
+                local_reservations_.erase( outpoint );
+                if ( auto entry_it = utxo_outpoints_.find( outpoint );
+                     entry_it != utxo_outpoints_.end() && entry_it->second.state == UTXOState::UTXO_CONSUMED )
+                {
+                    // D-01: the spent_by_txid evidence must survive the clear so a
+                    // checkpoint-mismatch rebuild can never resurrect a spent output.
+                    consumed_survivors.push_back( outpoint );
+                    continue;
+                }
+                utxo_outpoints_.erase( outpoint );
+            }
+            kept_consumed      = consumed_survivors.size();
+            address_it->second = std::move( consumed_survivors );
+        }
+
+        if ( auto store_result = StoreUTXOsLocked( address ); store_result.has_error() )
+        {
+            utxo_outpoints_     = previous_utxo_outpoints;
+            address_outpoints_  = previous_address_outpoints;
+            local_reservations_ = previous_reservations;
+            return outcome::failure( store_result.error() );
+        }
+
+        logger_->debug( "Cleared unspent UTXOs for address {}, kept {} consumed entries",
+                        address.substr( 0, 8 ),
+                        kept_consumed );
+        return outcome::success();
+    }
+
     outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( uint64_t    amount,
                                                                       std::string dest_address,
                                                                       TokenID     token_id )
@@ -699,8 +742,8 @@ namespace sgns
             }
             auto       reservation_it = local_reservations_.find( outpoint );
             const bool held_by_other  = entry_it->second.state == UTXOState::UTXO_RESERVED &&
-                                       reservation_it != local_reservations_.end() &&
-                                       reservation_it->second != reservation_id;
+                                        reservation_it != local_reservations_.end() &&
+                                        reservation_it->second != reservation_id;
             if ( held_by_other )
             {
                 continue;
@@ -806,7 +849,7 @@ namespace sgns
 
             const auto &owner_address          = utxo_it->second.utxo.GetOwnerAddress();
             const bool  delegated_escrow_spend = owner_address != address && input.output_idx_ == 0 &&
-                                                utxo_address::IsEscrowLockAddress( owner_address );
+                                                 utxo_address::IsEscrowLockAddress( owner_address );
 
             if ( owner_address != address && !delegated_escrow_spend )
             {
