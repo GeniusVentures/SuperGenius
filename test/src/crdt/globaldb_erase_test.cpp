@@ -5,7 +5,12 @@
  * Single real pubsub node per test (fresh database via removeAllWithRetry);
  * proves SC-1 (three-part assertions + negative control), SC-2 (the three
  * interruption-step crash injections), and SC-3 (head and resolved guard
- * rejections) through the facade API on the real compose path.
+ * rejections) through the facade API on the real compose path. The
+ * Redelivery/RefusalFailover/PrunedMesh suites ride the N-node
+ * EraseNodeCollection topology: pruned-root redelivery is terminal (18-01),
+ * a pruned server's clean refusal fails over per-CID to a serving peer
+ * (19-07, SURV-02), and a fresh node bootstraps a pruned mesh through the
+ * full node's serving broadcast (19-07, SURV-03).
  */
 
 #include <gtest/gtest.h>
@@ -20,6 +25,7 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/hierarchical_key.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "base/buffer.hpp"
@@ -550,6 +556,14 @@ protected:
         return { put_result.value(), tx_path, value };
     }
 
+    /// Present-and-applied predicate for one seeded entry on a node: the
+    /// CRDT value landed through the public read path.
+    static bool entryApplied( sgns::crdt::GlobalDB &db, const SeededEntry &entry )
+    {
+        auto value = db.Get( sgns::crdt::HierarchicalKey( entry.tx_path ) );
+        return value.has_value() && value.value().toString() == entry.value;
+    }
+
     /// Seeds the shared prune shape: A (node 0) puts entryA on the prune
     /// topic; B (node 1) receives, applies, and seals it; B's own entryB put
     /// retires entryA on B ONLY (A is deaf and never hears it); B erases
@@ -896,4 +910,214 @@ TEST_F( GlobalDBEraseTest, StalledDeltaPrunedBlockGivesUpLocallyWithZeroFetchAtt
     EXPECT_TRUE( db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
     EXPECT_TRUE( db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
     EXPECT_TRUE( rawSealKeyPresent( db, entry_a.cid ) );
+}
+
+/// SURV-02 (peer half, 19-07): a pruned server refuses a pruned-CID
+/// graphsync request cleanly -- the responder answers NOT_FOUND immediately
+/// (graphsync_impl.cpp: a block the responder lacks is "nothing selected",
+/// never a hung request) -- and the requester fails over to a serving peer.
+/// The refusal is accounted as a per-CID failure (getNode's FAILED /
+/// non-connection-status branch records RecordCIDFailure and walks to the
+/// next route peer), never as a connection blacklist: the light peer keeps
+/// serving data it still holds. Three real pubsub nodes on the N-node
+/// EraseNodeCollection topology: a requester, a light server that prunes
+/// the target entry, and a full server that keeps everything.
+class GlobalDBEraseRefusalFailoverTest : public GlobalDBEraseRedeliveryTest
+{
+protected:
+    /// The concrete DAG syncer owning the route walk and the per-peer
+    /// failure accounting; the broadcaster hands it out as void.
+    static std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> syncerOf( sgns::crdt::GlobalDB &db )
+    {
+        return std::static_pointer_cast<sgns::crdt::GraphsyncDAGSyncer>( db.GetBroadcaster()->GetDagSyncer() );
+    }
+};
+
+/// The refusal/failover scenario in three parts. Part 1 is hermetic: the
+/// requester joins no topic (empty route table, no cached broadcasts),
+/// the test registers the pruned light FIRST and the full node second
+/// for the pruned CID through the public AddRoute (the registration
+/// broadcasts drive via AddMultiCIDInfo), and one direct getNode walks
+/// the production route -- consult the light, take its clean refusal
+/// (the responder's storage lookup deterministically misses), record the
+/// per-CID failure, fail over to the serving peer. Part 2 is the mesh
+/// E2E: the requester grafts the topic, the light-attributed cached
+/// publishes and head re-broadcast deliver the pruned-CID learning (all
+/// refusal-bound), and the full node's fresh fork delta registers the
+/// serving route that completes the fetch; the ladder drains and the
+/// attempts stay bounded. Part 3 proves the light was never
+/// connection-blacklisted: it still serves its fresh data.
+TEST_F( GlobalDBEraseRefusalFailoverTest, PrunedPeerRefusalFailsOverToServingPeer )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_refusal_requester" );
+    testNodes->addNode( "globaldb_refusal_light" );
+    testNodes->addNode( "globaldb_refusal_full" );
+    ASSERT_EQ( testNodes->getNodes().size(), 3 );
+    testNodes->connectNodes( 1, 2 ); // seeding pair: light dials full
+
+    auto      &r_db        = *testNodes->getNodes()[0].db;
+    auto      &l_db        = *testNodes->getNodes()[1].db;
+    auto      &f_db        = *testNodes->getNodes()[2].db;
+    const auto light_peer  = testNodes->getNodes()[1].pubsub->GetHost()->getId();
+    auto      &r_datastore = *r_db.GetCRDTDataStore();
+
+    // The light node is DEAF (broadcast topics only): it never hears the
+    // full node's deltas, so only its own retire put can move its head
+    // past the prune target (the seedPrunedRoot topology). The full
+    // server listens -- and, this phase, publishes NOTHING: every cached
+    // or rebroadcast message the requester can see is light-attributed.
+    ASSERT_FALSE( l_db.AddBroadcastTopic( kTopic ).has_error() );
+    ASSERT_FALSE( f_db.AddBroadcastTopic( kTopic ).has_error() );
+    f_db.AddListenTopic( kTopic );
+
+    const auto entry_a = SeedEntryOn( l_db, "/refusal/entryA", "A", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return entryApplied( f_db, entry_a ) && rawSealKeyPresent( f_db, entry_a.cid ) &&
+                   headListContains( f_db, entry_a.cid );
+        },
+        WAIT_TIMEOUT,
+        "full server received and sealed the shared history root",
+        nullptr );
+    const auto entry_l2 = SeedEntryOn( l_db, "/refusal/entryL2", "L2", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&] { return !headListContains( l_db, entry_a.cid ) && headListContains( l_db, entry_l2.cid ); },
+        WAIT_TIMEOUT,
+        "light node's retire put moved its head past the prune target",
+        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( f_db, entry_l2.cid ); },
+                               WAIT_TIMEOUT,
+                               "full server received the retiring delta",
+                               nullptr );
+
+    // The pruned state on the light node (seal retained -- GATE-03).
+    ASSERT_TRUE( l_db.PutRaw( sgns::base::Buffer{}.put( entry_a.tx_path ),
+                              sgns::base::Buffer{}.put( entry_a.cid.toString().value() ) )
+                     .has_value() );
+    EXPECT_OUTCOME_TRUE_1( l_db.EraseEntry( entry_a.tx_path, entry_a.cid ) );
+    EXPECT_TRUE( l_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_TRUE( rawSealKeyPresent( l_db, entry_a.cid ) );
+    // The pruned server's DAG layer cannot serve the erased node: the
+    // block-bytes key the responder reads is the same key the erase
+    // removed, so a graphsync request for the pruned CID cannot be
+    // answered with content.
+    EXPECT_TRUE( syncerOf( l_db )->GetNodeFromMerkleDAG( entry_a.cid ).has_error() );
+    // The serving state on the full node: value, block bytes, seal.
+    EXPECT_TRUE( entryApplied( f_db, entry_a ) );
+    EXPECT_TRUE( f_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_value() );
+    EXPECT_TRUE( rawSealKeyPresent( f_db, entry_a.cid ) );
+
+    // Part 1 -- the peer half, hermetic. The requester joins NO topic
+    // (its route table is empty and no cached broadcast can reach it);
+    // the test registers the two routes itself, in order, through the
+    // public AddRoute -- the same registration broadcasts drive via
+    // AddMultiCIDInfo -- with the PRUNED light first and the serving
+    // full node second. One direct getNode call then walks the exact
+    // production route: consult the light (dialing its advertised
+    // address on demand), take its clean refusal (the responder's
+    // storage lookup deterministically misses -- asserted above),
+    // record the per-CID failure, and fail over to the full node,
+    // which serves.
+    const auto full_peer = testNodes->getNodes()[2].pubsub->GetHost()->getId();
+    const auto light_addr =
+        libp2p::multi::Multiaddress::create( testNodes->getNodes()[1].pubsub->GetInterfaceAddress() ).value();
+    const auto full_addr = libp2p::multi::Multiaddress::create( testNodes->getNodes()[2].pubsub->GetInterfaceAddress() )
+                               .value();
+
+    auto &r_syncer = *syncerOf( r_db );
+    r_syncer.AddRoute( entry_a.cid, light_peer, { light_addr } ); // consulted FIRST
+    r_syncer.AddRoute( entry_a.cid, full_peer, { full_addr } );   // failover target
+
+    const size_t ladder_baseline = r_datastore.GetFailedRootRetryCountForTest();
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    EXPECT_OUTCOME_TRUE( fetched_node, r_syncer.getNode( entry_a.cid ) );
+    EXPECT_EQ( fetched_node->getCID(), entry_a.cid );
+    // The refusal was CID-scoped, never a connection blacklist: a
+    // connection-failure classification would have blacklisted the light.
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    // The direct walk enqueues no root job: zero fetch-attempt movement,
+    // no storm.
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    EXPECT_EQ( r_datastore.GetFailedRootRetryCountForTest(), ladder_baseline );
+    // Discard the directly-fetched block (the LRU copy -- no root job
+    // ran, so the dag service never saw it) so the mesh half below
+    // processes the pruned CID through the real broadcast intake like
+    // any fresh node would, instead of the intake's HasBlock check
+    // silently skipping it.
+    EXPECT_OUTCOME_TRUE_1( r_syncer.DeleteCIDBlock( entry_a.cid ) );
+
+    // Part 2 -- the mesh half, end to end. The requester subscribes
+    // BEFORE dialing so its subscription is announced at connect (the
+    // Case-2 lesson); the graft relays the cached seeding publishes
+    // (every one of them light-attributed, so the pruned-history
+    // fetches under them take the same refusal), and the light's head
+    // re-broadcast guarantees the learning. The full node's own fork
+    // delta -- a put on the topic, published only now -- registers the
+    // serving route whose walk pulls the missing history; the
+    // pruned-CID values land and the rescued roots drain the ladder.
+    r_db.AddListenTopic( kTopic );
+    testNodes->connectNodes( 0, 1 );
+    testNodes->connectNodes( 0, 2 );
+    auto light_pubsub = testNodes->getNodes()[1].pubsub;
+    auto full_pubsub  = testNodes->getNodes()[2].pubsub;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            // The light node is deaf and never announces a subscription;
+            // the light's topic count sees {full, requester}, the full
+            // node's sees {requester}.
+            return light_pubsub->getPeerCount( fullTopicName( kTopic ) ) >= 2 &&
+                   full_pubsub->getPeerCount( fullTopicName( kTopic ) ) >= 1;
+        },
+        std::chrono::seconds( 10 ),
+        "both servers learned the requester's topic subscription",
+        nullptr );
+
+    EXPECT_OUTCOME_TRUE_1( l_db.GetCRDTDataStore()->BroadcastHeadsForTopics( { kTopic } ) );
+    const auto entry_fmid = SeedEntryOn( f_db, "/refusal/entryFmid", "F_MID", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        { return entryApplied( r_db, entry_a ) && entryApplied( r_db, entry_l2 ) && entryApplied( r_db, entry_fmid ); },
+        WAIT_TIMEOUT,
+        "pruned-CID fetch completed through the serving peer after the refusal",
+        nullptr );
+    // The rescue root becomes the requester's converged head as its
+    // root job finalizes (a refused sibling root's head update is lost
+    // with its failed job -- the rescue head supersedes it).
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( r_db, entry_fmid.cid ); },
+                               WAIT_TIMEOUT,
+                               "rescue root finalized as the requester's head",
+                               nullptr );
+
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    // No retry-ladder ride left behind: the rescued roots complete on
+    // their next retry (blocks now present) and drain the ladder.
+    ASSERT_WAIT_FOR_CONDITION( [&] { return r_datastore.GetFailedRootRetryCountForTest() == ladder_baseline; },
+                               WAIT_TIMEOUT,
+                               "rescued roots drained the retry ladder -- no doomed rides left",
+                               nullptr );
+    // Bounded attempts across the whole mesh window: a few enqueues with
+    // dedup; the 8-attempt doomed ladder would run far past this bound.
+    EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 8 );
+    // The pruned peer's terminal state is untouched by the failover.
+    EXPECT_TRUE( l_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_TRUE( rawSealKeyPresent( l_db, entry_a.cid ) );
+
+    // Part 3 -- functional not-blacklisted proof: a fetch the light CAN
+    // still serve (its fresh put, head-broadcast automatically on
+    // publish) routes to it and completes -- the connection-vs-CID
+    // distinction.
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    const auto entry_l3 = SeedEntryOn( l_db, "/refusal/entryL3", "L3", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return entryApplied( r_db, entry_l3 ); },
+                               WAIT_TIMEOUT,
+                               "light peer still serves data it holds -- not connection-blacklisted",
+                               nullptr );
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    EXPECT_GE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
+    EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 4 );
 }
