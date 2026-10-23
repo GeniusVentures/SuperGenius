@@ -3966,6 +3966,99 @@ namespace sgns
         return std::optional<std::shared_ptr<GeniusTransaction>>{};
     }
 
+    outcome::result<TransactionLookupResult> TransactionManager::LookupTransaction( const std::string &tx_hash ) const
+    {
+        if ( !globaldb_m )
+        {
+            m_logger->error( "{}: GlobalDB unavailable, cannot look up tx {}", __func__, tx_hash );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        // D-03 / Pitfall 8: probe the VALUE first (both found-sources), THEN
+        // the marker. The Phase-16 one-batch value-XOR-marker invariant makes
+        // this order safe: a value present now cannot become marker-only
+        // without the erase batch having committed, so a value hit is
+        // authoritative regardless of marker state.
+        std::shared_ptr<GeniusTransaction> tx;
+        {
+            const std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            tx = GetTransactionByHashNoLock( tx_hash );
+        }
+
+        if ( !tx )
+        {
+            // Found-source 2: the exact-hash CRDT probe across monitored
+            // networks. A hard error propagates — never downgraded to
+            // not-found.
+            auto crdt_tx = FetchExactTransactionFromCRDT( tx_hash );
+            if ( crdt_tx.has_error() )
+            {
+                m_logger->error( "{}: CRDT probe failed for tx {}: {}", __func__, tx_hash, crdt_tx.error().message() );
+                return outcome::failure( crdt_tx.error() );
+            }
+            tx = crdt_tx.value().value_or( nullptr );
+        }
+
+        // A found VALUE outranks any marker: FOUND regardless of marker
+        // state. The marker consult exists only to detect and loudly report
+        // the value-plus-marker invariant violation (the 17 contract) — it
+        // never changes which payload is returned.
+        if ( tx )
+        {
+            TransactionLookupResult result;
+            result.verdict    = PrunedLookup::NOT_FOUND;
+            result.tx         = tx;
+            auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+            if ( pruned_entry.has_error() )
+            {
+                m_logger->warn( "{}: pruned-marker consult failed for found tx {} ({}); verdict stays FOUND",
+                                __func__,
+                                tx_hash,
+                                pruned_entry.error().message() );
+            }
+            else if ( pruned_entry.value().first != PrunedLookup::NOT_FOUND )
+            {
+                result.verdict = PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION;
+                m_logger->error( "{}: pruned marker present while the value of tx {} was found — "
+                                 "value-XOR-marker invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+            }
+            return result;
+        }
+
+        // All found-sources missed: the pruned marker is the authority that
+        // separates PRUNED from plain not-found.
+        auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+        if ( pruned_entry.has_error() )
+        {
+            m_logger->error( "{}: pruned-marker lookup failed for tx {}: {}",
+                             __func__,
+                             tx_hash,
+                             pruned_entry.error().message() );
+            return outcome::failure( pruned_entry.error() );
+        }
+
+        TransactionLookupResult result;
+        result.verdict = pruned_entry.value().first;
+        result.record  = pruned_entry.value().second;
+        switch ( result.verdict )
+        {
+            case PrunedLookup::PRUNED:
+                m_logger->info( "{}: tx {} pruned locally - history pruned", __func__, tx_hash );
+                break;
+            case PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION:
+                m_logger->error( "{}: pruned marker for tx {} claims a value the found-sources cannot see — "
+                                 "invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+                break;
+            case PrunedLookup::NOT_FOUND:
+                break;
+        }
+        return result;
+    }
+
     outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
         const std::string &main_address )
     {

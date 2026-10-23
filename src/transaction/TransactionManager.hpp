@@ -48,6 +48,10 @@ namespace sgns
 {
     class MintTransactionV2;
 
+    /// PruneEligibility.hpp's tri-state verdict enum (the ONE pruned-evidence
+    /// vocabulary, reused verbatim — opaque here so this header adds no
+    /// rapidjson dependency to its consumers).
+    enum class PrunedLookup : uint8_t;
 
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
@@ -63,6 +67,36 @@ namespace sgns
         std::string                         main_addr;   ///< Main wallet public address (128-hex)
         uint64_t                            sequence;    ///< Registration sequence number
         SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+    };
+
+    /**
+     * @brief       Tri-state local lookup verdict + payload (D-03, SURV-02's local half).
+     * @details     Reuses PruneEligibility's PrunedLookup as the ONE verdict
+     *              vocabulary (hard invariant 2 — no second enum, no
+     *              hand-built marker keys). Read the result tx-FIRST: a
+     *              non-null @p tx IS the FOUND verdict and outranks any
+     *              marker (Pitfall-8 value-first ordering — a present value
+     *              is never reported PRUNED). @p verdict then carries the
+     *              marker evidence: NOT_FOUND on a clean found, or
+     *              VALUE_PRESENT_INVARIANT_VIOLATION when a pruned marker
+     *              coexists with the found value (reported loudly, never
+     *              guessed). With @p tx == nullptr the verdict is the whole
+     *              answer: PRUNED (@p record carries the durable payload) /
+     *              NOT_FOUND (unknown hash) / VALUE_PRESENT_INVARIANT_VIOLATION
+     *              (the marker claims a value the found-sources cannot see —
+     *              never fabricated as FOUND, never downgraded to NOT_FOUND).
+     */
+    struct TransactionLookupResult
+    {
+        /// Marker-evidence tri-state (PruneEligibility.hpp — the one home).
+        /// No default initializer: the enum is opaque here (kept dependency
+        /// -free), so every construction site MUST set it — LookupTransaction
+        /// always does.
+        PrunedLookup verdict;
+        /// Set iff a value was found (tracked map or CRDT): the FOUND verdict.
+        std::shared_ptr<GeniusTransaction> tx;
+        /// Set iff PRUNED: the durable PrunedTransactionRecord payload.
+        std::optional<SGTransaction::PrunedTransactionRecord> record;
     };
 
     /**
@@ -352,6 +386,26 @@ namespace sgns
 
         TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
+
+        /**
+         * @brief Tri-state local lookup of one transaction by hash (D-03 / SURV-02).
+         * @details Answers found / not-found / pruned distinctly — a locally
+         *          pruned transaction is NEVER conflated with a never-existed
+         *          one. Probe order is value-first-then-marker (Pitfall 8):
+         *          the tracked map (GetTransactionByHashNoLock), then the
+         *          exact-hash CRDT probe (FetchExactTransactionFromCRDT), and
+         *          only PruneEligibility::LookupPrunedEntry after both miss.
+         *          A value hit is FOUND regardless of marker state; a marker
+         *          coexisting with a found value is logged at ERROR but never
+         *          changes the verdict (never guess). A marker lookup error or
+         *          the VALUE_PRESENT_INVARIANT_VIOLATION verdict is returned
+         *          as-is — never downgraded to NOT_FOUND silently.
+         * @param[in] tx_hash Transaction hash (readable string form).
+         * @return TransactionLookupResult (tx set => FOUND; verdict PRUNED
+         *         carries the record), or outcome::failure when a found-source
+         *         or the marker lookup itself failed.
+         */
+        outcome::result<TransactionLookupResult> LookupTransaction( const std::string &tx_hash ) const;
 
         /**
          * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
