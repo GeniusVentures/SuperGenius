@@ -136,10 +136,8 @@ namespace sgns::crdt
         std::string file_access_key;
         std::string file_secret_key;
         std::string file_prefix;
-        bool        has_path_style = false;
-        bool        has_tls        = false;
-        bool        path_style     = true;
-        bool        tls            = false;
+        bool        path_style = true;
+        bool        tls        = false;
         for ( auto member = section.MemberBegin(); member != section.MemberEnd(); ++member )
         {
             const std::string key = member->name.GetString();
@@ -180,17 +178,13 @@ namespace sgns::crdt
             }
             else if ( key == "path_style" )
             {
-                has_path_style = true;
-                path_style     = member->value.GetBool();
+                path_style = member->value.GetBool();
             }
             else if ( key == "tls" )
             {
-                has_tls = true;
-                tls     = member->value.GetBool();
+                tls = member->value.GetBool();
             }
         }
-        (void)has_path_style;
-        (void)has_tls;
 
         // (e) D-08 file-intent gate: all four required fields blank in the
         // FILE => disabled REGARDLESS of env (env overrides values, never

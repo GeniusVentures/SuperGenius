@@ -366,14 +366,19 @@ namespace sgns
         }
         node_logger_->debug( "Account Address {}", account_->GetAddress() );
 
+        // CRDT config loads BEFORE the io thread pool spawns: LoadCrdtConfig
+        // throws std::runtime_error on a malformed blockstore section
+        // (INTG-02 loud-failure contract), and a throw after the pool exists
+        // would unwind over joinable io_threads_ and std::terminate before
+        // the named-field message could surface (07-REVIEW CR-01).
+        LoadCrdtConfig();
+
         // Initializes the thread pool for IO context
         io_threads_.reserve( io_thread_count_ );
         for ( unsigned i = 0; i < io_thread_count_; ++i )
         {
             io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
         }
-
-        LoadCrdtConfig();
     }
 
     void GeniusNode::LoadSgnsConfig()

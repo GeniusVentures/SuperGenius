@@ -126,6 +126,14 @@ TEST( ColdStorageConfigGate, WrongTypeFails )
     EXPECT_NE( result.error().find( "endpoint" ), std::string::npos );
 }
 
+// (c) present-but-not-an-object is a detectable malformation: loud (07-REVIEW IN-02)
+TEST( ColdStorageConfigGate, SectionNotAnObjectFails )
+{
+    auto result = Parse( R"({"blockstore": "yes"})", NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "blockstore" ), std::string::npos );
+}
+
 // ---------------------------------------------------------------------------
 // D-06: whole-file corruption stays lenient => disabled, not an error
 // ---------------------------------------------------------------------------
@@ -170,6 +178,21 @@ TEST( ColdStorageConfigGate, EnvNeverActivates )
         env );
     ASSERT_FALSE( result.has_error() );
     EXPECT_FALSE( result.value().enabled );
+}
+
+TEST( ColdStorageConfigGate, EnvOnlyCredentialsWithFileIntent )
+{
+    // The flagship D-07 server posture (07-REVIEW WR-01): file carries ONLY
+    // endpoint+bucket; credentials come EXCLUSIVELY from the environment -
+    // enabled, with the env values resolved.
+    ColdStorageEnvLookup env;
+    env.access_key = "env-access";
+    env.secret_key = "env-secret";
+    auto result = Parse( R"({"blockstore": {"endpoint": "10.1.2.3", "bucket": "cold"}})", env );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    EXPECT_EQ( result.value().accessKey, std::string( "env-access" ) );
+    EXPECT_EQ( result.value().secretKey, std::string( "env-secret" ) );
 }
 
 TEST( ColdStorageConfigGate, EnvEmptyStringIsUnset )

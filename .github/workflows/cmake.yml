@@ -604,7 +604,10 @@ jobs:
         run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
 
       - name: Tier-1 fail-closed lane
-        if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
+        # !cancelled(): the lane is an INDEPENDENT signal - a full-suite
+        # failure (e.g. a known flaky integration test) must not mask the
+        # fail-closed lane by skipping it (07-REVIEW WR-02).
+        if: ${{ !cancelled() && env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         # TEST-01 (v1.1 Phase 7): -L Tier1 never includes unlabeled tests
         # and --no-tests=error fails an empty selection, so a label typo or
