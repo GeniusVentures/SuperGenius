@@ -926,6 +926,72 @@ namespace sgns
         return it->second.spent_by_txid;
     }
 
+    outcome::result<std::optional<UTXOManager::DurableSpendEvidence>> UTXOManager::ReadDurableSpendEvidence(
+        const base::Hash256 &utxo_id,
+        uint32_t             output_idx,
+        const std::string   &address ) const
+    {
+        const auto db = AcquireStorage();
+        if ( db == nullptr )
+        {
+            logger_->error( "Tried to read durable spend evidence without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
+
+        // Exact-key prefix query: the record key identifies one outpoint, so
+        // the scan can return at most that record.
+        base::Buffer key_buf;
+        key_buf.put( BuildUTXORecordKey( address, OutPoint{ utxo_id, output_idx } ) );
+        auto records = db->query( key_buf );
+        if ( records.has_error() )
+        {
+            if ( records.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return std::nullopt;
+            }
+            logger_->error( "Failed to read durable UTXO record for outpoint {}:{} under {}",
+                            utxo_id.toReadableString(),
+                            output_idx,
+                            address.substr( 0, 8 ) );
+            return records.error();
+        }
+        if ( records.value().empty() )
+        {
+            return std::nullopt;
+        }
+
+        const auto                    &record_value = records.value().begin()->second;
+        SGTransaction::UTXOEntryRecord entry_record;
+        if ( !entry_record.ParseFromArray( record_value.data(), record_value.size() ) )
+        {
+            logger_->error( "Failed to deserialize durable UTXO record for outpoint {}:{} under {}",
+                            utxo_id.toReadableString(),
+                            output_idx,
+                            address.substr( 0, 8 ) );
+            return std::errc::bad_message;
+        }
+
+        DurableSpendEvidence evidence;
+        evidence.consumed = FromProtoState( entry_record.state() ) == UTXOState::UTXO_CONSUMED;
+        evidence.genuine  = evidence.consumed && entry_record.utxo().amount() != 0;
+        if ( entry_record.has_spent_by_txid() )
+        {
+            auto spender = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.spent_by_txid().data() ) ),
+                           entry_record.spent_by_txid().size() ) );
+            if ( spender.has_error() )
+            {
+                logger_->error( "Malformed spent_by_txid in durable UTXO record for outpoint {}:{} under {}",
+                                utxo_id.toReadableString(),
+                                output_idx,
+                                address.substr( 0, 8 ) );
+                return spender.error();
+            }
+            evidence.spender = spender.value();
+        }
+        return evidence;
+    }
+
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const
     {
         return ComputeUTXOMerkleRoot( address_ );

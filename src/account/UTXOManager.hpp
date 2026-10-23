@@ -458,6 +458,39 @@ namespace sgns
         std::optional<base::Hash256> GetOutPointSpender( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
 
         /**
+         * @brief       Durable spend evidence decoded from one /utxo/ record.
+         * @details     The durable view behind the rebuild crosscheck (D-01):
+         *              the in-memory registry is the write path's own view, so
+         *              a resurrected READY entry can never carry its spender
+         *              there — only the persisted record can still name it.
+         */
+        struct DurableSpendEvidence
+        {
+            bool                         consumed{ false }; ///< Record state is UTXO_CONSUMED.
+            bool                         genuine{ false };  ///< Consumed AND non-zero amount (tombstone discriminator).
+            std::optional<base::Hash256> spender;           ///< Record's spent_by_txid, when present.
+        };
+
+        /**
+         * @brief       Reads one outpoint's durable spend evidence from its /utxo/ record.
+         * @details     D-01 rebuild belt: reads the persisted record directly so a
+         *              divergence between the in-memory registry and the durable
+         *              record (e.g. one corrupted record, or a re-created READY
+         *              entry over a still-consumed record) is observable
+         *              without mutating the registry. Writes nothing.
+         * @param[in]   utxo_id Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @param[in]   address Owner address whose /utxo/ prefix holds the record.
+         * @return      The decoded evidence, nullopt when no record exists for
+         *              the outpoint, or an error for read/decode failures
+         *              (malformed spent_by_txid included).
+         */
+        outcome::result<std::optional<DurableSpendEvidence>> ReadDurableSpendEvidence(
+            const base::Hash256 &utxo_id,
+            uint32_t             output_idx,
+            const std::string   &address ) const;
+
+        /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address
          * @return      The computed UTXO Merkle root for this node address
          */

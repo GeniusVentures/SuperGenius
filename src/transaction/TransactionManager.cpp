@@ -2680,7 +2680,43 @@ namespace sgns
                                             return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
                                                 .has_value();
                                         } );
+            // D-01 derived hazard: a checkpoint-mismatch clear preserves the
+            // CONSUMED evidence, so the legitimate spender's OWN rebuild replay
+            // finds its inputs consumed by itself while the outputs-present
+            // heuristic above can never pass (the clear just dropped every
+            // READY entry, its outputs included). Spend evidence naming THIS
+            // transaction as the spender of every consumed input is proof of
+            // idempotent replay: proceed and let the consume + produce below
+            // re-apply. Any other spender-of-record stays a genuine double
+            // spend and still rejects.
+            bool own_replay = false;
             if ( !replayed )
+            {
+                std::optional<base::Hash256> own_txid;
+                if ( auto parsed = base::Hash256::fromReadableString( transfer_tx->GetHash() ); parsed.has_value() )
+                {
+                    own_txid = parsed.value();
+                }
+                own_replay = own_txid.has_value() &&
+                             std::all_of( inputs.begin(),
+                                          inputs.end(),
+                                          [&]( const InputUTXOInfo &input )
+                                          {
+                                              if ( !utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) )
+                                              {
+                                                  return true;
+                                              }
+                                              auto spender = utxo_mgr.GetOutPointSpender( input.txid_hash_,
+                                                                                          input.output_idx_ );
+                                              return spender.has_value() && spender.value() == own_txid.value();
+                                          } );
+                if ( own_replay )
+                {
+                    m_logger->info( "Recognized own rebuild replay of transfer {} over preserved spend evidence",
+                                    transfer_tx->GetHash() );
+                }
+            }
+            if ( !own_replay && !replayed )
             {
                 m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
                 return std::errc::invalid_argument;
@@ -3291,6 +3327,11 @@ namespace sgns
         bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
         auto monitored_networks = GetMonitoredNetworkIDs();
 
+        // Set when the checkpoint-mismatch clear below ran: only that path
+        // gap-fills a UTXO set that previously held spend evidence, so only it
+        // earns the post-rebuild crosscheck (D-01).
+        bool mismatch_rebuild = false;
+
         if ( has_local_utxos )
         {
             auto checkpoint_result = account_m->GetUTXOManager().LoadLatestCheckpoint( account_m->GetAddress() );
@@ -3313,8 +3354,7 @@ namespace sgns
                     // re-creation of spent outpoints during the rebuild below.
                     // SetUTXOs' wipe-everything clear would drop that evidence
                     // and open the double-spend window instead.
-                    auto clear_result = account_m->GetUTXOManager().ClearUnspentKeepConsumed(
-                        account_m->GetAddress() );
+                    auto clear_result = account_m->GetUTXOManager().ClearUnspentKeepConsumed( account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
                         m_logger->error( "Failed to clear local UTXOs after checkpoint mismatch: {}",
@@ -3322,7 +3362,8 @@ namespace sgns
                     }
                     else
                     {
-                        has_local_utxos = false;
+                        has_local_utxos  = false;
+                        mismatch_rebuild = true;
                     }
                 }
             }
@@ -3332,6 +3373,12 @@ namespace sgns
         {
             m_logger->info( "No local or network UTXOs found, querying transactions to mount UTXOs" );
             QueryTransactions();
+            if ( mismatch_rebuild )
+            {
+                // D-01 belt: prove the rebuild left no spent outpoint
+                // spendable-ready before boot continues.
+                (void) CrosscheckRebuiltUtxos();
+            }
             return;
         }
 
@@ -3402,8 +3449,7 @@ namespace sgns
                                             tx_hash );
                             pruned_locally = true;
                         }
-                        else if ( pruned_lookup.value().first
-                                  == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+                        else if ( pruned_lookup.value().first == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
                         {
                             m_logger->warn( "Pruned-marker invariant violation for missing creating tx {} "
                                             "(marker AND value both present); keeping bounded recovery",
@@ -3418,6 +3464,85 @@ namespace sgns
                 }
             }
         }
+    }
+
+    size_t TransactionManager::CrosscheckRebuiltUtxos()
+    {
+        // D-01 belt-and-suspenders: by construction the preserved CONSUMED
+        // entries make PutUTXO's existing-entry duplicate check refuse
+        // re-creation of spent outpoints, so a healthy mismatch rebuild
+        // gap-fills only genuinely unspent outputs and this pass finds
+        // nothing. It exists for the paths construction cannot see — a
+        // divergence between the in-memory registry and the durable /utxo/
+        // record (e.g. one corrupted record) must never leave a spent outpoint
+        // spendable-ready. Every rebuilt READY outpoint of this account is
+        // checked against its DURABLE record through the UTXOManager's own
+        // accessors (a READY registry entry can never carry its spender — only
+        // the persisted record can still name one); a consumed record reverts
+        // the outpoint through the owner's consume path. Errors are logged and
+        // skipped, never swallowed into success.
+        auto      &utxo_mgr = account_m->GetUTXOManager();
+        const auto address  = account_m->GetAddress();
+        size_t     reverted = 0;
+        const auto utxo_map = utxo_mgr.GetAllUTXOs();
+        for ( const auto &[utxo_address, utxo_data_vector] : utxo_map )
+        {
+            if ( utxo_address != address )
+            {
+                continue;
+            }
+            for ( const auto &[utxo_state, utxo] : utxo_data_vector )
+            {
+                if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                auto evidence = utxo_mgr.ReadDurableSpendEvidence( utxo.GetTxID(), utxo.GetOutputIdx(), utxo_address );
+                if ( evidence.has_error() )
+                {
+                    m_logger->warn( "Rebuild crosscheck: durable spend-evidence read failed for outpoint {}:{} "
+                                    "({}); leaving the outpoint untouched",
+                                    utxo.GetTxID().toReadableString(),
+                                    utxo.GetOutputIdx(),
+                                    evidence.error().message() );
+                    continue;
+                }
+                if ( !evidence.value().has_value() || !evidence.value().value().consumed )
+                {
+                    continue;
+                }
+                const auto &record = evidence.value().value();
+                m_logger->warn(
+                    "Rebuild crosscheck: outpoint {}:{} has durable consume evidence ({} spender {}) - "
+                    "reverting to consumed",
+                    utxo.GetTxID().toReadableString(),
+                    utxo.GetOutputIdx(),
+                    record.genuine ? "genuine" : "tombstone",
+                    record.spender.has_value() ? record.spender.value().toReadableString() : std::string( "unknown" ) );
+                auto consume_result = utxo_mgr.ConsumeUTXOs( { { utxo.GetTxID(), utxo.GetOutputIdx(), {} } },
+                                                             utxo_address,
+                                                             UTXOManager::UTXOType::UTXO_NORMAL,
+                                                             record.spender );
+                if ( consume_result.has_error() )
+                {
+                    m_logger->error( "Rebuild crosscheck: failed to revert outpoint {}:{} to consumed: {}",
+                                     utxo.GetTxID().toReadableString(),
+                                     utxo.GetOutputIdx(),
+                                     consume_result.error().message() );
+                    continue;
+                }
+                ++reverted;
+            }
+        }
+        if ( reverted > 0 )
+        {
+            m_logger->warn( "Rebuild crosscheck reverted {} resurrected outpoint(s) to consumed", reverted );
+        }
+        else
+        {
+            m_logger->debug( "Rebuild crosscheck found no resurrected outpoints" );
+        }
+        return reverted;
     }
 
     void TransactionManager::InitTransactions()

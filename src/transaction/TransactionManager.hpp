@@ -610,6 +610,20 @@ namespace sgns
         void InitializeUTXOs();
 
         /**
+         * @brief Post-rebuild belt of the GATE-05 checkpoint-mismatch path (D-01):
+         *        every rebuilt-READY outpoint of this account is checked against
+         *        its DURABLE /utxo/ record; a consumed record reverts the
+         *        outpoint to consumed so no spent output stays spendable-ready.
+         * @details By construction (preserved CONSUMED evidence + PutUTXO's
+         *          duplicate check) this finds nothing in a healthy rebuild —
+         *          it exists for registry/durable-record divergence (one
+         *          corrupted record class). Reads spend evidence only through
+         *          the UTXOManager accessors.
+         * @return The number of outpoints reverted to consumed.
+         */
+        size_t CrosscheckRebuiltUtxos();
+
+        /**
          * @brief Attempts to resolve missing hashes by requesting them from
          *        the network. Transitions to READY when none remain and the nonce
          *        check passes.
