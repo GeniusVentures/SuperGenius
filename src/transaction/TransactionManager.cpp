@@ -603,6 +603,9 @@ namespace sgns
                         break;
                     }
 
+                    // D-02 half 2: record when SYNCING recovery started so
+                    // SyncNonce's bounded exit can measure the window.
+                    syncing_since_ = std::chrono::steady_clock::now();
                     ChangeState( State::SYNCING );
 
                     m_logger->error( "Error in SendTransactionItem: {}", err.message() );
@@ -3257,6 +3260,19 @@ namespace sgns
         return missing_tx_max_attempts_for_test_.load();
     }
 
+    std::atomic<std::chrono::milliseconds::rep> TransactionManager::syncing_exit_timeout_for_test_{
+        k_syncing_exit_timeout.count() };
+
+    void TransactionManager::SetSyncingExitTimeoutForTest( std::chrono::milliseconds timeout )
+    {
+        syncing_exit_timeout_for_test_.store( timeout.count() );
+    }
+
+    std::chrono::milliseconds TransactionManager::GetSyncingExitTimeoutForTest()
+    {
+        return std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+    }
+
     void TransactionManager::InitializeUTXOs()
     {
         {
@@ -3511,6 +3527,31 @@ namespace sgns
 
     void TransactionManager::SyncNonce()
     {
+        // D-02 half 2: bounded SYNCING exit. When nothing advances the
+        // confirmed nonce within the window, fall back to the last DURABLE
+        // confirmed nonce and return READY — the wedge class where a failed
+        // (or never-published) send left the manager spinning with every later
+        // send rejected. Held reservations are deliberately untouched:
+        // GetNextNonceLocked skips pending nonces, so the next send queues
+        // behind anything still in flight (no nonce collision).
+        if ( syncing_since_.has_value() )
+        {
+            const auto window  = std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+            const auto elapsed = std::chrono::steady_clock::now() - syncing_since_.value();
+            if ( elapsed > window )
+            {
+                const auto durable_nonce = account_m->GetLocalConfirmedNonce();
+                m_logger->warn(
+                    "SYNCING exit: no confirming nonce advance within {} ms - falling back to last "
+                    "durable confirmed nonce {} and returning to READY",
+                    window.count(),
+                    durable_nonce.has_value() ? std::to_string( durable_nonce.value() ) : std::string( "none" ) );
+                syncing_since_.reset();
+                ChangeState( State::READY );
+                return;
+            }
+        }
+
         m_logger->debug( "Checking if my nonce is updated" );
 
         auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT );
@@ -3539,6 +3580,9 @@ namespace sgns
             //Either my old txs are outdated or
             //The responder has not updated yet
             m_logger->debug( "Network nonce updated: {}", expected_next_nonce );
+            // D-02: the sync resolved normally — no stale window timestamp may
+            // survive into a later SYNCING pass.
+            syncing_since_.reset();
             ChangeState( State::READY );
         }
         else if ( proposed_nonce > expected_next_nonce )

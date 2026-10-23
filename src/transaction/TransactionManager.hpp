@@ -708,6 +708,9 @@ namespace sgns
         State                                    state_m;
         std::mutex                               state_change_callback_mutex_;
         StateChangeCallback                      state_change_callback_;
+        /// D-02: when the current SYNCING recovery started (set at the
+        /// send-failure entry site; drives the bounded exit in SyncNonce).
+        std::optional<std::chrono::steady_clock::time_point> syncing_since_;
 
         // Head request rate limiting (for reactive requests due to nonce gaps)
         std::optional<std::chrono::steady_clock::time_point> last_head_request_time_;
@@ -782,6 +785,20 @@ namespace sgns
         /// first recovery round). No production caller may invoke this.
         static void    SetMissingTxMaxAttemptsForTest( uint8_t max_attempts );
         static uint8_t GetMissingTxMaxAttemptsForTest();
+
+        /// D-02: bounded SYNCING exit — when no confirming nonce advance
+        /// happens within this window, SyncNonce falls back to the last
+        /// durable confirmed nonce (WARN) and returns READY, so a wedged sync
+        /// can never reject sends forever. The fallback never touches held
+        /// nonce reservations.
+        static constexpr std::chrono::milliseconds k_syncing_exit_timeout = std::chrono::seconds( 60 );
+        /// Process-wide test override for the SYNCING exit window (ms).
+        static std::atomic<std::chrono::milliseconds::rep> syncing_exit_timeout_for_test_;
+
+        /// Test-only override for the SYNCING exit window. No production
+        /// caller may invoke this.
+        static void                      SetSyncingExitTimeoutForTest( std::chrono::milliseconds timeout );
+        static std::chrono::milliseconds GetSyncingExitTimeoutForTest();
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
