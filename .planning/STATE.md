@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
-stopped_at: Phase 19 context gathered
-last_updated: "2026-10-23T19:10:42.704Z"
+stopped_at: Completed 19-03-PLAN.md
+last_updated: "2026-10-23T19:50:29.382Z"
 last_activity: 2026-10-23
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 24
-  completed_plans: 18
+  completed_plans: 20
   percent: 12
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-10-23
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T19:10:42.700Z
-**Stopped At:** Phase 19 context gathered
+**Last session:** 2026-10-23T19:50:29.378Z
+**Stopped At:** Completed 19-03-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -144,6 +144,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
 | Phase 19 P01 | 17min | 2 tasks | 3 files |
 | Phase 19 P02 | 19min | 3 tasks | 4 files |
+| Phase 19 P03 | 34min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -222,6 +223,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: SetUTXOs wipes only index-resident entries — ConsumeUTXOs leaves CONSUMED entries orphaned from address_outpoints_; the real-world wipe path is post-restart (LoadUTXOs indexes CONSUMED before the mismatch clear), so D-01 tests must seed the reload shape
 - [Phase 19]: D-02 half 1 — preflight failures (witness/size) return typed Error::PRE_BROADCAST_VALIDATION; TickOnce rolls back and STAYS READY (error-code comparison across the Commit boundary cannot classify — same errc codes fire both sides)
 - [Phase 19]: D-02 half 2 — bounded SYNCING exit (60s knob, SetSyncingExitTimeoutForTest seam) anchors to GetLocalConfirmedNonce and never touches pending_nonces_; held reservations stay held so the next reserved nonce is strictly greater
+- [Phase 19]: SC-5 retry guard (19-03): RetryDueFailedRoots consults isResolved BEFORE the counter site; pruned/sealed roots are terminal (entry cleared), the fetch-attempt counter never moves for them, and the isResolved error branch stays fail-safe (re-armed, never enqueued)
+- [Phase 19]: Post-18-01, no natural path can place a sealed root on the retry ladder (the broadcast intake guard blocks sealed CIDs) — 19-03 added ForTest ladder-seeding seams + ladder-count observables on CrdtDatastore; the pass under test stays the real DAG worker loop
+- [Phase 19]: AccountMessenger's HandleBlockLikeRequest is private and InterfaceMethods has no response-send callback (19-03 plan assumptions) — the pruned-serving row is proven over real loopback pubsub with the responder's sign_ callback as the public capture point for the empty signed BlockResponse
 
 ## Deferred Items
 
