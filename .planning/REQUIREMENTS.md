@@ -169,7 +169,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 
 - [ ] **SURV-01**: Restart matrix on a pruned node passes — READY with zero pruned-CID fetch attempts, new-tip sync, spend/receive, and correct outgoing nonce chain
 - [ ] **SURV-02**: Local history queries answer "history pruned" (distinct from not-found); peer requests get clean `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a pruned node
-- [ ] **SURV-03**: A fresh light node bootstraps through a mesh whose peers have pruned the history it needs (full node serves) — E2E
+- [x] **SURV-03**: A fresh light node bootstraps through a mesh whose peers have pruned the history it needs (full node serves) — E2E
 
 ### Reclamation & Observability
 
@@ -218,7 +218,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | GATE-06 | Phase 17 | Pending |
 | SURV-01 | Phase 19 | Pending |
 | SURV-02 | Phase 19 | Pending |
-| SURV-03 | Phase 19 | Pending |
+| SURV-03 | Phase 19 | Complete |
 | RECL-01 | Phase 20 | Pending |
 | RECL-02 | Phase 20 | Pending |
 | RECL-03 | Phase 18 | Complete |

@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
 stopped_at: Completed 19-04-PLAN.md
-last_updated: "2026-10-23T20:48:11.732Z"
+last_updated: "2026-10-23T22:13:26.981Z"
 last_activity: 2026-10-23
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
   percent: 12
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-10-23
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Roadmap Snapshot
 
@@ -84,7 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T20:48:11.727Z
+**Last session:** 2026-10-23T22:13:26.976Z
 **Stopped At:** Completed 19-04-PLAN.md
 **Resume File:** None
 
@@ -146,6 +146,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P02 | 19min | 3 tasks | 4 files |
 | Phase 19 P03 | 34min | 3 tasks | 6 files |
 | Phase 19 P04 | 53min | 3 tasks | 5 files |
+| Phase 19 P07 | 82min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -227,6 +228,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: SC-5 retry guard (19-03): RetryDueFailedRoots consults isResolved BEFORE the counter site; pruned/sealed roots are terminal (entry cleared), the fetch-attempt counter never moves for them, and the isResolved error branch stays fail-safe (re-armed, never enqueued)
 - [Phase 19]: Post-18-01, no natural path can place a sealed root on the retry ladder (the broadcast intake guard blocks sealed CIDs) — 19-03 added ForTest ladder-seeding seams + ladder-count observables on CrdtDatastore; the pass under test stays the real DAG worker loop
 - [Phase 19]: AccountMessenger's HandleBlockLikeRequest is private and InterfaceMethods has no response-send callback (19-03 plan assumptions) — the pruned-serving row is proven over real loopback pubsub with the responder's sign_ callback as the public capture point for the empty signed BlockResponse
+- [Phase 19]: (19-07): Broadcast-order sequencing is unreproducible on this gossip layer (graft relays all cached publishes at once) -- peer-refusal proofs split into a hermetic ordered-AddRoute + direct-getNode walk beside an ordering-free mesh E2E
+- [Phase 19]: (19-07): PrunedMesh determinism needs a full-node-owned serving topic (dual-topic put links the mesh history under one serving head); single-shared-topic wiring makes the Pitfall-6 ladder ride a coin flip
+- [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
 
 ## Deferred Items
 
