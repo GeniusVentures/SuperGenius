@@ -440,6 +440,9 @@ if(SGNS_COLD_STORAGE)
     find_package(miniocpp CONFIG REQUIRED)
     set(sgns-blockstore_DIR "${_THIRDPARTY_BUILD_DIR}/sgns-blockstore/lib/cmake/sgns-blockstore")
     find_package(sgns-blockstore CONFIG REQUIRED)
+    # sgns-blockstore's installed config is silent on success - print the
+    # resolved package dir so ON-configure evidence logs show the find.
+    message(STATUS "SGNS_COLD_STORAGE: sgns-blockstore found via ${sgns-blockstore_DIR}")
 endif()
 
 # --------------------------------------------------------
