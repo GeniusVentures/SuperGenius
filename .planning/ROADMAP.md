@@ -68,7 +68,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [x] **Phase 16: Erasure Primitives & Bookkeeping Hardening** - Two-level local erasure primitives behind owner-module APIs; zero production behavior change (PRUNE-02, GATE-03) (completed 2026-10-15)
 - [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
-- [ ] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04)
+- [x] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04) (completed 2026-10-23)
 - [ ] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03)
 - [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
 
@@ -325,7 +325,7 @@ Plans:
 | 15. Private Networks | v1.1 | 17/18 | Complete | 2026-10-05 |
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
-| 18. TxPruner Service & First Real Prune | v1.2 (this branch) | — | Not started | — |
+| 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | — | Not started | — |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |

@@ -1,7 +1,7 @@
 ---
 phase: 18-txpruner-service-first-real-prune
 verified: 2026-10-21T21:30:00Z
-status: human_needed
+status: passed
 score: 10/12 must-haves verified
 overrides_applied: 0
 gaps:
@@ -187,3 +187,7 @@ _Verifier: Claude (gsd-verifier)_
 **Gap 1 (containment-gate stale expectation) — RESOLVED.** The WR-02 review-fix legitimately removed PruneEligibility.hpp's only EraseEntry reference (marker construction moved to TransactionManager); the gate's expected compose set was updated to the actual 3-file sanctioned set with a comment naming the cause. crdt_test 47/47 green at the fix commit. Production behavior was never affected — the gate correctly detected the set change; its expectation was stale.
 
 Remaining human_verification items: (1) live staging grow-then-prune demo (now fully enabled: dry_run=false + dev-mint policy + corrected first-cycle timing); (2) CR-01 logic-fix sign-off (commit 08421f54a — automated regression passes; logic-class protocol).
+
+## Human Verification Resolution (2026-10-23)
+
+Owner approval after the full live chain: PR #398 merged to develop → Release CI artifacts → GeniusSDK build → staging validators redeployed with the phase-18 build. Item 1 (live grow-then-prune demo): dev-mint certified through full consensus on staging, spend history created, the real prune cycle executed — owner confirmed validated. Item 2 (CR-01 sign-off): approved with the phase validation; the automated regression drives the real post-move exception path. Session also hardened the delivery along the way: GATE-05 boot-wedge fixed (dead-code recovery loop), Windows WinSock + OSX guard-race CI fixes, RocksDB residue cleanup + gitignore hardening, A7_MAX runner diagnosed. Record: 18-HUMAN-UAT.md (resolved, 2/2).

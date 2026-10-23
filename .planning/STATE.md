@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 17
-status: executing
-stopped_at: Phase 17 context gathered
-last_updated: "2026-10-16T20:22:20.076Z"
+status: ready_to_plan
+stopped_at: Phase 18 complete (7/7) — ready to discuss Phase 19
+last_updated: 2026-10-23T16:38:09.337Z
 last_activity: 2026-10-16 -- Phase 17 planning complete
 progress:
   total_phases: 23
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
+  completed_plans: 17
   percent: 4
 ---
 
@@ -19,20 +19,20 @@ progress:
 
 **Last updated:** 2026-10-15
 **Milestone:** v1.2 — Light-node transaction pruning
-**Current Phase:** 17
+**Current Phase:** 19
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 17 — eligibility, policy & gating (dry run)
+**Current focus:** Phase 19 — pruned node survival & recovery hardening
 
 ## Current Position
 
 Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-16 -- Phase 17 planning complete
+Status: Ready to plan
+Last activity: 2026-10-23
 
 Progress: [██████████] 100%
 

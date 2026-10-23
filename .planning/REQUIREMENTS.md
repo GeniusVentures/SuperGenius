@@ -153,8 +153,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 - [ ] **PRUNE-01**: A transaction is erasable only when every output is genuinely consumed (`IsOutPointGenuinelyConsumed`, not synthesized zero-amount tombstones) AND its depth beyond the current DAG head exceeds the configured finality window
 - [x] **PRUNE-02**: Erasure physically deletes, in one atomic RocksDB `WriteBatch`, the CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`), the raw CID block (existing `removeNode` chain), and the tx→CID map entry — never via the CRDT tombstone path (`DeleteKey`/`DeleteTransaction` are forbidden for pruning)
 - [ ] **PRUNE-03**: A delta block is erased only when every element it carries is prune-eligible (parse the block at prune time; deltas are multi-element)
-- [ ] **PRUNE-04**: The prune cycle is idempotent and crash-consistent — ordered erase flow (value → CID lookup → block-eligibility+delete → map entry) reaches a fixed point across crashes and restarts
-- [ ] **PRUNE-05**: Re-delivered/resurrected entries (add-wins OR-Set re-merge from lagging peers or restart head exchange) are re-pruned by a periodic sweep, and root processing treats pruned/resolved CIDs as terminal — no re-fetch storm
+- [x] **PRUNE-04**: The prune cycle is idempotent and crash-consistent — ordered erase flow (value → CID lookup → block-eligibility+delete → map entry) reaches a fixed point across crashes and restarts
+- [x] **PRUNE-05**: Re-delivered/resurrected entries (add-wins OR-Set re-merge from lagging peers or restart head exchange) are re-pruned by a periodic sweep, and root processing treats pruned/resolved CIDs as terminal — no re-fetch storm
 
 ### Gating & Safety
 
@@ -175,8 +175,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 
 - [ ] **RECL-01**: Deleted bytes actually leave the disk — periodic light-node-only `CompactRange` (`bottommost_level_compaction = kForce`) scheduled off the hot path
 - [ ] **RECL-02**: CI gate proves real reclamation — measured SST/`du` bytes before-vs-after a prune+compaction cycle (not key counts)
-- [ ] **RECL-03**: Per-cycle observability log — txs examined/erased, bytes reclaimed, watermark advance
-- [ ] **RECL-04**: Prune status is queryable — watermark and last-cycle stats
+- [x] **RECL-03**: Per-cycle observability log — txs examined/erased, bytes reclaimed, watermark advance
+- [x] **RECL-04**: Prune status is queryable — watermark and last-cycle stats
 
 ## v1.2 Deferred (future milestones)
 
@@ -208,8 +208,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | PRUNE-01 | Phase 17 | Pending |
 | PRUNE-02 | Phase 16 | Complete |
 | PRUNE-03 | Phase 17 | Pending |
-| PRUNE-04 | Phase 18 | Pending |
-| PRUNE-05 | Phase 18 | Pending |
+| PRUNE-04 | Phase 18 | Complete |
+| PRUNE-05 | Phase 18 | Complete |
 | GATE-01 | Phase 17 | Pending |
 | GATE-02 | Phase 20 | Pending |
 | GATE-03 | Phase 16 | Complete |
@@ -221,8 +221,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | SURV-03 | Phase 19 | Pending |
 | RECL-01 | Phase 20 | Pending |
 | RECL-02 | Phase 20 | Pending |
-| RECL-03 | Phase 18 | Pending |
-| RECL-04 | Phase 18 | Pending |
+| RECL-03 | Phase 18 | Complete |
+| RECL-04 | Phase 18 | Complete |
 
 v2 (future) requirements — no phase mapping by design:
 
