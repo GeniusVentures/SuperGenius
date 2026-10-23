@@ -4,14 +4,14 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
-stopped_at: Completed 19-03-PLAN.md
-last_updated: "2026-10-23T19:50:29.382Z"
+stopped_at: Completed 19-04-PLAN.md
+last_updated: "2026-10-23T20:48:11.732Z"
 last_activity: 2026-10-23
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 24
-  completed_plans: 20
+  completed_plans: 21
   percent: 12
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-10-23
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 88%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T19:50:29.378Z
-**Stopped At:** Completed 19-03-PLAN.md
+**Last session:** 2026-10-23T20:48:11.727Z
+**Stopped At:** Completed 19-04-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -145,6 +145,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P01 | 17min | 2 tasks | 3 files |
 | Phase 19 P02 | 19min | 3 tasks | 4 files |
 | Phase 19 P03 | 34min | 3 tasks | 6 files |
+| Phase 19 P04 | 53min | 3 tasks | 5 files |
 
 ## Decisions
 

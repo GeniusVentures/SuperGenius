@@ -190,7 +190,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 19-04-PLAN.md — D-01 checkpoint-rebuild guard: preserve-clear swap + PRUNED marker consult + own-replay recognition + gap-fill crosscheck + RebuildGuard suites (GATE-05)
+- [x] 19-04-PLAN.md — D-01 checkpoint-rebuild guard: preserve-clear swap + PRUNED marker consult + own-replay recognition + gap-fill crosscheck + RebuildGuard suites (GATE-05)
 - [ ] 19-07-PLAN.md — SURV-02 peer refusal/failover + SURV-03/D-04 three-node pruned-mesh E2E (SURV-02, SURV-03)
 
 **Wave 3** *(blocked on Wave 2)*
@@ -343,7 +343,7 @@ Plans:
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 3/7 | In Progress|  |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 4/7 | In Progress|  |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
