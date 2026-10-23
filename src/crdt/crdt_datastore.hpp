@@ -357,6 +357,41 @@ namespace sgns::crdt
          */
         static void ResetRootFetchAttemptsForTest();
 
+        /**
+         * @brief       Test-only: places @p cid on the failed-root retry
+         *              ladder exactly as one failed external root fetch
+         *              would (ScheduleFailedRootRetryLocked under the
+         *              worker lock).
+         * @note        No production caller may invoke this; tests use it to
+         *              reach the mid-flight ladder state deterministically.
+         * @param[in]   datastore datastore whose retry ladder is seeded
+         * @param[in]   cid root CID to schedule for retry
+         */
+        static void ScheduleFailedRootRetryForTest( CrdtDatastore &datastore, const CID &cid );
+
+        /**
+         * @brief       Test-only: places @p cid on the stalled-delta retry
+         *              ladder exactly as one dependency-stalled delta would.
+         * @note        No production caller may invoke this.
+         * @param[in]   datastore datastore whose retry ladder is seeded
+         * @param[in]   cid delta-block CID to schedule for retry
+         */
+        static void ScheduleStalledDeltaRetryForTest( CrdtDatastore &datastore, const CID &cid );
+
+        /**
+         * @brief       Test-only: current failed-root retry-ladder size.
+         * @note        No production caller may invoke this.
+         * @return      Number of CIDs currently scheduled for failed-root retry.
+         */
+        size_t GetFailedRootRetryCountForTest() const;
+
+        /**
+         * @brief       Test-only: current stalled-delta retry-ladder size.
+         * @note        No production caller may invoke this.
+         * @return      Number of CIDs currently scheduled for stalled-delta retry.
+         */
+        size_t GetStalledDeltaRetryCountForTest() const;
+
     protected:
         /// Test-only fetch-attempt counter (SC-3): increments once per
         /// EnqueueRootCID call that actually pushes onto pendingRootQueue_

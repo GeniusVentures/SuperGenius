@@ -752,3 +752,76 @@ TEST_F( GlobalDBEraseRedeliveryTest, RedeliveryOfUnprunedRootStillFetches )
         nullptr );
     EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
 }
+
+/// SC-5 (RetryDueFailedRoots guard): a root on the failed-fetch retry ladder
+/// whose block this node has since pruned (seal retained, block gone) is
+/// TERMINAL -- the retry pass must skip it BEFORE the fetch-attempt counter
+/// site (Pitfall 7), clear the ladder entry, and resurrect nothing. The
+/// mid-flight ladder state (a fetch failed, the seal appeared through another
+/// path) cannot be produced deterministically through the two-node wiring, so
+/// the ForTest seam places the pruned root on the ladder exactly as the failed
+/// fetch did; the retry pass itself is the REAL DAG-worker-loop pass.
+TEST_F( GlobalDBEraseRedeliveryTest, RetryDueFailedRootsSkipsPrunedRootWithZeroFetchAttempts )
+{
+    auto        testNodes = std::make_unique<EraseNodeCollection>();
+    SeededEntry entry_a;
+    seedPrunedRoot( *testNodes, "globaldb_redel_retry_guard", entry_a );
+    auto &b_db = *testNodes->getNodes()[1].db;
+
+    auto        &b_datastore = *b_db.GetCRDTDataStore();
+    const size_t baseline    = b_datastore.GetFailedRootRetryCountForTest();
+
+    // The mid-flight state: the pruned root sits on the retry ladder, due in
+    // one FAILED_ROOT_RETRY_BASE_DELAY (5s); the worker loop runs
+    // RetryDueFailedRoots every ~500ms pass.
+    sgns::crdt::CrdtDatastore::ScheduleFailedRootRetryForTest( b_datastore, entry_a.cid );
+    EXPECT_EQ( b_datastore.GetFailedRootRetryCountForTest(), baseline + 1 );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+
+    // One retry-pass horizon (the 5s base delay plus worker-loop slack): the
+    // guard must make the entry terminal -- cleared from the ladder.
+    ASSERT_WAIT_FOR_CONDITION( [&] { return b_datastore.GetFailedRootRetryCountForTest() == baseline; },
+                               std::chrono::seconds( 15 ),
+                               "pruned root's retry-ladder entry went terminal",
+                               nullptr );
+
+    // Zero fetch attempts across the pass: the guard fired before the counter
+    // site, and no other delivery moved the counter either.
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    assertNothingResurrected( b_db, entry_a );
+}
+
+/// Negative control: an UNRESOLVED root (no seal, no block -- never processed
+/// by this node) on the same ladder still enqueues: DeleteCIDBlock +
+/// EnqueueRootCID run and the fetch-attempt counter advances. The SC-5 guard
+/// suppresses only sealed roots, never ordinary retries.
+TEST_F( GlobalDBEraseTest, RetryDueFailedRootsStillRetriesUnresolvedRoot )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_redel_retry_control" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+    auto &db = *testNodes->getNodes().front().db;
+    ASSERT_FALSE( db.AddBroadcastTopic( kTopic ).has_error() );
+    db.AddListenTopic( kTopic );
+
+    const auto unseen_cid = makeUnseenCid( { 0x11, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45,
+                                             0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x11, 0x23, 0x45, 0x67, 0x89, 0xAB,
+                                             0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF } );
+
+    auto        &datastore = *db.GetCRDTDataStore();
+    const size_t baseline  = datastore.GetFailedRootRetryCountForTest();
+
+    sgns::crdt::CrdtDatastore::ScheduleFailedRootRetryForTest( datastore, unseen_cid );
+    EXPECT_EQ( datastore.GetFailedRootRetryCountForTest(), baseline + 1 );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    ASSERT_WAIT_FOR_CONDITION( [&] { return sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest() >= 1; },
+                               std::chrono::seconds( 15 ),
+                               "unresolved root's retry pass still enqueues a fetch",
+                               nullptr );
+
+    // The doomed fetch reschedules the entry: only the sealed-root guard
+    // clears ladder entries, so ordinary retries keep their ladder slot.
+    EXPECT_GE( datastore.GetFailedRootRetryCountForTest(), baseline + 1 );
+}
