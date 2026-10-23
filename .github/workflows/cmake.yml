@@ -603,6 +603,16 @@ jobs:
         # (failing, taking minutes) if Foundry ever lands on a runner.
         run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
 
+      - name: Tier-1 fail-closed lane
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        # TEST-01 (v1.1 Phase 7): -L Tier1 never includes unlabeled tests
+        # and --no-tests=error fails an empty selection, so a label typo or
+        # an unlabeled cold-storage registration cannot pass vacuously.
+        # Additive step - the existing fail-open full-suite lane above is
+        # unchanged (Pitfall 12: the two lanes coexist).
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -L Tier1 --no-tests=error
+
       - name: Run tests (Linux)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
@@ -676,6 +686,16 @@ jobs:
               ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry; \
             fi'
           unset GTEST_FILTER
+
+      - name: Tier-1 fail-closed lane (Linux)
+        working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
+        shell: bash
+        # TEST-01 (v1.1 Phase 7): hermetic Tier-1 lane; the keyring/dbus
+        # wrapper above is not needed (cold-storage Tier-1 tests touch no
+        # keyring and no MNN). Additive step - the existing fail-open
+        # full-suite lane above is unchanged (Pitfall 12).
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -L Tier1 --no-tests=error
 
       # The consensus/registry loggers (soralog) write to per-node sgnslog.log files, not the
       # console, so a flaky consensus failure leaves no trace in the job log. Capture them to

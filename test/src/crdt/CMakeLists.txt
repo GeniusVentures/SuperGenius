@@ -48,8 +48,9 @@ endif()
 
 # Cold-storage link proof (INTG-01, v1.1 Phase 7): registered ONLY under
 # SGNS_COLD_STORAGE because it links sgns-blockstore::sgns-blockstore.
-# LABELS "Tier1" is the fail-closed hermetic-lane assignment transplanted
-# from thirdparty/sgns-blockstore/docs/testing-tiers.md (addtest() itself
+# The Tier1 LABELS assignment below is the fail-closed hermetic-lane
+# convention transplanted from
+# thirdparty/sgns-blockstore/docs/testing-tiers.md (addtest() itself
 # has no LABELS support, so set_tests_properties is mandatory).
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_link_proof_test
