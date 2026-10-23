@@ -2,6 +2,7 @@
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
 #include <mutex>
+#include <string>
 #include <unordered_set>
 
 #include <boost/asio/io_context.hpp>
@@ -33,6 +34,33 @@ namespace sgns::crdt
             bool     auto_restore_on_repair_failure{ true };
         };
 
+        /**
+         * @brief      Construction-time configuration for the cold-storage
+         *             (sgns-blockstore) integration, v1.1 Phase 7 (INTG-02).
+         *
+         * Parsed strictly from the nested "blockstore" object of
+         * crdt_config.json (D-01/D-02): endpoint / bucket / access_key /
+         * secret_key are the required set; prefix / path_style / tls are
+         * optional. Credentials may resolve from the
+         * SGNS_BLOCKSTORE_S3_ACCESS_KEY / SGNS_BLOCKSTORE_S3_SECRET_KEY env
+         * vars (value override only - env never activates, D-07/D-08).
+         *
+         * @note accessKey/secretKey are NEVER-LOGGED credentials: no log
+         *       line, error string, or exception message may format their
+         *       values (redaction by omission; see LogSummary).
+         */
+        struct ColdStorageOptions
+        {
+            bool        enabled{ false };
+            std::string endpoint;
+            std::string bucket;
+            std::string accessKey; ///< credential - never logged
+            std::string secretKey; ///< credential - never logged
+            std::string prefix;
+            bool        pathStyle{ true };
+            bool        tls{ false };
+        };
+
         using Buffer             = base::Buffer;
         using QueryResult        = CrdtDatastore::QueryResult;
         using RocksDB            = storage::rocksdb;
@@ -49,6 +77,8 @@ namespace sgns::crdt
          * @param[in]   generator The request ID generator from graphsync
          * @param[in]   datastore datastore to be used. If not defined, created using databasePath
          * @param[in]   backup_options configuration for automatic backups of the CRDT data
+         * @param[in]   cold_storage_options configuration for the cold-storage (sgns-blockstore)
+         *              integration; default-constructed = disabled = today's behavior (v1.1 Phase 7)
          * @return      Instance of the GlobalDB initialized or Error
          */
         static outcome::result<std::shared_ptr<GlobalDB>> New(
@@ -60,7 +90,8 @@ namespace sgns::crdt
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
-            BackupOptions backup_options = BackupOptions{ false, 15, 12, true } );
+            BackupOptions          backup_options      = BackupOptions{ false, 15, 12, true },
+            ColdStorageOptions     cold_storage_options = ColdStorageOptions{} );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -328,6 +359,7 @@ namespace sgns::crdt
         bool                                              cid_receiving_started_;
         bool                                              head_broadcasting_started_;
         BackupOptions                                     backup_options_{};
+        ColdStorageOptions                                cold_storage_options_{};
         std::string                                       backup_directory_;
         std::atomic_bool                                  stop_backup_thread_{ false };
         std::atomic_bool                                  shutdown_started_{ false };

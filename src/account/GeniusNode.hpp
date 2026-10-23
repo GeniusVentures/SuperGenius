@@ -1623,6 +1623,10 @@ namespace sgns
 
         crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
 
+        /// Cold-storage (sgns-blockstore) config parsed strictly from the nested
+        /// "blockstore" section of crdt_config.json; default-constructed = disabled.
+        crdt::GlobalDB::ColdStorageOptions cold_storage_config_;
+
         /**
          * @brief Handles successful processing completion and triggers escrow payout.
          * @param[in] task_id Completed task identifier.

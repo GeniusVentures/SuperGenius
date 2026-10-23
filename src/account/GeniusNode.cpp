@@ -551,7 +551,8 @@ namespace sgns
 
     void GeniusNode::LoadCrdtConfig()
     {
-        crdt_backup_config_ = crdt::GlobalDB::BackupOptions{ true, 15, 12, true };
+        crdt_backup_config_    = crdt::GlobalDB::BackupOptions{ true, 15, 12, true };
+        cold_storage_config_   = crdt::GlobalDB::ColdStorageOptions{};
 
         const std::string config_path = write_base_path_ + "crdt_config.json";
         std::ifstream     config_file( config_path );
@@ -2124,7 +2125,8 @@ namespace sgns
                                                       scheduler_,
                                                       generator_,
                                                       nullptr,
-                                                      crdt_backup_config_ );
+                                                      crdt_backup_config_,
+                                                      cold_storage_config_ );
             if ( global_db_ret.has_error() )
             {
                 node_logger_->error( "Error creating GlobalDB: {}", global_db_ret.error().message() );
