@@ -3304,11 +3304,17 @@ namespace sgns
                 const auto local_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( account_m->GetAddress() );
                 if ( local_root != checkpoint_result.value()->utxo_merkle_root )
                 {
-                    m_logger->warn(
-                        "Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding" );
+                    m_logger->warn( "Local UTXO root mismatch with checkpoint during init. Clearing unspent UTXOs "
+                                    "and rebuilding (consumed spend evidence preserved)" );
 
-                    auto clear_result = account_m->GetUTXOManager().SetUTXOs( std::vector<GeniusUTXO>{},
-                                                                              account_m->GetAddress() );
+                    // D-01 (GATE-05 rebuild half): the clear must preserve
+                    // CONSUMED records — with their spent_by_txid evidence — so
+                    // PutUTXO's existing-entry duplicate check refuses
+                    // re-creation of spent outpoints during the rebuild below.
+                    // SetUTXOs' wipe-everything clear would drop that evidence
+                    // and open the double-spend window instead.
+                    auto clear_result = account_m->GetUTXOManager().ClearUnspentKeepConsumed(
+                        account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
                         m_logger->error( "Failed to clear local UTXOs after checkpoint mismatch: {}",
@@ -3370,8 +3376,44 @@ namespace sgns
                     // Incomplete history for another account must not prevent this account from starting.
                     if ( !processed && address == account_m->GetAddress() )
                     {
-                        std::lock_guard missing_lock( missing_tx_mutex_ );
-                        missing_tx_hashes_.insert( tx_hash );
+                        // GATE-05 / D-01: a creating tx that was pruned locally
+                        // is not relevant missing history — the durable UTXO set
+                        // is authoritative and every recovery request for it is
+                        // doomed by construction. Consult the pruned-marker
+                        // evidence (PruneEligibility is the marker's one home)
+                        // BEFORE touching the missing set; only a clean PRUNED
+                        // verdict skips. Anything else — NOT_FOUND, the
+                        // value-present invariant violation, or a lookup error —
+                        // keeps the 18-landed bounded recovery path exactly
+                        // as-is (never guess).
+                        bool pruned_locally = false;
+                        auto pruned_lookup  = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+                        if ( pruned_lookup.has_error() )
+                        {
+                            m_logger->warn( "Pruned-marker lookup failed for missing creating tx {} ({}); "
+                                            "keeping bounded recovery",
+                                            tx_hash,
+                                            pruned_lookup.error().message() );
+                        }
+                        else if ( pruned_lookup.value().first == PrunedLookup::PRUNED )
+                        {
+                            m_logger->info( "Creating tx {} pruned locally; UTXO set is authoritative - "
+                                            "not relevant, skipping recovery request",
+                                            tx_hash );
+                            pruned_locally = true;
+                        }
+                        else if ( pruned_lookup.value().first
+                                  == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+                        {
+                            m_logger->warn( "Pruned-marker invariant violation for missing creating tx {} "
+                                            "(marker AND value both present); keeping bounded recovery",
+                                            tx_hash );
+                        }
+                        if ( !pruned_locally )
+                        {
+                            std::lock_guard missing_lock( missing_tx_mutex_ );
+                            missing_tx_hashes_.insert( tx_hash );
+                        }
                     }
                 }
             }
