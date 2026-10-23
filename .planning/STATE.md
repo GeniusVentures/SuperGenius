@@ -5,7 +5,7 @@ milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
 stopped_at: Phase 19 context gathered
-last_updated: "2026-10-23T18:42:18.120Z"
+last_updated: "2026-10-23T19:10:42.704Z"
 last_activity: 2026-10-23
 progress:
   total_phases: 25
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-10-23
 
@@ -84,7 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T18:42:10.852Z
+**Last session:** 2026-10-23T19:10:42.700Z
 **Stopped At:** Phase 19 context gathered
 **Resume File:** None
 
@@ -143,6 +143,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
 | Phase 19 P01 | 17min | 2 tasks | 3 files |
+| Phase 19 P02 | 19min | 3 tasks | 4 files |
 
 ## Decisions
 
@@ -219,6 +220,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
 - [Phase 19]: Preserve-clear (19-01): ClearUnspentKeepConsumed is unconditional and owner-vended in UTXOManager; SetUTXOs wipe semantics stay byte-identical for existing callers
 - [Phase 19]: SetUTXOs wipes only index-resident entries — ConsumeUTXOs leaves CONSUMED entries orphaned from address_outpoints_; the real-world wipe path is post-restart (LoadUTXOs indexes CONSUMED before the mismatch clear), so D-01 tests must seed the reload shape
+- [Phase 19]: D-02 half 1 — preflight failures (witness/size) return typed Error::PRE_BROADCAST_VALIDATION; TickOnce rolls back and STAYS READY (error-code comparison across the Commit boundary cannot classify — same errc codes fire both sides)
+- [Phase 19]: D-02 half 2 — bounded SYNCING exit (60s knob, SetSyncingExitTimeoutForTest seam) anchors to GetLocalConfirmedNonce and never touches pending_nonces_; held reservations stay held so the next reserved nonce is strictly greater
 
 ## Deferred Items
 
