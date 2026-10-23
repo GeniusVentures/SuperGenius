@@ -50,6 +50,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
     {
         case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
             return "TRUST_POLICY_NOT_READY";
+        case sgns::TransactionManager::Error::PRE_BROADCAST_VALIDATION:
+            return "PRE_BROADCAST_VALIDATION";
     }
     return "Unknown TransactionManager error";
 }
@@ -575,6 +577,29 @@ namespace sgns
                     if ( retryable_error )
                     {
                         m_logger->info( "Send deferred/retryable ({}). Keeping transaction in queue", err.message() );
+                        break;
+                    }
+
+                    // D-02 half 1: a typed pre-broadcast failure never published
+                    // anything (staged Puts die with the uncommitted
+                    // AtomicTransaction), so waiting for a nonce confirmation
+                    // that cannot arrive would wedge every later send (the
+                    // failed-send-wedges-tm-in-syncing incident). Roll back and
+                    // STAY READY; the FAILED transition releases the reserved
+                    // nonce, so the next send reuses it cleanly.
+                    if ( err == make_error_code( Error::PRE_BROADCAST_VALIDATION ) )
+                    {
+                        m_logger->warn( "Pre-broadcast validation failed for tx {} ({}). Rolling back, staying READY",
+                                        tx_queue_m.front().first.front().first->GetHash(),
+                                        err.message() );
+
+                        auto rollback_result = RollbackTransactions( tx_queue_m.front() );
+                        if ( rollback_result.has_error() )
+                        {
+                            m_logger->error( "{} error, couldn't roll back pre-broadcast failure", __func__ );
+                            break;
+                        }
+                        tx_queue_m.pop_front();
                         break;
                     }
 
@@ -2057,7 +2082,7 @@ namespace sgns
                                  transaction->GetHash(),
                                  preflight_embedded_tx.ByteSizeLong(),
                                  MAX_PUBSUB_TX_BYTES );
-                return outcome::failure( std::errc::message_size );
+                return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
             }
 
             if ( transaction->HasUTXOParameters() )
@@ -2068,7 +2093,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
 
                 const auto &[preflight_chain, preflight_validator] = SelectInputValidator( *transaction );
@@ -2079,7 +2104,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
             }
         }

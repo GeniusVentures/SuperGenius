@@ -85,6 +85,10 @@ namespace sgns
         enum class Error : uint8_t
         {
             TRUST_POLICY_NOT_READY = 1,
+            /// Send failed BEFORE any CRDT Put/Commit or proposal side effect
+            /// (witness/size preflight). Nothing was published, so the send
+            /// baseline advance was a promise never kept (D-02).
+            PRE_BROADCAST_VALIDATION = 2,
         };
 
         /**
