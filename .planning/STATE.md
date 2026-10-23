@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 17
-status: ready_to_plan
-stopped_at: Phase 18 complete (7/7) — ready to discuss Phase 19
-last_updated: 2026-10-23T16:38:09.337Z
-last_activity: 2026-10-16 -- Phase 17 planning complete
+current_phase: 19
+status: planning
+stopped_at: Phase 19 context gathered
+last_updated: "2026-10-23T16:57:27.528Z"
+last_activity: 2026-10-23
 progress:
-  total_phases: 23
-  completed_phases: 1
-  total_plans: 10
+  total_phases: 25
+  completed_phases: 3
+  total_plans: 17
   completed_plans: 17
-  percent: 4
+  percent: 12
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-16T19:09:57.202Z
-**Stopped At:** Phase 17 context gathered
-**Resume File:** .planning/phases/17-eligibility-policy-gating-dry-run/17-CONTEXT.md
+**Last session:** 2026-10-23T16:57:27.519Z
+**Stopped At:** Phase 19 context gathered
+**Resume File:** .planning/phases/19-pruned-node-survival-recovery-hardening/19-CONTEXT.md
 
 ## Accumulated Context
 
