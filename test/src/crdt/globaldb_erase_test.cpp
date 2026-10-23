@@ -825,3 +825,75 @@ TEST_F( GlobalDBEraseTest, RetryDueFailedRootsStillRetriesUnresolvedRoot )
     // clears ladder entries, so ordinary retries keep their ladder slot.
     EXPECT_GE( datastore.GetFailedRootRetryCountForTest(), baseline + 1 );
 }
+
+/// SC-5 (RetryStalledDeltas, verify-only): the stalled-delta retry path is
+/// deliberately local-only (GetNodeWithoutRequest -- no fetch, the documented
+/// anti-pattern is ever adding one). A stalled delta whose block was pruned
+/// keeps that property under the worst input: ZERO fetch attempts across real
+/// retry passes, and bounded give-up at the MAX_FAILED_ROOT_RETRIES cap. The
+/// ladder state is seeded through the same locked scheduler a natural
+/// dependency-stall uses; the retry pass that observes the pruned block is the
+/// REAL DAG-worker-loop pass.
+TEST_F( GlobalDBEraseTest, StalledDeltaPrunedBlockGivesUpLocallyWithZeroFetchAttempts )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_stalled_pruned" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+    auto &db = *testNodes->getNodes().front().db;
+    ASSERT_FALSE( db.AddBroadcastTopic( kTopic ).has_error() );
+    db.AddListenTopic( kTopic );
+
+    // The pruned shape on one node: A seeded then retired by B, map entry in
+    // the StoreTransactionCID shape, erased through the one facade API so the
+    // seal marker remains (block gone).
+    const auto entry_a = SeedEntry( db, "/stalled/entryA", "VALUE_A" );
+    const auto entry_b = SeedEntry( db, "/stalled/entryB", "VALUE_B" );
+    ASSERT_FALSE( headListContains( db, entry_a.cid ) );
+    ASSERT_TRUE( db.PutRaw( sgns::base::Buffer{}.put( entry_a.tx_path ),
+                            sgns::base::Buffer{}.put( entry_a.cid.toString().value() ) )
+                     .has_value() );
+    EXPECT_OUTCOME_TRUE_1( db.EraseEntry( entry_a.tx_path, entry_a.cid ) );
+    ASSERT_TRUE( db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    ASSERT_TRUE( rawSealKeyPresent( db, entry_a.cid ) );
+
+    auto        &datastore = *db.GetCRDTDataStore();
+    const size_t baseline  = datastore.GetStalledDeltaRetryCountForTest();
+
+    // The mid-flight state: the pruned delta block sits on the stalled
+    // ladder, due in one base delay (5s).
+    sgns::crdt::CrdtDatastore::ScheduleStalledDeltaRetryForTest( datastore, entry_a.cid );
+    EXPECT_EQ( datastore.GetStalledDeltaRetryCountForTest(), baseline + 1 );
+
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+
+    // A quiet window spanning the due time plus worker-loop slack: at least
+    // one real RetryStalledDeltas pass re-attempts the pruned block locally
+    // (GetNodeWithoutRequest fails on the absent block and reschedules). No
+    // predicate observable exists for "a pass ran", so the window is the
+    // 5s base delay plus multi-pass slack.
+    std::this_thread::sleep_for( std::chrono::seconds( 8 ) );
+
+    // The pinned property: even with the block gone, the retry path never
+    // fetched -- zero counter movement across the real pass(es).
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    EXPECT_EQ( datastore.GetStalledDeltaRetryCountForTest(), baseline + 1 );
+
+    // Bounded give-up: each further failed local pass increments the attempt
+    // counter through the same locked scheduler, and the MAX_FAILED_ROOT_RETRIES
+    // cap erases the entry. Driving the remaining attempts directly pins that
+    // a stalled entry cannot retry forever.
+    size_t drives = 0;
+    while ( datastore.GetStalledDeltaRetryCountForTest() > baseline && drives < 10 )
+    {
+        sgns::crdt::CrdtDatastore::ScheduleStalledDeltaRetryForTest( datastore, entry_a.cid );
+        ++drives;
+    }
+    EXPECT_EQ( datastore.GetStalledDeltaRetryCountForTest(), baseline );
+    EXPECT_LE( drives, 9 );
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    // Still pruned, never resurrected: the value stays erased, the block stays
+    // gone, the seal marker is still the terminal record.
+    EXPECT_TRUE( db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+    EXPECT_TRUE( db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_TRUE( rawSealKeyPresent( db, entry_a.cid ) );
+}
