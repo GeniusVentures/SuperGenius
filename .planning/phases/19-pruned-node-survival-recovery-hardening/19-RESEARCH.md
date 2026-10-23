@@ -414,7 +414,7 @@ struct TransactionLookupResult
 
 **All other claims were verified against source this session** (file:line cited inline).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the D-01 preserve-clear also need the "pruned-below evidence" gate D-01's text mentions?**
    - What we know: preserving CONSUMED records is strictly safer unconditionally (consumed evidence is never wrong to keep); the evidence gate would only shape the LOG.
@@ -554,3 +554,8 @@ ASVS level 1 (config: `security_enforcement: true`, `security_asvs_level: 1`, `s
 
 **Research date:** 2026-10-23
 **Valid until:** 2026-11-22 (stable internal codebase; re-verify if `src/transaction/TransactionManager.cpp`, `src/account/UTXOManager.cpp`, or `src/crdt/impl/crdt_datastore.cpp` changes land first)
+
+### Resolution Record (2026-10-23, adopted by the plans)
+1. Preserve-clear gate: **unconditional preserve** adopted (19-01-T1 names the default); pruned-below evidence shapes logging only.
+2. Half-1 classification surface: **extend TransactionManager::Error + category** adopted (19-02-T1).
+3. SC-1 real-boot READY strategy: **(b) pre-seeded local confirmed nonce primary, (a) two-node fallback** adopted (19-06, measure-first gate).
