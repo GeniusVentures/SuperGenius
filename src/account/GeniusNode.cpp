@@ -564,9 +564,10 @@ namespace sgns
 
         std::stringstream buffer;
         buffer << config_file.rdbuf();
+        const std::string config_text = buffer.str();
 
         rapidjson::Document config_json;
-        config_json.Parse( buffer.str().c_str() );
+        config_json.Parse( config_text.c_str() );
         if ( config_json.HasParseError() || !config_json.IsObject() )
         {
             node_logger_->warn( "Invalid crdt_config.json at {}, using defaults", config_path );
@@ -607,6 +608,25 @@ namespace sgns
             crdt_backup_config_.interval_minutes,
             crdt_backup_config_.keep_count,
             crdt_backup_config_.auto_restore_on_repair_failure );
+
+        // Strict tri-state "blockstore" parse (INTG-02, v1.1 Phase 7). The
+        // file-level early returns above stay lenient (D-06); everything
+        // detectable INSIDE an inspectable section fails loudly below,
+        // before InitDatabase runs (the ctor's existing throw path).
+        auto cold_storage_result = crdt::GlobalDB::ParseColdStorageConfig( config_text );
+        if ( cold_storage_result.has_error() )
+        {
+            throw std::runtime_error( cold_storage_result.error() );
+        }
+        cold_storage_config_ = cold_storage_result.value();
+        // Pitfall 9: nothing new is logged when disabled - one info line
+        // ONLY when enabled, and it carries LogSummary() (endpoint/bucket/
+        // prefix/path_style/tls; credentials are never formatted).
+        if ( cold_storage_config_.enabled )
+        {
+            node_logger_->info( "crdt_config.json: cold storage blockstore enabled: {}",
+                                cold_storage_config_.LogSummary() );
+        }
     }
 
     void GeniusNode::LoadLogConfig()

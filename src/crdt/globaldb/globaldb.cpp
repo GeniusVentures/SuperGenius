@@ -21,6 +21,11 @@
 #include <chrono>
 #include <thread>
 
+#include <rapidjson/document.h>
+
+#include <cstdlib>
+#include <vector>
+
 #if defined( _WIN32 )
 #include <winsock2.h>
 #include <iphlpapi.h>
@@ -63,6 +68,186 @@ namespace sgns::crdt
     using IpfsRocksDb        = ipfs_lite::rocksdb;
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
+
+    GlobalDB::ColdStorageEnvLookup GlobalDB::DefaultColdStorageEnvLookup()
+    {
+        // D-07: credentials only - exactly two variables exist. Unset OR
+        // empty reads as empty (= no override); env never activates (D-08).
+        ColdStorageEnvLookup lookup;
+        const char *access_env = std::getenv( "SGNS_BLOCKSTORE_S3_ACCESS_KEY" );
+        const char *secret_env = std::getenv( "SGNS_BLOCKSTORE_S3_SECRET_KEY" );
+        if ( access_env != nullptr && *access_env != '\0' )
+        {
+            lookup.access_key = access_env;
+        }
+        if ( secret_env != nullptr && *secret_env != '\0' )
+        {
+            lookup.secret_key = secret_env;
+        }
+        return lookup;
+    }
+
+    std::string GlobalDB::ColdStorageOptions::LogSummary() const
+    {
+        // T-7-03 redaction by omission: credential members are NEVER
+        // referenced here - endpoint/bucket/prefix/path_style/tls only.
+        return "endpoint=" + endpoint + ", bucket=" + bucket + ", prefix=" + prefix
+             + ", path_style=" + ( pathStyle ? "true" : "false" ) + ", tls=" + ( tls ? "true" : "false" );
+    }
+
+    GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string &crdt_config_text )
+    {
+        return ParseColdStorageConfig( crdt_config_text, DefaultColdStorageEnvLookup() );
+    }
+
+    GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string         &crdt_config_text,
+                                                                       const ColdStorageEnvLookup &env_lookup )
+    {
+        ColdStorageOptions options; // disabled default (enabled == false)
+
+        rapidjson::Document document;
+        document.Parse( crdt_config_text.c_str() );
+
+        // (a) D-06: whole-file failures keep the legacy lenient behavior -
+        // disabled, NOT an error (the caller warns + keeps defaults).
+        if ( document.HasParseError() || !document.IsObject() )
+        {
+            return options;
+        }
+
+        // (b) D-03: absent section => disabled.
+        const auto section_it = document.FindMember( "blockstore" );
+        if ( section_it == document.MemberEnd() )
+        {
+            return options;
+        }
+
+        // (c) present-but-not-an-object is a detectable malformation: loud.
+        const rapidjson::Value &section = section_it->value;
+        if ( !section.IsObject() )
+        {
+            return outcome::failure( std::string( "crdt_config.json: 'blockstore' section must be an object" ) );
+        }
+
+        // (d) single member pass: unknown key => loud (D-05); wrong-typed
+        // known key => loud naming the key. Never warn-and-skip (P10).
+        std::string file_endpoint;
+        std::string file_bucket;
+        std::string file_access_key;
+        std::string file_secret_key;
+        std::string file_prefix;
+        bool        has_path_style = false;
+        bool        has_tls        = false;
+        bool        path_style     = true;
+        bool        tls            = false;
+        for ( auto member = section.MemberBegin(); member != section.MemberEnd(); ++member )
+        {
+            const std::string key = member->name.GetString();
+            const bool        is_string_key =
+                ( key == "endpoint" || key == "bucket" || key == "access_key" || key == "secret_key" || key == "prefix" );
+            const bool is_bool_key = ( key == "path_style" || key == "tls" );
+            if ( !is_string_key && !is_bool_key )
+            {
+                return outcome::failure( "crdt_config.json: unknown key 'blockstore." + key + "'" );
+            }
+            if ( is_string_key && !member->value.IsString() )
+            {
+                return outcome::failure( "crdt_config.json: 'blockstore." + key + "' must be a string" );
+            }
+            if ( is_bool_key && !member->value.IsBool() )
+            {
+                return outcome::failure( "crdt_config.json: 'blockstore." + key + "' must be a boolean" );
+            }
+            if ( key == "endpoint" )
+            {
+                file_endpoint = member->value.GetString();
+            }
+            else if ( key == "bucket" )
+            {
+                file_bucket = member->value.GetString();
+            }
+            else if ( key == "access_key" )
+            {
+                file_access_key = member->value.GetString();
+            }
+            else if ( key == "secret_key" )
+            {
+                file_secret_key = member->value.GetString();
+            }
+            else if ( key == "prefix" )
+            {
+                file_prefix = member->value.GetString();
+            }
+            else if ( key == "path_style" )
+            {
+                has_path_style = true;
+                path_style     = member->value.GetBool();
+            }
+            else if ( key == "tls" )
+            {
+                has_tls = true;
+                tls     = member->value.GetBool();
+            }
+        }
+        (void)has_path_style;
+        (void)has_tls;
+
+        // (e) D-08 file-intent gate: all four required fields blank in the
+        // FILE => disabled REGARDLESS of env (env overrides values, never
+        // activates). An optional-fields-only section lands here too.
+        const bool any_required_in_file =
+            !file_endpoint.empty() || !file_bucket.empty() || !file_access_key.empty() || !file_secret_key.empty();
+        if ( !any_required_in_file )
+        {
+            return options;
+        }
+
+        // (f) intent signalled: apply env VALUE overrides (D-07 - credentials
+        // only; endpoint/bucket/prefix/path_style/tls come solely from the
+        // file), THEN run the required-field check on post-env values (D-04).
+        const std::string resolved_access_key = env_lookup.access_key.empty() ? file_access_key : env_lookup.access_key;
+        const std::string resolved_secret_key = env_lookup.secret_key.empty() ? file_secret_key : env_lookup.secret_key;
+
+        std::vector<std::string> missing;
+        if ( file_endpoint.empty() )
+        {
+            missing.push_back( "endpoint" );
+        }
+        if ( file_bucket.empty() )
+        {
+            missing.push_back( "bucket" );
+        }
+        if ( resolved_access_key.empty() )
+        {
+            missing.push_back( "access_key (file or SGNS_BLOCKSTORE_S3_ACCESS_KEY)" );
+        }
+        if ( resolved_secret_key.empty() )
+        {
+            missing.push_back( "secret_key (file or SGNS_BLOCKSTORE_S3_SECRET_KEY)" );
+        }
+        if ( !missing.empty() )
+        {
+            std::string joined = missing[0];
+            for ( size_t i = 1; i < missing.size(); ++i )
+            {
+                joined += ", " + missing[i];
+            }
+            return outcome::failure(
+                "crdt_config.json: 'blockstore' partially filled - missing required field(s): " + joined );
+        }
+
+        // (g) enabled: populate with post-env values; optional defaults
+        // (prefix empty, path_style true, tls false) unless explicitly set.
+        options.enabled   = true;
+        options.endpoint  = file_endpoint;
+        options.bucket    = file_bucket;
+        options.accessKey = resolved_access_key;
+        options.secretKey = resolved_secret_key;
+        options.prefix    = file_prefix;
+        options.pathStyle = path_style;
+        options.tls       = tls;
+        return options;
+    }
 
     outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
         std::shared_ptr<boost::asio::io_context>                              context,

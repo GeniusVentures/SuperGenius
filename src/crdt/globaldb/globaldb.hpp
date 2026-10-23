@@ -59,7 +59,80 @@ namespace sgns::crdt
             std::string prefix;
             bool        pathStyle{ true };
             bool        tls{ false };
+
+            /**
+             * @brief      Sanitized one-line summary: endpoint, bucket,
+             *             prefix, path_style, tls ONLY - the credential
+             *             members are never referenced (redaction by
+             *             omission, T-7-03).
+             * @return     log-safe summary string
+             */
+            std::string LogSummary() const;
         };
+
+        /**
+         * @brief      Resolved cold-storage credential overrides from the
+         *             process environment (D-07/D-08, v1.1 Phase 7).
+         *
+         * Production resolution (DefaultColdStorageEnvLookup, globaldb.cpp)
+         * reads std::getenv for exactly SGNS_BLOCKSTORE_S3_ACCESS_KEY and
+         * SGNS_BLOCKSTORE_S3_SECRET_KEY; unset OR empty reads as empty (no
+         * override). Tests inject values directly without touching the
+         * process environment. Env overrides credential VALUES only - env
+         * alone can never activate cold storage (D-08).
+         */
+        struct ColdStorageEnvLookup
+        {
+            std::string access_key; ///< override for blockstore access_key; empty = none
+            std::string secret_key; ///< override for blockstore secret_key; empty = none
+        };
+
+        /**
+         * @brief      Production env resolution for the two credential
+         *              variables (unset or empty => empty member).
+         * @return      resolved overrides
+         */
+        static ColdStorageEnvLookup DefaultColdStorageEnvLookup();
+
+        /// Parse outcome: ColdStorageOptions on success; on failure a
+        /// human-readable message naming the offending key or the missing
+        /// field(s) - never a field VALUE (T-7-03).
+        using ColdStorageParseResult = outcome::result<ColdStorageOptions, std::string>;
+
+        /**
+         * @brief      Parses the strict tri-state "blockstore" section of a
+         *              crdt_config.json document (INTG-02, D-01..D-08).
+         *
+         * Semantics (strict section inside a lenient-at-file-level loader):
+         *  - D-03: no section / empty object / optional-fields-only =>
+         *      disabled options (not an error)
+         *  - D-04: partial fill (a required field non-blank in the file
+         *      while another required field is blank AFTER env resolution)
+         *      => error naming the missing field(s)
+         *  - D-05: unknown key or wrong-typed known key => error naming
+         *      the key
+         *  - D-06: whole-file JSON parse failure => disabled options (the
+         *      caller's legacy lenient behavior, NOT an error)
+         *  - D-07/D-08: env overrides credential values only; a section
+         *      whose four required fields are all blank in the file stays
+         *      disabled regardless of environment
+         *
+         * @param[in]  crdt_config_text the whole config file contents
+         * @return     parsed options (check .has_error() / guard before
+         *              .value() - the result alias terminates on misuse)
+         */
+        static ColdStorageParseResult ParseColdStorageConfig( const std::string &crdt_config_text );
+
+        /**
+         * @brief      Injectable-env overload; identical semantics with an
+         *              explicit env resolution (tests inject without
+         *              touching the process environment).
+         * @param[in]  crdt_config_text the whole config file contents
+         * @param[in]  env_lookup pre-resolved credential overrides
+         * @return     parsed options or a naming error message
+         */
+        static ColdStorageParseResult ParseColdStorageConfig( const std::string         &crdt_config_text,
+                                                              const ColdStorageEnvLookup &env_lookup );
 
         using Buffer             = base::Buffer;
         using QueryResult        = CrdtDatastore::QueryResult;
