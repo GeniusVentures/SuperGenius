@@ -63,3 +63,18 @@ target_link_libraries(cold_storage_link_proof_test
 set_tests_properties(cold_storage_link_proof_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Cold-storage config-gate matrix (TEST-01 / INTG-02, v1.1 Phase 7 plan 07-03).
+# Registered UNCONDITIONALLY - NOT under SGNS_COLD_STORAGE: the parse/env code
+# from 07-02 compiles ungated, so the Tier-1 lane is non-empty in default OFF
+# builds and ctest -L Tier1 --no-tests=error can never pass vacuously
+# (Pitfall 6). Links only crdt_globaldb (rapidjson arrives PRIVATE through it).
+addtest(cold_storage_config_gate_test
+    cold_storage_config_gate_test.cpp
+)
+
+target_link_libraries(cold_storage_config_gate_test
+    crdt_globaldb
+)
+
+set_tests_properties(cold_storage_config_gate_test PROPERTIES LABELS "Tier1")
+
