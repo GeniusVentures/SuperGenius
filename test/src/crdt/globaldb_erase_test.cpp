@@ -1121,3 +1121,170 @@ TEST_F( GlobalDBEraseRefusalFailoverTest, PrunedPeerRefusalFailsOverToServingPee
     EXPECT_GE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
     EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 4 );
 }
+
+/// SURV-03 / D-04 (19-07): a fresh light node bootstraps through a pruned
+/// mesh. Three seeders share the mesh topic -- two light peers that prune
+/// the history and one full node that keeps it -- and the full node also
+/// owns a serving topic carrying the same history head (a put on both
+/// topics links the mesh history, so one serving-topic broadcast carries
+/// the whole pruned DAG beneath it). The fresh node subscribes the
+/// serving topic first: the full node is the ONLY possible route source
+/// on it (Pitfall 6 -- routes register from broadcasts), so the pruned
+/// history provably arrives from the full node, with no ladder rides.
+/// Joining the pruned mesh afterwards -- with every block already
+/// present -- fetches nothing: no re-fetch storm from the pruned lights,
+/// seals intact.
+class GlobalDBErasePrunedMeshTest : public GlobalDBEraseRedeliveryTest
+{
+protected:
+    static constexpr char kMeshTopic[]  = "erase_e2e_mesh_topic";
+    static constexpr char kServeTopic[] = "erase_e2e_serve_topic";
+};
+
+TEST_F( GlobalDBErasePrunedMeshTest, FreshNodeBootstrapsPrunedHistoryServedByFullNode )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_mesh_light1" );
+    testNodes->addNode( "globaldb_mesh_light2" );
+    testNodes->addNode( "globaldb_mesh_full" );
+    testNodes->addNode( "globaldb_mesh_fresh" );
+    ASSERT_EQ( testNodes->getNodes().size(), 4 );
+    testNodes->connectNodes( 0, 1 ); // seeding mesh: light1 dials light2
+    testNodes->connectNodes( 0, 2 ); // light1 dials full
+    testNodes->connectNodes( 1, 2 ); // light2 dials full
+
+    auto &l1_db       = *testNodes->getNodes()[0].db;
+    auto &l2_db       = *testNodes->getNodes()[1].db;
+    auto &f_db        = *testNodes->getNodes()[2].db;
+    auto &fresh_db    = *testNodes->getNodes()[3].db;
+    auto &fresh_store = *fresh_db.GetCRDTDataStore();
+
+    // Light 1 is deaf (the retire-put topology); light 2 and the full
+    // node listen on the mesh topic. The full node owns the serving topic
+    // alone -- no light ever publishes or subscribes it, so every route
+    // a serving-topic subscriber can hold is full-node-attributed.
+    ASSERT_FALSE( l1_db.AddBroadcastTopic( kMeshTopic ).has_error() );
+    l2_db.AddListenTopic( kMeshTopic );
+    ASSERT_FALSE( f_db.AddBroadcastTopic( kMeshTopic ).has_error() );
+    f_db.AddListenTopic( kMeshTopic );
+    ASSERT_FALSE( f_db.AddBroadcastTopic( kServeTopic ).has_error() );
+    f_db.AddListenTopic( kServeTopic );
+
+    // Seed the history on all three: light 1 puts, the mesh receives.
+    const auto entry_a = SeedEntryOn( l1_db, "/mesh/entryA", "A", { kMeshTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return entryApplied( l2_db, entry_a ) && entryApplied( f_db, entry_a ) &&
+                   rawSealKeyPresent( l2_db, entry_a.cid ) && rawSealKeyPresent( f_db, entry_a.cid );
+        },
+        WAIT_TIMEOUT,
+        "mesh received and sealed the history root",
+        nullptr );
+    // Light 1's retire put moves every mesh head past the prune target.
+    const auto entry_l1 = SeedEntryOn( l1_db, "/mesh/entryL1", "L1_RETIRE", { kMeshTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return !headListContains( l1_db, entry_a.cid ) && headListContains( l1_db, entry_l1.cid ) &&
+                   headListContains( l2_db, entry_l1.cid ) && headListContains( f_db, entry_l1.cid );
+        },
+        WAIT_TIMEOUT,
+        "retire put moved every mesh head past the prune target",
+        nullptr );
+
+    // Both lights prune the history (seal retained -- GATE-03).
+    for ( const size_t light_idx : { size_t{ 0 }, size_t{ 1 } } )
+    {
+        auto &light_db = *testNodes->getNodes()[light_idx].db;
+        ASSERT_TRUE( light_db
+                         .PutRaw( sgns::base::Buffer{}.put( entry_a.tx_path ),
+                                  sgns::base::Buffer{}.put( entry_a.cid.toString().value() ) )
+                         .has_value() );
+        EXPECT_OUTCOME_TRUE_1( light_db.EraseEntry( entry_a.tx_path, entry_a.cid ) );
+        EXPECT_TRUE( light_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+        EXPECT_TRUE( light_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+        EXPECT_TRUE( rawSealKeyPresent( light_db, entry_a.cid ) );
+    }
+
+    // The full node's serving head: a put on BOTH topics links the mesh
+    // history, so the serving-topic broadcast carries the pruned DAG
+    // beneath it. Asserted BEFORE the fresh node's fetch window opens:
+    // the serving route's content exists.
+    const auto entry_f = SeedEntryOn( f_db, "/mesh/entryF", "F_SERVE", { kMeshTopic, kServeTopic } );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( f_db, entry_f.cid ); },
+                               WAIT_TIMEOUT,
+                               "full node's serving head landed on both topics",
+                               nullptr );
+    EXPECT_TRUE( entryApplied( f_db, entry_a ) );
+    EXPECT_TRUE( f_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_value() );
+    EXPECT_TRUE( rawSealKeyPresent( f_db, entry_a.cid ) );
+
+    // Phase B -- the fresh node bootstraps through the full node. It
+    // subscribes the serving topic (subscribing before dialing so the
+    // subscription is announced at connect) and knows the mesh topic
+    // NAME only: the datastore's link-fetch gate for mesh-named links,
+    // without joining the mesh's gossip yet.
+    fresh_db.AddListenTopic( kServeTopic );
+    fresh_db.AddTopicName( kMeshTopic );
+    EXPECT_FALSE( entryApplied( fresh_db, entry_a ) ); // non-vacuous: holds nothing
+    testNodes->connectNodes( 3, 2 );
+    auto full_pubsub = testNodes->getNodes()[2].pubsub;
+    ASSERT_WAIT_FOR_CONDITION( [&] { return full_pubsub->getPeerCount( fullTopicName( kServeTopic ) ) >= 1; },
+                               std::chrono::seconds( 10 ),
+                               "full node learned the fresh node's serving-topic subscription",
+                               nullptr );
+
+    const size_t ladder_baseline = fresh_store.GetFailedRootRetryCountForTest();
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    // The Pitfall-6 wiring: the serving head exists (asserted above) and
+    // the delivery path is up; the broadcast registers the full node's
+    // route on the fresh node BEFORE any fetch window it controls.
+    EXPECT_OUTCOME_TRUE_1( f_db.GetCRDTDataStore()->BroadcastHeadsForTopics( { kServeTopic } ) );
+
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return entryApplied( fresh_db, entry_a ) && entryApplied( fresh_db, entry_l1 ) &&
+                   entryApplied( fresh_db, entry_f );
+        },
+        WAIT_TIMEOUT,
+        "fresh node bootstrapped the pruned-history heads from the full node's broadcast",
+        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( fresh_db, entry_f.cid ); },
+                               WAIT_TIMEOUT,
+                               "serving head finalized as the fresh node's head",
+                               nullptr );
+    // No ladder rides and a bounded fetch total: the serving head's root
+    // enqueue (the pruned-history links ride the same walk) plus at most
+    // a re-delivery or a slow mesh-side fetch of the serving delta --
+    // the counter dedups pending roots, so the exact count wobbles by
+    // delivery timing; a route-starved ladder ride would run to 8.
+    EXPECT_EQ( fresh_store.GetFailedRootRetryCountForTest(), ladder_baseline );
+    EXPECT_GE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
+    EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 4 );
+
+    // Phase C -- join the pruned mesh with everything already present.
+    // The lights' cached head broadcasts deliver, find every block
+    // present, and fetch NOTHING: no re-fetch storm, seals untouched.
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    fresh_db.AddListenTopic( kMeshTopic );
+    testNodes->connectNodes( 3, 0 );
+    testNodes->connectNodes( 3, 1 );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return full_pubsub->getPeerCount( fullTopicName( kMeshTopic ) ) >= 2; },
+                               std::chrono::seconds( 10 ),
+                               "fresh node's mesh-topic subscription is known before the quiet window",
+                               nullptr );
+    std::this_thread::sleep_for( std::chrono::seconds( 6 ) );
+
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    EXPECT_EQ( fresh_store.GetFailedRootRetryCountForTest(), ladder_baseline );
+    for ( const size_t light_idx : { size_t{ 0 }, size_t{ 1 } } )
+    {
+        auto &light_db = *testNodes->getNodes()[light_idx].db;
+        EXPECT_TRUE( light_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+        EXPECT_TRUE( light_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+        EXPECT_TRUE( rawSealKeyPresent( light_db, entry_a.cid ) );
+    }
+    EXPECT_TRUE( entryApplied( fresh_db, entry_a ) );
+}
