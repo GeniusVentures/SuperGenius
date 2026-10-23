@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
 stopped_at: Phase 19 context gathered
-last_updated: "2026-10-23T18:14:56.563Z"
-last_activity: 2026-10-23 -- Phase 19 planning complete
+last_updated: "2026-10-23T18:42:18.120Z"
+last_activity: 2026-10-23
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 24
-  completed_plans: 17
+  completed_plans: 18
   percent: 12
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 19 — pruned node survival & recovery hardening
+**Current focus:** Phase 19 — pruned-node-survival-recovery-hardening
 
 ## Current Position
 
-Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
-Plan: Not started
+Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-10-23 -- Phase 19 planning complete
+Last activity: 2026-10-23
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T16:57:27.519Z
+**Last session:** 2026-10-23T18:42:10.852Z
 **Stopped At:** Phase 19 context gathered
-**Resume File:** .planning/phases/19-pruned-node-survival-recovery-hardening/19-CONTEXT.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -142,6 +142,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P02 | 18min | 3 tasks | 7 files |
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
+| Phase 19 P01 | 17min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -216,6 +217,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: The erase pending/active guard protects the EXTERNAL root path only (pendingRootQueue_/activeRootCID_); self-created Put jobs live in selfCreatedJobList_ — the 16-04 guard proof stalls a mirrored receiver's getNode, the fetch entry the DAG worker reaches with the root job active
 - [Phase 16]: The source-scan gate roots at PROJECT_ROOT, never CMAKE_SOURCE_DIR — this repo drives CMake from build/OSX/ (out-of-root driver), so CMAKE_SOURCE_DIR/src does not exist and would make the gate vacuously green
 - [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
+- [Phase 19]: Preserve-clear (19-01): ClearUnspentKeepConsumed is unconditional and owner-vended in UTXOManager; SetUTXOs wipe semantics stay byte-identical for existing callers
+- [Phase 19]: SetUTXOs wipes only index-resident entries — ConsumeUTXOs leaves CONSUMED entries orphaned from address_outpoints_; the real-world wipe path is post-restart (LoadUTXOs indexes CONSUMED before the mismatch clear), so D-01 tests must seed the reload shape
 
 ## Deferred Items
 
