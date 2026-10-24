@@ -31,6 +31,7 @@
 #ifndef _SGNS_TX_PRUNER_HPP_
 #define _SGNS_TX_PRUNER_HPP_
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -60,10 +61,10 @@ namespace sgns
      * @details     Per-tx EVIDENCE (reasons, spend heights, block verdicts)
      *              lives in the evaluator's PruneEvaluationResult — the stats
      *              carry the cycle-level arithmetic an operator needs in the
-     *              per-cycle INFO line and PruneStatus. bytes_reclaimed is
-     *              deliberately absent: deletes alone reclaim nothing and no
-     *              byte measurement exists before Phase 20's CompactRange
-     *              proof — a fabricated number is worse than none.
+     *              per-cycle INFO line and PruneStatus. Reclaimed BYTES are
+     *              never carried here: deletes alone reclaim nothing, and the
+     *              measured delta is stamped at compaction time on
+     *              PruneStatus::bytes_reclaimed (D-02 — the honest split).
      */
     struct PruneCycleStats
     {
@@ -107,16 +108,22 @@ namespace sgns
         /// before invoking the cycle and tags its own reporting; the flag
         /// stays false as produced by the service.
         bool generation_superseded = false;
+
+        /// True when this cycle's post-cycle compaction gate actually ran a
+        /// compaction to completion (D-01). A canceled, skipped, or failed
+        /// compaction leaves it false — the completed erase cycle itself
+        /// never fails because of compaction.
+        bool compacted = false;
+
+        /// Wall-clock duration of the compaction call in milliseconds
+        /// (zero when no compaction ran).
+        uint64_t compaction_duration_ms = 0;
     };
 
     /**
      * @brief       Queryable pruning status (RECL-04).
      * @details     A COPY is returned under the status mutex — concurrent
-     *              reads are safe while a cycle runs. There is deliberately
-     *              NO bytes_reclaimed field: byte reclamation is unmeasured
-     *              until Phase 20's explicit CompactRange proof (deletes
-     *              alone reclaim nothing) — the status never carries a
-     *              fabricated number.
+     *              reads are safe while a cycle runs.
      */
     struct PruneStatus
     {
@@ -130,6 +137,14 @@ namespace sgns
         /// Counters of the last cycle that updated the status (gate-skipped
         /// ticks and interrupted cycles leave the previous value in place).
         PruneCycleStats last_cycle;
+
+        /// MEASURED disk bytes reclaimed by the last successful compaction
+        /// (D-02): baseline-at-last-compaction size minus post-compaction
+        /// size, stamped ONLY at compaction success under the status mutex.
+        /// nullopt until the first compaction since restart — deletes alone
+        /// reclaim nothing, so this is never stamped at erase time and never
+        /// a fabricated number.
+        std::optional<uint64_t> bytes_reclaimed;
     };
 
     /**
@@ -236,6 +251,19 @@ namespace sgns
          */
         static bool IsPermanentStop( const std::error_code &error );
 
+        /**
+         * @brief       Requests cancellation of the post-cycle compaction.
+         * @details     Sets the member cancellation atomic the compaction
+         *              gate checks BEFORE starting a compaction and the
+         *              engine honors mid-flight (the shutdown promptness
+         *              path). The atomic is an INSTANCE MEMBER so it
+         *              outlives any in-flight CompactRange call — a stack
+         *              local would dangle under the engine's asynchronous
+         *              reads. Idempotent; never resets (a released pruner
+         *              never compacts again).
+         */
+        void RequestCompactionCancel();
+
         /// Interrupt seam step: after Evaluate(), before grouping.
         static constexpr int kInterruptAfterEvaluation = 1;
         /// Interrupt seam step: immediately before EACH per-tx erase call
@@ -281,6 +309,34 @@ namespace sgns
         void RecordCompletedCycle( crdt::GlobalDB                       &globaldb,
                                    PruneCycleStats                      &stats,
                                    std::chrono::steady_clock::time_point cycle_start );
+
+        /**
+         * @brief       Post-cycle compaction gate (D-01 — the RunCycle tail).
+         * @details     Runs BETWEEN RecordCompletedCycle and the RunCycle
+         *              return, so the completed cycle's status is already
+         *              recorded and the wiring's reschedule (which fires
+         *              only after RunCycle returns) is still held off — the
+         *              compaction never overlaps the next tick by
+         *              construction. Gate conjuncts, evaluated in order,
+         *              each returning with the stats untouched on false:
+         *              (1) this cycle erased at least one transaction;
+         *              (2) the shutdown cancellation atomic is clear;
+         *              (3) the cumulative erased-bytes watermark (an
+         *              in-memory estimate assembled from the evaluator's
+         *              carried sizes) has crossed
+         *              compact_threshold_mb. A canceled or failed
+         *              compaction NEVER fails the completed cycle — the
+         *              watermark is kept so the next completed cycle
+         *              retries naturally. On success, the measured
+         *              before/after disk-usage delta stamps
+         *              PruneStatus::bytes_reclaimed under the status mutex
+         *              (D-02), the watermark and baseline reset, and ONE
+         *              INFO line carries the measured numbers.
+         * @param[in,out] globaldb The compaction + size-measurement surface.
+         * @param[in,out] stats The cycle counters (compacted +
+         *              compaction_duration_ms stamped here on success).
+         */
+        void MaybeCompactAfterCycle( crdt::GlobalDB &globaldb, PruneCycleStats &stats );
 
         /**
          * @brief       Tick gate + settle-window clock (D-C2).
@@ -333,6 +389,29 @@ namespace sgns
         /// When the tick gate FIRST fully held (D-C2 settle clock); resets
         /// whenever the gate re-opens.
         std::optional<std::chrono::steady_clock::time_point> gate_held_since_;
+
+        /// Cumulative erased-bytes watermark (D-01): the evaluation-carried
+        /// estimate (value bytes + per-tx block share) summed over successful
+        /// erases, reset ONLY by a successful compaction. IN-MEMORY ONLY —
+        /// never persisted, never a /prune/ cursor; a restart rebuilds it
+        /// from zero (worst case one extra early compaction). Never surfaced
+        /// as a measured number.
+        uint64_t cumulative_erased_bytes_ = 0;
+
+        /// Whole-DB size at the LAST compaction (the reclamation baseline).
+        /// Lazily initialized at the first completed cycle after restart or
+        /// after a compaction, BEFORE any compaction of the span has run —
+        /// bytes_reclaimed therefore measures the full accumulated span
+        /// since the last compaction, never a per-cycle under-count. A
+        /// failed size read stores nothing and skips compaction this cycle.
+        std::optional<uint64_t> compaction_baseline_bytes_;
+
+        /// Cancellation flag threaded into GlobalDB::CompactStorage. MEMBER
+        /// scope is load-bearing: the engine's compaction iterator reads it
+        /// asynchronously, so it must outlive any in-flight compaction call
+        /// (a stack local at the call site would dangle). Set only through
+        /// RequestCompactionCancel (the shutdown path) and never reset.
+        std::atomic<bool> compaction_canceled_{ false };
 
         /// Test-only cycle interruption seam (nullptr in production).
         static std::function<bool( int step )> cycle_interrupt_hook_for_test_;

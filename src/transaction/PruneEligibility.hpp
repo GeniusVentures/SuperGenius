@@ -273,7 +273,7 @@ namespace sgns
         uint64_t settle_seconds = 60;
 
         /// Megabytes of cumulative erased bytes that must accumulate before
-        /// a post-cycle storage compaction fires (Phase 20 D-01). Default
+        /// a post-cycle storage compaction fires (D-01). Default
         /// 16. A degenerate 0 would compact after every cycle -- a
         /// write-amplification denial of service on self (V5) -- so it is
         /// rejected at read time and the member keeps its safe default.
