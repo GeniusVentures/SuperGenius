@@ -382,6 +382,14 @@ namespace sgns
         BlockGateResult report;
         report.cid = cid_string;
 
+        // Sharing count (the block-share divisor): derived from the same
+        // report the gate already received -- no store reads.
+        report.sharing_tx_count = static_cast<uint64_t>( std::count_if(
+            eligible.candidates.begin(),
+            eligible.candidates.end(),
+            [&cid_string]( const PruneCandidateResult &candidate )
+            { return candidate.eligible && candidate.cid.has_value() && *candidate.cid == cid_string; } ) );
+
         // The block is the source of truth (D-C3): parse it NOW, keys only,
         // elements AND tombstones — "what this node applied" is forbidden as
         // an oracle (light nodes store elements they never applied).
@@ -405,12 +413,7 @@ namespace sgns
                 // idempotent no-op on the absent key). It fires ONLY when
                 // this CID is named by an otherwise-ELIGIBLE candidate: the
                 // evidence completes an erase the caller already justified.
-                const bool completes_eligible = std::any_of(
-                    eligible.candidates.begin(),
-                    eligible.candidates.end(),
-                    [&cid_string]( const PruneCandidateResult &candidate )
-                    { return candidate.eligible && candidate.cid.has_value() && *candidate.cid == cid_string; } );
-                if ( completes_eligible )
+                if ( report.sharing_tx_count > 0 )
                 {
                     RecordReason( report, PruneReason::BLOCK_ALREADY_ERASED );
                     report.erasable = true;
@@ -429,6 +432,9 @@ namespace sgns
 
         for ( const auto &key : keys.value() )
         {
+            // Threshold-estimate carry (research A5): the parse above is the
+            // only read -- the carried-key byte total rides this same loop.
+            report.block_bytes += static_cast<uint64_t>( key.size() );
             if ( !IsAllowlistedTxKey( key ) )
             {
                 RecordReason( report, PruneReason::OUT_OF_PREFIX );
@@ -455,7 +461,8 @@ namespace sgns
                                                               uint64_t            window ) const
     {
         PruneCandidateResult candidate;
-        candidate.tx_path = key;
+        candidate.tx_path     = key;
+        candidate.value_bytes = static_cast<uint64_t>( value.size() );
 
         // Defensive allowlist (belt-and-braces): out-of-prefix keys are
         // reported with a reason, never silently dropped.
