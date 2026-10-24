@@ -217,7 +217,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 20-01-PLAN.md — compaction substrate: GlobalDB CompactStorage + GetApproximateDiskUsageBytes (the one recipe home) + pruning.compact_threshold_mb knob + resolved-values INFO (RECL-01)
+- [x] 20-01-PLAN.md — compaction substrate: GlobalDB CompactStorage + GetApproximateDiskUsageBytes (the one recipe home) + pruning.compact_threshold_mb knob + resolved-values INFO (RECL-01)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -363,7 +363,7 @@ Plans:
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
-| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 1/5 | In Progress|  |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |

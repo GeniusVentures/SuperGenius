@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
 stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T16:18:53.681Z"
-last_activity: 2026-10-24 -- Phase 20 planning complete
+last_updated: "2026-10-24T17:04:04.720Z"
+last_activity: 2026-10-24
 progress:
   total_phases: 25
   completed_phases: 4
   total_plans: 29
-  completed_plans: 24
+  completed_plans: 25
   percent: 16
 ---
 
@@ -25,16 +25,16 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 20 — reclamation proof & e2e hardening
+**Current focus:** Phase 20 — reclamation-proof-e2e-hardening
 
 ## Current Position
 
-Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: Not started
+Phase: 20 (reclamation-proof-e2e-hardening) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-10-24 -- Phase 20 planning complete
+Last activity: 2026-10-24
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T13:48:12.510Z
+**Last session:** 2026-10-24T17:03:44.360Z
 **Stopped At:** Phase 20 context gathered
-**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -149,6 +149,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P07 | 82min | 2 tasks | 1 files |
 | Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
 | Phase 19 P06 | 34min | 2 tasks | 1 files |
+| Phase 20 P01 | 24min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -235,6 +236,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
 - [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
 - [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
+- [Phase 20]: GlobalDB is the one home of the whole-DB compaction recipe (CompactStorage: bottommost force flag, no write stall, canceled passthrough) and the whole-DB size measurement (GetApproximateDiskUsageBytes: 0xFF sentinel range, files+memtables) — callers never touch getDB(); post-shutdown fail-closes GLOBALDB_NOT_STARTED, pre-set cancel returns operation_canceled (clean skip)
+- [Phase 20]: pruning.compact_threshold_mb defaults 16MB, rejects degenerate 0 at read time (write-amp DoS on self, V5/WR-03); MB is the single config representation — threshold bytes derive at the TxPruner comparison site
 
 ## Deferred Items
 
