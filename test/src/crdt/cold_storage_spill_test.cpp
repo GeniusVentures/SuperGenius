@@ -29,6 +29,7 @@
 #include <chrono>
 #include <filesystem>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
@@ -220,6 +221,149 @@ namespace
         std::map<std::string, IpfsDatastore::Value> blocks_;
         std::set<std::string>                       sealed_;
     };
+
+    /**
+     * @brief Test-local S3Client wrapper injecting a configurable per-Put
+     *        sleep before delegating to the in-memory fake (the fake has
+     *        fault kinds only - no latency hook; SC1's injected-latency
+     *        shape needs this ~30-line wrapper).
+     */
+    class LatencyInjectingS3Client final : public sgns::blockstore::S3Client
+    {
+    public:
+        LatencyInjectingS3Client( std::shared_ptr<InMemoryS3Client> inner,
+                                  std::chrono::milliseconds           per_put_latency )
+            : inner_( std::move( inner ) ), latency_ms_( per_put_latency.count() )
+        {
+        }
+
+        /// Adjust the injected latency (atomic; the teardown path zeroes it
+        /// so the final drain cycle does not pay 300 ms per item).
+        void SetPutLatency( std::chrono::milliseconds per_put_latency )
+        {
+            latency_ms_.store( per_put_latency.count() );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3PutResult, sgns::blockstore::BlockStatus> Put(
+            const std::string                              &key,
+            const std::vector<uint8_t>                     &bytes,
+            const sgns::blockstore::PutObjectOptions       &options = {} ) override
+        {
+            const auto latency = latency_ms_.load();
+            if ( latency > 0 )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( latency ) );
+            }
+            return inner_->Put( key, bytes, options );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3Object, sgns::blockstore::BlockStatus> Get(
+            const std::string &key ) override
+        {
+            return inner_->Get( key );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3HeadResult, sgns::blockstore::BlockStatus> Head(
+            const std::string &key ) override
+        {
+            return inner_->Head( key );
+        }
+
+        sgns::blockstore::result<void, sgns::blockstore::BlockStatus> Delete( const std::string &key ) override
+        {
+            return inner_->Delete( key );
+        }
+
+    private:
+        std::shared_ptr<InMemoryS3Client> inner_;
+        std::atomic<int64_t>              latency_ms_;
+    };
+
+    /**
+     * @brief Test-local S3Client wrapper failing a DETERMINISTIC per-CID
+     *        subset of Puts (every third first-seen key), healable at
+     *        runtime - the partial-success backoff shape (OQ3).
+     */
+    class FlakyS3Client final : public sgns::blockstore::S3Client
+    {
+    public:
+        explicit FlakyS3Client( std::shared_ptr<InMemoryS3Client> inner ) : inner_( std::move( inner ) )
+        {
+        }
+
+        /// Stop failing (heals every key; subsequent cycles succeed).
+        void Heal()
+        {
+            failing_.store( false );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3PutResult, sgns::blockstore::BlockStatus> Put(
+            const std::string                              &key,
+            const std::vector<uint8_t>                     &bytes,
+            const sgns::blockstore::PutObjectOptions       &options = {} ) override
+        {
+            if ( failing_.load() && IsScriptedFailingKey( key ) )
+            {
+                return sgns::blockstore::outcome::failure( sgns::blockstore::BlockStatus{
+                    sgns::blockstore::StatusClass::TemporarilyUnavailable,
+                    sgns::blockstore::BlockSource::Remote,
+                    "flaky: scripted per-CID failure" } );
+            }
+            return inner_->Put( key, bytes, options );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3Object, sgns::blockstore::BlockStatus> Get(
+            const std::string &key ) override
+        {
+            return inner_->Get( key );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3HeadResult, sgns::blockstore::BlockStatus> Head(
+            const std::string &key ) override
+        {
+            return inner_->Head( key );
+        }
+
+        sgns::blockstore::result<void, sgns::blockstore::BlockStatus> Delete( const std::string &key ) override
+        {
+            return inner_->Delete( key );
+        }
+
+    private:
+        /// First-seen index % 3 == 0 fails - deterministic per CID across
+        /// retries (drainer-thread-only access; no lock needed).
+        bool IsScriptedFailingKey( const std::string &key )
+        {
+            auto it = order_.find( key );
+            if ( it == order_.end() )
+            {
+                it = order_.emplace( key, next_index_++ ).first;
+            }
+            return it->second % 3 == 0;
+        }
+
+        std::shared_ptr<InMemoryS3Client> inner_;
+        std::atomic<bool>                 failing_{ true };
+        std::map<std::string, size_t>     order_;
+        size_t                            next_index_{ 0 };
+    };
+
+    /// Median + p99 of a sample set (ms), for the SC1 distributions.
+    struct TimingStats
+    {
+        double median_ms;
+        double p99_ms;
+    };
+
+    TimingStats StatsOf( std::vector<double> samples )
+    {
+        EXPECT_FALSE( samples.empty() );
+        std::sort( samples.begin(), samples.end() );
+        TimingStats stats;
+        stats.median_ms = samples[samples.size() / 2];
+        stats.p99_ms    = samples[( samples.size() * 99 + 99 ) / 100 - 1]; // ceil(0.99*n)-1
+        return stats;
+    }
 
     class ColdStorageSpillTest : public ::testing::Test
     {
@@ -714,4 +858,159 @@ TEST_F( ColdStorageSpillTest, single_block_journal_drains )
     EXPECT_TRUE( pending.value().empty() );
     EXPECT_TRUE( remote_->Get( cid ).has_value() );
     EXPECT_TRUE( remote_->Get( empty_cid.value() ).has_value() );
+}
+
+
+// ===========================================================================
+// SC1 latency-independence benchmark + partial-success backoff evidence
+// (v1.1 Phase 8 plan 08-03 Task 2). The benchmark NEVER compares
+// cold-storage-ON vs OFF (that comparison is false by design - the journal
+// Put adds a local fsync); it compares drainer-PAUSED vs drainer-RUNNING
+// under injected remote latency (Pitfall 8).
+// ===========================================================================
+
+/**
+ * @given the decorator over the shared journal and a drainer running
+ *        through a 300 ms-per-Put latency wrapper
+ * @when 200 unique sets land with the drainer PAUSED, then 200 more with
+ *        the drainer RUNNING and actively draining the same journal
+ * @then the two set()-latency distributions match within [0.5x, 2.0x] on
+ *        the medians and BOTH p99s stay under 100 ms - far below the
+ *        injected 300 ms, proving a set() never waits on remote I/O or a
+ *        mutex held across it.
+ */
+TEST_F( ColdStorageSpillTest, sc1_set_latency_independent_of_drainer_state )
+{
+    constexpr size_t kSamples = 200;
+
+    auto latency_client = std::make_shared<LatencyInjectingS3Client>( fake_, std::chrono::milliseconds( 300 ) );
+    auto opened_latency_store = S3BlockStore::Open( latency_client );
+    ASSERT_TRUE( opened_latency_store.has_value() );
+    auto latency_store =
+        std::shared_ptr<sgns::blockstore::S3BlockStore>( std::move( opened_latency_store.value() ) );
+
+    auto manager = MakeManager( latency_store, FastOptions( 100, 1000, 2000 ) );
+
+    const auto timed_sets = [&]( const std::string &prefix, std::vector<double> &out_ms ) {
+        out_ms.reserve( kSamples );
+        for ( size_t i = 0; i < kSamples; ++i )
+        {
+            const std::string payload = prefix + " benchmark payload " + std::to_string( i );
+            CID               cid_key( MakeCid( payload ) );
+            const auto        t0 = std::chrono::steady_clock::now();
+            auto res = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+            const auto t1 = std::chrono::steady_clock::now();
+            ASSERT_TRUE( res.has_value() );
+            out_ms.push_back( std::chrono::duration<double, std::milli>( t1 - t0 ).count() );
+        }
+    };
+
+    // Scenario A: drainer constructed but PAUSED (never started).
+    std::vector<double> a_ms;
+    timed_sets( "A", a_ms );
+
+    // Scenario B: drainer RUNNING at a short interval through the 300 ms
+    // wrapper - in-flight remote Puts on the same journal while sets land.
+    manager->Start();
+    std::vector<double> b_ms;
+    timed_sets( "B", b_ms );
+
+    const auto stats_a = StatsOf( a_ms );
+    const auto stats_b = StatsOf( b_ms );
+    // Marked stdout line so ctest/direct-run logs carry both distributions
+    // verbatim for the phase SUMMARY (SUCCEED streams do not print).
+    std::cout << "[SC1] paused median=" << stats_a.median_ms << "ms p99=" << stats_a.p99_ms
+              << "ms | running median=" << stats_b.median_ms << "ms p99=" << stats_b.p99_ms
+              << "ms (injected remote latency 300ms)" << std::endl;
+
+    EXPECT_GE( stats_b.median_ms, 0.5 * stats_a.median_ms ) << "distribution match (lower bound)";
+    EXPECT_LE( stats_b.median_ms, 2.0 * stats_a.median_ms ) << "distribution match (upper bound)";
+    EXPECT_LT( stats_a.p99_ms, 100.0 ) << "paused p99 far below the injected latency";
+    EXPECT_LT( stats_b.p99_ms, 100.0 ) << "running p99 far below the injected latency";
+
+    // Fast teardown: zero the injected latency so the in-flight cycle's
+    // remaining items drain at full speed, then stop.
+    latency_client->SetPutLatency( std::chrono::milliseconds( 0 ) );
+    manager->Stop();
+}
+
+/**
+ * @given six journaled blocks and a drainer whose remote fails every third
+ *        first-seen CID (two of six)
+ * @when cycles run under the flaky wrapper, then the wrapper heals
+ * @then the four succeeded items advance to UploadedAccepted WHILE the
+ *        cycle counts as a backoff failure (drainer_healthy false), the
+ *        failed items are never lost (still PendingUpload), and after the
+ *        heal the next full-success cycle drains everything promptly -
+ *        the reset fired (OQ3).
+ */
+TEST_F( ColdStorageSpillTest, partial_success_cycle_advances_and_backs_off )
+{
+    std::vector<Cid> cids;
+    for ( int i = 0; i < 6; ++i )
+    {
+        const std::string payload = "partial success payload " + std::to_string( i );
+        cids.push_back( MakeCid( payload ) );
+        CID cid_key( cids.back() );
+        ASSERT_TRUE( decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) ).has_value() );
+    }
+
+    auto flaky_client  = std::make_shared<FlakyS3Client>( fake_ );
+    auto opened_flaky  = S3BlockStore::Open( flaky_client );
+    ASSERT_TRUE( opened_flaky.has_value() );
+    auto flaky_store = std::shared_ptr<sgns::blockstore::S3BlockStore>( std::move( opened_flaky.value() ) );
+
+    auto manager = MakeManager( flaky_store, FastOptions() );
+    manager->Start();
+
+    // Partial success observable: exactly four Accepted, two still
+    // PendingUpload, and the cycle counted as failed (health false).
+    ASSERT_TRUE( PollUntil(
+        [&] {
+            size_t accepted = 0, pending = 0;
+            for ( const auto &cid : cids )
+            {
+                auto state = shared_local_->GetUploadState( cid );
+                if ( !state.has_value() )
+                {
+                    return false;
+                }
+                if ( state.value() == UploadState::UploadedAccepted )
+                {
+                    ++accepted;
+                }
+                else if ( state.value() == UploadState::PendingUpload )
+                {
+                    ++pending;
+                }
+            }
+            return accepted == 4 && pending == 2 && !manager->GetStatus().drainer_healthy;
+        },
+        std::chrono::milliseconds( 10000 ) ) )
+        << "succeeded items must advance while the cycle counts as failed";
+
+    // Failed items are never lost: still in the pending set pre-heal.
+    {
+        auto pending = shared_local_->GetPendingUploads();
+        ASSERT_TRUE( pending.has_value() );
+        EXPECT_EQ( pending.value().size(), 2u );
+    }
+
+    // Heal: the next full-success cycle drains promptly and the reset
+    // fires (health returns true).
+    flaky_client->Heal();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    manager->Stop();
+
+    for ( const auto &cid : cids )
+    {
+        auto state = shared_local_->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+    }
+    EXPECT_EQ( fake_->ObjectKeys().size(), 6u );
 }
