@@ -23,6 +23,10 @@
 
 namespace sgns::crdt
 {
+    // Gated drainer service (v1.1 Phase 8); defined in ColdStorageManager.hpp,
+    // reachable through the ColdStorageStack bridges only.
+    class ColdStorageManager;
+
     class GlobalDB
     {
     public:
@@ -191,6 +195,7 @@ namespace sgns::crdt
             PUBSUB_BROADCASTER_NOT_CREATED, ///< CRDT DataStore not created
             INVALID_PARAMETERS,             ///< Invalid parameters
             GLOBALDB_NOT_STARTED,           ///< Start wasn't called
+            COLD_STORAGE_INIT_FAILED,       ///< Cold storage stack failed to open (v1.1 Phase 8)
         };
 
         /**
@@ -433,6 +438,18 @@ namespace sgns::crdt
         bool                                              head_broadcasting_started_;
         BackupOptions                                     backup_options_{};
         ColdStorageOptions                                cold_storage_options_{};
+        /// Journal-spill decorator handed to the DAG syncer when cold
+        /// storage is enabled (v1.1 Phase 8); null when disabled.
+        std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore>   cold_data_store_;
+        /// Drainer-thread manager (v1.1 Phase 8); null until plan 08-02
+        /// and whenever cold storage is disabled. Declared AFTER the
+        /// datastore members' cluster so reverse-declaration destruction
+        /// favors us (Pitfall-5 ordering; shared_ptr ownership is
+        /// belt-and-suspenders).
+        std::shared_ptr<ColdStorageManager>               cold_manager_;
+        /// The ONE mutex shared by the publisher (decorator set) and the
+        /// drainer thread over the LocalBlockStore (v1.1 Phase 8).
+        std::shared_ptr<std::mutex>                       cold_store_mutex_;
         std::string                                       backup_directory_;
         std::atomic_bool                                  stop_backup_thread_{ false };
         std::atomic_bool                                  shutdown_started_{ false };

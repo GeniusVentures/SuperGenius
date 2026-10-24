@@ -1,4 +1,5 @@
 #include "globaldb.hpp"
+#include "ColdStorageStack.hpp"
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
@@ -53,6 +54,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "Invalid parameters provided";
         case ProofError::GLOBALDB_NOT_STARTED:
             return "Start method wasn't called";
+        case ProofError::COLD_STORAGE_INIT_FAILED:
+            return "Cold storage stack initialization failed";
     }
     return "Unknown error";
 }
@@ -508,6 +511,27 @@ namespace sgns::crdt
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
 
+        // Cold-storage seam (SPILL-01, v1.1 Phase 8): ONLY when enabled,
+        // wrap the freshly constructed inner datastore in the gated
+        // journal-spill decorator and hand THE DECORATOR to the DAG syncer
+        // below. When disabled, the inner store flows to the syncer
+        // untouched - byte-identical to the pre-Phase-8 construction.
+        std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore> block_datastore = ipfsDataStore;
+        if ( cold_storage_options_.enabled )
+        {
+            const auto database_path_absolute = boost::filesystem::absolute( m_databasePath ).string();
+            auto        stack = OpenColdStorageStack( cold_storage_options_, database_path_absolute, ipfsDataStore );
+            if ( !stack.has_value() )
+            {
+                m_logger->error( "Cold storage stack initialization failed: {}", stack.error() );
+                return outcome::failure( Error::COLD_STORAGE_INIT_FAILED );
+            }
+            block_datastore   = stack.value().data_store;
+            cold_data_store_  = block_datastore;
+            cold_manager_     = std::move( stack.value().manager );
+            cold_store_mutex_ = std::move( stack.value().cold_store_mutex );
+        }
+
         if ( !m_pubsub )
         {
             m_logger->error( "pubsub not initialized." );
@@ -521,7 +545,7 @@ namespace sgns::crdt
                                                           graphsyncnetwork,
                                                           generator,
                                                           m_pubsub->GetAsioContext() );
-        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
+        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( block_datastore, graphsync, host );
 
         // Start DagSyner listener
         auto startResult = dagSyncer->StartSync();
