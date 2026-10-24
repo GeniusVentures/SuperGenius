@@ -58,91 +58,103 @@ namespace sgns::crdt
             return outcome::failure( std::string( "cold storage stack requires a non-null inner datastore" ) );
         }
 
-        // Sibling coldstore directory (ResolveBackupDirectory derivation
-        // shape; LocalBlockStore creates/opens its own RocksDB there).
-        const std::string cold_store_directory =
-            ( std::filesystem::path( database_path_absolute ) / kColdStoreDirectoryName ).string();
+        // The library Open factories throw std::invalid_argument for
+        // empty endpoint/bucket/path (programmer-error taxonomy) - a
+        // programmatic ColdStorageOptions that bypassed the parser must
+        // yield a loud outcome failure, never a throw through the embedder
+        // (08-REVIEW MA-02).
+        try
+        {
+            // Sibling coldstore directory (ResolveBackupDirectory derivation
+            // shape; LocalBlockStore creates/opens its own RocksDB there).
+            const std::string cold_store_directory =
+                ( std::filesystem::path( database_path_absolute ) / kColdStoreDirectoryName ).string();
 
-        auto opened_local = sgns::blockstore::LocalBlockStore::Open(
-            sgns::blockstore::LocalBlockStoreOptions{ cold_store_directory } );
-        if ( !opened_local.has_value() )
-        {
-            // BlockStatus detail only - never a credential value.
-            return outcome::failure( "cold storage: LocalBlockStore open failed at '" + cold_store_directory
-                                     + "' (" + opened_local.error().message + ")" );
-        }
-        std::shared_ptr<sgns::blockstore::LocalBlockStore> local_store = std::move( opened_local.value() );
+            auto opened_local = sgns::blockstore::LocalBlockStore::Open(
+                sgns::blockstore::LocalBlockStoreOptions{ cold_store_directory } );
+            if ( !opened_local.has_value() )
+            {
+                // BlockStatus detail only - never a credential value.
+                return outcome::failure( "cold storage: LocalBlockStore open failed at '" + cold_store_directory
+                                         + "' (" + opened_local.error().message + ")" );
+            }
+            std::shared_ptr<sgns::blockstore::LocalBlockStore> local_store = std::move( opened_local.value() );
 
-        // Production S3 client: construction is eagerly validating with
-        // zero network I/O (Phase-6 D-06) - a non-listening endpoint
-        // cannot fail here.
-        sgns::blockstore::S3ClientConfig client_config;
-        client_config.endpoint  = options.endpoint;
-        client_config.bucket    = options.bucket;
-        client_config.accessKey = options.accessKey;
-        client_config.secretKey = options.secretKey;
-        client_config.pathStyle = options.pathStyle;
-        client_config.useTls    = options.tls;
-        auto opened_client      = sgns::blockstore::OpenMinioS3Client( client_config );
-        if ( !opened_client.has_value() )
-        {
-            return outcome::failure( "cold storage: S3 client construction failed ("
-                                     + opened_client.error().message + ")" );
-        }
+            // Production S3 client: construction is eagerly validating with
+            // zero network I/O (Phase-6 D-06) - a non-listening endpoint
+            // cannot fail here.
+            sgns::blockstore::S3ClientConfig client_config;
+            client_config.endpoint  = options.endpoint;
+            client_config.bucket    = options.bucket;
+            client_config.accessKey = options.accessKey;
+            client_config.secretKey = options.secretKey;
+            client_config.pathStyle = options.pathStyle;
+            client_config.useTls    = options.tls;
+            auto opened_client      = sgns::blockstore::OpenMinioS3Client( client_config );
+            if ( !opened_client.has_value() )
+            {
+                return outcome::failure( "cold storage: S3 client construction failed ("
+                                         + opened_client.error().message + ")" );
+            }
 
-        auto opened_remote = sgns::blockstore::S3BlockStore::Open(
-            opened_client.value(), sgns::blockstore::S3BlockStoreOptions{ "v1/blocks" } );
-        if ( !opened_remote.has_value() )
-        {
-            return outcome::failure( "cold storage: S3BlockStore open failed ("
-                                     + opened_remote.error().message + ")" );
-        }
-        std::shared_ptr<sgns::blockstore::S3BlockStore> remote_store = std::move( opened_remote.value() );
+            auto opened_remote = sgns::blockstore::S3BlockStore::Open(
+                opened_client.value(), sgns::blockstore::S3BlockStoreOptions{ "v1/blocks" } );
+            if ( !opened_remote.has_value() )
+            {
+                return outcome::failure( "cold storage: S3BlockStore open failed ("
+                                         + opened_remote.error().message + ")" );
+            }
+            std::shared_ptr<sgns::blockstore::S3BlockStore> remote_store = std::move( opened_remote.value() );
 
-        // The ONE shared mutex serializing publisher vs drainer access to
-        // the LocalBlockStore (library single-threaded-use contract).
-        auto cold_store_mutex = std::make_shared<std::mutex>();
+            // The ONE shared mutex serializing publisher vs drainer access to
+            // the LocalBlockStore (library single-threaded-use contract).
+            auto cold_store_mutex = std::make_shared<std::mutex>();
 
-        // The decorator and the drainer SHARE ownership of the journal
-        // store and the mutex (copy the handles, never move).
-        auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
-            std::move( inner ), local_store, cold_store_mutex, sgns::base::createLogger( "ColdStorage" ) );
+            // The decorator and the drainer SHARE ownership of the journal
+            // store and the mutex (copy the handles, never move).
+            auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
+                std::move( inner ), local_store, cold_store_mutex, sgns::base::createLogger( "ColdStorage" ) );
 
-        // Drainer options: normalize any still-0 knob to its built-in
-        // default (parsed configs arrive already normalized; programmatic
-        // configs defend here), then enforce the pair rule loudly.
-        GlobalDB::ColdStorageOptions::BackpressureOptions backpressure = options.backpressure;
-        if ( backpressure.drain_interval_ms == 0 )
-        {
-            backpressure.drain_interval_ms = kDefaultDrainIntervalMs;
-        }
-        if ( backpressure.backoff_cap_ms == 0 )
-        {
-            backpressure.backoff_cap_ms = kDefaultBackoffCapMs;
-        }
-        if ( backpressure.warn_pending == 0 )
-        {
-            backpressure.warn_pending = kDefaultWarnPending;
-        }
-        if ( backpressure.critical_pending == 0 )
-        {
-            backpressure.critical_pending = kDefaultCriticalPending;
-        }
-        if ( backpressure.warn_pending >= backpressure.critical_pending )
-        {
-            return outcome::failure( "cold storage: backpressure requires warn_pending < critical_pending "
-                                     "(warn_pending="
-                                     + std::to_string( backpressure.warn_pending )
-                                     + ", critical_pending=" + std::to_string( backpressure.critical_pending )
-                                     + ")" );
-        }
-        auto manager = std::make_shared<ColdStorageManager>( local_store, remote_store, cold_store_mutex, backpressure );
+            // Drainer options: normalize any still-0 knob to its built-in
+            // default (parsed configs arrive already normalized; programmatic
+            // configs defend here), then enforce the pair rule loudly.
+            GlobalDB::ColdStorageOptions::BackpressureOptions backpressure = options.backpressure;
+            if ( backpressure.drain_interval_ms == 0 )
+            {
+                backpressure.drain_interval_ms = kDefaultDrainIntervalMs;
+            }
+            if ( backpressure.backoff_cap_ms == 0 )
+            {
+                backpressure.backoff_cap_ms = kDefaultBackoffCapMs;
+            }
+            if ( backpressure.warn_pending == 0 )
+            {
+                backpressure.warn_pending = kDefaultWarnPending;
+            }
+            if ( backpressure.critical_pending == 0 )
+            {
+                backpressure.critical_pending = kDefaultCriticalPending;
+            }
+            if ( backpressure.warn_pending >= backpressure.critical_pending )
+            {
+                return outcome::failure( "cold storage: backpressure requires warn_pending < critical_pending "
+                                         "(warn_pending="
+                                         + std::to_string( backpressure.warn_pending )
+                                         + ", critical_pending=" + std::to_string( backpressure.critical_pending )
+                                         + ")" );
+            }
+            auto manager = std::make_shared<ColdStorageManager>( local_store, remote_store, cold_store_mutex, backpressure );
 
-        ColdStorageBundle bundle;
-        bundle.data_store       = std::move( decorator );
-        bundle.manager          = std::move( manager );
-        bundle.cold_store_mutex = std::move( cold_store_mutex );
-        return outcome::success( std::move( bundle ) );
+            ColdStorageBundle bundle;
+            bundle.data_store       = std::move( decorator );
+            bundle.manager          = std::move( manager );
+            bundle.cold_store_mutex = std::move( cold_store_mutex );
+            return outcome::success( std::move( bundle ) );
+        }
+        catch ( const std::invalid_argument &e )
+        {
+            return outcome::failure( std::string( "cold storage stack rejected configuration: " ) + e.what() );
+        }
     }
 
     void StartColdStorageManager( const std::shared_ptr<ColdStorageManager> &manager )

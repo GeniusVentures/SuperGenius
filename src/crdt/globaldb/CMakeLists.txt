@@ -1,12 +1,12 @@
 add_proto_library(crdt_globaldb_proto proto/broadcast.proto)
 
-# Cold-storage stack (SPILL-01, v1.1 Phase 8): the stub is ALWAYS compiled
-# so the factory/lifecycle-bridge symbols exist in default OFF builds with
-# zero sgns-blockstore linkage; the real stack + the journal-spill decorator
-# compile (and sgns-blockstore links) ONLY under SGNS_COLD_STORAGE (the
-# option + find_package chain shipped with Phase 7 - not duplicated here).
-# The real TU and the stub define the SAME symbols by design (gated
-# factory/stub split) - they must NEVER land in the same unity blob.
+# Cold-storage stack (SPILL-01, v1.1 Phase 8): EXACTLY ONE of the
+# factory TUs ever compiles - the stub on default OFF builds (zero
+# sgns-blockstore symbols), the real stack under SGNS_COLD_STORAGE. The
+# two TUs define the SAME five symbols by design (gated factory/stub
+# split), so compiling both on an ON build is an ODR violation whose
+# correct binding would be left to archive-member-order luck (08-REVIEW
+# CR-01).
 set_source_files_properties(ColdStorageStack.cpp ColdStorageStackStub.cpp
     ColdStorageManager.cpp BlockStoreBackedIpfsDatastore.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
@@ -15,7 +15,6 @@ add_library(crdt_globaldb
     globaldb.cpp
     pubsub_broadcaster_ext.cpp
     keypair_file_storage.cpp
-    ColdStorageStackStub.cpp
 )
 
 if(SGNS_COLD_STORAGE)
@@ -25,6 +24,10 @@ target_sources(crdt_globaldb PRIVATE
     BlockStoreBackedIpfsDatastore.cpp
 )
 target_link_libraries(crdt_globaldb PRIVATE sgns-blockstore::sgns-blockstore)
+else()
+target_sources(crdt_globaldb PRIVATE
+    ColdStorageStackStub.cpp
+)
 endif()
 
 set_target_properties(crdt_globaldb PROPERTIES UNITY_BUILD ON)
