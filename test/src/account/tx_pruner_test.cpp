@@ -3515,6 +3515,14 @@ TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcros
         ASSERT_EQ( pre.value().first, PrunedLookup::NOT_FOUND );
     }
 
+    // The light-side pre-prune captures its local correctness is later proven
+    // against (across the prune AND the compaction together): the sibling on
+    // every level, and every seal marker (GATE-03 — seals survive everything).
+    const std::string sibling_value         = BytesOf( db_->Get( { tx_path_u } ).value() );
+    const RawSnapshot sibling_crdt          = SnapshotCrdtEntriesContaining( tx_path_u );
+    const RawSnapshot sibling_blocks_before = SnapshotBlocks( { cid_u, cid_s } );
+    const RawSnapshot light_seals_before    = SnapshotSeals( baselined_cids );
+
     // The light's settled prune cycle — the erase the peers must not see.
     auto pruner = MakePruner( 10, kSmallSettleSeconds );
     ASSERT_NE( pruner, nullptr );
@@ -3547,6 +3555,179 @@ TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcros
     const RawSnapshot erased_blocks = SnapshotBlocks( { cid_a, cid_b } );
     EXPECT_EQ( erased_blocks.at( cid_a ), "absent" );
     EXPECT_EQ( erased_blocks.at( cid_b ), "absent" );
+
+    // CHECKPOINT 2 (the compaction half): ONE whole-DB compaction on the LIGHT
+    // only, through the production surface. The light's measured size must
+    // drop (the rewrite was real — the peer identity below is proven ACROSS a
+    // rewrite, not a no-op), and both peers stay byte-identical to the SAME
+    // baselines: the compaction, like the erase, is invisible on the wire —
+    // nothing propagates (T-20-0503).
+    const auto pre_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    const auto post_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction.has_value() );
+    EXPECT_LT( post_compaction.value(), pre_compaction.value() )
+        << "before=" << pre_compaction.value() << " after=" << post_compaction.value();
+
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[0].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_full,
+        "full peer across the light's compaction" );
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[1].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_archive,
+        "archive peer across the light's compaction" );
+
+    // The light's own local correctness across prune+compact: erased markers
+    // stay PRUNED (already asserted above and unchanged by the rewrite), the
+    // erased blocks stay gone, every seal marker survives (GATE-03), and the
+    // unspent sibling is byte-identical on every level.
+    EXPECT_EQ( SnapshotBlocks( { cid_a, cid_b } ), erased_blocks );
+    EXPECT_EQ( SnapshotSeals( baselined_cids ), light_seals_before )
+        << "a seal marker changed across the light's compaction";
+    EXPECT_EQ( BytesOf( db_->Get( { tx_path_u } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotMapEntry( tx_path_u ), cid_u );
+    EXPECT_EQ( SnapshotBlocks( { cid_u, cid_s } ), sibling_blocks_before );
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( tx_path_u ), sibling_crdt );
+    auto sibling_lookup = PruneEligibility::LookupPrunedEntry( *db_, unspent->GetHash() );
+    ASSERT_TRUE( sibling_lookup.has_value() );
+    EXPECT_EQ( sibling_lookup.value().first, PrunedLookup::NOT_FOUND );
+
+    // ROUND 2 — the criterion's "cycles" plural, evidenced: a second
+    // seed/prune/compact sequence on the SAME mesh. A second round costs
+    // seconds on this fixture (the peers are already up), so it runs rather
+    // than being argued away.
+    auto round2_a = MakeTransfer( 5, 1, kCandidateValueBytes );
+    auto round2_b = MakeTransfer( 6, 1, kCandidateValueBytes );
+    SeedTransaction( round2_a );
+    SeedTransaction( round2_b );
+    const std::string r2d1_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-1", "r2d1" );
+    TrackOutputs( *round2_a );
+    TrackOutputs( *round2_b );
+    ASSERT_TRUE( ConsumeOutput( *round2_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *round2_b, 0, *spender, padded_owner ) );
+    const std::string r2d2_cid          = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-2", "r2d2" );
+    const std::string r2_final_head_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-3", "r2d3" );
+
+    const std::string tx_path_2a = TransactionManager::GetTransactionPath( *round2_a );
+    const std::string tx_path_2b = TransactionManager::GetTransactionPath( *round2_b );
+    const std::string cid_2a     = SnapshotMapEntry( tx_path_2a );
+    const std::string cid_2b     = SnapshotMapEntry( tx_path_2b );
+    ASSERT_NE( cid_2a, "absent" );
+    ASSERT_NE( cid_2b, "absent" );
+
+    const std::vector<std::pair<std::string, std::string>> round2_expected = {
+        { tx_path_2a, BytesOf( db_->Get( { tx_path_2a } ).value() ) },
+        { tx_path_2b, BytesOf( db_->Get( { tx_path_2b } ).value() ) },
+        { "/seed/txpruner/mesh-r2-driver-1", "r2d1" },
+        { "/seed/txpruner/mesh-r2-driver-2", "r2d2" },
+        { "/seed/txpruner/mesh-r2-driver-3", "r2d3" },
+    };
+    const std::vector<std::string> round2_cids = { cid_2a, cid_2b, r2d1_cid, r2d2_cid, r2_final_head_cid };
+
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return PeerHoldsSeededHistory( *mesh_peers_[0].db, round2_expected, round2_cids, r2_final_head_cid ) &&
+                   PeerHoldsSeededHistory( *mesh_peers_[1].db, round2_expected, round2_cids, r2_final_head_cid );
+        },
+        std::chrono::seconds( 25 ),
+        "both mesh peers received and applied every round-2 element",
+        nullptr );
+
+    // The round-2 baselines carry the UNION: every round-1 key, tx path, and
+    // CID plus the round-2 ones — so the round-2 checkpoints prove CUMULATIVE
+    // retention (round-1 history still byte-identical after a second
+    // erase+compaction pair), not just round-2 isolation.
+    std::vector<std::string> all_keys     = baselined_keys;
+    std::vector<std::string> all_tx_paths = baselined_tx_paths;
+    std::vector<std::string> all_cids     = baselined_cids;
+    for ( const auto &key_and_expected : round2_expected )
+    {
+        all_keys.push_back( key_and_expected.first );
+    }
+    all_tx_paths.push_back( tx_path_2a );
+    all_tx_paths.push_back( tx_path_2b );
+    all_cids.insert( all_cids.end(), round2_cids.begin(), round2_cids.end() );
+
+    const PeerHistory round2_baseline_full    = SnapshotPeerHistory( *mesh_peers_[0].db,
+                                                                  all_keys,
+                                                                  all_tx_paths,
+                                                                  all_cids );
+    const PeerHistory round2_baseline_archive = SnapshotPeerHistory( *mesh_peers_[1].db,
+                                                                     all_keys,
+                                                                     all_tx_paths,
+                                                                     all_cids );
+
+    // Cumulative-retention pin: every round-1 baseline entry is still present,
+    // byte-identical, inside the round-2 baseline (grown, never mutated).
+    for ( const auto &key_and_value : baseline_full.values )
+    {
+        ASSERT_EQ( round2_baseline_full.values.at( key_and_value.first ), key_and_value.second );
+        ASSERT_EQ( round2_baseline_archive.values.at( key_and_value.first ),
+                   baseline_archive.values.at( key_and_value.first ) );
+    }
+    for ( const auto &cid_and_block : baseline_full.blocks )
+    {
+        ASSERT_EQ( round2_baseline_full.blocks.at( cid_and_block.first ), cid_and_block.second );
+        ASSERT_EQ( round2_baseline_archive.blocks.at( cid_and_block.first ),
+                   baseline_archive.blocks.at( cid_and_block.first ) );
+    }
+
+    // The light's round-2 prune (the tick gate and settle window are long
+    // settled on this pruner — a plain cycle).
+    const auto round2_stats = RunCycle( *pruner );
+    ASSERT_TRUE( round2_stats.has_value() );
+    ASSERT_EQ( round2_stats.value().erased, 2u );
+
+    // Round-2 CHECKPOINT 1: peers byte-identical to the round-2 baselines
+    // across the light's second erase; the light lacks the round-2 keys.
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[0].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_full,
+                                "full peer across the light's round-2 erase" );
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[1].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_archive,
+                                "archive peer across the light's round-2 erase" );
+    for ( const auto *tx : { round2_a.get(), round2_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // Round-2 CHECKPOINT 2: the second whole-DB compaction drops the light's
+    // size again (the round-2 reclamation was real) and the peers remain
+    // byte-identical — 100% retention proven across BOTH the erase and the
+    // compaction of BOTH cycles.
+    const auto pre_compaction_2 = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction_2.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    const auto post_compaction_2 = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction_2.has_value() );
+    EXPECT_LT( post_compaction_2.value(), pre_compaction_2.value() )
+        << "before=" << pre_compaction_2.value() << " after=" << post_compaction_2.value();
+
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[0].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_full,
+                                "full peer across the light's round-2 compaction" );
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[1].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_archive,
+                                "archive peer across the light's round-2 compaction" );
+
+    // The light's local correctness across BOTH cycles: round-1 erased markers
+    // survived the second compaction PRUNED, and the sibling is still itself.
+    for ( const auto &tx_hash : { eligible_a->GetHash(), eligible_b->GetHash() } )
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx_hash );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+    EXPECT_EQ( BytesOf( db_->Get( { tx_path_u } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotSeals( baselined_cids ), light_seals_before );
 }
 
 // ---------------------------------------------------------------------------
