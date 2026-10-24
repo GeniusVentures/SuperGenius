@@ -2932,3 +2932,164 @@ TEST_F( TxPrunerTest, RestartMatrix_SeamBootZeroFetchCompanion )
     }
 }
 
+/**
+ * The full SC-1/SURV-01 matrix, in the sentence's own order: prune ->
+ * restart (REAL StartCore) -> READY with zero pruned-CID fetches -> new-tip
+ * sync -> receive/spend -> the next outgoing tx chains correctly through
+ * the pruned frontier. Instantiated TWICE (MatrixDoubleRun): the whole
+ * family runs twice consecutively, each run on its own fresh DB path (a
+ * fresh fixture per instantiation — the double-run stability gate).
+ */
+class TxPrunerRestartMatrixTest : public TxPrunerTest, public ::testing::WithParamInterface<uint32_t>
+{
+};
+
+TEST_P( TxPrunerRestartMatrixTest, FullMatrixPruneRestartReadyTipReceiveOutgoing )
+{
+    RestartMatrixContext context;
+    SeedPruneAndReopenRealBoot( context );
+    ASSERT_FALSE( HasFatalFailure() );
+
+    // Beats 1-3 (prune -> restart -> READY): the zero-fetch boot gates.
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_FALSE( tm_->HasMissingTxHashes() );
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+    EXPECT_EQ( db_->GetCRDTDataStore()->GetFailedRootRetryCountForTest(), 0u );
+
+    //
+    // Beat 4a — TipSync: a new tip arrives on the fixture's real topic path
+    // (a foreign-source transfer certified at its slot) and the restarted
+    // pruned node processes it: tracked map + UTXO effects, tip advanced,
+    // still zero fetches.
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    auto incoming_tip = MakeForeignTransfer( *nonce_responder_account_, 1, std::nullopt );
+    ASSERT_NE( incoming_tip, nullptr );
+    SeedTransaction( incoming_tip );
+    SeedCertificate( incoming_tip );
+    auto tip_txid = base::Hash256::fromReadableString( incoming_tip->GetHash() );
+    ASSERT_FALSE( tip_txid.has_error() );
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+                auto tracked = tm_->GetTransactionStatusByTxId( incoming_tip->GetHash() );
+                if ( tracked == TransactionManager::TransactionStatus::INVALID )
+                {
+                    return false;
+                }
+                auto paid = utxo_mgr.GetOutPointState( tip_txid.value(), 1 ); // output 1 pays this account
+                return paid.has_value() && paid.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 10 ),
+            "new-tip delivery is processed (tracked map + UTXO effects)",
+            nullptr );
+    }
+    {
+        uint64_t max_height_tip = 0;
+        SnapshotHeads( max_height_tip );
+        EXPECT_GT( max_height_tip, context.max_height_before ) << "the tip advanced past the pre-restart height";
+    }
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+
+    //
+    // Beat 4b — ReceiveSpend: a second foreign delivery SPENDS the still
+    // -unspent output 0 of the tip (the responder's own output) and pays this
+    // account again: the real ConsumeUTXOs branch + a new READY output.
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    auto incoming_spend = MakeForeignTransfer( *nonce_responder_account_, 2, std::make_pair( tip_txid.value(), 0u ) );
+    ASSERT_NE( incoming_spend, nullptr );
+    SeedTransaction( incoming_spend );
+    SeedCertificate( incoming_spend );
+    auto spend_txid = base::Hash256::fromReadableString( incoming_spend->GetHash() );
+    ASSERT_FALSE( spend_txid.has_error() );
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+                auto spent = utxo_mgr.GetOutPointState( tip_txid.value(), 0 );
+                auto paid  = utxo_mgr.GetOutPointState( spend_txid.value(), 1 );
+                return spent.has_value() && spent.value() == UTXOManager::UTXOState::UTXO_CONSUMED &&
+                       paid.has_value() && paid.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 10 ),
+            "incoming spend of a still-unspent output applies its UTXO effects",
+            nullptr );
+        const auto spender_of_record = utxo_mgr.GetOutPointSpender( tip_txid.value(), 0 );
+        ASSERT_TRUE( spender_of_record.has_value() );
+        EXPECT_EQ( spender_of_record.value().toReadableString(), incoming_spend->GetHash() );
+    }
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+
+    //
+    // Beat 5 — OutgoingChain: the next outgoing transaction carries the
+    // durable-chain nonce and chains onto the GATE-04 resolution of the
+    // pruned frontier (asserted BY COMPARISON with the ladder, never by
+    // re-deriving the rule).
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    constexpr uint64_t kExpectedNextNonce = 4; // durable chain: certified nonces 1..3
+    auto               local_nonce        = account_->GetLocalConfirmedNonce();
+    ASSERT_TRUE( local_nonce.has_value() );
+    ASSERT_EQ( local_nonce.value(), 3u );
+
+    const std::string ladder_hash = TransactionManagerPendingLifecycleTestAccess::OutgoingPreviousHash(
+        *tm_,
+        kExpectedNextNonce );
+    ASSERT_FALSE( ladder_hash.empty() ) << "the ladder failed to resolve the pruned frontier";
+    EXPECT_EQ( ladder_hash, context.arm.frontier->GetHash() ) << "the chain resolves onto the certified frontier";
+    EXPECT_NE( ladder_hash, context.arm.producer->GetHash() ) << "resolved through a PRUNED tx";
+    EXPECT_NE( ladder_hash, context.arm.middle->GetHash() ) << "resolved through a PRUNED tx";
+
+    // Belt: the cert-slot rung's own data — the never-pruned certificate at
+    // slot <addr>:3 embeds exactly the hash the ladder answered with.
+    {
+        auto slot_cert = blockchain_->GetCertificateBySlot( account_->GetAddress() + ":3" );
+        ASSERT_FALSE( slot_cert.has_error() );
+        auto slot_subject = ConsensusManager::DecodeNonceSubject( slot_cert.value().proposal().subject() );
+        ASSERT_FALSE( slot_subject.has_error() );
+        ASSERT_EQ( slot_subject.value().nonce(), 3u );
+        auto slot_embedded = TransactionManager::DeSerializeEmbeddedTransaction( slot_subject.value().transaction() );
+        ASSERT_TRUE( slot_embedded.has_value() && slot_embedded.value() );
+        EXPECT_EQ( slot_embedded.value()->GetHash(), ladder_hash );
+    }
+
+    // Build through the production DAG fill (reserves the nonce + resolves
+    // previous_hash), enqueue through the production queue, and drive the
+    // send: the self-running tick loop (proven live — it carried the boot)
+    // processes it without any pruned-CID fetch.
+    auto dag = TransactionManagerPendingLifecycleTestAccess::RunFillDAGStruct( *tm_ );
+    EXPECT_EQ( dag.nonce(), kExpectedNextNonce );
+    EXPECT_EQ( dag.previous_hash(), ladder_hash );
+
+    auto outgoing = MakeSpenderWithDag( *context.arm.frontier, 0, dag );
+    ASSERT_NE( outgoing, nullptr );
+    TransactionManagerPendingLifecycleTestAccess::EnqueueOutgoing( *tm_, outgoing, db_->BeginTransaction() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+            auto status = tm_->GetTransactionStatusByTxId( outgoing->GetHash() );
+            return status != TransactionManager::TransactionStatus::CREATED &&
+                   status != TransactionManager::TransactionStatus::INVALID;
+        },
+        std::chrono::seconds( 15 ),
+        "post-restart outgoing send is driven past CREATED",
+        nullptr );
+    // The send published durably and the manager is still READY (the 19-02
+    // READY-preserving behavior — a send-path failure must never wedge it).
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *outgoing ) } ).has_value() );
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+}
+
+INSTANTIATE_TEST_SUITE_P( RestartMatrixDoubleRun,
+                          TxPrunerRestartMatrixTest,
+                          ::testing::Range<uint32_t>( 0, 2 ),
+                          []( const ::testing::TestParamInfo<uint32_t> &info )
+                          { return "Round" + std::to_string( info.param ); } );
