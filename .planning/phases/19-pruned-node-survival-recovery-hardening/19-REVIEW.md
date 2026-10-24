@@ -28,6 +28,9 @@ findings:
   total: 9
 status: issues_found
 ---
+fixed: 3
+skipped: 0
+
 
 # Phase 19: Code Review Report
 
@@ -46,7 +49,7 @@ Three warnings remain: a key-prefix collision defect in `ReadDurableSpendEvidenc
 
 ## Warnings
 
-### WR-01: `ReadDurableSpendEvidence` prefix query can decode a sibling outpoint's record as evidence
+### WR-01 — FIXED (exact-key equality): `ReadDurableSpendEvidence` prefix query can decode a sibling outpoint's record as evidence
 
 **File:** `src/account/UTXOManager.cpp:941-963`
 **Issue:** The comment claims "Exact-key prefix query: the record key identifies one outpoint, so the scan can return at most that record." That is false. `rocksdb::query` is a **prefix scan** (`src/storage/rocksdb/rocksdb.cpp:146` iterates while `iter->key().starts_with(slicePrefix)`), and the record key format is `/utxo/<addr>/<txid>:<idx>` (`BuildUTXORecordKey`, `UTXOManager.cpp:18-24`) — so the exact key for `idx=1` is a string prefix of `idx=10..19` (same for any `d` vs `d*`). When the exact record is absent but a longer sibling exists, `records.value().begin()->second` decodes the **sibling's** record and reports it as spend evidence for the queried outpoint. In the crosscheck, a CONSUMED sibling would falsely revert a legitimate READY outpoint to CONSUMED (node-side fund lock); a READY sibling silently skips. The exact-key-present case happens to work because `QueryResult` is `std::map<Buffer, Buffer>` and a proper prefix sorts before its extension, which makes the latent defect easy to miss.
@@ -65,7 +68,7 @@ if ( !( first.first == key_buf ) )
 const auto &record_value = first.second;
 ```
 
-### WR-02: Bounded SYNCING exit fires while the nonce gap is genuinely unresolved, and the send gate cannot catch the stale nonce
+### WR-02 — FIXED (gap-guarded exit): Bounded SYNCING exit fires while the nonce gap is genuinely unresolved, and the send gate cannot catch the stale nonce
 
 **File:** `src/transaction/TransactionManager.cpp:3704-3719`
 **Issue:** The timeout exit at the top of `SyncNonce` does not discriminate "wedged with no possible advance" from "still legitimately behind" — yet the same function's `proposed_nonce < expected_next_nonce` branch (lines 3769-3785) states: *"If we're behind at all, we need to catch up — even a gap of 1 means there's transaction data in CRDT that we don't have, and we cannot safely propose new transactions until we're caught up."* After the exit returns READY, the next queued send is gated only against the **local** confirmed nonce (`SendTransactionItem`, lines 2057-2069 and the nonce check at 2119), so a nonce the network already consumed for txs this node never received passes the gate and is Put/Commit-published to CRDT (lines 2163-2184) before any consensus-side rejection. `pending_nonces_` (the safety the comment cites) only holds *this node's own in-flight reservations* (`GeniusAccount.cpp:913-921`) — it offers no protection against network-side nonces inside the gap. On a pruned node (the exact Phase 19 scenario) the gap may be permanent, so every send becomes a 60-second-throttled stale-nonce publish cycle. Note also that `durable_nonce` (line 3710) is read for the log line only — nothing "falls back" to it; the log message overstates what the code does.
@@ -86,7 +89,7 @@ if ( syncing_since_.has_value() )
 
 (Track the last observed `expected_next_nonce` per SYNCING episode; when proposed is behind, keep requesting heads and let the existing missing-tx bounded recovery — or a wider, explicitly documented survival policy — own the exit.) At minimum, the comment and log text must match the actual behavior (state change only, no nonce reassignment).
 
-### WR-03: Pre-broadcast rollback failure leaves the queue front in place — deterministic re-failure loop with no cap
+### WR-03 — FIXED (3-attempt cap): Pre-broadcast rollback failure leaves the queue front in place — deterministic re-failure loop with no cap
 
 **File:** `src/transaction/TransactionManager.cpp:590-604`
 **Issue:** When `RollbackTransactions` fails in the new `PRE_BROADCAST_VALIDATION` branch, the code logs, `break`s, and leaves the transaction at the front of `tx_queue_m` in the READY state. Pre-broadcast validation failures are deterministic (size/witness/commitment preflight over the same bytes), so every subsequent ~300 ms tick re-runs send → same preflight failure → rollback retry: an unbounded hot loop of ERROR/WARN logging and wasted work for as long as the underlying rollback failure persists (e.g. storage down). The pre-existing SYNCING branch shares the `break`-without-pop shape but at least exits READY into `SyncNonce`'s slower cadence; the new branch stays in the send path.
