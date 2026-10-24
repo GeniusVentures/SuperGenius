@@ -1,7 +1,7 @@
 ---
 phase: 19-pruned-node-survival-recovery-hardening
 verified: 2026-10-24T00:55:00Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -134,3 +134,7 @@ No gaps. All five roadmap success criteria are verified in the codebase and re-p
 
 _Verified: 2026-10-24T00:55:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Human Verification Resolution (2026-10-24)
+
+Owner approval after the live staging spot-check: the demo node restarted with pruned history, booted to READY, `tx <pruned-hash>` answered "history pruned" distinctly, and spend/receive completed. Record: 19-HUMAN-UAT.md (resolved, 1/1).
