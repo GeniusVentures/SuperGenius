@@ -79,3 +79,26 @@ target_link_libraries(cold_storage_config_gate_test
 
 set_tests_properties(cold_storage_config_gate_test PROPERTIES LABELS "Tier1")
 
+# Cold-storage spill journal tests (SPILL-01, v1.1 Phase 8 plan 08-01).
+# Registered ONLY under SGNS_COLD_STORAGE: the suite links
+# sgns-blockstore::sgns-blockstore (the decorator under test plus the
+# InMemoryS3Client fake, whose NOT-installed src/ header is reached via the
+# relative include dir below - 08-RESEARCH Pitfall 6). The Tier-1 lane
+# stays non-empty on OFF builds via the unconditional config-gate test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_spill_test
+    cold_storage_spill_test.cpp
+)
+
+target_link_libraries(cold_storage_spill_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+)
+
+target_include_directories(cold_storage_spill_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_spill_test PROPERTIES LABELS "Tier1")
+endif()
+
