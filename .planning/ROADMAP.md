@@ -226,7 +226,7 @@ Plans:
 **Wave 3** *(parallel — no file overlap)*
 
 - [x] 20-03-PLAN.md — dedicated measured-bytes gate target: 200×~10KB → prune → ONE compaction → ≥60% bounded assertion + anti-vacuous pin + du belt (RECL-02)
-- [ ] 20-04-PLAN.md — compaction-trigger conjunct matrix + bytes_reclaimed honesty + GATE-02 post-compaction byte-identity (D-C5) + SC-5 seam-held race both legs (RECL-01, GATE-02)
+- [x] 20-04-PLAN.md — compaction-trigger conjunct matrix + bytes_reclaimed honesty + GATE-02 post-compaction byte-identity (D-C5) + SC-5 seam-held race both legs (RECL-01, GATE-02)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -363,7 +363,7 @@ Plans:
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
-| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 3/5 | In Progress|  |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 4/5 | In Progress|  |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |

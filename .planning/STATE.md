@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
 stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T18:05:24.793Z"
+last_updated: "2026-10-24T18:40:01.288Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 25
   completed_phases: 4
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
   percent: 16
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 20 (reclamation-proof-e2e-hardening) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-10-24
 
-Progress: [█████████░] 93%
+Progress: [██████████] 97%
 
 ## Roadmap Snapshot
 
@@ -84,7 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T18:05:14.622Z
+**Last session:** 2026-10-24T18:40:01.283Z
 **Stopped At:** Phase 20 context gathered
 **Resume File:** None
 
@@ -152,6 +152,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 20 P01 | 24min | 2 tasks | 7 files |
 | Phase 20 P02 | 23min | 3 tasks | 6 files |
 | Phase 20 P03 | 16min | 2 tasks | 2 files |
+| Phase 20 P04 | 20min | 3 tasks | 1 files |
 
 ## Decisions
 
