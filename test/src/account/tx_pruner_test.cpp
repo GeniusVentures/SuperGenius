@@ -1991,8 +1991,9 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
 }
 
 // ---------------------------------------------------------------------------
-// Compaction gate: D-01 — the threshold-crossed canary (ONE positive case;
-// the conjunct matrix is 20-04's scope)
+// Compaction gate: D-01 — the canary plus the full conjunct matrix and the
+// D-02 honesty contract (one TEST_F per conjunct; stats/status-driven
+// asserts only, never log capture)
 // ---------------------------------------------------------------------------
 
 /**
@@ -2057,6 +2058,370 @@ TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsR
         ASSERT_TRUE( lookup.has_value() );
         EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
     }
+}
+
+/**
+ * D-01 conjunct — cumulative watermark < compact_threshold_mb: a REAL
+ * erasing cycle (erased >= 1) whose summed evaluation-carried bytes stay far
+ * under the configured threshold never pays for a compaction, and the
+ * status stays honestly nullopt (D-02: nothing was reclaimed because no
+ * rewrite ran).
+ */
+TEST_F( TxPrunerTest, CompactionGate_BelowThresholdErasingCycleNeverCompacts )
+{
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1 );
+    auto eligible_b = MakeTransfer( 3, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/below-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    PutSeedValue( "/seed/txpruner/below-driver-2", "d2" );
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds ); // default 16MB threshold
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );  // a real erasing cycle (the erased >= 1 conjunct holds)
+    EXPECT_FALSE( stats.compacted ); // ...but the summed bytes stay far under 16MB
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+}
+
+/**
+ * D-01 conjunct — erased == 0: a cycle over already-pruned state (fresh
+ * evaluation, nothing new erased) never compacts even at the LOWEST sane
+ * threshold — the erased conjunct, not just the threshold, gates the
+ * rewrite (compaction rewrites bytes; with nothing newly deleted there is
+ * nothing new to reclaim).
+ */
+TEST_F( TxPrunerTest, CompactionGate_ErasedZeroCycleNeverCompactsAtLowThreshold )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/zero-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/zero-driver-2", "d2" );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    // Drain: the settled cycle erases the one small candidate (its summed
+    // bytes stay far under even the 1MB threshold), leaving no eligible work.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 1u );
+    EXPECT_FALSE( stats.compacted );
+
+    // The erased==0 cycle over the drained state never compacts.
+    auto drained = RunCycle( *pruner );
+    ASSERT_TRUE( drained.has_value() );
+    EXPECT_EQ( drained.value().erased, 0u );
+    EXPECT_FALSE( drained.value().compacted );
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+}
+
+/**
+ * D-01 conjunct — cumulative watermark >= threshold: a cycle whose erasures
+ * cross the threshold fires exactly ONE compaction; D-02 honesty: the
+ * bytes_reclaimed stamp is written at compaction only and RETAINED by later
+ * non-compacting cycles (both the erased==0 form and the strongest
+ * erasing-but-sub-threshold form — the stamp is never reset or refreshed).
+ */
+TEST_F( TxPrunerTest, CompactionGate_CrossedThresholdCompactsOnceAndStampRetained )
+{
+    constexpr size_t kValueBytes = 1u << 20; // ~1MB low-entropy value each
+
+    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cross-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cross-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u ); // ~2MB erased in ONE cycle: the crossing
+    EXPECT_TRUE( stats.compacted );
+    EXPECT_GT( stats.compaction_duration_ms, 0u );
+
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+    const uint64_t stamped = status.bytes_reclaimed.value();
+
+    // Follow-up below-threshold cycle (fresh evaluation, nothing new
+    // erased): no second compaction, stamp RETAINED.
+    auto follow_up = RunCycle( *pruner );
+    ASSERT_TRUE( follow_up.has_value() );
+    EXPECT_EQ( follow_up.value().erased, 0u );
+    EXPECT_FALSE( follow_up.value().compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+    EXPECT_EQ( pruner->GetPruneStatus().bytes_reclaimed.value(), stamped );
+
+    // Strongest retention form: a later ERASING but sub-threshold cycle
+    // still neither compacts nor disturbs the stamp.
+    auto small = MakeTransfer( 4, 1 );
+    SeedTransaction( small );
+    TrackOutputs( *small );
+    ASSERT_TRUE( ConsumeOutput( *small, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/cross-driver-3", "d3" );
+    auto small_cycle = RunCycle( *pruner );
+    ASSERT_TRUE( small_cycle.has_value() );
+    ASSERT_EQ( small_cycle.value().erased, 1u );
+    EXPECT_FALSE( small_cycle.value().compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+    EXPECT_EQ( pruner->GetPruneStatus().bytes_reclaimed.value(), stamped );
+}
+
+/**
+ * D-01 conjunct — !canceled: a cancel requested BEFORE the cycle keeps the
+ * threshold-crossing erasure un-compacted (compacted=false, the stamp never
+ * written), and the cancel persists for the instance's lifetime. The
+ * kept-watermark retry (a skipped compaction keeps the watermark so the
+ * still-crossed threshold retries) is proven on a fresh, never-canceled
+ * instance whose own crossing cycle compacts.
+ */
+TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompacts )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cancel-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cancel-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+
+    auto canceled_pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( canceled_pruner, nullptr );
+    canceled_pruner->RequestCompactionCancel(); // BEFORE any cycle runs
+
+    PruneCycleStats stats;
+    RunSettledCycle( *canceled_pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );   // the erases happened...
+    EXPECT_FALSE( stats.compacted ); // ...the compaction never started
+    EXPECT_FALSE( canceled_pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The cancel persists for the instance's lifetime (the shutdown
+    // promptness contract): a later crossing on the SAME instance still
+    // never compacts and still never stamps.
+    auto more = MakeTransfer( 4, 1, kValueBytes );
+    SeedTransaction( more );
+    TrackOutputs( *more );
+    ASSERT_TRUE( ConsumeOutput( *more, 0, *spender, padded_owner ) );
+    PutSeedValue( "/seed/txpruner/cancel-driver-3", "d3" );
+    auto still_canceled = RunCycle( *canceled_pruner );
+    ASSERT_TRUE( still_canceled.has_value() );
+    ASSERT_EQ( still_canceled.value().erased, 1u );
+    EXPECT_FALSE( still_canceled.value().compacted );
+    EXPECT_FALSE( canceled_pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The kept-watermark retry: a fresh, never-canceled instance whose
+    // cycle re-crosses the threshold compacts (the crossing erasure alone
+    // is sufficient — only the cancel suppressed the first one).
+    auto retry_pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( retry_pruner, nullptr );
+
+    auto big_c = MakeTransfer( 5, 1, kValueBytes );
+    auto big_d = MakeTransfer( 6, 1, kValueBytes );
+    SeedTransaction( big_c );
+    SeedTransaction( big_d );
+    TrackOutputs( *big_c );
+    TrackOutputs( *big_d );
+    ASSERT_TRUE( ConsumeOutput( *big_c, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_d, 0, *spender, padded_owner ) );
+    PutSeedValue( "/seed/txpruner/cancel-driver-4", "d4" );
+
+    PruneCycleStats retry_stats;
+    RunSettledCycle( *retry_pruner, retry_stats );
+    ASSERT_EQ( retry_stats.erased, 2u );
+    EXPECT_TRUE( retry_stats.compacted );
+    const auto retry_status = retry_pruner->GetPruneStatus();
+    ASSERT_TRUE( retry_status.bytes_reclaimed.has_value() );
+    EXPECT_GT( retry_status.bytes_reclaimed.value(), 0u );
+}
+
+/**
+ * D-01 / Pitfall 10 — the compaction bookkeeping is IN-MEMORY ONLY: a fresh
+ * TxPruner instance over the same fixture reports bytes_reclaimed ==
+ * nullopt (and no watermark) — the stamp never survives across instances
+ * and must never be asserted to.
+ */
+TEST_F( TxPrunerTest, CompactionGate_FreshInstanceReportsNoStampUntilItCompacts )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/fresh-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/fresh-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 2u );
+    ASSERT_TRUE( stats.compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The restart-honesty pin: a fresh instance on the SAME fixture starts
+    // from zero — no stamp, no watermark (in-memory state, D-01).
+    auto fresh = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( fresh, nullptr );
+    const auto fresh_status = fresh->GetPruneStatus();
+    EXPECT_FALSE( fresh_status.bytes_reclaimed.has_value() );
+    EXPECT_FALSE( fresh_status.watermark.has_value() );
+}
+
+/**
+ * D-02 — concurrent-read coherence during a COMPACTING cycle: a reader
+ * thread spins on GetPruneStatus while a threshold-crossing cycle runs
+ * seam-held and then completes its erases plus the tail compaction; every
+ * snapshot is a coherent full copy (bytes_reclaimed absent-or-stamped,
+ * never torn), the stamp becomes visible mid-polling, and neither side
+ * deadlocks. The :2044 pattern carried onto the compaction path.
+ */
+TEST_F( TxPrunerTest, CompactionGate_ConcurrentReadDuringCompactingCycleIsCoherent )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cread-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cread-driver-2", "d2" ); // retire both bigs from headship
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    std::atomic<bool>   hook_entered{ false };
+    std::atomic<bool>   release_cycle{ false };
+    std::atomic<bool>   stop_reader{ false };
+    std::atomic<size_t> reads{ 0 };
+    std::atomic<bool>   stamp_seen{ false };
+
+    // Reader: spin on GetPruneStatus the whole time (through the erases and
+    // the tail compaction); after enough concurrent reads INSIDE the held
+    // window, release the cycle thread.
+    std::thread reader(
+        [&]
+        {
+            while ( !stop_reader.load() )
+            {
+                const auto snapshot = pruner->GetPruneStatus(); // full copy under the status mutex
+                ++reads;
+                if ( snapshot.bytes_reclaimed.has_value() )
+                {
+                    stamp_seen.store( true );
+                }
+                if ( hook_entered.load() && reads.load() > 200 )
+                {
+                    release_cycle.store( true );
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+            release_cycle.store( true ); // never leave the cycle held on exit
+        } );
+
+    sgns::TxPruner::SetCycleInterruptHookForTest(
+        [&]( int step )
+        {
+            if ( step == sgns::TxPruner::kInterruptAfterEvaluation )
+            {
+                hook_entered.store( true );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+                while ( !release_cycle.load() && std::chrono::steady_clock::now() < deadline )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+                return false; // continue the cycle (the hold was the point)
+            }
+            return false;
+        } );
+
+    // The raced cycle: settles, holds after evaluation, then (released by
+    // the reader) erases both candidates and runs the tail compaction while
+    // the reader keeps polling.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+
+    {
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return stamp_seen.load(); },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "the reader observes the stamped bytes_reclaimed",
+                                   &waited );
+    }
+    stop_reader.store( true );
+    reader.join();
+
+    ASSERT_EQ( stats.erased, 2u );
+    EXPECT_TRUE( stats.compacted );
+    EXPECT_GT( reads.load(), 200u ); // the concurrent reads really happened
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
 }
 
 // ---------------------------------------------------------------------------
