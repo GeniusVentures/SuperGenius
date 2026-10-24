@@ -646,6 +646,46 @@ public:
         ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
     }
 
+    /// Reverts ONE durable /utxo/ record to the unspent (READY) shape and
+    /// rebuilds the in-memory UTXO map from disk — the inverse of
+    /// ConsumeOutput on the same outpoint, fixture-side. The LoadUTXOs
+    /// reload is load-bearing: IsOutPointGenuinelyConsumed reads the
+    /// IN-MEMORY utxo_outpoints_ map, so a record-only write would leave
+    /// the map CONSUMED and the re-verify would not refuse. Assert-free by
+    /// design — the cycle thread invokes this inside the interrupt hook, so
+    /// failures report through the returned flag instead.
+    bool RevertUtxoRecordToUnspentByKey( const std::string &key )
+    {
+        const auto snapshot     = SnapshotPrefix( "/utxo" );
+        const auto record_bytes = snapshot.find( key );
+        if ( record_bytes == snapshot.end() )
+        {
+            return false;
+        }
+
+        SGTransaction::UTXOEntryRecord record;
+        if ( !record.ParseFromArray( record_bytes->second.data(),
+                                     static_cast<int>( record_bytes->second.size() ) ) )
+        {
+            return false;
+        }
+        record.set_state( SGTransaction::UTXO_ENTRY_READY );
+        record.clear_has_spent_by_txid();
+        record.clear_spent_by_txid();
+        record.clear_has_spent_epoch();
+        record.clear_spent_epoch();
+
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( key );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        if ( !db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() )
+        {
+            return false;
+        }
+        return account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value();
+    }
+
     /// Arms the checkpoint mismatch by deleting the spender's change record
     /// (the corrupted/lost-record class): the durable READY set loses the
     /// change output while the input's CONSUMED evidence and the latest
@@ -2905,6 +2945,165 @@ TEST_F( TxPrunerTest, ComposeLock_HeadGuardRefusesAtEraseTimeNeverTorn )
     auto pruned = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
     ASSERT_TRUE( pruned.has_value() );
     EXPECT_EQ( pruned.value().first, PrunedLookup::PRUNED );
+}
+
+// ---------------------------------------------------------------------------
+// SpendRace: SC-5 — the seam-held window-edge race (D-04, both legs)
+// ---------------------------------------------------------------------------
+
+/**
+ * The window-edge fault test. The cycle is seam-held between evaluation
+ * and the per-tx erase (the kInterruptAfterEvaluation seam — the landed
+ * RunCycle order runs the per-candidate re-verify BEFORE the same
+ * candidate's kInterruptBeforeErase seam, so holding THERE could never
+ * influence that candidate's own re-verify; the post-evaluation seam is
+ * the entry of the exact evaluation-to-erase window this race protects).
+ * While held, the target candidate's spend state is reverted fixture-side
+ * by the TWO-STEP revert: (1) the durable /utxo/ record rewritten to
+ * READY, then (2) LoadUTXOs — the reload clears and rebuilds the IN-MEMORY
+ * utxo_outpoints_ map the re-verify reads, so the revert is observable
+ * (a record-only write leaves the map CONSUMED and leg (a) fails).
+ *
+ * Leg (a) — skip THIS cycle: released, the cycle continues into the
+ * under-lock re-verify, which REFUSES the erase (erased==0, skipped==1,
+ * value present, marker NOT_FOUND, stats still recorded). Leg (b) — next
+ * cycle picks it up: a genuine consumed record lands on the outpoint again
+ * (the exact ConsumeOutput write) and the NEXT cycle erases (erased==1,
+ * marker PRUNED, value gone). Deterministic by construction: the hold is
+ * the blocking hook with the 5s deadline (it FAILS rather than hangs), and
+ * the deadline-bounded spin is the ONLY wait in the interleaving path.
+ */
+TEST_F( TxPrunerTest, SpendRace_RevertedSpendSkipsThisCycleAndNextCyclePicksItUp )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/race-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) ); // genuinely consumed at evaluation time
+    PutSeedValue( "/seed/txpruner/race-driver-2", "d2" );
+
+    const std::string tx_path = TransactionManager::GetTransactionPath( *eligible );
+
+    // The revert target's durable record key (captured on the test thread;
+    // the key never changes), sanity-checked CONSUMED before the race.
+    auto txid = base::Hash256::fromReadableString( eligible->GetHash() );
+    ASSERT_FALSE( txid.has_error() );
+    auto utxo_record = FindUtxoRecord( txid.value(), 0 );
+    ASSERT_TRUE( utxo_record.has_value() );
+    const std::string utxo_key = utxo_record->first;
+    ASSERT_EQ( utxo_record->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    // The tick gate's READY precondition (the RunSettledCycle recipe; the
+    // plain RunCycle helper never drives it).
+    ForceManagerReady();
+
+    std::atomic<bool> hook_entered{ false };
+    std::atomic<bool> release_cycle{ false };
+    std::atomic<bool> revert_ok{ false };
+
+    sgns::TxPruner::SetCycleInterruptHookForTest(
+        [this, utxo_key, &hook_entered, &release_cycle, &revert_ok]( int step )
+        {
+            if ( step == sgns::TxPruner::kInterruptAfterEvaluation )
+            {
+                // The spend reverts WHILE the cycle is held: durable record
+                // to READY, then the LoadUTXOs reload (the in-memory map
+                // drives the re-verify — checker B3's two steps).
+                revert_ok.store( RevertUtxoRecordToUnspentByKey( utxo_key ) );
+                hook_entered.store( true );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+                while ( !release_cycle.load() && std::chrono::steady_clock::now() < deadline )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+                return false; // continue the cycle (the hold was the point)
+            }
+            return false;
+        } );
+
+    // Leg (a): the cycle runs OFF-THREAD (the hold releases only from this
+    // thread); the bounded poll settles the tick gate, then the held cycle
+    // runs to the seam.
+    std::optional<outcome::result<PruneCycleStats>> raced;
+    std::thread cycle_thread(
+        [&]
+        {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                auto result = RunCycle( *pruner );
+                if ( result.has_error() || result.value().examined > 0 )
+                {
+                    raced = result;
+                    return;
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+            }
+        } );
+
+    {
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return hook_entered.load(); },
+                                   std::chrono::milliseconds( 10000 ),
+                                   "the cycle reaches the post-evaluation hold",
+                                   &waited );
+    }
+
+    // Mid-hold: nothing erased yet — value present, marker NOT_FOUND (the
+    // ComposeLock never-torn state shape).
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    {
+        auto mid_hold = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( mid_hold.has_value() );
+        EXPECT_EQ( mid_hold.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    release_cycle.store( true );
+    cycle_thread.join();
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+
+    ASSERT_TRUE( raced.has_value() );
+    ASSERT_TRUE( raced.value().has_value() );
+    EXPECT_TRUE( revert_ok.load() ) << "the two-step revert failed inside the hook";
+
+    // The under-lock re-verify refused: this cycle erased NOTHING, skipped
+    // the candidate, and touched neither value nor marker.
+    EXPECT_EQ( raced.value().value().erased, 0u );
+    EXPECT_EQ( raced.value().value().skipped, 1u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    {
+        auto refused = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( refused.has_value() );
+        EXPECT_EQ( refused.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    // A skipped-only completed cycle still records its stats (watermark set,
+    // last_cycle carries the skip).
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.watermark.has_value() );
+    EXPECT_EQ( status.last_cycle.skipped, 1u );
+    EXPECT_EQ( status.last_cycle.erased, 0u );
+
+    // Leg (b): the spend lands again (the exact ConsumeOutput write) and
+    // the NEXT cycle picks the candidate up — D-04/A4's both-legs
+    // resolution: never erased by the raced cycle, erased by the next.
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    auto next = RunCycle( *pruner );
+    ASSERT_TRUE( next.has_value() );
+    EXPECT_EQ( next.value().erased, 1u );
+    EXPECT_EQ( next.value().skipped, 0u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+    {
+        auto picked_up = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( picked_up.has_value() );
+        EXPECT_EQ( picked_up.value().first, PrunedLookup::PRUNED );
+    }
 }
 
 // ---------------------------------------------------------------------------
