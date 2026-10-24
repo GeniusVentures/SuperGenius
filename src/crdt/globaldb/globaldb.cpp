@@ -93,9 +93,14 @@ namespace sgns::crdt
     std::string GlobalDB::ColdStorageOptions::LogSummary() const
     {
         // T-7-03 redaction by omission: credential members are NEVER
-        // referenced here - endpoint/bucket/prefix/path_style/tls only.
+        // referenced here - endpoint/bucket/prefix/path_style/tls plus the
+        // four backpressure knobs (D-08 watermark class) only.
         return "endpoint=" + endpoint + ", bucket=" + bucket + ", prefix=" + prefix
-             + ", path_style=" + ( pathStyle ? "true" : "false" ) + ", tls=" + ( tls ? "true" : "false" );
+             + ", path_style=" + ( pathStyle ? "true" : "false" ) + ", tls=" + ( tls ? "true" : "false" )
+             + ", drain_interval_ms=" + std::to_string( backpressure.drain_interval_ms )
+             + ", backoff_cap_ms=" + std::to_string( backpressure.backoff_cap_ms )
+             + ", warn_pending=" + std::to_string( backpressure.warn_pending )
+             + ", critical_pending=" + std::to_string( backpressure.critical_pending );
     }
 
     GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string &crdt_config_text )
@@ -106,6 +111,13 @@ namespace sgns::crdt
     GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string         &crdt_config_text,
                                                                        const ColdStorageEnvLookup &env_lookup )
     {
+        // Built-in backpressure defaults (D-07 discretion resolved per
+        // 08-RESEARCH A1; 0 on any knob means its named default).
+        constexpr uint32_t kDefaultDrainIntervalMs  = 5000;
+        constexpr uint32_t kDefaultBackoffCapMs     = 60000;
+        constexpr uint32_t kDefaultWarnPending      = 10000;
+        constexpr uint32_t kDefaultCriticalPending  = 100000;
+
         ColdStorageOptions options; // disabled default (enabled == false)
 
         rapidjson::Document document;
@@ -141,10 +153,59 @@ namespace sgns::crdt
         std::string file_prefix;
         bool        path_style = true;
         bool        tls        = false;
+        ColdStorageOptions::BackpressureOptions backpressure;
         for ( auto member = section.MemberBegin(); member != section.MemberEnd(); ++member )
         {
             const std::string key = member->name.GetString();
-            const bool        is_string_key =
+
+            // (d1) D-06: nested "backpressure" sub-object - present-but-
+            // not-object is loud; inside it a strict single-member loop
+            // accepts ONLY the four knobs (unknown key / wrong type loud,
+            // naming blockstore.backpressure.<key>).
+            if ( key == "backpressure" )
+            {
+                if ( !member->value.IsObject() )
+                {
+                    return outcome::failure(
+                        std::string( "crdt_config.json: 'blockstore.backpressure' must be an object" ) );
+                }
+                for ( auto sub = member->value.MemberBegin(); sub != member->value.MemberEnd(); ++sub )
+                {
+                    const std::string sub_key = sub->name.GetString();
+                    const bool is_uint_key = ( sub_key == "drain_interval_ms" || sub_key == "warn_pending"
+                                               || sub_key == "critical_pending" || sub_key == "backoff_cap_ms" );
+                    if ( !is_uint_key )
+                    {
+                        return outcome::failure(
+                            "crdt_config.json: unknown key 'blockstore.backpressure." + sub_key + "'" );
+                    }
+                    if ( !sub->value.IsUint() )
+                    {
+                        return outcome::failure( "crdt_config.json: 'blockstore.backpressure." + sub_key
+                                                 + "' must be a uint" );
+                    }
+                    const uint32_t value = sub->value.GetUint();
+                    if ( sub_key == "drain_interval_ms" )
+                    {
+                        backpressure.drain_interval_ms = value;
+                    }
+                    else if ( sub_key == "warn_pending" )
+                    {
+                        backpressure.warn_pending = value;
+                    }
+                    else if ( sub_key == "critical_pending" )
+                    {
+                        backpressure.critical_pending = value;
+                    }
+                    else
+                    {
+                        backpressure.backoff_cap_ms = value;
+                    }
+                }
+                continue; // handled - never falls into the string/bool checks
+            }
+
+            const bool is_string_key =
                 ( key == "endpoint" || key == "bucket" || key == "access_key" || key == "secret_key" || key == "prefix" );
             const bool is_bool_key = ( key == "path_style" || key == "tls" );
             if ( !is_string_key && !is_bool_key )
@@ -188,6 +249,36 @@ namespace sgns::crdt
                 tls = member->value.GetBool();
             }
         }
+
+        // (d2) D-07 backpressure normalization: 0 on any knob means its
+        // built-in default; then the pair rule - warn_pending must stay
+        // STRICTLY below critical_pending, validated POST-normalization so
+        // mixed 0/explicit forms are judged on their effective values.
+        if ( backpressure.drain_interval_ms == 0 )
+        {
+            backpressure.drain_interval_ms = kDefaultDrainIntervalMs;
+        }
+        if ( backpressure.backoff_cap_ms == 0 )
+        {
+            backpressure.backoff_cap_ms = kDefaultBackoffCapMs;
+        }
+        if ( backpressure.warn_pending == 0 )
+        {
+            backpressure.warn_pending = kDefaultWarnPending;
+        }
+        if ( backpressure.critical_pending == 0 )
+        {
+            backpressure.critical_pending = kDefaultCriticalPending;
+        }
+        if ( backpressure.warn_pending >= backpressure.critical_pending )
+        {
+            return outcome::failure( "crdt_config.json: 'blockstore.backpressure' requires warn_pending < "
+                                     "critical_pending (warn_pending="
+                                     + std::to_string( backpressure.warn_pending )
+                                     + ", critical_pending="
+                                     + std::to_string( backpressure.critical_pending ) + ")" );
+        }
+        options.backpressure = backpressure;
 
         // (e) D-08 file-intent gate: all four required fields blank in the
         // FILE => disabled REGARDLESS of env (env overrides values, never

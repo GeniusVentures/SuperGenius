@@ -65,10 +65,32 @@ namespace sgns::crdt
             bool        tls{ false };
 
             /**
+             * @brief      Backpressure knobs for the cold-storage drainer
+             *             (D-05/D-06/D-07, v1.1 Phase 8).
+             *
+             * Exactly four knobs live under the nested
+             * "blockstore.backpressure" sub-object; 0 means the built-in
+             * default (normalized post-parse): drain_interval_ms 5000,
+             * backoff_cap_ms 60000, warn_pending 10000, critical_pending
+             * 100000. The watermark alarm is ALWAYS active with no opt-in
+             * (D-07); backpressure knobs are file-only (no env surface).
+             * warn_pending must stay below critical_pending
+             * (validated post-normalization).
+             */
+            struct BackpressureOptions
+            {
+                uint32_t drain_interval_ms{ 0 };  ///< poll cadence floor; 0 = default 5000
+                uint32_t warn_pending{ 0 };       ///< warn watermark (pending-upload records); 0 = default 10000
+                uint32_t critical_pending{ 0 };   ///< critical watermark; 0 = default 100000
+                uint32_t backoff_cap_ms{ 0 };     ///< exponential-backoff cap; 0 = default 60000
+            };
+            BackpressureOptions backpressure;
+
+            /**
              * @brief      Sanitized one-line summary: endpoint, bucket,
-             *             prefix, path_style, tls ONLY - the credential
-             *             members are never referenced (redaction by
-             *             omission, T-7-03).
+             *             prefix, path_style, tls, and the four backpressure
+             *             knobs ONLY - the credential members are never
+             *             referenced (redaction by omission, T-7-03).
              * @return     log-safe summary string
              */
             std::string LogSummary() const;

@@ -251,3 +251,112 @@ TEST( ColdStorageConfigGate, EnabledOptionsFieldMapping )
     EXPECT_FALSE( options.pathStyle );
     EXPECT_TRUE( options.tls );
 }
+
+// ---------------------------------------------------------------------------
+// blockstore.backpressure (D-05/D-06/D-07, v1.1 Phase 8 plan 08-02):
+// absent sub-object / blank object / 0 knobs => built-in defaults; unknown
+// key / wrong type / warn >= critical => loud failure naming the offender;
+// backpressure-only sections stay DISABLED (Phase-7 (e) inheritance).
+// ---------------------------------------------------------------------------
+
+/// A fully-enabled config fixture WITHOUT the blockstore/outer closers -
+/// the backpressure cases inject their sub-object inside "blockstore"
+/// then append the closers themselves.
+constexpr const char *kEnabledConfigBody =
+    R"({"blockstore": {"endpoint": "10.0.0.1", "bucket": "b1", "access_key": "a", "secret_key": "s")";
+
+TEST( ColdStorageConfigGate, BackpressureAbsentSubObjectGivesDefaults )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + "}}", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    const auto &bp = result.value().backpressure;
+    EXPECT_EQ( bp.drain_interval_ms, 5000u );
+    EXPECT_EQ( bp.backoff_cap_ms, 60000u );
+    EXPECT_EQ( bp.warn_pending, 10000u );
+    EXPECT_EQ( bp.critical_pending, 100000u );
+}
+
+TEST( ColdStorageConfigGate, BackpressureBlankObjectGivesDefaults )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + R"(, "backpressure": {}}})", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    const auto &bp = result.value().backpressure;
+    EXPECT_EQ( bp.drain_interval_ms, 5000u );
+    EXPECT_EQ( bp.backoff_cap_ms, 60000u );
+    EXPECT_EQ( bp.warn_pending, 10000u );
+    EXPECT_EQ( bp.critical_pending, 100000u );
+}
+
+TEST( ColdStorageConfigGate, BackpressureZeroKnobTakesOnlyItsDefault )
+{
+    // drain_interval_ms=0 takes its default while the explicit others keep
+    // their values (D-07 0-default semantics, per-knob).
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "backpressure": {"drain_interval_ms": 0, "warn_pending": 50, "critical_pending": 500, "backoff_cap_ms": 10000}}})",
+                         NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    const auto &bp = result.value().backpressure;
+    EXPECT_EQ( bp.drain_interval_ms, 5000u );
+    EXPECT_EQ( bp.warn_pending, 50u );
+    EXPECT_EQ( bp.critical_pending, 500u );
+    EXPECT_EQ( bp.backoff_cap_ms, 10000u );
+}
+
+TEST( ColdStorageConfigGate, BackpressureUnknownKeyFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + R"(, "backpressure": {"bogus": 1}}})", NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "unknown key 'blockstore.backpressure.bogus'" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, BackpressureWrongTypeFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "backpressure": {"drain_interval_ms": "fast"}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "blockstore.backpressure.drain_interval_ms" ), std::string::npos );
+    EXPECT_NE( result.error().find( "uint" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, BackpressureNotAnObjectFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + R"(, "backpressure": 5}})", NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "'blockstore.backpressure' must be an object" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, BackpressureWarnAtOrAboveCriticalFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "backpressure": {"warn_pending": 500, "critical_pending": 500}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "warn_pending < critical_pending" ), std::string::npos );
+    EXPECT_NE( result.error().find( "500" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, BackpressureOnlySectionDisables )
+{
+    // Phase-7 (e) inheritance: optional-fields-only (backpressure included)
+    // => disabled config, NOT an error - the wallet blank form relies on it.
+    auto result = Parse( R"({"blockstore": {"backpressure": {"drain_interval_ms": 250}}})", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_FALSE( result.value().enabled );
+}
+
+TEST( ColdStorageConfigGate, BackpressureValidExplicitValuesPropagate )
+{
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "backpressure": {"drain_interval_ms": 250, "warn_pending": 50, "critical_pending": 500, "backoff_cap_ms": 10000}}})",
+                         NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    const auto &bp = result.value().backpressure;
+    EXPECT_EQ( bp.drain_interval_ms, 250u );
+    EXPECT_EQ( bp.warn_pending, 50u );
+    EXPECT_EQ( bp.critical_pending, 500u );
+    EXPECT_EQ( bp.backoff_cap_ms, 10000u );
+}
