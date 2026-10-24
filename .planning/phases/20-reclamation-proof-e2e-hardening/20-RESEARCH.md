@@ -472,7 +472,7 @@ EXPECT_LE( reclaimed, erased_logical_bytes * 2 + ( 1u << 20 ) );  // sanity ceil
 
 **All other claims were verified against vendored RocksDB 9.4 source or this repo's source this session** (file:line cited inline).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **The compaction surface's exact naming and error mapping** (planner, discretion-adjacent)
    - What we know: two methods needed (compact + size); GlobalDB is the owner; `Error::ROCKSDB_IO` is the existing generic mapping.
