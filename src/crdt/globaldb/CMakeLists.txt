@@ -8,7 +8,7 @@ add_proto_library(crdt_globaldb_proto proto/broadcast.proto)
 # The real TU and the stub define the SAME symbols by design (gated
 # factory/stub split) - they must NEVER land in the same unity blob.
 set_source_files_properties(ColdStorageStack.cpp ColdStorageStackStub.cpp
-    BlockStoreBackedIpfsDatastore.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    ColdStorageManager.cpp BlockStoreBackedIpfsDatastore.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 add_library(crdt_globaldb
     GlobalDbNetworkComposition.cpp
@@ -21,6 +21,7 @@ add_library(crdt_globaldb
 if(SGNS_COLD_STORAGE)
 target_sources(crdt_globaldb PRIVATE
     ColdStorageStack.cpp
+    ColdStorageManager.cpp
     BlockStoreBackedIpfsDatastore.cpp
 )
 target_link_libraries(crdt_globaldb PRIVATE sgns-blockstore::sgns-blockstore)

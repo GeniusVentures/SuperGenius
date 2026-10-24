@@ -396,6 +396,10 @@ namespace sgns::crdt
 
         //SetIncomingBroadcastEnabled( false );
         StopBackupLoop();
+        // D-11 (v1.1 Phase 8): the drainer stops IMMEDIATELY AFTER the
+        // backup loop and BEFORE the lifecycle_mutex_ teardown block -
+        // bounded grace then join while the stores still live.
+        StopColdStorageManager();
 
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
         std::shared_ptr<CrdtDatastore>        crdt_datastore;
@@ -771,6 +775,29 @@ namespace sgns::crdt
         }
     }
 
+    ColdStorageStatus GlobalDB::GetColdStorageStatus() const
+    {
+        // Active-accessor pattern (ActiveDataStore shape): the default
+        // triple once shutdown has started; otherwise the drainer's
+        // atomics-backed status - no journal scan under the lock.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return ColdStorageStatus{};
+        }
+        return GetColdStorageManagerStatus( cold_manager_ );
+    }
+
+    void GlobalDB::StartColdStorageManager()
+    {
+        sgns::crdt::StartColdStorageManager( cold_manager_ );
+    }
+
+    void GlobalDB::StopColdStorageManager()
+    {
+        sgns::crdt::StopColdStorageManager( cold_manager_ );
+    }
+
     void GlobalDB::Start()
     {
         if ( started_ )
@@ -782,6 +809,7 @@ namespace sgns::crdt
         StartRebroadcastHeads();
         started_ = true;
         StartBackupLoop();
+        StartColdStorageManager();
     }
 
     void GlobalDB::StartCIDReceiving()

@@ -27,6 +27,11 @@ namespace sgns::crdt
     // reachable through the ColdStorageStack bridges only.
     class ColdStorageManager;
 
+    // D-08 status triple for the cold-storage drainer; defined in
+    // ColdStorageStack.hpp (always compiled, zero library types).
+    enum class ColdStorageWatermark;
+    struct ColdStorageStatus;
+
     class GlobalDB
     {
     public:
@@ -367,6 +372,16 @@ namespace sgns::crdt
         void UnregisterDeletedElementCallback( const std::string &pattern );
 
         /**
+         * @brief      Read the cold-storage drainer status triple (D-08,
+         *             v1.1 Phase 8): pending-upload record count, watermark
+         *             state, drainer health - from drainer atomics, never a
+         *             journal scan. Rides the active-accessor pattern:
+         *             the default triple once shutdown has started.
+         * @return     live status, or defaults when disabled/shut down
+         */
+        ColdStorageStatus GetColdStorageStatus() const;
+
+        /**
          * @brief Starts the GlobalDB instance.
          */
         void Start();
@@ -503,6 +518,13 @@ namespace sgns::crdt
         void StartBackupLoop();
         /** @brief Stops the backup loop and waits for the thread to finish. */
         void StopBackupLoop();
+
+        /** @brief Starts the cold-storage drainer beside the backup loop
+         *         (D-10, v1.1 Phase 8); delegates to the stack bridge. */
+        void StartColdStorageManager();
+        /** @brief Stops the cold-storage drainer with bounded grace then
+         *         join (D-11, v1.1 Phase 8); delegates to the stack bridge. */
+        void StopColdStorageManager();
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };

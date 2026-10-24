@@ -15,6 +15,7 @@
 
 #include "ColdStorageStack.hpp"
 
+#include <algorithm>
 #include <filesystem>
 
 #include <sgns-blockstore/LocalBlockStore.hpp>
@@ -22,6 +23,7 @@
 #include <sgns-blockstore/S3Client.hpp>
 
 #include "BlockStoreBackedIpfsDatastore.hpp"
+#include "ColdStorageManager.hpp"
 
 namespace sgns::crdt
 {
@@ -31,6 +33,14 @@ namespace sgns::crdt
         /// "backups", NEVER inside it (M3 D-09: the journal is rebuildable,
         /// not backed up).
         constexpr const char *kColdStoreDirectoryName = "coldstore";
+
+        /// Built-in backpressure defaults for programmatic (non-parsed)
+        /// ColdStorageOptions whose knobs are still 0 (parser normalizes
+        /// file-sourced options; the factory defends the direct path).
+        constexpr uint32_t kDefaultDrainIntervalMs = 5000;
+        constexpr uint32_t kDefaultBackoffCapMs    = 60000;
+        constexpr uint32_t kDefaultWarnPending     = 10000;
+        constexpr uint32_t kDefaultCriticalPending = 100000;
     } // namespace
 
     ColdStorageStackResult OpenColdStorageStack( const GlobalDB::ColdStorageOptions &options,
@@ -87,40 +97,81 @@ namespace sgns::crdt
             return outcome::failure( "cold storage: S3BlockStore open failed ("
                                      + opened_remote.error().message + ")" );
         }
+        std::shared_ptr<sgns::blockstore::S3BlockStore> remote_store = std::move( opened_remote.value() );
 
         // The ONE shared mutex serializing publisher vs drainer access to
         // the LocalBlockStore (library single-threaded-use contract).
         auto cold_store_mutex = std::make_shared<std::mutex>();
 
+        // The decorator and the drainer SHARE ownership of the journal
+        // store and the mutex (copy the handles, never move).
         auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
-            std::move( inner ), std::move( local_store ), cold_store_mutex, sgns::base::createLogger( "ColdStorage" ) );
+            std::move( inner ), local_store, cold_store_mutex, sgns::base::createLogger( "ColdStorage" ) );
+
+        // Drainer options: normalize any still-0 knob to its built-in
+        // default (parsed configs arrive already normalized; programmatic
+        // configs defend here), then enforce the pair rule loudly.
+        GlobalDB::ColdStorageOptions::BackpressureOptions backpressure = options.backpressure;
+        if ( backpressure.drain_interval_ms == 0 )
+        {
+            backpressure.drain_interval_ms = kDefaultDrainIntervalMs;
+        }
+        if ( backpressure.backoff_cap_ms == 0 )
+        {
+            backpressure.backoff_cap_ms = kDefaultBackoffCapMs;
+        }
+        if ( backpressure.warn_pending == 0 )
+        {
+            backpressure.warn_pending = kDefaultWarnPending;
+        }
+        if ( backpressure.critical_pending == 0 )
+        {
+            backpressure.critical_pending = kDefaultCriticalPending;
+        }
+        if ( backpressure.warn_pending >= backpressure.critical_pending )
+        {
+            return outcome::failure( "cold storage: backpressure requires warn_pending < critical_pending "
+                                     "(warn_pending="
+                                     + std::to_string( backpressure.warn_pending )
+                                     + ", critical_pending=" + std::to_string( backpressure.critical_pending )
+                                     + ")" );
+        }
+        auto manager = std::make_shared<ColdStorageManager>( local_store, remote_store, cold_store_mutex, backpressure );
 
         ColdStorageBundle bundle;
         bundle.data_store       = std::move( decorator );
-        bundle.manager          = nullptr; // filled by plan 08-02
+        bundle.manager          = std::move( manager );
         bundle.cold_store_mutex = std::move( cold_store_mutex );
         return outcome::success( std::move( bundle ) );
     }
 
     void StartColdStorageManager( const std::shared_ptr<ColdStorageManager> &manager )
     {
-        (void)manager; // 08-02 fills the real bridge; null-safe no-op here
+        if ( manager )
+        {
+            manager->Start();
+        }
     }
 
     void StopColdStorageManager( const std::shared_ptr<ColdStorageManager> &manager )
     {
-        (void)manager; // 08-02 fills the real bridge; null-safe no-op here
+        if ( manager )
+        {
+            manager->Stop();
+        }
     }
 
     ColdStorageStatus GetColdStorageManagerStatus( const std::shared_ptr<ColdStorageManager> &manager )
     {
-        (void)manager; // 08-02 fills the real bridge; default triple for now
-        return ColdStorageStatus{};
+        return manager ? manager->GetStatus() : ColdStorageStatus{};
     }
 
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )
     {
-        (void)manager; // 08-02 fills the real bridge; null-safe no-op here
+        if ( manager )
+        {
+            manager->RequestDrain();
+        }
     }
 
 } // namespace sgns::crdt
