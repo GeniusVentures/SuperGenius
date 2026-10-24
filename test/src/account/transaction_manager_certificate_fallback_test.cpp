@@ -21,6 +21,7 @@
 
 #include "transaction/TransactionManager.hpp"
 #include "transaction/TransactionConsensusHandler.hpp"
+#include "transaction/PruneEligibility.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/RegistrationTransaction.hpp"
@@ -1718,6 +1719,72 @@ TEST_F( CertificateFallbackTest, CertSlotPreviousHash_RegistrationRungStillWorks
 
     EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kRegistrationNonce + 1 ),
                registration->GetHash() );
+}
+
+// ---------------------------------------------------------------------------
+// SC-5 verify-only: certificate consumer vs a pruned subject (19-03)
+// ---------------------------------------------------------------------------
+
+/**
+ * SC-5 (cert-consumer row, verify-only): a certificate redelivered for a
+ * subject whose transaction this node PRUNED (value, block bytes, and map
+ * entry erased through the sanctioned EraseTransactionEntryPruned driver --
+ * the PRUNED marker joins the batch; seal retained) still approves through
+ * the cert-embedded fallback. The certificate alone is the recovery
+ * authority: neither local lookup may re-fetch the pruned value nor fail the
+ * handler. Production code unchanged (OnConsensusCertificate path).
+ */
+TEST_F( CertificateFallbackTest, PrunedSubjectCertificateApprovesThroughEmbeddedFallback )
+{
+    constexpr uint64_t kSubjectNonce = 50;
+    const auto         subject       = MakeTransfer( account_->GetAddress(), kSubjectNonce );
+    ASSERT_FALSE( subject->GetHash().empty() );
+
+    SeedErasableFrontierEntry( subject );
+
+    const auto certificate = BuildSignedCertificate( subject );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( TransactionManager::CertificateMatchesTransaction( certificate.value(), *subject ) );
+
+    // Park the round timer: the direct redelivery below is the only ingress.
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+
+    // Non-vacuous prune precondition: the CRDT lookup still finds the subject
+    // before the erase, so the post-erase miss is the prune's doing.
+    const auto before = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, subject->GetHash() );
+    ASSERT_TRUE( before.has_value() );
+    ASSERT_TRUE( before.value().has_value() );
+
+    // The sanctioned pruned-erase driver.
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( subject->GetHash() ).has_value() );
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *subject ) ).has_error() );
+
+    // The PRUNED verdict is backed by the durable marker.
+    const auto pruned = PruneEligibility::LookupPrunedEntry( *db_, subject->GetHash() );
+    ASSERT_TRUE( pruned.has_value() );
+    EXPECT_EQ( pruned.value().first, PrunedLookup::PRUNED );
+
+    // Both local lookups miss after the prune.
+    EXPECT_FALSE( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, subject->GetHash() ).has_value() );
+    const auto after = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, subject->GetHash() );
+    ASSERT_TRUE( after.has_value() );
+    EXPECT_FALSE( after.value().has_value() );
+
+    // Redelivery of the same certificate: Approve from the certificate alone
+    // (cert-embedded fallback), no re-fetch of the pruned value.
+    const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               subject->GetHash(),
+                                                                               certificate.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+
+    // The fallback confirmed the subject from the embedded copy.
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, subject->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    // No re-fetch: the CRDT value stays erased -- nothing wrote it back.
+    EXPECT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *subject ) ).has_error() );
 }
 
 // ---------------------------------------------------------------------------

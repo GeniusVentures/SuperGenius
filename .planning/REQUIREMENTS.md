@@ -162,14 +162,14 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 - [ ] **GATE-02**: Non-transaction data is provably untouched — certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers are byte-identical across a prune run (ctest)
 - [x] **GATE-03**: Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch of pruned chains
 - [ ] **GATE-04**: Outgoing `previous_hash` resolution survives pruning of the node's own frontier transaction (cert-slot based resolution; certificates are never pruned) — must land before the first real prune
-- [ ] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing pruned transaction as not relevant — skips it and completes boot without failure, and never resurrects spent outputs
+- [x] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing pruned transaction as not relevant — skips it and completes boot without failure, and never resurrects spent outputs
 - [ ] **GATE-06**: Pruning config knobs live beside `node_type` in `sgns_config.json`, default off, resolved values INFO-logged
 
 ### Pruned-Node Survival
 
-- [ ] **SURV-01**: Restart matrix on a pruned node passes — READY with zero pruned-CID fetch attempts, new-tip sync, spend/receive, and correct outgoing nonce chain
-- [ ] **SURV-02**: Local history queries answer "history pruned" (distinct from not-found); peer requests get clean `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a pruned node
-- [ ] **SURV-03**: A fresh light node bootstraps through a mesh whose peers have pruned the history it needs (full node serves) — E2E
+- [x] **SURV-01**: Restart matrix on a pruned node passes — READY with zero pruned-CID fetch attempts, new-tip sync, spend/receive, and correct outgoing nonce chain
+- [x] **SURV-02**: Local history queries answer "history pruned" (distinct from not-found); peer requests get clean `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a pruned node
+- [x] **SURV-03**: A fresh light node bootstraps through a mesh whose peers have pruned the history it needs (full node serves) — E2E
 
 ### Reclamation & Observability
 
@@ -214,11 +214,11 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | GATE-02 | Phase 20 | Pending |
 | GATE-03 | Phase 16 | Complete |
 | GATE-04 | Phase 17 | Pending |
-| GATE-05 | Phase 19 | Pending |
+| GATE-05 | Phase 19 | Complete |
 | GATE-06 | Phase 17 | Pending |
-| SURV-01 | Phase 19 | Pending |
-| SURV-02 | Phase 19 | Pending |
-| SURV-03 | Phase 19 | Pending |
+| SURV-01 | Phase 19 | Complete |
+| SURV-02 | Phase 19 | Complete |
+| SURV-03 | Phase 19 | Complete |
 | RECL-01 | Phase 20 | Pending |
 | RECL-02 | Phase 20 | Pending |
 | RECL-03 | Phase 18 | Complete |

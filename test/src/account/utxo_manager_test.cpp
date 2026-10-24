@@ -1,3 +1,8 @@
+/**
+ * @file       utxo_manager_test.cpp
+ * @brief      Unit tests for UTXOManager lifecycle, persistence, and the D-01 preserve-clear.
+ * @date       2026-10-23
+ */
 #include <gtest/gtest.h>
 
 #include <array>
@@ -5,6 +10,7 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <map>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -13,7 +19,9 @@
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/storage/base_rocksdb_test.hpp"
 
 using namespace sgns;
@@ -51,10 +59,45 @@ std::vector<GeniusUTXO> BalanceUTXOs()
     };
 }
 
+namespace
+{
+    // Raw /utxo/<owner>/ prefix read straight off the fixture's RocksDB handle:
+    // the anti-vacuous disk check for the preserve-clear suites — the consumed
+    // record (and its spent_by_txid) must survive on disk, not just in memory.
+    std::map<std::string, SGTransaction::UTXOEntryRecord> ReadRawUtxoRecords(
+        const std::shared_ptr<storage::rocksdb> &db,
+        const std::string                       &owner )
+    {
+        std::map<std::string, SGTransaction::UTXOEntryRecord> parsed;
+        base::Buffer                                          prefix;
+        prefix.put( "/utxo/" + owner + "/" );
+        auto records = db->query( prefix );
+        if ( records.has_error() )
+        {
+            // An absent prefix reads NOT_FOUND; anything louder is a real failure.
+            EXPECT_EQ( records.error(), storage::DatabaseError::NOT_FOUND );
+            return parsed;
+        }
+        for ( const auto &[key, value] : records.value() )
+        {
+            SGTransaction::UTXOEntryRecord record;
+            if ( !record.ParseFromArray( value.data(), static_cast<int>( value.size() ) ) )
+            {
+                ADD_FAILURE() << "Malformed UTXO record at key " << key.toString();
+                continue;
+            }
+            parsed[std::string( key.toString() )] = record;
+        }
+        return parsed;
+    }
+} // namespace
+
 class UTXOManagerTest : public test::RocksDBFixture
 {
 public:
-    UTXOManagerTest() : RocksDBFixture( "utxo_manager_test" ) {}
+    UTXOManagerTest() : RocksDBFixture( "utxo_manager_test" )
+    {
+    }
 
     void SetUp() override
     {
@@ -485,8 +528,8 @@ TEST_F( UTXOManagerTest, RestoreConsumedUTXOsRejectsInvalidBatchAtomically )
     ASSERT_TRUE( utxo_manager->ConsumeUTXOs( { consumed_input } ).value() );
     ASSERT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
 
-    const auto restore_result =
-        utxo_manager->RestoreConsumedUTXOs( { consumed_input, ready_input }, std::string( PRIV_KEY ) );
+    const auto restore_result = utxo_manager->RestoreConsumedUTXOs( { consumed_input, ready_input },
+                                                                    std::string( PRIV_KEY ) );
 
     ASSERT_TRUE( restore_result.has_error() );
     EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
@@ -499,26 +542,23 @@ TEST_F( UTXOManagerTest, WinningPeerConsumesLocallyOwnedReservedBridgeBurn )
 {
     const std::string local_detector = "peer-b";
     const std::string winning_minter = "peer-a";
-    ASSERT_TRUE( utxo_manager
-                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ),
-                                local_detector,
-                                UTXOManager::UTXOType::UTXO_BRIDGE )
-                     .value() );
+    ASSERT_TRUE(
+        utxo_manager
+            ->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ), local_detector, UTXOManager::UTXOType::UTXO_BRIDGE )
+            .value() );
 
     InputUTXOInfo input;
     input.txid_hash_  = DUMMY_HASH;
     input.output_idx_ = 0;
     utxo_manager->ReserveUTXOs( { input }, "peer-b-proposal", UTXOManager::UTXOType::UTXO_BRIDGE );
 
-    auto consumed = utxo_manager->ConsumeUTXOs(
-        { input }, winning_minter, UTXOManager::UTXOType::UTXO_BRIDGE );
+    auto consumed = utxo_manager->ConsumeUTXOs( { input }, winning_minter, UTXOManager::UTXOType::UTXO_BRIDGE );
 
     ASSERT_TRUE( consumed.has_value() );
     EXPECT_TRUE( consumed.value() );
     EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
 
-    utxo_manager->RollbackUTXOs(
-        { input }, "peer-b-proposal", UTXOManager::UTXOType::UTXO_BRIDGE );
+    utxo_manager->RollbackUTXOs( { input }, "peer-b-proposal", UTXOManager::UTXOType::UTXO_BRIDGE );
     EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
 }
 
@@ -526,22 +566,18 @@ TEST_F( UTXOManagerTest, PutUTXOWithBridgeType )
 {
     // Insert a UTXO with UTXO_BRIDGE type for a foreign address
     const std::string foreign = "bridge_test_address";
-    ASSERT_TRUE( utxo_manager
-                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 10, 500, TOKEN_1 ),
-                                foreign,
-                                UTXOManager::UTXOType::UTXO_BRIDGE )
-                     .value() );
+    ASSERT_TRUE(
+        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 10, 500, TOKEN_1 ), foreign, UTXOManager::UTXOType::UTXO_BRIDGE )
+            .value() );
     // Verify the UTXO appears in GetUTXOs for that address
     auto utxos = utxo_manager->GetUTXOs( foreign );
     EXPECT_EQ( utxos.size(), 1u );
     EXPECT_EQ( utxos[0].GetAmount(), 500u );
 
     // Also verify we can insert with default UTXO_NORMAL type
-    ASSERT_TRUE( utxo_manager
-                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 11, 300, TOKEN_1 ),
-                                foreign,
-                                UTXOManager::UTXOType::UTXO_NORMAL )
-                     .value() );
+    ASSERT_TRUE(
+        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 11, 300, TOKEN_1 ), foreign, UTXOManager::UTXOType::UTXO_NORMAL )
+            .value() );
     EXPECT_EQ( utxo_manager->GetUTXOs( foreign ).size(), 2u );
 }
 
@@ -549,9 +585,7 @@ TEST_F( UTXOManagerTest, ForeignAddressPutUTXO )
 {
     // Insert a UTXO for an address that is NOT the node's own address
     const std::string foreign = "0xdeadbeef_foreign_address";
-    ASSERT_TRUE( utxo_manager
-                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 20, 777, TOKEN_1 ), foreign )
-                     .value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 20, 777, TOKEN_1 ), foreign ).value() );
     // Verify the UTXO is tracked under the foreign address
     auto foreign_utxos = utxo_manager->GetUTXOs( foreign );
     EXPECT_EQ( foreign_utxos.size(), 1u );
@@ -584,11 +618,10 @@ TEST_F( UTXOManagerTest, GetAllUTXOsIncludesBridgeTypeEntries )
 {
     // Insert a BRIDGE-type UTXO and verify GetAllUTXOs tracks it
     const std::string bridge_addr = "bridge_catchup_address";
-    ASSERT_TRUE( utxo_manager
-                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 30, 1000, TOKEN_1 ),
-                                bridge_addr,
-                                UTXOManager::UTXOType::UTXO_BRIDGE )
-                     .value() );
+    ASSERT_TRUE(
+        utxo_manager
+            ->PutUTXO( GeniusUTXO( DUMMY_HASH, 30, 1000, TOKEN_1 ), bridge_addr, UTXOManager::UTXOType::UTXO_BRIDGE )
+            .value() );
 
     auto all = utxo_manager->GetAllUTXOs();
     // Verify the bridge address exists in the map
@@ -643,8 +676,7 @@ TEST_F( UTXOManagerTest, TryReserveOutpointClaimsOnceAndReportsCollisions )
     InputUTXOInfo consumed_input;
     consumed_input.txid_hash_  = burn;
     consumed_input.output_idx_ = 0;
-    ASSERT_TRUE( utxo_manager
-                     ->ConsumeUTXOs( { consumed_input }, "claim-owner", UTXOManager::UTXOType::UTXO_BRIDGE )
+    ASSERT_TRUE( utxo_manager->ConsumeUTXOs( { consumed_input }, "claim-owner", UTXOManager::UTXOType::UTXO_BRIDGE )
                      .has_value() );
     EXPECT_EQ( utxo_manager->TryReserveOutpoint( burn, 0, "burn-id", UTXOManager::UTXOType::UTXO_BRIDGE ),
                UTXOManager::OutpointClaim::kAlreadyConsumed );
@@ -660,8 +692,8 @@ TEST_F( UTXOManagerTest, ConsumeUTXOsPersistsConsumedStateUnderStoredOwner )
      * state durable under NEITHER address. After a reload the outpoint came
      * back READY: a resurrected spend / double-spend window.
      */
-    const auto outpoint_hash = base::Hash256::fromReadableString( std::string( 64, '5' ) ).value();
-    const std::string stored_owner = "owner-a";
+    const auto        outpoint_hash = base::Hash256::fromReadableString( std::string( 64, '5' ) ).value();
+    const std::string stored_owner  = "owner-a";
     const std::string spender       = "spender-b";
     // UTXO_BRIDGE is the shape where the hole bites: bridge entries match any
     // spender (owner_matches is unconditionally true for the type), so the
@@ -681,8 +713,7 @@ TEST_F( UTXOManagerTest, ConsumeUTXOsPersistsConsumedStateUnderStoredOwner )
     // matches any spender AND the type must match), so the CONSUMED flip lands
     // on the original owner's entry — the exact shape the store must persist
     // under the stored owner.
-    const auto consumed =
-        utxo_manager->ConsumeUTXOs( { input }, spender, UTXOManager::UTXOType::UTXO_BRIDGE );
+    const auto consumed = utxo_manager->ConsumeUTXOs( { input }, spender, UTXOManager::UTXOType::UTXO_BRIDGE );
     ASSERT_TRUE( consumed.has_value() );
 
     // Reload from storage into a fresh manager: the consumed state must
@@ -830,4 +861,225 @@ TEST_F( UTXOManagerTest, SpenderSurvivesBucketRewriteAndReload )
     ASSERT_TRUE( recorded.has_value() );
     EXPECT_EQ( recorded->toReadableString(), spender.toReadableString() );
     EXPECT_TRUE( reloaded->IsOutPointGenuinelyConsumed( outpoint_hash, 0 ) );
+}
+
+TEST_F( UTXOManagerTest, ClearUnspentKeepConsumedPreservesEvidenceInMemoryAndOnDisk )
+{
+    /**
+     * D-01 preserve-clear: READY/RESERVED entries and their reservations are
+     * dropped, but CONSUMED spend evidence (spent_by_txid) survives — in memory
+     * AND on the raw /utxo/ prefix. The reload leg exercises the post-restart
+     * shape where LoadUTXOs has the CONSUMED entry resident in the address
+     * index — the exact state InitializeUTXOs's checkpoint-mismatch clear runs
+     * against.
+     */
+    const auto        ready_hash    = base::Hash256::fromReadableString( std::string( 64, '1' ) ).value();
+    const auto        reserved_hash = base::Hash256::fromReadableString( std::string( 64, '2' ) ).value();
+    const auto        spent_hash    = base::Hash256::fromReadableString( std::string( 64, '3' ) ).value();
+    const auto        spender       = base::Hash256::fromReadableString( std::string( 64, '9' ) ).value();
+    const std::string owner         = "keep-consumed-owner";
+    const std::string ready_key     = "/utxo/" + owner + "/" + ready_hash.toReadableString() + ":0";
+    const std::string reserved_key  = "/utxo/" + owner + "/" + reserved_hash.toReadableString() + ":1";
+    const std::string spent_key     = "/utxo/" + owner + "/" + spent_hash.toReadableString() + ":2";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( ready_hash, 0, 100, TOKEN_1 ), owner ).value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( reserved_hash, 1, 50, TOKEN_1 ), owner ).value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( spent_hash, 2, 70, TOKEN_1 ), owner ).value() );
+
+    InputUTXOInfo reserved_input;
+    reserved_input.txid_hash_  = reserved_hash;
+    reserved_input.output_idx_ = 1;
+    utxo_manager->ReserveUTXOs( { reserved_input }, "res-1" );
+    ASSERT_TRUE( utxo_manager->IsOutPointReserved( reserved_hash, 1 ) );
+    // The reservation is live before the clear: a second claimant is refused.
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( reserved_hash, 1, "res-2" ),
+               UTXOManager::OutpointClaim::kAlreadyReserved );
+
+    InputUTXOInfo spent_input;
+    spent_input.txid_hash_  = spent_hash;
+    spent_input.output_idx_ = 2;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { spent_input }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).value() );
+
+    // Present-before (disk): all three outpoints carry records under the prefix.
+    EXPECT_EQ( ReadRawUtxoRecords( db_, owner ).size(), 3u );
+
+    ASSERT_TRUE( utxo_manager->ClearUnspentKeepConsumed( owner ).has_value() );
+
+    // Memory: unspent entries are gone and their reservation was dropped with
+    // them (the outpoint is unknown — not merely held by someone else).
+    EXPECT_FALSE( utxo_manager->GetOutPointState( ready_hash, 0 ).has_value() );
+    EXPECT_FALSE( utxo_manager->GetOutPointState( reserved_hash, 1 ).has_value() );
+    EXPECT_TRUE( utxo_manager->GetUTXOs( owner ).empty() );
+    EXPECT_EQ( utxo_manager->TryReserveOutpoint( reserved_hash, 1, "res-2" ),
+               UTXOManager::OutpointClaim::kNotClaimable );
+
+    // Memory: consumed evidence survives with its spender binding.
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( spent_hash, 2 ) );
+    const auto spent_by_txid = utxo_manager->GetOutPointSpender( spent_hash, 2 );
+    ASSERT_TRUE( spent_by_txid.has_value() );
+    EXPECT_EQ( spent_by_txid->toReadableString(), spender.toReadableString() );
+    EXPECT_TRUE( utxo_manager->IsOutPointGenuinelyConsumed( spent_hash, 2 ) );
+
+    // Disk: the raw /utxo/ prefix carries exactly the consumed record with its
+    // spent_by_txid bytes, and the cleared unspent keys are gone.
+    const auto records = ReadRawUtxoRecords( db_, owner );
+    ASSERT_EQ( records.size(), 1u );
+    EXPECT_EQ( records.count( ready_key ), 0u );
+    EXPECT_EQ( records.count( reserved_key ), 0u );
+    const auto spent_it = records.find( spent_key );
+    ASSERT_NE( spent_it, records.end() );
+    EXPECT_EQ( spent_it->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+    EXPECT_EQ( spent_it->second.utxo().amount(), 70u );
+    ASSERT_TRUE( spent_it->second.has_spent_by_txid() );
+    EXPECT_EQ( spent_it->second.spent_by_txid(), spender.toString() );
+
+    // Reload leg: LoadUTXOs indexes every persisted record — including CONSUMED
+    // entries — into the address index. The clear must keep a CONSUMED survivor
+    // that is index-resident (the post-restart mismatch-clear shape).
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
+    ASSERT_TRUE( reloaded->IsOutPointConsumed( spent_hash, 2 ) );
+
+    ASSERT_TRUE( reloaded->ClearUnspentKeepConsumed( owner ).has_value() );
+
+    EXPECT_TRUE( reloaded->IsOutPointConsumed( spent_hash, 2 ) );
+    const auto reloaded_spender = reloaded->GetOutPointSpender( spent_hash, 2 );
+    ASSERT_TRUE( reloaded_spender.has_value() );
+    EXPECT_EQ( reloaded_spender->toReadableString(), spender.toReadableString() );
+    const auto reloaded_records = ReadRawUtxoRecords( db_, owner );
+    ASSERT_EQ( reloaded_records.size(), 1u );
+    const auto reloaded_spent_it = reloaded_records.find( spent_key );
+    ASSERT_NE( reloaded_spent_it, reloaded_records.end() );
+    EXPECT_EQ( reloaded_spent_it->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+    EXPECT_EQ( reloaded_spent_it->second.spent_by_txid(), spender.toString() );
+}
+
+TEST_F( UTXOManagerTest, ClearUnspentKeepConsumedKeepsTombstoneAndBlocksRecreation )
+{
+    /**
+     * Both consumed classes survive the clear: a genuine spend (amount != 0)
+     * and a synthesized zero-amount tombstone. Genuineness discrimination stays
+     * with IsOutPointGenuinelyConsumed; for blocking purposes ANY CONSUMED
+     * entry suffices — PutUTXO's existing-entry check refuses re-creation of
+     * both, which is the by-construction resurrection blocker.
+     */
+    const auto        genuine_hash = base::Hash256::fromReadableString( std::string( 64, '4' ) ).value();
+    const auto        unknown_hash = base::Hash256::fromReadableString( std::string( 64, '5' ) ).value();
+    const auto        spender      = base::Hash256::fromReadableString( std::string( 64, '6' ) ).value();
+    const std::string owner        = "tombstone-keep-owner";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( genuine_hash, 0, 100, TOKEN_1 ), owner ).value() );
+    InputUTXOInfo genuine_input;
+    genuine_input.txid_hash_  = genuine_hash;
+    genuine_input.output_idx_ = 0;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { genuine_input }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).value() );
+
+    InputUTXOInfo unknown_input;
+    unknown_input.txid_hash_  = unknown_hash;
+    unknown_input.output_idx_ = 7;
+    const auto tombstoned     = utxo_manager->ConsumeUTXOs( { unknown_input },
+                                                            owner,
+                                                            UTXOManager::UTXOType::UTXO_NORMAL,
+                                                            spender );
+    ASSERT_TRUE( tombstoned.has_value() );
+    EXPECT_FALSE( tombstoned.value() ); // unknown outpoint: not every input was consumed
+
+    ASSERT_TRUE( utxo_manager->ClearUnspentKeepConsumed( owner ).has_value() );
+
+    // Genuine spend: survives with full evidence quality.
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( genuine_hash, 0 ) );
+    EXPECT_TRUE( utxo_manager->IsOutPointGenuinelyConsumed( genuine_hash, 0 ) );
+    const auto genuine_spender = utxo_manager->GetOutPointSpender( genuine_hash, 0 );
+    ASSERT_TRUE( genuine_spender.has_value() );
+    EXPECT_EQ( genuine_spender->toReadableString(), spender.toReadableString() );
+
+    // Synthetic tombstone: survives (blocks re-creation) but is not genuine.
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( unknown_hash, 7 ) );
+    EXPECT_FALSE( utxo_manager->IsOutPointGenuinelyConsumed( unknown_hash, 7 ) );
+    const auto tombstone_spender = utxo_manager->GetOutPointSpender( unknown_hash, 7 );
+    ASSERT_TRUE( tombstone_spender.has_value() );
+    EXPECT_EQ( tombstone_spender->toReadableString(), spender.toReadableString() );
+
+    // Any surviving CONSUMED entry refuses re-creation — no resurrection.
+    EXPECT_FALSE( utxo_manager->PutUTXO( GeniusUTXO( genuine_hash, 0, 100, TOKEN_1 ), owner ).value() );
+    EXPECT_FALSE( utxo_manager->PutUTXO( GeniusUTXO( unknown_hash, 7, 100, TOKEN_1 ), owner ).value() );
+
+    // Disk: both consumed records survive the clear.
+    const auto records = ReadRawUtxoRecords( db_, owner );
+    ASSERT_EQ( records.size(), 2u );
+    const auto genuine_it = records.find( "/utxo/" + owner + "/" + genuine_hash.toReadableString() + ":0" );
+    ASSERT_NE( genuine_it, records.end() );
+    EXPECT_EQ( genuine_it->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+    EXPECT_EQ( genuine_it->second.spent_by_txid(), spender.toString() );
+    const auto tombstone_it = records.find( "/utxo/" + owner + "/" + unknown_hash.toReadableString() + ":7" );
+    ASSERT_NE( tombstone_it, records.end() );
+    EXPECT_EQ( tombstone_it->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+    EXPECT_EQ( tombstone_it->second.utxo().amount(), 0u );
+    EXPECT_EQ( tombstone_it->second.spent_by_txid(), spender.toString() );
+}
+
+TEST_F( UTXOManagerTest, KeepConsumedNegativeControlSetUTXOsStillWipesEverything )
+{
+    /**
+     * Negative control: SetUTXOs({}, address) keeps its wipe-everything
+     * semantics — CONSUMED records and their spent_by_txid are destroyed, in
+     * memory and on disk. The preserve-clear is purely additive.
+     *
+     * Seeded through the real-world wipe path: ConsumeUTXOs drops the outpoint
+     * from the address index, so only after a reload (LoadUTXOs indexes every
+     * persisted record, CONSUMED included) is the spent entry index-resident —
+     * the exact shape InitializeUTXOs's mismatch clear runs against.
+     */
+    const auto        spent_hash = base::Hash256::fromReadableString( std::string( 64, '7' ) ).value();
+    const auto        ready_hash = base::Hash256::fromReadableString( std::string( 64, '8' ) ).value();
+    const auto        spender    = base::Hash256::fromReadableString( std::string( 64, '0' ) ).value();
+    const std::string owner      = "wipe-control-owner";
+
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( ready_hash, 0, 60, TOKEN_1 ), owner ).value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( spent_hash, 1, 80, TOKEN_1 ), owner ).value() );
+    InputUTXOInfo spent_input;
+    spent_input.txid_hash_  = spent_hash;
+    spent_input.output_idx_ = 1;
+    ASSERT_TRUE(
+        utxo_manager->ConsumeUTXOs( { spent_input }, owner, UTXOManager::UTXOType::UTXO_NORMAL, spender ).value() );
+    ASSERT_TRUE( utxo_manager->IsOutPointConsumed( spent_hash, 1 ) );
+    EXPECT_EQ( ReadRawUtxoRecords( db_, owner ).size(), 2u );
+
+    // Reload so the CONSUMED entry is index-resident (the post-restart shape).
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
+    ASSERT_TRUE( reloaded->IsOutPointConsumed( spent_hash, 1 ) );
+    ASSERT_TRUE( reloaded->GetOutPointSpender( spent_hash, 1 ).has_value() );
+
+    ASSERT_TRUE( reloaded->SetUTXOs( {}, owner ).has_value() );
+
+    EXPECT_FALSE( reloaded->IsOutPointConsumed( spent_hash, 1 ) );
+    EXPECT_FALSE( reloaded->GetOutPointSpender( spent_hash, 1 ).has_value() );
+    EXPECT_FALSE( reloaded->GetOutPointState( ready_hash, 0 ).has_value() );
+    EXPECT_TRUE( reloaded->GetUTXOs( owner ).empty() );
+    EXPECT_TRUE( ReadRawUtxoRecords( db_, owner ).empty() );
 }

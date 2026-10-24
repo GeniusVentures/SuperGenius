@@ -69,7 +69,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 16: Erasure Primitives & Bookkeeping Hardening** - Two-level local erasure primitives behind owner-module APIs; zero production behavior change (PRUNE-02, GATE-03) (completed 2026-10-15)
 - [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
 - [x] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04) (completed 2026-10-23)
-- [ ] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03)
+- [x] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03) (completed 2026-10-24)
 - [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
 
 *Parallel milestones:* v1.2 executes HERE; v1.3 (Phases 21-29) is planned on `develop` in parallel — both tracked in this planning root. The v1.3-side read-only snapshot of this roadmap: `.planning/milestones/v1.2-ROADMAP.md`.
@@ -179,7 +179,24 @@ Plans:
   4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
   5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+
+**Wave 1** *(parallel — no file overlap)*
+
+- [x] 19-01-PLAN.md — UTXOManager consumed-preserving clear (D-01 substrate) + KeepConsumed unit suites (GATE-05)
+- [x] 19-02-PLAN.md — D-02 send-wedge fix: typed pre-broadcast error + READY-preserving TickOnce branch + bounded SYNCING exit + lifecycle suites + folded todo closed (SURV-01)
+- [x] 19-03-PLAN.md — SC-5 recovery-audit guards: RetryDueFailedRoots isResolved guard + stalled-delta/cert/AccountMessenger verify tests (GATE-05, SURV-01)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [x] 19-04-PLAN.md — D-01 checkpoint-rebuild guard: preserve-clear swap + PRUNED marker consult + own-replay recognition + gap-fill crosscheck + RebuildGuard suites (GATE-05)
+- [x] 19-07-PLAN.md — SURV-02 peer refusal/failover + SURV-03/D-04 three-node pruned-mesh E2E (SURV-02, SURV-03)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [x] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
+- [x] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
 
 ### Phase 20: Reclamation Proof & E2E Hardening
 
@@ -194,7 +211,26 @@ Plans:
   4. Full and archive nodes in the same mesh retain 100% of their transaction history across the light node's prune cycles (ctest).
   5. Window-edge races are fault-tested: a spend arriving during an active prune cycle is never erased (spent-ness re-verified under lock immediately before each erase) and is picked up by the next cycle — verified under debug and release timing.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 20-01-PLAN.md — compaction substrate: GlobalDB CompactStorage + GetApproximateDiskUsageBytes (the one recipe home) + pruning.compact_threshold_mb knob + resolved-values INFO (RECL-01)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 20-02-PLAN.md — TxPruner post-cycle compaction gate (D-01) + evaluation-carried erased-bytes estimate + PruneStatus.bytes_reclaimed stamped at compaction (D-02) + RECL-03 wording retirement + shutdown cancel wiring + canary (RECL-01)
+
+**Wave 3** *(parallel — no file overlap)*
+
+- [ ] 20-03-PLAN.md — dedicated measured-bytes gate target: 200×~10KB → prune → ONE compaction → ≥60% bounded assertion + anti-vacuous pin + du belt (RECL-02)
+- [ ] 20-04-PLAN.md — compaction-trigger conjunct matrix + bytes_reclaimed honesty + GATE-02 post-compaction byte-identity (D-C5) + SC-5 seam-held race both legs (RECL-01, GATE-02)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 20-05-PLAN.md — SC-4 mesh retention: full/archive GlobalDB peers byte-identical across the light's prune + compaction (GATE-02)
 
 ## Phase Details (v1.3 — ACTIVE)
 
@@ -326,7 +362,7 @@ Plans:
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | — | Not started | — |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |

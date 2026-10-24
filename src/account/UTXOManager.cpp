@@ -532,6 +532,49 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> UTXOManager::ClearUnspentKeepConsumed( const std::string &address )
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        const auto       previous_utxo_outpoints    = utxo_outpoints_;
+        const auto       previous_address_outpoints = address_outpoints_;
+        const auto       previous_reservations      = local_reservations_;
+
+        size_t kept_consumed = 0;
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+        {
+            std::vector<OutPoint> consumed_survivors;
+            consumed_survivors.reserve( address_it->second.size() );
+            for ( const auto &outpoint : address_it->second )
+            {
+                local_reservations_.erase( outpoint );
+                if ( auto entry_it = utxo_outpoints_.find( outpoint );
+                     entry_it != utxo_outpoints_.end() && entry_it->second.state == UTXOState::UTXO_CONSUMED )
+                {
+                    // D-01: the spent_by_txid evidence must survive the clear so a
+                    // checkpoint-mismatch rebuild can never resurrect a spent output.
+                    consumed_survivors.push_back( outpoint );
+                    continue;
+                }
+                utxo_outpoints_.erase( outpoint );
+            }
+            kept_consumed      = consumed_survivors.size();
+            address_it->second = std::move( consumed_survivors );
+        }
+
+        if ( auto store_result = StoreUTXOsLocked( address ); store_result.has_error() )
+        {
+            utxo_outpoints_     = previous_utxo_outpoints;
+            address_outpoints_  = previous_address_outpoints;
+            local_reservations_ = previous_reservations;
+            return outcome::failure( store_result.error() );
+        }
+
+        logger_->debug( "Cleared unspent UTXOs for address {}, kept {} consumed entries",
+                        address.substr( 0, 8 ),
+                        kept_consumed );
+        return outcome::success();
+    }
+
     outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( uint64_t    amount,
                                                                       std::string dest_address,
                                                                       TokenID     token_id )
@@ -699,8 +742,8 @@ namespace sgns
             }
             auto       reservation_it = local_reservations_.find( outpoint );
             const bool held_by_other  = entry_it->second.state == UTXOState::UTXO_RESERVED &&
-                                       reservation_it != local_reservations_.end() &&
-                                       reservation_it->second != reservation_id;
+                                        reservation_it != local_reservations_.end() &&
+                                        reservation_it->second != reservation_id;
             if ( held_by_other )
             {
                 continue;
@@ -806,7 +849,7 @@ namespace sgns
 
             const auto &owner_address          = utxo_it->second.utxo.GetOwnerAddress();
             const bool  delegated_escrow_spend = owner_address != address && input.output_idx_ == 0 &&
-                                                utxo_address::IsEscrowLockAddress( owner_address );
+                                                 utxo_address::IsEscrowLockAddress( owner_address );
 
             if ( owner_address != address && !delegated_escrow_spend )
             {
@@ -881,6 +924,83 @@ namespace sgns
             return std::nullopt;
         }
         return it->second.spent_by_txid;
+    }
+
+    outcome::result<std::optional<UTXOManager::DurableSpendEvidence>> UTXOManager::ReadDurableSpendEvidence(
+        const base::Hash256 &utxo_id,
+        uint32_t             output_idx,
+        const std::string   &address ) const
+    {
+        const auto db = AcquireStorage();
+        if ( db == nullptr )
+        {
+            logger_->error( "Tried to read durable spend evidence without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
+
+        // Exact-key query via prefix scan: the record key identifies one
+        // outpoint, BUT the key format ("<txid>:<idx>") makes shorter keys a
+        // prefix of longer siblings (":1" prefixes ":10"..":19"), so the scan
+        // can return longer siblings when the exact record is absent. Require
+        // exact-key equality on the first hit; anything else is absent.
+        const auto   expected_key = BuildUTXORecordKey( address, OutPoint{ utxo_id, output_idx } );
+        base::Buffer key_buf;
+        key_buf.put( expected_key );
+        auto records = db->query( key_buf );
+        if ( records.has_error() )
+        {
+            if ( records.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return std::nullopt;
+            }
+            logger_->error( "Failed to read durable UTXO record for outpoint {}:{} under {}",
+                            utxo_id.toReadableString(),
+                            output_idx,
+                            address.substr( 0, 8 ) );
+            return records.error();
+        }
+        if ( records.value().empty() )
+        {
+            return std::nullopt;
+        }
+
+        const auto &first = *records.value().begin();
+        if ( first.first.toString() != expected_key )
+        {
+            // A longer sibling (":10" vs ":1") — the exact record is absent.
+            return std::nullopt;
+        }
+
+        const auto                    &record_value = first.second;
+        SGTransaction::UTXOEntryRecord entry_record;
+        if ( !entry_record.ParseFromArray( record_value.data(), record_value.size() ) )
+        {
+            logger_->error( "Failed to deserialize durable UTXO record for outpoint {}:{} under {}",
+                            utxo_id.toReadableString(),
+                            output_idx,
+                            address.substr( 0, 8 ) );
+            return std::errc::bad_message;
+        }
+
+        DurableSpendEvidence evidence;
+        evidence.consumed = FromProtoState( entry_record.state() ) == UTXOState::UTXO_CONSUMED;
+        evidence.genuine  = evidence.consumed && entry_record.utxo().amount() != 0;
+        if ( entry_record.has_spent_by_txid() )
+        {
+            auto spender = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.spent_by_txid().data() ) ),
+                           entry_record.spent_by_txid().size() ) );
+            if ( spender.has_error() )
+            {
+                logger_->error( "Malformed spent_by_txid in durable UTXO record for outpoint {}:{} under {}",
+                                utxo_id.toReadableString(),
+                                output_idx,
+                                address.substr( 0, 8 ) );
+                return spender.error();
+            }
+            evidence.spender = spender.value();
+        }
+        return evidence;
     }
 
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const

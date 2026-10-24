@@ -967,6 +967,22 @@ namespace sgns
         TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
 
         /**
+         * @brief Tri-state local lookup of one transaction by hash (D-03 / SURV-02).
+         * @details Thin passthrough to the TransactionManager's lookup, in the
+         *          GetTransactionStatus shape. Verdicts: tx set => found;
+         *          verdict PRUNED (+ record) => history pruned on this node —
+         *          a distinct answer, never conflated with not-found; verdict
+         *          NOT_FOUND with no tx => unknown hash;
+         *          VALUE_PRESENT_INVARIANT_VIOLATION => reported loudly by the
+         *          manager, never guessed. No RPC/transport mapping (deferred
+         *          per D-03).
+         * @param[in] txId Transaction hash to look up.
+         * @return TransactionLookupResult, or std::errc::not_connected when
+         *         the transaction manager is not ready (the GetTransactionStatus gate).
+         */
+        outcome::result<TransactionLookupResult> LookupTransaction( const std::string &txId ) const;
+
+        /**
          * @brief Sets the authorized full-node address for blockchain genesis verification.
          * @param[in] pub_address Public address authorized to create genesis blocks.
          */
