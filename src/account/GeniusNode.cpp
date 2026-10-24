@@ -2463,6 +2463,14 @@ namespace sgns
             prune_dry_run_timer_->cancel( ignored );
             prune_dry_run_timer_.reset();
         }
+        if ( tx_pruner_ )
+        {
+            // The io pool is already drained here, so an in-flight
+            // compaction has RETURNED — setting the atomic only shortens
+            // any not-yet-started compaction's window (the drain is the
+            // join; verified ordering, no other change needed).
+            tx_pruner_->RequestCompactionCancel();
+        }
         // The TxPruner holds only status/config (no runtime resources) —
         // release it beside its timer once the io pool is drained (18-04).
         tx_pruner_.reset();

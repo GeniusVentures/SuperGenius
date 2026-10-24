@@ -28,10 +28,12 @@
  *             destructor so a hook armed by a failing case never leaks, and
  *             fresh DB paths back every case (double-run safe).
  *
- *             The RECL-03 bytes-reclaimed statement ("not measured until
- *             Phase 20") lives in the TxPruner INFO line; these suites pin
- *             its structural half — PruneStatus/PruneCycleStats carry NO
- *             bytes field at all, so no fabricated number can exist.
+ *             The RECL-03/RECL-04 honest-split contract: the erase-time
+ *             reporting stays counts-only, PruneStatus.bytes_reclaimed is
+ *             stamped ONLY at compaction success (nullopt under the default
+ *             threshold — these fixtures never cross it), and the
+ *             CompactionGate_ canary crosses a 1MB threshold end-to-end and
+ *             asserts the measured field.
  * @date       2026-10-21
  */
 
@@ -282,7 +284,10 @@ public:
     //
 
     /// Transfer with @p output_count outputs owned by this account (empty for spenders).
-    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count )
+    /// @p dest_pad_bytes appends that many low-entropy bytes to every
+    /// destination address — sizes the serialized VALUE for the compaction
+    /// threshold without extra outputs (the CompactionGate canary).
+    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count, size_t dest_pad_bytes = 0 )
     {
         SGTransaction::DAGStruct dag;
         dag.set_type( "transfer" );
@@ -292,11 +297,13 @@ public:
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() ) );
 
+        const std::string destination = dest_pad_bytes > 0 ? account_->GetAddress() + std::string( dest_pad_bytes, 'x' )
+                                                           : account_->GetAddress();
         std::vector<OutputDestInfo> destinations;
         destinations.reserve( output_count );
         for ( size_t i = 0; i < output_count; ++i )
         {
-            destinations.push_back( { 100 + i, account_->GetAddress(), kTestTokenId } );
+            destinations.push_back( { 100 + i, destination, kTestTokenId } );
         }
         return std::make_shared<TransferTransaction>(
             TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
@@ -399,14 +406,21 @@ public:
     }
 
     /// Spends one output by @p spender; returns ConsumeUTXOs's verdict.
-    bool ConsumeOutput( const GeniusTransaction &transaction, uint32_t output_idx, const GeniusTransaction &spender )
+    /// @p owner_address overrides the consuming owner (a padded destination
+    /// — ConsumeUTXOs matches the STORED owner, so a padded output must be
+    /// consumed under its own address).
+    bool ConsumeOutput( const GeniusTransaction &transaction,
+                        uint32_t                 output_idx,
+                        const GeniusTransaction &spender,
+                        const std::string       &owner_address = "" )
     {
         auto txid = base::Hash256::fromReadableString( transaction.GetHash() );
         EXPECT_FALSE( txid.has_error() );
-        auto consumed = account_->GetUTXOManager().ConsumeUTXOs( { { txid.value(), output_idx, {} } },
-                                                                 account_->GetAddress(),
-                                                                 UTXOManager::UTXOType::UTXO_NORMAL,
-                                                                 SpenderHash( spender ) );
+        auto consumed = account_->GetUTXOManager().ConsumeUTXOs(
+            { { txid.value(), output_idx, {} } },
+            owner_address.empty() ? account_->GetAddress() : owner_address,
+            UTXOManager::UTXOType::UTXO_NORMAL,
+            SpenderHash( spender ) );
         EXPECT_TRUE( consumed.has_value() );
         return consumed.has_value() && consumed.value();
     }
@@ -681,7 +695,11 @@ public:
     //
 
     /// Constructs a Light TxPruner with the suite's window and dry_run=false.
-    std::shared_ptr<sgns::TxPruner> MakePruner( uint64_t k_budget, uint64_t settle_seconds )
+    /// @p compact_threshold_mb defaults to the PruningConfig default so no
+    /// existing call site changes (the CompactionGate canary passes 1).
+    std::shared_ptr<sgns::TxPruner> MakePruner( uint64_t k_budget,
+                                                uint64_t settle_seconds,
+                                                uint64_t compact_threshold_mb = PruningConfig{}.compact_threshold_mb )
     {
         PruningConfig config;
         config.enabled              = true;
@@ -689,6 +707,7 @@ public:
         config.finality_window      = kWindow;
         config.max_erases_per_cycle = k_budget;
         config.settle_seconds       = settle_seconds;
+        config.compact_threshold_mb = compact_threshold_mb;
         auto pruner                 = sgns::TxPruner::New( NodeType::Light, config );
         EXPECT_TRUE( pruner.has_value() );
         return pruner.has_value() ? pruner.value() : nullptr;
@@ -1904,10 +1923,10 @@ TEST_F( TxPrunerTest, TickGate_EmptyMissingSetAtAccessorLevel )
  * The per-cycle observability contract: every PruneCycleStats counter equals
  * the fixture's known actions, the generation tag travels onto the stats and
  * the queryable status, the watermark equals the maxHeight the completed
- * cycle observed, and status.last_cycle carries the same counters. There is
- * deliberately NO bytes-reclaimed field anywhere (the RECL-03 INFO line
- * states "not measured until Phase 20" — the status can never carry a
- * fabricated number).
+ * cycle observed, and status.last_cycle carries the same counters. The
+ * honest-split half (D-02): under the DEFAULT threshold this fixture never
+ * compacts — bytes_reclaimed stays nullopt and compacted stays false, so no
+ * fabricated reclamation number can exist at erase time.
  */
 TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
 {
@@ -1947,6 +1966,8 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     EXPECT_EQ( stats.errors, 0u );
     EXPECT_EQ( stats.generation, kTestGeneration );
     EXPECT_FALSE( stats.generation_superseded ); // caller-owned: ships false (D-C4)
+    EXPECT_FALSE( stats.compacted );             // default threshold: this fixture never compacts
+    EXPECT_EQ( stats.compaction_duration_ms, 0u );
 
     const auto status = pruner->GetPruneStatus();
     ASSERT_TRUE( status.watermark.has_value() );
@@ -1959,6 +1980,7 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     EXPECT_EQ( status.last_cycle.errors, stats.errors );
     EXPECT_EQ( status.last_cycle.generation, stats.generation );
     EXPECT_EQ( status.last_cycle.duration_ms, stats.duration_ms );
+    EXPECT_FALSE( status.bytes_reclaimed.has_value() ); // honest nullopt: no compaction ran
 
     // The generation tag travels on every invocation's stats (a
     // generation-superseded caller would see ITS tag here).
@@ -1966,6 +1988,75 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     ASSERT_TRUE( noop.has_value() );
     EXPECT_EQ( noop.value().generation, kTestGeneration + 2 );
     EXPECT_EQ( pruner->GetPruneStatus().last_cycle.generation, kTestGeneration + 2 );
+}
+
+// ---------------------------------------------------------------------------
+// Compaction gate: D-01 — the threshold-crossed canary (ONE positive case;
+// the conjunct matrix is 20-04's scope)
+// ---------------------------------------------------------------------------
+
+/**
+ * The end-to-end mechanism proof: two spent-beyond-window transactions whose
+ * evaluation-carried sizes (~1MB values each) cross a 1MB threshold inside
+ * ONE settled cycle trigger the post-cycle compaction through the real
+ * GlobalDB surface — the returned stats carry compacted=true with a recorded
+ * duration, the queryable status stamps the MEASURED bytes_reclaimed (never
+ * at erase time), and the erased values are genuinely gone (not vacuous).
+ */
+TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsReclaimedBytes )
+{
+    constexpr size_t kCanaryValueBytes = 1u << 20; // ~1MB low-entropy value each
+
+    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
+    // consumed under their own (padded) address.
+    const std::string padded_owner = account_->GetAddress() + std::string( kCanaryValueBytes, 'x' );
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kCanaryValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kCanaryValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/compact-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/compact-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+
+    // Pre-state: both values present, nothing reclaimed yet (honest nullopt).
+    for ( const auto *tx : { big_a.get(), big_b.get() } )
+    {
+        ASSERT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *tx ) } ).has_value() );
+    }
+
+    // Threshold 1MB: the two ~1MB erased values cross it inside this cycle.
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, 1 );
+    ASSERT_NE( pruner, nullptr );
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    EXPECT_EQ( stats.erased, 2u );
+    EXPECT_TRUE( stats.compacted );
+    EXPECT_GT( stats.compaction_duration_ms, 0u );
+
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+
+    // Non-vacuous: the erased values are gone (marker PRUNED, value absent).
+    for ( const auto *tx : { big_a.get(), big_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
 }
 
 // ---------------------------------------------------------------------------
