@@ -1470,6 +1470,141 @@ TEST_F( TxPrunerTest, RealPrune_ErasesEligibleAndLeavesEverythingElseByteIdentic
     EXPECT_EQ( status.watermark.value(), max_height );
 }
 
+/**
+ * GATE-02 / D-C5 — the rewrite proof. RealPrune's exact shape with ~256KB
+ * candidates (so a compaction observably rewrites files), plus the
+ * load-bearing difference: the production compaction surface runs INSIDE
+ * the test BETWEEN the before/after snapshot pairs. The mutation check
+ * (post-compaction size < pre-compaction size) proves the rewrite was
+ * real, so the byte-identity below is proven ACROSS a whole-DB rewrite,
+ * not a no-op: certificates, SecureCRDT seed-class values, the /utxo/
+ * prefix, the full head map, every seal marker, and the unspent sibling
+ * are all byte-identical after CompactStorage.
+ */
+TEST_F( TxPrunerTest, RealPrune_PostCompactionEverythingElseStaysByteIdentical )
+{
+    constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a non-vacuous rewrite
+
+    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
+    // consumed under their own (padded) address.
+    const std::string padded_owner = account_->GetAddress() + std::string( kCandidateValueBytes, 'x' );
+
+    // RealPrune's seeding verbatim (sizes aside): ancient spender, driver,
+    // two eligibles, the untouched sibling.
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1, kCandidateValueBytes );
+    auto eligible_b = MakeTransfer( 3, 1, kCandidateValueBytes );
+    auto unspent    = MakeTransfer( 4, 2 ); // the untouched sibling
+
+    SeedTransaction( spender );
+    const std::string driver_cid_1 = PutSeedValueReturningCid( "/seed/txpruner/pc-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/pc-driver-2", "d2" ); // retire the eligibles from headship
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *unspent ); // deliberately never consumed
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender, padded_owner ) );
+
+    // Non-tx data: a cert-shaped record and plain seed keys.
+    const std::string cert_key    = "/cert/" + account_->GetAddress() + ":41";
+    const std::string cert_cid    = PutSeedValueReturningCid( cert_key, "certificate-record" );
+    const std::string seed_cid    = PutSeedValueReturningCid( "/seed/txpruner/pc-data", "untouched" );
+    const std::string driver_cid2 = PutSeedValueReturningCid( "/seed/txpruner/pc-driver-3", "d3" );
+
+    // Block CIDs from the map entries (captured before any erase removes them).
+    const std::string cid_a = SnapshotMapEntry( TransactionManager::GetTransactionPath( *eligible_a ) );
+    const std::string cid_b = SnapshotMapEntry( TransactionManager::GetTransactionPath( *eligible_b ) );
+    const std::string cid_u = SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) );
+    const std::string cid_s = SnapshotMapEntry( TransactionManager::GetTransactionPath( *spender ) );
+    ASSERT_NE( cid_a, "absent" );
+    ASSERT_NE( cid_b, "absent" );
+
+    // Snapshots BEFORE: everything the cycle AND the compaction must not touch.
+    const RawSnapshot  utxo_before  = SnapshotPrefix( "/utxo/" );
+    const RawSnapshot  cert_before  = SnapshotCrdtEntriesContaining( cert_key );
+    const RawSnapshot  seed_before  = SnapshotCrdtEntriesContaining( "/seed/txpruner/pc-data" );
+    uint64_t           max_height   = 0;
+    const HeadSnapshot heads_before = SnapshotHeads( max_height );
+    const RawSnapshot  seals_before = SnapshotSeals(
+        { cid_a, cid_b, cid_u, cid_s, cert_cid, seed_cid, driver_cid_1, driver_cid2 } );
+    const RawSnapshot blocks_before = SnapshotBlocks( { cid_u, cid_s } );
+    const std::string sibling_value = BytesOf(
+        db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() );
+    const RawSnapshot sibling_crdt = SnapshotCrdtEntriesContaining(
+        TransactionManager::GetTransactionPath( *unspent ) );
+    ASSERT_FALSE( utxo_before.empty() ); // tracked outputs (spent + unspent) are on disk
+
+    // The prune: settled cycle under the DEFAULT 16MB threshold (the summed
+    // ~512KB estimate never crosses it — the auto-compaction is silent; the
+    // rewrite below is the test's own direct call through the same surface).
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );
+    EXPECT_FALSE( stats.compacted ); // auto-trigger silence at the default threshold
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The rewrite (D-C5): the production compaction surface, INSIDE the
+    // test, between the snapshot pairs.
+    auto pre_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    auto post_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction.has_value() );
+
+    // Mutation check (anti-vacuous): the compaction observably rewrote
+    // files, so the identity below is proven across a REAL rewrite.
+    EXPECT_LT( post_compaction.value(), pre_compaction.value() )
+        << "before=" << pre_compaction.value() << " after=" << post_compaction.value();
+
+    // Erased candidates: value gone, map entry gone, marker PRUNED — the
+    // compaction changed none of the three verdicts.
+    for ( const auto &tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_TRUE( SnapshotCrdtEntriesContaining( tx_path ).empty() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // The erased deltas' block bytes are still gone.
+    const RawSnapshot erased_blocks = SnapshotBlocks( { cid_a, cid_b } );
+    EXPECT_EQ( erased_blocks.at( cid_a ), "absent" );
+    EXPECT_EQ( erased_blocks.at( cid_b ), "absent" );
+
+    // Byte-identity of every untouched surface AFTER the whole-DB rewrite.
+    EXPECT_EQ( SnapshotPrefix( "/utxo/" ), utxo_before ) << "the unspent UTXO set changed across compaction";
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( cert_key ), cert_before ) << "cert record changed across compaction";
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( "/seed/txpruner/pc-data" ), seed_before )
+        << "non-tx data changed across compaction";
+    uint64_t           max_height_after = 0;
+    const HeadSnapshot heads_after      = SnapshotHeads( max_height_after );
+    EXPECT_EQ( heads_after, heads_before ) << "the DAG heads changed across compaction";
+    EXPECT_EQ( max_height_after, max_height );
+    EXPECT_EQ( SnapshotSeals( { cid_a, cid_b, cid_u, cid_s, cert_cid, seed_cid, driver_cid_1, driver_cid2 } ),
+               seals_before )
+        << "a seal marker changed across compaction (GATE-03)";
+
+    // Negative control: the unspent sibling byte-identical on every level.
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) ), cid_u );
+    EXPECT_EQ( SnapshotBlocks( { cid_u, cid_s } ), blocks_before );
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( TransactionManager::GetTransactionPath( *unspent ) ), sibling_crdt );
+    auto sibling_lookup = PruneEligibility::LookupPrunedEntry( *db_, unspent->GetHash() );
+    ASSERT_TRUE( sibling_lookup.has_value() );
+    EXPECT_EQ( sibling_lookup.value().first, PrunedLookup::NOT_FOUND );
+}
+
 // ---------------------------------------------------------------------------
 // Idempotent: a second cycle after a full drain is a no-op
 // ---------------------------------------------------------------------------
@@ -2090,7 +2225,7 @@ TEST_F( TxPrunerTest, CompactionGate_BelowThresholdErasingCycleNeverCompacts )
     PruneCycleStats stats;
     RunSettledCycle( *pruner, stats );
 
-    ASSERT_EQ( stats.erased, 2u );  // a real erasing cycle (the erased >= 1 conjunct holds)
+    ASSERT_EQ( stats.erased, 2u );   // a real erasing cycle (the erased >= 1 conjunct holds)
     EXPECT_FALSE( stats.compacted ); // ...but the summed bytes stay far under 16MB
     EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
 }
