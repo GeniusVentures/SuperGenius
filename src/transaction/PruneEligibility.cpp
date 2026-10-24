@@ -108,6 +108,15 @@ namespace sgns
             config.settle_seconds = pruning_object["settle_seconds"].GetUint64();
         }
 
+        // Phase 20 compaction threshold knob: a degenerate 0 would compact
+        // after every cycle (write-amp denial of service on self, V5);
+        // rejected at read time, default retained.
+        if ( pruning_object.HasMember( "compact_threshold_mb" ) && pruning_object["compact_threshold_mb"].IsUint64() &&
+             pruning_object["compact_threshold_mb"].GetUint64() > 0 )
+        {
+            config.compact_threshold_mb = pruning_object["compact_threshold_mb"].GetUint64();
+        }
+
         if ( config.enabled && !config.finality_window.has_value() )
         {
             // Fail closed (D-02): a positive N is required when enabled; there

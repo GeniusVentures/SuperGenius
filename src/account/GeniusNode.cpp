@@ -483,12 +483,13 @@ namespace sgns
                 node_logger_->warn( "sgns_config.json: {}", *pruning_config_.disabled_reason );
             }
             node_logger_->info( "sgns_config.json: pruning enabled={}, finality_window={}, dry_run={}, "
-                                "max_erases_per_cycle={}, settle_seconds={}",
+                                "max_erases_per_cycle={}, settle_seconds={}, compact_threshold_mb={}",
                                 pruning_config_.enabled,
                                 pruning_config_.finality_window.value_or( 0 ),
                                 pruning_config_.dry_run,
                                 pruning_config_.max_erases_per_cycle,
-                                pruning_config_.settle_seconds );
+                                pruning_config_.settle_seconds,
+                                pruning_config_.compact_threshold_mb );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {

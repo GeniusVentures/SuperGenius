@@ -771,6 +771,42 @@ TEST_F( PruneEligibilityTest, PruningConfig_IllTypedBudgetAndSettleKeepDefaults 
     EXPECT_EQ( config.settle_seconds, 60u );
 }
 
+/** C11 — absent compact_threshold_mb keeps the 16MB default (20-01). */
+TEST_F( PruneEligibilityTest, PruningConfig_CompactThresholdDefaultWhenAbsent )
+{
+    const auto empty = ParseConfig( "{}" );
+    EXPECT_EQ( empty.compact_threshold_mb, 16u );
+
+    // A fully-specified enabled request without the key: default too.
+    const auto enabled = ParseConfig( R"( { "enabled": true, "finality_window": 100 } )" );
+    EXPECT_EQ( enabled.compact_threshold_mb, 16u );
+}
+
+/** C12 — an explicit positive compact_threshold_mb parses verbatim. */
+TEST_F( PruneEligibilityTest, PruningConfig_CompactThresholdExplicitValueParses )
+{
+    const auto config = ParseConfig( R"( { "compact_threshold_mb": 8 } )" );
+    EXPECT_EQ( config.compact_threshold_mb, 8u );
+}
+
+/**
+ * C13 — a zero compact_threshold_mb is DEGENERATE and rejected at read
+ * time: a 0-MB threshold would compact after every cycle — a write-amp
+ * denial of service on self (V5). The member keeps its safe default.
+ */
+TEST_F( PruneEligibilityTest, PruningConfig_ZeroCompactThresholdKeepsDefault )
+{
+    const auto config = ParseConfig( R"( { "compact_threshold_mb": 0 } )" );
+    EXPECT_EQ( config.compact_threshold_mb, 16u );
+}
+
+/** C14 — an ill-typed compact_threshold_mb keeps the default (no partial trust). */
+TEST_F( PruneEligibilityTest, PruningConfig_IllTypedCompactThresholdKeepsDefault )
+{
+    const auto config = ParseConfig( R"( { "compact_threshold_mb": "tiny" } )" );
+    EXPECT_EQ( config.compact_threshold_mb, 16u );
+}
+
 // ---------------------------------------------------------------------------
 // Group D: SC-2 — the multi-element block gate (PRUNE-03, D-C3)
 // ---------------------------------------------------------------------------

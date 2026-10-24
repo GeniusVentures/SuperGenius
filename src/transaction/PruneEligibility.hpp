@@ -246,6 +246,15 @@ namespace sgns
         /// and the member keeps its safe default.
         uint64_t settle_seconds = 60;
 
+        /// Megabytes of cumulative erased bytes that must accumulate before
+        /// a post-cycle storage compaction fires (Phase 20 D-01). Default
+        /// 16. A degenerate 0 would compact after every cycle -- a
+        /// write-amplification denial of service on self (V5) -- so it is
+        /// rejected at read time and the member keeps its safe default.
+        /// Megabytes is the single config representation: the threshold
+        /// comparison derives bytes at its own site.
+        uint64_t compact_threshold_mb = 16;
+
         /// Set when FromJSON had to fail-close an enabled request (missing
         /// finality_window); carries the operator-facing reason.
         std::optional<std::string> disabled_reason;
@@ -265,7 +274,12 @@ namespace sgns
          *              and rejected at read time (a 0-K cycle can never drain,
          *              a settle-less cycle can fire during initial sync), so
          *              the members keep their safe defaults; ill-typed members
-         *              keep defaults too.
+         *              keep defaults too. compact_threshold_mb (default 16)
+         *              follows the identical discipline: an explicit positive
+         *              value parses; a degenerate 0 (compact after every
+         *              cycle -- a write-amp denial of service on self) is
+         *              rejected at read time and the member keeps its safe
+         *              default.
          * @param[in]   pruning_object The "pruning" member of sgns_config.json.
          * @return      The validated configuration.
          */
