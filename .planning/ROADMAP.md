@@ -211,7 +211,26 @@ Plans:
   4. Full and archive nodes in the same mesh retain 100% of their transaction history across the light node's prune cycles (ctest).
   5. Window-edge races are fault-tested: a spend arriving during an active prune cycle is never erased (spent-ness re-verified under lock immediately before each erase) and is picked up by the next cycle — verified under debug and release timing.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 20-01-PLAN.md — compaction substrate: GlobalDB CompactStorage + GetApproximateDiskUsageBytes (the one recipe home) + pruning.compact_threshold_mb knob + resolved-values INFO (RECL-01)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 20-02-PLAN.md — TxPruner post-cycle compaction gate (D-01) + evaluation-carried erased-bytes estimate + PruneStatus.bytes_reclaimed stamped at compaction (D-02) + RECL-03 wording retirement + shutdown cancel wiring + canary (RECL-01)
+
+**Wave 3** *(parallel — no file overlap)*
+
+- [ ] 20-03-PLAN.md — dedicated measured-bytes gate target: 200×~10KB → prune → ONE compaction → ≥60% bounded assertion + anti-vacuous pin + du belt (RECL-02)
+- [ ] 20-04-PLAN.md — compaction-trigger conjunct matrix + bytes_reclaimed honesty + GATE-02 post-compaction byte-identity (D-C5) + SC-5 seam-held race both legs (RECL-01, GATE-02)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 20-05-PLAN.md — SC-4 mesh retention: full/archive GlobalDB peers byte-identical across the light's prune + compaction (GATE-02)
 
 ## Phase Details (v1.3 — ACTIVE)
 
