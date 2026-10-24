@@ -838,6 +838,8 @@ namespace sgns
         std::unordered_set<std::string> missing_tx_hashes_;
         /// Per-hash recovery attempt counts (GATE-05 bounded recovery).
         std::unordered_map<std::string, uint8_t> missing_tx_attempts_;
+        /// Consecutive pre-broadcast rollback failures (WR-03 cap).
+        uint32_t pre_broadcast_rollback_failures_{ 0 };
         /// Process-wide test override for the recovery attempt cap (GATE-05).
         static std::atomic<uint8_t> missing_tx_max_attempts_for_test_;
 

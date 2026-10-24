@@ -938,10 +938,14 @@ namespace sgns
             return storage::DatabaseError::UNITIALIZED;
         }
 
-        // Exact-key prefix query: the record key identifies one outpoint, so
-        // the scan can return at most that record.
+        // Exact-key query via prefix scan: the record key identifies one
+        // outpoint, BUT the key format ("<txid>:<idx>") makes shorter keys a
+        // prefix of longer siblings (":1" prefixes ":10"..":19"), so the scan
+        // can return longer siblings when the exact record is absent. Require
+        // exact-key equality on the first hit; anything else is absent.
+        const auto   expected_key = BuildUTXORecordKey( address, OutPoint{ utxo_id, output_idx } );
         base::Buffer key_buf;
-        key_buf.put( BuildUTXORecordKey( address, OutPoint{ utxo_id, output_idx } ) );
+        key_buf.put( expected_key );
         auto records = db->query( key_buf );
         if ( records.has_error() )
         {
@@ -960,7 +964,14 @@ namespace sgns
             return std::nullopt;
         }
 
-        const auto                    &record_value = records.value().begin()->second;
+        const auto &first = *records.value().begin();
+        if ( first.first.toString() != expected_key )
+        {
+            // A longer sibling (":10" vs ":1") — the exact record is absent.
+            return std::nullopt;
+        }
+
+        const auto                    &record_value = first.second;
         SGTransaction::UTXOEntryRecord entry_record;
         if ( !entry_record.ParseFromArray( record_value.data(), record_value.size() ) )
         {

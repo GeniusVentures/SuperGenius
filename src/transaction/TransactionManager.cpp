@@ -596,9 +596,29 @@ namespace sgns
                         auto rollback_result = RollbackTransactions( tx_queue_m.front() );
                         if ( rollback_result.has_error() )
                         {
-                            m_logger->error( "{} error, couldn't roll back pre-broadcast failure", __func__ );
+                            // WR-03 (review): the failure is deterministic —
+                            // without a cap this re-fails every ~300ms forever.
+                            // Drop the batch after 3 consecutive rollback
+                            // failures (loudly) so the manager stays usable;
+                            // the nonce was already released by FAILED.
+                            static constexpr uint32_t kMaxRollbackFailures = 3;
+                            ++pre_broadcast_rollback_failures_;
+                            m_logger->error( "{} error, couldn't roll back pre-broadcast failure "
+                                             "(attempt {}/{}) - {}",
+                                             __func__,
+                                             pre_broadcast_rollback_failures_,
+                                             kMaxRollbackFailures,
+                                             pre_broadcast_rollback_failures_ >= kMaxRollbackFailures
+                                                 ? "dropping the batch"
+                                                 : "retrying" );
+                            if ( pre_broadcast_rollback_failures_ >= kMaxRollbackFailures )
+                            {
+                                pre_broadcast_rollback_failures_ = 0;
+                                tx_queue_m.pop_front();
+                            }
                             break;
                         }
+                        pre_broadcast_rollback_failures_ = 0;
                         tx_queue_m.pop_front();
                         break;
                     }
@@ -3707,15 +3727,31 @@ namespace sgns
             const auto elapsed = std::chrono::steady_clock::now() - syncing_since_.value();
             if ( elapsed > window )
             {
-                const auto durable_nonce = account_m->GetLocalConfirmedNonce();
-                m_logger->warn(
-                    "SYNCING exit: no confirming nonce advance within {} ms - falling back to last "
-                    "durable confirmed nonce {} and returning to READY",
-                    window.count(),
-                    durable_nonce.has_value() ? std::to_string( durable_nonce.value() ) : std::string( "none" ) );
-                syncing_since_.reset();
-                ChangeState( State::READY );
-                return;
+                // WR-02 (review): the bounded exit exists for the WEDGE class —
+                // a failed send left nothing confirmable to wait for. It must
+                // NOT fire while the local nonce is genuinely BEHIND the
+                // network (the gap branch below forbids proposing until caught
+                // up), or the next send could publish into a network-consumed
+                // nonce. Only exit when not behind.
+                const auto proposed_behind = account_m->GetProposedNonce() != UINT64_MAX &&
+                                             account_m->GetLocalConfirmedNonce().has_value() &&
+                                             account_m->GetProposedNonce() <
+                                                 account_m->GetLocalConfirmedNonce().value() + 1;
+                if ( !proposed_behind )
+                {
+                    const auto durable_nonce = account_m->GetLocalConfirmedNonce();
+                    m_logger->warn(
+                        "SYNCING exit: no confirming nonce advance within {} ms - last durable "
+                        "confirmed nonce {}, not behind - returning to READY",
+                        window.count(),
+                        durable_nonce.has_value() ? std::to_string( durable_nonce.value() ) : std::string( "none" ) );
+                    syncing_since_.reset();
+                    ChangeState( State::READY );
+                    return;
+                }
+                m_logger->warn( "SYNCING window elapsed but local nonce is behind - staying in SYNCING to catch up "
+                                "(gap recovery, not the failed-send wedge)" );
+                syncing_since_.reset(); // re-arm so the check can fire once caught up
             }
         }
 
