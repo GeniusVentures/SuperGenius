@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -264,6 +265,58 @@ namespace sgns::crdt
         outcome::result<void> EraseEntry( const std::string                              &key,
                                           const CID                                      &cid,
                                           const std::optional<std::pair<Buffer, Buffer>> &extra_entry = std::nullopt );
+
+        /**
+         * @brief       Whole-database storage compaction -- the ONE home of
+         *              the reclamation recipe (Phase 20 substrate).
+         * @details     Runs a manual whole-DB compaction on the underlying
+         *              RocksDB with the locked recipe: the bottommost
+         *              force-compaction flag (the engine default rewrites
+         *              the bottommost level only when a compaction filter
+         *              is installed, and none is -- without the force flag
+         *              deletes survive as un-reclaimed tombstones), write
+         *              stalls never forced, and the vendored cancellation
+         *              pointer threaded through. The options and whole-DB
+         *              bounds knowledge lives ONLY here -- callers never
+         *              re-state the recipe (one-home rule). This surface
+         *              writes NO new keys and transforms NO values:
+         *              compaction rewrites files, never value bytes.
+         *
+         *              Fail-closed like the EraseEntry family: after
+         *              ShutdownNow moved the datastore, returns
+         *              Error::GLOBALDB_NOT_STARTED without touching a
+         *              moved handle.
+         * @param[in]   canceled Optional cancellation flag OWNED BY THE
+         *              CALLER (an instance member that outlives the
+         *              in-flight call). Read by the engine before starting
+         *              and mid-flight; never written here.
+         * @return      outcome::success on completion;
+         *              outcome::failure(std::errc::operation_canceled)
+         *              when the call was skipped because @p canceled was
+         *              already set -- the distinct clean-skip signal,
+         *              loggable once and never as an error;
+         *              Error::GLOBALDB_NOT_STARTED after shutdown;
+         *              Error::ROCKSDB_IO on any other engine failure
+         *              (WARN-logged with the status string).
+         */
+        outcome::result<void> CompactStorage( const std::atomic<bool> *canceled );
+
+        /**
+         * @brief       Approximate whole-database disk usage in bytes.
+         * @details     Measures the DB's approximate file-system space over
+         *              a sentinel range spanning every key class, counting
+         *              SST files AND memtable content (a node still under
+         *              the write-buffer size keeps everything in the
+         *              memtable, where a files-only read reports ~0).
+         *              Compression-aware: the value shrinks with on-disk
+         *              compression. The sentinel-range and measurement-flag
+         *              knowledge lives ONLY here (DRY invariant) -- callers
+         *              never re-derive either.
+         * @return      The approximate byte count, or
+         *              Error::GLOBALDB_NOT_STARTED after shutdown /
+         *              Error::ROCKSDB_IO on an engine failure.
+         */
+        outcome::result<uint64_t> GetApproximateDiskUsageBytes() const;
 
         /**
          * @brief Test-only interruption seam for EraseEntry's compose window.
