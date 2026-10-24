@@ -195,7 +195,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
+- [x] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
 - [ ] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
 
 ### Phase 20: Reclamation Proof & E2E Hardening
@@ -343,7 +343,7 @@ Plans:
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 5/7 | In Progress|  |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 6/7 | In Progress|  |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |

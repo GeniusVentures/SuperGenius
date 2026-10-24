@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 19
 status: executing
 stopped_at: Completed 19-04-PLAN.md
-last_updated: "2026-10-23T22:13:26.981Z"
-last_activity: 2026-10-23
+last_updated: "2026-10-24T00:04:28.659Z"
+last_activity: 2026-10-24
 progress:
   total_phases: 25
   completed_phases: 3
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 12
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
-Last activity: 2026-10-23
+Last activity: 2026-10-24
 
-Progress: [█████████░] 92%
+Progress: [██████████] 96%
 
 ## Roadmap Snapshot
 
@@ -84,7 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-23T22:13:26.976Z
+**Last session:** 2026-10-24T00:03:33.187Z
 **Stopped At:** Completed 19-04-PLAN.md
 **Resume File:** None
 
@@ -147,6 +147,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P03 | 34min | 3 tasks | 6 files |
 | Phase 19 P04 | 53min | 3 tasks | 5 files |
 | Phase 19 P07 | 82min | 2 tasks | 1 files |
+| Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
 
 ## Decisions
 
@@ -231,6 +232,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: (19-07): Broadcast-order sequencing is unreproducible on this gossip layer (graft relays all cached publishes at once) -- peer-refusal proofs split into a hermetic ordered-AddRoute + direct-getNode walk beside an ordering-free mesh E2E
 - [Phase 19]: (19-07): PrunedMesh determinism needs a full-node-owned serving topic (dual-topic put links the mesh history under one serving head); single-shared-topic wiring makes the Pitfall-6 ladder ride a coin flip
 - [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
+- [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
+- [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
 
 ## Deferred Items
 
