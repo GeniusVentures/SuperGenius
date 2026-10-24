@@ -61,13 +61,16 @@
 #include "account/TransferTransaction.hpp"
 #include "account/UTXOManager.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "base/sgns_version.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "crdt/crdt_options.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/globaldb_node_shutdown.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 #include "transaction/PruneEligibility.hpp"
@@ -231,6 +234,18 @@ public:
         sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
         crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
 
+        // The SC-4 mesh peers (MeshRetention) come before the fixture's own
+        // teardown chain: each follows the committed EraseNodeCollection order
+        // through the shared pubsub-first helper (ShutdownNow drains the CRDT
+        // workers, pubsub Stop joins the networking thread, then the db is
+        // released under the reactor keepalive), so no in-flight peer fetch
+        // ever observes a dying light stack.
+        for ( auto &peer : mesh_peers_ )
+        {
+            sgns::test::stopGlobalDBNode( peer.db, peer.pubsub );
+        }
+        mesh_peers_.clear();
+
         /*
          * Teardown invariant (asio), copied verbatim from
          * PruneEligibilityTest/CertificateFallbackTest: stop the blockchain
@@ -275,6 +290,103 @@ public:
     //
     std::shared_ptr<ipfs_pubsub::GossipPubSub> nonce_responder_pubsub_;
     std::shared_ptr<GeniusAccount>             nonce_responder_account_;
+
+    //
+    // SC-4 mesh peers (MeshRetention): GlobalDB-only nodes subscribed to the
+    // seed topic beside this light. Retention is by construction — a peer
+    // never constructs a pruner (the Full/Archive factory refusal is already
+    // ctest-pinned by TickGate_NonLightRolesRefusedAtConstruction above; not
+    // duplicated here). Built with the 19-07 EraseNodeCollection recipe:
+    // loopback-advertised listeners (a wildcard-only listener silently drops
+    // every Broadcast) and ONE-direction dials.
+    //
+    struct MeshPeer
+    {
+        std::string                                basePath;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub;
+        std::shared_ptr<crdt::GlobalDB>            db;
+    };
+
+    std::vector<MeshPeer> mesh_peers_;
+
+    /// Spins one GlobalDB-only peer on a fresh path under the fixture's base,
+    /// subscribes it to the seed topic, then dials THIS fixture's host ONE
+    /// direction (the multi_node one-dial lesson: two dials inside one gossip
+    /// heartbeat collide on the shared source tuple) and waits for a
+    /// connected host pair plus a live topic mesh. The subscription happens
+    /// BEFORE the dial so it is announced at connect (the 19-07 Case-2
+    /// lesson). The peer is fixture-owned before any wait that can fail.
+    void AddMeshPeer( const std::string &name )
+    {
+        MeshPeer peer;
+        peer.basePath = ( base_path / name ).string();
+        boost::filesystem::create_directories( peer.basePath );
+
+        crdt::KeyPairFileStorage key_store( peer.basePath + "/key" );
+        auto                     key_pair = key_store.GetKeyPair();
+        ASSERT_TRUE( key_pair.has_value() );
+        if ( key_pair.has_error() )
+        {
+            return;
+        }
+
+        // Loopback-advertised listener (the makeNode wiring): a wildcard-only
+        // listener yields no addresses and every Broadcast would silently drop.
+        peer.pubsub            = std::make_shared<ipfs_pubsub::GossipPubSub>( key_pair.value() );
+        const auto start_error = peer.pubsub->Start( 0, {}, "0.0.0.0", { "127.0.0.1" } ).get();
+        ASSERT_FALSE( start_error ) << "could not start the mesh peer host: " << start_error.message();
+        if ( start_error )
+        {
+            return;
+        }
+
+        // GraphSync writes to libp2p streams from its scheduler thread, and
+        // libp2p is single-threaded per host, so the scheduler has to run on
+        // the host's io_context (the makeNode recipe verbatim).
+        auto io        = peer.pubsub->GetAsioContext();
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( peer.pubsub->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+        auto graphsync_network = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( peer.pubsub->GetHost(),
+                                                                                        scheduler );
+        auto generator         = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+        auto globaldb_ret = crdt::GlobalDB::New( io,
+                                                 peer.basePath + "/CommonKey",
+                                                 peer.pubsub,
+                                                 crdt::CrdtOptions::DefaultOptions(),
+                                                 graphsync_network,
+                                                 scheduler,
+                                                 generator );
+        ASSERT_TRUE( globaldb_ret.has_value() );
+        if ( globaldb_ret.has_error() )
+        {
+            return;
+        }
+        peer.db = std::move( globaldb_ret.value() );
+
+        peer.db->Start();
+        peer.db->AddListenTopic( kSeedTopic );
+        mesh_peers_.push_back( std::move( peer ) );
+
+        // ONE-direction dial (the dial itself), then the connected pair AND
+        // the topic mesh are both live before any seeding publish exists.
+        auto      &live       = mesh_peers_.back();
+        auto       peer_host  = live.pubsub->GetHost();
+        const auto light_info = pubs_->GetHost()->getPeerInfo();
+        live.pubsub->AddPeers( { pubs_->GetInterfaceAddress() } );
+        const std::string         full_topic = std::string( kSeedTopic ) + sgns::version::GetNetAndVersionAppendix();
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&] { return peer_host->connectedness( light_info ) == libp2p::Host::Connectedness::CONNECTED; },
+            std::chrono::seconds( 10 ),
+            "mesh peer dials the light host",
+            &waited );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return live.pubsub->getPeerCount( full_topic ) >= 1; },
+                                   std::chrono::seconds( 10 ),
+                                   "mesh peer and the light join the seed topic mesh",
+                                   &waited );
+    }
 
     //
     // Seeding helpers — every transaction goes through the REAL topic Put so
@@ -3103,6 +3215,338 @@ TEST_F( TxPrunerTest, SpendRace_RevertedSpendSkipsThisCycleAndNextCyclePicksItUp
         ASSERT_TRUE( picked_up.has_value() );
         EXPECT_EQ( picked_up.value().first, PrunedLookup::PRUNED );
     }
+}
+
+// ---------------------------------------------------------------------------
+// MeshRetention: SC-4 — full/archive GlobalDB peers in the SAME real-pubsub
+// mesh as the pruning light retain 100% of the transaction history
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Everything one mesh peer provably holds of the seeded history, read
+    /// through the peer's own public surface only (never its internals).
+    struct PeerHistory
+    {
+        RawSnapshot  values;       ///< resolved key -> value bytes (txs + non-tx puts)
+        RawSnapshot  crdt_entries; ///< merged /crdt/ element entries of every baselined tx
+        RawSnapshot  blocks;       ///< delta CID -> raw block bytes
+        HeadSnapshot heads;        ///< topic -> head CID set
+    };
+
+    /// Present-and-applied predicate for one key on a peer (the entryApplied
+    /// shape: the public Get path must return the exact seeded bytes).
+    bool PeerValueApplied( crdt::GlobalDB &peer, const std::string &key, const std::string &expected )
+    {
+        auto value = peer.Get( crdt::HierarchicalKey( key ) );
+        return value.has_value() && BytesOf( value.value() ) == expected;
+    }
+
+    /// Raw block-bytes presence for one delta CID (the block-key format has
+    /// one home: Buffer(cid.toBytes()), the vendored RocksdbDatastore encode).
+    bool PeerBlockPresent( crdt::GlobalDB &peer, const std::string &cid )
+    {
+        auto parsed = CID::fromString( cid );
+        if ( parsed.has_error() )
+        {
+            return false;
+        }
+        auto bytes = parsed.value().toBytes();
+        return bytes.has_value() && peer.GetRaw( crdt::GlobalDB::Buffer( bytes.value() ) ).has_value();
+    }
+
+    /// The peer's head map contains @p cid (the converged live head).
+    bool PeerHeadContains( crdt::GlobalDB &peer, const std::string &cid )
+    {
+        auto heads = peer.GetCRDTHeadList();
+        if ( heads.has_error() )
+        {
+            return false;
+        }
+        for ( const auto &topic_and_heads : heads.value().first )
+        {
+            for ( const auto &head : topic_and_heads.second )
+            {
+                if ( head.toString().value() == cid )
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// Bounded-wait predicate: the peer holds EVERY expected value, EVERY
+    /// expected block, and the converged head — per-instance observables of
+    /// the peer's own public surface, never delivery timing.
+    bool PeerHoldsSeededHistory( crdt::GlobalDB                                         &peer,
+                                 const std::vector<std::pair<std::string, std::string>> &values,
+                                 const std::vector<std::string>                         &cids,
+                                 const std::string                                      &final_head_cid )
+    {
+        for ( const auto &key_and_expected : values )
+        {
+            if ( !PeerValueApplied( peer, key_and_expected.first, key_and_expected.second ) )
+            {
+                return false;
+            }
+        }
+        for ( const auto &cid : cids )
+        {
+            if ( !PeerBlockPresent( peer, cid ) )
+            {
+                return false;
+            }
+        }
+        return PeerHeadContains( peer, final_head_cid );
+    }
+
+    /// The full peer baseline: values at @p keys, the /crdt/ element entries
+    /// of @p tx_paths (the transient /crdt/work/ broadcaster-queue family
+    /// excluded — pending-publish plumbing whose presence depends on drain
+    /// timing, not on any prune action), the raw blocks of @p cids, and the
+    /// whole head map.
+    PeerHistory SnapshotPeerHistory( crdt::GlobalDB                 &peer,
+                                     const std::vector<std::string> &keys,
+                                     const std::vector<std::string> &tx_paths,
+                                     const std::vector<std::string> &cids )
+    {
+        PeerHistory history;
+        for ( const auto &key : keys )
+        {
+            auto value          = peer.Get( crdt::HierarchicalKey( key ) );
+            history.values[key] = value.has_value() ? BytesOf( value.value() ) : std::string( "absent" );
+        }
+        auto entries = peer.QueryRaw( crdt::GlobalDB::Buffer{}.put( std::string( "/crdt/" ) ) );
+        if ( entries.has_value() )
+        {
+            static const std::string kTransientWorkFamily = "/crdt/work/";
+            for ( const auto &key_and_value : entries.value() )
+            {
+                const std::string key_str = BytesOf( key_and_value.first );
+                if ( key_str.rfind( kTransientWorkFamily, 0 ) == 0 )
+                {
+                    continue;
+                }
+                for ( const auto &needle : tx_paths )
+                {
+                    if ( key_str.find( needle ) != std::string::npos )
+                    {
+                        history.crdt_entries[key_str] = BytesOf( key_and_value.second );
+                        break;
+                    }
+                }
+            }
+        }
+        for ( const auto &cid : cids )
+        {
+            auto parsed = CID::fromString( cid );
+            if ( parsed.has_error() )
+            {
+                history.blocks[cid] = "unparseable";
+                continue;
+            }
+            auto bytes = parsed.value().toBytes();
+            auto block = peer.GetRaw(
+                crdt::GlobalDB::Buffer( bytes.has_value() ? std::move( bytes.value() ) : std::vector<uint8_t>{} ) );
+            history.blocks[cid] = block.has_value() ? BytesOf( block.value() ) : std::string( "absent" );
+        }
+        auto heads = peer.GetCRDTHeadList();
+        if ( heads.has_value() )
+        {
+            for ( const auto &topic_and_heads : heads.value().first )
+            {
+                for ( const auto &head : topic_and_heads.second )
+                {
+                    history.heads[topic_and_heads.first].insert( head.toString().value() );
+                }
+            }
+        }
+        return history;
+    }
+
+    /// Byte-identity of every peer surface against its baseline — the
+    /// retention checkpoint core: a single changed byte on the peer fails.
+    void ExpectPeerHistoryIdentical( const PeerHistory &actual, const PeerHistory &baseline, const std::string &label )
+    {
+        EXPECT_EQ( actual.values, baseline.values ) << label << ": a value changed";
+        EXPECT_EQ( actual.crdt_entries, baseline.crdt_entries ) << label << ": a tx CRDT entry changed";
+        EXPECT_EQ( actual.blocks, baseline.blocks ) << label << ": a block changed";
+        EXPECT_EQ( actual.heads, baseline.heads ) << label << ": the head map changed";
+    }
+} // namespace
+
+/**
+ * SC-4, the mesh half of the phase's retention proof. A light node with the
+ * full TxPruner stack seeds spent-beyond-window history through the REAL
+ * publish path while two GlobalDB-only peers (nominally full and archive —
+ * retention by construction, neither constructs a pruner; the role gate is
+ * TickGate_NonLightRolesRefusedAtConstruction, not duplicated here) hold the
+ * identical history in the same real-pubsub mesh. The peers are PROVEN to
+ * hold 100% of the seeded history BEFORE any prune exists (bounded per-peer
+ * polls of values, blocks, and the converged head — never delivery-timing
+ * EXPECTs), so the retention baseline is real and the byte-identity below is
+ * not vacuous (T-20-0501).
+ *
+ * CHECKPOINT 1 (this suite's erase half): the light's settled prune cycle
+ * erases its candidates locally (values gone, map entries gone, markers
+ * PRUNED — the mutation check proving the test is not vacuous) while BOTH
+ * peers stay byte-identical to their baselines on every surface: values,
+ * per-tx /crdt/ element entries, CID blocks, and the head map. The locked
+ * decision "pruning is a local RocksDB operation, never the CRDT tombstone
+ * path" gets its network-side proof — the light's reclamation erases so much
+ * as a byte on no peer.
+ */
+TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcrossPruneAndCompactionCycles )
+{
+    constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a measurable later compaction on the light
+
+    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
+    // consumed under their own (padded) address.
+    const std::string padded_owner = account_->GetAddress() + std::string( kCandidateValueBytes, 'x' );
+
+    // The mesh FIRST: subscribed before dialing (the Case-2 lesson), so every
+    // seeding publish below flows to a live topic mesh.
+    AddMeshPeer( "mesh-full" );
+    AddMeshPeer( "mesh-archive" );
+    ASSERT_FALSE( HasFatalFailure() );
+    ASSERT_EQ( mesh_peers_.size(), 2u );
+
+    // RealPrune's seeding shape (sizes aside): ancient spender, driver, two
+    // eligibles, the untouched sibling, the retiring driver, non-tx data.
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1, kCandidateValueBytes );
+    auto eligible_b = MakeTransfer( 3, 1, kCandidateValueBytes );
+    auto unspent    = MakeTransfer( 4, 2 );
+
+    SeedTransaction( spender );
+    const std::string driver_cid_1 = PutSeedValueReturningCid( "/seed/txpruner/mesh-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/mesh-driver-2", "d2" ); // retire the eligibles from headship
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *unspent ); // deliberately never consumed
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender, padded_owner ) );
+
+    const std::string cert_key       = "/cert/" + account_->GetAddress() + ":41";
+    const std::string cert_cid       = PutSeedValueReturningCid( cert_key, "certificate-record" );
+    const std::string seed_cid       = PutSeedValueReturningCid( "/seed/txpruner/mesh-data", "untouched" );
+    const std::string final_head_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-driver-3", "d3" );
+
+    const std::string tx_path_a = TransactionManager::GetTransactionPath( *eligible_a );
+    const std::string tx_path_b = TransactionManager::GetTransactionPath( *eligible_b );
+    const std::string tx_path_u = TransactionManager::GetTransactionPath( *unspent );
+    const std::string tx_path_s = TransactionManager::GetTransactionPath( *spender );
+    const std::string cid_a     = SnapshotMapEntry( tx_path_a );
+    const std::string cid_b     = SnapshotMapEntry( tx_path_b );
+    const std::string cid_u     = SnapshotMapEntry( tx_path_u );
+    const std::string cid_s     = SnapshotMapEntry( tx_path_s );
+    ASSERT_NE( cid_a, "absent" );
+    ASSERT_NE( cid_b, "absent" );
+    ASSERT_NE( cid_u, "absent" );
+    ASSERT_NE( cid_s, "absent" );
+
+    // The exact bytes the deltas carried (read through the light's own public
+    // surface) — what every peer must provably end up holding.
+    const std::vector<std::pair<std::string, std::string>> expected_values = {
+        { tx_path_a, BytesOf( db_->Get( { tx_path_a } ).value() ) },
+        { tx_path_b, BytesOf( db_->Get( { tx_path_b } ).value() ) },
+        { tx_path_u, BytesOf( db_->Get( { tx_path_u } ).value() ) },
+        { tx_path_s, BytesOf( db_->Get( { tx_path_s } ).value() ) },
+        { "/seed/txpruner/mesh-driver-1", "d1" },
+        { "/seed/txpruner/mesh-driver-2", "d2" },
+        { cert_key, "certificate-record" },
+        { "/seed/txpruner/mesh-data", "untouched" },
+        { "/seed/txpruner/mesh-driver-3", "d3" },
+    };
+    const std::vector<std::string> baselined_tx_paths = { tx_path_a, tx_path_b, tx_path_u, tx_path_s };
+    const std::vector<std::string> baselined_cids =
+        { cid_a, cid_b, cid_u, cid_s, driver_cid_1, cert_cid, seed_cid, final_head_cid };
+    std::vector<std::string> baselined_keys;
+    for ( const auto &key_and_expected : expected_values )
+    {
+        baselined_keys.push_back( key_and_expected.first );
+    }
+
+    // BOUNDED: BOTH peers provably hold 100% of the seeded history BEFORE any
+    // prune exists — the per-instance observables of each peer's own public
+    // surface, never a sleep and never delivery-timing EXPECTs (T-20-0502).
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return PeerHoldsSeededHistory( *mesh_peers_[0].db, expected_values, baselined_cids, final_head_cid ) &&
+                   PeerHoldsSeededHistory( *mesh_peers_[1].db, expected_values, baselined_cids, final_head_cid );
+        },
+        std::chrono::seconds( 25 ),
+        "both mesh peers received and applied every seeded element",
+        nullptr );
+
+    // The peer baselines, each captured through the peer's own public surface,
+    // with non-vacuity pins on the baselines themselves: every value, every
+    // block, and the tx CRDT families really are there.
+    const PeerHistory baseline_full    = SnapshotPeerHistory( *mesh_peers_[0].db,
+                                                           baselined_keys,
+                                                           baselined_tx_paths,
+                                                           baselined_cids );
+    const PeerHistory baseline_archive = SnapshotPeerHistory( *mesh_peers_[1].db,
+                                                              baselined_keys,
+                                                              baselined_tx_paths,
+                                                              baselined_cids );
+    ASSERT_EQ( baseline_full.values.size(), baselined_keys.size() );
+    ASSERT_EQ( baseline_archive.values.size(), baselined_keys.size() );
+    for ( const auto &cid : baselined_cids )
+    {
+        ASSERT_NE( baseline_full.blocks.at( cid ), "absent" );
+        ASSERT_NE( baseline_archive.blocks.at( cid ), "absent" );
+    }
+    ASSERT_FALSE( baseline_full.crdt_entries.empty() );
+    ASSERT_FALSE( baseline_archive.crdt_entries.empty() );
+
+    // The light's own pre-prune state: both eligibles present, no markers yet.
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        ASSERT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *tx ) } ).has_value() );
+        auto pre = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( pre.has_value() );
+        ASSERT_EQ( pre.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    // The light's settled prune cycle — the erase the peers must not see.
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 2u );
+
+    // CHECKPOINT 1: both peers byte-identical to their baselines on every
+    // surface (100% retention across the light's erase) while the light's own
+    // store provably lacks the erased keys (the mutation check).
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[0].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_full,
+        "full peer across the light's erase" );
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[1].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_archive,
+        "archive peer across the light's erase" );
+
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_TRUE( SnapshotCrdtEntriesContaining( tx_path ).empty() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+    const RawSnapshot erased_blocks = SnapshotBlocks( { cid_a, cid_b } );
+    EXPECT_EQ( erased_blocks.at( cid_a ), "absent" );
+    EXPECT_EQ( erased_blocks.at( cid_b ), "absent" );
 }
 
 // ---------------------------------------------------------------------------
