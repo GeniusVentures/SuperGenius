@@ -5,13 +5,13 @@ milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
 stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T17:43:49.608Z"
+last_updated: "2026-10-24T18:05:24.793Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 25
   completed_phases: 4
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
   percent: 16
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 20 (reclamation-proof-e2e-hardening) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-10-24
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Roadmap Snapshot
 
@@ -84,7 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T17:43:49.604Z
+**Last session:** 2026-10-24T18:05:14.622Z
 **Stopped At:** Phase 20 context gathered
 **Resume File:** None
 
@@ -151,6 +151,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P06 | 34min | 2 tasks | 1 files |
 | Phase 20 P01 | 24min | 2 tasks | 7 files |
 | Phase 20 P02 | 23min | 3 tasks | 6 files |
+| Phase 20 P03 | 16min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -242,6 +243,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 20]: TxPruner post-cycle compaction gate (D-01): erased>=1 AND !canceled AND cumulative erased-bytes watermark >= compact_threshold_mb; the watermark is the evaluation-carried estimate, kept on cancel/failure as the natural retry, reset only on success — never fails the completed cycle
 - [Phase 20]: PruneStatus.bytes_reclaimed is the MEASURED baseline-at-last-compaction delta, stamped only at compaction success under the status mutex (nullopt until the first compaction since restart); the erase-time RECL-03 INFO stays counts-only and the compaction emits its own before/after/delta INFO (D-02 honest split)
 - [Phase 20]: The compaction cancel atomic is a TxPruner MEMBER (the engine's compaction iterator reads it asynchronously; a stack local dangles) and GeniusNode's stop path sets it before tx_pruner_.reset() — the io-pool drain is the join, the atomic only shortens any not-yet-started compaction's window
+- [Phase 20]: The reclamation gate's sanity ceiling is calibrated to the MEASURED storage envelope (erased*20+2MB), not the payload multiplier — the CRDT stack stores each value under four key families + delta block + UTXO records, so an erase legitimately reclaims ~15x the payload (measured 1492%, stable across runs); payload-only denominators stay valid for floors only
 
 ## Deferred Items
 
