@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 19
-status: ready_to_plan
-stopped_at: Phase 19 complete (7/7) — ready to discuss Phase 20
-last_updated: 2026-10-24T12:53:27.184Z
+current_phase: 20
+status: planning
+stopped_at: Phase 20 context gathered
+last_updated: "2026-10-24T13:48:12.518Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 25
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T00:43:21.886Z
-**Stopped At:** Completed 19-04-PLAN.md
-**Resume File:** None
+**Last session:** 2026-10-24T13:48:12.510Z
+**Stopped At:** Phase 20 context gathered
+**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
 
 ## Accumulated Context
 
