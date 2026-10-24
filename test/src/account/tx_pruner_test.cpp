@@ -664,8 +664,7 @@ public:
         }
 
         SGTransaction::UTXOEntryRecord record;
-        if ( !record.ParseFromArray( record_bytes->second.data(),
-                                     static_cast<int>( record_bytes->second.size() ) ) )
+        if ( !record.ParseFromArray( record_bytes->second.data(), static_cast<int>( record_bytes->second.size() ) ) )
         {
             return false;
         }
@@ -3031,7 +3030,7 @@ TEST_F( TxPrunerTest, SpendRace_RevertedSpendSkipsThisCycleAndNextCyclePicksItUp
     // thread); the bounded poll settles the tick gate, then the held cycle
     // runs to the seam.
     std::optional<outcome::result<PruneCycleStats>> raced;
-    std::thread cycle_thread(
+    std::thread                                     cycle_thread(
         [&]
         {
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
