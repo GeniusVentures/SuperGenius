@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 20
-status: executing
-stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T18:40:01.288Z"
+status: verifying
+stopped_at: "Completed 20-05-PLAN.md (phase 20 complete: 5/5 plans)"
+last_updated: "2026-10-24T19:21:49.560Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 25
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 29
-  completed_plans: 28
-  percent: 16
+  completed_plans: 29
+  percent: 20
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 20 (reclamation-proof-e2e-hardening) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-24
 
-Progress: [██████████] 97%
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T18:40:01.283Z
-**Stopped At:** Phase 20 context gathered
+**Last session:** 2026-10-24T19:21:49.555Z
+**Stopped At:** Completed 20-05-PLAN.md (phase 20 complete: 5/5 plans)
 **Resume File:** None
 
 ## Accumulated Context
@@ -153,6 +153,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 20 P02 | 23min | 3 tasks | 6 files |
 | Phase 20 P03 | 16min | 2 tasks | 2 files |
 | Phase 20 P04 | 20min | 3 tasks | 1 files |
+| Phase 20 P05 | 35min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -245,6 +246,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 20]: PruneStatus.bytes_reclaimed is the MEASURED baseline-at-last-compaction delta, stamped only at compaction success under the status mutex (nullopt until the first compaction since restart); the erase-time RECL-03 INFO stays counts-only and the compaction emits its own before/after/delta INFO (D-02 honest split)
 - [Phase 20]: The compaction cancel atomic is a TxPruner MEMBER (the engine's compaction iterator reads it asynchronously; a stack local dangles) and GeniusNode's stop path sets it before tx_pruner_.reset() — the io-pool drain is the join, the atomic only shortens any not-yet-started compaction's window
 - [Phase 20]: The reclamation gate's sanity ceiling is calibrated to the MEASURED storage envelope (erased*20+2MB), not the payload multiplier — the CRDT stack stores each value under four key families + delta block + UTXO records, so an erase legitimately reclaims ~15x the payload (measured 1492%, stable across runs); payload-only denominators stay valid for floors only
+- [Phase 20]: SC-4 mesh peers are GlobalDB-only nodes on the 19-07 EraseNodeCollection recipe as TxPrunerTest fixture members — subscribed to the seed topic BEFORE the one-direction dial (Case-2 announce-at-connect), fixture-owned before any wait that can fail, torn down first via sgns::test::stopGlobalDBNode (ShutdownNow -> pubsub Stop -> db reset) ahead of the fixture's own chain
+- [Phase 20]: Mesh retention round 2 uses UNION baselines with an explicit cumulative-retention pin: every round-1 value/block byte-identical inside the round-2 baseline, proving round-1 history survives a SECOND erase+compaction pair (~1.9s incremental on this fixture, so the cycles-plural criterion is evidenced, not argued)
 
 ## Deferred Items
 

@@ -70,7 +70,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
 - [x] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04) (completed 2026-10-23)
 - [x] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03) (completed 2026-10-24)
-- [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
+- [x] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02) (completed 2026-10-24)
 
 *Parallel milestones:* v1.2 executes HERE; v1.3 (Phases 21-29) is planned on `develop` in parallel — both tracked in this planning root. The v1.3-side read-only snapshot of this roadmap: `.planning/milestones/v1.2-ROADMAP.md`.
 
@@ -230,7 +230,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 20-05-PLAN.md — SC-4 mesh retention: full/archive GlobalDB peers byte-identical across the light's prune + compaction (GATE-02)
+- [x] 20-05-PLAN.md — SC-4 mesh retention: full/archive GlobalDB peers byte-identical across the light's prune + compaction (GATE-02)
 
 ## Phase Details (v1.3 — ACTIVE)
 
@@ -363,7 +363,7 @@ Plans:
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
-| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 4/5 | In Progress|  |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 5/5 | Complete   | 2026-10-24 |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
