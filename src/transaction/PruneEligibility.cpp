@@ -114,7 +114,17 @@ namespace sgns
         if ( pruning_object.HasMember( "compact_threshold_mb" ) && pruning_object["compact_threshold_mb"].IsUint64() &&
              pruning_object["compact_threshold_mb"].GetUint64() > 0 )
         {
-            config.compact_threshold_mb = pruning_object["compact_threshold_mb"].GetUint64();
+            const uint64_t threshold_mb = pruning_object["compact_threshold_mb"].GetUint64();
+            // WR-02 (review): the consumer derives bytes via threshold_mb << 20,
+            // which wraps mod 2^64 for values >= 2^44 -- a wrapped 0 would
+            // compact after every erasing cycle (the write-amp DoS the knob's
+            // zero-rejection exists to prevent). Reject the wrapping range.
+            constexpr uint64_t kMaxCompactThresholdMb = std::numeric_limits<uint64_t>::max() >> 20;
+            if ( threshold_mb <= kMaxCompactThresholdMb )
+            {
+                config.compact_threshold_mb = threshold_mb;
+            }
+            // Out-of-range values are ignored: the 16MB default applies.
         }
 
         if ( config.enabled && !config.finality_window.has_value() )

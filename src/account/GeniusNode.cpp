@@ -2563,6 +2563,16 @@ namespace sgns
             prune_dry_run_timer_->cancel( ignored );
         }
 
+        // CR-01 (review): abort any in-flight scheduled compaction BEFORE
+        // stopping the io pool -- a whole-DB kForce CompactRange otherwise
+        // blocks shutdown for its full duration with no abort. (The earlier
+        // cancel inside ReleaseRuntimeMembersAfterIoStopped had no caller;
+        // this is the live path.)
+        if ( tx_pruner_ )
+        {
+            tx_pruner_->RequestCompactionCancel();
+        }
+
         // Unsubscribe from bootstrap disconnect events
         if ( bootstrap_disconnect_subscription_ )
         {

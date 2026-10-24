@@ -392,13 +392,17 @@ namespace sgns
         // reset the in-memory watermark + baseline (D-01), and report the
         // measured numbers once.
         const uint64_t reclaimed = before_bytes > after.value() ? before_bytes - after.value() : 0;
+        stats.compacted          = true;
         {
             const std::scoped_lock lock( status_mutex_ );
             status_m.bytes_reclaimed = reclaimed;
+            // WR-01 (review): re-copy so last_cycle reports compacted/
+            // compaction_duration_ms -- RecordCompletedCycle copied the stats
+            // before this stamping ran, leaving the fields stale in status.
+            status_m.last_cycle = stats;
         }
         cumulative_erased_bytes_   = 0;
         compaction_baseline_bytes_ = after.value();
-        stats.compacted            = true;
         logger_->info( "Prune compaction [generation {}]: before_bytes={}, after_bytes={}, reclaimed={}, "
                        "duration_ms={}",
                        stats.generation,
