@@ -26,12 +26,15 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <vector>
 
 #include <libp2p/multi/content_identifier_codec.hpp>
@@ -46,6 +49,7 @@
 
 #include "base/logger.hpp"
 #include "crdt/globaldb/BlockStoreBackedIpfsDatastore.hpp"
+#include "crdt/globaldb/ColdStorageManager.hpp"
 
 namespace
 {
@@ -63,9 +67,43 @@ namespace
     namespace ipfs_outcome = sgns::IPFS::outcome;
 
     using sgns::crdt::BlockStoreBackedIpfsDatastore;
+    using sgns::crdt::ColdStorageManager;
+    using sgns::crdt::ColdStorageWatermark;
     using IpfsDatastore = sgns::ipfs_lite::ipfs::IpfsDatastore;
     using IpfsDatastoreError = sgns::ipfs_lite::ipfs::IpfsDatastoreError;
     using CID = sgns::CID;
+
+    /// Bounded poll loop with deadline - never a fixed sleep, so the suite
+    /// stays stable on loaded Windows CI-equivalent machines.
+    bool PollUntil( const std::function<bool()> &predicate,
+                    std::chrono::milliseconds       deadline,
+                    std::chrono::milliseconds       step = std::chrono::milliseconds( 10 ) )
+    {
+        const auto end = std::chrono::steady_clock::now() + deadline;
+        while ( std::chrono::steady_clock::now() < end )
+        {
+            if ( predicate() )
+            {
+                return true;
+            }
+            std::this_thread::sleep_for( step );
+        }
+        return predicate();
+    }
+
+    /// Short-interval drainer options for the behavior suite (watermark
+    /// thresholds and cadence per-case; the pair rule always holds).
+    ColdStorageManager::BackpressureOptions FastOptions( uint32_t drain_interval_ms = 100,
+                                                         uint32_t warn_pending    = 10,
+                                                         uint32_t critical_pending = 20 )
+    {
+        ColdStorageManager::BackpressureOptions options;
+        options.drain_interval_ms = drain_interval_ms;
+        options.warn_pending      = warn_pending;
+        options.critical_pending  = critical_pending;
+        options.backoff_cap_ms    = 1000;
+        return options;
+    }
 
     gsl::span<const uint8_t> SpanOf( const std::string &s )
     {
@@ -203,12 +241,25 @@ namespace
                 inner_, shared_local_, cold_store_mutex_, sgns::base::createLogger( "ColdStorageSpill" ) );
         }
 
+        /// Construct a manager directly over the fixture stores (D-10).
+        std::shared_ptr<ColdStorageManager> MakeManager(
+            std::shared_ptr<sgns::blockstore::S3BlockStore>    remote,
+            const ColdStorageManager::BackpressureOptions      &options )
+        {
+            return std::make_shared<ColdStorageManager>( shared_local_, std::move( remote ), cold_store_mutex_, options );
+        }
+
+        std::shared_ptr<ColdStorageManager> MakeManager( const ColdStorageManager::BackpressureOptions &options )
+        {
+            return MakeManager( remote_, options );
+        }
+
         // local_ is moved into shared_local_ for the decorator; keep the
         // shared handle for direct journal assertions.
         std::unique_ptr<LocalBlockStore>          local_;
         std::shared_ptr<LocalBlockStore>          shared_local_;
         std::shared_ptr<InMemoryS3Client>         fake_;
-        std::unique_ptr<S3BlockStore>             remote_;
+        std::shared_ptr<sgns::blockstore::S3BlockStore> remote_;
         std::shared_ptr<std::mutex>               cold_store_mutex_;
         std::shared_ptr<FakeInnerDatastore>       inner_;
         std::shared_ptr<BlockStoreBackedIpfsDatastore> decorator_;
@@ -390,4 +441,277 @@ TEST_F( ColdStorageSpillTest, zero_length_block_journals )
     auto pending = shared_local_->GetPendingUploads();
     ASSERT_TRUE( pending.has_value() );
     EXPECT_EQ( std::count( pending.value().begin(), pending.value().end(), cid.value() ), 1 );
+}
+
+
+// ===========================================================================
+// Drainer behavior suite (SPILL-02 evidence, v1.1 Phase 8 plan 08-03):
+// the manager is constructed DIRECTLY over the fixture's real
+// LocalBlockStore journal + InMemoryS3Client fake (D-10) - the same
+// assembly the factory builds. All waits are bounded poll loops.
+// ===========================================================================
+
+/**
+ * @given 10 blocks journaled through the decorator
+ * @when the manager starts and drains
+ * @then pending reaches 0, the fake S3 returns all blocks byte-identical
+ *        via the S3BlockStore Get path, every journal record is
+ *        UploadedAccepted, and NO record reaches UploadedDurable
+ *        (Phase-10 boundary).
+ */
+TEST_F( ColdStorageSpillTest, drain_moves_journal_to_s3 )
+{
+    std::vector<std::string> payloads;
+    std::vector<Cid>         cids;
+    for ( int i = 0; i < 10; ++i )
+    {
+        payloads.push_back( "drain behavior payload " + std::to_string( i ) );
+        cids.push_back( MakeCid( payloads.back() ) );
+        CID cid_key( cids.back() );
+        auto res = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payloads.back() ) ) );
+        ASSERT_TRUE( res.has_value() );
+    }
+
+    auto manager = MakeManager( FastOptions() );
+    manager->Start();
+    // drainer_healthy is false until the FIRST completed cycle - requiring
+    // it stops the poll from passing on the initial atomic value.
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "pending must drain to 0 within the deadline";
+    manager->Stop();
+
+    for ( size_t i = 0; i < payloads.size(); ++i )
+    {
+        auto got = remote_->Get( cids[i] );
+        ASSERT_TRUE( got.has_value() ) << "remote must hold block " << i;
+        EXPECT_EQ( got.value().bytes, std::vector<uint8_t>( payloads[i].begin(), payloads[i].end() ) );
+        auto state = shared_local_->GetUploadState( cids[i] );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+        EXPECT_NE( state.value(), UploadState::UploadedDurable ); // Phase-10 boundary
+    }
+    EXPECT_EQ( fake_->ObjectKeys().size(), 10u );
+}
+
+/**
+ * @given blocks journaled with NO manager ever started (crash shape)
+ * @when a SECOND store + manager open over the SAME cold-store directory
+ *        with a fresh fake pre-loaded with one of the blocks
+ * @then everything drains to exactly N distinct remote objects - nothing
+ *        lost, nothing duplicated (D-12/SC3 createOnly convergence).
+ */
+TEST_F( ColdStorageSpillTest, crash_restart_reconciles )
+{
+    constexpr size_t kBlocks = 5;
+    const std::string dir = FreshDir();
+    auto               first_open = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+    ASSERT_TRUE( first_open.has_value() );
+    std::vector<std::string> payloads;
+    std::vector<Cid>         cids;
+    for ( size_t i = 0; i < kBlocks; ++i )
+    {
+        payloads.push_back( "crash resume payload " + std::to_string( i ) );
+        cids.push_back( MakeCid( payloads.back() ) );
+        auto put = first_open.value()->Put( cids.back(), SpanOf( payloads.back() ) );
+        ASSERT_TRUE( put.has_value() );
+    }
+    // Simulated death: release the store object in a scope - the destructor
+    // closes the DB and frees the directory LOCK (the library tests' own
+    // crash shape; the WAL tail replays on reopen either way).
+    {
+        auto crashed = std::move( first_open.value() );
+    }
+
+    // Reopen the SAME directory; fresh fake PRE-LOADED with one block.
+    auto reopened = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+    ASSERT_TRUE( reopened.has_value() );
+    auto shared_reopened = std::shared_ptr<LocalBlockStore>( std::move( reopened.value() ) );
+    auto fake2           = std::make_shared<InMemoryS3Client>();
+    auto opened_remote2  = S3BlockStore::Open( fake2 );
+    ASSERT_TRUE( opened_remote2.has_value() );
+    auto remote2 = std::shared_ptr<sgns::blockstore::S3BlockStore>( std::move( opened_remote2.value() ) );
+    auto preloaded = remote2->Put( cids[0], SpanOf( payloads[0] ) );
+    ASSERT_TRUE( preloaded.has_value() );
+
+    ColdStorageManager::BackpressureOptions options = FastOptions();
+    auto manager = std::make_shared<ColdStorageManager>( shared_reopened, remote2, cold_store_mutex_, options );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    manager->Stop();
+
+    // Exactly N distinct remote objects - nothing lost, nothing duplicated.
+    EXPECT_EQ( fake2->ObjectKeys().size(), kBlocks );
+    for ( size_t i = 0; i < kBlocks; ++i )
+    {
+        auto state = shared_reopened->GetUploadState( cids[i] );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+    }
+}
+
+/**
+ * @given a fault-injected fake (S3 Put unavailable) and a manager with
+ *        warn_pending=5, critical_pending=10
+ * @when 12 decorator sets run during the outage, the fake then heals
+ * @then EVERY set succeeds during the outage (D-01/SC4 - the write path
+ *        never fails due to REMOTE cold-store state), the watermark
+ *        crosses Warn then Critical while the journal grows, and after
+ *        healing everything drains with the watermark recovering to None.
+ */
+TEST_F( ColdStorageSpillTest, s3d_down_window_keeps_publishing )
+{
+    fake_->SetFault( sgns::blockstore::S3Op::Put, sgns::blockstore::S3FaultKind::Unavailable );
+    auto manager = MakeManager( FastOptions( 100, 5, 10 ) );
+    manager->Start();
+
+    // First six sets: crosses Warn (>=5, <10) observably.
+    for ( int i = 0; i < 6; ++i )
+    {
+        const std::string payload = "outage window payload " + std::to_string( i );
+        CID               cid_key( MakeCid( payload ) );
+        auto res = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+        ASSERT_TRUE( res.has_value() ) << "set() must succeed during the outage";
+    }
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().watermark == ColdStorageWatermark::Warn; },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "watermark must reach Warn";
+
+    // Six more: past critical.
+    for ( int i = 6; i < 12; ++i )
+    {
+        const std::string payload = "outage window payload " + std::to_string( i );
+        CID               cid_key( MakeCid( payload ) );
+        auto res = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+        ASSERT_TRUE( res.has_value() ) << "set() must keep succeeding deep into the outage";
+    }
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().watermark == ColdStorageWatermark::Critical; },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "watermark must reach Critical (unbounded journal, alarm only - D-01)";
+    EXPECT_FALSE( manager->GetStatus().drainer_healthy );
+
+    // Heal: everything drains, watermark recovers to None (down-crossing).
+    fake_->ClearFaults();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.watermark == ColdStorageWatermark::None;
+    },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "post-heal catch-up must drain fully and recover the watermark";
+    manager->Stop();
+}
+
+/**
+ * @given a manager at drain_interval_ms=60000 (effectively paused) and one
+ *        journaled block
+ * @when RequestDrain() runs
+ * @then it returns immediately (well under 1 s) and the pending set
+ *        reaches 0 within 10 s - the drain body never ran on the test
+ *        thread (SC2 enqueue-never-inline).
+ */
+TEST_F( ColdStorageSpillTest, ops_trigger_enqueues_never_inline )
+{
+    const std::string payload = "ops trigger payload";
+    CID               cid_key( MakeCid( payload ) );
+    auto              put = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+    ASSERT_TRUE( put.has_value() );
+
+    auto manager = MakeManager( FastOptions( 60000 ) );
+    manager->Start();
+    const auto t0      = std::chrono::steady_clock::now();
+    manager->RequestDrain();
+    const auto elapsed = std::chrono::steady_clock::now() - t0;
+    EXPECT_LT( elapsed, std::chrono::seconds( 1 ) ) << "RequestDrain must be enqueue-only";
+
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "the enqueued drain must wake the drainer thread";
+    manager->Stop();
+}
+
+/**
+ * @given a manager with in-flight pending work over a healthy fake
+ * @when Stop() runs, then a FRESH manager opens over the same directory
+ * @then Stop returns within the grace window plus margin (15 s) and any
+ *        journal leftovers resume and drain fully under the fresh manager
+ *        - one resume path serves crash and clean stop (D-11/SC3).
+ */
+TEST_F( ColdStorageSpillTest, shutdown_grace_joins )
+{
+    std::vector<Cid> cids;
+    for ( int i = 0; i < 3; ++i )
+    {
+        const std::string payload = "shutdown grace payload " + std::to_string( i );
+        cids.push_back( MakeCid( payload ) );
+        CID cid_key( cids.back() );
+        auto res = decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+        ASSERT_TRUE( res.has_value() );
+    }
+
+    auto manager = MakeManager( FastOptions( 60000 ) ); // long wait, work stays pending
+    manager->Start();
+    const auto t0      = std::chrono::steady_clock::now();
+    manager->Stop();
+    const auto elapsed = std::chrono::steady_clock::now() - t0;
+    EXPECT_LT( elapsed, std::chrono::seconds( 15 ) ) << "grace (5 s) + margin";
+
+    // Whatever remains resumes under a fresh manager (same store+remote).
+    auto fresh = MakeManager( FastOptions() );
+    fresh->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = fresh->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    fresh->Stop();
+    for ( const auto &cid : cids )
+    {
+        auto state = shared_local_->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+    }
+}
+
+/**
+ * @given a single-block journal plus the zero-length block from the 08-01
+ *        empty edge
+ * @when the manager drains
+ * @then both reach the remote and the pending set empties without error
+ *        (degenerate-input drain half).
+ */
+TEST_F( ColdStorageSpillTest, single_block_journal_drains )
+{
+    const std::string payload = "single degenerate payload";
+    const auto        cid     = MakeCid( payload );
+    CID               cid_key( cid );
+    ASSERT_TRUE( decorator_->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) ).has_value() );
+    const auto empty_cid = CidOf( gsl::span<const uint8_t>(), MulticodecType::Code::RAW );
+    ASSERT_TRUE( empty_cid.has_value() );
+    CID empty_key( empty_cid.value() );
+    ASSERT_TRUE( decorator_->set( empty_key, IpfsDatastore::Value() ).has_value() );
+
+    auto manager = MakeManager( FastOptions() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.pending_upload_count == 0 && status.drainer_healthy;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    manager->Stop();
+
+    auto pending = shared_local_->GetPendingUploads();
+    ASSERT_TRUE( pending.has_value() );
+    EXPECT_TRUE( pending.value().empty() );
+    EXPECT_TRUE( remote_->Get( cid ).has_value() );
+    EXPECT_TRUE( remote_->Get( empty_cid.value() ).has_value() );
 }
