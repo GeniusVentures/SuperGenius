@@ -29,6 +29,7 @@
 #include "base/logger.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/globaldb_node_shutdown.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -133,12 +134,7 @@ public:
         {
             for ( auto &node : nodes_ )
             {
-                if ( node.db )
-                {
-                    node.db->ShutdownNow();
-                }
-                node.db.reset();
-                node.pubsub->Stop();
+                sgns::test::stopGlobalDBNode( node.db, node.pubsub );
             }
 
             nodes_.clear();

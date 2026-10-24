@@ -33,6 +33,7 @@
 #include "testutil/outcome.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/globaldb_node_shutdown.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/host/host.hpp>
@@ -115,10 +116,8 @@ public:
             }
         }
 
-        /// Tears node @p index down (db FIRST, then pubsub -- the graphsync
-        /// chain co-owns the host wired from the pubsub, so releasing the db
-        /// before pubsub->Stop() is the only teardown order that never
-        /// deregisters a connection against a dead reactor) and recreates it
+        /// Tears node @p index down (drain CRDT workers, stop and join pubsub,
+        /// then release the db while retaining the host's reactor) and recreates it
         /// on the SAME base path WITHOUT db->Start(). The caller reconnects
         /// peers and then Start()s, so the restarted head exchange's first
         /// RebroadcastHeads publishes into a live connection (an immediate
@@ -128,15 +127,7 @@ public:
         {
             ASSERT_LT( index, nodes_.size() );
             EraseNode &old = nodes_[index];
-            if ( old.db )
-            {
-                old.db->ShutdownNow();
-            }
-            old.db.reset();
-            if ( old.pubsub )
-            {
-                old.pubsub->Stop();
-            }
+            sgns::test::stopGlobalDBNode( old.db, old.pubsub );
             const std::string basePath = old.basePath;
             nodes_[index]              = makeNode( basePath, /*start=*/false );
         }
@@ -223,12 +214,7 @@ public:
                 // Always clear the interruption seam before teardown: a hook
                 // left armed from a failed case must never leak further.
                 sgns::crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
-                if ( node.db )
-                {
-                    node.db->ShutdownNow();
-                }
-                node.db.reset();
-                node.pubsub->Stop();
+                sgns::test::stopGlobalDBNode( node.db, node.pubsub );
             }
 
             nodes_.clear();
