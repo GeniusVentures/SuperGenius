@@ -173,7 +173,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 
 ### Reclamation & Observability
 
-- [ ] **RECL-01**: Deleted bytes actually leave the disk — periodic light-node-only `CompactRange` (`bottommost_level_compaction = kForce`) scheduled off the hot path
+- [x] **RECL-01**: Deleted bytes actually leave the disk — periodic light-node-only `CompactRange` (`bottommost_level_compaction = kForce`) scheduled off the hot path
 - [ ] **RECL-02**: CI gate proves real reclamation — measured SST/`du` bytes before-vs-after a prune+compaction cycle (not key counts)
 - [x] **RECL-03**: Per-cycle observability log — txs examined/erased, bytes reclaimed, watermark advance
 - [x] **RECL-04**: Prune status is queryable — watermark and last-cycle stats
@@ -219,7 +219,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | SURV-01 | Phase 19 | Complete |
 | SURV-02 | Phase 19 | Complete |
 | SURV-03 | Phase 19 | Complete |
-| RECL-01 | Phase 20 | Pending |
+| RECL-01 | Phase 20 | Complete |
 | RECL-02 | Phase 20 | Pending |
 | RECL-03 | Phase 18 | Complete |
 | RECL-04 | Phase 18 | Complete |

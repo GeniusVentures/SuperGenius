@@ -221,7 +221,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 20-02-PLAN.md — TxPruner post-cycle compaction gate (D-01) + evaluation-carried erased-bytes estimate + PruneStatus.bytes_reclaimed stamped at compaction (D-02) + RECL-03 wording retirement + shutdown cancel wiring + canary (RECL-01)
+- [x] 20-02-PLAN.md — TxPruner post-cycle compaction gate (D-01) + evaluation-carried erased-bytes estimate + PruneStatus.bytes_reclaimed stamped at compaction (D-02) + RECL-03 wording retirement + shutdown cancel wiring + canary (RECL-01)
 
 **Wave 3** *(parallel — no file overlap)*
 
@@ -363,7 +363,7 @@ Plans:
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
-| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 1/5 | In Progress|  |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 2/5 | In Progress|  |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
