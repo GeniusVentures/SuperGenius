@@ -69,7 +69,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 16: Erasure Primitives & Bookkeeping Hardening** - Two-level local erasure primitives behind owner-module APIs; zero production behavior change (PRUNE-02, GATE-03) (completed 2026-10-15)
 - [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
 - [x] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04) (completed 2026-10-23)
-- [ ] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03)
+- [x] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03) (completed 2026-10-24)
 - [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
 
 *Parallel milestones:* v1.2 executes HERE; v1.3 (Phases 21-29) is planned on `develop` in parallel — both tracked in this planning root. The v1.3-side read-only snapshot of this roadmap: `.planning/milestones/v1.2-ROADMAP.md`.
@@ -196,7 +196,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2)*
 
 - [x] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
-- [ ] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
+- [x] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
 
 ### Phase 20: Reclamation Proof & E2E Hardening
 
@@ -343,7 +343,7 @@ Plans:
 | 16. Erasure Primitives & Bookkeeping Hardening | v1.2 (this branch) | 4/4 | Complete | 2026-10-15 |
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
-| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 6/7 | In Progress|  |
+| 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete   | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
