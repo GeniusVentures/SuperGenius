@@ -445,6 +445,30 @@ else()
     )
 endif()
 
+# Phase 19 (19-05): D-03 tri-state tx-lookup suites — same link set as
+# tx_pruner_test (the fixture family it copies).
+addtest(tx_lookup_tri_state_test
+    tx_lookup_tri_state_test.cpp
+)
+
+target_link_libraries(tx_lookup_tri_state_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(tx_lookup_tri_state_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(tx_lookup_tri_state_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(tx_lookup_tri_state_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 # Several suites in this directory boot multiple full nodes; running them
 # concurrently starves CPU on smaller CI runners (observed: a genesis creator
 # starved for 30s while eight test binaries ran), stalling startup past any
