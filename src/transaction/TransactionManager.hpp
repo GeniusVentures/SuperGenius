@@ -48,6 +48,10 @@ namespace sgns
 {
     class MintTransactionV2;
 
+    /// PruneEligibility.hpp's tri-state verdict enum (the ONE pruned-evidence
+    /// vocabulary, reused verbatim — opaque here so this header adds no
+    /// rapidjson dependency to its consumers).
+    enum class PrunedLookup : uint8_t;
 
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
@@ -63,6 +67,36 @@ namespace sgns
         std::string                         main_addr;   ///< Main wallet public address (128-hex)
         uint64_t                            sequence;    ///< Registration sequence number
         SGTransaction::RegistrationMetadata metadata;    ///< Registration metadata
+    };
+
+    /**
+     * @brief       Tri-state local lookup verdict + payload (D-03, SURV-02's local half).
+     * @details     Reuses PruneEligibility's PrunedLookup as the ONE verdict
+     *              vocabulary (hard invariant 2 — no second enum, no
+     *              hand-built marker keys). Read the result tx-FIRST: a
+     *              non-null @p tx IS the FOUND verdict and outranks any
+     *              marker (Pitfall-8 value-first ordering — a present value
+     *              is never reported PRUNED). @p verdict then carries the
+     *              marker evidence: NOT_FOUND on a clean found, or
+     *              VALUE_PRESENT_INVARIANT_VIOLATION when a pruned marker
+     *              coexists with the found value (reported loudly, never
+     *              guessed). With @p tx == nullptr the verdict is the whole
+     *              answer: PRUNED (@p record carries the durable payload) /
+     *              NOT_FOUND (unknown hash) / VALUE_PRESENT_INVARIANT_VIOLATION
+     *              (the marker claims a value the found-sources cannot see —
+     *              never fabricated as FOUND, never downgraded to NOT_FOUND).
+     */
+    struct TransactionLookupResult
+    {
+        /// Marker-evidence tri-state (PruneEligibility.hpp — the one home).
+        /// No default initializer: the enum is opaque here (kept dependency
+        /// -free), so every construction site MUST set it — LookupTransaction
+        /// always does.
+        PrunedLookup verdict;
+        /// Set iff a value was found (tracked map or CRDT): the FOUND verdict.
+        std::shared_ptr<GeniusTransaction> tx;
+        /// Set iff PRUNED: the durable PrunedTransactionRecord payload.
+        std::optional<SGTransaction::PrunedTransactionRecord> record;
     };
 
     /**
@@ -85,6 +119,10 @@ namespace sgns
         enum class Error : uint8_t
         {
             TRUST_POLICY_NOT_READY = 1,
+            /// Send failed BEFORE any CRDT Put/Commit or proposal side effect
+            /// (witness/size preflight). Nothing was published, so the send
+            /// baseline advance was a promise never kept (D-02).
+            PRE_BROADCAST_VALIDATION = 2,
         };
 
         /**
@@ -350,6 +388,26 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
         /**
+         * @brief Tri-state local lookup of one transaction by hash (D-03 / SURV-02).
+         * @details Answers found / not-found / pruned distinctly — a locally
+         *          pruned transaction is NEVER conflated with a never-existed
+         *          one. Probe order is value-first-then-marker (Pitfall 8):
+         *          the tracked map (GetTransactionByHashNoLock), then the
+         *          exact-hash CRDT probe (FetchExactTransactionFromCRDT), and
+         *          only PruneEligibility::LookupPrunedEntry after both miss.
+         *          A value hit is FOUND regardless of marker state; a marker
+         *          coexisting with a found value is logged at ERROR but never
+         *          changes the verdict (never guess). A marker lookup error or
+         *          the VALUE_PRESENT_INVARIANT_VIOLATION verdict is returned
+         *          as-is — never downgraded to NOT_FOUND silently.
+         * @param[in] tx_hash Transaction hash (readable string form).
+         * @return TransactionLookupResult (tx set => FOUND; verdict PRUNED
+         *         carries the record), or outcome::failure when a found-source
+         *         or the marker lookup itself failed.
+         */
+        outcome::result<TransactionLookupResult> LookupTransaction( const std::string &tx_hash ) const;
+
+        /**
          * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
          */
         std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
@@ -606,6 +664,20 @@ namespace sgns
         void InitializeUTXOs();
 
         /**
+         * @brief Post-rebuild belt of the GATE-05 checkpoint-mismatch path (D-01):
+         *        every rebuilt-READY outpoint of this account is checked against
+         *        its DURABLE /utxo/ record; a consumed record reverts the
+         *        outpoint to consumed so no spent output stays spendable-ready.
+         * @details By construction (preserved CONSUMED evidence + PutUTXO's
+         *          duplicate check) this finds nothing in a healthy rebuild —
+         *          it exists for registry/durable-record divergence (one
+         *          corrupted record class). Reads spend evidence only through
+         *          the UTXOManager accessors.
+         * @return The number of outpoints reverted to consumed.
+         */
+        size_t CrosscheckRebuiltUtxos();
+
+        /**
          * @brief Attempts to resolve missing hashes by requesting them from
          *        the network. Transitions to READY when none remain and the nonce
          *        check passes.
@@ -704,6 +776,9 @@ namespace sgns
         State                                    state_m;
         std::mutex                               state_change_callback_mutex_;
         StateChangeCallback                      state_change_callback_;
+        /// D-02: when the current SYNCING recovery started (set at the
+        /// send-failure entry site; drives the bounded exit in SyncNonce).
+        std::optional<std::chrono::steady_clock::time_point> syncing_since_;
 
         // Head request rate limiting (for reactive requests due to nonce gaps)
         std::optional<std::chrono::steady_clock::time_point> last_head_request_time_;
@@ -763,6 +838,8 @@ namespace sgns
         std::unordered_set<std::string> missing_tx_hashes_;
         /// Per-hash recovery attempt counts (GATE-05 bounded recovery).
         std::unordered_map<std::string, uint8_t> missing_tx_attempts_;
+        /// Consecutive pre-broadcast rollback failures (WR-03 cap).
+        uint32_t pre_broadcast_rollback_failures_{ 0 };
         /// Process-wide test override for the recovery attempt cap (GATE-05).
         static std::atomic<uint8_t> missing_tx_max_attempts_for_test_;
 
@@ -778,6 +855,20 @@ namespace sgns
         /// first recovery round). No production caller may invoke this.
         static void    SetMissingTxMaxAttemptsForTest( uint8_t max_attempts );
         static uint8_t GetMissingTxMaxAttemptsForTest();
+
+        /// D-02: bounded SYNCING exit — when no confirming nonce advance
+        /// happens within this window, SyncNonce falls back to the last
+        /// durable confirmed nonce (WARN) and returns READY, so a wedged sync
+        /// can never reject sends forever. The fallback never touches held
+        /// nonce reservations.
+        static constexpr std::chrono::milliseconds k_syncing_exit_timeout = std::chrono::seconds( 60 );
+        /// Process-wide test override for the SYNCING exit window (ms).
+        static std::atomic<std::chrono::milliseconds::rep> syncing_exit_timeout_for_test_;
+
+        /// Test-only override for the SYNCING exit window. No production
+        /// caller may invoke this.
+        static void                      SetSyncingExitTimeoutForTest( std::chrono::milliseconds timeout );
+        static std::chrono::milliseconds GetSyncingExitTimeoutForTest();
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";

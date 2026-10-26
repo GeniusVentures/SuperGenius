@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 17
-status: ready_to_plan
-stopped_at: Phase 18 complete (7/7) — ready to discuss Phase 19
-last_updated: 2026-10-23T16:38:09.337Z
-last_activity: 2026-10-16 -- Phase 17 planning complete
+current_phase: 20
+status: executing
+stopped_at: Phase 20 context gathered
+last_updated: "2026-10-24T16:18:53.681Z"
+last_activity: 2026-10-24 -- Phase 20 planning complete
 progress:
-  total_phases: 23
-  completed_phases: 1
-  total_plans: 10
-  completed_plans: 17
-  percent: 4
+  total_phases: 25
+  completed_phases: 4
+  total_plans: 29
+  completed_plans: 24
+  percent: 16
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
 
 **Last updated:** 2026-10-15
 **Milestone:** v1.2 — Light-node transaction pruning
-**Current Phase:** 19
+**Current Phase:** 20
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 19 — pruned node survival & recovery hardening
+**Current focus:** Phase 20 — reclamation proof & e2e hardening
 
 ## Current Position
 
-Phase: 16 (erasure-primitives-bookkeeping-hardening) — EXECUTING
+Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-23
+Status: Ready to execute
+Last activity: 2026-10-24 -- Phase 20 planning complete
 
 Progress: [██████████] 100%
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-16T19:09:57.202Z
-**Stopped At:** Phase 17 context gathered
-**Resume File:** .planning/phases/17-eligibility-policy-gating-dry-run/17-CONTEXT.md
+**Last session:** 2026-10-24T13:48:12.510Z
+**Stopped At:** Phase 20 context gathered
+**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
 
 ## Accumulated Context
 
@@ -142,6 +142,13 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 16 P02 | 18min | 3 tasks | 7 files |
 | Phase 16 P03 | 40min | 3 tasks | 5 files |
 | Phase 16 P04 | 71min | 3 tasks | 6 files |
+| Phase 19 P01 | 17min | 2 tasks | 3 files |
+| Phase 19 P02 | 19min | 3 tasks | 4 files |
+| Phase 19 P03 | 34min | 3 tasks | 6 files |
+| Phase 19 P04 | 53min | 3 tasks | 5 files |
+| Phase 19 P07 | 82min | 2 tasks | 1 files |
+| Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
+| Phase 19 P06 | 34min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -216,6 +223,18 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 16]: The erase pending/active guard protects the EXTERNAL root path only (pendingRootQueue_/activeRootCID_); self-created Put jobs live in selfCreatedJobList_ — the 16-04 guard proof stalls a mirrored receiver's getNode, the fetch entry the DAG worker reaches with the root job active
 - [Phase 16]: The source-scan gate roots at PROJECT_ROOT, never CMAKE_SOURCE_DIR — this repo drives CMake from build/OSX/ (out-of-root driver), so CMAKE_SOURCE_DIR/src does not exist and would make the gate vacuously green
 - [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
+- [Phase 19]: Preserve-clear (19-01): ClearUnspentKeepConsumed is unconditional and owner-vended in UTXOManager; SetUTXOs wipe semantics stay byte-identical for existing callers
+- [Phase 19]: SetUTXOs wipes only index-resident entries — ConsumeUTXOs leaves CONSUMED entries orphaned from address_outpoints_; the real-world wipe path is post-restart (LoadUTXOs indexes CONSUMED before the mismatch clear), so D-01 tests must seed the reload shape
+- [Phase 19]: D-02 half 1 — preflight failures (witness/size) return typed Error::PRE_BROADCAST_VALIDATION; TickOnce rolls back and STAYS READY (error-code comparison across the Commit boundary cannot classify — same errc codes fire both sides)
+- [Phase 19]: D-02 half 2 — bounded SYNCING exit (60s knob, SetSyncingExitTimeoutForTest seam) anchors to GetLocalConfirmedNonce and never touches pending_nonces_; held reservations stay held so the next reserved nonce is strictly greater
+- [Phase 19]: SC-5 retry guard (19-03): RetryDueFailedRoots consults isResolved BEFORE the counter site; pruned/sealed roots are terminal (entry cleared), the fetch-attempt counter never moves for them, and the isResolved error branch stays fail-safe (re-armed, never enqueued)
+- [Phase 19]: Post-18-01, no natural path can place a sealed root on the retry ladder (the broadcast intake guard blocks sealed CIDs) — 19-03 added ForTest ladder-seeding seams + ladder-count observables on CrdtDatastore; the pass under test stays the real DAG worker loop
+- [Phase 19]: AccountMessenger's HandleBlockLikeRequest is private and InterfaceMethods has no response-send callback (19-03 plan assumptions) — the pruned-serving row is proven over real loopback pubsub with the responder's sign_ callback as the public capture point for the empty signed BlockResponse
+- [Phase 19]: (19-07): Broadcast-order sequencing is unreproducible on this gossip layer (graft relays all cached publishes at once) -- peer-refusal proofs split into a hermetic ordered-AddRoute + direct-getNode walk beside an ordering-free mesh E2E
+- [Phase 19]: (19-07): PrunedMesh determinism needs a full-node-owned serving topic (dual-topic put links the mesh history under one serving head); single-shared-topic wiring makes the Pitfall-6 ladder ride a coin flip
+- [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
+- [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
+- [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
 
 ## Deferred Items
 

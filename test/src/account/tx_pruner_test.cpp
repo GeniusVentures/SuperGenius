@@ -4,11 +4,16 @@
  *             re-prune (D-02b), the stranding-edge budget behavior, the SC-4
  *             tick-gate refusals, the RECL-03/RECL-04 observability +
  *             status contracts (including the D-01 compose-lock
- *             non-interleaving proof), and the SC-2 crash matrix — killing
+ *             non-interleaving proof), the SC-2 crash matrix — killing
  *             the cycle at EVERY interrupt point of BOTH seams and reopening
  *             the database on the same path converges to the same fixed
- *             point — all against the TxPruner SERVICE on real stores
- *             (GlobalDB + pubsub + temp dir, no GeniusNode).
+ *             point — and the SURV-01 RestartMatrix: a pruned node
+ *             restarted on the same path boots through the REAL StartCore
+ *             path to READY with ZERO pruned-CID fetch attempts, syncs a
+ *             new tip, receives/spends, and chains the next outgoing tx
+ *             correctly through the pruned frontier — all against the
+ *             TxPruner SERVICE on real stores (GlobalDB + pubsub + temp
+ *             dir, no GeniusNode).
  * @details    Every suite targets the service because GeniusNode is not
  *             unit-testable (the established testability split). Seeding
  *             always goes through the REAL publish path on the fixture's
@@ -44,15 +49,22 @@
 #include <vector>
 
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/host/host.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/UTXOManager.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "blockchain/Blockchain.hpp"
+#include "blockchain/Consensus.hpp"
+#include "blockchain/ConsensusAuth.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
@@ -70,7 +82,11 @@ namespace sgns
      * TxPruner tick gate requires State::READY, which no public API reaches
      * deterministically (StartCore's async nonce path is network-timed).
      * The pending-lifecycle test owns the same class name in its own binary;
-     * this per-binary definition carries only the ChangeState member.
+     * this per-binary definition carries only the members this binary uses:
+     * ChangeState (the tick gate), the two RebuildGuard drivers (the real
+     * InitializeUTXOs boot path and the belt pass), and the RestartMatrix
+     * send-path drivers (enqueue, the nonce-reserving DAG fill, and the
+     * GATE-04 previous-hash ladder — all protected/private members).
      */
     class TransactionManagerPendingLifecycleTestAccess
     {
@@ -78,6 +94,56 @@ namespace sgns
         static void ChangeState( TransactionManager &manager, TransactionManager::State state )
         {
             manager.ChangeState( state );
+        }
+
+        static void RunInitializeUTXOs( TransactionManager &manager )
+        {
+            manager.InitializeUTXOs();
+        }
+
+        static size_t RunCrosscheckRebuiltUtxos( TransactionManager &manager )
+        {
+            return manager.CrosscheckRebuiltUtxos();
+        }
+
+        static outcome::result<void> ChangeTransactionState( TransactionManager                       &manager,
+                                                             const std::shared_ptr<GeniusTransaction> &transaction,
+                                                             TransactionManager::TransactionStatus     status )
+        {
+            return manager.ChangeTransactionState( transaction, status );
+        }
+
+        /// Enqueues @p transaction as a one-tx outgoing batch staged on @p atomic_tx
+        /// (the pending-lifecycle binary's Enqueue shape).
+        static void EnqueueOutgoing( TransactionManager                       &manager,
+                                     const std::shared_ptr<GeniusTransaction> &transaction,
+                                     std::shared_ptr<crdt::AtomicTransaction>  atomic_tx )
+        {
+            TransactionManager::TransactionBatch batch;
+            batch.emplace_back( transaction, std::nullopt );
+            manager.EnqueueTransaction( { std::move( batch ), std::move( atomic_tx ) } );
+        }
+
+        /// The production outgoing-tx DAG fill: reserves the next nonce and
+        /// resolves previous_hash through the GATE-04 ladder.
+        static SGTransaction::DAGStruct RunFillDAGStruct( TransactionManager &manager )
+        {
+            return manager.FillDAGStruct();
+        }
+
+        /// One iteration of the manager's own tick loop. The fixture's io_ is
+        /// a hand-driven context (the CRDTFixture contract), so on the REAL
+        /// -boot leg the test thread drives the loop StartCore armed — the
+        /// loop logic is the production one, only its scheduler is manual.
+        static void RunTickOnce( TransactionManager &manager )
+        {
+            manager.TickOnce();
+        }
+
+        /// The GATE-04 ladder read (cert-slot rung is pruned-proof by design).
+        static std::string OutgoingPreviousHash( const TransactionManager &manager, uint64_t nonce )
+        {
+            return manager.GetOutgoingPreviousHash( nonce );
         }
     };
 } // namespace sgns
@@ -177,11 +243,36 @@ public:
         tm_.reset();
         blockchain_.reset();
         account_.reset();
+
+        // The nonce responder (RestartMatrix legs only) is independent of the
+        // fixture's db stack: stop its messenger worker thread BEFORE its
+        // pubsub host (the responder has no db/graphsync chain of its own).
+        if ( nonce_responder_account_ )
+        {
+            nonce_responder_account_->StopMessenger();
+            nonce_responder_account_.reset();
+        }
+        if ( nonce_responder_pubsub_ )
+        {
+            nonce_responder_pubsub_->Stop();
+            nonce_responder_pubsub_.reset();
+        }
     }
 
     std::shared_ptr<GeniusAccount>      account_;
     std::shared_ptr<Blockchain>         blockchain_;
     std::shared_ptr<TransactionManager> tm_;
+
+    //
+    // SURV-01 nonce responder (RestartMatrix legs): CheckNonce's trusting
+    // -local path needs a peer that ANSWERS the nonce request (with or
+    // without a nonce) — a strictly peerless Light node fails closed on the
+    // fetch error. The responder is a second real pubsub host carrying an
+    // ephemeral account's messenger; it never joins a CRDT topic, so it can
+    // move neither the fetch counter nor any CRDT state.
+    //
+    std::shared_ptr<ipfs_pubsub::GossipPubSub> nonce_responder_pubsub_;
+    std::shared_ptr<GeniusAccount>             nonce_responder_account_;
 
     //
     // Seeding helpers — every transaction goes through the REAL topic Put so
@@ -325,6 +416,259 @@ public:
         return base::Hash256::fromReadableString( transaction.GetHash() ).value();
     }
 
+    //
+    // RebuildGuard helpers (GATE-05's checkpoint-rebuild half, D-01): the
+    // certificate recipe is the pending-lifecycle binary's verbatim shape, the
+    // mismatch arm seeds the RELOAD shape 19-01 proved is the real-world wipe
+    // path (disk-resident CONSUMED evidence reloaded through LoadUTXOs), and
+    // the raw-record helpers give the Pitfall-2 disk-level proofs.
+    //
+
+    /// Validator registry backing SeedCertificate; lazily initialized so only
+    /// RebuildGuard tests carry registry records in their fresh per-test DB.
+    std::shared_ptr<ValidatorRegistry> registry_;
+
+    /// Seeds a valid consensus certificate for @p transaction at its slot (the
+    /// transaction_manager_pending_lifecycle_test recipe verbatim). The nonce
+    /// subject's account is the transaction's OWN source address, so foreign
+    /// -source deliveries (the RestartMatrix receive legs) certify through the
+    /// same recipe as self-sourced ones.
+    void SeedCertificate( const std::shared_ptr<GeniusTransaction> &transaction )
+    {
+        if ( registry_ == nullptr )
+        {
+            registry_ = blockchain_->GetValidatorRegistry();
+            ASSERT_TRUE( registry_ != nullptr );
+            ASSERT_TRUE( registry_
+                             ->StoreGenesisRegistry( { account_->GetAddress() },
+                                                     [this]( std::vector<uint8_t> payload )
+                                                     { return account_->Sign( payload ); } )
+                             .has_value() );
+        }
+
+        auto subject = ConsensusManager::CreateNonceSubject( transaction->GetSrcAddress(),
+                                                             transaction->GetNonce(),
+                                                             transaction->GetHash(),
+                                                             transaction->SerializeToEmbeddedTransaction(),
+                                                             std::nullopt,
+                                                             std::nullopt );
+        ASSERT_TRUE( subject.has_value() );
+
+        auto proposal = ConsensusManager::CreateProposal( subject.value(),
+                                                          account_->GetAddress(),
+                                                          registry_->GetRegistryCid(),
+                                                          registry_->GetRegistryEpoch(),
+                                                          [this]( std::vector<uint8_t> payload )
+                                                          { return account_->Sign( payload ); } );
+        ASSERT_TRUE( proposal.has_value() );
+
+        ConsensusManager::Vote vote;
+        vote.set_proposal_id( proposal.value().proposal_id() );
+        vote.set_voter_id( account_->GetAddress() );
+        vote.set_approve( true );
+        vote.set_timestamp( proposal.value().timestamp() );
+        auto vote_bytes = VoteSigningBytes( vote );
+        ASSERT_TRUE( vote_bytes.has_value() );
+        const auto vote_signature = account_->Sign( std::move( vote_bytes.value() ) );
+        vote.set_signature( vote_signature.data(), vote_signature.size() );
+
+        ConsensusManager::Certificate certificate;
+        certificate.set_proposal_id( proposal.value().proposal_id() );
+        certificate.set_registry_cid( proposal.value().registry_cid() );
+        certificate.set_registry_epoch( proposal.value().registry_epoch() );
+        certificate.set_total_weight( 1 );
+        certificate.set_approved_weight( 1 );
+        certificate.set_timestamp( vote.timestamp() );
+        *certificate.add_votes()        = vote;
+        *certificate.mutable_proposal() = proposal.value();
+
+        crdt::GlobalDB::Buffer certificate_data;
+        certificate_data.put( certificate.SerializeAsString() );
+        ASSERT_TRUE(
+            db_->Put( crdt::HierarchicalKey( "/cert/" + transaction->GetSlotID() ), certificate_data, { kSeedTopic } )
+                .has_value() );
+        ASSERT_TRUE( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) );
+    }
+
+    /// Signed transfer spending @p source's output @p output_idx (nonce @p
+    /// nonce, one change output back to this account).
+    std::shared_ptr<TransferTransaction> MakeSpender( const GeniusTransaction &source,
+                                                      uint32_t                 output_idx,
+                                                      uint64_t                 nonce )
+    {
+        auto source_txid = base::Hash256::fromReadableString( source.GetHash() );
+        EXPECT_FALSE( source_txid.has_error() );
+
+        InputUTXOInfo input;
+        input.txid_hash_  = source_txid.value();
+        input.output_idx_ = output_idx;
+        input.signature_  = account_->Sign( input.SerializeForSigning() );
+
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "transfer" );
+        dag.set_source_addr( account_->GetAddress() );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() ) );
+
+        auto spender = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( { std::move( input ) },
+                                      { OutputDestInfo{ 100, account_->GetAddress(), kTestTokenId } },
+                                      std::move( dag ) ) );
+        spender->MakeSignature( *account_ );
+        return spender;
+    }
+
+    /// The deterministic checkpoint-mismatch arm: a certified producer (one
+    /// READY output), then a certified spender consuming that output (change
+    /// READY). Everything applies through the REAL stack (certificate delivery
+    /// -> consensus handler -> effects); the handler's approval-time
+    /// checkpoint leaves the latest checkpoint rooted over the post-spend
+    /// READY set (the change output). The mismatch itself is armed per-case by
+    /// ArmMismatchByLosingChangeOutput (the plan-sanctioned divergent-checkpoint
+    /// induction).
+    struct RebuildArm
+    {
+        std::shared_ptr<TransferTransaction> producer;
+        std::shared_ptr<TransferTransaction> spender;
+        base::Hash256                        spent_outpoint;  ///< (producer hash, output 0).
+        base::Hash256                        change_outpoint; ///< (spender hash, output 0).
+    };
+
+    void SeedMismatchArm( RebuildArm &arm )
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+
+        arm.producer = MakeTransfer( 1, 1 );
+        ASSERT_NE( arm.producer, nullptr );
+        SeedTransaction( arm.producer );
+        SeedCertificate( arm.producer );
+
+        auto producer_txid = base::Hash256::fromReadableString( arm.producer->GetHash() );
+        ASSERT_FALSE( producer_txid.has_error() );
+        arm.spent_outpoint = producer_txid.value();
+
+        // The certificate delivery applies the producer asynchronously through
+        // the real stack — wait for its output (bounded, never a blind sleep).
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto state = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+                return state.has_value() && state.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 5 ),
+            "certified producer output becomes READY",
+            nullptr );
+
+        arm.spender = MakeSpender( *arm.producer, 0, 2 );
+        SeedTransaction( arm.spender );
+        SeedCertificate( arm.spender );
+
+        auto spender_txid = base::Hash256::fromReadableString( arm.spender->GetHash() );
+        ASSERT_FALSE( spender_txid.has_error() );
+        arm.change_outpoint = spender_txid.value();
+
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto spent   = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+                auto change  = utxo_mgr.GetOutPointState( arm.change_outpoint, 0 );
+                auto spender = utxo_mgr.GetOutPointSpender( arm.spent_outpoint, 0 );
+                return spent.has_value() && spent.value() == UTXOManager::UTXOState::UTXO_CONSUMED &&
+                       change.has_value() && change.value() == UTXOManager::UTXOState::UTXO_READY &&
+                       spender.has_value() && spender.value() == SpenderHash( *arm.spender );
+            },
+            std::chrono::seconds( 5 ),
+            "certified spend applies (input CONSUMED by the spender, change READY)",
+            nullptr );
+    }
+
+    /// Raw /utxo/ record (key + decoded) for one outpoint — the Pitfall-2
+    /// disk-level proof helper.
+    std::optional<std::pair<std::string, SGTransaction::UTXOEntryRecord>> FindUtxoRecord( const base::Hash256 &txid,
+                                                                                          uint32_t output_idx )
+    {
+        for ( const auto &[key, value] : SnapshotPrefix( "/utxo" ) )
+        {
+            SGTransaction::UTXOEntryRecord record;
+            if ( !record.ParseFromArray( value.data(), static_cast<int>( value.size() ) ) )
+            {
+                continue;
+            }
+            auto recorded_txid = base::Hash256::fromSpan(
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( record.utxo().hash().data() ) ),
+                           record.utxo().hash().size() ) );
+            if ( recorded_txid.has_error() || recorded_txid.value() != txid ||
+                 record.utxo().output_idx() != static_cast<int>( output_idx ) )
+            {
+                continue;
+            }
+            return std::make_pair( key, record );
+        }
+        return std::nullopt;
+    }
+
+    /// Overwrites ONE durable /utxo/ record, marking the outpoint CONSUMED by
+    /// @p spender — the "one corrupted record" divergence class (T-19-0401)
+    /// the rebuild crosscheck exists for. Amount untouched (genuine class).
+    void TamperUtxoRecordToConsumed( const std::string &key, const base::Hash256 &spender )
+    {
+        const auto snapshot     = SnapshotPrefix( "/utxo" );
+        const auto record_bytes = snapshot.find( key );
+        ASSERT_NE( record_bytes, snapshot.end() );
+
+        SGTransaction::UTXOEntryRecord record;
+        ASSERT_TRUE(
+            record.ParseFromArray( record_bytes->second.data(), static_cast<int>( record_bytes->second.size() ) ) );
+        record.set_state( SGTransaction::UTXO_ENTRY_CONSUMED );
+        record.set_has_spent_by_txid( true );
+        record.set_spent_by_txid( spender.data(), spender.size() );
+
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( key );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+    }
+
+    /// Arms the checkpoint mismatch by deleting the spender's change record
+    /// (the corrupted/lost-record class): the durable READY set loses the
+    /// change output while the input's CONSUMED evidence and the latest
+    /// checkpoint (rooted over the change) survive — a deterministic local
+    /// root != checkpoint root for the next InitializeUTXOs, AND the exact
+    /// precondition of the own-replay hazard (input spend evidence preserved,
+    /// the spender's outputs absent).
+    void ArmMismatchByLosingChangeOutput( const RebuildArm &arm )
+    {
+        ASSERT_TRUE(
+            account_->GetUTXOManager().DeleteUTXO( arm.change_outpoint, 0, account_->GetAddress() ).has_value() );
+    }
+
+    /// Rebuilds ONLY the TransactionManager over the live db/account: fresh
+    /// tracked map, durable /utxo/ + checkpoint + cert records untouched, and
+    /// NO db restart. (A db restart re-delivers the cert topic, whose
+    /// approval-time checkpoint re-converges the latest-checkpoint pointer to
+    /// the post-spend local state — deterministically destroying the mismatch
+    /// arm. The REAL-boot db-restart leg is 19-06's matrix.) The fresh
+    /// manager's InitializeUTXOs reloads everything from disk — the exact
+    /// index-resident reload shape 19-01 proved is the real-world wipe path.
+    void RebuildTransactionManagerOnly()
+    {
+        tm_.reset();
+        constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
+        constexpr auto kMutabilityWindow   = std::chrono::milliseconds( 600000 );
+        tm_                                = TransactionManager::New( db_,
+                                       io_,
+                                       account_,
+                                       blockchain_,
+                                       NodeType::Light,
+                                       0,
+                                       kTimestampTolerance,
+                                       kMutabilityWindow );
+        ASSERT_NE( tm_, nullptr );
+    }
+
     /// Extracts the tx hash from a /bc-<net>/tx/<hash> candidate path.
     static std::string HashOfPath( const std::string &tx_path )
     {
@@ -446,9 +790,16 @@ public:
      * SAME database path — the crash/restart of the SC-2 matrix. The pubsub
      * host and the io pool survive (the Phase-16 makeNode wiring, rebuilt
      * graphsync network and scheduler over the live host); the manager is
-     * re-driven to READY for the post-restart cycles.
+     * re-driven to READY for the post-restart cycles (the seam path).
+     *
+     * The @p real_boot path (SURV-01) instead wires the reopened account for
+     * the REAL boot: the account messenger (CheckNonce needs a peer) and the
+     * durable nonce store (ConfigureDatabaseDependencies — the confirmed
+     * nonces survive the restart on the same path), then tm_->StartCore()
+     * with a bounded READY wait — ForceManagerReady is NEVER taken on this
+     * leg (Pitfall 5: the seam bypasses InitializeUTXOs).
      */
-    void ReopenStackOnSamePath()
+    void ReopenStackOnSamePath( bool real_boot = false )
     {
         if ( blockchain_ )
         {
@@ -486,6 +837,15 @@ public:
         ASSERT_NE( account_, nullptr );
         ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
 
+        if ( real_boot )
+        {
+            // The real-boot wiring order (GeniusNode's): messenger first, then
+            // the database dependencies — the durable nonce store reloads the
+            // confirmed nonces from the SAME path the pre-restart node wrote.
+            ASSERT_TRUE( account_->InitMessenger( pubs_ ) );
+            ASSERT_TRUE( account_->ConfigureDatabaseDependencies( db_ ) );
+        }
+
         blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
         ASSERT_NE( blockchain_, nullptr );
         constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
@@ -499,7 +859,345 @@ public:
                                                                       kTimestampTolerance,
                                                                       kMutabilityWindow );
         ASSERT_NE( tm_, nullptr );
-        ForceManagerReady();
+        if ( real_boot )
+        {
+            // SURV-01: the REAL boot — no ForceManagerReady anywhere on this
+            // leg. StartCore -> INITIALIZING -> InitializeUTXOs (the 19-04
+            // marker consult must keep the missing set empty for locally
+            // pruned creating refs) -> InitTransactions -> CheckNonce, whose
+            // trusting-local path passes once the nonce responder answers.
+            // The fixture's io_ is hand-driven (the CRDTFixture contract), so
+            // the wait drives the armed tick loop itself.
+            tm_->StartCore();
+            ASSERT_WAIT_FOR_CONDITION(
+                [this]
+                {
+                    TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+                    return tm_->GetState() == TransactionManager::State::READY;
+                },
+                std::chrono::seconds( 30 ),
+                "real StartCore boot reaches READY on the restarted pruned node",
+                nullptr );
+        }
+        else
+        {
+            ForceManagerReady();
+        }
+    }
+
+    //
+    // RestartMatrix helpers (SURV-01): the nonce responder, the certified
+    // pruned-frontier arm, foreign-source receive deliveries, and the
+    // outgoing-chain builder.
+    //
+
+    /// Spins the nonce responder: a second real pubsub host (loopback
+    /// advertised — the EraseNodeCollection makeNode wiring) carrying an
+    /// ephemeral account's AccountMessenger, dialed ONE direction to the
+    /// fixture host (the multi_node one-dial lesson). The responder subscribes
+    /// only to the messenger topics — never a CRDT topic — so no CRDT or
+    /// graphsync machinery exists on it.
+    void StartNonceResponder()
+    {
+        if ( nonce_responder_account_ != nullptr )
+        {
+            return;
+        }
+        const std::string responder_base = ( base_path / "nonce-responder" ).string();
+        boost::filesystem::create_directories( responder_base );
+
+        crdt::KeyPairFileStorage key_store( responder_base + "/key" );
+        auto                     key_pair = key_store.GetKeyPair();
+        ASSERT_TRUE( key_pair.has_value() );
+        if ( key_pair.has_error() )
+        {
+            return;
+        }
+        nonce_responder_pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( key_pair.value() );
+        const auto start_error  = nonce_responder_pubsub_->Start( 0, {}, "0.0.0.0", { "127.0.0.1" } ).get();
+        ASSERT_FALSE( start_error ) << "could not start the nonce responder host: " << start_error.message();
+        if ( start_error )
+        {
+            return;
+        }
+
+        nonce_responder_account_ = GeniusAccount::NewEphemeral( kTestTokenId );
+        ASSERT_NE( nonce_responder_account_, nullptr );
+        ASSERT_TRUE( nonce_responder_account_->InitMessenger( nonce_responder_pubsub_ ) );
+
+        // One-direction dial (two dials inside one gossip heartbeat collide on
+        // the shared source tuple), then wait for a connected host pair.
+        nonce_responder_pubsub_->AddPeers( { pubs_->GetInterfaceAddress() } );
+        auto                      responder_host = nonce_responder_pubsub_->GetHost();
+        auto                      fixture_info   = pubs_->GetHost()->getPeerInfo();
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&] { return responder_host->connectedness( fixture_info ) == libp2p::Host::Connectedness::CONNECTED; },
+            std::chrono::seconds( 10 ),
+            "nonce responder dials the fixture host",
+            &waited );
+    }
+
+    /// Measures (A4) the exact precondition CheckNonce's trusting-local path
+    /// needs: FetchNetworkNonce succeeds WITH an empty optional — a peer
+    /// answered the nonce request reporting it has no nonce for us. Probed
+    /// BEFORE StartCore so the boot's first CheckNonce passes deterministically.
+    void ProbeNonceResponderAnswersWithoutNonce()
+    {
+        ASSERT_NE( account_, nullptr );
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION(
+            [this]
+            {
+                auto network_nonce = account_->FetchNetworkNonce( std::chrono::milliseconds( 2000 ) );
+                return network_nonce.has_value() && !network_nonce.value().has_value();
+            },
+            std::chrono::seconds( 15 ),
+            "nonce responder answers without a nonce (the trusting-local CheckNonce precondition)",
+            &waited );
+    }
+
+    /// The SURV-01 pruned-frontier arm: a certified three-tx chain (nonces
+    /// 1..3) whose first two links become prunable — the producer's output is
+    /// consumed by the middle spender, whose change is consumed by the
+    /// frontier spender. After a settled prune cycle the PRUNED FRONTIER is
+    /// nonces 1 and 2 (markers present, values/blocks gone) while the
+    /// frontier tx (nonce 3, its change the live balance) survives with its
+    /// never-pruned certificate at slot <addr>:3 — the GATE-04 rung the next
+    /// outgoing tx must chain onto.
+    struct RestartArm
+    {
+        std::shared_ptr<TransferTransaction> producer; ///< nonce 1 (prunable link)
+        std::shared_ptr<TransferTransaction> middle;   ///< nonce 2 (prunable link)
+        std::shared_ptr<TransferTransaction> frontier; ///< nonce 3 (live frontier)
+        base::Hash256                        producer_outpoint;
+        base::Hash256                        middle_outpoint;
+        base::Hash256                        frontier_outpoint;
+    };
+
+    /// Seeds + certifies the RestartArm through the REAL stack (certificate
+    /// delivery applies every effect); driver puts between links keep the
+    /// prunable depths beyond the finality window and retire headships.
+    void SeedRestartArm( RestartArm &arm )
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+
+        arm.producer = MakeTransfer( 1, 1 );
+        ASSERT_NE( arm.producer, nullptr );
+        SeedTransaction( arm.producer );
+        SeedCertificate( arm.producer );
+        auto producer_txid = base::Hash256::fromReadableString( arm.producer->GetHash() );
+        ASSERT_FALSE( producer_txid.has_error() );
+        arm.producer_outpoint = producer_txid.value();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto state = utxo_mgr.GetOutPointState( arm.producer_outpoint, 0 );
+                return state.has_value() && state.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 5 ),
+            "certified producer output becomes READY",
+            nullptr );
+        PutSeedValue( "/seed/txpruner/rm-driver-1", "d1" );
+
+        arm.middle = MakeSpender( *arm.producer, 0, 2 );
+        ASSERT_NE( arm.middle, nullptr );
+        SeedTransaction( arm.middle );
+        SeedCertificate( arm.middle );
+        auto middle_txid = base::Hash256::fromReadableString( arm.middle->GetHash() );
+        ASSERT_FALSE( middle_txid.has_error() );
+        arm.middle_outpoint = middle_txid.value();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto spent  = utxo_mgr.GetOutPointState( arm.producer_outpoint, 0 );
+                auto change = utxo_mgr.GetOutPointState( arm.middle_outpoint, 0 );
+                return spent.has_value() && spent.value() == UTXOManager::UTXOState::UTXO_CONSUMED &&
+                       change.has_value() && change.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 5 ),
+            "certified middle spend applies (producer consumed, middle change READY)",
+            nullptr );
+        PutSeedValue( "/seed/txpruner/rm-driver-2", "d2" );
+
+        arm.frontier = MakeSpender( *arm.middle, 0, 3 );
+        ASSERT_NE( arm.frontier, nullptr );
+        SeedTransaction( arm.frontier );
+        SeedCertificate( arm.frontier );
+        auto frontier_txid = base::Hash256::fromReadableString( arm.frontier->GetHash() );
+        ASSERT_FALSE( frontier_txid.has_error() );
+        arm.frontier_outpoint = frontier_txid.value();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                auto spent  = utxo_mgr.GetOutPointState( arm.middle_outpoint, 0 );
+                auto change = utxo_mgr.GetOutPointState( arm.frontier_outpoint, 0 );
+                return spent.has_value() && spent.value() == UTXOManager::UTXOState::UTXO_CONSUMED &&
+                       change.has_value() && change.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 5 ),
+            "certified frontier spend applies (middle consumed, frontier change READY)",
+            nullptr );
+        PutSeedValue( "/seed/txpruner/rm-driver-3", "d3" );
+    }
+
+    /// Foreign-source transfer signed by @p source_account (the responder's
+    /// ephemeral account — CheckTransactionAuthorization verifies the tx
+    /// signature against the source address, so an unsigned foreign tx is
+    /// filtered before processing). @p spend is the optional input outpoint
+    /// (a still-unspent output of a prior foreign delivery); every output
+    /// list shape pays this account once, so UTXO effects are observable.
+    std::shared_ptr<TransferTransaction> MakeForeignTransfer(
+        GeniusAccount                                           &source_account,
+        uint64_t                                                 nonce,
+        const std::optional<std::pair<base::Hash256, uint32_t>> &spend )
+    {
+        std::vector<InputUTXOInfo> inputs;
+        if ( spend.has_value() )
+        {
+            InputUTXOInfo input;
+            input.txid_hash_  = spend->first;
+            input.output_idx_ = spend->second;
+            inputs.push_back( std::move( input ) );
+        }
+
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "transfer" );
+        dag.set_source_addr( source_account.GetAddress() );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() ) );
+
+        auto transfer = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( std::move( inputs ),
+                                      { OutputDestInfo{ 100, source_account.GetAddress(), kTestTokenId },
+                                        OutputDestInfo{ 100, account_->GetAddress(), kTestTokenId } },
+                                      std::move( dag ) ) );
+        transfer->MakeSignature( source_account );
+        return transfer;
+    }
+
+    /// The SURV-01 matrix context: the pruned-frontier arm plus the
+    /// pre-restart snapshots the post-restart state is compared against.
+    struct RestartMatrixContext
+    {
+        RestartArm arm;
+
+        std::set<std::string> utxo_keys_before; ///< /utxo/ record key set.
+        RawSnapshot           seals_before;     ///< tx-delta seals (GATE-03).
+        HeadSnapshot          heads_before;     ///< topic -> head CIDs.
+        uint64_t              max_height_before = 0;
+
+        std::string producer_cid; ///< delta CID (erased with the value).
+        std::string middle_cid;   ///< delta CID (erased with the value).
+        std::string frontier_cid; ///< delta CID (survives — live frontier).
+    };
+
+    /// Raw /utxo/ record key set — resurrection (a new key) and evidence loss
+    /// (a missing key) are both visible without byte-comparing values (the
+    /// legitimate redelivery replay rewrites consumed records as tombstones,
+    /// so values are NOT byte-stable across a restart — 19-04 key-decision 3).
+    std::set<std::string> UtxoRecordKeys()
+    {
+        std::set<std::string> keys;
+        for ( const auto &[key, value] : SnapshotPrefix( "/utxo/" ) )
+        {
+            keys.insert( key );
+        }
+        return keys;
+    }
+
+    /**
+     * The shared SURV-01 prologue (the matrix's first three beats): wire the
+     * durable nonce chain, seed + certify the pruned-frontier arm, prune the
+     * two consumed links through a settled cycle, snapshot the survival
+     * surfaces, mesh the nonce responder, and reopen the stack on the SAME
+     * path through the REAL StartCore boot (zero-fetch-bracketed).
+     */
+    void SeedPruneAndReopenRealBoot( RestartMatrixContext &context )
+    {
+        // The durable nonce chain: the messenger first (GeniusNode's order),
+        // then the nonce store — every certified confirmation below persists
+        // onto the same path the reopened node reloads.
+        ASSERT_TRUE( account_->InitMessenger( pubs_ ) );
+        ASSERT_TRUE( account_->ConfigureDatabaseDependencies( db_ ) );
+
+        SeedRestartArm( context.arm );
+        ASSERT_FALSE( HasFatalFailure() );
+
+        auto durable_nonce = account_->GetLocalConfirmedNonce();
+        ASSERT_TRUE( durable_nonce.has_value() );
+        ASSERT_EQ( durable_nonce.value(), 3u );
+
+        // Delta CIDs BEFORE the erase removes the map entries.
+        context.producer_cid = SnapshotMapEntry( TransactionManager::GetTransactionPath( *context.arm.producer ) );
+        context.middle_cid   = SnapshotMapEntry( TransactionManager::GetTransactionPath( *context.arm.middle ) );
+        context.frontier_cid = SnapshotMapEntry( TransactionManager::GetTransactionPath( *context.arm.frontier ) );
+        ASSERT_NE( context.producer_cid, "absent" );
+        ASSERT_NE( context.middle_cid, "absent" );
+        ASSERT_NE( context.frontier_cid, "absent" );
+
+        // The prune: a settled cycle erases the two consumed links (nonces 1-2).
+        auto pruner = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner, nullptr );
+        PruneCycleStats stats;
+        RunSettledCycle( *pruner, stats );
+        ASSERT_EQ( stats.erased, 2u );
+        for ( const auto *pruned : { context.arm.producer.get(), context.arm.middle.get() } )
+        {
+            auto lookup = PruneEligibility::LookupPrunedEntry( *db_, pruned->GetHash() );
+            ASSERT_TRUE( lookup.has_value() );
+            ASSERT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+        }
+        ASSERT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *context.arm.frontier ) } ).has_value() );
+
+        // Survival snapshots across the restart.
+        context.utxo_keys_before = UtxoRecordKeys();
+        context.seals_before     = SnapshotSeals( { context.producer_cid, context.middle_cid, context.frontier_cid } );
+        context.heads_before     = SnapshotHeads( context.max_height_before );
+        ASSERT_FALSE( context.utxo_keys_before.empty() );
+
+        // The nonce responder must answer BEFORE the boot: probe (the A4
+        // measurement) proves the trusting-local precondition holds, so the
+        // first CheckNonce inside StartCore passes deterministically.
+        StartNonceResponder();
+        ASSERT_FALSE( HasFatalFailure() );
+        ProbeNonceResponderAnswersWithoutNonce();
+        ASSERT_FALSE( HasFatalFailure() );
+
+        // The fixture-held registry pins pre-reopen db handles (the 19-04
+        // RocksDB-lock lesson): release it BEFORE reopening the same path.
+        registry_.reset();
+
+        // ZERO-FETCH BRACKET: the entire restart window — teardown, reopen,
+        // real StartCore boot, bounded READY wait — must fetch nothing.
+        crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+        ReopenStackOnSamePath( /*real_boot=*/true );
+        ASSERT_FALSE( HasFatalFailure() );
+    }
+
+    /// The outgoing-chain builder: spends @p source's output @p output_idx
+    /// under a PRE-BUILT dag (RunFillDAGStruct reserved the nonce and resolved
+    /// previous_hash through the ladder — the values under test).
+    std::shared_ptr<TransferTransaction> MakeSpenderWithDag( const GeniusTransaction &source,
+                                                             uint32_t                 output_idx,
+                                                             SGTransaction::DAGStruct dag )
+    {
+        auto source_txid = base::Hash256::fromReadableString( source.GetHash() );
+        EXPECT_FALSE( source_txid.has_error() );
+
+        InputUTXOInfo input;
+        input.txid_hash_  = source_txid.value();
+        input.output_idx_ = output_idx;
+        input.signature_  = account_->Sign( input.SerializeForSigning() );
+
+        auto spender = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( { std::move( input ) },
+                                      { OutputDestInfo{ 100, account_->GetAddress(), kTestTokenId } },
+                                      std::move( dag ) ) );
+        spender->MakeSignature( *account_ );
+        return spender;
     }
 
     //
@@ -1923,3 +2621,475 @@ INSTANTIATE_TEST_SUITE_P( CrashFixedPointMatrix,
                           TxPrunerCrashFixedPointTest,
                           ::testing::ValuesIn( kCrashKillPoints ),
                           CrashKillName );
+
+//
+// ---------------------------------------------------------------------------
+// RebuildGuard family — GATE-05's checkpoint-rebuild half (D-01): a checkpoint
+// mismatch on a pruned node must clear-and-rebuild without resurrecting spent
+// outputs (preserve-clear + PutUTXO duplicate check by construction, belt
+// proven via the tampered-record induction), without falsely rejecting the
+// legitimate spender's own rebuild replay (the derived hazard), and without
+// burning recovery requests on locally-pruned creating txs (marker consult).
+// Boot runs the REAL InitializeUTXOs on the reopened stack (the reload shape
+// 19-01 proved is the real-world wipe path); the StartCore/network leg is
+// 19-06's restart matrix and is deliberately not duplicated here.
+// ---------------------------------------------------------------------------
+//
+
+/// Case 1 (no resurrection): retained producer + pruned spender. The preserved
+/// CONSUMED evidence must block re-creation of the spent outpoint and survive
+/// the clear ON DISK — the Pitfall-2 anti-vacuous proof (a SetUTXOs-shaped
+/// clear would have wiped the prefix and the rebuild would re-create the
+/// outpoint READY).
+TEST_F( TxPrunerTest, RebuildGuardNoResurrectionKeepsPreservedConsumeEvidence )
+{
+    RebuildArm arm;
+    SeedMismatchArm( arm );
+    ASSERT_FALSE( HasFatalFailure() );
+    ASSERT_NO_FATAL_FAILURE( ArmMismatchByLosingChangeOutput( arm ) );
+
+    // The pruned-spender scenario: the spender's history is physically gone
+    // (marker present) while the producer stays retained.
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( arm.spender->GetHash() ).has_value() );
+
+    RebuildTransactionManagerOnly();
+    ASSERT_FALSE( HasFatalFailure() );
+
+    TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *tm_ );
+
+    auto      &utxo_mgr    = account_->GetUTXOManager();
+    const auto spent_state = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( spent_state.has_value() );
+    EXPECT_NE( spent_state.value(), UTXOManager::UTXOState::UTXO_READY ) << "spent outpoint resurrected READY";
+    EXPECT_EQ( spent_state.value(), UTXOManager::UTXOState::UTXO_CONSUMED );
+    const auto spender = utxo_mgr.GetOutPointSpender( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( spender.has_value() );
+    EXPECT_EQ( spender.value().toReadableString(), arm.spender->GetHash() );
+
+    // Disk-level proof: the CONSUMED record with its spent_by_txid survived
+    // the clear on the raw /utxo/ prefix.
+    const auto record = FindUtxoRecord( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( record.has_value() );
+    EXPECT_EQ( record->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+    ASSERT_TRUE( record->second.has_spent_by_txid() );
+    EXPECT_EQ( record->second.spent_by_txid(),
+               std::string( reinterpret_cast<const char *>( SpenderHash( *arm.spender ).data() ),
+                            SpenderHash( *arm.spender ).size() ) );
+
+    // The producer replay processed fine — nothing went missing, nothing to
+    // re-request (zero doomed recovery requests).
+    EXPECT_FALSE( tm_->HasMissingTxHashes() );
+
+    // The pruned spender's change output did not come back either: the clear
+    // dropped it (it was READY) and only its erased spender could re-create it.
+    const auto change_state = utxo_mgr.GetOutPointState( arm.change_outpoint, 0 );
+    EXPECT_FALSE( change_state.has_value() ) << "pruned spender's change output resurrected";
+}
+
+/// Case 2 (own replay): a spender whose transaction SURVIVES but whose inputs'
+/// CONSUMED evidence is preserved through the clear. The rebuild replays it
+/// without the double-spend reject and re-creates its change output; a FOREIGN
+/// certified spender of the same input still rejects (T-19-0402).
+TEST_F( TxPrunerTest, RebuildGuardOwnReplayReappliesSpenderChangeWithoutDoubleSpendReject )
+{
+    RebuildArm arm;
+    SeedMismatchArm( arm );
+    ASSERT_FALSE( HasFatalFailure() );
+    ASSERT_NO_FATAL_FAILURE( ArmMismatchByLosingChangeOutput( arm ) );
+
+    // The foreign conflicting spender (different nonce): driven straight
+    // through the CONFIRMED parse below — the exact production code path the
+    // rebuild would take for it — after the rebuild settled, so the reject it
+    // must hit is order-independent.
+    auto conflicting = MakeSpender( *arm.producer, 0, 3 );
+
+    RebuildTransactionManagerOnly();
+    ASSERT_FALSE( HasFatalFailure() );
+
+    TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *tm_ );
+
+    auto &utxo_mgr = account_->GetUTXOManager();
+
+    // The legitimate spender's change output is READY after the rebuild —
+    // impossible under the double-spend reject (the reject precedes
+    // PutProducedUTXOs, and the CONFIRMED status below is the same code path
+    // as the "Rejected double-spending transfer" ERROR: the status proves the
+    // reject never fired).
+    const auto change_state = utxo_mgr.GetOutPointState( arm.change_outpoint, 0 );
+    ASSERT_TRUE( change_state.has_value() );
+    EXPECT_EQ( change_state.value(), UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_EQ( tm_->GetTransactionStatusByTxId( arm.spender->GetHash() ),
+               TransactionManager::TransactionStatus::CONFIRMED );
+
+    // The consumed input was not resurrected by the producer's replay.
+    const auto spent_state = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( spent_state.has_value() );
+    EXPECT_EQ( spent_state.value(), UTXOManager::UTXOState::UTXO_CONSUMED );
+
+    // The foreign spender still rejects: its input's spender-of-record is the
+    // legitimate spender, so the own-replay discriminator must NOT accept it
+    // (T-19-0402 — accepting a foreign spender would be the actual bypass).
+    const auto conflicting_result = TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+        *tm_,
+        conflicting,
+        TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( conflicting_result.has_error() );
+    const auto conflicting_state = utxo_mgr.GetOutPointState(
+        base::Hash256::fromReadableString( conflicting->GetHash() ).value(),
+        0 );
+    EXPECT_FALSE( conflicting_state.has_value() ) << "foreign double spend credited its output";
+}
+
+/// Case 3 (the MANDATORY belt induction): the CONSUMED entry removed post-clear
+/// so PutUTXO re-creates the outpoint READY, while a durable CONSUMED record
+/// with the spender binding survives — the crosscheck must DETECT and REVERT
+/// (no exercised-by-construction downgrade).
+TEST_F( TxPrunerTest, RebuildGuardCrosscheckBeltRevertsResurrectedOutpoint )
+{
+    RebuildArm arm;
+    SeedMismatchArm( arm );
+    ASSERT_FALSE( HasFatalFailure() );
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( arm.spender->GetHash() ).has_value() );
+
+    auto       &utxo_mgr = account_->GetUTXOManager();
+    const auto &owner    = account_->GetAddress();
+
+    // Re-index through a reload first: the live consume above leaves the
+    // CONSUMED entry orphaned from the address index (the 19-01 finding), and
+    // the removal below must see the index-resident shape.
+    ASSERT_TRUE( utxo_mgr.LoadUTXOs( db_->GetDataStore() ).has_value() );
+
+    // Arm: the post-clear CONSUMED entry is removed and the producer replay's
+    // PutUTXO re-creates the outpoint READY (the resurrection the belt exists
+    // for — exactly what the by-construction duplicate check would have
+    // blocked had the entry survived).
+    ASSERT_TRUE( utxo_mgr.DeleteUTXO( arm.spent_outpoint, 0, owner ).has_value() );
+    const auto outputs = arm.producer->GetProducedUTXOs();
+    ASSERT_TRUE( outputs.has_value() && !outputs->empty() );
+    const auto resurrected = utxo_mgr.PutUTXO( outputs->front(), outputs->front().GetOwnerAddress() );
+    ASSERT_TRUE( resurrected.has_value() && resurrected.value() );
+    const auto pre_state = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( pre_state.has_value() );
+    ASSERT_EQ( pre_state.value(), UTXOManager::UTXOState::UTXO_READY );
+
+    // Divergence: the durable /utxo/ record still carries the CONSUMED
+    // evidence with the spender binding (the one-corrupted-record class,
+    // T-19-0401) — the in-memory READY entry can never name its spender.
+    const auto record = FindUtxoRecord( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( record.has_value() );
+    ASSERT_NO_FATAL_FAILURE( TamperUtxoRecordToConsumed( record->first, SpenderHash( *arm.spender ) ) );
+
+    const size_t reverted = TransactionManagerPendingLifecycleTestAccess::RunCrosscheckRebuiltUtxos( *tm_ );
+    EXPECT_EQ( reverted, 1u );
+
+    const auto post_state = utxo_mgr.GetOutPointState( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( post_state.has_value() );
+    EXPECT_EQ( post_state.value(), UTXOManager::UTXOState::UTXO_CONSUMED );
+    const auto spender_after = utxo_mgr.GetOutPointSpender( arm.spent_outpoint, 0 );
+    ASSERT_TRUE( spender_after.has_value() );
+    EXPECT_EQ( spender_after.value().toReadableString(), arm.spender->GetHash() );
+}
+
+/// Case 4a (marker consult, pruned arm): a local READY UTXO whose creating tx
+/// was pruned locally (marker present, value absent) is NOT relevant missing
+/// history — no recovery request, no missing-set entry, boot proceeds.
+TEST_F( TxPrunerTest, RebuildGuardMarkerConsultSkipsLocallyPrunedCreatingTx )
+{
+    auto pruned_producer = MakeTransfer( 1, 1 );
+    SeedTransaction( pruned_producer );
+    // Move the topic head past the producer's delta (a topic head never
+    // erases — GATE-03), then track its output and prune the history.
+    PutSeedValue( "rebuildguard/marker-consult/head", "advance" );
+    TrackOutputs( *pruned_producer );
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( pruned_producer->GetHash() ).has_value() );
+
+    // No checkpoint: the local-UTXO walk (the insert site under test) runs.
+    TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *tm_ );
+
+    EXPECT_FALSE( tm_->HasMissingTxHashes() );
+}
+
+/// Case 4b (marker consult, negative control): an UNMARKED missing creating tx
+/// keeps the 18-landed bounded recovery path exactly as-is (the insert fires).
+TEST_F( TxPrunerTest, RebuildGuardMarkerConsultKeepsBoundedRecoveryForUnmarkedCreatingTx )
+{
+    auto ghost_producer = MakeTransfer( 1, 1 ); // never seeded: no value, no marker
+    TrackOutputs( *ghost_producer );
+
+    TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *tm_ );
+
+    EXPECT_TRUE( tm_->HasMissingTxHashes() );
+}
+
+// ---------------------------------------------------------------------------
+// RestartMatrix: SC-1/SURV-01 — the full restart matrix on a pruned node
+// ---------------------------------------------------------------------------
+
+/**
+ * The REAL-boot leg. A pruned node (frontier nonces 1-2 erased with markers,
+ * the certified nonce-3 frontier alive) is restarted on the SAME database
+ * path and booted through the REAL TransactionManager::StartCore — never
+ * ForceManagerReady (Pitfall 5) — reaching READY within a bounded wait while
+ * making ZERO pruned-CID fetch attempts across the ENTIRE restart window:
+ * the 19-03 retry guard keeps the ladder still, the 19-04 marker consult
+ * keeps the missing set empty for the locally-pruned creating refs, and the
+ * spend evidence + live balance + seals + heads all survive the restart.
+ *
+ * READY strategy: (a) nonce responder. The plan's primary (b) — a pre-seeded
+ * local confirmed nonce — cannot fire on this fixture: CheckNonce (read in
+ * full) only passes a Light node when FetchNetworkNonce SUCCEEDS (with
+ * "no nonce info" or a network nonce <= local), and with no answering peer
+ * the fetch errors and fails closed regardless of any local pre-seed. The
+ * responder answers "no nonce for that address" — the trusting-local path.
+ */
+TEST_F( TxPrunerTest, RestartMatrix_RealBootPrunedNodeReachesReadyWithZeroPrunedCidFetches )
+{
+    RestartMatrixContext context;
+    SeedPruneAndReopenRealBoot( context );
+    ASSERT_FALSE( HasFatalFailure() );
+
+    // The real boot's own gates.
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_FALSE( tm_->HasMissingTxHashes() ); // pruned creating refs never entered the set
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+    // The per-instance ladder observable (dedup-safe, the 19-07 lesson): no
+    // failed-root retry entry exists on the reopened datastore.
+    EXPECT_EQ( db_->GetCRDTDataStore()->GetFailedRootRetryCountForTest(), 0u );
+
+    // The pruned frontier is intact and never resurrected.
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *context.arm.producer ) } ).has_error() );
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *context.arm.middle ) } ).has_error() );
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *context.arm.frontier ) } ).has_value() );
+    const RawSnapshot erased_blocks = SnapshotBlocks( { context.producer_cid, context.middle_cid } );
+    EXPECT_EQ( erased_blocks.at( context.producer_cid ), "absent" );
+    EXPECT_EQ( erased_blocks.at( context.middle_cid ), "absent" );
+    EXPECT_NE( SnapshotBlocks( { context.frontier_cid } ).at( context.frontier_cid ), "absent" );
+
+    // Spend evidence + live balance survived the restart.
+    auto      &utxo_mgr       = account_->GetUTXOManager();
+    const auto producer_state = utxo_mgr.GetOutPointState( context.arm.producer_outpoint, 0 );
+    ASSERT_TRUE( producer_state.has_value() );
+    EXPECT_EQ( producer_state.value(), UTXOManager::UTXOState::UTXO_CONSUMED );
+    const auto middle_state = utxo_mgr.GetOutPointState( context.arm.middle_outpoint, 0 );
+    ASSERT_TRUE( middle_state.has_value() );
+    EXPECT_EQ( middle_state.value(), UTXOManager::UTXOState::UTXO_CONSUMED );
+    const auto frontier_state = utxo_mgr.GetOutPointState( context.arm.frontier_outpoint, 0 );
+    ASSERT_TRUE( frontier_state.has_value() );
+    EXPECT_EQ( frontier_state.value(), UTXOManager::UTXOState::UTXO_READY );
+
+    // The /utxo/ record key set is identical (no resurrection, no loss);
+    // seals are byte-identical; the DAG heads are unchanged.
+    EXPECT_EQ( UtxoRecordKeys(), context.utxo_keys_before );
+    EXPECT_EQ( SnapshotSeals( { context.producer_cid, context.middle_cid, context.frontier_cid } ),
+               context.seals_before );
+    uint64_t           max_height_after = 0;
+    const HeadSnapshot heads_after      = SnapshotHeads( max_height_after );
+    EXPECT_EQ( heads_after, context.heads_before );
+
+    // The durable nonce chain survived the restart (the reloaded local
+    // confirmed nonce is the frontier's certified nonce).
+    auto local_nonce = account_->GetLocalConfirmedNonce();
+    ASSERT_TRUE( local_nonce.has_value() );
+    EXPECT_EQ( local_nonce.value(), 3u );
+}
+
+/**
+ * The seam companion (cheap regression breadth): the SAME zero-fetch
+ * invariant across the db-restart window on the ForceManagerReady seam path.
+ * The seam bypasses InitializeUTXOs/InitTransactions entirely (Pitfall 5 —
+ * which is exactly why it can never be the only leg), so this case proves
+ * the RESTART machinery itself fetches nothing; the boot-truth proof lives
+ * in the real-boot leg above.
+ */
+TEST_F( TxPrunerTest, RestartMatrix_SeamBootZeroFetchCompanion )
+{
+    RestartArm arm;
+    SeedRestartArm( arm );
+    ASSERT_FALSE( HasFatalFailure() );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 2u );
+
+    registry_.reset(); // release pre-reopen db handles (the 19-04 lock lesson)
+
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    ReopenStackOnSamePath(); // seam path: ForceManagerReady
+    ASSERT_FALSE( HasFatalFailure() );
+
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+    EXPECT_FALSE( tm_->HasMissingTxHashes() );
+
+    // The pruned frontier is still pruned on the seam path too.
+    for ( const auto *pruned : { arm.producer.get(), arm.middle.get() } )
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, pruned->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+}
+
+/**
+ * The full SC-1/SURV-01 matrix, in the sentence's own order: prune ->
+ * restart (REAL StartCore) -> READY with zero pruned-CID fetches -> new-tip
+ * sync -> receive/spend -> the next outgoing tx chains correctly through
+ * the pruned frontier. Instantiated TWICE (MatrixDoubleRun): the whole
+ * family runs twice consecutively, each run on its own fresh DB path (a
+ * fresh fixture per instantiation — the double-run stability gate).
+ */
+class TxPrunerRestartMatrixTest : public TxPrunerTest, public ::testing::WithParamInterface<uint32_t>
+{
+};
+
+TEST_P( TxPrunerRestartMatrixTest, FullMatrixPruneRestartReadyTipReceiveOutgoing )
+{
+    RestartMatrixContext context;
+    SeedPruneAndReopenRealBoot( context );
+    ASSERT_FALSE( HasFatalFailure() );
+
+    // Beats 1-3 (prune -> restart -> READY): the zero-fetch boot gates.
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_FALSE( tm_->HasMissingTxHashes() );
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+    EXPECT_EQ( db_->GetCRDTDataStore()->GetFailedRootRetryCountForTest(), 0u );
+
+    //
+    // Beat 4a — TipSync: a new tip arrives on the fixture's real topic path
+    // (a foreign-source transfer certified at its slot) and the restarted
+    // pruned node processes it: tracked map + UTXO effects, tip advanced,
+    // still zero fetches.
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    auto incoming_tip = MakeForeignTransfer( *nonce_responder_account_, 1, std::nullopt );
+    ASSERT_NE( incoming_tip, nullptr );
+    SeedTransaction( incoming_tip );
+    SeedCertificate( incoming_tip );
+    auto tip_txid = base::Hash256::fromReadableString( incoming_tip->GetHash() );
+    ASSERT_FALSE( tip_txid.has_error() );
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+                auto tracked = tm_->GetTransactionStatusByTxId( incoming_tip->GetHash() );
+                if ( tracked == TransactionManager::TransactionStatus::INVALID )
+                {
+                    return false;
+                }
+                auto paid = utxo_mgr.GetOutPointState( tip_txid.value(), 1 ); // output 1 pays this account
+                return paid.has_value() && paid.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 10 ),
+            "new-tip delivery is processed (tracked map + UTXO effects)",
+            nullptr );
+    }
+    {
+        uint64_t max_height_tip = 0;
+        SnapshotHeads( max_height_tip );
+        EXPECT_GT( max_height_tip, context.max_height_before ) << "the tip advanced past the pre-restart height";
+    }
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+
+    //
+    // Beat 4b — ReceiveSpend: a second foreign delivery SPENDS the still
+    // -unspent output 0 of the tip (the responder's own output) and pays this
+    // account again: the real ConsumeUTXOs branch + a new READY output.
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    auto incoming_spend = MakeForeignTransfer( *nonce_responder_account_, 2, std::make_pair( tip_txid.value(), 0u ) );
+    ASSERT_NE( incoming_spend, nullptr );
+    SeedTransaction( incoming_spend );
+    SeedCertificate( incoming_spend );
+    auto spend_txid = base::Hash256::fromReadableString( incoming_spend->GetHash() );
+    ASSERT_FALSE( spend_txid.has_error() );
+    {
+        auto &utxo_mgr = account_->GetUTXOManager();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+                auto spent = utxo_mgr.GetOutPointState( tip_txid.value(), 0 );
+                auto paid  = utxo_mgr.GetOutPointState( spend_txid.value(), 1 );
+                return spent.has_value() && spent.value() == UTXOManager::UTXOState::UTXO_CONSUMED &&
+                       paid.has_value() && paid.value() == UTXOManager::UTXOState::UTXO_READY;
+            },
+            std::chrono::seconds( 10 ),
+            "incoming spend of a still-unspent output applies its UTXO effects",
+            nullptr );
+        const auto spender_of_record = utxo_mgr.GetOutPointSpender( tip_txid.value(), 0 );
+        ASSERT_TRUE( spender_of_record.has_value() );
+        EXPECT_EQ( spender_of_record.value().toReadableString(), incoming_spend->GetHash() );
+    }
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+
+    //
+    // Beat 5 — OutgoingChain: the next outgoing transaction carries the
+    // durable-chain nonce and chains onto the GATE-04 resolution of the
+    // pruned frontier (asserted BY COMPARISON with the ladder, never by
+    // re-deriving the rule).
+    //
+    crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    constexpr uint64_t kExpectedNextNonce = 4; // durable chain: certified nonces 1..3
+    auto               local_nonce        = account_->GetLocalConfirmedNonce();
+    ASSERT_TRUE( local_nonce.has_value() );
+    ASSERT_EQ( local_nonce.value(), 3u );
+
+    const std::string ladder_hash = TransactionManagerPendingLifecycleTestAccess::OutgoingPreviousHash(
+        *tm_,
+        kExpectedNextNonce );
+    ASSERT_FALSE( ladder_hash.empty() ) << "the ladder failed to resolve the pruned frontier";
+    EXPECT_EQ( ladder_hash, context.arm.frontier->GetHash() ) << "the chain resolves onto the certified frontier";
+    EXPECT_NE( ladder_hash, context.arm.producer->GetHash() ) << "resolved through a PRUNED tx";
+    EXPECT_NE( ladder_hash, context.arm.middle->GetHash() ) << "resolved through a PRUNED tx";
+
+    // Belt: the cert-slot rung's own data — the never-pruned certificate at
+    // slot <addr>:3 embeds exactly the hash the ladder answered with.
+    {
+        auto slot_cert = blockchain_->GetCertificateBySlot( account_->GetAddress() + ":3" );
+        ASSERT_FALSE( slot_cert.has_error() );
+        auto slot_subject = ConsensusManager::DecodeNonceSubject( slot_cert.value().proposal().subject() );
+        ASSERT_FALSE( slot_subject.has_error() );
+        ASSERT_EQ( slot_subject.value().nonce(), 3u );
+        auto slot_embedded = TransactionManager::DeSerializeEmbeddedTransaction( slot_subject.value().transaction() );
+        ASSERT_TRUE( slot_embedded.has_value() && slot_embedded.value() );
+        EXPECT_EQ( slot_embedded.value()->GetHash(), ladder_hash );
+    }
+
+    // Build through the production DAG fill (reserves the nonce + resolves
+    // previous_hash), enqueue through the production queue, and drive the
+    // send: the self-running tick loop (proven live — it carried the boot)
+    // processes it without any pruned-CID fetch.
+    auto dag = TransactionManagerPendingLifecycleTestAccess::RunFillDAGStruct( *tm_ );
+    EXPECT_EQ( dag.nonce(), kExpectedNextNonce );
+    EXPECT_EQ( dag.previous_hash(), ladder_hash );
+
+    auto outgoing = MakeSpenderWithDag( *context.arm.frontier, 0, dag );
+    ASSERT_NE( outgoing, nullptr );
+    TransactionManagerPendingLifecycleTestAccess::EnqueueOutgoing( *tm_, outgoing, db_->BeginTransaction() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            TransactionManagerPendingLifecycleTestAccess::RunTickOnce( *tm_ );
+            auto status = tm_->GetTransactionStatusByTxId( outgoing->GetHash() );
+            return status != TransactionManager::TransactionStatus::CREATED &&
+                   status != TransactionManager::TransactionStatus::INVALID;
+        },
+        std::chrono::seconds( 15 ),
+        "post-restart outgoing send is driven past CREATED",
+        nullptr );
+    // The send published durably and the manager is still READY (the 19-02
+    // READY-preserving behavior — a send-path failure must never wedge it).
+    EXPECT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *outgoing ) } ).has_value() );
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::READY );
+    EXPECT_EQ( crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0u );
+}
+
+INSTANTIATE_TEST_SUITE_P( RestartMatrixDoubleRun,
+                          TxPrunerRestartMatrixTest,
+                          ::testing::Range<uint32_t>( 0, 2 ),
+                          []( const ::testing::TestParamInfo<uint32_t> &info )
+                          { return "Round" + std::to_string( info.param ); } );

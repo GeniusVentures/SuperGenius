@@ -1840,6 +1840,25 @@ namespace sgns::crdt
 
         for ( const auto &cid : due )
         {
+            // SC-5 retry guard: the never-erased seal marker may have appeared
+            // since this root failed (processed through another root's walk,
+            // since pruned). Terminal BEFORE the fetch-attempt counter site:
+            // evidence first, never a doomed fetch on unknown state.
+            auto resolved_result = dagSyncer_->isResolved( cid );
+            if ( resolved_result.has_failure() )
+            {
+                logger_->error( "RetryDueFailedRoots: error checking resolved state for CID {}",
+                                cid.toString().value() );
+                continue;
+            }
+            if ( resolved_result.value() )
+            {
+                logger_->info( "RetryDueFailedRoots: pruned/resolved root {} terminal, skipping",
+                               cid.toString().value() );
+                std::lock_guard lock( dagWorkerMutex_ );
+                ClearFailedRootRetryLocked( cid );
+                continue;
+            }
             // EnqueueRootCID flips a FAILED pending_jobs_ entry back to PENDING itself.
             (void) dagSyncer_->DeleteCIDBlock( cid );
             if ( EnqueueRootCID( cid ) )
@@ -2302,6 +2321,28 @@ namespace sgns::crdt
     void CrdtDatastore::ResetRootFetchAttemptsForTest()
     {
         root_fetch_attempts_for_test_.store( 0, std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ScheduleFailedRootRetryForTest( CrdtDatastore &datastore, const CID &cid )
+    {
+        std::lock_guard lock( datastore.dagWorkerMutex_ );
+        datastore.ScheduleFailedRootRetryLocked( cid );
+    }
+
+    void CrdtDatastore::ScheduleStalledDeltaRetryForTest( CrdtDatastore &datastore, const CID &cid )
+    {
+        std::lock_guard lock( datastore.dagWorkerMutex_ );
+        datastore.ScheduleStalledDeltaRetryLocked( cid );
+    }
+
+    size_t CrdtDatastore::GetFailedRootRetryCountForTest() const
+    {
+        return failedRootRetryCount_.load( std::memory_order_relaxed );
+    }
+
+    size_t CrdtDatastore::GetStalledDeltaRetryCountForTest() const
+    {
+        return stalledDeltaRetryCount_.load( std::memory_order_relaxed );
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()

@@ -50,6 +50,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
     {
         case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
             return "TRUST_POLICY_NOT_READY";
+        case sgns::TransactionManager::Error::PRE_BROADCAST_VALIDATION:
+            return "PRE_BROADCAST_VALIDATION";
     }
     return "Unknown TransactionManager error";
 }
@@ -578,6 +580,52 @@ namespace sgns
                         break;
                     }
 
+                    // D-02 half 1: a typed pre-broadcast failure never published
+                    // anything (staged Puts die with the uncommitted
+                    // AtomicTransaction), so waiting for a nonce confirmation
+                    // that cannot arrive would wedge every later send (the
+                    // failed-send-wedges-tm-in-syncing incident). Roll back and
+                    // STAY READY; the FAILED transition releases the reserved
+                    // nonce, so the next send reuses it cleanly.
+                    if ( err == make_error_code( Error::PRE_BROADCAST_VALIDATION ) )
+                    {
+                        m_logger->warn( "Pre-broadcast validation failed for tx {} ({}). Rolling back, staying READY",
+                                        tx_queue_m.front().first.front().first->GetHash(),
+                                        err.message() );
+
+                        auto rollback_result = RollbackTransactions( tx_queue_m.front() );
+                        if ( rollback_result.has_error() )
+                        {
+                            // WR-03 (review): the failure is deterministic —
+                            // without a cap this re-fails every ~300ms forever.
+                            // Drop the batch after 3 consecutive rollback
+                            // failures (loudly) so the manager stays usable;
+                            // the nonce was already released by FAILED.
+                            static constexpr uint32_t kMaxRollbackFailures = 3;
+                            ++pre_broadcast_rollback_failures_;
+                            m_logger->error( "{} error, couldn't roll back pre-broadcast failure "
+                                             "(attempt {}/{}) - {}",
+                                             __func__,
+                                             pre_broadcast_rollback_failures_,
+                                             kMaxRollbackFailures,
+                                             pre_broadcast_rollback_failures_ >= kMaxRollbackFailures
+                                                 ? "dropping the batch"
+                                                 : "retrying" );
+                            if ( pre_broadcast_rollback_failures_ >= kMaxRollbackFailures )
+                            {
+                                pre_broadcast_rollback_failures_ = 0;
+                                tx_queue_m.pop_front();
+                            }
+                            break;
+                        }
+                        pre_broadcast_rollback_failures_ = 0;
+                        tx_queue_m.pop_front();
+                        break;
+                    }
+
+                    // D-02 half 2: record when SYNCING recovery started so
+                    // SyncNonce's bounded exit can measure the window.
+                    syncing_since_ = std::chrono::steady_clock::now();
                     ChangeState( State::SYNCING );
 
                     m_logger->error( "Error in SendTransactionItem: {}", err.message() );
@@ -2057,7 +2105,7 @@ namespace sgns
                                  transaction->GetHash(),
                                  preflight_embedded_tx.ByteSizeLong(),
                                  MAX_PUBSUB_TX_BYTES );
-                return outcome::failure( std::errc::message_size );
+                return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
             }
 
             if ( transaction->HasUTXOParameters() )
@@ -2068,7 +2116,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
 
                 const auto &[preflight_chain, preflight_validator] = SelectInputValidator( *transaction );
@@ -2079,7 +2127,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
             }
         }
@@ -2652,7 +2700,43 @@ namespace sgns
                                             return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
                                                 .has_value();
                                         } );
+            // D-01 derived hazard: a checkpoint-mismatch clear preserves the
+            // CONSUMED evidence, so the legitimate spender's OWN rebuild replay
+            // finds its inputs consumed by itself while the outputs-present
+            // heuristic above can never pass (the clear just dropped every
+            // READY entry, its outputs included). Spend evidence naming THIS
+            // transaction as the spender of every consumed input is proof of
+            // idempotent replay: proceed and let the consume + produce below
+            // re-apply. Any other spender-of-record stays a genuine double
+            // spend and still rejects.
+            bool own_replay = false;
             if ( !replayed )
+            {
+                std::optional<base::Hash256> own_txid;
+                if ( auto parsed = base::Hash256::fromReadableString( transfer_tx->GetHash() ); parsed.has_value() )
+                {
+                    own_txid = parsed.value();
+                }
+                own_replay = own_txid.has_value() &&
+                             std::all_of( inputs.begin(),
+                                          inputs.end(),
+                                          [&]( const InputUTXOInfo &input )
+                                          {
+                                              if ( !utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) )
+                                              {
+                                                  return true;
+                                              }
+                                              auto spender = utxo_mgr.GetOutPointSpender( input.txid_hash_,
+                                                                                          input.output_idx_ );
+                                              return spender.has_value() && spender.value() == own_txid.value();
+                                          } );
+                if ( own_replay )
+                {
+                    m_logger->info( "Recognized own rebuild replay of transfer {} over preserved spend evidence",
+                                    transfer_tx->GetHash() );
+                }
+            }
+            if ( !own_replay && !replayed )
             {
                 m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
                 return std::errc::invalid_argument;
@@ -3232,6 +3316,19 @@ namespace sgns
         return missing_tx_max_attempts_for_test_.load();
     }
 
+    std::atomic<std::chrono::milliseconds::rep> TransactionManager::syncing_exit_timeout_for_test_{
+        k_syncing_exit_timeout.count() };
+
+    void TransactionManager::SetSyncingExitTimeoutForTest( std::chrono::milliseconds timeout )
+    {
+        syncing_exit_timeout_for_test_.store( timeout.count() );
+    }
+
+    std::chrono::milliseconds TransactionManager::GetSyncingExitTimeoutForTest()
+    {
+        return std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+    }
+
     void TransactionManager::InitializeUTXOs()
     {
         {
@@ -3250,6 +3347,11 @@ namespace sgns
         bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
         auto monitored_networks = GetMonitoredNetworkIDs();
 
+        // Set when the checkpoint-mismatch clear below ran: only that path
+        // gap-fills a UTXO set that previously held spend evidence, so only it
+        // earns the post-rebuild crosscheck (D-01).
+        bool mismatch_rebuild = false;
+
         if ( has_local_utxos )
         {
             auto checkpoint_result = account_m->GetUTXOManager().LoadLatestCheckpoint( account_m->GetAddress() );
@@ -3263,11 +3365,16 @@ namespace sgns
                 const auto local_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( account_m->GetAddress() );
                 if ( local_root != checkpoint_result.value()->utxo_merkle_root )
                 {
-                    m_logger->warn(
-                        "Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding" );
+                    m_logger->warn( "Local UTXO root mismatch with checkpoint during init. Clearing unspent UTXOs "
+                                    "and rebuilding (consumed spend evidence preserved)" );
 
-                    auto clear_result = account_m->GetUTXOManager().SetUTXOs( std::vector<GeniusUTXO>{},
-                                                                              account_m->GetAddress() );
+                    // D-01 (GATE-05 rebuild half): the clear must preserve
+                    // CONSUMED records — with their spent_by_txid evidence — so
+                    // PutUTXO's existing-entry duplicate check refuses
+                    // re-creation of spent outpoints during the rebuild below.
+                    // SetUTXOs' wipe-everything clear would drop that evidence
+                    // and open the double-spend window instead.
+                    auto clear_result = account_m->GetUTXOManager().ClearUnspentKeepConsumed( account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
                         m_logger->error( "Failed to clear local UTXOs after checkpoint mismatch: {}",
@@ -3275,7 +3382,8 @@ namespace sgns
                     }
                     else
                     {
-                        has_local_utxos = false;
+                        has_local_utxos  = false;
+                        mismatch_rebuild = true;
                     }
                 }
             }
@@ -3285,6 +3393,12 @@ namespace sgns
         {
             m_logger->info( "No local or network UTXOs found, querying transactions to mount UTXOs" );
             QueryTransactions();
+            if ( mismatch_rebuild )
+            {
+                // D-01 belt: prove the rebuild left no spent outpoint
+                // spendable-ready before boot continues.
+                (void) CrosscheckRebuiltUtxos();
+            }
             return;
         }
 
@@ -3329,12 +3443,126 @@ namespace sgns
                     // Incomplete history for another account must not prevent this account from starting.
                     if ( !processed && address == account_m->GetAddress() )
                     {
-                        std::lock_guard missing_lock( missing_tx_mutex_ );
-                        missing_tx_hashes_.insert( tx_hash );
+                        // GATE-05 / D-01: a creating tx that was pruned locally
+                        // is not relevant missing history — the durable UTXO set
+                        // is authoritative and every recovery request for it is
+                        // doomed by construction. Consult the pruned-marker
+                        // evidence (PruneEligibility is the marker's one home)
+                        // BEFORE touching the missing set; only a clean PRUNED
+                        // verdict skips. Anything else — NOT_FOUND, the
+                        // value-present invariant violation, or a lookup error —
+                        // keeps the 18-landed bounded recovery path exactly
+                        // as-is (never guess).
+                        bool pruned_locally = false;
+                        auto pruned_lookup  = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+                        if ( pruned_lookup.has_error() )
+                        {
+                            m_logger->warn( "Pruned-marker lookup failed for missing creating tx {} ({}); "
+                                            "keeping bounded recovery",
+                                            tx_hash,
+                                            pruned_lookup.error().message() );
+                        }
+                        else if ( pruned_lookup.value().first == PrunedLookup::PRUNED )
+                        {
+                            m_logger->info( "Creating tx {} pruned locally; UTXO set is authoritative - "
+                                            "not relevant, skipping recovery request",
+                                            tx_hash );
+                            pruned_locally = true;
+                        }
+                        else if ( pruned_lookup.value().first == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+                        {
+                            m_logger->warn( "Pruned-marker invariant violation for missing creating tx {} "
+                                            "(marker AND value both present); keeping bounded recovery",
+                                            tx_hash );
+                        }
+                        if ( !pruned_locally )
+                        {
+                            std::lock_guard missing_lock( missing_tx_mutex_ );
+                            missing_tx_hashes_.insert( tx_hash );
+                        }
                     }
                 }
             }
         }
+    }
+
+    size_t TransactionManager::CrosscheckRebuiltUtxos()
+    {
+        // D-01 belt-and-suspenders: by construction the preserved CONSUMED
+        // entries make PutUTXO's existing-entry duplicate check refuse
+        // re-creation of spent outpoints, so a healthy mismatch rebuild
+        // gap-fills only genuinely unspent outputs and this pass finds
+        // nothing. It exists for the paths construction cannot see — a
+        // divergence between the in-memory registry and the durable /utxo/
+        // record (e.g. one corrupted record) must never leave a spent outpoint
+        // spendable-ready. Every rebuilt READY outpoint of this account is
+        // checked against its DURABLE record through the UTXOManager's own
+        // accessors (a READY registry entry can never carry its spender — only
+        // the persisted record can still name one); a consumed record reverts
+        // the outpoint through the owner's consume path. Errors are logged and
+        // skipped, never swallowed into success.
+        auto      &utxo_mgr = account_m->GetUTXOManager();
+        const auto address  = account_m->GetAddress();
+        size_t     reverted = 0;
+        const auto utxo_map = utxo_mgr.GetAllUTXOs();
+        for ( const auto &[utxo_address, utxo_data_vector] : utxo_map )
+        {
+            if ( utxo_address != address )
+            {
+                continue;
+            }
+            for ( const auto &[utxo_state, utxo] : utxo_data_vector )
+            {
+                if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                auto evidence = utxo_mgr.ReadDurableSpendEvidence( utxo.GetTxID(), utxo.GetOutputIdx(), utxo_address );
+                if ( evidence.has_error() )
+                {
+                    m_logger->warn( "Rebuild crosscheck: durable spend-evidence read failed for outpoint {}:{} "
+                                    "({}); leaving the outpoint untouched",
+                                    utxo.GetTxID().toReadableString(),
+                                    utxo.GetOutputIdx(),
+                                    evidence.error().message() );
+                    continue;
+                }
+                if ( !evidence.value().has_value() || !evidence.value().value().consumed )
+                {
+                    continue;
+                }
+                const auto &record = evidence.value().value();
+                m_logger->warn(
+                    "Rebuild crosscheck: outpoint {}:{} has durable consume evidence ({} spender {}) - "
+                    "reverting to consumed",
+                    utxo.GetTxID().toReadableString(),
+                    utxo.GetOutputIdx(),
+                    record.genuine ? "genuine" : "tombstone",
+                    record.spender.has_value() ? record.spender.value().toReadableString() : std::string( "unknown" ) );
+                auto consume_result = utxo_mgr.ConsumeUTXOs( { { utxo.GetTxID(), utxo.GetOutputIdx(), {} } },
+                                                             utxo_address,
+                                                             UTXOManager::UTXOType::UTXO_NORMAL,
+                                                             record.spender );
+                if ( consume_result.has_error() )
+                {
+                    m_logger->error( "Rebuild crosscheck: failed to revert outpoint {}:{} to consumed: {}",
+                                     utxo.GetTxID().toReadableString(),
+                                     utxo.GetOutputIdx(),
+                                     consume_result.error().message() );
+                    continue;
+                }
+                ++reverted;
+            }
+        }
+        if ( reverted > 0 )
+        {
+            m_logger->warn( "Rebuild crosscheck reverted {} resurrected outpoint(s) to consumed", reverted );
+        }
+        else
+        {
+            m_logger->debug( "Rebuild crosscheck found no resurrected outpoints" );
+        }
+        return reverted;
     }
 
     void TransactionManager::InitTransactions()
@@ -3486,6 +3714,47 @@ namespace sgns
 
     void TransactionManager::SyncNonce()
     {
+        // D-02 half 2: bounded SYNCING exit. When nothing advances the
+        // confirmed nonce within the window, fall back to the last DURABLE
+        // confirmed nonce and return READY — the wedge class where a failed
+        // (or never-published) send left the manager spinning with every later
+        // send rejected. Held reservations are deliberately untouched:
+        // GetNextNonceLocked skips pending nonces, so the next send queues
+        // behind anything still in flight (no nonce collision).
+        if ( syncing_since_.has_value() )
+        {
+            const auto window  = std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+            const auto elapsed = std::chrono::steady_clock::now() - syncing_since_.value();
+            if ( elapsed > window )
+            {
+                // WR-02 (review): the bounded exit exists for the WEDGE class —
+                // a failed send left nothing confirmable to wait for. It must
+                // NOT fire while the local nonce is genuinely BEHIND the
+                // network (the gap branch below forbids proposing until caught
+                // up), or the next send could publish into a network-consumed
+                // nonce. Only exit when not behind.
+                const auto proposed_behind = account_m->GetProposedNonce() != UINT64_MAX &&
+                                             account_m->GetLocalConfirmedNonce().has_value() &&
+                                             account_m->GetProposedNonce() <
+                                                 account_m->GetLocalConfirmedNonce().value() + 1;
+                if ( !proposed_behind )
+                {
+                    const auto durable_nonce = account_m->GetLocalConfirmedNonce();
+                    m_logger->warn(
+                        "SYNCING exit: no confirming nonce advance within {} ms - last durable "
+                        "confirmed nonce {}, not behind - returning to READY",
+                        window.count(),
+                        durable_nonce.has_value() ? std::to_string( durable_nonce.value() ) : std::string( "none" ) );
+                    syncing_since_.reset();
+                    ChangeState( State::READY );
+                    return;
+                }
+                m_logger->warn( "SYNCING window elapsed but local nonce is behind - staying in SYNCING to catch up "
+                                "(gap recovery, not the failed-send wedge)" );
+                syncing_since_.reset(); // re-arm so the check can fire once caught up
+            }
+        }
+
         m_logger->debug( "Checking if my nonce is updated" );
 
         auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT );
@@ -3514,6 +3783,9 @@ namespace sgns
             //Either my old txs are outdated or
             //The responder has not updated yet
             m_logger->debug( "Network nonce updated: {}", expected_next_nonce );
+            // D-02: the sync resolved normally — no stale window timestamp may
+            // survive into a later SYNCING pass.
+            syncing_since_.reset();
             ChangeState( State::READY );
         }
         else if ( proposed_nonce > expected_next_nonce )
@@ -3728,6 +4000,99 @@ namespace sgns
         }
 
         return std::optional<std::shared_ptr<GeniusTransaction>>{};
+    }
+
+    outcome::result<TransactionLookupResult> TransactionManager::LookupTransaction( const std::string &tx_hash ) const
+    {
+        if ( !globaldb_m )
+        {
+            m_logger->error( "{}: GlobalDB unavailable, cannot look up tx {}", __func__, tx_hash );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        // D-03 / Pitfall 8: probe the VALUE first (both found-sources), THEN
+        // the marker. The Phase-16 one-batch value-XOR-marker invariant makes
+        // this order safe: a value present now cannot become marker-only
+        // without the erase batch having committed, so a value hit is
+        // authoritative regardless of marker state.
+        std::shared_ptr<GeniusTransaction> tx;
+        {
+            const std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            tx = GetTransactionByHashNoLock( tx_hash );
+        }
+
+        if ( !tx )
+        {
+            // Found-source 2: the exact-hash CRDT probe across monitored
+            // networks. A hard error propagates — never downgraded to
+            // not-found.
+            auto crdt_tx = FetchExactTransactionFromCRDT( tx_hash );
+            if ( crdt_tx.has_error() )
+            {
+                m_logger->error( "{}: CRDT probe failed for tx {}: {}", __func__, tx_hash, crdt_tx.error().message() );
+                return outcome::failure( crdt_tx.error() );
+            }
+            tx = crdt_tx.value().value_or( nullptr );
+        }
+
+        // A found VALUE outranks any marker: FOUND regardless of marker
+        // state. The marker consult exists only to detect and loudly report
+        // the value-plus-marker invariant violation (the 17 contract) — it
+        // never changes which payload is returned.
+        if ( tx )
+        {
+            TransactionLookupResult result;
+            result.verdict    = PrunedLookup::NOT_FOUND;
+            result.tx         = tx;
+            auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+            if ( pruned_entry.has_error() )
+            {
+                m_logger->warn( "{}: pruned-marker consult failed for found tx {} ({}); verdict stays FOUND",
+                                __func__,
+                                tx_hash,
+                                pruned_entry.error().message() );
+            }
+            else if ( pruned_entry.value().first != PrunedLookup::NOT_FOUND )
+            {
+                result.verdict = PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION;
+                m_logger->error( "{}: pruned marker present while the value of tx {} was found — "
+                                 "value-XOR-marker invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+            }
+            return result;
+        }
+
+        // All found-sources missed: the pruned marker is the authority that
+        // separates PRUNED from plain not-found.
+        auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+        if ( pruned_entry.has_error() )
+        {
+            m_logger->error( "{}: pruned-marker lookup failed for tx {}: {}",
+                             __func__,
+                             tx_hash,
+                             pruned_entry.error().message() );
+            return outcome::failure( pruned_entry.error() );
+        }
+
+        TransactionLookupResult result;
+        result.verdict = pruned_entry.value().first;
+        result.record  = pruned_entry.value().second;
+        switch ( result.verdict )
+        {
+            case PrunedLookup::PRUNED:
+                m_logger->info( "{}: tx {} pruned locally - history pruned", __func__, tx_hash );
+                break;
+            case PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION:
+                m_logger->error( "{}: pruned marker for tx {} claims a value the found-sources cannot see — "
+                                 "invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+                break;
+            case PrunedLookup::NOT_FOUND:
+                break;
+        }
+        return result;
     }
 
     outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
