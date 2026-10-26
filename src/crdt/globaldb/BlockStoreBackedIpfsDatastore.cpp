@@ -121,7 +121,12 @@ namespace sgns::crdt
     IPFS::outcome::result<BlockStoreBackedIpfsDatastore::Value> BlockStoreBackedIpfsDatastore::get(
         const CID &key ) const
     {
-        // Phase 9 adds the cold fallback; today: pure forward.
+        // READ-01 (v1.1 Phase 9): the cold chain lives in GraphsyncDAGSyncer
+        // (FetchNodeFromColdStorage - OUTSIDE dagMutex_ and off the
+        // single-thread responder, 09-RESEARCH §4.1); ColdServeDagService is
+        // the serving-side sibling of that same read-path discipline. get()
+        // stays a pure forward by design - the publish mutex and the
+        // responder both reach it.
         return inner_->get( key );
     }
 

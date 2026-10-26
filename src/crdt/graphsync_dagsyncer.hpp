@@ -330,9 +330,89 @@ namespace sgns::crdt
         /// cold storage is disabled (byte-identical behavior).
         std::shared_ptr<class ColdReadFallback> cold_read_hook_;
 
+        /// READ-02 (v1.1 Phase 9): the responder wrapper handed to
+        /// graphsync_->start in place of the raw dagService_ (delegate-or-
+        /// enqueue, never block - D-05). Declared AFTER cold_read_hook_ so
+        /// destruction order keeps the wrapper's non-owning hook pointer
+        /// valid for the wrapper's whole life.
+        std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagService> cold_serve_wrapper_;
+
         std::atomic<bool> is_stopped_{ false };
     };
 
+}
+
+namespace sgns::crdt
+{
+    /**
+     * @brief      Responder-side cold-serve wrapper (READ-02, v1.1
+     *             Phase 9): delegates every MerkleDagService call to the
+     *             inner service and, on a getNode miss with a live hook,
+     *             try-enqueues ONE coalesced background re-warm then
+     *             returns the failure IMMEDIATELY (D-05).
+     *
+     * The responder runs on the pubsub host's single-threaded
+     * io_context: this wrapper NEVER waits, sleeps, or holds a lock
+     * across I/O - a wait here is the documented whole-node-freeze
+     * hazard (SC2). A getNode failure maps to RS_NOT_FOUND at the
+     * graphsync layer - the honest immediate don't-have; the re-warm
+     * makes the block hot so the peer's retry ladder finds it locally
+     * (D-05). With a null hook the wrapper degenerates to pure
+     * delegation - byte-identical to the raw inner service (D-06,
+     * Phase-7 disabled bar). Ungated by design: it holds only interface
+     * types plus the ungated ColdReadFallback pointer.
+     */
+    class ColdServeDagService final : public ipfs_lite::ipfs::merkledag::MerkleDagService
+    {
+    public:
+        /**
+         * @brief       Construct the wrapper around the inner service.
+         * @param[in]   inner the real dag service (non-null)
+         * @param[in]   hook the cold-read hook (non-owning; may be null -
+         *              null means pure delegation)
+         */
+        ColdServeDagService( std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagService> inner,
+                             ColdReadFallback                                                           *hook );
+
+        ~ColdServeDagService() override = default;
+
+        /** @brief Delegate; on miss with a live hook, try-enqueue a
+         *         coalesced re-warm (discarded-return try-op) and return
+         *         the inner failure UNCHANGED (D-05/SC2). */
+        IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode( const CID &cid ) const override;
+
+        /// @brief Pure delegation (select errors keep today's shape).
+        IPFS::outcome::result<size_t> select(
+            gsl::span<const uint8_t>                                                    root_cid,
+            gsl::span<const uint8_t>                                                    selector,
+            std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const override;
+
+        /// @brief Pure delegation (add path untouched by cold-serve).
+        IPFS::outcome::result<void> addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node ) override;
+
+        /// @brief Pure delegation (remove stays hot-only - eviction is
+        ///         not CRDT deletion).
+        IPFS::outcome::result<void> removeNode( const CID &cid ) override;
+
+        /// @brief Pure delegation (seal markers are hot-store keys).
+        IPFS::outcome::result<void> markResolved( const CID &cid ) override;
+
+        /// @brief Pure delegation.
+        IPFS::outcome::result<bool> isResolved( const CID &cid ) const override;
+
+        /// @brief Pure delegation.
+        IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> fetchGraph(
+            const CID &cid ) const override;
+
+        /// @brief Pure delegation.
+        IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> fetchGraphOnDepth(
+            const CID &cid,
+            uint64_t   depth ) const override;
+
+    private:
+        std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagService> inner_;
+        ColdReadFallback                                                           *hook_;
+    };
 }
 
 /**

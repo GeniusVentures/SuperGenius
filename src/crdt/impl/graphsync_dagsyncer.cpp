@@ -97,6 +97,76 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 
 namespace sgns::crdt
 {
+    ColdServeDagService::ColdServeDagService(
+        std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagService> inner,
+        ColdReadFallback                                                           *hook )
+        : inner_( std::move( inner ) ), hook_( hook )
+    {
+        BOOST_ASSERT_MSG( inner_ != nullptr, "cold-serve wrapper requires a non-null inner dag service" );
+    }
+
+    IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> ColdServeDagService::getNode(
+        const CID &cid ) const
+    {
+        // Hot-first delegation (SC2): the wrapper never waits - a wait here
+        // pins the pubsub host's single thread and freezes the whole node.
+        auto node = inner_->getNode( cid );
+        if ( node.has_error() && hook_ != nullptr )
+        {
+            // D-05: fire-and-forget try-op - one coalesced re-warm per CID
+            // on the bounded executor; the failure returns UNCHANGED so the
+            // responder completes the request negatively NOW (RS_NOT_FOUND,
+            // the honest don't-have). The peer's retry ladder finds the
+            // re-warmed block hot.
+            (void)hook_->EnqueueRewarm( cid );
+        }
+        return node;
+    }
+
+    IPFS::outcome::result<size_t> ColdServeDagService::select(
+        gsl::span<const uint8_t>                                                    root_cid,
+        gsl::span<const uint8_t>                                                    selector,
+        std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
+    {
+        // Whole-call delegation: select errors keep today's
+        // RS_REQUEST_FAILED internal shape - no regression (D-06).
+        return inner_->select( root_cid, selector, std::move( handler ) );
+    }
+
+    IPFS::outcome::result<void> ColdServeDagService::addNode(
+        std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
+    {
+        return inner_->addNode( std::move( node ) );
+    }
+
+    IPFS::outcome::result<void> ColdServeDagService::removeNode( const CID &cid )
+    {
+        return inner_->removeNode( cid );
+    }
+
+    IPFS::outcome::result<void> ColdServeDagService::markResolved( const CID &cid )
+    {
+        return inner_->markResolved( cid );
+    }
+
+    IPFS::outcome::result<bool> ColdServeDagService::isResolved( const CID &cid ) const
+    {
+        return inner_->isResolved( cid );
+    }
+
+    IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> ColdServeDagService::fetchGraph(
+        const CID &cid ) const
+    {
+        return inner_->fetchGraph( cid );
+    }
+
+    IPFS::outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> ColdServeDagService::fetchGraphOnDepth(
+        const CID &cid,
+        uint64_t   depth ) const
+    {
+        return inner_->fetchGraphOnDepth( cid, depth );
+    }
+
     // Test-only blacklist backoff override (milliseconds); 0 == production formula.
     // Default-initialized to 0 so an unconfigured process keeps production durations.
     std::atomic<uint64_t> GraphsyncDAGSyncer::blacklist_backoff_override_ms_for_test_{ 0 };
@@ -723,7 +793,14 @@ namespace sgns::crdt
         // libp2p host's io_context, and GraphsyncDAGSyncer::getNode fetches a block it does not
         // have from the network, polling for up to two minutes. That pins the host's only
         // thread and freezes the whole node. Responders serve what they already hold.
-        graphsync_->start( dagService_, blockCallback );
+        // READ-02 (v1.1 Phase 9): the responder receives the ColdServeDagService
+        // wrapper around dagService_ - hot reads delegate, cold misses
+        // try-enqueue ONE coalesced background re-warm (never a wait,
+        // never a lock across I/O) and answer don't-have immediately
+        // (D-05). With a null hook the wrapper is pure delegation -
+        // byte-identical to handing over dagService_ directly (D-06).
+        cold_serve_wrapper_ = std::make_shared<ColdServeDagService>( dagService_, cold_read_hook_.get() );
+        graphsync_->start( cold_serve_wrapper_, blockCallback );
 
         if ( host_ == nullptr )
         {
