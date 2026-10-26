@@ -125,3 +125,25 @@ target_include_directories(cold_storage_fallback_test PRIVATE
 set_tests_properties(cold_storage_fallback_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Cold-read SC2 latency-budget benchmark + responder-freeze regression
+# (READ-02, v1.1 Phase 9 plan 09-02). Registered ONLY under
+# SGNS_COLD_STORAGE: links sgns-blockstore::sgns-blockstore plus the
+# InMemoryS3Client fake via the relative include dir. The Tier-1 lane
+# stays non-empty on OFF builds via the unconditional config-gate test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_read_freeze_latency_test
+    cold_read_freeze_latency_test.cpp
+)
+
+target_link_libraries(cold_read_freeze_latency_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+)
+
+target_include_directories(cold_read_freeze_latency_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_read_freeze_latency_test PROPERTIES LABELS "Tier1")
+endif()
+
