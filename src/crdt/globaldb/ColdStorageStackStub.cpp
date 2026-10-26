@@ -59,4 +59,14 @@ namespace sgns::crdt
         (void)manager; // no manager exists on OFF builds; null-safe no-op
     }
 
+    void StartColdReadService( const std::shared_ptr<ColdReadService> &service )
+    {
+        (void)service; // no service exists on OFF builds; null-safe no-op
+    }
+
+    void StopColdReadService( const std::shared_ptr<ColdReadService> &service )
+    {
+        (void)service; // no service exists on OFF builds; null-safe no-op
+    }
+
 } // namespace sgns::crdt

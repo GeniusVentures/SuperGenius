@@ -400,6 +400,12 @@ namespace sgns::crdt
         // backup loop and BEFORE the lifecycle_mutex_ teardown block -
         // bounded grace then join while the stores still live.
         StopColdStorageManager();
+        // READ-02 (v1.1 Phase 9): the re-warm worker stops beside the
+        // drainer and still BEFORE the lifecycle-mutex teardown - in-flight
+        // re-warms finish their decorator writes while the stores live
+        // (RESEARCH §6.5; StopSync happens later at CRDT datastore
+        // teardown, so the responder stops asking after the drain).
+        StopColdReadService();
 
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
         std::shared_ptr<CrdtDatastore>        crdt_datastore;
@@ -630,6 +636,10 @@ namespace sgns::crdt
             // here and injected into the DAG syncer as its ungated hook.
             cold_read_hook      = stack.value().cold_read_hook;
             cold_read_service_  = std::move( stack.value().cold_read_service );
+            // READ-02 (plan 09-02): the re-warm worker starts at
+            // construction time beside the service so every serve miss
+            // finds the executor live (own thread - Phase-8 D-10).
+            StartColdReadService();
         }
 
         if ( !m_pubsub )
@@ -804,6 +814,16 @@ namespace sgns::crdt
     void GlobalDB::StopColdStorageManager()
     {
         sgns::crdt::StopColdStorageManager( cold_manager_ );
+    }
+
+    void GlobalDB::StartColdReadService()
+    {
+        sgns::crdt::StartColdReadService( cold_read_service_ );
+    }
+
+    void GlobalDB::StopColdReadService()
+    {
+        sgns::crdt::StopColdReadService( cold_read_service_ );
     }
 
     void GlobalDB::Start()

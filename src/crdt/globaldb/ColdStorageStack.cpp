@@ -206,4 +206,20 @@ namespace sgns::crdt
         }
     }
 
+    void StartColdReadService( const std::shared_ptr<ColdReadService> &service )
+    {
+        if ( service )
+        {
+            service->Start();
+        }
+    }
+
+    void StopColdReadService( const std::shared_ptr<ColdReadService> &service )
+    {
+        if ( service )
+        {
+            service->Stop();
+        }
+    }
+
 } // namespace sgns::crdt

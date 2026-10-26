@@ -536,6 +536,14 @@ namespace sgns::crdt
          *         join (D-11, v1.1 Phase 8); delegates to the stack bridge. */
         void StopColdStorageManager();
 
+        /** @brief Starts the re-warm worker (READ-02, v1.1 Phase 9);
+         *         delegates to the stack bridge (null-safe). */
+        void StartColdReadService();
+        /** @brief Stops the re-warm worker with bounded grace then join
+         *         (Phase-8 D-11 shape, v1.1 Phase 9); delegates to the
+         *         stack bridge (null-safe). */
+        void StopColdReadService();
+
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };
 }

@@ -150,6 +150,20 @@ namespace sgns::crdt
      */
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager );
 
+    /**
+     * @brief      Start the re-warm worker thread (null-safe no-op when
+     *             null; READ-02, v1.1 Phase 9).
+     * @param[in]  service the bundle's cold-read service (may be null)
+     */
+    void StartColdReadService( const std::shared_ptr<ColdReadService> &service );
+
+    /**
+     * @brief      Stop the re-warm worker with bounded grace then join
+     *             (null-safe no-op when null; Phase-8 D-11 shape).
+     * @param[in]  service the bundle's cold-read service (may be null)
+     */
+    void StopColdReadService( const std::shared_ptr<ColdReadService> &service );
+
 } // namespace sgns::crdt
 
 #endif // SUPERGENIUS_CRDT_COLDSTORAGESTACK_HPP

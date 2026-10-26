@@ -74,9 +74,17 @@ namespace sgns::crdt
         BOOST_ASSERT_MSG( rehydrate_target_ != nullptr, "rehydrate target datastore is nullptr" );
     }
 
+    ColdReadService::~ColdReadService()
+    {
+        Stop(); // idempotent; joins before members die (Pitfall-5 ordering)
+    }
+
     bool ColdReadService::ShouldLogColdFailure()
     {
-        const auto now = std::chrono::steady_clock::now();
+        // Runs on both the CRDT DAG worker and the re-warm worker - the
+        // limiter state carries its own guard.
+        std::lock_guard<std::mutex> log_lock( cold_failure_log_mutex_ );
+        const auto                  now = std::chrono::steady_clock::now();
         if ( last_cold_failure_log_.time_since_epoch().count() != 0
              && ( now - last_cold_failure_log_ ) < kColdFailureLogInterval )
         {
@@ -267,11 +275,145 @@ namespace sgns::crdt
 
     bool ColdReadService::EnqueueRewarm( const CID &cid )
     {
-        // D-05/D-06/D-07: a real try-op whose bounded executor arrives in
-        // plan 09-02 - until then there is no queue to accept the
-        // request. Never blocks, never fetches inline (SC2).
-        (void)cid;
-        return false;
+        // D-07 (READ-02): a real try-op over the bounded queue - NEVER
+        // blocks the enqueuer (the responder thread) and NEVER runs the
+        // fetch inline (SC2). One in-flight re-warm per CID: an existing
+        // map entry means attach (the peer's next request finds it hot).
+        bool enqueued = false;
+        {
+            std::lock_guard<std::mutex> lock( rewarm_mutex_ );
+            if ( rewarm_in_flight_.count( cid ) > 0 )
+            {
+                return true; // attached to the in-flight re-warm (D-07)
+            }
+            if ( rewarm_queue_.size() < kMaxRewarmQueueDepth )
+            {
+                rewarm_in_flight_.emplace( cid, RewarmState{ std::chrono::steady_clock::now() } );
+                rewarm_queue_.push_back( cid );
+                enqueued = true;
+            }
+        }
+        if ( !enqueued )
+        {
+            // Bounded overflow: drop + count + rate-limited warn; the next
+            // request for this CID re-enqueues (D-07 makes drops cheap).
+            ++rewarm_overflow_drops_;
+            if ( ShouldLogColdFailure() )
+            {
+                logger_->warn( "cold read: re-warm queue full (bound {}), request dropped (D-07)",
+                               kMaxRewarmQueueDepth );
+            }
+            return false;
+        }
+        rewarm_cv_.notify_one();
+        return true;
+    }
+
+    void ColdReadService::Start()
+    {
+        if ( rewarm_thread_.joinable() )
+        {
+            return; // already running - idempotent
+        }
+        rewarm_stop_flag_.store( false );
+        rewarm_thread_ = std::thread( [this]() { RewarmWorkerLoop(); } );
+    }
+
+    void ColdReadService::Stop()
+    {
+        rewarm_stop_flag_.store( true );
+        rewarm_cv_.notify_all();
+        if ( rewarm_thread_.joinable() )
+        {
+            // Bounded grace for an in-flight re-warm, then the
+            // unconditional join (D-11 shape) - queued-but-unstarted
+            // re-warms are abandoned; the hot store stays cold and the
+            // next request re-enqueues.
+            std::unique_lock<std::mutex> lock( rewarm_idle_mutex_ );
+            rewarm_idle_cv_.wait_for( lock, kRewarmShutdownGraceWindow, [this] { return rewarm_idle_; } );
+            lock.unlock();
+            rewarm_thread_.join();
+        }
+    }
+
+    void ColdReadService::MarkRewarmBusy()
+    {
+        std::lock_guard<std::mutex> lock( rewarm_idle_mutex_ );
+        rewarm_idle_ = false;
+    }
+
+    void ColdReadService::MarkRewarmIdle()
+    {
+        {
+            std::lock_guard<std::mutex> lock( rewarm_idle_mutex_ );
+            rewarm_idle_ = true;
+        }
+        rewarm_idle_cv_.notify_all();
+    }
+
+    void ColdReadService::RewarmWorkerLoop()
+    {
+        while ( !rewarm_stop_flag_.load() )
+        {
+            CID                                    cid;
+            std::chrono::steady_clock::time_point enqueued_at{};
+            bool                                   have_work = false;
+            {
+                std::unique_lock<std::mutex> lock( rewarm_mutex_ );
+                MarkRewarmIdle();
+                rewarm_cv_.wait( lock, [this] { return rewarm_stop_flag_.load() || !rewarm_queue_.empty(); } );
+                if ( rewarm_stop_flag_.load() )
+                {
+                    break;
+                }
+                cid = std::move( rewarm_queue_.front() );
+                rewarm_queue_.pop_front();
+                auto it = rewarm_in_flight_.find( cid );
+                if ( it != rewarm_in_flight_.end() )
+                {
+                    enqueued_at = it->second.enqueued_at;
+                    have_work   = true;
+                }
+            }
+
+            if ( !have_work )
+            {
+                continue; // defensive: popped entry without map state
+            }
+
+            MarkRewarmBusy();
+            // §6.4: the budget bounds SCHEDULING AND WAITING only - a
+            // task found past-deadline before starting is skipped; the
+            // underlying op is bounded by the executor's single-thread
+            // bound (at most one pinned thread; the node's freeze-safety
+            // never depends on the deadline firing).
+            if ( std::chrono::steady_clock::now() - enqueued_at >= kRewarmBudget )
+            {
+                ++rewarm_expired_drops_;
+                if ( ShouldLogColdFailure() )
+                {
+                    logger_->warn( "cold read: re-warm skipped - budget expired before start (D-07)" );
+                }
+            }
+            else
+            {
+                // The 09-01 chain does the CID-verifying fetch + re-cache
+                // (T-9-07: verification cannot be bypassed; corrupted
+                // bytes classify Corrupt and are never re-cached).
+                sgns::common::Buffer   bytes;
+                const ColdReadStatus status = Get( cid, bytes );
+                if ( !bytes.empty() )
+                {
+                    Rehydrate( cid, bytes );
+                }
+                (void)status; // classifications are logged inside the chain
+            }
+            {
+                std::lock_guard<std::mutex> lock( rewarm_mutex_ );
+                rewarm_in_flight_.erase( cid );
+            }
+            MarkRewarmIdle();
+        }
     }
 
     void ColdReadService::Rehydrate( const CID &cid, const sgns::common::Buffer &bytes )

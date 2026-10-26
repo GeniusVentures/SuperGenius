@@ -598,3 +598,190 @@ TEST_F( ColdStorageFallbackTest, HasLocalColdBoolContractUnderFault )
     shared_local_->SetFault( sgns::blockstore::FaultKind::Unavailable );
     EXPECT_NO_THROW( { EXPECT_FALSE( service_->HasLocalCold( cid_key ) ); } );
 }
+
+/**
+ * @brief Test-local S3Client wrapper injecting a per-GET sleep before
+ *        delegating (re-warm worker timing control; the fake has fault
+ *        kinds only - no latency hook).
+ */
+class GetLatencyS3Client final : public sgns::blockstore::S3Client
+{
+public:
+    GetLatencyS3Client( std::shared_ptr<InMemoryS3Client> inner, std::chrono::milliseconds per_get_latency )
+        : inner_( std::move( inner ) ), latency_ms_( per_get_latency.count() )
+    {
+    }
+
+    sgns::blockstore::result<sgns::blockstore::S3PutResult, sgns::blockstore::BlockStatus> Put(
+        const std::string &key, const std::vector<uint8_t> &bytes, const sgns::blockstore::PutObjectOptions &options = {} ) override
+    {
+        return inner_->Put( key, bytes, options );
+    }
+
+    sgns::blockstore::result<sgns::blockstore::S3Object, sgns::blockstore::BlockStatus> Get(
+        const std::string &key ) override
+    {
+        const auto latency = latency_ms_.load();
+        if ( latency > 0 )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( latency ) );
+        }
+        return inner_->Get( key );
+    }
+
+    sgns::blockstore::result<sgns::blockstore::S3HeadResult, sgns::blockstore::BlockStatus> Head(
+        const std::string &key ) override
+    {
+        return inner_->Head( key );
+    }
+
+    sgns::blockstore::result<void, sgns::blockstore::BlockStatus> Delete( const std::string &key ) override
+    {
+        return inner_->Delete( key );
+    }
+
+private:
+    std::shared_ptr<InMemoryS3Client> inner_;
+    std::atomic<int64_t>              latency_ms_;
+};
+
+/**
+ * @given a block present ONLY in S3 and a started re-warm executor behind
+ *        a COUNTING S3 client
+ * @when  EnqueueRewarm runs TWICE for the same CID before completion
+ * @then  exactly ONE chain fetch runs (fake Get count == 1) and the block
+ *        becomes hot (PollUntil) - D-07 coalescing with warm completion.
+ */
+TEST_F( ColdStorageFallbackTest, RewarmCoalescesDuplicateEnqueues )
+{
+    const std::string payload = "re-warm coalescing payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto counting = std::make_shared<CountingS3Client>( fake_ );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( counting );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> counting_remote = std::move( opened_remote.value() );
+    ColdReadService rewarm_service(
+        shared_local_, counting_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+
+    auto put = counting_remote->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    rewarm_service.Start();
+    EXPECT_TRUE( rewarm_service.EnqueueRewarm( cid_key ) );
+    // Second enqueue before completion attaches to the in-flight re-warm.
+    EXPECT_TRUE( rewarm_service.EnqueueRewarm( cid_key ) );
+
+    const auto hot = [&]() {
+        auto got = inner_->get( cid_key );
+        return got.has_value();
+    };
+    EXPECT_TRUE( PollUntil( hot, std::chrono::seconds( 5 ) ) ) << "re-warm must complete and re-cache";
+
+    // D-07: duplicates coalesced into exactly one chain fetch.
+    EXPECT_EQ( counting->get_calls(), 1u );
+    rewarm_service.Stop();
+}
+
+/**
+ * @given a NOT-STARTED executor (no consumer) and kMaxRewarmQueueDepth+1
+ *        distinct cold CIDs
+ * @when  the queue is filled then exceeded
+ * @then  the first kMaxRewarmQueueDepth enqueues return true, the next
+ *        returns false (drop + count), and the call never blocks (D-07
+ *        bounded queue, non-blocking overflow).
+ */
+TEST_F( ColdStorageFallbackTest, RewarmQueueOverflowDropsWithoutBlocking )
+{
+    std::vector<CID> cids;
+    for ( size_t i = 0; i < ColdReadService::kMaxRewarmQueueDepth + 1; ++i )
+    {
+        cids.emplace_back( MakeCid( "overflow cid " + std::to_string( i ) ) );
+    }
+
+    const auto started_at = std::chrono::steady_clock::now();
+    for ( size_t i = 0; i < ColdReadService::kMaxRewarmQueueDepth; ++i )
+    {
+        EXPECT_TRUE( service_->EnqueueRewarm( cids[i] ) ) << "enqueue " << i << " must fit the bound";
+    }
+    // The overflow drop must be immediate - the enqueuer is the responder
+    // thread and must never block (SC2/D-07).
+    EXPECT_FALSE( service_->EnqueueRewarm( cids.back() ) ) << "queue-full enqueue must drop";
+    const auto elapsed = std::chrono::steady_clock::now() - started_at;
+    EXPECT_LT( std::chrono::duration_cast<std::chrono::milliseconds>( elapsed ).count(), 1000 );
+    // The dropped CID leaves no in-flight entry: a later retry can enqueue
+    // once space frees (verified indirectly - no map leak by behavior).
+    service_->Stop();
+}
+
+/**
+ * @given a queue entry that aged past kRewarmBudget while no worker ran
+ * @when  the worker starts and reaches the stale entry
+ * @then  the entry is SKIPPED (dropped + counted), not fetched - the
+ *        budget bounds scheduling/waiting (D-07/RESEARCH §6.4).
+ */
+TEST_F( ColdStorageFallbackTest, RewarmExpiredBudgetEntryIsSkipped )
+{
+    const std::string payload = "expired budget payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto counting = std::make_shared<CountingS3Client>( fake_ );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( counting );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> counting_remote = std::move( opened_remote.value() );
+    ColdReadService budget_service(
+        shared_local_, counting_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+    auto put = counting_remote->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    // Enqueue with no worker running, then let the entry age past the
+    // budget (bounded poll on elapsed time - never a fixed sleep).
+    EXPECT_TRUE( budget_service.EnqueueRewarm( cid_key ) );
+    const auto deadline = std::chrono::steady_clock::now() + ColdReadService::kRewarmBudget
+                        + std::chrono::milliseconds( 200 );
+    const auto aged = [&]() { return std::chrono::steady_clock::now() >= deadline; };
+    ASSERT_TRUE( PollUntil( aged, ColdReadService::kRewarmBudget + std::chrono::seconds( 2 ) ) );
+
+    budget_service.Start();
+    // Give the worker a window to (incorrectly) fetch, then assert it
+    // never did and nothing became hot.
+    const auto fetched = [&]() { return counting->get_calls() > 0; };
+    EXPECT_FALSE( PollUntil( fetched, std::chrono::milliseconds( 500 ) ) )
+        << "an over-budget entry must be skipped, not fetched";
+    auto got = inner_->get( cid_key );
+    EXPECT_FALSE( got.has_value() ) << "a skipped re-warm must not re-cache";
+    budget_service.Stop();
+}
+
+/**
+ * @given a started executor with one latency-injected re-warm in flight
+ * @when  Stop() runs (twice) and the service is destroyed
+ * @then  every call returns without hanging - the join completes inside
+ *         the bounded-grace + join contract (D-11 shape), Stop is
+ *         idempotent, and the destructor joins (Pitfall-5 ordering).
+ */
+TEST_F( ColdStorageFallbackTest, RewarmStopJoinsAndIsIdempotent )
+{
+    const std::string payload = "shutdown grace payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto slow = std::make_shared<GetLatencyS3Client>( fake_, std::chrono::milliseconds( 300 ) );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( slow );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> slow_remote = std::move( opened_remote.value() );
+    auto slow_service = std::make_shared<ColdReadService>(
+        shared_local_, slow_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+    auto put = slow_remote->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    slow_service->Start();
+    EXPECT_TRUE( slow_service->EnqueueRewarm( cid_key ) );
+
+    slow_service->Stop(); // bounded grace then unconditional join
+    slow_service->Stop(); // idempotent no-op on an already-joined thread
+    ASSERT_NO_THROW( { slow_service.reset(); } ); // destructor join path
+    SUCCEED();
+}
