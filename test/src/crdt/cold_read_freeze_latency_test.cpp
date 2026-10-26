@@ -56,10 +56,15 @@
  *     idempotent re-cache makes duplicates harmless. Phase-12 soak data.
  *
  * Hard assertions in the suite: (b) time-to-warm < kRewarmBudget at
- * 500 ms injected latency; (c) hot-hit serve through the wrapper < 50 ms
- * while >= 16 cold misses are queued and the worker is pinned by 500 ms
- * Gets (the freeze regression); (e) the miss path returns immediately
- * under a scripted Unavailable fault.
+ * 500 ms injected latency (SC2_TimeToWarmWithinBudgetAt500MsLatency);
+ * (c) hot-hit serve through the wrapper < 50 ms while >= 16 cold misses
+ * are queued - both the slow-500 ms scenario
+ * (SC2_HotServeUnderSaturatedSlowQueue) and the faulted fail-fast
+ * outage with a churning queue (SC2_HotServeUnderOutageFailFastQueueChurning,
+ * plus the miss-path bound SC2_OutageMissReturnsImmediately_FailFast) -
+ * the freeze regression; measurements (a) and (d) are recorded above via
+ * InlineChainLatencyByInjectedGetLatency and
+ * ConcurrentColdReadsDuplicateGetCount.
  */
 
 #include <gtest/gtest.h>

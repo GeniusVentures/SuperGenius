@@ -1,7 +1,7 @@
 /**
  * @file       cold_storage_fallback_test.cpp
  * @brief      Hermetic Tier-1 cold-read fallback tests (READ-01, v1.1
- *             Phase 9 plan 09-01).
+ *             Phase 9 plans 09-01/09-03).
  *
  * Registered ONLY under SGNS_COLD_STORAGE (links
  * sgns-blockstore::sgns-blockstore - the OFF-build Tier-1 lane stays
@@ -13,6 +13,38 @@
  * behind an S3BlockStore, the shared mutexes, and a test-local spy inner
  * IpfsDatastore behind the journal-spill decorator (the rehydrate
  * target).
+ *
+ * ─── PHASE-9 EVIDENCE MATRIX (SC1-SC5; every case named below runs in
+ *     this binary - evidence describes what runs) ───
+ *
+ * SC1 no-NotFound-escape: SC1_NoNotFoundEscape_S3Unavailable (a scripted
+ *     s3d Unavailable with the block absent everywhere classifies
+ *     TemporarilyUnavailable at BOTH the ColdReadStatus layer and the
+ *     MapColdReadStatus layer - never CID_NOT_FOUND).
+ * SC3 honest taxonomy: SC3_CorruptAttributesRemoteTier (byte-flip),
+ *     SC3_CorruptAttributesLocalTier (FaultController CorruptData),
+ *     SC3_LocalCorruptServesGoodS3Copy, SC3_UnauthorizedSurfacesOwnClass,
+ *     SC3_MapColdReadStatusExhaustiveTable (full 4x2 input space),
+ *     SC3_NoPeerBlameMappingSafetyNet (no cold status input can yield
+ *     PEER_BLACKLISTED/TIMED_OUT; the structural half - zero
+ *     RecordCIDFailure/BlackListPeer references in the cold-read sources
+ *     - is this plan's scoped source audit).
+ * SC4 rehydrate silence: SC4_RehydrateSilence_BytesOnlyNoMarkers (exactly
+ *     one set, zero marker writes - §2.4 bytes-only ruling) and
+ *     SC4_PreSealedBlockGainsNoMarker (pre-sealed blocks untouched).
+ * SC5 hermetic lane: this target registers gated with
+ *     set_tests_properties LABELS "Tier1"; the lane runs under
+ *     ctest -L Tier1 --no-tests=error (fail-closed).
+ * D-decisions: D01_S3TierHitEndToEnd, D02_LocalTierHitEndToEnd,
+ *     D02_LocalTierHitPerformsZeroS3Gets (tier selection, fake counter),
+ *     D03_DefinitiveAbsenceIsTheOnlyNotFound,
+ *     D03_LocalUnavailableFallsThroughToS3 (mid-chain fall-through),
+ *     D06_NullHookNoOpReturnsHotErrorUnchanged (disabled bar),
+ *     D07_RewarmCoalescesDuplicateEnqueues (exactly one fetch under
+ *     duplicates), D07_RewarmQueueOverflowDropsWithoutBlocking,
+ *     D07_RewarmExpiredBudgetEntryIsSkipped,
+ *     D07_RewarmFaultRecoveryMapNeverWedges, D08_HasLocalColdBoolContract-
+ *     UnderFault, D11_RewarmStopJoinsAndIsIdempotent.
  *
  * Include discipline: installed angle-bracket sgns-blockstore headers
  * plus the fake via the relative include-dir workaround in CMakeLists.txt
