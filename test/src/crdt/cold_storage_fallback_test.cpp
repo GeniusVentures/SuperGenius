@@ -215,6 +215,52 @@ namespace
         std::atomic<size_t>                         seal_calls_{ 0 };
     };
 
+    /**
+     * @brief Test-local S3Client wrapper counting Get calls before
+     *        delegating to the in-memory fake - the D-02 tier-selection
+     *        probe (the fake itself has no call counter).
+     */
+    class CountingS3Client final : public sgns::blockstore::S3Client
+    {
+    public:
+        explicit CountingS3Client( std::shared_ptr<InMemoryS3Client> inner ) : inner_( std::move( inner ) )
+        {
+        }
+
+        size_t get_calls() const
+        {
+            return get_calls_;
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3PutResult, sgns::blockstore::BlockStatus> Put(
+            const std::string &key, const std::vector<uint8_t> &bytes, const sgns::blockstore::PutObjectOptions &options = {} ) override
+        {
+            return inner_->Put( key, bytes, options );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3Object, sgns::blockstore::BlockStatus> Get(
+            const std::string &key ) override
+        {
+            ++get_calls_;
+            return inner_->Get( key );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3HeadResult, sgns::blockstore::BlockStatus> Head(
+            const std::string &key ) override
+        {
+            return inner_->Head( key );
+        }
+
+        sgns::blockstore::result<void, sgns::blockstore::BlockStatus> Delete( const std::string &key ) override
+        {
+            return inner_->Delete( key );
+        }
+
+    private:
+        std::shared_ptr<InMemoryS3Client> inner_;
+        std::atomic<size_t>               get_calls_{ 0 };
+    };
+
     class ColdStorageFallbackTest : public ::testing::Test
     {
     protected:
@@ -343,4 +389,212 @@ TEST_F( ColdStorageFallbackTest, NullHookNoOpReturnsHotErrorUnchanged )
     // No cold write may have happened on the disabled path.
     EXPECT_EQ( inner_->set_calls(), 0u );
     EXPECT_TRUE( fake_->ObjectKeys().empty() );
+}
+
+/**
+ * @given a block journaled into the Local tier and a COUNTING S3 client
+ *        behind the chain's remote tier
+ * @when  the chain resolves the block from the Local tier (D-02)
+ * @then  ZERO S3 Gets ran - tier selection is proven behaviorally, not
+ *        just by return value (D-02: a cold-dir hit avoids the S3 round
+ *        trip).
+ */
+TEST_F( ColdStorageFallbackTest, LocalTierHitPerformsZeroS3Gets )
+{
+    const std::string payload = "tier selection payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto counting = std::make_shared<CountingS3Client>( fake_ );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( counting );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> counting_remote = std::move( opened_remote.value() );
+    ColdReadService counting_service(
+        shared_local_, counting_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+
+    auto journaled = shared_local_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( journaled.has_value() );
+
+    sgns::common::Buffer out;
+    (void)counting_service.Get( cid_key, out );
+    ASSERT_FALSE( out.empty() );
+    counting_service.Rehydrate( cid_key, out );
+
+    // D-02 tier selection: the Local-tier hit must never touch S3.
+    EXPECT_EQ( counting->get_calls(), 0u );
+    EXPECT_EQ( inner_->set_calls(), 1u );
+}
+
+/**
+ * @given a block present in NEITHER cold tier (definitive absence)
+ * @when  the chain runs
+ * @then  the classification is NotFound - the only legitimate NotFound
+ *        per the envelope rule (SC1) - and MapColdReadStatus maps it to
+ *        CID_NOT_FOUND.
+ */
+TEST_F( ColdStorageFallbackTest, DefinitiveAbsenceClassifiesNotFound )
+{
+    const std::string payload = "definitively absent payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    sgns::common::Buffer out;
+    const auto status = service_->Get( cid_key, out );
+    EXPECT_TRUE( out.empty() );
+    EXPECT_EQ( status.cls, ColdReadStatus::Class::NotFound );
+    EXPECT_TRUE( status.fromRemoteTier ) << "absence is attributed to the last tier consulted (remote)";
+    EXPECT_EQ( sgns::crdt::MapColdReadStatus( status ),
+               sgns::crdt::GraphsyncDAGSyncer::Error::CID_NOT_FOUND );
+}
+
+/**
+ * @given s3d scripted Unavailable on Get with the block absent everywhere
+ * @when  the chain runs
+ * @then  the classification is TemporarilyUnavailable with remote
+ *        attribution - NEVER NotFound (SC1 headline) - and
+ *        MapColdReadStatus maps it to COLD_STORAGE_TEMPORARILY_UNAVAILABLE,
+ *        never CID_NOT_FOUND (D-03).
+ */
+TEST_F( ColdStorageFallbackTest, S3UnavailableNeverSurfacesAsNotFound )
+{
+    const std::string payload = "transport blip payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    fake_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+
+    sgns::common::Buffer out;
+    const auto status = service_->Get( cid_key, out );
+    EXPECT_TRUE( out.empty() );
+    EXPECT_EQ( status.cls, ColdReadStatus::Class::TemporarilyUnavailable );
+    EXPECT_TRUE( status.fromRemoteTier );
+    EXPECT_EQ( sgns::crdt::MapColdReadStatus( status ),
+               sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE )
+        << "SC1: a transport-shaped failure must never surface as CID_NOT_FOUND";
+}
+
+/**
+ * @given a stored S3 object whose served bytes are XOR-flipped (the
+ *        adapter SUCCEEDS; S3BlockStore's CID verification is the
+ *        detector)
+ * @when  the chain fetches it
+ * @then  the classification is Corrupt attributed to the REMOTE tier and
+ *        it never maps to CID_NOT_FOUND (SC3).
+ */
+TEST_F( ColdStorageFallbackTest, RemoteCorruptionAttributesToRemoteTier )
+{
+    const std::string payload = "remote corruption payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto put = remote_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+    // Exactly one stored object: its derived key is the only candidate.
+    auto keys = fake_->ObjectKeys();
+    ASSERT_EQ( keys.size(), 1u );
+    fake_->SetFlipBytesForKey( keys[0], true );
+
+    sgns::common::Buffer out;
+    const auto status = service_->Get( cid_key, out );
+    EXPECT_TRUE( out.empty() );
+    EXPECT_EQ( status.cls, ColdReadStatus::Class::Corrupt );
+    EXPECT_TRUE( status.fromRemoteTier ) << "SC3: corruption attributes its source tier (remote)";
+    EXPECT_EQ( sgns::crdt::MapColdReadStatus( status ),
+               sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_CORRUPT );
+}
+
+/**
+ * @given a Local-tier-resident block with FaultKind::CorruptData injected
+ *        on LocalBlockStore (bytes fail CID verification at the tier)
+ * @when  the chain fetches it
+ * @then  the classification is Corrupt attributed to the LOCAL tier - the
+ *        chain continues to S3 per §3.2, finds absence there, and the
+ *        remembered local Corrupt outranks the remote NotFound (SC3).
+ */
+TEST_F( ColdStorageFallbackTest, LocalCorruptionAttributesToLocalTier )
+{
+    const std::string payload = "local corruption payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto journaled = shared_local_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( journaled.has_value() );
+    shared_local_->SetFault( sgns::blockstore::FaultKind::CorruptData );
+
+    sgns::common::Buffer out;
+    const auto status = service_->Get( cid_key, out );
+    EXPECT_TRUE( out.empty() );
+    EXPECT_EQ( status.cls, ColdReadStatus::Class::Corrupt );
+    EXPECT_FALSE( status.fromRemoteTier ) << "SC3: corruption attributes its source tier (local)";
+    EXPECT_EQ( sgns::crdt::MapColdReadStatus( status ),
+               sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_CORRUPT );
+}
+
+/**
+ * @given the full 4-class x 2-tier input space of MapColdReadStatus
+ * @when  every combination maps onto the DAGSyncer error surface
+ * @then  each row yields its SC3 table value, and no non-NotFound input
+ *        ever maps to CID_NOT_FOUND.
+ */
+TEST( ColdReadStatusMapping, MapColdReadStatusExhaustiveTable )
+{
+    struct Row
+    {
+        ColdReadStatus::Class              cls;
+        bool                               from_remote_tier;
+        sgns::crdt::GraphsyncDAGSyncer::Error expected;
+    };
+    using Class = ColdReadStatus::Class;
+    using Error = sgns::crdt::GraphsyncDAGSyncer::Error;
+    const std::vector<Row> rows = {
+        { Class::NotFound, false, Error::CID_NOT_FOUND },
+        { Class::NotFound, true, Error::CID_NOT_FOUND },
+        { Class::TemporarilyUnavailable, false, Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE },
+        { Class::TemporarilyUnavailable, true, Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE },
+        { Class::Corrupt, false, Error::COLD_STORAGE_CORRUPT },
+        { Class::Corrupt, true, Error::COLD_STORAGE_CORRUPT },
+        { Class::Unauthorized, false, Error::COLD_STORAGE_UNAUTHORIZED },
+        { Class::Unauthorized, true, Error::COLD_STORAGE_UNAUTHORIZED },
+    };
+    for ( const auto &row : rows )
+    {
+        ColdReadStatus status;
+        status.cls           = row.cls;
+        status.fromRemoteTier = row.from_remote_tier;
+        const auto mapped = sgns::crdt::MapColdReadStatus( status );
+        EXPECT_EQ( mapped, row.expected );
+        if ( row.cls != Class::NotFound )
+        {
+            EXPECT_NE( mapped, Error::CID_NOT_FOUND )
+                << "SC1: class " << static_cast<int>( row.cls )
+                << " must never surface as CID_NOT_FOUND";
+        }
+    }
+}
+
+/**
+ * @given HasLocalCold over a cold-dir-resident CID, an absent CID, and a
+ *        Local tier faulted Unavailable (D-08 bool contract)
+ * @when  each presence query runs
+ * @then  resident answers true, absent answers false, and the fault
+ *        answers false WITHOUT throwing - the freeze-sensitive callers
+ *        must never block or throw (D-08/D-09).
+ */
+TEST_F( ColdStorageFallbackTest, HasLocalColdBoolContractUnderFault )
+{
+    const std::string payload = "cold-dir presence payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto journaled = shared_local_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( journaled.has_value() );
+
+    EXPECT_TRUE( service_->HasLocalCold( cid_key ) );
+
+    const auto absent_cid = MakeCid( "never stored anywhere" );
+    EXPECT_FALSE( service_->HasLocalCold( CID( absent_cid ) ) );
+
+    // Injected local-tier Unavailable: false, never a throw (D-08).
+    shared_local_->SetFault( sgns::blockstore::FaultKind::Unavailable );
+    EXPECT_NO_THROW( { EXPECT_FALSE( service_->HasLocalCold( cid_key ) ); } );
 }
