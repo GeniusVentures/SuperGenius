@@ -2334,6 +2334,9 @@ TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsR
     const auto status = pruner->GetPruneStatus();
     ASSERT_TRUE( status.bytes_reclaimed.has_value() );
     EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+    // WR-03 pin (re-review): last_cycle must report the compaction.
+    EXPECT_TRUE( status.last_cycle.compacted );
+    EXPECT_GT( status.last_cycle.compaction_duration_ms, std::chrono::milliseconds::zero().count() );
 
     // Non-vacuous: the erased values are gone (marker PRUNED, value absent).
     for ( const auto *tx : { big_a.get(), big_b.get() } )

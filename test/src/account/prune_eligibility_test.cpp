@@ -801,6 +801,17 @@ TEST_F( PruneEligibilityTest, PruningConfig_ZeroCompactThresholdKeepsDefault )
 }
 
 /** C14 — an ill-typed compact_threshold_mb keeps the default (no partial trust). */
+
+// WR-03 pin (re-review): the >= 2^44 wrap range is rejected — out-of-range
+// keeps the 16MB default, never a wrapped-zero (compact-every-cycle) threshold.
+TEST_F( PruneEligibilityTest, PruningConfig_CompactThresholdWrapRangeRejected )
+{
+    const auto config = ParseConfig( R"( { "compact_threshold_mb": 17592186044416 } )" );
+    EXPECT_EQ( config.compact_threshold_mb, 16u );
+    const auto larger = ParseConfig( R"( { "compact_threshold_mb": 18446744073709551615 } )" );
+    EXPECT_EQ( larger.compact_threshold_mb, 16u );
+}
+
 TEST_F( PruneEligibilityTest, PruningConfig_IllTypedCompactThresholdKeepsDefault )
 {
     const auto config = ParseConfig( R"( { "compact_threshold_mb": "tiny" } )" );

@@ -2447,88 +2447,6 @@ namespace sgns
         trust_state_store_.reset();
     }
 
-    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
-    {
-        // The timer's completion handler captures a scheduling closure associated
-        // with this node. Destroy it while the io_context is still alive.
-        if ( gc_timer_ )
-        {
-            boost::system::error_code ignored;
-            gc_timer_->cancel( ignored );
-            gc_timer_.reset();
-        }
-        if ( prune_dry_run_timer_ )
-        {
-            boost::system::error_code ignored;
-            prune_dry_run_timer_->cancel( ignored );
-            prune_dry_run_timer_.reset();
-        }
-        if ( tx_pruner_ )
-        {
-            // The io pool is already drained here, so an in-flight
-            // compaction has RETURNED — setting the atomic only shortens
-            // any not-yet-started compaction's window (the drain is the
-            // join; verified ordering, no other change needed).
-            tx_pruner_->RequestCompactionCancel();
-        }
-        // The TxPruner holds only status/config (no runtime resources) —
-        // release it beside its timer once the io pool is drained (18-04).
-        tx_pruner_.reset();
-
-        // Account-bound services depend on GlobalDB, which in turn depends on
-        // GraphSync, the scheduler, PubSub, and the io_context.
-        ResetProcessingMembers();
-        transaction_manager_.reset();
-        ShutdownNodePolicyServices();
-        bridge_relayer_.reset();
-        eth_watch_service_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
-        blockchain_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
-
-        {
-            std::lock_guard<std::mutex> lock( migration_mutex_ );
-            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
-                                 migration_manager_.use_count() );
-            migration_manager_.reset();
-        }
-
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
-                             tx_globaldb_.use_count() );
-        tx_globaldb_.reset();
-
-        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
-        // PubSub host and scheduler. Release dependents before their providers.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
-                             bitswap_.use_count() );
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
-                             bitswap_.use_count() );
-        bitswap_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
-                             bitswap_event_bus_.use_count() );
-        bitswap_event_bus_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
-                             graphsyncnetwork_.use_count() );
-        graphsyncnetwork_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
-                             generator_.use_count() );
-        generator_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
-                             scheduler_.use_count() );
-        scheduler_.reset();
-
-        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
-        // account_ is declared before io_, so relying on implicit destruction
-        // would otherwise destroy its messenger after the io_context.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})",
-                             account_.use_count() );
-        account_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
-        pubsub_.reset();
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
-    }
-
     void GeniusNode::ShutdownForDestruction()
     {
         bool expected = false;
@@ -2566,7 +2484,6 @@ namespace sgns
         // CR-01 (review): abort any in-flight scheduled compaction BEFORE
         // stopping the io pool -- a whole-DB kForce CompactRange otherwise
         // blocks shutdown for its full duration with no abort. (The earlier
-        // cancel inside ReleaseRuntimeMembersAfterIoStopped had no caller;
         // this is the live path.)
         if ( tx_pruner_ )
         {
@@ -5013,7 +4930,6 @@ namespace sgns
         //
         // tx_globaldb_ is deliberately read without the lifecycle lock: it is
         // assigned once in InitDatabase() before this timer can exist and reset
-        // only in ReleaseRuntimeMembersAfterIoStopped(), after the io pool (this
         // callback's only executor) has been drained — it is never swapped
         // concurrently with a cycle.
         const auto snapshot = SnapshotAccountServices();

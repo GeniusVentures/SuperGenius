@@ -12,6 +12,7 @@
 #include "transaction/PruneEligibility.hpp"
 
 #include <set>
+#include <limits>
 
 #include "account/UTXOManager.hpp"
 #include "crdt/globaldb/globaldb.hpp"

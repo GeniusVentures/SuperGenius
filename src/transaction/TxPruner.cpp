@@ -385,6 +385,13 @@ namespace sgns
                            stats.generation );
             stats.compacted          = true;
             cumulative_erased_bytes_ = 0;
+            {
+                // WR-01 (re-review): mirror the success path's re-copy so
+                // last_cycle reports this cycle's compacted/duration even
+                // when the measured delta could not be stamped.
+                const std::scoped_lock lock( status_mutex_ );
+                status_m.last_cycle = stats;
+            }
             return;
         }
 
