@@ -62,12 +62,17 @@ namespace sgns::crdt
          *              blocks (createOnly idempotency)
          * @param[in]   cold_store_mutex the ONE mutex shared with the
          *              decorator (library single-threaded-use contract)
+         * @param[in]   remote_store_mutex the ONE mutex serializing ALL
+         *              S3BlockStore access (shared with the Phase-9
+         *              cold-read chain; taken per-Put-item in the drainer's
+         *              remote phase - 09-RESEARCH §6.3)
          * @param[in]   options NORMALIZED backpressure knobs (0s resolved
          *              to built-in defaults before this call)
          */
         ColdStorageManager( std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store,
                             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store,
                             std::shared_ptr<std::mutex>                        cold_store_mutex,
+                            std::shared_ptr<std::mutex>                        remote_store_mutex,
                             BackpressureOptions                                options );
 
         ~ColdStorageManager();
@@ -127,6 +132,9 @@ namespace sgns::crdt
         std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store_;
         std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store_;
         std::shared_ptr<std::mutex>                        cold_store_mutex_;
+        /// READ-01 (v1.1 Phase 9): serializes remote Puts against the
+        /// cold-read chain's S3 Gets (single-threaded-use contract).
+        std::shared_ptr<std::mutex>                        remote_store_mutex_;
         BackpressureOptions                                options_;
 
         std::thread              thread_;

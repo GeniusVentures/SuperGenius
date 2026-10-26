@@ -386,11 +386,16 @@ namespace
         }
 
         /// Construct a manager directly over the fixture stores (D-10).
+        /// READ-01 (v1.1 Phase 9): the manager now shares the
+        /// remote-store mutex with the cold-read chain; the spill suite
+        /// has no chain, so a fixture-local mutex fills the parameter.
         std::shared_ptr<ColdStorageManager> MakeManager(
             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote,
             const ColdStorageManager::BackpressureOptions      &options )
         {
-            return std::make_shared<ColdStorageManager>( shared_local_, std::move( remote ), cold_store_mutex_, options );
+            auto remote_store_mutex = std::make_shared<std::mutex>();
+            return std::make_shared<ColdStorageManager>(
+                shared_local_, std::move( remote ), cold_store_mutex_, remote_store_mutex, options );
         }
 
         std::shared_ptr<ColdStorageManager> MakeManager( const ColdStorageManager::BackpressureOptions &options )

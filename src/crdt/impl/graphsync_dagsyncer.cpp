@@ -1,4 +1,5 @@
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "crdt/cold_read_fallback.hpp"
 #include "outcome/outcome.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
@@ -45,6 +46,12 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
             return "The graphsync member is null";
         case sgns::crdt::GraphsyncDAGSyncer::Error::HOST_IS_NULL:
             return "The host member is null";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE:
+            return "Cold storage is temporarily unavailable (transport/outage/timeout)";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_CORRUPT:
+            return "Cold storage returned bytes that failed CID verification";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_UNAUTHORIZED:
+            return "Cold storage rejected the request (authentication/permission failure)";
     }
     return "Unknown error";
 }
@@ -57,11 +64,13 @@ namespace sgns::crdt
 
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
-                                            std::shared_ptr<libp2p::Host>  host ) :
+                                            std::shared_ptr<libp2p::Host>  host,
+                                            std::shared_ptr<class ColdReadFallback> cold_read_hook ) :
         dagService_(
             std::make_shared<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl>( std::move( block_datastore ) ) ),
         graphsync_( std::move( graphsync ) ),
-        host_( std::move( host ) )
+        host_( std::move( host ) ),
+        cold_read_hook_( std::move( cold_read_hook ) )
     {
         logger_->debug( "GraphSyncer created {} ", reinterpret_cast<size_t>( this ) );
     }
@@ -526,7 +535,66 @@ namespace sgns::crdt
             return getNodeResult;
         }
 
-        return GrabCIDBlock( cid );
+        auto grabResult = GrabCIDBlock( cid );
+
+        if ( grabResult.has_value() )
+        {
+            return grabResult;
+        }
+
+        // READ-01 (v1.1 Phase 9): both hot helpers missed - resolve
+        // through the cold chain (LocalBlockStore -> S3BlockStore), OUTSIDE
+        // dagMutex_ by construction. A null hook (cold storage disabled)
+        // passes the original hot-miss error through unchanged - the
+        // Phase-7 byte-identical bar.
+        return FetchNodeFromColdStorage( cid, grabResult );
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::FetchNodeFromColdStorage(
+        const CID                                                               &cid,
+        const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result ) const
+    {
+        if ( cold_read_hook_ == nullptr )
+        {
+            // Disabled bar (Phase-7): no hook -> the hot path's own error
+            // surfaces unchanged; no cold I/O ever runs.
+            return hot_miss_result;
+        }
+
+        common::Buffer   bytes;
+        const ColdReadStatus status = cold_read_hook_->Get( cid, bytes );
+        if ( !bytes.empty() )
+        {
+            // D-04: re-cache through the dedicated rehydrate path BEFORE
+            // returning (bytes only - SC4; the decorator set() journals +
+            // writes hot, local disk only).
+            cold_read_hook_->Rehydrate( cid, bytes );
+
+            // The node is ALWAYS produced by the existing hot path - no
+            // custom bytes-to-node deserialization (09-RESEARCH §4.2).
+            auto node = GetNodeFromMerkleDAG( cid );
+            if ( node.has_value() )
+            {
+                // LRU insert per the GrabCIDBlock pattern so the read does
+                // not pay a second hot lookup (AddCIDBlock shape).
+                (void)lru_cid_cache_.add( cid, node.value() );
+                logger_->debug( "cold read: rehydrated CID {} through the cold chain",
+                                cid.toString().value() );
+                return node;
+            }
+            // Rehydrate wrote but the hot re-read failed: the re-read error
+            // is the honest failure - surface it, not the (stale) success
+            // classification.
+            logger_->warn( "cold read: CID {} fetched cold but hot re-read failed",
+                           cid.toString().value() );
+            return node;
+        }
+
+        logger_->debug( "cold read: chain miss for CID {} (class={}, fromRemoteTier={})",
+                        cid.toString().value(),
+                        static_cast<int>( status.cls ),
+                        status.fromRemoteTier );
+        return outcome::failure( MapColdReadStatus( status ) );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::StartSync()

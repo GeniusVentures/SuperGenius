@@ -27,6 +27,12 @@ namespace sgns::crdt
     // reachable through the ColdStorageStack bridges only.
     class ColdStorageManager;
 
+    // Gated cold-read chain service (v1.1 Phase 9); defined in
+    // ColdReadService.hpp, reachable through the ColdStorageStack
+    // bundle only. The DAGSyncer holds it through the UNGATED
+    // ColdReadFallback interface (crdt/cold_read_fallback.hpp).
+    class ColdReadService;
+
     // D-08 status triple for the cold-storage drainer; defined in
     // ColdStorageStack.hpp (always compiled, zero library types).
     enum class ColdStorageWatermark;
@@ -484,6 +490,10 @@ namespace sgns::crdt
         /// favors us (Pitfall-5 ordering; shared_ptr ownership is
         /// belt-and-suspenders).
         std::shared_ptr<ColdStorageManager>               cold_manager_;
+        /// Cold-read chain service (v1.1 Phase 9); null whenever cold
+        /// storage is disabled. Declared AFTER cold_manager_ so reverse-
+        /// declaration destruction favors the same ordering rationale.
+        std::shared_ptr<ColdReadService>                  cold_read_service_;
         /// The ONE mutex shared by the publisher (decorator set) and the
         /// drainer thread over the LocalBlockStore (v1.1 Phase 8).
         std::shared_ptr<std::mutex>                       cold_store_mutex_;

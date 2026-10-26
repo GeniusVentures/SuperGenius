@@ -59,9 +59,18 @@ namespace sgns::crdt
     // through the bridges below.
     class ColdStorageManager;
 
+    // Defined in ColdReadService.hpp (gated TU, v1.1 Phase 9); reachable
+    // here only through the bundle fields below.
+    class ColdReadService;
+
+    // Defined in crdt/cold_read_fallback.hpp (ungated interface, v1.1
+    // Phase 9) - the DAGSyncer-side hook type. No sgns-blockstore type
+    // crosses this header.
+    class ColdReadFallback;
+
     /**
      * @brief      Everything GlobalDB owns of the cold-storage stack
-     *             (v1.1 Phase 8).
+     *             (v1.1 Phase 8; extended in Phase 9).
      *
      * data_store is the BlockStoreBackedIpfsDatastore decorator handed to
      * GraphsyncDAGSyncer in place of the inner RocksdbDatastore; manager is
@@ -69,12 +78,24 @@ namespace sgns::crdt
      * storage is disabled); cold_store_mutex is the ONE mutex shared by the
      * publisher (decorator set) and the drainer thread honoring the
      * library's single-threaded-use contract.
+     *
+     * Phase 9 (READ-01) additions: remote_store_mutex is the ONE mutex
+     * serializing every S3BlockStore access (the cold-read chain's Gets
+     * vs the drainer's remote Puts - MinioS3Client has no
+     * concurrent-call contract); cold_read_service is the chain service
+     * (creation-side up-cast - globaldb.cpp never needs the complete
+     * gated type); cold_read_hook is the SAME object up-cast to the
+     * ungated interface for GraphsyncDAGSyncer injection. Both stay null
+     * on OFF builds and disabled configs.
      */
     struct ColdStorageBundle
     {
         std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore> data_store;
         std::shared_ptr<ColdStorageManager>             manager;
         std::shared_ptr<std::mutex>                     cold_store_mutex;
+        std::shared_ptr<std::mutex>                     remote_store_mutex;
+        std::shared_ptr<ColdReadService>                cold_read_service;
+        std::shared_ptr<ColdReadFallback>               cold_read_hook;
     };
 
     /// Factory outcome: the bundle on success, a human-readable failure

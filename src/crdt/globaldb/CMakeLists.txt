@@ -8,7 +8,8 @@ add_proto_library(crdt_globaldb_proto proto/broadcast.proto)
 # correct binding would be left to archive-member-order luck (08-REVIEW
 # CR-01).
 set_source_files_properties(ColdStorageStack.cpp ColdStorageStackStub.cpp
-    ColdStorageManager.cpp BlockStoreBackedIpfsDatastore.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    ColdStorageManager.cpp BlockStoreBackedIpfsDatastore.cpp
+    ColdReadService.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 add_library(crdt_globaldb
     GlobalDbNetworkComposition.cpp
@@ -22,6 +23,7 @@ target_sources(crdt_globaldb PRIVATE
     ColdStorageStack.cpp
     ColdStorageManager.cpp
     BlockStoreBackedIpfsDatastore.cpp
+    ColdReadService.cpp
 )
 target_link_libraries(crdt_globaldb PRIVATE sgns-blockstore::sgns-blockstore)
 else()

@@ -27,9 +27,14 @@ namespace sgns::crdt
                 "but support is not compiled - rebuild with -DSGNS_COLD_STORAGE=ON" ) );
         }
         ColdStorageBundle bundle;
-        bundle.data_store       = std::move( inner ); // pure passthrough
-        bundle.manager          = nullptr;
-        bundle.cold_store_mutex = nullptr;
+        bundle.data_store         = std::move( inner ); // pure passthrough
+        bundle.manager            = nullptr;
+        bundle.cold_store_mutex   = nullptr;
+        // READ-01 (v1.1 Phase 9): no cold-read service exists on OFF
+        // builds - the DAGSyncer hook stays null (byte-identical reads).
+        bundle.remote_store_mutex = nullptr;
+        bundle.cold_read_service  = nullptr;
+        bundle.cold_read_hook     = nullptr;
         return outcome::success( std::move( bundle ) );
     }
 

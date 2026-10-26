@@ -24,15 +24,18 @@ namespace sgns::crdt
     ColdStorageManager::ColdStorageManager( std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store,
                                             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store,
                                             std::shared_ptr<std::mutex>                        cold_store_mutex,
+                                            std::shared_ptr<std::mutex>                        remote_store_mutex,
                                             BackpressureOptions                                options )
         : local_block_store_( std::move( local_block_store ) ),
           remote_block_store_( std::move( remote_block_store ) ),
           cold_store_mutex_( std::move( cold_store_mutex ) ),
+          remote_store_mutex_( std::move( remote_store_mutex ) ),
           options_( options )
     {
         BOOST_ASSERT_MSG( local_block_store_ != nullptr, "local block store is nullptr" );
         BOOST_ASSERT_MSG( remote_block_store_ != nullptr, "remote block store is nullptr" );
         BOOST_ASSERT_MSG( cold_store_mutex_ != nullptr, "cold store mutex is nullptr" );
+        BOOST_ASSERT_MSG( remote_store_mutex_ != nullptr, "remote store mutex is nullptr" );
         current_delay_ = std::chrono::milliseconds( options_.drain_interval_ms );
     }
 
@@ -176,10 +179,15 @@ namespace sgns::crdt
             return;
         }
 
-        // (ii) remote Puts with createOnly semantics - NO lock held (D-01:
-        // remote S3 latency must never block the publisher).
-        bool                            any_failure = false;
-        std::vector<sgns::blockstore::Cid> succeeded;
+        // (ii) remote Puts with createOnly semantics - the cold-store
+        // mutex stays released (D-01: remote S3 latency must never block
+        // the publisher). READ-01 (v1.1 Phase 9): each Put takes the
+        // shared remote-store mutex PER ITEM so the cold-read chain's S3
+        // Gets interleave between Puts instead of waiting out a whole
+        // drain cycle (MinioS3Client single-threaded-use contract,
+        // 09-RESEARCH §6.3).
+        bool                                any_failure = false;
+        std::vector<sgns::blockstore::Cid>  succeeded;
         for ( const auto &item : items )
         {
             if ( !item.have_bytes )
@@ -187,6 +195,7 @@ namespace sgns::crdt
                 any_failure = true; // stays pending; re-drains next cycle
                 continue;
             }
+            std::lock_guard<std::mutex> remote_lock( *remote_store_mutex_ );
             auto put = remote_block_store_->Put(
                 item.cid, gsl::span<const uint8_t>( item.bytes.data(), item.bytes.size() ) );
             if ( put.has_value() )

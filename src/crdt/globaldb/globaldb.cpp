@@ -612,6 +612,7 @@ namespace sgns::crdt
         // below. When disabled, the inner store flows to the syncer
         // untouched - byte-identical to the pre-Phase-8 construction.
         std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore> block_datastore = ipfsDataStore;
+        std::shared_ptr<sgns::crdt::ColdReadFallback>   cold_read_hook;
         if ( cold_storage_options_.enabled )
         {
             const auto database_path_absolute = boost::filesystem::absolute( m_databasePath ).string();
@@ -621,10 +622,14 @@ namespace sgns::crdt
                 m_logger->error( "Cold storage stack initialization failed: {}", stack.error() );
                 return outcome::failure( Error::COLD_STORAGE_INIT_FAILED );
             }
-            block_datastore   = stack.value().data_store;
-            cold_data_store_  = block_datastore;
-            cold_manager_     = std::move( stack.value().manager );
-            cold_store_mutex_ = std::move( stack.value().cold_store_mutex );
+            block_datastore     = stack.value().data_store;
+            cold_data_store_    = block_datastore;
+            cold_manager_       = std::move( stack.value().manager );
+            cold_store_mutex_   = std::move( stack.value().cold_store_mutex );
+            // READ-01 (v1.1 Phase 9): the cold-read chain service, owned
+            // here and injected into the DAG syncer as its ungated hook.
+            cold_read_hook      = stack.value().cold_read_hook;
+            cold_read_service_  = std::move( stack.value().cold_read_service );
         }
 
         if ( !m_pubsub )
@@ -640,7 +645,10 @@ namespace sgns::crdt
                                                           graphsyncnetwork,
                                                           generator,
                                                           m_pubsub->GetAsioContext() );
-        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( block_datastore, graphsync, host );
+        // READ-01 (v1.1 Phase 9): the hook is passed ONLY when cold
+        // storage is enabled - the disabled path constructs nothing and
+        // the DAG syncer runs byte-identical to Phase 8 (Phase-7 bar).
+        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( block_datastore, graphsync, host, cold_read_hook );
 
         // Start DagSyner listener
         auto startResult = dagSyncer->StartSync();

@@ -48,6 +48,14 @@ namespace sgns::crdt
             DAGSYNCER_NOT_STARTED, ///< Start wasn't called, or StopSync was called
             GRAPHSYNC_IS_NULL,     ///< Graphsync member is nullptr
             HOST_IS_NULL,          ///< Graphsync member is nullptr
+            // READ-01/SC3 (v1.1 Phase 9): the honest cold-storage failure
+            // classes - appended AFTER HOST_IS_NULL (uint8_t-sequential;
+            // existing values are never reordered so serialized/compared
+            // values stay stable). Transport-shaped cold failures surface
+            // here, NEVER as CID_NOT_FOUND (D-03/SC1).
+            COLD_STORAGE_TEMPORARILY_UNAVAILABLE, ///< Cold tier transport/outage/timeout (D-03)
+            COLD_STORAGE_CORRUPT,                 ///< Cold-tier bytes failed CID verification (SC3)
+            COLD_STORAGE_UNAUTHORIZED,            ///< Cold-tier authentication/permission failure (SC3)
         };
 
         struct BlacklistEntry
@@ -65,7 +73,13 @@ namespace sgns::crdt
 
         GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                             std::shared_ptr<Graphsync>     graphsync,
-                            std::shared_ptr<libp2p::Host>  host );
+                            std::shared_ptr<libp2p::Host>  host,
+                            // READ-01 (v1.1 Phase 9): cold-read fallback
+                            // hook - null when cold storage is disabled,
+                            // which keeps the disabled build byte-identical
+                            // (Phase-7 bar). Injected at the single
+                            // construction site in globaldb.cpp.
+                            std::shared_ptr<class ColdReadFallback> cold_read_hook = nullptr );
 
         ~GraphsyncDAGSyncer() override
         {
@@ -175,6 +189,27 @@ namespace sgns::crdt
         bool AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
 
+        /**
+         * @brief      Cold-chain fetch leg (READ-01/D-01/D-02, v1.1
+         *             Phase 9): resolves a CID through LocalBlockStore
+         *             then S3BlockStore via the injected hook, rehydrates
+         *             on a hit (D-04), and maps the honest classification
+         *             onto the Error surface (SC3).
+         * @param[in]  cid the content identifier
+         * @param[in]  hot_miss_result the failed hot-path result to pass
+         *             through UNCHANGED when no hook is injected (the
+         *             Phase-7 byte-identical disabled bar)
+         * @return     the re-cached node on a cold hit, or the mapped
+         *             cold classification
+         * @note        Runs OUTSIDE dagMutex_ by construction (called only
+         *             after GetNodeFromMerkleDAG has returned failure and
+         *             released it) - the publish mutex never waits on
+         *             cold-tier I/O (Phase-8 discipline).
+         */
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> FetchNodeFromColdStorage(
+            const CID                                                               &cid,
+            const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result ) const;
+
         outcome::result<void> BlackListPeer( const PeerId &peer ) const;
 
         outcome::result<std::vector<PeerKey>> GetRouteKeys( const CID &cid ) const;
@@ -276,6 +311,10 @@ namespace sgns::crdt
         };
 
         mutable LRUCIDCache lru_cid_cache_;
+
+        /// READ-01 (v1.1 Phase 9): cold-read fallback hook; null when
+        /// cold storage is disabled (byte-identical behavior).
+        std::shared_ptr<class ColdReadFallback> cold_read_hook_;
 
         std::atomic<bool> is_stopped_{ false };
     };

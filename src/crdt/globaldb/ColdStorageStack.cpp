@@ -24,6 +24,7 @@
 
 #include "BlockStoreBackedIpfsDatastore.hpp"
 #include "ColdStorageManager.hpp"
+#include "ColdReadService.hpp"
 
 namespace sgns::crdt
 {
@@ -110,6 +111,12 @@ namespace sgns::crdt
             // the LocalBlockStore (library single-threaded-use contract).
             auto cold_store_mutex = std::make_shared<std::mutex>();
 
+            // READ-01 (v1.1 Phase 9): the ONE shared mutex serializing ALL
+            // S3BlockStore access - the cold-read chain's Gets race the
+            // drainer's remote Puts from this point on (MinioS3Client has
+            // no concurrent-call contract, 09-RESEARCH §6.3).
+            auto remote_store_mutex = std::make_shared<std::mutex>();
+
             // The decorator and the drainer SHARE ownership of the journal
             // store and the mutex (copy the handles, never move).
             auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
@@ -143,12 +150,25 @@ namespace sgns::crdt
                                          + ", critical_pending=" + std::to_string( backpressure.critical_pending )
                                          + ")" );
             }
-            auto manager = std::make_shared<ColdStorageManager>( local_store, remote_store, cold_store_mutex, backpressure );
+            auto manager = std::make_shared<ColdStorageManager>(
+                local_store, remote_store, cold_store_mutex, remote_store_mutex, backpressure );
+
+            // READ-01 (v1.1 Phase 9): the cold-read chain service over the
+            // SAME store handles and mutexes, rehydrating through the
+            // decorator (its set() journals + writes hot - SC4's path).
+            auto cold_read_service = std::make_shared<ColdReadService>(
+                local_store, remote_store, cold_store_mutex, remote_store_mutex, decorator );
 
             ColdStorageBundle bundle;
-            bundle.data_store       = std::move( decorator );
-            bundle.manager          = std::move( manager );
-            bundle.cold_store_mutex = std::move( cold_store_mutex );
+            bundle.data_store         = std::move( decorator );
+            bundle.manager            = std::move( manager );
+            bundle.cold_store_mutex   = std::move( cold_store_mutex );
+            bundle.remote_store_mutex = std::move( remote_store_mutex );
+            // The SAME service object, up-cast to the ungated hook
+            // interface for GraphsyncDAGSyncer injection (globaldb.cpp
+            // never needs the complete gated type).
+            bundle.cold_read_service  = cold_read_service;
+            bundle.cold_read_hook     = std::move( cold_read_service );
             return outcome::success( std::move( bundle ) );
         }
         catch ( const std::invalid_argument &e )
