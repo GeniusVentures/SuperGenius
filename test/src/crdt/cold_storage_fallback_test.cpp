@@ -683,6 +683,140 @@ TEST_F( ColdStorageFallbackTest, SC3_UnauthorizedSurfacesOwnClass )
 }
 
 /**
+ * @given the full 8-input ColdReadStatus space
+ * @when  every input maps onto the DAGSyncer error surface
+ * @then  NO input ever yields PEER_BLACKLISTED or TIMED_OUT - a cold
+ *        status can never blame a peer or claim a network timeout (SC3
+ *        behavioral proxy for the no-peer-blame rule; the structural
+ *        half is the scoped source audit in this plan's verification).
+ */
+TEST( ColdReadStatusMapping, SC3_NoPeerBlameMappingSafetyNet )
+{
+    using Class = ColdReadStatus::Class;
+    using Error = sgns::crdt::GraphsyncDAGSyncer::Error;
+    const std::vector<std::pair<Class, bool>> inputs = {
+        { Class::NotFound, false },          { Class::NotFound, true },
+        { Class::TemporarilyUnavailable, false }, { Class::TemporarilyUnavailable, true },
+        { Class::Corrupt, false },           { Class::Corrupt, true },
+        { Class::Unauthorized, false },      { Class::Unauthorized, true },
+    };
+    for ( const auto &[cls, from_remote] : inputs )
+    {
+        ColdReadStatus status;
+        status.cls           = cls;
+        status.fromRemoteTier = from_remote;
+        const auto mapped = sgns::crdt::MapColdReadStatus( status );
+        EXPECT_NE( mapped, Error::PEER_BLACKLISTED )
+            << "class " << static_cast<int>( cls ) << " must never blame a peer (SC3)";
+        EXPECT_NE( mapped, Error::TIMED_OUT )
+            << "class " << static_cast<int>( cls ) << " must never claim a peer timeout (SC3)";
+    }
+}
+
+/**
+ * @given a never-sealed block fetched cold through the chain
+ * @when  the rehydrate path writes it back
+ * @then  the spy inner saw EXACTLY ONE bytes-write (set) and ZERO
+ *        resolved-marker writes - SC4 + the §2.4 ruling: bytes only this
+ *        phase; the write surface is the decorator set() and nothing
+ *        else (no restore re-entry storms: pubsub/routing/heads are
+ *        unreachable from this layer by construction, §2.3).
+ */
+TEST_F( ColdStorageFallbackTest, SC4_RehydrateSilence_BytesOnlyNoMarkers )
+{
+    const std::string payload = "rehydrate silence payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto put = remote_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    sgns::common::Buffer out;
+    (void)service_->Get( cid_key, out );
+    ASSERT_FALSE( out.empty() );
+    service_->Rehydrate( cid_key, out );
+
+    EXPECT_EQ( inner_->set_calls(), 1u ) << "SC4: exactly one bytes-write";
+    EXPECT_EQ( inner_->seal_calls(), 0u ) << "SC4/§2.4: zero resolved-marker writes";
+}
+
+/**
+ * @given a block that WAS previously sealed in the hot fixture
+ * @when  a cold fetch rehydrates it
+ * @then  the pre-existing seal stays and NO second marker write occurs -
+ *        the rehydrate path never touches seal state (SC4).
+ */
+TEST_F( ColdStorageFallbackTest, SC4_PreSealedBlockGainsNoMarker )
+{
+    const std::string payload = "pre-sealed rehydrate payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto put = remote_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    // Pre-seal the CID in the hot fixture (exactly one marker write).
+    auto sealed = decorator_->seal( cid_key );
+    ASSERT_TRUE( sealed.has_value() );
+    ASSERT_EQ( inner_->seal_calls(), 1u );
+    auto was_sealed = decorator_->is_sealed( cid_key );
+    ASSERT_TRUE( was_sealed.has_value() && was_sealed.value() );
+
+    sgns::common::Buffer out;
+    (void)service_->Get( cid_key, out );
+    ASSERT_FALSE( out.empty() );
+    service_->Rehydrate( cid_key, out );
+
+    EXPECT_EQ( inner_->set_calls(), 1u );
+    EXPECT_EQ( inner_->seal_calls(), 1u ) << "no additional marker write after rehydrate (SC4)";
+    auto still_sealed = decorator_->is_sealed( cid_key );
+    ASSERT_TRUE( still_sealed.has_value() );
+    EXPECT_TRUE( still_sealed.value() ) << "the pre-existing marker survives untouched";
+}
+
+/**
+ * @given a re-warm that FAILED under a scripted s3d Unavailable fault
+ * @when  the fault clears and the same CID is re-enqueued
+ * @then  the coalescing map never wedges on the failed fetch: the
+ *        re-enqueue is accepted and the block warms - D-07 recovery.
+ */
+TEST_F( ColdStorageFallbackTest, D07_RewarmFaultRecoveryMapNeverWedges )
+{
+    const std::string payload = "fault recovery payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto counting = std::make_shared<CountingS3Client>( fake_ );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( counting );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> counting_remote = std::move( opened_remote.value() );
+    auto recovery_service = std::make_shared<ColdReadService>(
+        shared_local_, counting_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+    auto put = counting_remote->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+
+    recovery_service->Start();
+    fake_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+    EXPECT_TRUE( recovery_service->EnqueueRewarm( cid_key ) );
+
+    // Deterministic observation of the failed attempt: the worker actually
+    // reached the S3 tier (the counting client saw the Get) before failing.
+    const auto attempted = [&]() { return counting->get_calls() >= 1; };
+    ASSERT_TRUE( PollUntil( attempted, std::chrono::seconds( 2 ) ) );
+
+    // Clear the fault: the same CID must be accepted again and complete.
+    fake_->ClearFaults();
+    EXPECT_TRUE( recovery_service->EnqueueRewarm( cid_key ) );
+    const auto hot = [&]() {
+        auto got = inner_->get( cid_key );
+        return got.has_value();
+    };
+    EXPECT_TRUE( PollUntil( hot, ColdReadService::kRewarmBudget + std::chrono::seconds( 1 ) ) )
+        << "the coalescing map must never wedge on a failed fetch (D-07)";
+    recovery_service->Stop();
+}
+
+/**
  * @brief Test-local S3Client wrapper injecting a per-GET sleep before
  *        delegating (re-warm worker timing control; the fake has fault
  *        kinds only - no latency hook).

@@ -480,7 +480,7 @@ TEST_F( ColdReadFreezeLatencyTest, InlineChainLatencyByInjectedGetLatency )
  * @then  the block is hot well INSIDE the 4 s kRewarmBudget (hard bound;
  *        SC2 time-to-warm evidence).
  */
-TEST_F( ColdReadFreezeLatencyTest, TimeToWarmWithinBudgetAt500MsLatency )
+TEST_F( ColdReadFreezeLatencyTest, SC2_TimeToWarmWithinBudgetAt500MsLatency )
 {
     injected_->SetGetLatency( std::chrono::milliseconds( 500 ) );
     const CID cid_key = SeedColdBlock( "time to warm payload" );
@@ -505,7 +505,7 @@ TEST_F( ColdReadFreezeLatencyTest, TimeToWarmWithinBudgetAt500MsLatency )
  *        the executor; the whole-node-freeze hazard stays closed (SC2
  *        regression).
  */
-TEST_F( ColdReadFreezeLatencyTest, HotServeNeverWaitsOnSaturatedRewarmQueue )
+TEST_F( ColdReadFreezeLatencyTest, SC2_HotServeUnderSaturatedSlowQueue )
 {
     injected_->SetGetLatency( std::chrono::milliseconds( 500 ) );
 
@@ -542,7 +542,7 @@ TEST_F( ColdReadFreezeLatencyTest, HotServeNeverWaitsOnSaturatedRewarmQueue )
  *        path (SC2; the outage is logged + counted by the worker's chain
  *        run, not by the responder).
  */
-TEST_F( ColdReadFreezeLatencyTest, UnavailableFaultMissReturnsImmediately )
+TEST_F( ColdReadFreezeLatencyTest, SC2_OutageMissReturnsImmediately_FailFast )
 {
     fake_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
     const auto miss_cid = MakeCid( "unavailable outage cid" );
@@ -553,6 +553,39 @@ TEST_F( ColdReadFreezeLatencyTest, UnavailableFaultMissReturnsImmediately )
         std::chrono::steady_clock::now() - started_at );
     EXPECT_TRUE( result.has_error() );
     EXPECT_LT( elapsed_ms.count(), 50 );
+}
+
+/**
+ * @given a scripted s3d Unavailable outage WITH >= 16 cold re-warms in
+ *        flight (each failing fast on the worker)
+ * @when  a hot CID is served through the responder wrapper
+ * @then  the serve returns in under 50 ms - the outage-side half of the
+ *        SC2 freeze regression (the slow-500 ms half is
+ *        SC2_HotServeUnderSaturatedSlowQueue): the responder never
+ *        freezes libp2p stream processing while cold misses churn.
+ */
+TEST_F( ColdReadFreezeLatencyTest, SC2_HotServeUnderOutageFailFastQueueChurning )
+{
+    fake_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+
+    // >= 16 cold misses in flight through the wrapper (each misses the
+    // fake dag, enqueues, and the worker fails fast on the faulted S3).
+    for ( int i = 0; i < 16; ++i )
+    {
+        const CID cid_key = SeedColdBlock( "outage churn cold cid " + std::to_string( i ) );
+        auto miss = wrapper_->getNode( cid_key );
+        EXPECT_TRUE( miss.has_error() );
+    }
+
+    // Hot hit through the wrapper while the outage churns: immediate.
+    const auto hot_started = std::chrono::steady_clock::now();
+    auto hot_result = wrapper_->getNode( fake_dag_->hot_cid() );
+    const auto hot_elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - hot_started );
+    ASSERT_TRUE( hot_result.has_value() );
+    EXPECT_LT( hot_elapsed_ms.count(), 50 ) << "SC2: an s3d outage must never delay hot serving";
+
+    fake_->ClearFaults();
 }
 
 /**
