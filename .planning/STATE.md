@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 20
-status: ready_to_plan
-stopped_at: Phase 20 complete (5/5) — ready to discuss Phase 21
-last_updated: 2026-10-24T21:09:10.522Z
-last_activity: 2026-10-24
+current_phase: 21
+status: Awaiting next milestone
+stopped_at: "Completed 20-05-PLAN.md (phase 20 complete: 5/5 plans)"
+last_updated: "2026-10-26T11:50:08.174Z"
+last_activity: 2026-10-26 — Milestone v1.2 completed and archived
 progress:
   total_phases: 25
   completed_phases: 5
@@ -29,12 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 ## Current Position
 
-Phase: 20 (reclamation-proof-e2e-hardening) — EXECUTING
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-24
-
-Progress: [██████████] 100%
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-26 — Milestone v1.2 completed and archived
 
 ## Roadmap Snapshot
 
@@ -73,7 +71,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Operator Next Steps
 
-- Plan the first phase: /gsd:plan-phase 16
+- Start the next milestone with /gsd-new-milestone
 
 ### Quick Tasks Completed
 
@@ -251,17 +249,17 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
+Items acknowledged and deferred at milestone close on 2026-10-26 (v1.2):
 
 | Category | Item | Status |
 |----------|------|--------|
-| todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the BOOT-01..04 scope (durable confirmed trust-state, ceremony, policy authority); kept for reference |
-| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track A bridge scope (evmrelay_integration track), not v1.1 |
-| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track A Phase 5 scope (PR #298 findings), not v1.1 |
+| uat | 16-HUMAN-UAT.md | Resolved — both items passed with evidence (stale frontmatter label) |
+| uat | 17-HUMAN-UAT.md | Resolved — live staging validation, 2/2 passed |
+| uat | 18-HUMAN-UAT.md | Resolved — live grow-then-prune demo + CR-01 sign-off |
+| uat | 19-HUMAN-UAT.md | Resolved — staging spot-check confirmed by owner |
 | quick_task | 11 June-2026 TokenId/InputValidator records (260602-*) | Stale — artifacts no longer on disk |
-| uat | 14-UAT.md (4 open scenarios) | Discarded — phase 14 execution discarded by owner 2026-08; scope unshipped |
-| uat | 15-HUMAN-UAT.md | Resolved 2026-10-02 (status label predates resolve state) |
-| verification | 11-VERIFICATION.md (conditional) | Documented — multi_account instability later green; see v1.1-MILESTONE-AUDIT.md |
-| verification | 13-VERIFICATION.md (29/32) | Documented — residuals map to discarded phase-14 scope; see v1.1-MILESTONE-AUDIT.md |
-| gap | ELM-01..08 | Dropped from v1.1 — cross-repo SGProcessingManager scope; see v1.1-MILESTONE-AUDIT.md |
-| gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
+| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track-A bridge scope, not v1.2 |
+| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track-A scope (PR #298 findings) |
+| todo | nodeconsensustest-registry-catchup-flake (P2) | Open — proven pre-existing (develop A/B); budget-raise or dual-proposer fix documented |
+| todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the scope |
+| debug | ci-nodeconsensustest-registry-timeout-pr398 | Closed — verdict NOT OURS (develop A/B proof); ticket filed |
