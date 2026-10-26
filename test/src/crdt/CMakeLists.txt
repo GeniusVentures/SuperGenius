@@ -102,3 +102,26 @@ target_include_directories(cold_storage_spill_test PRIVATE
 set_tests_properties(cold_storage_spill_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Cold-read fallback chain tests (READ-01, v1.1 Phase 9 plan 09-01).
+# Registered ONLY under SGNS_COLD_STORAGE: the suite links
+# sgns-blockstore::sgns-blockstore (the chain service under test plus the
+# InMemoryS3Client fake, whose NOT-installed src/ header is reached via the
+# relative include dir below - 08-RESEARCH Pitfall 6). The Tier-1 lane
+# stays non-empty on OFF builds via the unconditional config-gate test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_fallback_test
+    cold_storage_fallback_test.cpp
+)
+
+target_link_libraries(cold_storage_fallback_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+)
+
+target_include_directories(cold_storage_fallback_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_fallback_test PROPERTIES LABELS "Tier1")
+endif()
+
