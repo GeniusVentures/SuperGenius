@@ -26,6 +26,45 @@ namespace
     // peer (120s x N). Expiring here fails the fetch; the datastore's failed-root
     // retry ladder reschedules it with backoff while the worker keeps serving.
     constexpr auto kTotalFetchTimeout = std::chrono::seconds( 20 );
+
+    // D-03 (v1.1 Phase 9): cold-precedence over the peer leg's
+    // not-found-shaped terminal errors. A recorded cold classification of
+    // Corrupt/Unauthorized/TemporarilyUnavailable outranks
+    // CID_NOT_FOUND/ROUTE_NOT_FOUND - a transport-shaped cold failure must
+    // never surface as an authoritative miss (SC1). Precedence
+    // Corrupt > Unauthorized > TemporarilyUnavailable is already resolved
+    // inside the chain service; the status handed here is its final
+    // aggregate. A cold NotFound NEVER overrides the peer error (SC1:
+    // only definitive absence everywhere is NotFound), and neither does
+    // any cold classification override TIMED_OUT / PEER_BLACKLISTED /
+    // DAGSYNCER_NOT_STARTED - those keep their distinct meanings.
+    sgns::crdt::GraphsyncDAGSyncer::Error ApplyColdPrecedence( sgns::crdt::GraphsyncDAGSyncer::Error peer_error,
+                                                               bool                                    cold_classified,
+                                                               const sgns::crdt::ColdReadStatus      &cold_status )
+    {
+        using Error      = sgns::crdt::GraphsyncDAGSyncer::Error;
+        using ColdStatus = sgns::crdt::ColdReadStatus;
+        if ( !cold_classified )
+        {
+            return peer_error;
+        }
+        if ( peer_error != Error::CID_NOT_FOUND && peer_error != Error::ROUTE_NOT_FOUND )
+        {
+            return peer_error;
+        }
+        switch ( cold_status.cls )
+        {
+            case ColdStatus::Class::Corrupt:
+                return Error::COLD_STORAGE_CORRUPT;
+            case ColdStatus::Class::Unauthorized:
+                return Error::COLD_STORAGE_UNAUTHORIZED;
+            case ColdStatus::Class::TemporarilyUnavailable:
+                return Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE;
+            case ColdStatus::Class::NotFound:
+                return peer_error; // cold NotFound never overrides (SC1)
+        }
+        return peer_error;
+    }
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
@@ -233,7 +272,36 @@ namespace sgns::crdt
             return node;
         }
 
-        BOOST_OUTCOME_TRY( auto route_keys, GetRouteKeys( cid ) );
+        // D-01 (v1.1 Phase 9): COLD BEFORE PEERS - after both hot attempts
+        // miss, resolve through the cold chain (LocalBlockStore ->
+        // S3BlockStore) BEFORE any peer request. A cold hit serves
+        // directly; any cold miss or failure is logged + counted by the
+        // service and falls through to the peer leg unchanged (D-03). The
+        // synchronous fetch is bounded by existing worker tolerance
+        // (09-RESEARCH §7.2: peer fetches already occupy this worker up to
+        // kTotalFetchTimeout; a transport fault fails fast and falls
+        // through, so the worker is never parked on a dead s3d).
+        ColdReadStatus cold_classification{};
+        bool           cold_classified = false;
+        node = FetchNodeFromColdStorage( cid, node, &cold_classified, &cold_classification );
+
+        if ( !node.has_error() )
+        {
+            logger_->debug( "Return node for CID {} instance={}",
+                            cid.toString().value(),
+                            reinterpret_cast<size_t>( this ) );
+            return node;
+        }
+
+        auto route_keys_result = GetRouteKeys( cid );
+        if ( route_keys_result.has_error() )
+        {
+            // D-03: no peer route at all - surface the not-found-shaped
+            // terminal error with cold precedence applied.
+            return outcome::failure(
+                ApplyColdPrecedence( Error::ROUTE_NOT_FOUND, cold_classified, cold_classification ) );
+        }
+        auto route_keys = std::move( route_keys_result.value() );
 
         const auto fetch_deadline = std::chrono::steady_clock::now() + kTotalFetchTimeout;
 
@@ -244,7 +312,8 @@ namespace sgns::crdt
                 logger_->error( "Fetch for CID {} abandoned: total budget of {}s exhausted across route peers",
                                 cid.toString().value(),
                                 std::chrono::duration_cast<std::chrono::seconds>( kTotalFetchTimeout ).count() );
-                return outcome::failure( Error::ROUTE_NOT_FOUND );
+                return outcome::failure(
+                    ApplyColdPrecedence( Error::ROUTE_NOT_FOUND, cold_classified, cold_classification ) );
             }
 
             BOOST_OUTCOME_TRY( auto peerEntry, GetPeerById( peer_key ) );
@@ -464,7 +533,11 @@ namespace sgns::crdt
         }
 
         logger_->error( "No usable route candidates left for CID {}", cid.toString().value() );
-        return outcome::failure( Error::ROUTE_NOT_FOUND );
+        // D-03: peers exhausted without the block - surface the terminal
+        // error with cold precedence applied (a recorded transport-shaped
+        // cold classification outranks the not-found-shaped peer result).
+        return outcome::failure(
+            ApplyColdPrecedence( Error::ROUTE_NOT_FOUND, cold_classified, cold_classification ) );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
@@ -522,7 +595,24 @@ namespace sgns::crdt
         auto getNodeResult       = GetNodeFromMerkleDAG( cid );
         auto getCachedNodeResult = GrabCIDBlock( cid );
 
-        return getNodeResult.has_value() || getCachedNodeResult.has_value();
+        if ( getNodeResult.has_value() || getCachedNodeResult.has_value() )
+        {
+            return true;
+        }
+
+        // D-09 (v1.1 Phase 9): third check, cold-dir presence - gated on
+        // the hook being non-null (disabled builds keep today's two-term
+        // answer, the Phase-7 byte-identical bar). LOCAL TIER ONLY (D-08):
+        // HasLocalCold is a LocalBlockStore::Has point lookup that NEVER
+        // performs S3 or network I/O - the pubsub-receive-path callers
+        // (pubsub_broadcaster_ext.cpp:632; crdt_datastore.cpp:706/:1881)
+        // must stay freeze-proof; its bool contract never blocks/throws.
+        if ( cold_read_hook_ != nullptr && cold_read_hook_->HasLocalCold( cid ) )
+        {
+            return true;
+        }
+
+        return false;
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeWithoutRequest(
@@ -552,7 +642,9 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::FetchNodeFromColdStorage(
         const CID                                                               &cid,
-        const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result ) const
+        const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result,
+        bool                                                                   *out_cold_classified,
+        ColdReadStatus                                                         *out_cold_status ) const
     {
         if ( cold_read_hook_ == nullptr )
         {
@@ -588,6 +680,16 @@ namespace sgns::crdt
             logger_->warn( "cold read: CID {} fetched cold but hot re-read failed",
                            cid.toString().value() );
             return node;
+        }
+
+        // D-03: record the non-NotFound aggregate for the caller's
+        // cold-precedence rule (a cold NotFound is definitive absence at
+        // both tiers - it never overrides the peer leg's own result).
+        if ( out_cold_classified != nullptr && out_cold_status != nullptr
+             && status.cls != ColdReadStatus::Class::NotFound )
+        {
+            *out_cold_classified = true;
+            *out_cold_status     = status;
         }
 
         logger_->debug( "cold read: chain miss for CID {} (class={}, fromRemoteTier={})",

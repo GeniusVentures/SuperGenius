@@ -14,6 +14,12 @@
 
 namespace sgns::crdt
 {
+    // READ-01 (v1.1 Phase 9): cold-read hook types - defined in the
+    // ungated crdt/cold_read_fallback.hpp (which includes this header;
+    // forward declarations here keep the include cycle broken).
+    class ColdReadFallback;
+    struct ColdReadStatus;
+
     /**
    * @brief A DAGSyncer is an abstraction to an IPLD-based p2p storage layer.
    * A DAGSyncer is a DAGService with the ability to publish new ipld nodes
@@ -199,6 +205,12 @@ namespace sgns::crdt
          * @param[in]  hot_miss_result the failed hot-path result to pass
          *             through UNCHANGED when no hook is injected (the
          *             Phase-7 byte-identical disabled bar)
+         * @param[out] out_cold_classified when non-null: set to true iff
+         *             the chain ran and ended in a NON-NotFound
+         *             classification (the D-03 precedence aggregate)
+         * @param[out] out_cold_status when non-null: receives the final
+         *             cold classification (valid when
+         *             *out_cold_classified)
          * @return     the re-cached node on a cold hit, or the mapped
          *             cold classification
          * @note        Runs OUTSIDE dagMutex_ by construction (called only
@@ -208,7 +220,9 @@ namespace sgns::crdt
          */
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> FetchNodeFromColdStorage(
             const CID                                                               &cid,
-            const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result ) const;
+            const outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> &hot_miss_result,
+            bool                                                                   *out_cold_classified = nullptr,
+            ColdReadStatus                                                         *out_cold_status     = nullptr ) const;
 
         outcome::result<void> BlackListPeer( const PeerId &peer ) const;
 
