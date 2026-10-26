@@ -304,7 +304,7 @@ namespace
  *        and ZERO seal writes (SC4 bytes-only rehydrate), and the hot
  *        store now serves the block (D-04 re-cache).
  */
-TEST_F( ColdStorageFallbackTest, LocalTierHitEndToEnd )
+TEST_F( ColdStorageFallbackTest, D02_LocalTierHitEndToEnd )
 {
     const std::string payload = "local tier cold read payload";
     const auto        cid     = MakeCid( payload );
@@ -339,7 +339,7 @@ TEST_F( ColdStorageFallbackTest, LocalTierHitEndToEnd )
  * @then  the chain resolves from S3 with CID-verified bytes, re-caches
  *        through the decorator set (SC4), and the hot store serves it.
  */
-TEST_F( ColdStorageFallbackTest, S3TierHitEndToEnd )
+TEST_F( ColdStorageFallbackTest, D01_S3TierHitEndToEnd )
 {
     const std::string payload = "s3 tier cold read payload";
     const auto        cid     = MakeCid( payload );
@@ -372,7 +372,7 @@ TEST_F( ColdStorageFallbackTest, S3TierHitEndToEnd )
  *        the null hook is a no-op and the disabled bar stays
  *        byte-identical (Phase-7).
  */
-TEST_F( ColdStorageFallbackTest, NullHookNoOpReturnsHotErrorUnchanged )
+TEST_F( ColdStorageFallbackTest, D06_NullHookNoOpReturnsHotErrorUnchanged )
 {
     const std::string payload = "absent payload";
     const auto        cid     = MakeCid( payload );
@@ -399,7 +399,7 @@ TEST_F( ColdStorageFallbackTest, NullHookNoOpReturnsHotErrorUnchanged )
  *        just by return value (D-02: a cold-dir hit avoids the S3 round
  *        trip).
  */
-TEST_F( ColdStorageFallbackTest, LocalTierHitPerformsZeroS3Gets )
+TEST_F( ColdStorageFallbackTest, D02_LocalTierHitPerformsZeroS3Gets )
 {
     const std::string payload = "tier selection payload";
     const auto        cid     = MakeCid( payload );
@@ -432,7 +432,7 @@ TEST_F( ColdStorageFallbackTest, LocalTierHitPerformsZeroS3Gets )
  *        per the envelope rule (SC1) - and MapColdReadStatus maps it to
  *        CID_NOT_FOUND.
  */
-TEST_F( ColdStorageFallbackTest, DefinitiveAbsenceClassifiesNotFound )
+TEST_F( ColdStorageFallbackTest, D03_DefinitiveAbsenceIsTheOnlyNotFound )
 {
     const std::string payload = "definitively absent payload";
     const auto        cid     = MakeCid( payload );
@@ -455,7 +455,7 @@ TEST_F( ColdStorageFallbackTest, DefinitiveAbsenceClassifiesNotFound )
  *        MapColdReadStatus maps it to COLD_STORAGE_TEMPORARILY_UNAVAILABLE,
  *        never CID_NOT_FOUND (D-03).
  */
-TEST_F( ColdStorageFallbackTest, S3UnavailableNeverSurfacesAsNotFound )
+TEST_F( ColdStorageFallbackTest, SC1_NoNotFoundEscape_S3Unavailable )
 {
     const std::string payload = "transport blip payload";
     const auto        cid     = MakeCid( payload );
@@ -481,7 +481,7 @@ TEST_F( ColdStorageFallbackTest, S3UnavailableNeverSurfacesAsNotFound )
  * @then  the classification is Corrupt attributed to the REMOTE tier and
  *        it never maps to CID_NOT_FOUND (SC3).
  */
-TEST_F( ColdStorageFallbackTest, RemoteCorruptionAttributesToRemoteTier )
+TEST_F( ColdStorageFallbackTest, SC3_CorruptAttributesRemoteTier )
 {
     const std::string payload = "remote corruption payload";
     const auto        cid     = MakeCid( payload );
@@ -511,7 +511,7 @@ TEST_F( ColdStorageFallbackTest, RemoteCorruptionAttributesToRemoteTier )
  *        chain continues to S3 per §3.2, finds absence there, and the
  *        remembered local Corrupt outranks the remote NotFound (SC3).
  */
-TEST_F( ColdStorageFallbackTest, LocalCorruptionAttributesToLocalTier )
+TEST_F( ColdStorageFallbackTest, SC3_CorruptAttributesLocalTier )
 {
     const std::string payload = "local corruption payload";
     const auto        cid     = MakeCid( payload );
@@ -536,7 +536,7 @@ TEST_F( ColdStorageFallbackTest, LocalCorruptionAttributesToLocalTier )
  * @then  each row yields its SC3 table value, and no non-NotFound input
  *        ever maps to CID_NOT_FOUND.
  */
-TEST( ColdReadStatusMapping, MapColdReadStatusExhaustiveTable )
+TEST( ColdReadStatusMapping, SC3_MapColdReadStatusExhaustiveTable )
 {
     struct Row
     {
@@ -580,7 +580,7 @@ TEST( ColdReadStatusMapping, MapColdReadStatusExhaustiveTable )
  *        answers false WITHOUT throwing - the freeze-sensitive callers
  *        must never block or throw (D-08/D-09).
  */
-TEST_F( ColdStorageFallbackTest, HasLocalColdBoolContractUnderFault )
+TEST_F( ColdStorageFallbackTest, D08_HasLocalColdBoolContractUnderFault )
 {
     const std::string payload = "cold-dir presence payload";
     const auto        cid     = MakeCid( payload );
@@ -597,6 +597,89 @@ TEST_F( ColdStorageFallbackTest, HasLocalColdBoolContractUnderFault )
     // Injected local-tier Unavailable: false, never a throw (D-08).
     shared_local_->SetFault( sgns::blockstore::FaultKind::Unavailable );
     EXPECT_NO_THROW( { EXPECT_FALSE( service_->HasLocalCold( cid_key ) ); } );
+}
+
+/**
+ * @given the Local tier faulted Unavailable (transport blip) while a good
+ *        copy sits in S3, behind a COUNTING client
+ * @when  the chain runs
+ * @then  the chain FALLS THROUGH to the S3 tier (fake Get count >= 1) and
+ *        resolves the good remote bytes - D-03 mid-chain fall-through;
+ *        the local transport failure never ends the read.
+ */
+TEST_F( ColdStorageFallbackTest, D03_LocalUnavailableFallsThroughToS3 )
+{
+    const std::string payload = "local blip fall-through payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto counting = std::make_shared<CountingS3Client>( fake_ );
+    auto opened_remote = sgns::blockstore::S3BlockStore::Open( counting );
+    ASSERT_TRUE( opened_remote.has_value() );
+    std::shared_ptr<S3BlockStore> counting_remote = std::move( opened_remote.value() );
+    ColdReadService fallthrough_service(
+        shared_local_, counting_remote, cold_store_mutex_, remote_store_mutex_, decorator_ );
+
+    auto put = counting_remote->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put.has_value() );
+    shared_local_->SetFault( sgns::blockstore::FaultKind::Unavailable );
+
+    sgns::common::Buffer out;
+    const auto status = fallthrough_service.Get( cid_key, out );
+    EXPECT_FALSE( out.empty() ) << "the good S3 copy must serve after a local transport blip (D-03)";
+    EXPECT_EQ( out.toVector(), std::vector<uint8_t>( payload.begin(), payload.end() ) );
+    EXPECT_GE( counting->get_calls(), 1u ) << "the chain must still consult the S3 tier (D-03 fall-through)";
+    // On success the status payload is the documented default (meaningful
+    // only on failure) - the SC1 no-NotFound-escape property is asserted
+    // on the FAILURE-shape cases (SC1_NoNotFoundEscape_S3Unavailable).
+}
+
+/**
+ * @given a CORRUPT Local-tier copy and a GOOD S3 copy of the same CID
+ * @when  the chain runs
+ * @then  the good S3 bytes serve - Corrupt stops the tier, never the
+ *        chain (§3.2: the remote copy may be good; SC3).
+ */
+TEST_F( ColdStorageFallbackTest, SC3_LocalCorruptServesGoodS3Copy )
+{
+    const std::string payload = "local corrupt good remote payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    auto put_local = shared_local_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put_local.has_value() );
+    auto put_remote = remote_->Put( cid, SpanOf( payload ) );
+    ASSERT_TRUE( put_remote.has_value() );
+    shared_local_->SetFault( sgns::blockstore::FaultKind::CorruptData );
+
+    sgns::common::Buffer out;
+    (void)service_->Get( cid_key, out );
+    ASSERT_FALSE( out.empty() ) << "a corrupt local copy must not mask the good S3 copy";
+    EXPECT_EQ( out.toVector(), std::vector<uint8_t>( payload.begin(), payload.end() ) );
+}
+
+/**
+ * @given an Unauthorized fault scripted on S3 Get with the block absent
+ * @when  the chain runs
+ * @then  the classification is Unauthorized - its OWN class, never
+ *        NotFound, never TemporarilyUnavailable (SC3 table row).
+ */
+TEST_F( ColdStorageFallbackTest, SC3_UnauthorizedSurfacesOwnClass )
+{
+    const std::string payload = "unauthorized payload";
+    const auto        cid     = MakeCid( payload );
+    const CID         cid_key( cid );
+
+    fake_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unauthorized );
+
+    sgns::common::Buffer out;
+    const auto status = service_->Get( cid_key, out );
+    EXPECT_TRUE( out.empty() );
+    EXPECT_EQ( status.cls, ColdReadStatus::Class::Unauthorized );
+    EXPECT_NE( status.cls, ColdReadStatus::Class::NotFound );
+    EXPECT_NE( status.cls, ColdReadStatus::Class::TemporarilyUnavailable );
+    EXPECT_EQ( sgns::crdt::MapColdReadStatus( status ),
+               sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_UNAUTHORIZED );
 }
 
 /**
@@ -652,7 +735,7 @@ private:
  * @then  exactly ONE chain fetch runs (fake Get count == 1) and the block
  *        becomes hot (PollUntil) - D-07 coalescing with warm completion.
  */
-TEST_F( ColdStorageFallbackTest, RewarmCoalescesDuplicateEnqueues )
+TEST_F( ColdStorageFallbackTest, D07_RewarmCoalescesDuplicateEnqueues )
 {
     const std::string payload = "re-warm coalescing payload";
     const auto        cid     = MakeCid( payload );
@@ -692,7 +775,7 @@ TEST_F( ColdStorageFallbackTest, RewarmCoalescesDuplicateEnqueues )
  *        returns false (drop + count), and the call never blocks (D-07
  *        bounded queue, non-blocking overflow).
  */
-TEST_F( ColdStorageFallbackTest, RewarmQueueOverflowDropsWithoutBlocking )
+TEST_F( ColdStorageFallbackTest, D07_RewarmQueueOverflowDropsWithoutBlocking )
 {
     std::vector<CID> cids;
     for ( size_t i = 0; i < ColdReadService::kMaxRewarmQueueDepth + 1; ++i )
@@ -721,7 +804,7 @@ TEST_F( ColdStorageFallbackTest, RewarmQueueOverflowDropsWithoutBlocking )
  * @then  the entry is SKIPPED (dropped + counted), not fetched - the
  *        budget bounds scheduling/waiting (D-07/RESEARCH §6.4).
  */
-TEST_F( ColdStorageFallbackTest, RewarmExpiredBudgetEntryIsSkipped )
+TEST_F( ColdStorageFallbackTest, D07_RewarmExpiredBudgetEntryIsSkipped )
 {
     const std::string payload = "expired budget payload";
     const auto        cid     = MakeCid( payload );
@@ -762,7 +845,7 @@ TEST_F( ColdStorageFallbackTest, RewarmExpiredBudgetEntryIsSkipped )
  *         the bounded-grace + join contract (D-11 shape), Stop is
  *         idempotent, and the destructor joins (Pitfall-5 ordering).
  */
-TEST_F( ColdStorageFallbackTest, RewarmStopJoinsAndIsIdempotent )
+TEST_F( ColdStorageFallbackTest, D11_RewarmStopJoinsAndIsIdempotent )
 {
     const std::string payload = "shutdown grace payload";
     const auto        cid     = MakeCid( payload );
