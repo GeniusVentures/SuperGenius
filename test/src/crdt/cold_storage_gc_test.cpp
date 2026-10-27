@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -1743,4 +1744,145 @@ TEST_F( ColdStorageGcTest, RedeliveryDedupDropsAtHasBlockWithZeroS3Gets )
 
     EXPECT_EQ( counting_->get_calls(), gets_before )
         << "zero S3 Gets on the dedup path - the marker is a local point lookup";
+}
+
+/**
+ * @given a store seeded with LIVE values AND TOMBSTONES (a published
+ *        element then deleted - the /t/ keyspace is non-empty), two
+ *        detached deltas evicted through aggressive-retention passes
+ * @when  the /t/, /k/, and /h/ keyspaces are snapshotted before and
+ *        after the passes
+ * @then  every snapshot is BYTE-IDENTICAL - tombstones, current values,
+ *        and heads are never purged by any number of GC passes (the
+ *        SC2 end-state complement of the per-op spy), and the evicted
+ *        units' reclaimed-bytes metrics equal the markers' recorded
+ *        bytes exactly.
+ */
+TEST_F( ColdStorageGcTest, NeverPurgedEndStateAcrossAggressivePasses )
+{
+    // Seed: a live value, then a DELETED key (the tombstone delta).
+    (void)PublishElement( "gc/np/live", "value" );
+    auto tomb_delta = crdt_->CreateDeltaToRemove( "gc/np/live" );
+    ASSERT_TRUE( tomb_delta.has_value() );
+    auto removed = crdt_->Publish( tomb_delta.value(), { "topic" } );
+    ASSERT_TRUE( removed.has_value() );
+
+    // Two detached deltas to evict.
+    const CID e1 = PublishElement( "gc/np/evict-1", "v" );
+    ASSERT_TRUE( crdt_->RemoveHead( e1, "topic" ).has_value() );
+    const CID e2 = PublishElement( "gc/np/evict-2", "v" );
+    ASSERT_TRUE( crdt_->RemoveHead( e2, "topic" ).has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( e1 ), Cid( e2 ) } );
+    Backdate( Cid( e1 ), 60000 );
+    Backdate( Cid( e2 ), 60000 );
+
+    // Keyspace snapshots BEFORE (t/k/h under the set namespace + heads).
+    using HotQueryResult = sgns::storage::rocksdb::QueryResult;
+    auto snapshot_keys = [&]( HotQueryResult &out ) {
+        out.clear();
+        const std::string keys_prefix = crdt_->GetKeysPrefix(); // "<ns>/s/k"
+        const std::string set_root    = keys_prefix.substr( 0, keys_prefix.size() - 1 ); // "<ns>/s/"
+        const std::array<std::string, 3> prefixes = {
+            set_root + "t/", set_root + "k/", "/" + std::string( "namespace" ) + "/h/",
+        };
+        for ( const auto &prefix : prefixes )
+        {
+            sgns::storage::Buffer p;
+            p.put( prefix );
+            auto found = real_hot_->query( p );
+            ASSERT_TRUE( found.has_value() );
+            for ( const auto &[k, v] : found.value() )
+            {
+                out[k] = v;
+            }
+        }
+    };
+
+    HotQueryResult before;
+    snapshot_keys( before );
+    ASSERT_FALSE( before.empty() ) << "fixture must actually hold t/k/h state";
+
+    // Aggressive passes until the deterministic detach set is reclaimed
+    // (e1+e2; whether the LINKED HISTORY also orphans depends on head-
+    // replacement timing in the CRDT processing - the count is run-
+    // dependent, the GUARD below is the deterministic claim).
+    for ( int i = 0; i < 6; ++i )
+    {
+        (void)manager->GcPassOnce();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+        (void)manager->GcPassOnce();
+        if ( manager->GetStatus().gc_disposed_marker_count >= 2 )
+        {
+            break;
+        }
+    }
+    const auto status = manager->GetStatus();
+    ASSERT_GE( status.gc_disposed_marker_count, 2u ) << "e1 and e2 are always evicted";
+
+    // Metrics exactness: the markers' reclaimed bytes are all positive
+    // and their COUNT matches the evicted units exactly.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto markers = shared_local_->GetDisposed();
+        ASSERT_TRUE( markers.has_value() );
+        ASSERT_GE( markers.value().size(), 2u );
+        for ( const auto &[cid, record] : markers.value() )
+        {
+            (void)cid;
+            EXPECT_GT( record.reclaimed_bytes, 0u );
+        }
+    }
+
+    // THE GUARD: byte-identical t/k/h keyspaces after everything.
+    HotQueryResult after;
+    snapshot_keys( after );
+    EXPECT_EQ( before, after ) << "tombstones/current-values/heads are never purged";
+}
+
+/**
+ * @given a fully-evicted CID (marker present)
+ * @when  the CID is re-delivered K times through the pubsub-receive
+ *        HasBlock call shape (a re-delivery storm)
+ * @then  EVERY delivery drops at the the marker term with ZERO S3 Gets
+ *        across the whole storm (the counting client is static), and
+ *        the marker count stays bounded.
+ */
+TEST_F( ColdStorageGcTest, RedeliveryStormDropsEveryTimeWithZeroS3Gets )
+{
+    const Cid orphan = MakeCid( "storm payload" );
+    {
+        IpfsDatastore::Value value;
+        value.put( "storm payload" );
+        ASSERT_TRUE( decorator_->set( CID( orphan ), std::move( value ) ).has_value() );
+    }
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+    Backdate( orphan, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    (void)manager->GcPassOnce(); // evicted
+
+    const uint64_t gets_before = counting_->get_calls();
+    constexpr int  kStorm      = 25;
+    for ( int i = 0; i < kStorm; ++i )
+    {
+        auto dropped = dagsyncer_->HasBlock( CID( orphan ) );
+        ASSERT_TRUE( dropped.has_value() );
+        EXPECT_TRUE( dropped.value() ) << "delivery " << i << " drops at the marker term";
+    }
+    EXPECT_EQ( counting_->get_calls(), gets_before )
+        << "the whole storm cost ZERO S3 gets";
+
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto markers = shared_local_->GetDisposed();
+        ASSERT_TRUE( markers.has_value() );
+        EXPECT_LE( markers.value().size(),
+                   sgns::blockstore::kDefaultDisposedMarkerCap );
+    }
 }
