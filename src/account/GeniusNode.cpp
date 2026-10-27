@@ -632,6 +632,16 @@ namespace sgns
             node_logger_->info( "crdt_config.json: cold storage blockstore enabled: {}",
                                 cold_storage_config_.LogSummary() );
         }
+        // GC-01 (v1.1 Phase 11) retention-inert WARN: a retention section
+        // while gate (e) leaves cold storage disabled is NEVER a silent
+        // disable - one line, the same one-line posture as the enabled
+        // log. Nothing new is logged when retention is absent.
+        if ( cold_storage_config_.retention_configured && !cold_storage_config_.enabled )
+        {
+            node_logger_->warn(
+                "crdt_config.json: blockstore.retention configured but cold storage is disabled - "
+                "retention GC is inert" );
+        }
     }
 
     void GeniusNode::LoadLogConfig()

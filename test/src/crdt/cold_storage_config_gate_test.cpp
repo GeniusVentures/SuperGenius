@@ -453,3 +453,105 @@ TEST( ColdStorageConfigGate, AdminEndpointOptionalString )
     EXPECT_NE( wrong_type.error().find( "blockstore.admin_endpoint" ), std::string::npos );
     EXPECT_NE( wrong_type.error().find( "string" ), std::string::npos );
 }
+
+// ---------------------------------------------------------------------------
+// blockstore.retention (GC-01/D-02/D-03/D-04/D-07/D-13, v1.1 Phase 11
+// plan 11-02): absent sub-object => GC off, retention_configured false,
+// enabled unchanged (D-02); retention present WITHOUT a positive
+// retention_age_ms => loud (D-04); unknown key / wrong type => loud
+// naming the key; the two cadence knobs take per-knob 0-defaults; a
+// retention-only section never activates cold storage (Phase-7 (e)
+// inheritance) and reports retention_configured true (the WARN posture
+// input).
+// ---------------------------------------------------------------------------
+
+TEST( ColdStorageConfigGate, RetentionAbsentSubObjectDisablesGc )
+{
+    // D-02: absent retention => no GC actor, byte-identical posture.
+    auto result = Parse( std::string( kEnabledConfigBody ) + "}}", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    EXPECT_FALSE( result.value().retention_configured );
+    EXPECT_EQ( result.value().retention.retention_age_ms, 0u );
+}
+
+TEST( ColdStorageConfigGate, RetentionWithoutAgeFails )
+{
+    // D-04 loud: the retention object present without retention_age_ms.
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "retention": {"dry_run": true}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "blockstore.retention.retention_age_ms" ), std::string::npos );
+    EXPECT_NE( result.error().find( "required" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, RetentionZeroAgeFailsLoud )
+{
+    // D-04: an explicitly-typed 0 age is impossible to configure
+    // meaningfully (it would arm a 0-threshold eviction) - presence is
+    // tracked separately from value and 0 fails loud, naming the key.
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "retention": {"retention_age_ms": 0}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "blockstore.retention.retention_age_ms" ), std::string::npos );
+    EXPECT_NE( result.error().find( "positive" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, RetentionUnknownKeyFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "retention": {"retention_age_ms": 86400000, "bogus": 1}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "unknown key 'blockstore.retention.bogus'" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, RetentionWrongTypeFails )
+{
+    // Non-uint age / non-bool dry_run => loud naming the key + type.
+    auto bad_age = Parse( std::string( kEnabledConfigBody )
+                          + R"(, "retention": {"retention_age_ms": "old"}}})",
+                          NoEnv() );
+    ASSERT_TRUE( bad_age.has_error() );
+    EXPECT_NE( bad_age.error().find( "blockstore.retention.retention_age_ms" ), std::string::npos );
+    EXPECT_NE( bad_age.error().find( "uint" ), std::string::npos );
+
+    auto bad_dry_run = Parse( std::string( kEnabledConfigBody )
+                              + R"(, "retention": {"retention_age_ms": 86400000, "dry_run": 1}}})",
+                              NoEnv() );
+    ASSERT_TRUE( bad_dry_run.has_error() );
+    EXPECT_NE( bad_dry_run.error().find( "blockstore.retention.dry_run" ), std::string::npos );
+    EXPECT_NE( bad_dry_run.error().find( "boolean" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, RetentionDryRunAndKnobsParseAndNormalize )
+{
+    // dry_run parses; per-knob 0-takes-only-its-default semantics for the
+    // two cadence knobs (absent/0 => 600000 / 60000; explicit values
+    // keep their value).
+    auto result = Parse( std::string( kEnabledConfigBody )
+                             + R"(, "retention": {"retention_age_ms": 86400000, "dry_run": true, )"
+                             + R"("gc_interval_ms": 0, "grace_ms": 250}}})",
+                         NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().retention_configured );
+    const auto &ret = result.value().retention;
+    EXPECT_EQ( ret.retention_age_ms, 86400000u );
+    EXPECT_TRUE( ret.dry_run );
+    EXPECT_EQ( ret.gc_interval_ms, 600000u ); // 0 took ONLY its default
+    EXPECT_EQ( ret.grace_ms, 250u );          // explicit value kept
+}
+
+TEST( ColdStorageConfigGate, RetentionOnlySectionNeverActivates )
+{
+    // Phase-7 (e) inheritance: a retention-only blockstore section never
+    // activates cold storage, but retention_configured reports true (the
+    // GeniusNode inert-WARN posture input).
+    auto result = Parse( R"({"blockstore": {"retention": {"retention_age_ms": 3600000}}})", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_FALSE( result.value().enabled );
+    EXPECT_TRUE( result.value().retention_configured );
+}
+

@@ -206,9 +206,20 @@ namespace sgns::crdt
             }
             auto admin_client = opened_admin.value();
 
+            // GC-01 (v1.1 Phase 11): retention posture conversion - the
+            // parse layer already normalized the cadence knobs (and the
+            // manager ctor re-defends), so this is the plain field copy of
+            // the durability conversion shape. retention_age_ms == 0 means
+            // the GC never runs (the D-02 absent=off posture).
+            ColdStorageManager::RetentionOptions retention;
+            retention.retention_age_ms = options.retention.retention_age_ms;
+            retention.dry_run          = options.retention.dry_run;
+            retention.gc_interval_ms   = options.retention.gc_interval_ms;
+            retention.grace_ms         = options.retention.grace_ms;
+
             auto manager = std::make_shared<ColdStorageManager>(
                 local_store, remote_store, cold_store_mutex, remote_store_mutex, backpressure, durability,
-                admin_client );
+                admin_client, retention );
             // Missing-password posture (planner ruling 1 / 10-RESEARCH
             // §5.3): default-on flush - the manager emits ONE startup WARN
             // naming the env var; never a hard fail, never silent.
@@ -246,6 +257,20 @@ namespace sgns::crdt
         }
     }
 
+    void AttachColdStorageGc( const std::shared_ptr<ColdStorageManager> &manager,
+                              CrdtDatastore                             *crdt_datastore,
+                              GraphsyncDAGSyncer                         *dag_syncer,
+                              std::shared_ptr<HotStoreFace>               hot_store )
+    {
+        // GC-01 (v1.1 Phase 11) null-safe forwarder: disabled configs and
+        // OFF builds carry a null manager; the manager itself rejects an
+        // incomplete dependency set (fail-closed, never partial attach).
+        if ( manager )
+        {
+            manager->AttachGcDependencies( crdt_datastore, dag_syncer, std::move( hot_store ) );
+        }
+    }
+
     void StopColdStorageManager( const std::shared_ptr<ColdStorageManager> &manager )
     {
         if ( manager )
@@ -269,10 +294,18 @@ namespace sgns::crdt
         // Gated TU: the library result type is legal HERE and maps to the
         // ungated enum before it crosses back (Pitfall 5). sgns::CID and
         // the library Cid alias the same libp2p type - direct pass.
+        // MI-02 (Phase 11): absence and unreadability are DISTINCT - a
+        // NotFound error is the clean NoRecord case; ANY other read
+        // failure maps to Unreadable (never conflated with absence, never
+        // healthy-by-omission).
         const auto state = manager->GetUploadState( cid );
         if ( !state.has_value() )
         {
-            return ColdUploadState::NoRecord;
+            if ( state.error().code == sgns::blockstore::StatusClass::NotFound )
+            {
+                return ColdUploadState::NoRecord;
+            }
+            return ColdUploadState::Unreadable;
         }
         switch ( state.value() )
         {

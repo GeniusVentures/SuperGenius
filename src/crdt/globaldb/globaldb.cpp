@@ -101,10 +101,11 @@ namespace sgns::crdt
     {
         // T-7-03 redaction by omission: credential members are NEVER
         // referenced here - endpoint/bucket/prefix/path_style/tls plus the
-        // four backpressure knobs (D-08 watermark class) and the two
-        // durability knobs + admin endpoint (Phase 10) only. The admin
-        // password is never referenced (D-06).
-        return "endpoint=" + endpoint + ", bucket=" + bucket + ", prefix=" + prefix
+        // four backpressure knobs (D-08 watermark class), the two
+        // durability knobs + admin endpoint (Phase 10), and - only when
+        // retention_configured - the four non-secret retention knobs
+        // (Phase 11). The admin password is never referenced (D-06).
+        std::string summary = "endpoint=" + endpoint + ", bucket=" + bucket + ", prefix=" + prefix
              + ", path_style=" + ( pathStyle ? "true" : "false" ) + ", tls=" + ( tls ? "true" : "false" )
              + ", drain_interval_ms=" + std::to_string( backpressure.drain_interval_ms )
              + ", backoff_cap_ms=" + std::to_string( backpressure.backoff_cap_ms )
@@ -113,6 +114,17 @@ namespace sgns::crdt
              + ", flush_min_interval_ms=" + std::to_string( durability.flush_min_interval_ms )
              + ", flush_max_interval_ms=" + std::to_string( durability.flush_max_interval_ms )
              + ", admin_endpoint=" + admin_endpoint;
+        if ( retention_configured )
+        {
+            // Phase 11 (GC-01): all four retention knobs are non-secret;
+            // rendered ONLY when the sub-object was present (absent = the
+            // GC is off and the line stays byte-identical to Phase 10).
+            summary += ", retention_age_ms=" + std::to_string( retention.retention_age_ms )
+                 + ", retention_dry_run=" + ( retention.dry_run ? "true" : "false" )
+                 + ", gc_interval_ms=" + std::to_string( retention.gc_interval_ms )
+                 + ", grace_ms=" + std::to_string( retention.grace_ms );
+        }
+        return summary;
     }
 
     GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string &crdt_config_text )
@@ -133,6 +145,11 @@ namespace sgns::crdt
         // kDefaultFlush* constants mirrored at the parse layer).
         constexpr uint32_t kDefaultFlushMinIntervalMs = 30000;
         constexpr uint32_t kDefaultFlushMaxIntervalMs = 300000;
+        // Built-in retention cadence defaults (GC-01, Phase 11 - the
+        // manager's kDefaultGcIntervalMs/kDefaultGraceMs mirrored at the
+        // parse layer, the durability mirror discipline).
+        constexpr uint32_t kDefaultGcIntervalMs = 600000;
+        constexpr uint32_t kDefaultGraceMs      = 60000;
 
         ColdStorageOptions options; // disabled default (enabled == false)
 
@@ -172,6 +189,14 @@ namespace sgns::crdt
         bool        tls        = false;
         ColdStorageOptions::BackpressureOptions backpressure;
         ColdStorageOptions::DurabilityOptions   durability;
+        // Phase 11 (GC-01/D-04): retention sub-object state - presence is
+        // tracked SEPARATELY from the age value so "absent" and
+        // "explicitly 0" are distinguishable (age 0 is impossible to
+        // configure meaningfully and must fail loudly, never silently
+        // arm a 0-threshold eviction).
+        ColdStorageOptions::RetentionOptions retention;
+        bool                                 retention_configured = false;
+        bool                                 retention_age_seen   = false;
         for ( auto member = section.MemberBegin(); member != section.MemberEnd(); ++member )
         {
             const std::string key = member->name.GetString();
@@ -259,6 +284,63 @@ namespace sgns::crdt
                         durability.flush_max_interval_ms = sub->value.GetUint();
                     }
                 }
+                continue; // handled - never falls into the string/bool checks
+            }
+
+            // (d1c) GC-01 (Phase 11): nested "retention" sub-object - the
+            // retention-GC knobs. Present-but-not-object is loud; inside it
+            // a strict single-member loop accepts ONLY the four knobs
+            // (unknown key / wrong type loud, naming
+            // blockstore.retention.<key>). retention_age_ms presence is
+            // tracked separately (D-04) and validated POST-loop.
+            if ( key == "retention" )
+            {
+                if ( !member->value.IsObject() )
+                {
+                    return outcome::failure(
+                        std::string( "crdt_config.json: 'blockstore.retention' must be an object" ) );
+                }
+                for ( auto sub = member->value.MemberBegin(); sub != member->value.MemberEnd(); ++sub )
+                {
+                    const std::string sub_key = sub->name.GetString();
+                    if ( sub_key == "dry_run" )
+                    {
+                        if ( !sub->value.IsBool() )
+                        {
+                            return outcome::failure( "crdt_config.json: 'blockstore.retention.dry_run' "
+                                                     "must be a boolean" );
+                        }
+                        retention.dry_run = sub->value.GetBool();
+                        continue;
+                    }
+                    const bool is_uint_key = ( sub_key == "retention_age_ms" || sub_key == "gc_interval_ms"
+                                               || sub_key == "grace_ms" );
+                    if ( !is_uint_key )
+                    {
+                        return outcome::failure(
+                            "crdt_config.json: unknown key 'blockstore.retention." + sub_key + "'" );
+                    }
+                    if ( !sub->value.IsUint64() )
+                    {
+                        return outcome::failure( "crdt_config.json: 'blockstore.retention." + sub_key
+                                                 + "' must be a uint" );
+                    }
+                    const uint64_t value = sub->value.GetUint64();
+                    if ( sub_key == "retention_age_ms" )
+                    {
+                        retention.retention_age_ms = value;
+                        retention_age_seen         = true;
+                    }
+                    else if ( sub_key == "gc_interval_ms" )
+                    {
+                        retention.gc_interval_ms = static_cast<uint32_t>( value );
+                    }
+                    else
+                    {
+                        retention.grace_ms = static_cast<uint32_t>( value );
+                    }
+                }
+                retention_configured = true;
                 continue; // handled - never falls into the string/bool checks
             }
 
@@ -363,6 +445,32 @@ namespace sgns::crdt
                                      + std::to_string( durability.flush_max_interval_ms ) + ")" );
         }
         options.durability = durability;
+
+        // (d3b) GC-01 (Phase 11) retention validation + normalization:
+        // the required-age rule FIRST (D-04 - absent or 0 age fails loud,
+        // naming the key; age 0 would arm a 0-threshold eviction), then
+        // the per-knob 0-means-default for the two cadence knobs (no
+        // cross-field rule: the defer-to-next-tick grace makes any grace
+        // value valid).
+        if ( retention_configured )
+        {
+            if ( !retention_age_seen || retention.retention_age_ms == 0 )
+            {
+                return outcome::failure(
+                    "crdt_config.json: 'blockstore.retention.retention_age_ms' is required and must "
+                    "be a positive uint (a 0 age would arm immediate eviction - D-04)" );
+            }
+            if ( retention.gc_interval_ms == 0 )
+            {
+                retention.gc_interval_ms = kDefaultGcIntervalMs;
+            }
+            if ( retention.grace_ms == 0 )
+            {
+                retention.grace_ms = kDefaultGraceMs;
+            }
+        }
+        options.retention            = retention;
+        options.retention_configured = retention_configured;
 
         // (e) D-08 file-intent gate: all four required fields blank in the
         // FILE => disabled REGARDLESS of env (env overrides values, never
@@ -773,6 +881,15 @@ namespace sgns::crdt
             m_logger->error( "Unable to create CRDT datastore" );
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
+
+        // GC-01 (v1.1 Phase 11, the 6.1 post-construction seam): attach
+        // the GC dependencies RIGHT AFTER m_crdtDatastore exists and
+        // BEFORE Start() spawns the GC thread - the heads source, the DAG
+        // read path, and the hot CRDT RocksDB face (the /crdt/gc/ pinned
+        // namespace's home). Null-safe on OFF/disabled builds; reaching
+        // Start() with retention configured but dependencies unattached
+        // is the manager's fail-closed programmer-error posture.
+        AttachColdStorageGc( cold_manager_, m_crdtDatastore.get(), dagSyncer.get(), m_datastore );
 
         return outcome::success();
     }

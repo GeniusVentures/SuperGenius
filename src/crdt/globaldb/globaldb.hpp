@@ -130,6 +130,37 @@ namespace sgns::crdt
             DurabilityOptions durability;
 
             /**
+             * @brief      Retention-GC knobs (GC-01/D-02..D-04/D-07/D-13,
+             *             v1.1 Phase 11).
+             *
+             * Exactly four knobs live under the nested
+             * "blockstore.retention" sub-object. retention_age_ms is
+             * REQUIRED (present-but-absent or 0 => loud parse failure -
+             * D-04: age 0 is impossible to configure meaningfully and a
+             * 0-threshold would arm immediate eviction); dry_run parses
+             * here and only suppresses deletes from 11-02 onward. The two
+             * cadence knobs follow the 0-equals-default discipline
+             * (gc_interval_ms 600000, grace_ms 60000 - normalized
+             * post-parse; the defer-to-next-tick grace makes any grace
+             * value valid, so NO cross-field rule). A retention-only
+             * section never activates cold storage (Phase-7 (e)
+             * inheritance) - retention_configured && !enabled is the
+             * one-WARN inert posture, never a silent disable. The knobs
+             * are file-only (no env surface).
+             */
+            struct RetentionOptions
+            {
+                uint64_t retention_age_ms{ 0 }; ///< REQUIRED age threshold (no default)
+                bool     dry_run{ false };      ///< report candidates without deleting (11-02+)
+                uint32_t gc_interval_ms{ 0 };   ///< pass cadence; 0 = default 600000
+                uint32_t grace_ms{ 0 };         ///< evicting->delete grace; 0 = default 60000
+            };
+            RetentionOptions retention;
+            /// True when the parse saw a "blockstore.retention" sub-object
+            /// (drives the inert WARN and the LogSummary extension).
+            bool retention_configured{ false };
+
+            /**
              * @brief      Sanitized one-line summary: endpoint, bucket,
              *             prefix, path_style, tls, and the four backpressure
              *             knobs ONLY - the credential members are never

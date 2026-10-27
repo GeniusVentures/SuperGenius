@@ -43,6 +43,20 @@ namespace sgns::crdt
         (void)manager; // no manager exists on OFF builds; null-safe no-op
     }
 
+    // GC-01 (v1.1 Phase 11): the ODR twin of the attach bridge - OFF
+    // builds have no manager, so the attach is the null-safe no-op (the
+    // retention GC itself cannot exist without the gated stack).
+    void AttachColdStorageGc( const std::shared_ptr<ColdStorageManager> &manager,
+                              CrdtDatastore                             *crdt_datastore,
+                              GraphsyncDAGSyncer                         *dag_syncer,
+                              std::shared_ptr<HotStoreFace>               hot_store )
+    {
+        (void)manager;
+        (void)crdt_datastore;
+        (void)dag_syncer;
+        (void)hot_store; // no GC exists on OFF builds; null-safe no-op
+    }
+
     void StopColdStorageManager( const std::shared_ptr<ColdStorageManager> &manager )
     {
         (void)manager; // no manager exists on OFF builds; null-safe no-op

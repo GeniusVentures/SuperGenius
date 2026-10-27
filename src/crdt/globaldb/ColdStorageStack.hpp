@@ -54,6 +54,12 @@ namespace sgns::crdt
         Pending,  ///< local commit, remote upload not yet acknowledged
         Accepted, ///< object store acknowledged receipt (durability unproven)
         Durable,  ///< flush-gated evidence observed (pendingObjects == 0)
+        /// The journal read itself failed (IO/lock/corruption) - NEVER
+        /// conflated with absence: the MI-02 widening (v1.1 Phase 11) so
+        /// the retention GC's evidence gate can distinguish "no record"
+        /// (not eligible, cleanly) from "unreadable" (not eligible,
+        /// loudly - never healthy-by-omission).
+        Unreadable,
     };
 
     /**
@@ -118,6 +124,15 @@ namespace sgns::crdt
     // Phase 9) - the DAGSyncer-side hook type. No sgns-blockstore type
     // crosses this header.
     class ColdReadFallback;
+
+    // Forward declarations for the GC-dependency attach bridge (GC-01,
+    // v1.1 Phase 11): the manager attaches AFTER construction, between
+    // GlobalDB::Init's m_crdtDatastore creation and Start(). Raw
+    // pointers/raw storage face only - no gated type crosses this
+    // always-compiled header (the stub carries the ODR twin).
+    class CrdtDatastore;
+    class GraphsyncDAGSyncer;
+    using HotStoreFace = storage::BufferStorage;
 
     /**
      * @brief      Everything GlobalDB owns of the cold-storage stack
@@ -211,6 +226,27 @@ namespace sgns::crdt
      * @param[in]  manager the bundle's manager (may be null)
      */
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager );
+
+    /**
+     * @brief      Null-safe GC-dependency attach bridge (GC-01, v1.1
+     *             Phase 11 - the 6.1 post-construction seam).
+     *
+     * Real implementation (SGNS_COLD_STORAGE=ON): forwards to the
+     * manager's AttachGcDependencies when BOTH the manager and every
+     * dependency are non-null; the OFF-build stub is the ODR no-op twin.
+     * globaldb.cpp calls this right after m_crdtDatastore is created and
+     * BEFORE Start().
+     * @param[in]  manager the bundle's manager (may be null - disabled or
+     *             OFF build)
+     * @param[in]  crdt_datastore the heads source (GetHeadList)
+     * @param[in]  dag_syncer the DAG read path (GetNodeWithoutRequest)
+     * @param[in]  hot_store the hot CRDT RocksDB face (the same handle
+     *             GlobalDB owns; shared_ptr up-cast to the storage face)
+     */
+    void AttachColdStorageGc( const std::shared_ptr<ColdStorageManager> &manager,
+                              CrdtDatastore                             *crdt_datastore,
+                              GraphsyncDAGSyncer                         *dag_syncer,
+                              std::shared_ptr<HotStoreFace>               hot_store );
 
     /**
      * @brief      Start the re-warm worker thread (null-safe no-op when
