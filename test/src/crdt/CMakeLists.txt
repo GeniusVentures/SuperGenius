@@ -147,3 +147,26 @@ target_include_directories(cold_read_freeze_latency_test PRIVATE
 set_tests_properties(cold_read_freeze_latency_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Flush-gated durability advancement tests (DUR-01, v1.1 Phase 10 plan
+# 10-01). Registered ONLY under SGNS_COLD_STORAGE: links
+# sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
+# InMemoryS3AdminClient fakes via the relative include dir (both fake
+# headers are deliberately not installed). The Tier-1 lane stays
+# non-empty on OFF builds via the unconditional config-gate test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_durability_test
+    cold_storage_durability_test.cpp
+)
+
+target_link_libraries(cold_storage_durability_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+)
+
+target_include_directories(cold_storage_durability_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_durability_test PROPERTIES LABELS "Tier1")
+endif()
+
