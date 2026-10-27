@@ -24,22 +24,41 @@
 
 #include "ColdStorageManager.hpp"
 
+#include <deque>
+
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
+
 namespace sgns::crdt
 {
+    namespace
+    {
+        /// Wall-clock unix-ms (the D-01 spill-timestamp clock).
+        uint64_t UnixNowMs()
+        {
+            return static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() );
+        }
+    } // namespace
+
     ColdStorageManager::ColdStorageManager( std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store,
                                             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store,
                                             std::shared_ptr<std::mutex>                        cold_store_mutex,
                                             std::shared_ptr<std::mutex>                        remote_store_mutex,
                                             BackpressureOptions                                options,
                                             DurabilityOptions                                  durability_options,
-                                            std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client )
+                                            std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client,
+                                            RetentionOptions                                   retention_options )
         : local_block_store_( std::move( local_block_store ) ),
           remote_block_store_( std::move( remote_block_store ) ),
           cold_store_mutex_( std::move( cold_store_mutex ) ),
           remote_store_mutex_( std::move( remote_store_mutex ) ),
           options_( options ),
           admin_client_( std::move( admin_client ) ),
-          durability_( durability_options )
+          durability_( durability_options ),
+          retention_( retention_options )
     {
         BOOST_ASSERT_MSG( local_block_store_ != nullptr, "local block store is nullptr" );
         BOOST_ASSERT_MSG( remote_block_store_ != nullptr, "remote block store is nullptr" );
@@ -64,6 +83,25 @@ namespace sgns::crdt
         last_flush_attempt_ = now;
         last_advancement_  = now;
         flush_delay_       = std::chrono::milliseconds( durability_.flush_min_interval_ms );
+
+        // GC-01 (v1.1 Phase 11): retention normalization - the D-02 gate is
+        // retention_age_ms > 0 (absent/0 = the GC actor never runs,
+        // byte-identical node behavior). The two cadence knobs follow the
+        // 0-equals-default discipline and normalize ONLY when the GC is
+        // active (an inactive posture keeps its knobs inert).
+        gc_enabled_ = retention_.retention_age_ms > 0;
+        gc_dry_run_ = retention_.dry_run;
+        if ( gc_enabled_ )
+        {
+            if ( retention_.gc_interval_ms == 0 )
+            {
+                retention_.gc_interval_ms = kDefaultGcIntervalMs;
+            }
+            if ( retention_.grace_ms == 0 )
+            {
+                retention_.grace_ms = kDefaultGraceMs;
+            }
+        }
     }
 
     ColdStorageManager::~ColdStorageManager()
@@ -74,6 +112,27 @@ namespace sgns::crdt
     void ColdStorageManager::SetAdminPasswordPresent( bool present )
     {
         admin_password_present_ = present;
+    }
+
+    void ColdStorageManager::AttachGcDependencies( CrdtDatastore                          *crdt_datastore,
+                                                    GraphsyncDAGSyncer                      *dag_syncer,
+                                                    std::shared_ptr<storage::BufferStorage> hot_store )
+    {
+        // The §6.1 post-construction seam: the manager is built BEFORE
+        // CrdtDatastore exists, so the GC dependencies attach here -
+        // between construction and Start(). Every pointer must be
+        // non-null (attaching a partial dependency set would arm the GC
+        // against a missing universe).
+        if ( crdt_datastore == nullptr || dag_syncer == nullptr || hot_store == nullptr )
+        {
+            logger_->error(
+                "gc: AttachGcDependencies rejected a null dependency - nothing attached "
+                "(the GC stays fail-closed until a complete set attaches)" );
+            return;
+        }
+        gc_crdt_datastore_ = crdt_datastore;
+        gc_dag_syncer_     = dag_syncer;
+        gc_hot_store_      = std::move( hot_store );
     }
 
     void ColdStorageManager::Start()
@@ -148,6 +207,50 @@ namespace sgns::crdt
                     (void)woken; // drain_requested wake falls through to the next cycle
                 }
             } );
+
+        // GC-01 (v1.1 Phase 11, D-06): the GC runs on its OWN std::thread
+        // with its own cv-poll loop (never io_, never the pubsub asio
+        // context) - the drainer lifecycle shape on a second thread. The
+        // retention gate is retention_age_ms > 0 (D-02 absent = no GC
+        // actor, byte-identical posture); retention configured but
+        // dependencies unattached is a fail-closed programmer error (no
+        // thread, one error-level line).
+        if ( gc_enabled_ )
+        {
+            if ( gc_crdt_datastore_ == nullptr || gc_dag_syncer_ == nullptr
+                 || gc_hot_store_ == nullptr )
+            {
+                logger_->error(
+                    "gc: retention configured (age {} ms) but dependencies unattached - GC "
+                    "thread NOT started; AttachGcDependencies must run between construction "
+                    "and Start() (programmer error posture)",
+                    retention_.retention_age_ms );
+            }
+            else
+            {
+                gc_stop_flag_.store( false );
+                gc_inhibit_streak_.store( 0 );
+                gc_abort_streak_.store( 0 );
+                gc_thread_ = std::thread(
+                    [this]()
+                    {
+                        while ( !gc_stop_flag_.load() )
+                        {
+                            (void)GcPassOnce();
+                            std::unique_lock<std::mutex> lock( gc_wait_mutex_ );
+                            gc_cv_.wait_for(
+                                lock,
+                                std::chrono::milliseconds( retention_.gc_interval_ms ),
+                                [this] { return gc_stop_flag_.load(); } );
+                            lock.unlock();
+                            if ( gc_stop_flag_.load() )
+                            {
+                                break; // between-pass stop check guarantees join termination
+                            }
+                        }
+                    } );
+            }
+        }
     }
 
     void ColdStorageManager::Stop()
@@ -244,6 +347,19 @@ namespace sgns::crdt
                 }
             }
         }
+
+        // GC-01 (v1.1 Phase 11, D-06 shutdown ordering): stop+join the GC
+        // thread AFTER the drainer join and the Phase-10 final flush,
+        // before returning - the last point where the GC's dependencies
+        // (CRDT datastore, DAG syncer, hot face) provably live. Bounded by
+        // construction: the GC loop's between-pass stop check guarantees
+        // the join terminates.
+        gc_stop_flag_.store( true );
+        gc_cv_.notify_all();
+        if ( gc_thread_.joinable() )
+        {
+            gc_thread_.join();
+        }
     }
 
     void ColdStorageManager::RequestDrain()
@@ -272,6 +388,17 @@ namespace sgns::crdt
         status.staging_buffer_limit     = staging_buffer_limit_.load( std::memory_order_relaxed );
         status.staging_failed_uploads   = staging_failed_uploads_.load( std::memory_order_relaxed );
         status.staging_healthy          = staging_healthy_.load( std::memory_order_relaxed );
+        // GC-01 (v1.1 Phase 11): gc status fields - plain values from
+        // atomics, never a journal scan (the D-08 discipline).
+        status.gc_enabled               = gc_enabled_;
+        status.gc_dry_run               = gc_dry_run_;
+        status.gc_inhibited_staging     = gc_inhibited_staging_.load( std::memory_order_relaxed );
+        status.gc_evicting_count        = gc_evicting_count_.load( std::memory_order_relaxed );
+        status.gc_last_pass_unix_ms     = gc_last_pass_unix_ms_.load( std::memory_order_relaxed );
+        status.gc_last_pass_candidates  = gc_last_pass_candidates_.load( std::memory_order_relaxed );
+        status.gc_last_pass_reclaimed_count = gc_last_pass_reclaimed_count_.load( std::memory_order_relaxed );
+        status.gc_last_pass_reclaimed_bytes = gc_last_pass_reclaimed_bytes_.load( std::memory_order_relaxed );
+        status.gc_disposed_marker_count = gc_disposed_marker_count_.load( std::memory_order_relaxed );
         return status;
     }
 
@@ -566,6 +693,248 @@ namespace sgns::crdt
             // Fail-safe on unreadable evidence (D-12).
             UpdateStagingHealth( sgns::blockstore::UploadStats{}, false );
         }
+    }
+
+    bool ColdStorageManager::HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
+                                          const CrdtHeads::CRDTHeadList &rhs )
+    {
+        // The §2.2 exactness lemma's abort predicate: content equality of
+        // the per-topic head sets (unordered-container == compares sizes
+        // then per-element membership - order-insensitive).
+        return !( lhs == rhs );
+    }
+
+    std::pair<std::unordered_set<CID>, bool> ColdStorageManager::WalkReachable(
+        const CrdtHeads::CRDTHeadList &snapshot )
+    {
+        // GC-01 (D-05, v1.1 Phase 11): FRESH full walk, per pass, from the
+        // heads snapshot - no persisted reachability state. Iterative
+        // deque work-queue + visited set (the TraverseCIDsLinks mechanics
+        // ONLY): every link is traversed UNCONDITIONALLY - the isResolved
+        // skips of the CRDT processing walk mark processing state, not
+        // reachability, and skipping them under-counts reachability, the
+        // wrongful-eviction direction (Pitfall 1).
+        std::unordered_set<CID> visited;
+        std::deque<CID>         work;
+        for ( const auto &[topic, cids] : snapshot )
+        {
+            (void)topic;
+            for ( const auto &cid : cids )
+            {
+                work.push_back( cid );
+            }
+        }
+
+        constexpr size_t kStopCheckInterval = 512;
+        size_t           since_stop_check   = 0;
+        while ( !work.empty() )
+        {
+            if ( ++since_stop_check >= kStopCheckInterval )
+            {
+                since_stop_check = 0;
+                if ( gc_stop_flag_.load() )
+                {
+                    // Stopped mid-walk: reachability is incomplete - the
+                    // caller must abort the pass (never a partial set).
+                    return { {}, false };
+                }
+            }
+
+            CID current = work.front();
+            work.pop_front();
+            if ( !visited.insert( current ).second )
+            {
+                continue; // already walked - content-addressed blocks are immutable
+            }
+
+            // Per-node read via GetNodeWithoutRequest ONLY: dagMutex_ is
+            // held just inside GetNodeFromMerkleDAG (per-node granularity,
+            // never across batches), and the Phase-9 cold chain serves any
+            // hot-missing block (the D-10 re-learn - self-healing).
+            auto node = gc_dag_syncer_->GetNodeWithoutRequest( current );
+            if ( !node.has_value() )
+            {
+                // Walk gap: a head-reachable link is missing from EVERY
+                // tier (hot, LRU, cold dir, remote). Reachability below it
+                // is not computable - abort the pass toward under-eviction
+                // rather than guessing (the only safe direction).
+                logger_->warn(
+                    "gc: pass-aborted-walk-gap - CID {} is head-reachable but missing from "
+                    "every tier; reachability not computable (under-eviction)",
+                    current.toString().value() );
+                return { {}, false };
+            }
+
+            for ( const auto &link : node.value()->getLinks() )
+            {
+                work.push_back( link.get().getCID() ); // unconditional - no resolution skips
+            }
+        }
+        return { std::move( visited ), true };
+    }
+
+    std::vector<sgns::blockstore::Cid> ColdStorageManager::GcPassOnce()
+    {
+        // (0) stop check: a stopped manager never evaluates policy.
+        if ( gc_stop_flag_.load() )
+        {
+            return {};
+        }
+
+        // (1) staging gate (D-12/D-13, Phase-10 surfaces exactly as
+        // shipped): refresh, then consult the conservative predicate -
+        // unhealthy evidence (unreadable, buffer pressure, failing
+        // uploads) inhibits the tick entirely.
+        RefreshStagingStats();
+        if ( !staging_healthy_.load( std::memory_order_relaxed ) )
+        {
+            gc_inhibited_staging_.store( true, std::memory_order_relaxed );
+            const uint32_t streak = gc_inhibit_streak_.fetch_add( 1 ) + 1;
+            if ( streak == 1 || streak % 10 == 0 )
+            {
+                logger_->warn(
+                    "gc: tick inhibited - staging unhealthy (streak {}); no candidates this pass",
+                    streak );
+            }
+            gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
+            return {};
+        }
+        gc_inhibited_staging_.store( false, std::memory_order_relaxed );
+        gc_inhibit_streak_.store( 0 );
+
+        // (2) heads snapshot: the pass universe. A read failure aborts the
+        // pass (under-eviction - reachability without a universe is a
+        // guess).
+        auto heads_result = gc_crdt_datastore_->GetHeadList();
+        if ( heads_result.has_error() )
+        {
+            const uint32_t streak = gc_abort_streak_.fetch_add( 1 ) + 1;
+            if ( streak == 1 || streak % 10 == 0 )
+            {
+                logger_->warn(
+                    "gc: pass-aborted-heads-read (streak {}); no candidates this pass",
+                    streak );
+            }
+            gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
+            return {};
+        }
+        const CrdtHeads::CRDTHeadList snapshot = heads_result.value().first;
+
+        // (3) fresh reachability walk (D-05): heads are pinned by
+        // construction (walk roots are IN the reachable set), and the
+        // /crdt/gc/ epoch-record prefix is pinned alongside heads (SC5 -
+        // keys under that prefix are never GC state, never candidates).
+        const auto [reachable, walk_exact] = WalkReachable( snapshot );
+        if ( !walk_exact )
+        {
+            const uint32_t streak = gc_abort_streak_.fetch_add( 1 ) + 1;
+            if ( streak == 1 || streak % 10 == 0 )
+            {
+                logger_->warn(
+                    "gc: pass-aborted-walk (streak {}); no candidates this pass", streak );
+            }
+            gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
+            return {};
+        }
+
+        // (4) eligibility: enumerate the journal (MI-01 - the journal is
+        // the truth, never the advisory status counters) under the shared
+        // cold-store mutex; local RocksDB point reads, microseconds.
+        std::vector<sgns::blockstore::Cid> candidates;
+        const uint64_t                     now_ms = UnixNowMs();
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto durable = local_block_store_->GetDurableWithSpillTime();
+            if ( !durable.has_value() )
+            {
+                // Enumeration failure poisons the evidence: abort the pass
+                // (an unreadable scan is never eligibility evidence, MI-02).
+                const uint32_t streak = gc_abort_streak_.fetch_add( 1 ) + 1;
+                if ( streak == 1 || streak % 10 == 0 )
+                {
+                    logger_->warn(
+                        "gc: pass-aborted-journal-read (streak {}); no candidates this pass",
+                        streak );
+                }
+                gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
+                return {};
+            }
+
+            for ( auto &entry : durable.value() )
+            {
+                // D-01 backfill fairness: a record with NO spill timestamp
+                // (pre-Phase-11 store) gets one NOW and waits a full
+                // retention period - never an assumed age.
+                if ( entry.spilled_at_unix_ms == 0 )
+                {
+                    (void)local_block_store_->SetSpilledAt( entry.cid, now_ms );
+                    continue;
+                }
+                // Clock-skew guard: a future-dated stamp reads young -
+                // never a wrapped huge age.
+                if ( entry.spilled_at_unix_ms > now_ms )
+                {
+                    continue;
+                }
+                // Age gate: STRICTLY past the threshold - age == threshold
+                // is NOT eligible (ties break toward under-eviction).
+                if ( ( now_ms - entry.spilled_at_unix_ms ) <= retention_.retention_age_ms )
+                {
+                    continue;
+                }
+                // Reachability gate: heads are pinned by construction
+                // (walk roots); a reachable old block is never a candidate.
+                if ( reachable.count( CID( entry.cid ) ) > 0 )
+                {
+                    continue;
+                }
+                // Durability gate (MI-02): the journal state must be
+                // EXACTLY kEvictionDurabilityGate - anything else
+                // (NoRecord/Pending/Accepted) or an unreadable read is not
+                // eligible.
+                auto state = local_block_store_->GetUploadState( entry.cid );
+                if ( !state.has_value() || state.value() != kEvictionDurabilityGate )
+                {
+                    continue;
+                }
+                candidates.push_back( entry.cid );
+            }
+        }
+
+        // (5) heads-equality re-check (the §2.2 exactness lemma): blocks
+        // are immutable and content-addressed, so heads-equality against
+        // the pass-start snapshot proves the snapshot's reachable set is
+        // STILL exact. ANY difference aborts the pass - zero candidates,
+        // under-eviction, one rate-limited line.
+        auto heads_now = gc_crdt_datastore_->GetHeadList();
+        if ( heads_now.has_error()
+             || HeadsDiffer( heads_now.value().first, snapshot ) )
+        {
+            const uint32_t streak = gc_abort_streak_.fetch_add( 1 ) + 1;
+            if ( streak == 1 || streak % 10 == 0 )
+            {
+                logger_->warn(
+                    "gc: pass-aborted-on-heads-change (streak {}) - heads moved during the "
+                    "pass; zero candidates (under-eviction)",
+                    streak );
+            }
+            gc_last_pass_unix_ms_.store( now_ms, std::memory_order_relaxed );
+            gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
+            return {};
+        }
+        gc_abort_streak_.store( 0 );
+
+        // (6) status update + the one-line per-pass summary (SC5's
+        // computation lands in Task 3; nothing in v1.1 is deletion-gated
+        // on it). Deletion machinery is 11-02 - this pass ENDS at the
+        // reported candidate set.
+        gc_last_pass_unix_ms_.store( now_ms, std::memory_order_relaxed );
+        gc_last_pass_candidates_.store( candidates.size(), std::memory_order_relaxed );
+        logger_->info( "gc: pass complete - {} candidate(s) (retention {} ms, dry_run {})",
+                       candidates.size(),
+                       retention_.retention_age_ms,
+                       gc_dry_run_ );
+        return candidates;
     }
 
     void ColdStorageManager::UpdateStagingHealth( const sgns::blockstore::UploadStats &stats,

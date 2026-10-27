@@ -43,6 +43,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include <sgns-blockstore/LocalBlockStore.hpp>
@@ -55,6 +56,9 @@
 
 namespace sgns::crdt
 {
+    class CrdtDatastore;      // GC dependency (attached post-construction)
+    class GraphsyncDAGSyncer; // GC dependency (attached post-construction)
+
     class ColdStorageManager final
     {
     public:
@@ -76,6 +80,30 @@ namespace sgns::crdt
             uint32_t flush_min_interval_ms{ 0 }; ///< floor between flush attempts
             uint32_t flush_max_interval_ms{ 0 }; ///< backstop: flush at least this often
         };
+
+        /**
+         * @brief       Retention-GC knobs (GC-01, v1.1 Phase 11).
+         *
+         * retention_age_ms is REQUIRED to activate the GC: 0 means the
+         * GC actor is never constructed/run (absent = off = byte-identical
+         * node behavior, D-02). The two cadence knobs follow the
+         * 0-equals-default discipline and normalize to kDefaultGcIntervalMs
+         * / kDefaultGraceMs at construction. dry_run parses here and only
+         * suppresses deletes from 11-02 onward (every Phase-11 Wave-1 path
+         * is observe-only by construction).
+         */
+        struct RetentionOptions
+        {
+            uint64_t retention_age_ms{ 0 }; ///< the age threshold (0 = GC off; NO default - D-04)
+            bool     dry_run{ false };      ///< report candidates without deleting (11-02+)
+            uint32_t gc_interval_ms{ 0 };   ///< pass cadence (0 = kDefaultGcIntervalMs)
+            uint32_t grace_ms{ 0 };         ///< evicting->delete grace (0 = kDefaultGraceMs)
+        };
+
+        /// Default GC pass cadence (10 min) when gc_interval_ms == 0.
+        static constexpr uint32_t kDefaultGcIntervalMs{ 600000 };
+        /// Default evicting->delete grace (1 min) when grace_ms == 0.
+        static constexpr uint32_t kDefaultGraceMs{ 60000 };
 
         /// @brief The eviction-safety durability gate (D-10): a local
         ///        block's bytes are evictable ONLY when its journal
@@ -125,6 +153,10 @@ namespace sgns::crdt
          * @param[in]   admin_client the s3d admin facade (nullptr = no
          *              flush-gated advancement at all - the Phase-8
          *              5-argument posture, drain-to-Accepted only)
+         * @param[in]   retention_options retention-GC knobs (retention_age_ms
+         *              == 0 = GC never runs - the D-02 absent=off posture;
+         *              0 cadence knobs normalized here to the built-in
+         *              defaults)
          */
         ColdStorageManager( std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store,
                             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store,
@@ -132,7 +164,8 @@ namespace sgns::crdt
                             std::shared_ptr<std::mutex>                        remote_store_mutex,
                             BackpressureOptions                                options,
                             DurabilityOptions                                  durability_options = {},
-                            std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client       = nullptr );
+                            std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client       = nullptr,
+                            RetentionOptions                                   retention_options = {} );
 
         ~ColdStorageManager();
 
@@ -216,6 +249,54 @@ namespace sgns::crdt
          */
         void RefreshStagingStats();
 
+        /**
+         * @brief      Attach the retention-GC dependencies (GC-01, v1.1
+         *             Phase 11 - the §6.1 post-construction seam).
+         *
+         * The manager is constructed BEFORE CrdtDatastore exists (the
+         * GlobalDB::Init order), so the GC's heads/walk/hot-store
+         * dependencies attach here, between construction and Start().
+         * Call between construction and Start(); reaching Start() with
+         * retention configured but dependencies unattached is a
+         * fail-closed programmer error (no GC thread, one error-level
+         * line).
+         * @param[in]  crdt_datastore the heads source (GetHeadList - the
+         *             pass universe and the exactness re-check)
+         * @param[in]  dag_syncer the DAG read path (GetNodeWithoutRequest
+         *             only - hot-first then the Phase-9 cold chain)
+         * @param[in]  hot_store the hot CRDT RocksDB face (the same
+         *             handle GlobalDB owns; the /crdt/gc/ pinned namespace
+         *             lives here)
+         */
+        void AttachGcDependencies( CrdtDatastore                     *crdt_datastore,
+                                   GraphsyncDAGSyncer                 *dag_syncer,
+                                   std::shared_ptr<storage::BufferStorage> hot_store );
+
+        /**
+         * @brief      ONE retention-GC pass (GC-01 - observe-only in
+         *             Phase 11 Wave 1; deletion machinery lands in 11-02).
+         *
+         * The fixed tick order: (0) stop check; (1) RefreshStagingStats +
+         * staging_healthy_ gate (unhealthy => inhibited tick, zero
+         * candidates); (2) heads snapshot via GetHeadList; (3) FRESH full
+         * reachability walk (every link traversed unconditionally - no
+         * resolution skips, Pitfall 1); (4) eligibility over
+         * GetDurableWithSpillTime under cold_store_mutex_ (journal is
+         * truth, MI-01): age STRICTLY past retention (ties and
+         * future-dated stamps read young), absent from the reachable set,
+         * journal state EXACTLY kEvictionDurabilityGate (MI-02);
+         * missing timestamps backfill to now and wait one full period;
+         * (5) heads-equality re-check - ANY difference aborts the pass
+         * with zero candidates (the §2.2 exactness lemma, under-eviction);
+         * (6) gc status atomics updated, one per-pass summary line.
+         *
+         * Thread-safe to call from the GC thread (its normal home) or
+         * directly from tests (the driven-pass seam).
+         * @return     the pass's candidate CIDs (empty = inhibited, aborted,
+         *             or genuinely zero candidates)
+         */
+        std::vector<sgns::blockstore::Cid> GcPassOnce();
+
     private:
         /// Backoff multiplier per failed cycle (D-03; compile-time, D-05).
         static constexpr uint32_t kBackoffFactor = 2;
@@ -254,6 +335,25 @@ namespace sgns::crdt
         /// RefreshStagingStats - every field it touches is atomic).
         void UpdateStagingHealth( const sgns::blockstore::UploadStats &stats,
                                   bool                              admin_reachable );
+
+        /// GC-01 (v1.1 Phase 11): the fresh full reachability walk from a
+        /// heads snapshot - iterative deque work queue + visited set
+        /// (the TraverseCIDsLinks mechanics ONLY; its isResolved skips
+        /// are FORBIDDEN - under-counting reachability is the
+        /// wrongful-eviction direction, Pitfall 1). Per-node reads via
+        /// GetNodeWithoutRequest only (dagMutex_ held only inside
+        /// GetNodeFromMerkleDAG - never across batches), stop-flag checks
+        /// every 256-1024 nodes. Returns {reachable set, walk-exact}; a
+        /// walk gap (a link missing from every tier) returns exact=false
+        /// so the caller aborts the pass (reachability not computable
+        /// => under-eviction, never a guess).
+        std::pair<std::unordered_set<CID>, bool> WalkReachable(
+            const CrdtHeads::CRDTHeadList &snapshot );
+
+        /// GC-01: true when the two heads snapshots differ in ANY topic
+        /// or CID (the §2.2 exactness lemma's abort predicate).
+        static bool HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
+                                 const CrdtHeads::CRDTHeadList &rhs );
 
         /// Update the pending-count atomic, watermark transitions, and the
         /// held-watermark heartbeat (D-02/D-07/D-08/D-09).
@@ -337,6 +437,44 @@ namespace sgns::crdt
         /// D-07/Pitfall 6: mirror of flush_failure_streak_ > 0 for the
         /// lock-free status getter (the streak itself is drainer-only).
         std::atomic<bool>                flush_backoff_active_{ false };
+
+        //
+        // Retention GC (GC-01, v1.1 Phase 11): D-06 - the GC runs on its
+        // OWN std::thread with its own stop-flag/cv (never io_, never the
+        // pubsub asio context), mirroring the drainer lifecycle shape.
+        // The Stop() join slots AFTER the drainer join and the Phase-10
+        // final flush.
+        //
+        /// NORMALIZED retention knobs (0s resolved in the ctor).
+        RetentionOptions retention_;
+        /// True when retention_age_ms > 0 (ctor-fixed, immutable).
+        bool gc_enabled_{ false };
+        /// Mirrors retention_.dry_run (ctor-fixed, immutable).
+        bool gc_dry_run_{ false };
+        /// §6.1 post-construction dependencies (raw: the GlobalDB owns
+        /// them and outlives Stop(); never dereferenced before attach).
+        CrdtDatastore                     *gc_crdt_datastore_ = nullptr;
+        GraphsyncDAGSyncer                *gc_dag_syncer_ = nullptr;
+        std::shared_ptr<storage::BufferStorage> gc_hot_store_;
+        std::thread              gc_thread_;
+        std::atomic_bool         gc_stop_flag_{ false };
+        std::mutex               gc_wait_mutex_;
+        std::condition_variable  gc_cv_;
+        /// Rate-limit state for the inhibited/aborted gc: lines (atomic:
+        /// GcPassOnce may run on the GC thread or a test thread).
+        std::atomic<uint32_t>    gc_inhibit_streak_{ 0 };
+        std::atomic<uint32_t>    gc_abort_streak_{ 0 };
+
+        // GC status atomics (D-08 discipline: read lock-free by
+        // GetStatus). The evicting/reclaimed/disposed fields stay zero
+        // until 11-02's destructive half lands.
+        std::atomic<bool>        gc_inhibited_staging_{ false };
+        std::atomic<size_t>      gc_evicting_count_{ 0 };
+        std::atomic<uint64_t>    gc_last_pass_unix_ms_{ 0 };
+        std::atomic<size_t>      gc_last_pass_candidates_{ 0 };
+        std::atomic<size_t>      gc_last_pass_reclaimed_count_{ 0 };
+        std::atomic<uint64_t>    gc_last_pass_reclaimed_bytes_{ 0 };
+        std::atomic<size_t>      gc_disposed_marker_count_{ 0 };
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "ColdStorageManager" );
     };

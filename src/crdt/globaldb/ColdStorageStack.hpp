@@ -91,6 +91,19 @@ namespace sgns::crdt
         uint64_t staging_buffer_limit{ 0 };    ///< staging buffer capacity (0 = unlimited)
         uint64_t staging_failed_uploads{ 0 };  ///< s3d permanent upload failures (cumulative)
         bool     staging_healthy{ false };     ///< conservative predicate (D-12) - false on unreadable evidence
+        // Retention GC (GC-01, v1.1 Phase 11). PLAIN TYPES ONLY (Pitfall 5
+        // - same always-compiled-header rule; the manager fills them from
+        // gc status atomics). The evicting/reclaimed/disposed fields stay
+        // zero until 11-02's destructive half lands.
+        bool     gc_enabled{ false };                 ///< retention configured (age > 0) and the actor constructed
+        bool     gc_dry_run{ false };                 ///< dry_run knob (suppresses deletes from 11-02 onward)
+        bool     gc_inhibited_staging{ false };       ///< last tick skipped: staging unhealthy (D-12 gate)
+        size_t   gc_evicting_count{ 0 };              ///< CIDs in the in-memory evicting mark set (11-02+)
+        uint64_t gc_last_pass_unix_ms{ 0 };           ///< wall-clock ms of the last completed pass
+        size_t   gc_last_pass_candidates{ 0 };        ///< cold-eligible CIDs the last pass identified
+        size_t   gc_last_pass_reclaimed_count{ 0 };   ///< evicted CIDs the last pass deleted (11-02+)
+        uint64_t gc_last_pass_reclaimed_bytes{ 0 };   ///< local bytes reclaimed by the last pass (11-02+)
+        size_t   gc_disposed_marker_count{ 0 };       ///< disposed-CID markers currently persisted (11-02+)
     };
 
     // Defined in ColdStorageManager.hpp (gated TU); reachable here only

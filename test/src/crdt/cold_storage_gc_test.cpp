@@ -446,7 +446,12 @@ namespace
         {
             // The REAL hot CRDT RocksDB store (heads + set rows + tombstones
             // land here through the CrdtDatastore), wrapped in the SC1 spy.
+            // storage::rocksdb::create does NOT create parent directories
+            // (unlike LocalBlockStore::Open) - create them explicitly (A4).
             hot_dir_ = FreshDir( "hot" );
+            std::error_code hot_ec;
+            std::filesystem::create_directories( hot_dir_, hot_ec );
+            ASSERT_FALSE( hot_ec );
             rocksdb::Options hot_options;
             hot_options.create_if_missing = true;
             auto opened_hot = rocksdb::create( hot_dir_, hot_options );
@@ -534,7 +539,9 @@ namespace
         Cid SetOrphan( const std::string &payload )
         {
             const auto cid = MakeCid( payload );
-            auto       set = decorator_->set( CID( cid ), Buffer{}.put( payload ) );
+            IpfsDatastore::Value value;
+            value.put( payload );
+            auto set = decorator_->set( CID( cid ), std::move( value ) );
             EXPECT_TRUE( set.has_value() );
             return cid;
         }
@@ -689,7 +696,9 @@ TEST_F( ColdStorageGcTest, DurabilityGateRequiresExactlyDurable )
     // Fault the remote Put BEFORE journaling: the drainer can never move
     // the record past PendingUpload.
     fake_->SetFaultForKey( DeriveTestKey( orphan ), S3Op::Put, S3FaultKind::Unavailable );
-    auto set = decorator_->set( CID( orphan ), Buffer{}.put( "never drained payload" ) );
+    IpfsDatastore::Value orphan_value;
+    orphan_value.put( "never drained payload" );
+    auto set = decorator_->set( CID( orphan ), std::move( orphan_value ) );
     ASSERT_TRUE( set.has_value() );
 
     auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
