@@ -62,10 +62,14 @@
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/crdt_options.hpp"
 #include "crdt/globaldb/BlockStoreBackedIpfsDatastore.hpp"
+#include "crdt/globaldb/ColdReadService.hpp"
 #include "crdt/globaldb/ColdStorageManager.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/hierarchical_key.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+
+#include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
+#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 
 namespace
 {
@@ -163,6 +167,16 @@ namespace
         retention.dry_run          = false;
         retention.gc_interval_ms   = 0; // 0 -> kDefaultGcIntervalMs (dormant)
         retention.grace_ms         = 0; // 0 -> kDefaultGraceMs
+        return retention;
+    }
+
+    /// Retention with an EXPLICIT grace (ms-scale) so eviction tests
+    /// process due marks on the next driven pass deterministically.
+    ColdStorageManager::RetentionOptions RetentionFastGrace( uint64_t retention_age_ms,
+                                                             uint32_t grace_ms )
+    {
+        auto retention      = RetentionFast( retention_age_ms );
+        retention.grace_ms = grace_ms; // explicit - never normalized
         return retention;
     }
 
@@ -473,9 +487,17 @@ namespace
             fake_admin_     = std::make_shared<InMemoryS3AdminClient>();
             cold_store_mutex_ = std::make_shared<std::mutex>();
 
-            // The DAG layer: decorator -> GraphsyncDAGSyncer -> CrdtDatastore
-            // (the GlobalDB::Init construction order, hermetically).
-            inner_     = std::make_shared<FakeInnerDatastore>();
+            // The DAG layer (the production shared-DB shape): ONE
+            // underlying RocksDB, wrapped TWICE - sgns::storage::rocksdb
+            // for the CrdtDatastore + the manager's hot face (the spy),
+            // and ipfs_lite::rocksdb over the SAME DB handle for the
+            // RocksdbDatastore the decorator wraps (globaldb.cpp:803's
+            // IpfsRocksDb::create( m_datastore->getDB() ) shape). Hot
+            // block bytes + seal text keys land in the real store the
+            // GC's hot cleanup deletes from.
+            auto ipfs_db = sgns::ipfs_lite::rocksdb::create( real_hot_->getDB() );
+            ASSERT_TRUE( ipfs_db.has_value() );
+            inner_     = std::make_shared<sgns::ipfs_lite::ipfs::RocksdbDatastore>( ipfs_db.value() );
             decorator_ = std::make_shared<BlockStoreBackedIpfsDatastore>(
                 inner_, shared_local_, cold_store_mutex_, sgns::base::createLogger( "ColdStorageGc" ) );
             dagsyncer_ = std::make_shared<GraphsyncDAGSyncer>(
@@ -592,7 +614,7 @@ namespace
         std::shared_ptr<S3BlockStore>           remote_;
         std::shared_ptr<InMemoryS3AdminClient>  fake_admin_;
         std::shared_ptr<std::mutex>             cold_store_mutex_;
-        std::shared_ptr<FakeInnerDatastore>     inner_;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::IpfsDatastore> inner_;
         std::shared_ptr<BlockStoreBackedIpfsDatastore> decorator_;
         std::shared_ptr<GraphsyncDAGSyncer>     dagsyncer_;
         std::shared_ptr<NoopBroadcaster>        broadcaster_;
@@ -1036,4 +1058,192 @@ TEST_F( ColdStorageGcTest, PerPassMetricsTrackEachPass )
     const auto status_second = manager->GetStatus();
     EXPECT_EQ( status_second.gc_last_pass_candidates, 0u );
     EXPECT_GE( status_second.gc_last_pass_unix_ms, status_first.gc_last_pass_unix_ms );
+}
+
+// ===========================================================================
+// v1.1 Phase 11 plan 11-02: the destructive half (GC-02 / SC2)
+// ===========================================================================
+
+/// The hot-store binary key for a CID (the datastore encode shape).
+sgns::storage::Buffer HotKeyOf( const CID &cid )
+{
+    auto bytes = cid.toBytes();
+    sgns::storage::Buffer key;
+    key.put( bytes.value() );
+    return key;
+}
+
+/// The hot-store seal text key ("<cid-string>sealed" - datastore_rocksdb
+/// :47-56 shape).
+sgns::storage::Buffer SealKeyOf( const CID &cid )
+{
+    auto cid_string = cid.toString();
+    sgns::storage::Buffer key;
+    key.put( cid_string.value() + "sealed" );
+    return key;
+}
+
+/// The delta's OWN membership row key: ElemsPrefix(key).ChildString(cid)
+/// (crdt_set.cpp:707) - derived from the datastore's keys prefix
+/// ("/namespace/k/" -> elems base "/namespace/s/").
+std::string ElemRowKeyOf( const std::string &keys_prefix,
+                          const std::string &elem_key,
+                          const std::string &cid_string )
+{
+    // keys_prefix is "<ns>/k/" - the elems base shares the namespace root.
+    EXPECT_GE( keys_prefix.size(), 2u );
+    return keys_prefix.substr( 0, keys_prefix.size() - 2 ) + "s/" + elem_key + "/" + cid_string;
+}
+
+/**
+ * @given a real delta block that LOST head-reachability (RemoveHead) -
+ *        backdated past retention, Durable, sealed (resolution state
+ *        present), with its own s-row in the hot store
+ * @when  two driven passes run with a fast explicit grace (mark, then
+ *        due-processing with heads unchanged)
+ * @then  the full D-16 two-half eviction lands as ONE policy unit: HALF 1
+ *        removes cold bytes + journal + timestamp and writes the disposed
+ *        marker in ONE library batch (IsDisposed true, GetUploadState
+ *        absent, GetColdUploadState NoRecord); HALF 2 removes the hot
+ *        binary key, the seal text key, and EXACTLY the block's own
+ *        s-row via one hot batch + LRU invalidation; the t/k/h keyspaces
+ *        and every OTHER s-row see ZERO operations (spy); HasBlock stays
+ *        TRUE across the whole eviction moment (hot bytes before, the
+ *        disposed-marker term after - D-11); and a DIRECT read still
+ *        resolves the CID CID-verified through the S3 tier (D-12 - the
+ *        marker is dedup-only, never read absence).
+ */
+TEST_F( ColdStorageGcTest, EvictionEndToEndTwoHalvesUnitAtomic )
+{
+    const CID d1 = PublishElement( "gc/evict-e2e", "value" );
+    // Detach the head: d1 becomes unreachable (the retention target - a
+    // REAL delta with real s-rows and seal state).
+    auto detached = crdt_->RemoveHead( d1, "topic" );
+    ASSERT_TRUE( detached.has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+
+    // Resolution state present (the production markResolved -> seal path).
+    ASSERT_TRUE( dagsyncer_->markResolved( d1 ).has_value() );
+
+    const auto keys_prefix = crdt_->GetKeysPrefix();
+    const auto d1_string   = d1.toString().value();
+    const auto row_key     = ElemRowKeyOf( keys_prefix, "gc/evict-e2e", d1_string );
+
+    // Preconditions: the hot store holds the binary key, the seal text
+    // key, and the delta's own s-row.
+    ASSERT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+    ASSERT_TRUE( real_hot_->contains( SealKeyOf( d1 ) ) );
+    {
+        sgns::storage::Buffer row_buf;
+        row_buf.put( row_key );
+        ASSERT_TRUE( real_hot_->contains( row_buf ) );
+    }
+
+    // Pass 1: the candidate is marked, NOTHING is deleted yet
+    // (defer-to-next-tick grace).
+    const auto pass1 = manager->GcPassOnce();
+    ASSERT_EQ( pass1.size(), 1u );
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() ) << "grace: cold bytes kept until due";
+    }
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) ) << "grace: hot bytes kept until due";
+
+    // Pass 2 (grace elapsed, heads unchanged): both halves run.
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    (void)manager->GcPassOnce();
+
+    // HALF 1 post-state: cold bytes + journal gone, marker present.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_FALSE( cold_has.value() );
+        auto state = shared_local_->GetUploadState( Cid( d1 ) );
+        EXPECT_FALSE( state.has_value() ) << "journal record removed";
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_TRUE( disposed.value() );
+        auto marker = shared_local_->GetDisposed();
+        ASSERT_TRUE( marker.has_value() );
+        ASSERT_EQ( marker.value().size(), 1u );
+        EXPECT_TRUE( marker.value()[0].first == Cid( d1 ) );
+        EXPECT_TRUE( marker.value()[0].second.was_sealed );
+        EXPECT_GT( marker.value()[0].second.original_size, 0u );
+    }
+
+    // HALF 2 post-state: binary key, seal key, and EXACTLY the own s-row
+    // gone; the marker answers HasBlock (D-11 fourth term).
+    EXPECT_FALSE( real_hot_->contains( HotKeyOf( d1 ) ) );
+    EXPECT_FALSE( real_hot_->contains( SealKeyOf( d1 ) ) );
+    {
+        sgns::storage::Buffer row_buf;
+        row_buf.put( row_key );
+        EXPECT_FALSE( real_hot_->contains( row_buf ) );
+    }
+    auto has_block = dagsyncer_->HasBlock( d1 );
+    ASSERT_TRUE( has_block.has_value() );
+    EXPECT_TRUE( has_block.value() ) << "HasBlock stays honest via the disposed-marker term";
+
+    // D-12 split: a DIRECT read never treats the marker as absence - the
+    // cold chain resolves the disposed CID from the S3 fake, CID-verified.
+    auto resolved = dagsyncer_->GetNodeWithoutRequest( d1 );
+    ASSERT_TRUE( resolved.has_value() ) << "disposed CIDs stay readable through the cold chain";
+
+    // The bridge reports the post-eviction journal truth: NoRecord.
+    EXPECT_EQ( sgns::crdt::GetColdUploadState( manager, d1 ), sgns::crdt::ColdUploadState::NoRecord );
+
+    // Metrics + marks drained.
+    const auto status = manager->GetStatus();
+    EXPECT_EQ( status.gc_last_pass_reclaimed_count, 1u );
+    EXPECT_GT( status.gc_last_pass_reclaimed_bytes, 0u );
+    EXPECT_EQ( status.gc_evicting_count, 0u );
+    EXPECT_EQ( status.gc_disposed_marker_count, 1u );
+
+    // Keyspace boundary across the WHOLE eviction: zero operations under
+    // /t/, /h/, /k/ and zero on any s-row other than the block's own.
+    EXPECT_EQ( spy_->OpsMatching( "/t/" ), 0u );
+    EXPECT_EQ( spy_->OpsMatching( "/h/" ), 0u );
+    EXPECT_EQ( spy_->OpsMatching( "/k/" ), 0u );
+    EXPECT_LE( spy_->OpsMatching( "/s/" ), 2u ); // get(own row) + remove(own row) at most
+}
+
+/**
+ * @given an eligible candidate marked on pass 1 with a grace LONGER than
+ *        the test window
+ * @when  pass 2 runs immediately (grace not elapsed)
+ * @then  the mark is NOT processed on pass 2 (defer-to-next-tick grace:
+ *        nothing deleted, mark retained).
+ */
+TEST_F( ColdStorageGcTest, GraceDeferToNextTickNotProcessedEarly )
+{
+    const CID d1 = PublishElement( "gc/defer-e2e", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 60000 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+
+    const auto pass1 = manager->GcPassOnce();
+    ASSERT_EQ( pass1.size(), 1u );
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+
+    // Immediately-driven second pass: the grace has not elapsed - the
+    // mark must survive untouched.
+    (void)manager->GcPassOnce();
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() );
+    }
 }
