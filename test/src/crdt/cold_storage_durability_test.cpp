@@ -951,3 +951,194 @@ TEST_F( ColdStorageDurabilityTest, acceptance_race_mid_flush_excluded_from_marks
     },
                             std::chrono::milliseconds( 10000 ) ) );
 }
+
+// ---------------------------------------------------------------------------
+// SC4 staging-health suite (DUR-01, v1.1 Phase 10 plan 10-02 Task 2):
+// raw counters + the conservative D-12 predicate in the status getter,
+// on-tick freshness, on-demand D-13 refresh, restart count seeding.
+// ---------------------------------------------------------------------------
+
+/// Script a stats body with the given counters (pendingObjects always 0
+/// so the evidence gate never interferes with the health assertions).
+UploadStats StagingStats( uint64_t buffer_used, uint64_t buffer_limit, uint64_t failed )
+{
+    UploadStats stats;
+    stats.pendingObjects = 0;
+    stats.bufferUsed     = buffer_used;
+    stats.bufferLimit    = buffer_limit;
+    stats.failedUploads  = failed;
+    return stats;
+}
+
+/**
+ * @given clean stats (flat failures, buffer far under the fraction)
+ * @when  a cadence tick observes them
+ * @then  staging_healthy reads true with the raw counters visible.
+ */
+TEST_F( ColdStorageDurabilityTest, staging_healthy_on_clean_stats )
+{
+    fake_admin_->SetStats( StagingStats( 100, 1000, 0 ) );
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    const auto status = manager->GetStatus();
+    EXPECT_EQ( status.staging_buffer_used, 100u );
+    EXPECT_EQ( status.staging_buffer_limit, 1000u );
+    EXPECT_EQ( status.staging_failed_uploads, 0u );
+    EXPECT_EQ( status.staging_pending_objects, 0u );
+}
+
+/**
+ * @given bufferUsed above kStagingBufferFraction of a non-zero limit
+ * @when  a tick observes them
+ * @then  staging_healthy reads false (the GC-inhibition signal Phase 11
+ *        consumes) even though the flush evidence itself is fine.
+ */
+TEST_F( ColdStorageDurabilityTest, staging_unhealthy_when_buffer_fraction_exceeded )
+{
+    fake_admin_->SetStats( StagingStats( 900, 1000, 0 ) ); // > 0.8 * 1000
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_buffer_limit == 1000; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    const auto status = manager->GetStatus();
+    EXPECT_FALSE( status.staging_healthy );
+    EXPECT_TRUE( status.last_flush_ok ); // evidence fine - health is separate
+    // The public threshold constant is citable (Phase-9 D-12 precedent).
+    EXPECT_DOUBLE_EQ( ColdStorageManager::kStagingBufferFraction, 0.8 );
+}
+
+/**
+ * @given bufferLimit == 0 (openapi verbatim: unlimited) with a huge
+ *        bufferUsed and flat failures
+ * @when  a tick observes them
+ * @then  the buffer clause is vacuously true - health decided by the
+ *        other clauses alone.
+ */
+TEST_F( ColdStorageDurabilityTest, staging_zero_limit_is_unlimited )
+{
+    fake_admin_->SetStats( StagingStats( 4000000000ull, 0, 0 ) );
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_EQ( manager->GetStatus().staging_buffer_used, 4000000000ull );
+}
+
+/**
+ * @given failedUploads growing between ticks
+ * @when  ticks observe 5 -> 5 -> 6
+ * @then  the growth tick reads unhealthy and the flat delta tick reads
+ *        healthy again (delta-since-previous-tick semantics).
+ */
+TEST_F( ColdStorageDurabilityTest, staging_unhealthy_on_failed_uploads_growth )
+{
+    fake_admin_->SetStats( StagingStats( 0, 1000, 5 ) ); // first tick: delta vs 0 -> unhealthy
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_failed_uploads == 5; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_FALSE( manager->GetStatus().staging_healthy );
+
+    // Flat delta: healthy again.
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+
+    // Growth: unhealthy until the next flat tick.
+    fake_admin_->SetStats( StagingStats( 0, 1000, 6 ) );
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_failed_uploads == 6
+                                       && !manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+}
+
+/**
+ * @given healthy staging state, then the admin scripted Unreachable
+ * @when  a tick's admin call fails
+ * @then  staging_healthy reads false (fail-safe on unreadable evidence)
+ *        while the counters keep their last-known values.
+ */
+TEST_F( ColdStorageDurabilityTest, staging_fail_safe_on_admin_unreachable )
+{
+    fake_admin_->SetStats( StagingStats( 100, 1000, 0 ) );
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+
+    fake_admin_->SetAdminFault( S3AdminFaultKind::Unreachable );
+    ASSERT_TRUE( PollUntil( [&] { return !manager->GetStatus().staging_healthy; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    // Counters hold their last-known values (100/1000/0).
+    EXPECT_EQ( manager->GetStatus().staging_buffer_used, 100u );
+    EXPECT_EQ( manager->GetStatus().staging_buffer_limit, 1000u );
+    fake_admin_->SetAdminFault( S3AdminFaultKind::None );
+}
+
+/**
+ * @given a manager whose flush floor is far beyond the test window (no
+ *        tick will fire) and newly scripted stats
+ * @when  RefreshStagingStats() is called from the TEST thread while the
+ *        drainer loop runs
+ * @then  the cached counters update immediately without waiting a tick,
+ *        serialized through the admin mutex (no deadlock, no race).
+ */
+TEST_F( ColdStorageDurabilityTest, staging_refresh_on_demand_updates_without_tick )
+{
+    fake_admin_->SetStats( StagingStats( 100, 1000, 0 ) );
+    auto manager = MakeManager( FastOptions(), FastDurability( 10000, 20000 ) );
+    manager->Start();
+    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+    EXPECT_FALSE( manager->GetStatus().staging_healthy ); // no tick ran yet
+
+    fake_admin_->SetStats( StagingStats( 250, 1000, 0 ) );
+    manager->RefreshStagingStats(); // on-demand (D-13), test-thread call
+    const auto status = manager->GetStatus();
+    EXPECT_EQ( status.staging_buffer_used, 250u );
+    EXPECT_EQ( status.staging_buffer_limit, 1000u );
+    EXPECT_TRUE( status.staging_healthy );
+}
+
+/**
+ * @given a reopened directory already holding 2 Accepted and 1 Durable
+ *        journal records
+ * @when  a fresh manager starts over it with a flush floor beyond the
+ *        test window (nothing advances)
+ * @then  the first-cycle seeding reports accepted=2 / durable=1 in the
+ *        status getter - counts survive restart without any scan in
+ *        GetStatus().
+ */
+TEST_F( ColdStorageDurabilityTest, staging_restart_seeding_counts )
+{
+    const std::string dir = FreshDir();
+    {
+        auto opened = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+        ASSERT_TRUE( opened.has_value() );
+        auto store = std::shared_ptr<LocalBlockStore>( std::move( opened.value() ) );
+        const std::string payloads[3] = { "seed A", "seed B", "seed C" };
+        for ( const auto &payload : payloads )
+        {
+            auto cid = MakeCid( payload );
+            ASSERT_TRUE( store->Put( cid, SpanOf( payload ) ).has_value() );
+            ASSERT_TRUE( store->MarkUploadedAccepted( cid ).has_value() );
+        }
+        auto durable_cid = MakeCid( payloads[2] );
+        ASSERT_TRUE( store->MarkUploadedDurable( durable_cid ).has_value() );
+    } // store released - directory lock freed
+
+    auto reopened = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+    ASSERT_TRUE( reopened.has_value() );
+    auto reopened_store = std::shared_ptr<LocalBlockStore>( std::move( reopened.value() ) );
+    auto remote_store_mutex = std::make_shared<std::mutex>();
+    manager_ = std::make_shared<ColdStorageManager>(
+        reopened_store, remote_, cold_store_mutex_, remote_store_mutex, FastOptions(),
+        FastDurability( 10000, 20000 ), fake_admin_ );
+    manager_->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager_->GetStatus();
+        return status.accepted_upload_count == 2 && status.durable_upload_count == 1;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+}
