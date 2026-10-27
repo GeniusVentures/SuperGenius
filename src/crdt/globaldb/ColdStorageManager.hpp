@@ -96,6 +96,12 @@ namespace sgns::crdt
         static constexpr std::chrono::milliseconds kFinalFlushBudgetMs{ 2000 };
         /// Cap of the flush-failure backoff (compile-time, NOT a knob).
         static constexpr std::chrono::milliseconds kFlushBackoffCapMs{ 60000 };
+        /// D-12 staging-health threshold: bufferUsed above this fraction
+        /// of a NON-ZERO bufferLimit reads staging unhealthy (public for
+        /// test citation - Phase-9 D-12 constant precedent). bufferLimit
+        /// == 0 means UNLIMITED (openapi verbatim) - the clause is
+        /// vacuously true there.
+        static constexpr double kStagingBufferFraction = 0.8;
         /// Shutdown grace window for in-flight cycle work (D-11; NOT a
         /// knob - public for the bounded-Stop test citation).
         static constexpr std::chrono::milliseconds kShutdownGraceWindow{ 5000 };
@@ -202,6 +208,14 @@ namespace sgns::crdt
         sgns::blockstore::result<sgns::blockstore::UploadState, sgns::blockstore::BlockStatus>
         GetUploadState( const sgns::blockstore::Cid &cid );
 
+        /**
+         * @brief      D-13 on-demand staging-stats refresh: ONE bounded
+         *             GetUploadStats plus predicate re-evaluation,
+         *             serialized against the drainer tick's admin calls
+         *             via admin_mutex_ (no poller thread).
+         */
+        void RefreshStagingStats();
+
     private:
         /// Backoff multiplier per failed cycle (D-03; compile-time, D-05).
         static constexpr uint32_t kBackoffFactor = 2;
@@ -233,6 +247,13 @@ namespace sgns::crdt
         /// (pendingObjects != 0): records valid-but-not-ok evidence and
         /// resets nothing - records stay Accepted for the next cycle.
         void RecordFlushNoEvidence( uint64_t observed_pending );
+
+        /// D-12 staging-health predicate: evaluates the conservative
+        /// three-clause rule over the observed stats and writes the
+        /// staging atomics (called from the drainer tick AND
+        /// RefreshStagingStats - every field it touches is atomic).
+        void UpdateStagingHealth( const sgns::blockstore::UploadStats &stats,
+                                  bool                              admin_reachable );
 
         /// Update the pending-count atomic, watermark transitions, and the
         /// held-watermark heartbeat (D-02/D-07/D-08/D-09).
@@ -286,6 +307,21 @@ namespace sgns::crdt
         /// D-04: Stop() is idempotent and the destructor calls it too -
         /// the guard makes the final-flush attempt exactly-once.
         std::atomic<bool>                      final_flush_done_{ false };
+
+        // SC4 staging health (D-12/D-13): the predicate evaluates on the
+        // drainer tick and on demand; every status-read field is atomic.
+        std::atomic<uint64_t>                  staging_pending_objects_{ 0 };
+        std::atomic<uint64_t>                  staging_buffer_used_{ 0 };
+        std::atomic<uint64_t>                  staging_buffer_limit_{ 0 };
+        std::atomic<uint64_t>                  staging_failed_uploads_{ 0 };
+        std::atomic<bool>                      staging_healthy_{ false };
+        /// Last-observed failedUploads (the flat-delta clause's
+        /// baseline; atomic - refresh may run off the drainer thread).
+        std::atomic<uint64_t>                  previous_failed_uploads_{ 0 };
+        std::atomic<bool>                      admin_reachable_last_tick_{ false };
+        /// D-13: serializes admin-client use between the drainer tick's
+        /// calls and RefreshStagingStats (the only contended object).
+        std::mutex                             admin_mutex_;
 
         // Status atomics (D-08): read lock-free by GetStatus.
         std::atomic<size_t>              pending_count_{ 0 };

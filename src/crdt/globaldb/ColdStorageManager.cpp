@@ -105,6 +105,25 @@ namespace sgns::crdt
                 // idempotently (S3 createOnly convergence), so node start
                 // latency is unaffected and no synchronous startup gate
                 // exists.
+                //
+                // D-08 restart seeding (v1.1 Phase 10): the SAME boundary
+                // seeds the per-state counters from one journal scan -
+                // counts survive restart while GetStatus stays scan-free.
+                {
+                    std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                    auto accepted = local_block_store_->GetUploadsInState(
+                        sgns::blockstore::UploadState::UploadedAccepted );
+                    if ( accepted.has_value() )
+                    {
+                        accepted_count_.store( accepted.value().size(), std::memory_order_relaxed );
+                    }
+                    auto durable = local_block_store_->GetUploadsInState(
+                        sgns::blockstore::UploadState::UploadedDurable );
+                    if ( durable.has_value() )
+                    {
+                        durable_count_.store( durable.value().size(), std::memory_order_relaxed );
+                    }
+                }
                 while ( !stop_flag_.load() )
                 {
                     MarkBusy();
@@ -233,6 +252,11 @@ namespace sgns::crdt
         status.last_flush_unix_ms       = last_flush_unix_ms_.load( std::memory_order_relaxed );
         status.last_flush_pending_objects = last_flush_pending_objects_.load( std::memory_order_relaxed );
         status.flush_backoff_active     = flush_backoff_active_.load( std::memory_order_relaxed );
+        status.staging_pending_objects  = staging_pending_objects_.load( std::memory_order_relaxed );
+        status.staging_buffer_used      = staging_buffer_used_.load( std::memory_order_relaxed );
+        status.staging_buffer_limit     = staging_buffer_limit_.load( std::memory_order_relaxed );
+        status.staging_failed_uploads   = staging_failed_uploads_.load( std::memory_order_relaxed );
+        status.staging_healthy          = staging_healthy_.load( std::memory_order_relaxed );
         return status;
     }
 
@@ -423,28 +447,41 @@ namespace sgns::crdt
         accepted_count_.store( snapshot.size(), std::memory_order_relaxed );
         last_flush_attempt_ = now;
 
-        // (ii) admin calls UNLOCKED (a NEW connection - the drainer is
-        // idle at this point, remote_store_mutex_ is NOT involved; D-02:
-        // writes and reads are never blocked by admin latency).
-        auto flushed = admin_client_->Flush( kCadenceFlushReadTimeoutMs );
-        if ( !flushed.has_value() )
+        // (ii) admin calls UNLOCKED from the publisher's perspective (a
+        // NEW connection - remote_store_mutex_ is NOT involved; D-02)
+        // but serialized against RefreshStagingStats through admin_mutex_
+        // (D-13: the admin client is the only contended object).
+        sgns::blockstore::UploadStats observed{};
         {
-            RecordFlushFailedCycle( "flush call failed: " + flushed.error().message );
-            return;
+            std::lock_guard<std::mutex> admin_lock( admin_mutex_ );
+            auto flushed = admin_client_->Flush( kCadenceFlushReadTimeoutMs );
+            if ( !flushed.has_value() )
+            {
+                UpdateStagingHealth( observed, false );
+                RecordFlushFailedCycle( "flush call failed: " + flushed.error().message );
+                return;
+            }
+            auto stats = admin_client_->GetUploadStats();
+            if ( !stats.has_value() )
+            {
+                UpdateStagingHealth( observed, false );
+                RecordFlushFailedCycle( "stats observation failed: " + stats.error().message );
+                return;
+            }
+            observed = stats.value();
         }
-        auto stats = admin_client_->GetUploadStats();
-        if ( !stats.has_value() )
-        {
-            RecordFlushFailedCycle( "stats observation failed: " + stats.error().message );
-            return;
-        }
+
+        // The observation succeeded: staging health evaluates NOW (D-12
+        // on-tick freshness) regardless of what the evidence gate next
+        // decides about marks.
+        UpdateStagingHealth( observed, true );
 
         // (iii) evidence gate (SC1): ONLY a pendingObjects == 0
         // observation permits marks - anything else leaves every record
         // Accepted for a later cycle (never accepted-is-durable).
-        if ( stats.value().pendingObjects != 0 )
+        if ( observed.pendingObjects != 0 )
         {
-            RecordFlushNoEvidence( stats.value().pendingObjects );
+            RecordFlushNoEvidence( observed.pendingObjects );
             return;
         }
 
@@ -488,6 +525,55 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
         return local_block_store_->GetUploadState( cid );
+    }
+
+    void ColdStorageManager::RefreshStagingStats()
+    {
+        // D-13 on-demand entry: one bounded observation, predicate
+        // re-evaluated, no poller thread. Serialized against the drainer
+        // tick's admin calls through admin_mutex_.
+        if ( admin_client_ == nullptr )
+        {
+            return;
+        }
+        std::lock_guard<std::mutex> lock( admin_mutex_ );
+        auto stats = admin_client_->GetUploadStats();
+        if ( stats.has_value() )
+        {
+            UpdateStagingHealth( stats.value(), true );
+        }
+        else
+        {
+            // Fail-safe on unreadable evidence (D-12).
+            UpdateStagingHealth( sgns::blockstore::UploadStats{}, false );
+        }
+    }
+
+    void ColdStorageManager::UpdateStagingHealth( const sgns::blockstore::UploadStats &stats,
+                                                  bool                              admin_reachable )
+    {
+        // The conservative three-clause D-12 predicate. GC inhibition
+        // defaults to INHIBITED on unreadable, garbage, or absent
+        // evidence - never healthy-by-omission.
+        if ( !admin_reachable )
+        {
+            admin_reachable_last_tick_.store( false, std::memory_order_relaxed );
+            staging_healthy_.store( false, std::memory_order_relaxed );
+            return; // counters keep their last-known values
+        }
+        admin_reachable_last_tick_.store( true, std::memory_order_relaxed );
+        const bool buffer_ok =
+            stats.bufferLimit == 0
+            || static_cast<double>( stats.bufferUsed )
+                   <= kStagingBufferFraction * static_cast<double>( stats.bufferLimit );
+        const bool failed_flat =
+            stats.failedUploads == previous_failed_uploads_.load( std::memory_order_relaxed );
+        staging_healthy_.store( buffer_ok && failed_flat, std::memory_order_relaxed );
+        previous_failed_uploads_.store( stats.failedUploads, std::memory_order_relaxed );
+        staging_pending_objects_.store( stats.pendingObjects, std::memory_order_relaxed );
+        staging_buffer_used_.store( stats.bufferUsed, std::memory_order_relaxed );
+        staging_buffer_limit_.store( stats.bufferLimit, std::memory_order_relaxed );
+        staging_failed_uploads_.store( stats.failedUploads, std::memory_order_relaxed );
     }
 
     void ColdStorageManager::RecordFlushFailedCycle( const std::string &context )

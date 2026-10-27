@@ -82,6 +82,15 @@ namespace sgns::crdt
         /// D-07/Pitfall-6 separation observable: drain health and flush
         /// backoff vary INDEPENDENTLY (v1.1 Phase 10).
         bool     flush_backoff_active{ false };
+        // SC4 staging health (D-12, v1.1 Phase 10): raw counters + the
+        // conservative healthy flag - the GC-inhibition signal Phase 11
+        // consumes. PLAIN TYPES ONLY (Pitfall 5 - the library UploadStats
+        // flattens at this boundary).
+        uint64_t staging_pending_objects{ 0 }; ///< s3d staged-object count (process-global)
+        uint64_t staging_buffer_used{ 0 };     ///< staging disk buffer bytes in use
+        uint64_t staging_buffer_limit{ 0 };    ///< staging buffer capacity (0 = unlimited)
+        uint64_t staging_failed_uploads{ 0 };  ///< s3d permanent upload failures (cumulative)
+        bool     staging_healthy{ false };     ///< conservative predicate (D-12) - false on unreadable evidence
     };
 
     // Defined in ColdStorageManager.hpp (gated TU); reachable here only
