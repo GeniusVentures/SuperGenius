@@ -40,6 +40,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -104,6 +105,13 @@ namespace sgns::crdt
         static constexpr uint32_t kDefaultGcIntervalMs{ 600000 };
         /// Default evicting->delete grace (1 min) when grace_ms == 0.
         static constexpr uint32_t kDefaultGraceMs{ 60000 };
+        /// SC5 (GC-01): the PINNED hot-store prefix holding GC's node-local
+        /// epoch records - every key under it is pinned alongside heads
+        /// (never a candidate, never deleted; public for test citation).
+        static constexpr const char *kGcPinnedPrefix{ "/crdt/gc/" };
+        /// SC5: the epoch watermark record's hot-store key (node-local,
+        /// non-replicated; layout documented on WriteEpochWatermark).
+        static constexpr const char *kGcEpochWatermarkKey{ "/crdt/gc/epoch-watermark" };
 
         /// @brief The eviction-safety durability gate (D-10): a local
         ///        block's bytes are evictable ONLY when its journal
@@ -250,6 +258,18 @@ namespace sgns::crdt
         void RefreshStagingStats();
 
         /**
+         * @brief      TEST-ONLY mid-pass hook (the library's
+         *             SetCrashPointForTesting precedent): invoked between
+         *             the pass-start heads snapshot/walk and the
+         *             heads-equality finalization - the seam the
+         *             heads-change abort case uses to mutate heads inside
+         *             the pass window. PRODUCTION CODE MUST NEVER CALL
+         *             SetGcMidPassHookForTesting.
+         * @param[in]  hook the callback (null clears)
+         */
+        void SetGcMidPassHookForTesting( std::function<void()> hook );
+
+        /**
          * @brief      Attach the retention-GC dependencies (GC-01, v1.1
          *             Phase 11 - the §6.1 post-construction seam).
          *
@@ -354,6 +374,22 @@ namespace sgns::crdt
         /// or CID (the §2.2 exactness lemma's abort predicate).
         static bool HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
                                  const CrdtHeads::CRDTHeadList &rhs );
+
+        /// SC5 (GC-01): compute and store the per-topic epoch watermark
+        /// record from the pass-start heads snapshot - min-head-height
+        /// floor, max height, computed-at unix-ms - as ONE node-local,
+        /// non-replicated record under the PINNED /crdt/gc/ hot-store
+        /// prefix via the attached hot face (a DIRECT hot-store record -
+        /// never through the CRDT datastore Put path, which would publish
+        /// a block). NOTHING in v1.1 is deletion-gated on it.
+        ///
+        /// Record layout (internal, node-local, fixed): little-endian
+        /// [u64 computed_at_unix_ms][u32 topic_count] then per topic
+        /// [u16 name_len][name bytes][u64 min_height][u64 max_height].
+        /// A height-read failure skips that head conservatively (the
+        /// watermark is advisory bookkeeping in v1.1); a write failure is
+        /// one rate-limited warn, never a pass abort.
+        void WriteEpochWatermark( const CrdtHeads::CRDTHeadList &snapshot );
 
         /// Update the pending-count atomic, watermark transitions, and the
         /// held-watermark heartbeat (D-02/D-07/D-08/D-09).
@@ -460,6 +496,10 @@ namespace sgns::crdt
         std::atomic_bool         gc_stop_flag_{ false };
         std::mutex               gc_wait_mutex_;
         std::condition_variable  gc_cv_;
+        /// TEST-ONLY mid-pass hook (null in production; see the setter).
+        std::function<void()>    gc_mid_pass_hook_;
+        /// Serializes gc_mid_pass_hook_ swaps against a running pass.
+        std::mutex               gc_hook_mutex_;
         /// Rate-limit state for the inhibited/aborted gc: lines (atomic:
         /// GcPassOnce may run on the GC thread or a test thread).
         std::atomic<uint32_t>    gc_inhibit_streak_{ 0 };

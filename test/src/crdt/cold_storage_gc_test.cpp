@@ -525,11 +525,13 @@ namespace
         /// Publish one element through the REAL CRDT Put path: the delta
         /// node lands in the DAG through the decorator (journaled = the
         /// spill-on-write shape) and the heads mutate (the walk universe).
-        CID PublishElement( const std::string &key, const std::string &value )
+        CID PublishElement( const std::string                       &key,
+                            const std::string                       &value,
+                            const std::unordered_set<std::string> &topics = { "topic" } )
         {
             auto delta = CrdtDatastore::CreateDeltaToAdd( key, value );
             EXPECT_TRUE( delta.has_value() );
-            auto published = crdt_->Publish( delta.value(), { "topic" } );
+            auto published = crdt_->Publish( delta.value(), topics );
             EXPECT_TRUE( published.has_value() );
             return published.value();
         }
@@ -647,10 +649,12 @@ TEST_F( ColdStorageGcTest, EndToEndRetentionPassIdentifiesExactCandidateSet )
     EXPECT_FALSE( status.gc_inhibited_staging );
 
     // SC1 keyspace boundary: the GC performed ZERO hot-store operations
-    // during policy evaluation - no tombstone, heads, current-value, or
-    // set-row enumeration (and in this plan no hot op of ANY shape).
+    // under the protected tombstone/heads/current-value/set prefixes
+    // during policy evaluation - and since Task 3, the ONLY hot-store
+    // operation of any shape is the SC5 epoch-watermark write under the
+    // pinned /crdt/gc/ prefix.
     EXPECT_EQ( spy_->ProtectedPrefixOps(), 0u );
-    EXPECT_EQ( spy_->TotalOps(), 0u );
+    EXPECT_EQ( spy_->TotalOps(), spy_->OpsMatching( "/crdt/gc/" ) );
 }
 
 /**
@@ -803,4 +807,233 @@ TEST_F( ColdStorageGcTest, UnattachedDependenciesFailClosed )
 
     EXPECT_EQ( manager_->GetStatus().gc_last_pass_unix_ms, 0u )
         << "the GC thread must not run without attached dependencies";
+}
+
+/**
+ * @given a published delta chain whose MID-TIER block carries resolution
+ *        state (sealed through the production markResolved path) yet
+ *        remains linked from the head, backdated past retention
+ * @when  a driven GC pass runs
+ * @then  ZERO candidates come from that subtree - the walk traverses
+ *        THROUGH resolved blocks (resolution marks processing state, not
+ *        reachability; skipping them under-counts reachability, the
+ *        wrongful-eviction direction - Pitfall 1 regression).
+ */
+TEST_F( ColdStorageGcTest, ResolvedOldSubtreeNeverEligible )
+{
+    const CID d1 = PublishElement( "gc/resolved-1", "value1" );
+    const CID d2 = PublishElement( "gc/resolved-2", "value2" );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ), Cid( d2 ) } );
+
+    // Resolution state present on the mid-tier block (the production
+    // markResolved -> decorator seal path).
+    auto sealed = dagsyncer_->markResolved( d1 );
+    ASSERT_TRUE( sealed.has_value() );
+    auto is_resolved = dagsyncer_->isResolved( d1 );
+    ASSERT_TRUE( is_resolved.has_value() );
+    EXPECT_TRUE( is_resolved.value() ) << "fixture must actually carry resolution state";
+
+    Backdate( Cid( d1 ), 60000 );
+    Backdate( Cid( d2 ), 60000 );
+
+    const auto candidates = manager->GcPassOnce();
+    EXPECT_TRUE( candidates.empty() )
+        << "resolved-but-reachable blocks are NEVER candidates";
+    EXPECT_EQ( spy_->ProtectedPrefixOps(), 0u );
+}
+
+/**
+ * @given a backdated unreachable Durable orphan (a certain candidate) and
+ *        a mid-pass hook that publishes a NEW head block between the
+ *        pass-start snapshot and the finalization re-check
+ * @when  the driven pass runs
+ * @then  the pass ABORTS with zero candidates (heads moved during the
+ *        pass - the 2.2 exactness lemma's operational rule; a normal
+ *        pass over the same state would report exactly one candidate);
+ *        the NEXT pass over the now-stable heads reports the candidate.
+ */
+TEST_F( ColdStorageGcTest, HeadsChangeDuringPassAborts )
+{
+    PublishElement( "gc/abort-base", "value" );
+    const Cid orphan = SetOrphan( "heads-change abort payload" );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+    Backdate( orphan, 60000 );
+
+    // The mid-pass mutation: a new head published INSIDE the pass window
+    // (the SetGcMidPassHookForTesting seam, between walk and re-check).
+    manager->SetGcMidPassHookForTesting( [this] {
+        (void)PublishElement( "gc/abort-mid-pass", "mid-pass-value" );
+    } );
+
+    const auto aborted = manager->GcPassOnce();
+    EXPECT_TRUE( aborted.empty() )
+        << "heads moved during the pass - zero candidates (under-eviction)";
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+
+    // With heads stable again, the same state yields the candidate.
+    manager->SetGcMidPassHookForTesting( nullptr );
+    const auto recovered = manager->GcPassOnce();
+    ASSERT_EQ( recovered.size(), 1u );
+    EXPECT_TRUE( recovered[0] == orphan );
+}
+
+/**
+ * @given an unreachable Durable orphan whose spill timestamp is ERASED
+ *        (spilled_at 0 - the pre-Phase-11 record shape) despite its true
+ *        age being far past retention
+ * @when  a driven pass runs
+ * @then  the record is NOT a candidate regardless of true age: the pass
+ *        BACKFILLS the timestamp to now (observable via GetSpilledAt)
+ *        and the block waits one full retention period (backfill
+ *        fairness - the under-eviction direction).
+ */
+TEST_F( ColdStorageGcTest, BackfillFairnessWaitsFullPeriod )
+{
+    const Cid orphan = SetOrphan( "backfill fairness payload" );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+
+    // Erase the age evidence: spilled_at 0 = absent (the pre-Phase-11
+    // shape). NO backdate follows - a backdate would re-write a REAL old
+    // stamp and defeat the erase; the true-age-old block must wait on the
+    // absent stamp alone.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        ASSERT_TRUE( shared_local_->SetSpilledAt( orphan, 0 ).has_value() );
+    }
+
+    const auto candidates = manager->GcPassOnce();
+    EXPECT_TRUE( candidates.empty() )
+        << "a record with no age evidence waits one full retention period";
+
+    // The backfill happened: a REAL timestamp exists now.
+    std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+    auto backfilled = shared_local_->GetSpilledAt( orphan );
+    ASSERT_TRUE( backfilled.has_value() );
+    EXPECT_GT( backfilled.value(), 0u );
+}
+
+/**
+ * @given a two-topic DAG (topic-a chain of two deltas, topic-b one
+ *        delta) all Durable
+ * @when  driven passes run
+ * @then  the SC5 epoch watermark record exists under the PINNED
+ *        /crdt/gc/ prefix with per-topic floor/max heights and a
+ *        computed-at stamp; a second pass REWRITES it with a fresh
+ *        computed-at; the pin holds across passes (the record survives,
+ *        contributes no journal candidates, and the spy saw writes ONLY
+ *        under /crdt/gc/ - the four protected prefixes stay untouched);
+ *        nothing in this plan consumes it for deletion.
+ */
+TEST_F( ColdStorageGcTest, EpochWatermarkWrittenPerPassAndPinned )
+{
+    const CID a1 = PublishElement( "gc/wm-a1", "v1", { "topic-a" } );
+    const CID a2 = PublishElement( "gc/wm-a2", "v2", { "topic-a" } );
+    const CID b1 = PublishElement( "gc/wm-b1", "v1", { "topic-b" } );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( a1 ), Cid( a2 ), Cid( b1 ) } );
+
+    // Read the record through the UNWRAPPED real face (the spy's inner).
+    auto read_watermark = [&]( uint64_t &computed_at ) {
+        sgns::storage::Buffer key;
+        key.put( std::string( ColdStorageManager::kGcEpochWatermarkKey ) );
+        auto value = real_hot_->get( key );
+        ASSERT_TRUE( value.has_value() );
+        const auto &bytes = value.value().toVector();
+        ASSERT_GE( bytes.size(), 12u );
+        auto read_u64 = [&bytes]( size_t offset ) {
+            uint64_t v = 0;
+            for ( unsigned i = 0; i < 8; ++i )
+            {
+                v |= static_cast<uint64_t>( bytes[offset + i] ) << ( 8 * i );
+            }
+            return v;
+        };
+        computed_at = read_u64( 0 );
+        const uint32_t topic_count = static_cast<uint32_t>( bytes[8] )
+                                   | ( static_cast<uint32_t>( bytes[9] ) << 8 )
+                                   | ( static_cast<uint32_t>( bytes[10] ) << 16 )
+                                   | ( static_cast<uint32_t>( bytes[11] ) << 24 );
+        // Both topics present with sane floor<=max (heights >= 1).
+        EXPECT_GE( topic_count, 2u );
+        size_t offset = 12;
+        size_t topics_seen = 0;
+        for ( uint32_t t = 0; t < topic_count && offset + 2 <= bytes.size(); ++t )
+        {
+            const uint16_t name_len = static_cast<uint16_t>( bytes[offset] )
+                                    | ( static_cast<uint16_t>( bytes[offset + 1] ) << 8 );
+            offset += 2 + name_len;
+            ASSERT_LE( offset + 16, bytes.size() );
+            const uint64_t floor_height = read_u64( offset );
+            const uint64_t max_height   = read_u64( offset + 8 );
+            offset += 16;
+            EXPECT_LE( floor_height, max_height );
+            EXPECT_GE( max_height, 1u );
+            ++topics_seen;
+        }
+        EXPECT_EQ( topics_seen, topic_count );
+    };
+
+    (void)manager->GcPassOnce();
+    uint64_t first_computed_at = 0;
+    read_watermark( first_computed_at );
+    EXPECT_GT( first_computed_at, 0u );
+
+    // Second pass rewrites with a fresh computed-at (freshness proof).
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    (void)manager->GcPassOnce();
+    uint64_t second_computed_at = 0;
+    read_watermark( second_computed_at );
+    EXPECT_GT( second_computed_at, first_computed_at );
+
+    // Pin + keyspace boundary: the record survived two passes, every
+    // hot-store write the GC made sits under /crdt/gc/, and the four
+    // protected prefixes saw ZERO operations.
+    EXPECT_GE( spy_->OpsMatching( "/crdt/gc/" ), 2u );
+    EXPECT_EQ( spy_->ProtectedPrefixOps(), 0u );
+}
+
+/**
+ * @given an old Durable orphan and a driven pass, then the same orphan
+ *        with its age evidence erased
+ * @when  two driven passes run
+ * @then  the per-pass metrics track each pass: candidates 1 then 0, and
+ *        gc_last_pass_unix_ms advances monotonically.
+ */
+TEST_F( ColdStorageGcTest, PerPassMetricsTrackEachPass )
+{
+    const Cid orphan = SetOrphan( "metrics payload" );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFast( 5000 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+    Backdate( orphan, 60000 );
+
+    const auto first = manager->GcPassOnce();
+    ASSERT_EQ( first.size(), 1u );
+    const auto status_first = manager->GetStatus();
+    EXPECT_EQ( status_first.gc_last_pass_candidates, 1u );
+    EXPECT_GT( status_first.gc_last_pass_unix_ms, 0u );
+
+    // Age evidence erased: the next pass backfills and reports zero.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        ASSERT_TRUE( shared_local_->SetSpilledAt( orphan, 0 ).has_value() );
+    }
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    const auto second = manager->GcPassOnce();
+    EXPECT_TRUE( second.empty() );
+    const auto status_second = manager->GetStatus();
+    EXPECT_EQ( status_second.gc_last_pass_candidates, 0u );
+    EXPECT_GE( status_second.gc_last_pass_unix_ms, status_first.gc_last_pass_unix_ms );
 }

@@ -24,7 +24,9 @@
 
 #include "ColdStorageManager.hpp"
 
+#include <algorithm>
 #include <deque>
+#include <limits>
 
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
@@ -695,6 +697,12 @@ namespace sgns::crdt
         }
     }
 
+    void ColdStorageManager::SetGcMidPassHookForTesting( std::function<void()> hook )
+    {
+        std::lock_guard<std::mutex> lock( gc_hook_mutex_ );
+        gc_mid_pass_hook_ = std::move( hook );
+    }
+
     bool ColdStorageManager::HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
                                           const CrdtHeads::CRDTHeadList &rhs )
     {
@@ -897,6 +905,14 @@ namespace sgns::crdt
                 {
                     continue;
                 }
+                // Pin rule (SC5): heads are pinned by construction (walk
+                // roots) and every hot-store key under the /crdt/gc/
+                // epoch-record prefix is pinned alongside them - GC state
+                // (the watermark record) is never a candidate and never
+                // deleted. Journal CIDs and /crdt/gc/ text keys are
+                // disjoint keyspaces BY CONSTRUCTION (candidates come only
+                // from the journal column family); the rule binds the
+                // 11-02 delete path to the same disjointness.
                 candidates.push_back( entry.cid );
             }
         }
@@ -905,7 +921,16 @@ namespace sgns::crdt
         // are immutable and content-addressed, so heads-equality against
         // the pass-start snapshot proves the snapshot's reachable set is
         // STILL exact. ANY difference aborts the pass - zero candidates,
-        // under-eviction, one rate-limited line.
+        // under-eviction, one rate-limited line. The TEST-ONLY mid-pass
+        // hook fires just before the re-check: the heads-change abort
+        // case mutates heads inside the pass window through it.
+        {
+            std::lock_guard<std::mutex> lock( gc_hook_mutex_ );
+            if ( gc_mid_pass_hook_ )
+            {
+                gc_mid_pass_hook_();
+            }
+        }
         auto heads_now = gc_crdt_datastore_->GetHeadList();
         if ( heads_now.has_error()
              || HeadsDiffer( heads_now.value().first, snapshot ) )
@@ -924,17 +949,107 @@ namespace sgns::crdt
         }
         gc_abort_streak_.store( 0 );
 
-        // (6) status update + the one-line per-pass summary (SC5's
-        // computation lands in Task 3; nothing in v1.1 is deletion-gated
-        // on it). Deletion machinery is 11-02 - this pass ENDS at the
-        // reported candidate set.
+        // (6) status update + the one-line per-pass summary, then the SC5
+        // epoch watermark (computation + storage ONLY - nothing in v1.1 is
+        // deletion-gated on it). Deletion machinery is 11-02 - this pass
+        // ENDS at the reported candidate set.
         gc_last_pass_unix_ms_.store( now_ms, std::memory_order_relaxed );
         gc_last_pass_candidates_.store( candidates.size(), std::memory_order_relaxed );
         logger_->info( "gc: pass complete - {} candidate(s) (retention {} ms, dry_run {})",
                        candidates.size(),
                        retention_.retention_age_ms,
                        gc_dry_run_ );
+        WriteEpochWatermark( snapshot );
         return candidates;
+    }
+
+    void ColdStorageManager::WriteEpochWatermark( const CrdtHeads::CRDTHeadList &snapshot )
+    {
+        // SC5 (GC-01): per-topic {min head height (the floor), max height,
+        // computed_at} - computed from the pass-start snapshot, stored as
+        // ONE node-local record under the PINNED /crdt/gc/ prefix. A
+        // DIRECT hot-store write through the attached face: never through
+        // the CRDT datastore Put path (which would publish a block and
+        // mutate heads). Layout documented on the declaration.
+        if ( gc_hot_store_ == nullptr )
+        {
+            return; // unattached (should not happen post-Start) - advisory
+        }
+
+        struct TopicWatermark
+        {
+            std::string topic;
+            uint64_t    min_height{ std::numeric_limits<uint64_t>::max() };
+            uint64_t    max_height{ 0 };
+        };
+        std::vector<TopicWatermark> watermarks;
+        for ( const auto &[topic, cids] : snapshot )
+        {
+            if ( cids.empty() )
+            {
+                continue;
+            }
+            TopicWatermark mark;
+            mark.topic = topic;
+            for ( const auto &cid : cids )
+            {
+                // Cache read under the heads' own shared lock; a failed
+                // read skips the head conservatively (advisory record).
+                auto height = gc_crdt_datastore_->GetHeadHeight( cid, topic );
+                if ( height.has_error() )
+                {
+                    continue;
+                }
+                mark.min_height = std::min( mark.min_height,
+                                            static_cast<uint64_t>( height.value() ) );
+                mark.max_height = std::max( mark.max_height,
+                                            static_cast<uint64_t>( height.value() ) );
+            }
+            if ( mark.min_height == std::numeric_limits<uint64_t>::max() )
+            {
+                mark.min_height = 0; // every height read failed - empty floor
+            }
+            watermarks.push_back( std::move( mark ) );
+        }
+
+        auto append_u16 = []( std::vector<uint8_t> &out, uint16_t v ) {
+            out.push_back( static_cast<uint8_t>( v & 0xFF ) );
+            out.push_back( static_cast<uint8_t>( ( v >> 8 ) & 0xFF ) );
+        };
+        auto append_u32 = []( std::vector<uint8_t> &out, uint32_t v ) {
+            for ( unsigned i = 0; i < 4; ++i )
+            {
+                out.push_back( static_cast<uint8_t>( ( v >> ( 8 * i ) ) & 0xFF ) );
+            }
+        };
+        auto append_u64 = []( std::vector<uint8_t> &out, uint64_t v ) {
+            for ( unsigned i = 0; i < 8; ++i )
+            {
+                out.push_back( static_cast<uint8_t>( ( v >> ( 8 * i ) ) & 0xFF ) );
+            }
+        };
+
+        std::vector<uint8_t> record;
+        append_u64( record, UnixNowMs() );
+        append_u32( record, static_cast<uint32_t>( watermarks.size() ) );
+        for ( const auto &mark : watermarks )
+        {
+            append_u16( record, static_cast<uint16_t>( mark.topic.size() ) );
+            record.insert( record.end(), mark.topic.begin(), mark.topic.end() );
+            append_u64( record, mark.min_height );
+            append_u64( record, mark.max_height );
+        }
+
+        sgns::storage::Buffer key;
+        key.put( std::string( kGcEpochWatermarkKey ) );
+        sgns::storage::Buffer value;
+        value.put( record );
+        auto written = gc_hot_store_->put( key, value );
+        if ( !written.has_value() )
+        {
+            // Advisory bookkeeping: one rate-limited warn, never an abort.
+            logger_->warn( "gc: epoch watermark write failed (advisory record; no pass impact)" );
+        }
     }
 
     void ColdStorageManager::UpdateStagingHealth( const sgns::blockstore::UploadStats &stats,
