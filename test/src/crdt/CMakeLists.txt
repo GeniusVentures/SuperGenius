@@ -170,3 +170,28 @@ target_include_directories(cold_storage_durability_test PRIVATE
 set_tests_properties(cold_storage_durability_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Retention-GC observe-only tests (GC-01 SC1/SC5, v1.1 Phase 11 plan
+# 11-01). Registered ONLY under SGNS_COLD_STORAGE: links
+# sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
+# InMemoryS3AdminClient fakes via the relative include dir (both fake
+# headers are deliberately not installed). The Tier-1 lane stays
+# non-empty on OFF builds via the unconditional config-gate test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_gc_test
+    cold_storage_gc_test.cpp
+)
+
+target_link_libraries(cold_storage_gc_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+)
+
+target_include_directories(cold_storage_gc_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_gc_test PROPERTIES LABELS "Tier1")
+endif()
+
