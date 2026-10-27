@@ -332,6 +332,102 @@ namespace
     };
 
     /**
+     * @brief Test-local S3Client wrapper counting Get calls before
+     *        delegating to the in-memory fake - the D-11 zero-S3-traffic
+     * probe (the fallback-suite CountingS3Client shape).
+     */
+    class CountingS3Client final : public sgns::blockstore::S3Client
+    {
+    public:
+        explicit CountingS3Client( std::shared_ptr<InMemoryS3Client> inner )
+            : inner_( std::move( inner ) )
+        {
+        }
+
+        uint64_t get_calls() const
+        {
+            return get_calls_;
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3PutResult, sgns::blockstore::BlockStatus> Put(
+            const std::string &key, const std::vector<uint8_t> &bytes,
+            const sgns::blockstore::PutObjectOptions &options = {} ) override
+        {
+            return inner_->Put( key, bytes, options );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3Object, sgns::blockstore::BlockStatus> Get(
+            const std::string &key ) override
+        {
+            ++get_calls_;
+            return inner_->Get( key );
+        }
+
+        sgns::blockstore::result<sgns::blockstore::S3HeadResult, sgns::blockstore::BlockStatus> Head(
+            const std::string &key ) override
+        {
+            return inner_->Head( key );
+        }
+
+        sgns::blockstore::result<void, sgns::blockstore::BlockStatus> Delete(
+            const std::string &key ) override
+        {
+            return inner_->Delete( key );
+        }
+
+    private:
+        std::shared_ptr<InMemoryS3Client> inner_;
+        std::atomic<uint64_t>             get_calls_{ 0 };
+    };
+
+    /**
+     * @brief The spy's batch wrapper: every put/remove key tallies (as a
+     *        WRITE) before forwarding, so batch commits - the hot-cleanup
+     *        path's deletes - are inside the keyspace proof.
+     */
+    class SpyBufferBatch final : public sgns::storage::BufferBatch
+    {
+    public:
+        SpyBufferBatch( std::unique_ptr<sgns::storage::BufferBatch> inner,
+                        std::function<void( const std::string & )> record_write )
+            : inner_( std::move( inner ) ), record_write_( std::move( record_write ) )
+        {
+        }
+
+        outcome::result<void> put( const Buffer &key, const Buffer &value ) override
+        {
+            record_write_( std::string( reinterpret_cast<const char *>( key.data() ), key.size() ) );
+            return inner_->put( key, value );
+        }
+
+        outcome::result<void> put( const Buffer &key, Buffer &&value ) override
+        {
+            record_write_( std::string( reinterpret_cast<const char *>( key.data() ), key.size() ) );
+            return inner_->put( key, std::move( value ) );
+        }
+
+        outcome::result<void> remove( const Buffer &key ) override
+        {
+            record_write_( std::string( reinterpret_cast<const char *>( key.data() ), key.size() ) );
+            return inner_->remove( key );
+        }
+
+        outcome::result<void> commit() override
+        {
+            return inner_->commit();
+        }
+
+        void clear() override
+        {
+            inner_->clear();
+        }
+
+    private:
+        std::unique_ptr<sgns::storage::BufferBatch> inner_;
+        std::function<void( const std::string & )>   record_write_;
+    };
+
+    /**
      * @brief SC1 prefix-spy hot datastore (test-local BufferStorage
      *        decorator - the SC1 "provably never" instrument).
      *
@@ -385,6 +481,35 @@ namespace
             return total;
         }
 
+        /// WRITE operations (put/remove) whose key CONTAINS the needle -
+        /// the dry-run zero-writes probe.
+        uint64_t WriteOpsMatching( const std::string &needle ) const
+        {
+            std::lock_guard<std::mutex> lock( mutex_ );
+            uint64_t                    total = 0;
+            for ( const auto &[key, ops] : write_op_by_key_ )
+            {
+                if ( key.find( needle ) != std::string::npos )
+                {
+                    total += ops;
+                }
+            }
+            return total;
+        }
+
+        /// Every tallied WRITE operation regardless of key shape.
+        uint64_t TotalWriteOps() const
+        {
+            std::lock_guard<std::mutex> lock( mutex_ );
+            uint64_t                    total = 0;
+            for ( const auto &[key, ops] : write_op_by_key_ )
+            {
+                (void)key;
+                total += ops;
+            }
+            return total;
+        }
+
         std::unique_ptr<sgns::storage::BufferMapCursor> cursor() override
         {
             Record( "<cursor>" );
@@ -394,7 +519,13 @@ namespace
         std::unique_ptr<sgns::storage::BufferBatch> batch() override
         {
             Record( "<batch>" );
-            return inner_->batch();
+            // Wrap the inner batch so every put/remove key tallies as a
+            // write - batch commits (the hot-cleanup deletes) stay inside
+            // the keyspace proof.
+            auto shared_this = std::shared_ptr<PrefixSpyHotStore>( this, []( PrefixSpyHotStore * ) {} );
+            return std::make_unique<SpyBufferBatch>(
+                inner_->batch(),
+                [shared_this]( const std::string &key ) { shared_this->RecordWrite( key ); } );
         }
 
         outcome::result<Buffer> get( const Buffer &key ) const override
@@ -417,18 +548,21 @@ namespace
         outcome::result<void> put( const Buffer &key, const Buffer &value ) override
         {
             Record( KeyString( key ) );
+            RecordWrite( KeyString( key ) );
             return inner_->put( key, value );
         }
 
         outcome::result<void> put( const Buffer &key, Buffer &&value ) override
         {
             Record( KeyString( key ) );
+            RecordWrite( KeyString( key ) );
             return inner_->put( key, std::move( value ) );
         }
 
         outcome::result<void> remove( const Buffer &key ) override
         {
             Record( KeyString( key ) );
+            RecordWrite( KeyString( key ) );
             return inner_->remove( key );
         }
 
@@ -449,7 +583,14 @@ namespace
             ++op_by_key_[key];
         }
 
+        void RecordWrite( const std::string &key ) const
+        {
+            std::lock_guard<std::mutex> lock( mutex_ );
+            ++write_op_by_key_[key];
+        }
+
         mutable std::map<std::string, uint64_t> op_by_key_;
+        mutable std::map<std::string, uint64_t> write_op_by_key_;
         mutable std::mutex                      mutex_;
         std::shared_ptr<rocksdb>                inner_;
     };
@@ -480,8 +621,9 @@ namespace
             ASSERT_TRUE( opened_local.has_value() );
             shared_local_ = std::shared_ptr<LocalBlockStore>( std::move( opened_local.value() ) );
 
-            fake_ = std::make_shared<InMemoryS3Client>();
-            auto opened_remote = S3BlockStore::Open( fake_ );
+            fake_       = std::make_shared<InMemoryS3Client>();
+            counting_   = std::make_shared<CountingS3Client>( fake_ );
+            auto opened_remote = S3BlockStore::Open( counting_ );
             ASSERT_TRUE( opened_remote.has_value() );
             remote_ = std::shared_ptr<S3BlockStore>( std::move( opened_remote.value() ) );
 
@@ -620,6 +762,7 @@ namespace
         std::string                             shared_local_dir_;
         std::shared_ptr<LocalBlockStore>        shared_local_;
         std::shared_ptr<InMemoryS3Client>       fake_;
+        std::shared_ptr<CountingS3Client>        counting_;
         std::shared_ptr<S3BlockStore>           remote_;
         std::shared_ptr<InMemoryS3AdminClient>  fake_admin_;
         std::shared_ptr<std::mutex>             cold_store_mutex_;
@@ -1261,4 +1404,343 @@ TEST_F( ColdStorageGcTest, GraceDeferToNextTickNotProcessedEarly )
         ASSERT_TRUE( cold_has.has_value() );
         EXPECT_TRUE( cold_has.value() );
     }
+}
+
+/**
+ * @given a marked candidate (grace NOT yet processed)
+ * @when  the manager is DESTROYED mid-grace (marks are in-memory, D-15)
+ *        and a fresh manager opens over the SAME stores
+ * @then  NOTHING was deleted (cold bytes, hot bytes, journal all
+ *        present, no marker), and the fresh manager's first pass
+ *        re-identifies and re-marks the candidate from scratch.
+ */
+TEST_F( ColdStorageGcTest, CrashMidGraceDeletesNothingAndReMarks )
+{
+    const CID d1 = PublishElement( "gc/crash-mid-grace", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+
+    {
+        auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 60000 ) );
+        manager->Start();
+        WaitAllDurable( { Cid( d1 ) } );
+        Backdate( Cid( d1 ), 60000 );
+        ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+        EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+        // Destroy WITHOUT processing due marks (Stop is the TearDown
+        // order; marks die with the object).
+    }
+
+    // The safe post-state: everything still present, no marker.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() );
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() );
+    }
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+
+    // The fresh manager re-identifies and re-marks from scratch.
+    auto fresh = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    const auto reidentified = fresh->GcPassOnce();
+    ASSERT_EQ( reidentified.size(), 1u );
+    EXPECT_EQ( fresh->GetStatus().gc_evicting_count, 1u );
+}
+
+/**
+ * @given a fully-evictable candidate where HALF 1 is driven DIRECTLY
+ *        through the public library primitive (the crash-between-halves
+ *        window: the library batch committed, the hot cleanup never ran)
+ * @when  a fresh manager runs one pass
+ * @then  FinishOrphanedHotCleanups completes HALF 2 exactly (hot binary
+ *        key, seal key, and own s-rows gone; marker intact), with NO
+ *        re-spill (no new journal record).
+ */
+TEST_F( ColdStorageGcTest, CrashBetweenHalvesOrphanRescanCompletesHotCleanup )
+{
+    const CID d1 = PublishElement( "gc/crash-between-halves", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+    ASSERT_TRUE( dagsyncer_->markResolved( d1 ).has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+    const auto keys_prefix = crdt_->GetKeysPrefix();
+    const auto row_key     = ElemRowKeyOf( keys_prefix, "gc/crash-between-halves", d1.toString().value() );
+    ASSERT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+    ASSERT_TRUE( real_hot_->contains( SealKeyOf( d1 ) ) );
+
+    // HALF 1 only, driven directly (the public primitive - no seam).
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        sgns::blockstore::DisposedRecord record;
+        record.disposed_at_unix_ms = UnixNowMs();
+        record.reclaimed_bytes     = 1;
+        record.original_size       = 1;
+        record.reason              = ColdStorageManager::kEvictionReasonRetention;
+        record.was_sealed          = true;
+        ASSERT_TRUE( shared_local_->EvictLocalAndMarkDisposed( Cid( d1 ), record ).has_value() );
+    }
+    // The orphaned window: hot bytes still present behind the marker.
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+
+    // One pass: the orphan re-scan completes HALF 2.
+    (void)manager->GcPassOnce();
+    EXPECT_FALSE( real_hot_->contains( HotKeyOf( d1 ) ) );
+    EXPECT_FALSE( real_hot_->contains( SealKeyOf( d1 ) ) );
+    {
+        sgns::storage::Buffer row_buf;
+        row_buf.put( row_key );
+        EXPECT_FALSE( real_hot_->contains( row_buf ) );
+    }
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_TRUE( disposed.value() ) << "marker intact - no re-spill";
+        auto state = shared_local_->GetUploadState( Cid( d1 ) );
+        EXPECT_FALSE( state.has_value() ) << "no new journal record (nothing re-spilled)";
+    }
+}
+
+/**
+ * @given a marked candidate whose grace will elapse
+ * @when  a NEW head block is published before the due tick (heads mutate
+ *        relative to the mark's snapshot)
+ * @then  the delete-time re-check CANCELS the mark: ALL bytes kept in
+ *        BOTH stores, gc_evicting_count returns to 0, the CID returns to
+ *        normal evaluation, and the next pass re-marks it.
+ */
+TEST_F( ColdStorageGcTest, DeleteTimeHeadsChangeCancelsMark )
+{
+    const CID d1 = PublishElement( "gc/cancel-e2e", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+
+    // Heads mutate BEFORE the due tick (D-14's race realized).
+    (void)PublishElement( "gc/cancel-new-head", "value" );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+
+    (void)manager->GcPassOnce(); // due mark processed -> cancelled
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 0u );
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() ) << "cancel keeps the cold bytes";
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() );
+    }
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) ) << "cancel keeps the hot bytes";
+
+    // The CID returns to normal: still eligible on the next pass.
+    const auto reidentified = manager->GcPassOnce();
+    ASSERT_EQ( reidentified.size(), 1u );
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+}
+
+/**
+ * @given a fully-evictable candidate and dry_run = true
+ * @when  two driven passes run (mark, then due-processing)
+ * @then  the evaluation surface is IDENTICAL (candidates reported,
+ *        evicting count cycles, metrics track) but ZERO writes occur on
+ *        ANY key shape (spy write-op totals: only the SC5 watermark
+ *        under /crdt/gc/), no library delete (bytes + journal intact),
+ *        and no marker.
+ */
+TEST_F( ColdStorageGcTest, DryRunSuppressesBothHalvesEntirely )
+{
+    const CID d1 = PublishElement( "gc/dry-run-e2e", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+
+    auto retention         = RetentionFastGrace( 5000, 1 );
+    retention.dry_run      = true;
+    auto manager           = MakeManager( FastOptions(), FastDurability(), retention );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u );
+    EXPECT_TRUE( manager->GetStatus().gc_dry_run );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    (void)manager->GcPassOnce(); // due mark processed - suppressed
+
+    // Identical evaluation surface, zero deletes anywhere.
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u );
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_reclaimed_count, 0u );
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() );
+        auto state = shared_local_->GetUploadState( Cid( d1 ) );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), sgns::blockstore::UploadState::UploadedDurable );
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() );
+    }
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+
+    // The write-shape proof: the ONLY writes across both passes are the
+    // SC5 watermark records under the pinned /crdt/gc/ prefix.
+    EXPECT_EQ( spy_->TotalWriteOps(), spy_->WriteOpsMatching( "/crdt/gc/" ) );
+    EXPECT_EQ( spy_->WriteOpsMatching( "/s/" ), 0u );
+    EXPECT_EQ( spy_->WriteOpsMatching( "/t/" ), 0u );
+    EXPECT_EQ( spy_->WriteOpsMatching( "/h/" ), 0u );
+    EXPECT_EQ( spy_->WriteOpsMatching( "/k/" ), 0u );
+}
+
+/**
+ * @given a fully-evicted CID whose disposed marker is then TRIMMED (the
+ *        D-10 bound realized - dedup state gone)
+ * @when  the block is re-delivered through the decorator set (the
+ *        pubsub-receive re-entry shape)
+ * @then  the CID re-enters the pipeline with a FRESH PendingUpload
+ *        journal record (re-journal => re-spill => re-drain, D-10's
+ *        re-learn) and the re-delivery stays bytes-only (no seal marker
+ *        restored - Phase-9 SC4).
+ */
+TEST_F( ColdStorageGcTest, TrimmedMarkerRelearnRejournalsOnRedelivery )
+{
+    const Cid orphan = MakeCid( "relearn payload" );
+    {
+        sgns::ipfs_lite::ipfs::IpfsDatastore::Value value;
+        value.put( "relearn payload" );
+        ASSERT_TRUE( decorator_->set( CID( orphan ), std::move( value ) ).has_value() );
+    }
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+    Backdate( orphan, 60000 );
+
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    (void)manager->GcPassOnce(); // evicted
+
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( orphan );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_TRUE( disposed.value() );
+    }
+
+    // The bound realizes: trim ALL markers (age bound in the future).
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        ASSERT_TRUE( shared_local_->TrimDisposed( 0, UnixNowMs() + 1000 ).has_value() );
+        auto disposed = shared_local_->IsDisposed( orphan );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() ) << "marker trimmed - dedup state gone";
+    }
+
+    // Re-delivery: the decorator set re-journals (fresh PendingUpload).
+    {
+        sgns::ipfs_lite::ipfs::IpfsDatastore::Value value;
+        value.put( "relearn payload" );
+        ASSERT_TRUE( decorator_->set( CID( orphan ), std::move( value ) ).has_value() );
+    }
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto state = shared_local_->GetUploadState( orphan );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), sgns::blockstore::UploadState::PendingUpload )
+            << "re-journal: the re-delivered block re-enters the pipeline";
+        auto stamp = shared_local_->GetSpilledAt( orphan );
+        ASSERT_TRUE( stamp.has_value() );
+        EXPECT_GT( stamp.value(), 0u );
+    }
+    // Bytes-only re-delivery: no seal marker restored (SC4).
+    EXPECT_FALSE( real_hot_->contains( SealKeyOf( CID( orphan ) ) ) );
+}
+
+/**
+ * @given an otherwise-evictable candidate and the local store faulted
+ *        Unavailable (the unreadable-evidence shape)
+ * @when  the state is read through the bridge and a pass runs
+ * @then  the bridge maps the failed read to the UNREADABLE enum value
+ *        (never absence - MI-02), the pass evicts NOTHING, and after the
+ *        fault clears the store is intact.
+ */
+TEST_F( ColdStorageGcTest, UnreadableEvidenceNeverEvicts )
+{
+    const CID d1 = PublishElement( "gc/unreadable-e2e", "value" );
+    ASSERT_TRUE( crdt_->RemoveHead( d1, "topic" ).has_value() );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { Cid( d1 ) } );
+    Backdate( Cid( d1 ), 60000 );
+
+    // Unreadable evidence: the journal read itself fails.
+    shared_local_->SetFault( sgns::blockstore::FaultKind::Unavailable );
+    EXPECT_EQ( sgns::crdt::GetColdUploadState( manager, d1 ),
+               sgns::crdt::ColdUploadState::Unreadable )
+        << "an unreadable read maps to Unreadable - never absence";
+
+    const auto candidates = manager->GcPassOnce();
+    EXPECT_TRUE( candidates.empty() ) << "no eviction on unreadable evidence";
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_reclaimed_count, 0u );
+
+    // Fault clears: everything intact.
+    shared_local_->SetFault( sgns::blockstore::FaultKind::None );
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto cold_has = shared_local_->Has( Cid( d1 ) );
+        ASSERT_TRUE( cold_has.has_value() );
+        EXPECT_TRUE( cold_has.value() );
+        auto disposed = shared_local_->IsDisposed( Cid( d1 ) );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() );
+    }
+    EXPECT_TRUE( real_hot_->contains( HotKeyOf( d1 ) ) );
+}
+
+/**
+ * @given a fully-evicted, still-marked CID (marker present, hot and cold
+ *        bytes gone)
+ * @when  HasBlock runs (the pubsub re-delivery dedup call shape)
+ * @then  the answer is TRUE via the disposed-marker term with ZERO S3
+ *        Gets (the counting client's probe) - re-delivery drops at the
+ *        dedup point without any network traffic (D-11).
+ */
+TEST_F( ColdStorageGcTest, RedeliveryDedupDropsAtHasBlockWithZeroS3Gets )
+{
+    const Cid orphan = MakeCid( "dedup payload" );
+    {
+        sgns::ipfs_lite::ipfs::IpfsDatastore::Value value;
+        value.put( "dedup payload" );
+        ASSERT_TRUE( decorator_->set( CID( orphan ), std::move( value ) ).has_value() );
+    }
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionFastGrace( 5000, 1 ) );
+    manager->Start();
+    WaitAllDurable( { orphan } );
+    Backdate( orphan, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    (void)manager->GcPassOnce(); // evicted
+
+    const uint64_t gets_before = counting_->get_calls();
+
+    auto has_block = dagsyncer_->HasBlock( CID( orphan ) );
+    ASSERT_TRUE( has_block.has_value() );
+    EXPECT_TRUE( has_block.value() ) << "the marker term answers the dedup query";
+
+    EXPECT_EQ( counting_->get_calls(), gets_before )
+        << "zero S3 Gets on the dedup path - the marker is a local point lookup";
 }
