@@ -368,18 +368,21 @@ namespace sgns::crdt
 
         // (iv) mark EXACTLY the pre-flush snapshot (re-enumerating after
         // the stats read and marking the fresh set is forbidden - D-03).
+        // ONE batched MarkUploadedDurableMany = one WriteBatch + one
+        // sync Write (single fsync, all-or-nothing crash window over
+        // the snapshot; per-item skip-and-continue on a vanished
+        // record - no fabrication, never an abort).
         size_t marked = 0;
         {
             std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
-            for ( const auto &cid : snapshot )
+            auto transition = local_block_store_->MarkUploadedDurableMany(
+                gsl::span<const sgns::blockstore::Cid>( snapshot.data(), snapshot.size() ) );
+            if ( transition.has_value() )
             {
-                auto transition = local_block_store_->MarkUploadedDurable( cid );
-                if ( transition.has_value() )
-                {
-                    ++marked; // per-CID isolation: a mark failure leaves
-                              // that record Accepted, re-derived next cycle
-                }
+                marked = snapshot.size();
             }
+            // A batch failure leaves every record Accepted - the next
+            // cycle re-derives the snapshot from the journal.
         }
 
         // (v) success: backoff reset, clocks, and the evidence atomics.
