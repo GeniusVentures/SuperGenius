@@ -687,7 +687,14 @@ TEST_F( ColdStorageSpillTest, crash_restart_reconciles )
     ASSERT_TRUE( preloaded.has_value() );
 
     ColdStorageManager::BackpressureOptions options = FastOptions();
-    auto manager = std::make_shared<ColdStorageManager>( shared_reopened, remote2, cold_store_mutex_, options );
+    // READ-01: the manager ctor takes the shared remote-store mutex; the
+    // crash-restart scenario has no cold-read chain, so a fixture-local
+    // mutex fills the parameter (the MakeManager precedent - this direct
+    // construction site was missed when the ctor widened in 76e813710
+    // and never rebuilt; repaired during Phase 10 plan 10-01).
+    auto remote_store_mutex = std::make_shared<std::mutex>();
+    auto manager            = std::make_shared<ColdStorageManager>(
+        shared_reopened, remote2, cold_store_mutex_, remote_store_mutex, options );
     manager->Start();
     ASSERT_TRUE( PollUntil( [&] {
         const auto status = manager->GetStatus();

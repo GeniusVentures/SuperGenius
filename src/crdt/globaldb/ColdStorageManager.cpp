@@ -12,9 +12,14 @@
  * remote Put createOnly / MarkUploadedAccepted) are composed directly per
  * UploadDrainer.hpp's own composition note; the one-shot free function
  * interleaves remote Puts between journal ops, so a single lock scope
- * around it would hold the publisher mutex across S3 latency. The
- * MarkUploadedDurable transition is deliberately NEVER invoked (Phase-10
- * boundary).
+ * around it would hold the publisher mutex across S3 latency.
+ *
+ * DUR-01 (v1.1 Phase 10): the loop's AdvanceDurabilityOnce step is the
+ * flush-gated advancement the Phase-8 "boundary" comments anticipated -
+ * POST /objects/flush plus a pendingObjects==0 observation from
+ * /stats/uploads is the ONLY evidence that advances the pre-flush
+ * UploadedAccepted snapshot to MarkUploadedDurable (accepted-is-durable
+ * is never assumed; D-01/D-02/D-03).
  */
 
 #include "ColdStorageManager.hpp"
@@ -25,18 +30,40 @@ namespace sgns::crdt
                                             std::shared_ptr<sgns::blockstore::S3BlockStore>    remote_block_store,
                                             std::shared_ptr<std::mutex>                        cold_store_mutex,
                                             std::shared_ptr<std::mutex>                        remote_store_mutex,
-                                            BackpressureOptions                                options )
+                                            BackpressureOptions                                options,
+                                            DurabilityOptions                                  durability_options,
+                                            std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client )
         : local_block_store_( std::move( local_block_store ) ),
           remote_block_store_( std::move( remote_block_store ) ),
           cold_store_mutex_( std::move( cold_store_mutex ) ),
           remote_store_mutex_( std::move( remote_store_mutex ) ),
-          options_( options )
+          options_( options ),
+          admin_client_( std::move( admin_client ) ),
+          durability_( durability_options )
     {
         BOOST_ASSERT_MSG( local_block_store_ != nullptr, "local block store is nullptr" );
         BOOST_ASSERT_MSG( remote_block_store_ != nullptr, "remote block store is nullptr" );
         BOOST_ASSERT_MSG( cold_store_mutex_ != nullptr, "cold store mutex is nullptr" );
         BOOST_ASSERT_MSG( remote_store_mutex_ != nullptr, "remote store mutex is nullptr" );
         current_delay_ = std::chrono::milliseconds( options_.drain_interval_ms );
+        // 0-equals-default normalization (BackpressureOptions
+        // discipline): durability knobs resolve to the built-in
+        // constants, and the flush clocks seed to construction time so
+        // the cadence floor gates even the first attempt.
+        if ( durability_.flush_min_interval_ms == 0 )
+        {
+            durability_.flush_min_interval_ms =
+                static_cast<uint32_t>( kDefaultFlushMinIntervalMs.count() );
+        }
+        if ( durability_.flush_max_interval_ms == 0 )
+        {
+            durability_.flush_max_interval_ms =
+                static_cast<uint32_t>( kDefaultFlushMaxIntervalMs.count() );
+        }
+        const auto now = std::chrono::steady_clock::now();
+        last_flush_attempt_ = now;
+        last_advancement_  = now;
+        flush_delay_       = std::chrono::milliseconds( durability_.flush_min_interval_ms );
     }
 
     ColdStorageManager::~ColdStorageManager()
@@ -65,7 +92,13 @@ namespace sgns::crdt
                 while ( !stop_flag_.load() )
                 {
                     MarkBusy();
-                    DrainOnce();
+                    // DUR-01: the drain cycle exposes its quiescence
+                    // outcome, and the flush-gated advancement runs on
+                    // the SAME thread between the drain and the idle
+                    // mark - the admin calls never run on any other
+                    // thread (and never inline on the write path).
+                    const bool quiescent = DrainOnce();
+                    AdvanceDurabilityOnce( quiescent );
                     MarkIdle();
 
                     std::unique_lock<std::mutex> lock( wait_mutex_ );
@@ -113,6 +146,12 @@ namespace sgns::crdt
         status.pending_upload_count = pending_count_.load( std::memory_order_relaxed );
         status.watermark            = watermark_.load( std::memory_order_relaxed );
         status.drainer_healthy      = healthy_.load( std::memory_order_relaxed );
+        status.accepted_upload_count    = accepted_count_.load( std::memory_order_relaxed );
+        status.durable_upload_count     = durable_count_.load( std::memory_order_relaxed );
+        status.last_flush_valid         = last_flush_valid_.load( std::memory_order_relaxed );
+        status.last_flush_ok            = last_flush_ok_.load( std::memory_order_relaxed );
+        status.last_flush_unix_ms       = last_flush_unix_ms_.load( std::memory_order_relaxed );
+        status.last_flush_pending_objects = last_flush_pending_objects_.load( std::memory_order_relaxed );
         return status;
     }
 
@@ -131,7 +170,7 @@ namespace sgns::crdt
         idle_cv_.notify_all();
     }
 
-    void ColdStorageManager::DrainOnce()
+    bool ColdStorageManager::DrainOnce()
     {
         struct PendingItem
         {
@@ -150,9 +189,10 @@ namespace sgns::crdt
             if ( !pending.has_value() )
             {
                 // Wholesale enumeration failure aborts the cycle before any
-                // item ran - a failed cycle for backoff (D-03).
+                // item ran - a failed cycle for backoff (D-03), and NOT a
+                // quiescent cycle (the drain could not even observe).
                 RecordFailedCycle();
-                return;
+                return false;
             }
             items.reserve( pending.value().size() );
             for ( const auto &cid : pending.value() )
@@ -176,7 +216,7 @@ namespace sgns::crdt
             // Healthy no-op cycle: count published, backoff reset.
             BackoffReset();
             UpdateWatermark( 0 );
-            return;
+            return true;
         }
 
         // (ii) remote Puts with createOnly semantics - the cold-store
@@ -211,8 +251,9 @@ namespace sgns::crdt
         }
 
         // (iii) re-acquire the mutex: MarkUploadedAccepted ONLY for
-        // remote-present outcomes. UploadedDurable is NEVER written here
-        // (Phase-10 boundary).
+        // remote-present outcomes. The UploadedDurable transition is
+        // owned exclusively by AdvanceDurabilityOnce below - it fires
+        // only on observed flush evidence (DUR-01), never here.
         {
             std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
             for ( const auto &cid : succeeded )
@@ -221,6 +262,10 @@ namespace sgns::crdt
                 if ( !marked.has_value() )
                 {
                     any_failure = true; // mark failure: CID stays pending, retried
+                }
+                else
+                {
+                    accepted_count_.fetch_add( 1, std::memory_order_relaxed );
                 }
             }
         }
@@ -237,6 +282,179 @@ namespace sgns::crdt
         }
         // Documented approximation (A4): concurrent Puts appear next cycle.
         UpdateWatermark( items.size() - succeeded.size() );
+        // Quiescence signal for the D-01 hybrid cadence: every item this
+        // cycle observed succeeded (an empty enumeration returned true
+        // above).
+        return !any_failure;
+    }
+
+    void ColdStorageManager::AdvanceDurabilityOnce( bool quiescent_this_cycle )
+    {
+        // No admin facade (Phase-8 5-argument posture) or shutting down:
+        // nothing to advance. The stop check is defensive here; the Stop()
+        // final flush (D-04) makes its own bounded attempt after the join.
+        if ( admin_client_ == nullptr || stop_flag_.load() )
+        {
+            return;
+        }
+
+        // (0) cadence gate (D-01 hybrid): the floor elapsed AND (quiescent
+        // OR the max-interval backstop elapsed); a flush-failure backoff
+        // replaces the floor while a streak is held (D-07/Pitfall 6 - the
+        // flush backoff state is SEPARATE from the drain backoff state).
+        const auto now = std::chrono::steady_clock::now();
+        const auto floor = flush_failure_streak_ > 0
+                               ? flush_delay_
+                               : std::chrono::milliseconds( durability_.flush_min_interval_ms );
+        if ( now - last_flush_attempt_ < floor )
+        {
+            return;
+        }
+        if ( !quiescent_this_cycle
+             && now - last_advancement_
+                    < std::chrono::milliseconds( durability_.flush_max_interval_ms ) )
+        {
+            return;
+        }
+
+        // (i) the D-03 snapshot: UploadedAccepted records ONLY,
+        // journal-derived under the shared mutex (crash-re-derivable by
+        // construction - a restart re-runs this enumeration). Records
+        // accepted AFTER this point are provably excluded from this
+        // cycle's marks: the snapshot vector is the only mark input.
+        std::vector<sgns::blockstore::Cid> snapshot;
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto accepted = local_block_store_->GetUploadsInState(
+                sgns::blockstore::UploadState::UploadedAccepted );
+            if ( !accepted.has_value() )
+            {
+                RecordFlushFailedCycle( "accepted enumeration failed" );
+                return;
+            }
+            snapshot = std::move( accepted.value() );
+        }
+        if ( snapshot.empty() )
+        {
+            return; // nothing worth flushing; the cadence clock stands
+        }
+        accepted_count_.store( snapshot.size(), std::memory_order_relaxed );
+        last_flush_attempt_ = now;
+
+        // (ii) admin calls UNLOCKED (a NEW connection - the drainer is
+        // idle at this point, remote_store_mutex_ is NOT involved; D-02:
+        // writes and reads are never blocked by admin latency).
+        auto flushed = admin_client_->Flush( kCadenceFlushReadTimeoutMs );
+        if ( !flushed.has_value() )
+        {
+            RecordFlushFailedCycle( "flush call failed" );
+            return;
+        }
+        auto stats = admin_client_->GetUploadStats();
+        if ( !stats.has_value() )
+        {
+            RecordFlushFailedCycle( "stats observation failed" );
+            return;
+        }
+
+        // (iii) evidence gate (SC1): ONLY a pendingObjects == 0
+        // observation permits marks - anything else leaves every record
+        // Accepted for a later cycle (never accepted-is-durable).
+        if ( stats.value().pendingObjects != 0 )
+        {
+            RecordFlushNoEvidence( stats.value().pendingObjects );
+            return;
+        }
+
+        // (iv) mark EXACTLY the pre-flush snapshot (re-enumerating after
+        // the stats read and marking the fresh set is forbidden - D-03).
+        size_t marked = 0;
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            for ( const auto &cid : snapshot )
+            {
+                auto transition = local_block_store_->MarkUploadedDurable( cid );
+                if ( transition.has_value() )
+                {
+                    ++marked; // per-CID isolation: a mark failure leaves
+                              // that record Accepted, re-derived next cycle
+                }
+            }
+        }
+
+        // (v) success: backoff reset, clocks, and the evidence atomics.
+        BackoffResetFlush();
+        last_advancement_ = now;
+        accepted_count_.store( snapshot.size() - marked, std::memory_order_relaxed );
+        durable_count_.fetch_add( marked, std::memory_order_relaxed );
+        last_flush_valid_.store( true, std::memory_order_relaxed );
+        last_flush_ok_.store( true, std::memory_order_relaxed );
+        last_flush_pending_objects_.store( 0, std::memory_order_relaxed );
+        last_flush_unix_ms_.store(
+            static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ),
+            std::memory_order_relaxed );
+    }
+
+    sgns::blockstore::result<sgns::blockstore::UploadState, sgns::blockstore::BlockStatus>
+    ColdStorageManager::GetUploadState( const sgns::blockstore::Cid &cid )
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        return local_block_store_->GetUploadState( cid );
+    }
+
+    void ColdStorageManager::RecordFlushFailedCycle( const std::string &context )
+    {
+        ++flush_failure_streak_;
+        last_flush_valid_.store( false, std::memory_order_relaxed );
+        last_flush_ok_.store( false, std::memory_order_relaxed );
+        const auto doubled = flush_delay_ * kBackoffFactor;
+        if ( flush_delay_ < kFlushBackoffCapMs )
+        {
+            flush_delay_ = doubled < kFlushBackoffCapMs ? doubled : kFlushBackoffCapMs;
+        }
+        // D-07: rate-limited and worded to stay distinguishable from the
+        // "cold-storage drainer ..." family - the FIRST failure and every
+        // 10th thereafter (a sustained outage stays visible in logs
+        // without spamming per-cycle).
+        if ( flush_failure_streak_ == 1 || flush_failure_streak_ % 10 == 0 )
+        {
+            logger_->warn( "cold-storage flush cycle failed (streak {}): {}",
+                           flush_failure_streak_,
+                           context );
+        }
+    }
+
+    void ColdStorageManager::BackoffResetFlush()
+    {
+        if ( flush_failure_streak_ != 0 )
+        {
+            logger_->info( "cold-storage flush recovered: backoff reset ({} failed cycle(s) cleared)",
+                           flush_failure_streak_ );
+        }
+        flush_failure_streak_ = 0;
+        flush_delay_          = std::chrono::milliseconds( durability_.flush_min_interval_ms );
+    }
+
+    void ColdStorageManager::RecordFlushNoEvidence( uint64_t observed_pending )
+    {
+        // A valid observation whose evidence was not met: records stay
+        // Accepted ("not this cycle") and NOTHING resets - the cadence
+        // clock already advanced at the attempt, the backoff stays
+        // untouched (this is not a failure), and the evidence atomics
+        // record valid-but-not-ok so operators can see the staging
+        // pipeline is still draining.
+        last_flush_valid_.store( true, std::memory_order_relaxed );
+        last_flush_ok_.store( false, std::memory_order_relaxed );
+        last_flush_pending_objects_.store( observed_pending, std::memory_order_relaxed );
+        last_flush_unix_ms_.store(
+            static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ),
+            std::memory_order_relaxed );
     }
 
     void ColdStorageManager::RecordFailedCycle()

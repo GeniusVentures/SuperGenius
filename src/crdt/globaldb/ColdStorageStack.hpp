@@ -53,6 +53,16 @@ namespace sgns::crdt
         size_t              pending_upload_count{ 0 };                    ///< pending-upload record count
         ColdStorageWatermark watermark{ ColdStorageWatermark::None };     ///< current watermark
         bool                drainer_healthy{ false };                     ///< false while a failure streak is held
+        // Flush-gated durability evidence (DUR-01, v1.1 Phase 10).
+        // PLAIN TYPES ONLY (Pitfall 5 - no sgns-blockstore type crosses
+        // this always-compiled header; the manager fills them from
+        // atomics, so reading them never scans the journal).
+        size_t   accepted_upload_count{ 0 };       ///< records at UploadedAccepted
+        size_t   durable_upload_count{ 0 };        ///< records at UploadedDurable (evidence-backed)
+        bool     last_flush_valid{ false };        ///< last observation completed (flush+stats succeeded)
+        bool     last_flush_ok{ false };           ///< last observation met the evidence (pendingObjects == 0)
+        uint64_t last_flush_unix_ms{ 0 };          ///< wall-clock ms of the last observation
+        uint64_t last_flush_pending_objects{ 0 };  ///< pendingObjects observed by the last flush cycle
     };
 
     // Defined in ColdStorageManager.hpp (gated TU); reachable here only

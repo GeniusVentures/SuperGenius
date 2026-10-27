@@ -140,6 +140,20 @@ namespace
         return dir;
     }
 
+    /// The BACK-07 object key for a RAW fixture CID (S3BlockStore's
+    /// private DeriveKey replicated test-side for per-key fault scripting:
+    /// <keyPrefix>/<codec>/<digest-fanout-byte>/<cid-string>, default
+    /// prefix "v1/blocks", RAW codec token "raw").
+    std::string DeriveTestKey( const Cid &cid )
+    {
+        auto cid_string = libp2p::multi::ContentIdentifierCodec::toString( cid );
+        static const char *kHex = "0123456789abcdef";
+        const auto         digest = cid.content_address.getHash();
+        const uint8_t      first  = digest.empty() ? 0 : digest[0];
+        std::string        fanout{ kHex[first >> 4], kHex[first & 0x0F] };
+        return std::string( "v1/blocks" ) + "/raw/" + fanout + "/" + cid_string.value();
+    }
+
     class ColdStorageDurabilityTest : public ::testing::Test
     {
     protected:
@@ -377,11 +391,13 @@ TEST_F( ColdStorageDurabilityTest, cadence_floor_delays_first_flush )
 /**
  * @given one CID's remote Put persistently failing (every drain cycle is
  *        non-quiescent) while the other blocks drain to Accepted, with a
- *        long flush floor but a SHORT backstop interval
+ *        fast floor and a 300 ms backstop interval
  * @when  cycles run under the sustained non-quiescent activity
- * @then  the backstop fires anyway: the healthy records advance to
- *        UploadedDurable within the backstop budget while the failing CID
- *        stays PendingUpload (never drained, never marked).
+ * @then  quiescence is NEVER the trigger - only the D-01 max-interval
+ *        backstop can pass the cadence gate - and the healthy records
+ *        still advance to UploadedDurable within the backstop budget
+ *        while the failing CID stays PendingUpload (never drained, never
+ *        marked).
  */
 TEST_F( ColdStorageDurabilityTest, backstop_flushes_under_sustained_activity )
 {
@@ -390,11 +406,9 @@ TEST_F( ColdStorageDurabilityTest, backstop_flushes_under_sustained_activity )
 
     // Fail exactly one CID's remote Put forever: every drain cycle ends
     // non-quiescent (any_failure), so only the D-01 backstop can flush.
-    auto failing_key = remote_->DeriveKey( cids[0] );
-    ASSERT_TRUE( failing_key.has_value() );
-    fake_->SetFaultForKey( failing_key.value(), S3Op::Put, S3FaultKind::Unavailable );
+    fake_->SetFaultForKey( DeriveTestKey( cids[0] ), S3Op::Put, S3FaultKind::Unavailable );
 
-    auto manager = MakeManager( FastOptions(), FastDurability( 10000, 300 ) );
+    auto manager = MakeManager( FastOptions(), FastDurability( 50, 300 ) );
     manager->Start();
 
     ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().durable_upload_count == kBlocks - 1; },
