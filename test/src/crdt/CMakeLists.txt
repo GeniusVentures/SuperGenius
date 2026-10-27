@@ -195,3 +195,28 @@ target_include_directories(cold_storage_gc_test PRIVATE
 set_tests_properties(cold_storage_gc_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Retention-GC retrievability proofs (GC-03, v1.1 Phase 11 plan 11-03).
+# Registered ONLY under SGNS_COLD_STORAGE: links
+# sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
+# InMemoryS3AdminClient fakes via the relative include dir. Proves the
+# evicted-CID retrievability legs over the real chain (local read,
+# verification honesty, responder re-warm, request cold-before-peers).
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_gc_retrievability_test
+    cold_storage_gc_retrievability_test.cpp
+)
+
+target_link_libraries(cold_storage_gc_retrievability_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+)
+
+target_include_directories(cold_storage_gc_retrievability_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_gc_retrievability_test PROPERTIES LABELS "Tier1")
+endif()
+
