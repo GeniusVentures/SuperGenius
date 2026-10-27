@@ -232,6 +232,7 @@ namespace sgns::crdt
         status.last_flush_ok            = last_flush_ok_.load( std::memory_order_relaxed );
         status.last_flush_unix_ms       = last_flush_unix_ms_.load( std::memory_order_relaxed );
         status.last_flush_pending_objects = last_flush_pending_objects_.load( std::memory_order_relaxed );
+        status.flush_backoff_active     = flush_backoff_active_.load( std::memory_order_relaxed );
         return status;
     }
 
@@ -402,6 +403,11 @@ namespace sgns::crdt
         // construction - a restart re-runs this enumeration). Records
         // accepted AFTER this point are provably excluded from this
         // cycle's marks: the snapshot vector is the only mark input.
+        // An EMPTY snapshot does NOT skip the cycle (10-02 construction
+        // fix): the flush + stats observation still runs on the cadence -
+        // staging health stays fresh and an idempotent replay over an
+        // all-Durable journal observes flush_count advancing while
+        // marking exactly nothing.
         std::vector<sgns::blockstore::Cid> snapshot;
         {
             std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
@@ -414,10 +420,6 @@ namespace sgns::crdt
             }
             snapshot = std::move( accepted.value() );
         }
-        if ( snapshot.empty() )
-        {
-            return; // nothing worth flushing; the cadence clock stands
-        }
         accepted_count_.store( snapshot.size(), std::memory_order_relaxed );
         last_flush_attempt_ = now;
 
@@ -427,13 +429,13 @@ namespace sgns::crdt
         auto flushed = admin_client_->Flush( kCadenceFlushReadTimeoutMs );
         if ( !flushed.has_value() )
         {
-            RecordFlushFailedCycle( "flush call failed" );
+            RecordFlushFailedCycle( "flush call failed: " + flushed.error().message );
             return;
         }
         auto stats = admin_client_->GetUploadStats();
         if ( !stats.has_value() )
         {
-            RecordFlushFailedCycle( "stats observation failed" );
+            RecordFlushFailedCycle( "stats observation failed: " + stats.error().message );
             return;
         }
 
@@ -493,18 +495,30 @@ namespace sgns::crdt
         ++flush_failure_streak_;
         last_flush_valid_.store( false, std::memory_order_relaxed );
         last_flush_ok_.store( false, std::memory_order_relaxed );
+        flush_backoff_active_.store( true, std::memory_order_relaxed );
         const auto doubled = flush_delay_ * kBackoffFactor;
         if ( flush_delay_ < kFlushBackoffCapMs )
         {
             flush_delay_ = doubled < kFlushBackoffCapMs ? doubled : kFlushBackoffCapMs;
         }
-        // D-07: rate-limited and worded to stay distinguishable from the
-        // "cold-storage drainer ..." family - the FIRST failure and every
-        // 10th thereafter (a sustained outage stays visible in logs
-        // without spamming per-cycle).
-        if ( flush_failure_streak_ == 1 || flush_failure_streak_ % 10 == 0 )
+        // D-07: the flush-failure alarm family - first failure carries the
+        // BlockStatus context and the engaged backoff delay, repeats are
+        // rate-limited while the streak is held, and recovery logs on the
+        // next success. Wording stays "cold-storage flush ..." - always
+        // distinguishable from the "cold-storage drainer ..." family.
+        // drainer_healthy is NEVER touched here (Pitfall 6 separation -
+        // the sustained-flush signal surfaces via last_flush_ok=false,
+        // flush_backoff_active, and this alarm, not by falsifying drain
+        // health).
+        if ( flush_failure_streak_ == 1 )
         {
-            logger_->warn( "cold-storage flush cycle failed (streak {}): {}",
+            logger_->warn( "cold-storage flush failed: {} (flush backoff engaged, next attempt in {} ms)",
+                           context,
+                           flush_delay_.count() );
+        }
+        else if ( flush_failure_streak_ % 10 == 0 )
+        {
+            logger_->warn( "cold-storage flush still failing (streak {}): {}",
                            flush_failure_streak_,
                            context );
         }
@@ -518,6 +532,7 @@ namespace sgns::crdt
                            flush_failure_streak_ );
         }
         flush_failure_streak_ = 0;
+        flush_backoff_active_.store( false, std::memory_order_relaxed );
         flush_delay_          = std::chrono::milliseconds( durability_.flush_min_interval_ms );
     }
 

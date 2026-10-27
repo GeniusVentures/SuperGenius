@@ -96,6 +96,9 @@ namespace sgns::crdt
         static constexpr std::chrono::milliseconds kFinalFlushBudgetMs{ 2000 };
         /// Cap of the flush-failure backoff (compile-time, NOT a knob).
         static constexpr std::chrono::milliseconds kFlushBackoffCapMs{ 60000 };
+        /// Shutdown grace window for in-flight cycle work (D-11; NOT a
+        /// knob - public for the bounded-Stop test citation).
+        static constexpr std::chrono::milliseconds kShutdownGraceWindow{ 5000 };
 
         /**
          * @brief       Construct the drainer over the shared stores.
@@ -202,9 +205,6 @@ namespace sgns::crdt
     private:
         /// Backoff multiplier per failed cycle (D-03; compile-time, D-05).
         static constexpr uint32_t kBackoffFactor = 2;
-        /// Shutdown grace window for in-flight cycle work (D-11; NOT a
-        /// knob - D-05).
-        static constexpr std::chrono::milliseconds kShutdownGraceWindow{ 5000 };
         /// Rate limit for the held-watermark heartbeat line (D-09).
         static constexpr std::chrono::milliseconds kHeartbeatPeriod{ 60000 };
 
@@ -298,6 +298,9 @@ namespace sgns::crdt
         std::atomic<bool>                last_flush_ok_{ false };
         std::atomic<uint64_t>            last_flush_unix_ms_{ 0 };
         std::atomic<uint64_t>            last_flush_pending_objects_{ 0 };
+        /// D-07/Pitfall 6: mirror of flush_failure_streak_ > 0 for the
+        /// lock-free status getter (the streak itself is drainer-only).
+        std::atomic<bool>                flush_backoff_active_{ false };
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "ColdStorageManager" );
     };

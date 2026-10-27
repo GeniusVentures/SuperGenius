@@ -78,6 +78,10 @@ namespace sgns::crdt
         bool     last_flush_ok{ false };           ///< last observation met the evidence (pendingObjects == 0)
         uint64_t last_flush_unix_ms{ 0 };          ///< wall-clock ms of the last observation
         uint64_t last_flush_pending_objects{ 0 };  ///< pendingObjects observed by the last flush cycle
+        /// True while a flush-failure streak holds the flush backoff - the
+        /// D-07/Pitfall-6 separation observable: drain health and flush
+        /// backoff vary INDEPENDENTLY (v1.1 Phase 10).
+        bool     flush_backoff_active{ false };
     };
 
     // Defined in ColdStorageManager.hpp (gated TU); reachable here only
