@@ -29,7 +29,9 @@
 #include <chrono>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -46,10 +48,20 @@
 #include "InMemoryS3AdminClient.hpp"
 #include "InMemoryS3Client.hpp"
 
+#include "crdt/globaldb/BlockStoreBackedIpfsDatastore.hpp"
 #include "crdt/globaldb/ColdStorageManager.hpp"
+
+#include "base/logger.hpp"
 
 namespace
 {
+    // IPFS resolves only inside namespace sgns - alias it for this TU
+    // (the decorator's set()/get() surface is IpfsDatastore-typed).
+    namespace ipfs_outcome = sgns::IPFS::outcome;
+    using IpfsDatastore      = sgns::ipfs_lite::ipfs::IpfsDatastore;
+    using IpfsDatastoreError = sgns::ipfs_lite::ipfs::IpfsDatastoreError;
+    using CID                = sgns::CID;
+    using sgns::crdt::BlockStoreBackedIpfsDatastore;
     using sgns::blockstore::Cid;
     using sgns::blockstore::CidOf;
     using sgns::blockstore::InMemoryS3AdminClient;
@@ -154,12 +166,92 @@ namespace
         return std::string( "v1/blocks" ) + "/raw/" + fanout + "/" + cid_string.value();
     }
 
+    /// @brief Test-local in-memory inner IpfsDatastore (decorator-level
+    ///        outage/publish tests need no real RocksDB inner store - the
+    ///        spill suite's FakeInnerDatastore shape).
+    class FakeInnerDatastore final : public IpfsDatastore
+    {
+    public:
+        ipfs_outcome::result<bool> contains( const CID &key ) const override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            return blocks_.count( key_str.value() ) > 0;
+        }
+
+        ipfs_outcome::result<void> set( const CID &key, Value value ) override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            blocks_[key_str.value()] = std::move( value );
+            return ipfs_outcome::success();
+        }
+
+        ipfs_outcome::result<void> seal( const CID &key ) override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            sealed_.insert( key_str.value() );
+            return ipfs_outcome::success();
+        }
+
+        ipfs_outcome::result<bool> is_sealed( const CID &key ) const override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            return sealed_.count( key_str.value() ) > 0;
+        }
+
+        ipfs_outcome::result<Value> get( const CID &key ) const override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            auto it = blocks_.find( key_str.value() );
+            if ( it == blocks_.end() )
+            {
+                return IpfsDatastoreError::NOT_FOUND;
+            }
+            return it->second;
+        }
+
+        ipfs_outcome::result<void> remove( const CID &key ) override
+        {
+            auto key_str = key.toString();
+            if ( key_str.has_error() )
+            {
+                return key_str.error();
+            }
+            blocks_.erase( key_str.value() );
+            return ipfs_outcome::success();
+        }
+
+    private:
+        std::map<std::string, IpfsDatastore::Value> blocks_;
+        std::set<std::string>                       sealed_;
+    };
+
     class ColdStorageDurabilityTest : public ::testing::Test
     {
     protected:
         void SetUp() override
         {
-            auto opened_local = LocalBlockStore::Open( LocalBlockStoreOptions{ FreshDir() } );
+            shared_local_dir_ = FreshDir();
+            auto opened_local = LocalBlockStore::Open( LocalBlockStoreOptions{ shared_local_dir_ } );
             ASSERT_TRUE( opened_local.has_value() );
             shared_local_ = std::shared_ptr<LocalBlockStore>( std::move( opened_local.value() ) );
 
@@ -232,6 +324,7 @@ namespace
         }
 
         std::shared_ptr<LocalBlockStore>          shared_local_;
+        std::string                               shared_local_dir_;
         std::shared_ptr<InMemoryS3Client>         fake_;
         std::shared_ptr<S3BlockStore>             remote_;
         std::shared_ptr<InMemoryS3AdminClient>    fake_admin_;
@@ -527,4 +620,334 @@ TEST_F( ColdStorageDurabilityTest, eviction_gate_constant_and_per_cid_state )
     auto       state   = manager->GetUploadState( cids[0] );
     ASSERT_TRUE( state.has_value() );
     EXPECT_EQ( state.value(), UploadState::PendingUpload );
+}
+
+// ---------------------------------------------------------------------------
+// SC3 fault-injection honesty suite (DUR-01, v1.1 Phase 10 plan 10-02
+// Task 1): crash reconciliation, admin outage, shutdown under load,
+// idempotent replay, and the mid-flush acceptance race - the proofs the
+// 10-01 construction stands on, plus the discharge of both flagged
+// assumptions.
+// ---------------------------------------------------------------------------
+
+/**
+ * @given a directory holding MIXED leftovers after a simulated crash -
+ *        3 records drained to UploadedAccepted (never advanced: the
+ *        crashed manager had no admin client) and 2 still PendingUpload
+ *        (their remote Puts were failing)
+ * @when  a fresh manager with a fast cadence opens over the SAME
+ *        directory
+ * @then  the first poll re-drains the Pending records (Phase-8 D-12
+ *        path) and the first eligible flush cycle advances the stranded
+ *        Accepted records - eventually everything is Durable and the
+ *        accepted count does not freeze non-zero across the restart
+ *        (SC3 leg 1 / Pitfall 2).
+ */
+TEST_F( ColdStorageDurabilityTest, crash_reconciliation_mixed_leftovers )
+{
+    constexpr size_t kBlocks = 5;
+    const std::string dir = FreshDir();
+    std::shared_ptr<LocalBlockStore> first_store; // assigned below
+    {
+        auto opened = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+        ASSERT_TRUE( opened.has_value() );
+        first_store = std::shared_ptr<LocalBlockStore>( std::move( opened.value() ) );
+    }
+    ASSERT_NE( first_store, nullptr );
+
+    std::vector<Cid> cids;
+    for ( size_t i = 0; i < kBlocks; ++i )
+    {
+        const auto payload = "crash-mixed payload " + std::to_string( i );
+        auto       cid     = MakeCid( payload );
+        ASSERT_TRUE( first_store->Put( cid, SpanOf( payload ) ).has_value() );
+        cids.push_back( std::move( cid ) );
+    }
+    // Two CIDs' remote Puts fail forever: they stay PendingUpload across
+    // the simulated crash.
+    fake_->SetFaultForKey( DeriveTestKey( cids[3] ), S3Op::Put, S3FaultKind::Unavailable );
+    fake_->SetFaultForKey( DeriveTestKey( cids[4] ), S3Op::Put, S3FaultKind::Unavailable );
+
+    // Manager A: NO admin client - drains to Accepted, cannot advance, and
+    // its Stop() final flush is inert (the crash shape: nothing advanced).
+    {
+        auto remote_store_mutex = std::make_shared<std::mutex>();
+        auto manager_a          = std::make_shared<ColdStorageManager>(
+            first_store, remote_, cold_store_mutex_, remote_store_mutex, FastOptions() );
+        manager_a->Start();
+        ASSERT_TRUE( PollUntil( [&] {
+            const auto status = manager_a->GetStatus();
+            return status.accepted_upload_count == 3 && status.pending_upload_count == 2;
+        },
+                                std::chrono::milliseconds( 10000 ) ) );
+        manager_a->Stop();
+    }
+    // Simulated death: release the store so the directory lock frees (the
+    // library's own crash shape - WAL tail replays on reopen).
+    first_store.reset();
+    ASSERT_EQ( first_store.get(), nullptr );
+
+    // Reopen over the SAME directory; heal the remote; fresh admin fake
+    // posture (faults cleared) - the resume manager.
+    fake_->ClearFaults();
+    auto reopened = LocalBlockStore::Open( LocalBlockStoreOptions{ dir } );
+    ASSERT_TRUE( reopened.has_value() );
+    auto reopened_store = std::shared_ptr<LocalBlockStore>( std::move( reopened.value() ) );
+    auto remote_store_mutex_b = std::make_shared<std::mutex>();
+    manager_ = std::make_shared<ColdStorageManager>(
+        reopened_store, remote_, cold_store_mutex_, remote_store_mutex_b, FastOptions(),
+        FastDurability(), fake_admin_ );
+    manager_->Start();
+
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+    const auto status = manager_->GetStatus();
+    EXPECT_EQ( status.durable_upload_count, kBlocks );
+    EXPECT_EQ( status.accepted_upload_count, 0u );
+}
+
+/**
+ * @given a decorated store publishing through set() while the admin API
+ *        is scripted Unreachable
+ * @when  publishes continue and flush cycles fail during the outage, the
+ *        fault then clears
+ * @then  EVERY set() succeeds on the dagMutex_-held write path (journal
+ *        first - an admin outage can never block a publish), records
+ *        drain to Accepted and their GetUploadState NEVER surfaces a
+ *        NotFound-shaped failure, drainer_healthy stays TRUE while
+ *        flush_backoff_active engages INDEPENDENTLY (Pitfall 6), and
+ *        after the fault clears the next cycle advances everything and
+ *        the flush backoff resets (SC3 leg 2 / D-07).
+ */
+TEST_F( ColdStorageDurabilityTest, admin_outage_never_not_found_and_drain_unpoisoned )
+{
+    auto inner     = std::make_shared<FakeInnerDatastore>();
+    auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
+        inner, shared_local_, cold_store_mutex_, sgns::base::createLogger( "ColdStorageDurability" ) );
+
+    constexpr size_t kBlocks = 3;
+    std::vector<Cid> cids;
+    fake_admin_->SetAdminFault( S3AdminFaultKind::Unreachable );
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+
+    // Publishes through the decorator succeed THROUGHOUT the outage.
+    for ( size_t i = 0; i < kBlocks; ++i )
+    {
+        const auto payload = "outage payload " + std::to_string( i );
+        auto       cid     = MakeCid( payload );
+        CID        cid_key( cid );
+        auto res = decorator->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+        ASSERT_TRUE( res.has_value() ) << "publish " << i << " must succeed during the admin outage";
+        cids.push_back( std::move( cid ) );
+    }
+
+    // Drain reaches Accepted under the outage; flush attempts fail; the
+    // state reads Accepted (never NotFound), drain health holds, flush
+    // backoff engages independently.
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager->GetStatus();
+        return status.accepted_upload_count == kBlocks && status.flush_backoff_active
+               && fake_admin_->flush_count() >= 3;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    for ( const auto &cid : cids )
+    {
+        auto state = manager->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() ); // never a NotFound-shaped failure
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+    }
+    EXPECT_TRUE( manager->GetStatus().drainer_healthy );
+
+    // Fault clears: the next cycle advances and the flush backoff resets.
+    fake_admin_->SetAdminFault( S3AdminFaultKind::None );
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+    const auto recovered = manager->GetStatus();
+    EXPECT_FALSE( recovered.flush_backoff_active );
+    EXPECT_EQ( recovered.durable_upload_count, kBlocks );
+}
+
+/**
+ * @given drained-to-Accepted records and the admin scripted GarbageStats
+ *        (a 200-body the strict parse must reject)
+ * @when  flush cycles run, the fault then clears
+ * @then  flush itself succeeds (attempts observed) but ZERO records
+ *        advance while the observation cannot be parsed - conservative
+ *        failure, never NotFound - and the recovery cycle advances them.
+ */
+TEST_F( ColdStorageDurabilityTest, garbage_stats_keeps_accepted_then_recovers )
+{
+    constexpr size_t kBlocks = 2;
+    const auto       cids    = JournalBlocks( kBlocks );
+    fake_admin_->SetAdminFault( S3AdminFaultKind::GarbageStats );
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+
+    ASSERT_TRUE( PollUntil( [&] { return fake_admin_->flush_count() >= 2; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_EQ( manager->GetStatus().durable_upload_count, 0u );
+    ASSERT_TRUE( AllInState( cids, UploadState::UploadedAccepted ) );
+    EXPECT_FALSE( manager->GetStatus().last_flush_valid );
+
+    fake_admin_->SetAdminFault( S3AdminFaultKind::None );
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_TRUE( manager->GetStatus().last_flush_valid );
+}
+
+/**
+ * @given a publisher thread setting blocks through the decorator while a
+ *        SlowFlush (3 s) exceeds the 2 s final-flush budget
+ * @when  Stop() runs under that load
+ * @then  Stop() returns bounded (grace window + final-flush budget +
+ *        margin), nothing crashes, records are left Accepted (the final
+ *        flush could not complete inside its budget), and a fresh
+ *        manager over the same directory advances them at restart
+ *        (SC3 leg 3 / D-04 / Pitfall 4).
+ */
+TEST_F( ColdStorageDurabilityTest, shutdown_under_load_slow_flush_bounded )
+{
+    auto inner     = std::make_shared<FakeInnerDatastore>();
+    auto decorator = std::make_shared<BlockStoreBackedIpfsDatastore>(
+        inner, shared_local_, cold_store_mutex_, sgns::base::createLogger( "ColdStorageDurability" ) );
+
+    auto manager = MakeManager( FastOptions(), FastDurability( 10000, 20000 ) );
+    manager->Start();
+
+    std::atomic<bool> publishing{ true };
+    std::thread publisher( [&]
+    {
+        uint64_t n = 0;
+        while ( publishing.load() )
+        {
+            const auto payload = "shutdown-load payload " + std::to_string( n );
+            auto       cid     = MakeCid( payload );
+            CID        cid_key( cid );
+            (void)decorator->set( cid_key, IpfsDatastore::Value( SpanOf( payload ) ) );
+            ++n;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+        }
+    } );
+
+    // Let some blocks drain to Accepted, then arm the slow flush and stop.
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().accepted_upload_count >= 2; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    fake_admin_->SetSlowFlushDelayMs( 3000 ); // > kFinalFlushBudgetMs (2000)
+
+    const auto   stop_start = std::chrono::steady_clock::now();
+    manager->Stop();
+    const auto   stop_elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - stop_start )
+                                       .count();
+    publishing.store( false );
+    publisher.join();
+
+    const int64_t bound_ms = ColdStorageManager::kShutdownGraceWindow.count()
+                           + ColdStorageManager::kFinalFlushBudgetMs.count() + 3000 /* margin */;
+    std::cout << "[measurement] Stop() under SlowFlush load returned in " << stop_elapsed_ms
+              << " ms (bound " << bound_ms << " ms)\n";
+    EXPECT_LT( stop_elapsed_ms, bound_ms ) << "Stop() must stay bounded by grace + final budget";
+
+    // The final flush could not complete inside its budget: Accepted
+    // records remain. Reuse the STILL-OPEN fixture store with a fresh
+    // manager (same process, same directory) - the resume proof.
+    EXPECT_GT( manager->GetStatus().accepted_upload_count, 0u );
+    fake_admin_->SetSlowFlushDelayMs( 0 );
+    auto remote_store_mutex = std::make_shared<std::mutex>();
+    auto manager_b          = std::make_shared<ColdStorageManager>(
+        shared_local_, remote_, cold_store_mutex_, remote_store_mutex, FastOptions(),
+        FastDurability(), fake_admin_ );
+    manager_b->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        const auto status = manager_b->GetStatus();
+        return status.pending_upload_count == 0 && status.accepted_upload_count == 0
+               && status.durable_upload_count > 0;
+    },
+                            std::chrono::milliseconds( 15000 ) ) );
+    manager_b->Stop();
+}
+
+/**
+ * @given a journal where every record is already UploadedDurable
+ * @when  additional flush cycles run (the cadence keeps observing)
+ * @then  flush_count keeps advancing while ZERO records change state and
+ *        durable_upload_count is unchanged - re-running the flush+advance
+ *        cycle over the same records is a no-op-advancement (D-03
+ *        snapshot semantics; discharges the 10-01 idempotency flag).
+ */
+TEST_F( ColdStorageDurabilityTest, idempotent_replay_marks_nothing )
+{
+    constexpr size_t kBlocks = 2;
+    const auto       cids    = JournalBlocks( kBlocks );
+    auto             manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+
+    const auto flushes_before = fake_admin_->flush_count();
+    const auto durable_before = manager->GetStatus().durable_upload_count;
+    ASSERT_TRUE( PollUntil( [&] { return fake_admin_->flush_count() >= flushes_before + 2; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_EQ( manager->GetStatus().durable_upload_count, durable_before );
+    ASSERT_TRUE( AllInState( cids, UploadState::UploadedDurable ) );
+}
+
+/**
+ * @given a flush cycle in flight whose on_flush hook journals + accepts a
+ *        NEW block MID-FLUSH (after the snapshot was captured)
+ * @when  the cycle completes with pendingObjects == 0 and marks its
+ *        snapshot
+ * @then  the late-accepted CID is NOT marked on that cycle's evidence -
+ *        it stays UploadedAccepted until exactly the NEXT cycle advances
+ *        it (D-03; discharges the 10-01 acceptance-race flag).
+ */
+TEST_F( ColdStorageDurabilityTest, acceptance_race_mid_flush_excluded_from_marks )
+{
+    const auto payload_x = "race payload X";
+    auto       cid_x     = MakeCid( payload_x );
+    ASSERT_TRUE( shared_local_->Put( cid_x, SpanOf( payload_x ) ).has_value() );
+
+    const auto  payload_y = "race payload Y (late accept)";
+    auto        cid_y     = MakeCid( payload_y );
+    std::atomic<bool> late_accepted{ false };
+
+    fake_admin_->SetOnFlush( [&]
+    {
+        if ( late_accepted.exchange( true ) )
+        {
+            return; // arm once: only the FIRST flush races a late accept
+        }
+        // Runs on the drainer thread INSIDE the (unlocked) admin call:
+        // journal + accept a brand-new block AFTER the cycle's snapshot
+        // was captured under cold_store_mutex_.
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        (void)shared_local_->Put( cid_y, SpanOf( payload_y ) );
+        (void)shared_local_->MarkUploadedAccepted( cid_y );
+    } );
+
+    auto manager = MakeManager( FastOptions(), FastDurability() );
+    manager->Start();
+
+    // The racing cycle completes: X advances on the zero-pending
+    // evidence, Y does NOT ride that evidence.
+    ASSERT_TRUE( PollUntil( [&] {
+        auto state = manager->GetUploadState( cid_x );
+        return state.has_value() && state.value() == UploadState::UploadedDurable;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    ASSERT_TRUE( late_accepted.load() );
+    {
+        auto late = manager->GetUploadState( cid_y );
+        ASSERT_TRUE( late.has_value() );
+        EXPECT_EQ( late.value(), UploadState::UploadedAccepted )
+            << "the late-accepted CID must not ride the racing cycle's evidence";
+    }
+
+    // Exactly the NEXT cycle advances it.
+    ASSERT_TRUE( PollUntil( [&] {
+        auto late = manager->GetUploadState( cid_y );
+        return late.has_value() && late.value() == UploadState::UploadedDurable;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
 }
