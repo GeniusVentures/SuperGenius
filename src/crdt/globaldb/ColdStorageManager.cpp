@@ -188,43 +188,58 @@ namespace sgns::crdt
             }
             if ( !snapshot.empty() )
             {
-                auto flushed = admin_client_->Flush( kFinalFlushBudgetMs );
-                if ( !flushed.has_value() )
+                // Review WR-01: the final flush's admin calls take the SAME
+                // admin_mutex_ as the drainer tick and RefreshStagingStats -
+                // the admin client is never used concurrently.
+                bool                               flush_ok = false;
+                bool                               evidence_ok = false;
+                sgns::blockstore::UploadStats      observed{};
+                {
+                    std::lock_guard<std::mutex> admin_lock( admin_mutex_ );
+                    auto flushed = admin_client_->Flush( kFinalFlushBudgetMs );
+                    if ( flushed.has_value() )
+                    {
+                        auto stats = admin_client_->GetUploadStats();
+                        if ( stats.has_value() )
+                        {
+                            observed    = stats.value();
+                            flush_ok    = true;
+                            evidence_ok = observed.pendingObjects == 0;
+                        }
+                    }
+                }
+                if ( !flush_ok )
                 {
                     logger_->warn( "cold-storage final flush at shutdown failed ({} record(s) left "
                                    "UploadedAccepted for next startup)",
                                    snapshot.size() );
                 }
+                else if ( !evidence_ok )
+                {
+                    logger_->info( "cold-storage final flush observed non-zero pending objects - "
+                                   "{} record(s) left UploadedAccepted for next startup",
+                                   snapshot.size() );
+                }
                 else
                 {
-                    auto stats = admin_client_->GetUploadStats();
-                    if ( !stats.has_value() || stats.value().pendingObjects != 0 )
+                    std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                    auto transition = local_block_store_->MarkUploadedDurableMany(
+                        gsl::span<const sgns::blockstore::Cid>( snapshot.data(), snapshot.size() ) );
+                    if ( transition.has_value() )
                     {
-                        logger_->info( "cold-storage final flush observed non-zero pending objects - "
-                                       "{} record(s) left UploadedAccepted for next startup",
+                        durable_count_.fetch_add( snapshot.size(), std::memory_order_relaxed );
+                        accepted_count_.store( 0, std::memory_order_relaxed );
+                        last_flush_valid_.store( true, std::memory_order_relaxed );
+                        last_flush_ok_.store( true, std::memory_order_relaxed );
+                        last_flush_pending_objects_.store( 0, std::memory_order_relaxed );
+                        logger_->info( "cold-storage final flush advanced {} record(s) to UploadedDurable",
                                        snapshot.size() );
                     }
                     else
                     {
-                        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
-                        auto transition = local_block_store_->MarkUploadedDurableMany(
-                            gsl::span<const sgns::blockstore::Cid>( snapshot.data(), snapshot.size() ) );
-                        if ( transition.has_value() )
-                        {
-                            durable_count_.fetch_add( snapshot.size(), std::memory_order_relaxed );
-                            accepted_count_.store( 0, std::memory_order_relaxed );
-                            last_flush_valid_.store( true, std::memory_order_relaxed );
-                            last_flush_ok_.store( true, std::memory_order_relaxed );
-                            last_flush_pending_objects_.store( 0, std::memory_order_relaxed );
-                            logger_->info( "cold-storage final flush advanced {} record(s) to UploadedDurable",
-                                           snapshot.size() );
-                        }
-                        else
-                        {
-                            logger_->warn( "cold-storage final flush mark failed ({} record(s) left "
-                                           "UploadedAccepted for next startup)",
-                                           snapshot.size() );
-                        }
+                        logger_->warn( "cold-storage final flush mark failed ({} record(s) left "
+                                       "UploadedAccepted for next startup)",
+                                       snapshot.size() );
                     }
                 }
             }
@@ -439,6 +454,10 @@ namespace sgns::crdt
                 sgns::blockstore::UploadState::UploadedAccepted );
             if ( !accepted.has_value() )
             {
+                // Review WR-03: a failed enumeration IS a flush attempt -
+                // advance the clock so the floor/backoff applies (sustained
+                // scan failures must not retry every drain tick).
+                last_flush_attempt_ = now;
                 RecordFlushFailedCycle( "accepted enumeration failed" );
                 return;
             }
@@ -469,12 +488,12 @@ namespace sgns::crdt
                 return;
             }
             observed = stats.value();
+            // The observation succeeded: staging health evaluates INSIDE
+            // the lock (D-12 on-tick freshness; review WR-02 - the shared
+            // failedUploads baseline cannot interleave with a concurrent
+            // refresh).
+            UpdateStagingHealth( observed, true );
         }
-
-        // The observation succeeded: staging health evaluates NOW (D-12
-        // on-tick freshness) regardless of what the evidence gate next
-        // decides about marks.
-        UpdateStagingHealth( observed, true );
 
         // (iii) evidence gate (SC1): ONLY a pendingObjects == 0
         // observation permits marks - anything else leaves every record
