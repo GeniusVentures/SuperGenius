@@ -82,6 +82,7 @@ namespace
     using sgns::base::Buffer;
     using sgns::crdt::BlockStoreBackedIpfsDatastore;
     using sgns::crdt::Broadcaster;
+    using sgns::crdt::ColdReadService;
     using sgns::crdt::CrdtDatastore;
     using sgns::crdt::CrdtOptions;
     using sgns::crdt::GraphsyncDAGSyncer;
@@ -500,8 +501,16 @@ namespace
             inner_     = std::make_shared<sgns::ipfs_lite::ipfs::RocksdbDatastore>( ipfs_db.value() );
             decorator_ = std::make_shared<BlockStoreBackedIpfsDatastore>(
                 inner_, shared_local_, cold_store_mutex_, sgns::base::createLogger( "ColdStorageGc" ) );
+            // 11-02: the REAL cold-read chain as the DAGSyncer hook - the
+            // cold-dir term, the disposed-marker term (D-11), and the
+            // direct-read cold chain (D-12) all live here (the re-warm
+            // worker stays unstarted - these paths are synchronous).
+            remote_store_mutex_ = std::make_shared<std::mutex>();
+            cold_read_service_  = std::make_shared<ColdReadService>(
+                shared_local_, remote_, cold_store_mutex_, remote_store_mutex_, decorator_ );
             dagsyncer_ = std::make_shared<GraphsyncDAGSyncer>(
-                decorator_, nullptr, nullptr /* no graphsync/host needed for the no-request path */ );
+                decorator_, nullptr, nullptr /* no graphsync/host needed for the no-request path */,
+                cold_read_service_ );
 
             broadcaster_ = std::make_shared<NoopBroadcaster>();
             crdt_        = CrdtDatastore::New(
@@ -616,6 +625,8 @@ namespace
         std::shared_ptr<std::mutex>             cold_store_mutex_;
         std::shared_ptr<sgns::ipfs_lite::ipfs::IpfsDatastore> inner_;
         std::shared_ptr<BlockStoreBackedIpfsDatastore> decorator_;
+        std::shared_ptr<std::mutex>             remote_store_mutex_;
+        std::shared_ptr<ColdReadService>        cold_read_service_;
         std::shared_ptr<GraphsyncDAGSyncer>     dagsyncer_;
         std::shared_ptr<NoopBroadcaster>        broadcaster_;
         std::shared_ptr<CrdtDatastore>          crdt_;
@@ -672,11 +683,12 @@ TEST_F( ColdStorageGcTest, EndToEndRetentionPassIdentifiesExactCandidateSet )
 
     // SC1 keyspace boundary: the GC performed ZERO hot-store operations
     // under the protected tombstone/heads/current-value/set prefixes
-    // during policy evaluation - and since Task 3, the ONLY hot-store
-    // operation of any shape is the SC5 epoch-watermark write under the
-    // pinned /crdt/gc/ prefix.
+    // during policy evaluation. Since 11-02's marking step the pass also
+    // POINT-CHECKS the candidate's seal text key (a contains, never a
+    // write) and writes the SC5 watermark under /crdt/gc/ - neither
+    // touches a protected prefix.
     EXPECT_EQ( spy_->ProtectedPrefixOps(), 0u );
-    EXPECT_EQ( spy_->TotalOps(), spy_->OpsMatching( "/crdt/gc/" ) );
+    EXPECT_EQ( spy_->OpsMatching( "/s/" ), 0u );
 }
 
 /**
@@ -1084,15 +1096,16 @@ sgns::storage::Buffer SealKeyOf( const CID &cid )
 }
 
 /// The delta's OWN membership row key: ElemsPrefix(key).ChildString(cid)
-/// (crdt_set.cpp:707) - derived from the datastore's keys prefix
-/// ("/namespace/k/" -> elems base "/namespace/s/").
+/// (crdt_set.cpp:707) - the elems namespace is the SIBLING of the
+/// k-namespace under the set root ("<set>/s/k" keys prefix ->
+/// "<set>/s/s/<key>/<cid>" rows; GetKeysPrefix carries NO trailing
+/// slash).
 std::string ElemRowKeyOf( const std::string &keys_prefix,
                           const std::string &elem_key,
                           const std::string &cid_string )
 {
-    // keys_prefix is "<ns>/k/" - the elems base shares the namespace root.
-    EXPECT_GE( keys_prefix.size(), 2u );
-    return keys_prefix.substr( 0, keys_prefix.size() - 2 ) + "s/" + elem_key + "/" + cid_string;
+    EXPECT_GE( keys_prefix.size(), 1u );
+    return keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/" + elem_key + "/" + cid_string;
 }
 
 /**
@@ -1192,13 +1205,15 @@ TEST_F( ColdStorageGcTest, EvictionEndToEndTwoHalvesUnitAtomic )
     ASSERT_TRUE( has_block.has_value() );
     EXPECT_TRUE( has_block.value() ) << "HasBlock stays honest via the disposed-marker term";
 
+    // The bridge reports the post-eviction journal truth: NoRecord -
+    // asserted BEFORE the direct read below, whose re-learn legitimately
+    // re-journals the block (D-10: re-journal => re-spill => re-drain).
+    EXPECT_EQ( sgns::crdt::GetColdUploadState( manager, d1 ), sgns::crdt::ColdUploadState::NoRecord );
+
     // D-12 split: a DIRECT read never treats the marker as absence - the
     // cold chain resolves the disposed CID from the S3 fake, CID-verified.
     auto resolved = dagsyncer_->GetNodeWithoutRequest( d1 );
     ASSERT_TRUE( resolved.has_value() ) << "disposed CIDs stay readable through the cold chain";
-
-    // The bridge reports the post-eviction journal truth: NoRecord.
-    EXPECT_EQ( sgns::crdt::GetColdUploadState( manager, d1 ), sgns::crdt::ColdUploadState::NoRecord );
 
     // Metrics + marks drained.
     const auto status = manager->GetStatus();

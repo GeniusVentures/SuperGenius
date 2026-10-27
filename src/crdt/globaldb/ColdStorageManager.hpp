@@ -112,6 +112,9 @@ namespace sgns::crdt
         /// SC5: the epoch watermark record's hot-store key (node-local,
         /// non-replicated; layout documented on WriteEpochWatermark).
         static constexpr const char *kGcEpochWatermarkKey{ "/crdt/gc/epoch-watermark" };
+        /// DisposedRecord::reason code for retention-policy evictions
+        /// (public for test citation; the only v1.1 reason).
+        static constexpr uint8_t kEvictionReasonRetention{ 1 };
 
         /// @brief The eviction-safety durability gate (D-10): a local
         ///        block's bytes are evictable ONLY when its journal
@@ -375,6 +378,61 @@ namespace sgns::crdt
         static bool HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
                                  const CrdtHeads::CRDTHeadList &rhs );
 
+        /// GC-02 (D-13/D-14/D-15): ONE in-memory evicting mark - the
+        /// GC-thread-only (single-writer) two-phase state. Carries
+        /// everything the destructive step needs so NOTHING is re-derived
+        /// after the grace: the pass-start heads snapshot it rests on
+        /// (the D-14 delete-time exactness check compares CURRENT heads
+        /// against THIS), the parsed delta row keys, the size, and the
+        /// seal state - all captured BEFORE anything is deleted. Crashes
+        /// vanish with the process (D-15): nothing was deleted, the next
+        /// pass re-walks and re-marks from scratch.
+        struct EvictingMark
+        {
+            EvictingMark() = delete; // Cid has no default constructor
+            explicit EvictingMark( const sgns::blockstore::Cid &c ) : cid( c ) {}
+
+            sgns::blockstore::Cid      cid;
+            uint64_t                   marked_at_unix_ms{ 0 };
+            uint64_t                   size_bytes{ 0 };
+            bool                       was_sealed{ false };
+            std::vector<std::string>   hot_row_keys;
+                       uint64_t                   mark_tick{ 0 };
+            CrdtHeads::CRDTHeadList    heads_snapshot;
+        };
+
+        /// GC-02: the evaluate half of a pass (steps 2-5b of the 11-01
+        /// tick order + candidate marking). Returns the pass's
+        /// candidates (empty = inhibited, aborted, or zero).
+        std::vector<sgns::blockstore::Cid> EvaluatePass();
+
+        /// GC-02 (D-14/D-15/D-16): process marks whose grace elapsed ON A
+        /// LATER TICK - per mark, the delete-time heads-equality re-check
+        /// against the MARK'S snapshot (ANY difference cancels: clear the
+        /// mark, keep the bytes, the CID returns to normal), then unless
+        /// dry_run the D-16 two-half eviction (library batch, then the
+        /// idempotent hot cleanup + LRU invalidation).
+        void ProcessDueMarks();
+
+        /// GC-02 (§4.2): FIRST step of every pass - enumerate the
+        /// disposed markers and, for each whose hot binary key is still
+        /// present, complete HALF 2 only (the crash-between-halves
+        /// recovery; the library half already committed). Row keys are
+        /// recomputed from the REMOTE copy (the cold-dir bytes are gone).
+        void FinishOrphanedHotCleanups();
+
+        /// GC-02 (D-10): enforce both disposed-marker bounds and refresh
+        /// gc_disposed_marker_count_.
+        void TrimDisposedMarkers();
+
+        /// GC-02 (D-16 HALF 2): ONE hot-store batch deleting the binary
+        /// CID key, the text <cid>sealed key, and EXACTLY the given row
+        /// keys (computed from the delta content, never enumerated),
+        /// followed by DeleteCIDBlock LRU invalidation (A6: AFTER the
+        /// deletes, so HasBlock never lies).
+        void RunHotCleanup( const sgns::blockstore::Cid       &cid,
+                            const std::vector<std::string> &row_keys );
+
         /// SC5 (GC-01): compute and store the per-topic epoch watermark
         /// record from the pass-start heads snapshot - min-head-height
         /// floor, max height, computed-at unix-ms - as ONE node-local,
@@ -504,6 +562,17 @@ namespace sgns::crdt
         /// GcPassOnce may run on the GC thread or a test thread).
         std::atomic<uint32_t>    gc_inhibit_streak_{ 0 };
         std::atomic<uint32_t>    gc_abort_streak_{ 0 };
+
+        // GC-02 (v1.1 Phase 11): the in-memory evicting marks + tick
+        // counter (GC-thread-only / single-writer - GcPassOnce never
+        // overlaps itself) and the per-pass reclaimed accumulators.
+        std::vector<EvictingMark> evicting_marks_;
+        uint64_t                  gc_tick_counter_{ 0 };
+        size_t                    pass_reclaimed_count_{ 0 };
+        uint64_t                  pass_reclaimed_bytes_{ 0 };
+        /// The last completed evaluation's heads snapshot (the SC5
+        /// watermark input; GC-thread-only like the marks).
+        CrdtHeads::CRDTHeadList    last_pass_snapshot_;
 
         // GC status atomics (D-08 discipline: read lock-free by
         // GetStatus). The evicting/reclaimed/disposed fields stay zero

@@ -273,6 +273,38 @@ namespace sgns::crdt
         }
     }
 
+    bool ColdReadService::HasDisposed( const CID &cid )
+    {
+        // D-11 (v1.1 Phase 11): disposed-marker point lookup, LOCAL TIER
+        // ONLY - never S3, never network. Same freeze-safe bool contract
+        // as HasLocalCold (the pubsub receive path calls this); a marker
+        // hit means already-integrated (D-12 dedup ONLY - reads never
+        // consult the marker as absence).
+        try
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto disposed = local_block_store_->IsDisposed( cid );
+            if ( disposed.has_value() )
+            {
+                return disposed.value();
+            }
+            if ( ShouldLogColdFailure() )
+            {
+                logger_->warn( "cold read: disposed-marker check failed (code {}) - reporting absent",
+                               static_cast<int>( disposed.error().code ) );
+            }
+            return false;
+        }
+        catch ( const std::invalid_argument &e )
+        {
+            if ( ShouldLogColdFailure() )
+            {
+                logger_->warn( "cold read: disposed-marker check rejected CID: {}", e.what() );
+            }
+            return false;
+        }
+    }
+
     bool ColdReadService::EnqueueRewarm( const CID &cid )
     {
         // D-07 (READ-02): a real try-op over the bounded queue - NEVER

@@ -82,6 +82,9 @@ namespace sgns::crdt
         /** @copydoc ColdReadFallback::HasLocalCold() */
         bool HasLocalCold( const CID &cid ) override;
 
+        /** @copydoc ColdReadFallback::HasDisposed() */
+        bool HasDisposed( const CID &cid ) override;
+
         /** @copydoc ColdReadFallback::EnqueueRewarm() */
         bool EnqueueRewarm( const CID &cid ) override;
 

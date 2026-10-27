@@ -28,6 +28,8 @@
 #include <deque>
 #include <limits>
 
+#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 
@@ -810,6 +812,50 @@ namespace sgns::crdt
         gc_inhibited_staging_.store( false, std::memory_order_relaxed );
         gc_inhibit_streak_.store( 0 );
 
+        // GC-02 (v1.1 Phase 11): tick bookkeeping - the tick counter is
+        // the defer-to-next-tick clock, and the reclaimed accumulators
+        // are per-pass.
+        ++gc_tick_counter_;
+        pass_reclaimed_count_  = 0;
+        pass_reclaimed_bytes_  = 0;
+
+        // GC-02 (§4.2): the orphaned-hot-bytes re-scan runs FIRST - a
+        // crash between the D-16 halves left hot bytes behind a committed
+        // library half, and this pass completes them before evaluating
+        // anything new. Suppressed under dry_run (observe-only posture).
+        if ( !gc_dry_run_ )
+        {
+            FinishOrphanedHotCleanups();
+        }
+
+        // (2)-(5b) + candidate marking: the evaluate half.
+        const auto candidates = EvaluatePass();
+
+        // (6) the destructive half: due marks only (this tick's fresh
+        // marks are NOT due - defer-to-next-tick grace, D-13).
+        ProcessDueMarks();
+
+        // (7) marker bounds (D-10).
+        TrimDisposedMarkers();
+
+        // (8) status update + the one-line per-pass summary, then the SC5
+        // epoch watermark (computation + storage ONLY - nothing in v1.1
+        // is deletion-gated on it).
+        gc_last_pass_unix_ms_.store( UnixNowMs(), std::memory_order_relaxed );
+        gc_last_pass_candidates_.store( candidates.size(), std::memory_order_relaxed );
+        gc_last_pass_reclaimed_count_.store( pass_reclaimed_count_, std::memory_order_relaxed );
+        gc_last_pass_reclaimed_bytes_.store( pass_reclaimed_bytes_, std::memory_order_relaxed );
+        logger_->info( "gc: pass complete - {} candidate(s), {} evicted (retention {} ms, dry_run {})",
+                       candidates.size(),
+                       pass_reclaimed_count_,
+                       retention_.retention_age_ms,
+                       gc_dry_run_ );
+        WriteEpochWatermark( last_pass_snapshot_ );
+        return candidates;
+    }
+
+    std::vector<sgns::blockstore::Cid> ColdStorageManager::EvaluatePass()
+    {
         // (2) heads snapshot: the pass universe. A read failure aborts the
         // pass (under-eviction - reachability without a universe is a
         // guess).
@@ -912,7 +958,7 @@ namespace sgns::crdt
                 // deleted. Journal CIDs and /crdt/gc/ text keys are
                 // disjoint keyspaces BY CONSTRUCTION (candidates come only
                 // from the journal column family); the rule binds the
-                // 11-02 delete path to the same disjointness.
+                // delete path to the same disjointness.
                 candidates.push_back( entry.cid );
             }
         }
@@ -943,24 +989,279 @@ namespace sgns::crdt
                     "pass; zero candidates (under-eviction)",
                     streak );
             }
-            gc_last_pass_unix_ms_.store( now_ms, std::memory_order_relaxed );
             gc_last_pass_candidates_.store( 0, std::memory_order_relaxed );
             return {};
         }
         gc_abort_streak_.store( 0 );
 
-        // (6) status update + the one-line per-pass summary, then the SC5
-        // epoch watermark (computation + storage ONLY - nothing in v1.1 is
-        // deletion-gated on it). Deletion machinery is 11-02 - this pass
-        // ENDS at the reported candidate set.
-        gc_last_pass_unix_ms_.store( now_ms, std::memory_order_relaxed );
-        gc_last_pass_candidates_.store( candidates.size(), std::memory_order_relaxed );
-        logger_->info( "gc: pass complete - {} candidate(s) (retention {} ms, dry_run {})",
-                       candidates.size(),
-                       retention_.retention_age_ms,
-                       gc_dry_run_ );
-        WriteEpochWatermark( snapshot );
+        // (5a) GC-02 (D-13): mark every candidate in-memory. EVERYTHING
+        // the destructive step needs is captured NOW, before anything is
+        // deleted: the heads snapshot this evaluation rests on, the
+        // block's cold-dir size, its parsed delta row keys, and its hot
+        // seal state. A CID already carrying a mark (a prior pass's
+        // unfinished grace) is not re-marked.
+        for ( const auto &cid : candidates )
+        {
+            bool already_marked = false;
+            for ( const auto &mark : evicting_marks_ )
+            {
+                if ( mark.cid == cid )
+                {
+                    already_marked = true;
+                    break;
+                }
+            }
+            if ( already_marked )
+            {
+                continue;
+            }
+
+            EvictingMark mark( cid );
+            mark.cid              = cid;
+            mark.marked_at_unix_ms = now_ms;
+            mark.mark_tick        = gc_tick_counter_;
+            mark.heads_snapshot   = snapshot;
+            {
+                std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                auto block = local_block_store_->Get( cid );
+                if ( block.has_value() )
+                {
+                    mark.size_bytes = block.value().bytes.size();
+                    // Parse the delta to compute EXACTLY this block's own
+                    // membership rows (never enumerated): a raw orphan has
+                    // no rows, a delta's rows are ElemsPrefix(key)/<cid>.
+                    auto node = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes(
+                        gsl::span<const uint8_t>( block.value().bytes.data(),
+                                                  block.value().bytes.size() ) );
+                    if ( node.has_value() )
+                    {
+                        const auto &content = node.value()->content();
+                        CrdtDatastore::Delta delta;
+                        if ( delta.ParseFromArray( content.data(),
+                                                   static_cast<int>( content.size() ) ) )
+                        {
+                            const auto cid_string = CID( cid ).toString().value();
+                            // The elems namespace is the SIBLING of the
+                            // k-namespace under the set root: keys prefix
+                            // "<set>/s/k" -> rows "<set>/s/s/<key>/<cid>"
+                            // (GetKeysPrefix carries NO trailing slash).
+                            const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
+                            const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
+                            for ( const auto &elem : delta.elements() )
+                            {
+                                mark.hot_row_keys.push_back( elems_base + elem.key() + "/"
+                                                             + cid_string );
+                            }
+                        }
+                    }
+                }
+            }
+            if ( gc_hot_store_ != nullptr )
+            {
+                sgns::storage::Buffer seal_key;
+                seal_key.put( CID( cid ).toString().value() + "sealed" );
+                mark.was_sealed = gc_hot_store_->contains( seal_key );
+            }
+            evicting_marks_.push_back( std::move( mark ) );
+        }
+        gc_evicting_count_.store( evicting_marks_.size(), std::memory_order_relaxed );
+        last_pass_snapshot_ = snapshot;
         return candidates;
+    }
+
+    void ColdStorageManager::ProcessDueMarks()
+    {
+        if ( evicting_marks_.empty() )
+        {
+            gc_evicting_count_.store( 0, std::memory_order_relaxed );
+            return;
+        }
+        const uint64_t now_ms = UnixNowMs();
+        std::vector<EvictingMark> retained;
+        retained.reserve( evicting_marks_.size() );
+        for ( auto &mark : evicting_marks_ )
+        {
+            // Defer-to-next-tick (D-13): a mark is due only on a LATER
+            // tick AND after the grace elapsed.
+            if ( gc_tick_counter_ <= mark.mark_tick
+                 || now_ms < mark.marked_at_unix_ms + retention_.grace_ms )
+            {
+                retained.push_back( std::move( mark ) );
+                continue;
+            }
+            // Delete-time exactness re-check (D-14): CURRENT heads vs the
+            // snapshot THIS mark rests on. ANY difference (even one head)
+            // cancels: clear the mark, keep the bytes, the CID returns to
+            // normal evaluation (under-eviction).
+            auto heads_now = gc_crdt_datastore_->GetHeadList();
+            if ( heads_now.has_error()
+                 || HeadsDiffer( heads_now.value().first, mark.heads_snapshot ) )
+            {
+                logger_->info( "gc: delete-time cancel - heads changed since mark; CID kept "
+                               "and returns to normal evaluation" );
+                continue; // mark dropped, bytes kept
+            }
+            if ( gc_dry_run_ )
+            {
+                // D-03: identical evaluation and metrics, BOTH halves
+                // suppressed - the mark stays cycling so the observe-only
+                // posture is honest.
+                retained.push_back( std::move( mark ) );
+                continue;
+            }
+            // D-16 HALF 1: the library batch (cold bytes + journal +
+            // timestamp + disposed marker) under the shared mutex.
+            sgns::blockstore::DisposedRecord record;
+            record.disposed_at_unix_ms = now_ms;
+            record.reclaimed_bytes     = mark.size_bytes;
+            record.original_size       = mark.size_bytes;
+            record.reason              = kEvictionReasonRetention;
+            record.was_sealed          = mark.was_sealed;
+            {
+                std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                auto evicted = local_block_store_->EvictLocalAndMarkDisposed( mark.cid, record );
+                if ( !evicted.has_value() )
+                {
+                    // Library failure: the mark survives for a later tick
+                    // (under-eviction; nothing partial committed).
+                    logger_->warn( "gc: eviction batch failed - mark retained for a later pass" );
+                    retained.push_back( std::move( mark ) );
+                    continue;
+                }
+            }
+            // D-16 HALF 2: the idempotent hot cleanup + LRU invalidation.
+            RunHotCleanup( mark.cid, mark.hot_row_keys );
+            ++pass_reclaimed_count_;
+            pass_reclaimed_bytes_ += mark.size_bytes;
+            logger_->info( "gc: evicted - reclaimed {} local byte(s)",
+                           mark.size_bytes );
+        }
+        evicting_marks_ = std::move( retained );
+        gc_evicting_count_.store( evicting_marks_.size(), std::memory_order_relaxed );
+    }
+
+    void ColdStorageManager::RunHotCleanup( const sgns::blockstore::Cid  &cid,
+                                            const std::vector<std::string> &row_keys )
+    {
+        if ( gc_hot_store_ == nullptr )
+        {
+            return;
+        }
+        const CID cid_key( cid );
+        // ONE hot-store batch: the binary CID key, the text <cid>sealed
+        // key, and EXACTLY the block's own membership rows (computed from
+        // the delta content at mark/recovery time - never enumerated).
+        // Deleting absent keys succeeds (idempotent post-state).
+        auto batch = gc_hot_store_->batch();
+        auto encoded = cid_key.toBytes();
+        if ( encoded.has_value() )
+        {
+            sgns::storage::Buffer binary_key;
+            binary_key.put( encoded.value() );
+            (void)batch->remove( binary_key );
+        }
+        sgns::storage::Buffer seal_key;
+        seal_key.put( cid_key.toString().value() + "sealed" );
+        (void)batch->remove( seal_key );
+        for ( const auto &row : row_keys )
+        {
+            sgns::storage::Buffer row_key;
+            row_key.put( row );
+            (void)batch->remove( row_key );
+        }
+        (void)batch->commit();
+        // A6: LRU invalidation AFTER the hot deletes - post-cleanup the
+        // hot and LRU HasBlock terms miss and the disposed-marker term
+        // answers (HasBlock stays honest through the whole window).
+        (void)gc_dag_syncer_->DeleteCIDBlock( cid_key );
+    }
+
+    void ColdStorageManager::FinishOrphanedHotCleanups()
+    {
+        // §4.2: complete HALF 2 for markers whose hot binary key survived
+        // (the crash-between-halves window). The library half already
+        // committed; the cold-dir bytes are gone, so the block's own
+        // membership rows are recomputed from the REMOTE copy.
+        if ( gc_hot_store_ == nullptr )
+        {
+            return;
+        }
+        std::vector<std::pair<sgns::blockstore::Cid, sgns::blockstore::DisposedRecord>> markers;
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto disposed = local_block_store_->GetDisposed();
+            if ( !disposed.has_value() )
+            {
+                return; // unreadable markers: skip this pass (safe)
+            }
+            markers = std::move( disposed.value() );
+        }
+        for ( const auto &entry : markers )
+        {
+            const CID cid_key( entry.first );
+            auto encoded = cid_key.toBytes();
+            if ( !encoded.has_value() )
+            {
+                continue;
+            }
+            sgns::storage::Buffer binary_key;
+            binary_key.put( encoded.value() );
+            if ( !gc_hot_store_->contains( binary_key ) )
+            {
+                continue; // hot already clean - nothing to finish
+            }
+            // Recompute the block's own rows from the remote copy.
+            std::vector<std::string> rows;
+            {
+                std::lock_guard<std::mutex> remote_lock( *remote_store_mutex_ );
+                auto block = remote_block_store_->Get( entry.first );
+                if ( block.has_value() )
+                {
+                    auto node = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes(
+                        gsl::span<const uint8_t>( block.value().bytes.data(),
+                                                  block.value().bytes.size() ) );
+                    if ( node.has_value() )
+                    {
+                        const auto &content = node.value()->content();
+                        CrdtDatastore::Delta delta;
+                        if ( delta.ParseFromArray( content.data(),
+                                                   static_cast<int>( content.size() ) ) )
+                        {
+                            const auto cid_string = cid_key.toString().value();
+                            // The sibling-of-k derivation (see the mark
+                            // capture in EvaluatePass).
+                            const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
+                            const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
+                            for ( const auto &elem : delta.elements() )
+                            {
+                                rows.push_back( elems_base + elem.key() + "/" + cid_string );
+                            }
+                        }
+                    }
+                }
+            }
+            RunHotCleanup( entry.first, rows );
+            logger_->info( "gc: orphaned-hot-bytes re-scan completed the hot-cleanup half" );
+        }
+    }
+
+    void ColdStorageManager::TrimDisposedMarkers()
+    {
+        const uint64_t now_ms = UnixNowMs();
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            (void)local_block_store_->TrimDisposed(
+                sgns::blockstore::kDefaultDisposedMarkerCap,
+                now_ms > sgns::blockstore::kDefaultDisposedMarkerMaxAgeMs
+                    ? now_ms - sgns::blockstore::kDefaultDisposedMarkerMaxAgeMs
+                    : 0 );
+            auto markers = local_block_store_->GetDisposed();
+            if ( markers.has_value() )
+            {
+                gc_disposed_marker_count_.store( markers.value().size(),
+                                                 std::memory_order_relaxed );
+            }
+        }
     }
 
     void ColdStorageManager::WriteEpochWatermark( const CrdtHeads::CRDTHeadList &snapshot )

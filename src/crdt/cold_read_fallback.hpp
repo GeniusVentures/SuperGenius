@@ -94,6 +94,24 @@ namespace sgns::crdt
         virtual bool HasLocalCold( const CID &cid ) = 0;
 
         /**
+         * @brief       Disposed-marker point lookup (D-11, v1.1 Phase 11).
+         * @param[in]   cid the content identifier
+         * @return      true when the disposed-marker store holds the CID
+         *              (the block was evicted locally and its re-delivery
+         *              is already integrated); false on absence AND on
+         *              any non-authoritative failure (the same
+         *              freeze-safe bool contract as HasLocalCold)
+         * @note        NEVER performs S3 or network I/O (the pubsub
+         *              receive path calls this). D-12 split semantics: a
+         *              marker hit answers HasBlock for DEDUP ONLY -
+         *              direct reads (GetNodeWithoutRequest, the responder
+         *              cold-serve chain) NEVER consult the marker as
+         *              absence and always resolve the CID through the
+         *              cold chain.
+         */
+        virtual bool HasDisposed( const CID &cid ) = 0;
+
+        /**
          * @brief       Try-enqueue a background re-warm for a CID
          *              (D-05/D-06/D-07; the bounded executor arrives in
          *              09-02).

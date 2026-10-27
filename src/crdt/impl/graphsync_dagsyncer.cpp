@@ -682,6 +682,20 @@ namespace sgns::crdt
             return true;
         }
 
+        // D-11 (v1.1 Phase 11): FOURTH check, the disposed-marker point
+        // lookup - gated exactly like the cold-dir term. A marker hit
+        // means the block was evicted locally and its re-delivery is
+        // already integrated: answer TRUE so the pubsub re-delivery dedup
+        // (the three call sites above) drops it with zero new call-site
+        // audits. D-12 split: this term is DEDUP ONLY - direct reads
+        // (GetNodeWithoutRequest, the responder cold-serve chain) never
+        // consult the marker as absence and resolve disposed CIDs through
+        // the Phase-9 cold chain.
+        if ( cold_read_hook_ != nullptr && cold_read_hook_->HasDisposed( cid ) )
+        {
+            return true;
+        }
+
         return false;
     }
 
