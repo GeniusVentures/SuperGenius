@@ -360,3 +360,96 @@ TEST( ColdStorageConfigGate, BackpressureValidExplicitValuesPropagate )
     EXPECT_EQ( bp.critical_pending, 500u );
     EXPECT_EQ( bp.backoff_cap_ms, 10000u );
 }
+
+// ---------------------------------------------------------------------------
+// blockstore.durability + blockstore.admin_endpoint (D-11/D-06, v1.1 Phase
+// 10 plan 10-01 Task 3): absent sub-object / blank object / 0 knobs =>
+// built-in defaults (30000/300000); unknown key / wrong type / min > max
+// => loud failure naming the offender (min>max naming BOTH effective
+// values); durability-only sections stay DISABLED (Phase-7 (e)
+// inheritance); admin_endpoint is an optional string at the blockstore
+// level (absent = empty => the s3d default applies downstream).
+// ---------------------------------------------------------------------------
+
+TEST( ColdStorageConfigGate, DurabilityAbsentSubObjectGivesDefaults )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + "}}", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_TRUE( result.value().enabled );
+    const auto &dur = result.value().durability;
+    EXPECT_EQ( dur.flush_min_interval_ms, 30000u );
+    EXPECT_EQ( dur.flush_max_interval_ms, 300000u );
+}
+
+TEST( ColdStorageConfigGate, DurabilityZeroKnobTakesOnlyItsDefault )
+{
+    // flush_min_interval_ms=0 takes its default while the explicit max
+    // keeps its value (per-knob 0-default semantics).
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "durability": {"flush_min_interval_ms": 0, "flush_max_interval_ms": 60000}}})",
+                         NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    const auto &dur = result.value().durability;
+    EXPECT_EQ( dur.flush_min_interval_ms, 30000u );
+    EXPECT_EQ( dur.flush_max_interval_ms, 60000u );
+}
+
+TEST( ColdStorageConfigGate, DurabilityUnknownKeyFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody ) + R"(, "durability": {"bogus": 1}}})", NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "unknown key 'blockstore.durability.bogus'" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, DurabilityWrongTypeFails )
+{
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "durability": {"flush_min_interval_ms": "fast"}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "blockstore.durability.flush_min_interval_ms" ), std::string::npos );
+    EXPECT_NE( result.error().find( "uint" ), std::string::npos );
+}
+
+TEST( ColdStorageConfigGate, DurabilityMinAboveMaxFails )
+{
+    // Post-normalization rule judged on EFFECTIVE values: an explicit min
+    // above the DEFAULTED max fails naming both effective numbers.
+    auto result = Parse( std::string( kEnabledConfigBody )
+                         + R"(, "durability": {"flush_min_interval_ms": 500000}}})",
+                         NoEnv() );
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_NE( result.error().find( "flush_min_interval_ms <= flush_max_interval_ms" ), std::string::npos );
+    EXPECT_NE( result.error().find( "500000" ), std::string::npos ); // effective min
+    EXPECT_NE( result.error().find( "300000" ), std::string::npos ); // effective (defaulted) max
+}
+
+TEST( ColdStorageConfigGate, DurabilityOnlySectionDisables )
+{
+    // Phase-7 (e) inheritance: a durability-only section never activates
+    // cold storage (the wallet blank form relies on it).
+    auto result = Parse( R"({"blockstore": {"durability": {"flush_min_interval_ms": 250}}})", NoEnv() );
+    ASSERT_FALSE( result.has_error() );
+    EXPECT_FALSE( result.value().enabled );
+}
+
+TEST( ColdStorageConfigGate, AdminEndpointOptionalString )
+{
+    // Absent => empty (the s3d default applies downstream)...
+    auto absent = Parse( std::string( kEnabledConfigBody ) + "}}", NoEnv() );
+    ASSERT_FALSE( absent.has_error() );
+    EXPECT_EQ( absent.value().admin_endpoint, std::string() );
+
+    // ...present-and-string => carried verbatim...
+    auto present = Parse( std::string( kEnabledConfigBody )
+                              + R"(, "admin_endpoint": "http://127.0.0.1:9001"}})",
+                          NoEnv() );
+    ASSERT_FALSE( present.has_error() );
+    EXPECT_EQ( present.value().admin_endpoint, std::string( "http://127.0.0.1:9001" ) );
+
+    // ...present-but-not-a-string => loud.
+    auto wrong_type = Parse( std::string( kEnabledConfigBody ) + R"(, "admin_endpoint": 5}})", NoEnv() );
+    ASSERT_TRUE( wrong_type.has_error() );
+    EXPECT_NE( wrong_type.error().find( "blockstore.admin_endpoint" ), std::string::npos );
+    EXPECT_NE( wrong_type.error().find( "string" ), std::string::npos );
+}

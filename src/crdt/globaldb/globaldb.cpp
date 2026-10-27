@@ -76,9 +76,12 @@ namespace sgns::crdt
     {
         // D-07: credentials only - exactly two variables exist. Unset OR
         // empty reads as empty (= no override); env never activates (D-08).
+        // D-06 (Phase 10): the ADMIN password is env-ONLY - no config key
+        // ever carries it (unset or empty = flush cannot authenticate).
         ColdStorageEnvLookup lookup;
         const char *access_env = std::getenv( "SGNS_BLOCKSTORE_S3_ACCESS_KEY" );
         const char *secret_env = std::getenv( "SGNS_BLOCKSTORE_S3_SECRET_KEY" );
+        const char *admin_env  = std::getenv( "SGNS_BLOCKSTORE_S3_ADMIN_PASSWORD" );
         if ( access_env != nullptr && *access_env != '\0' )
         {
             lookup.access_key = access_env;
@@ -87,6 +90,10 @@ namespace sgns::crdt
         {
             lookup.secret_key = secret_env;
         }
+        if ( admin_env != nullptr && *admin_env != '\0' )
+        {
+            lookup.admin_password = admin_env;
+        }
         return lookup;
     }
 
@@ -94,13 +101,18 @@ namespace sgns::crdt
     {
         // T-7-03 redaction by omission: credential members are NEVER
         // referenced here - endpoint/bucket/prefix/path_style/tls plus the
-        // four backpressure knobs (D-08 watermark class) only.
+        // four backpressure knobs (D-08 watermark class) and the two
+        // durability knobs + admin endpoint (Phase 10) only. The admin
+        // password is never referenced (D-06).
         return "endpoint=" + endpoint + ", bucket=" + bucket + ", prefix=" + prefix
              + ", path_style=" + ( pathStyle ? "true" : "false" ) + ", tls=" + ( tls ? "true" : "false" )
              + ", drain_interval_ms=" + std::to_string( backpressure.drain_interval_ms )
              + ", backoff_cap_ms=" + std::to_string( backpressure.backoff_cap_ms )
              + ", warn_pending=" + std::to_string( backpressure.warn_pending )
-             + ", critical_pending=" + std::to_string( backpressure.critical_pending );
+             + ", critical_pending=" + std::to_string( backpressure.critical_pending )
+             + ", flush_min_interval_ms=" + std::to_string( durability.flush_min_interval_ms )
+             + ", flush_max_interval_ms=" + std::to_string( durability.flush_max_interval_ms )
+             + ", admin_endpoint=" + admin_endpoint;
     }
 
     GlobalDB::ColdStorageParseResult GlobalDB::ParseColdStorageConfig( const std::string &crdt_config_text )
@@ -117,6 +129,10 @@ namespace sgns::crdt
         constexpr uint32_t kDefaultBackoffCapMs     = 60000;
         constexpr uint32_t kDefaultWarnPending      = 10000;
         constexpr uint32_t kDefaultCriticalPending  = 100000;
+        // Built-in flush-cadence defaults (D-11, Phase 10 - the manager's
+        // kDefaultFlush* constants mirrored at the parse layer).
+        constexpr uint32_t kDefaultFlushMinIntervalMs = 30000;
+        constexpr uint32_t kDefaultFlushMaxIntervalMs = 300000;
 
         ColdStorageOptions options; // disabled default (enabled == false)
 
@@ -151,9 +167,11 @@ namespace sgns::crdt
         std::string file_access_key;
         std::string file_secret_key;
         std::string file_prefix;
+        std::string file_admin_endpoint;
         bool        path_style = true;
         bool        tls        = false;
         ColdStorageOptions::BackpressureOptions backpressure;
+        ColdStorageOptions::DurabilityOptions   durability;
         for ( auto member = section.MemberBegin(); member != section.MemberEnd(); ++member )
         {
             const std::string key = member->name.GetString();
@@ -205,8 +223,48 @@ namespace sgns::crdt
                 continue; // handled - never falls into the string/bool checks
             }
 
-            const bool is_string_key =
-                ( key == "endpoint" || key == "bucket" || key == "access_key" || key == "secret_key" || key == "prefix" );
+            // (d1b) D-11 (Phase 10): nested "durability" sub-object - the
+            // flush-cadence knobs. Present-but-not-object is loud; inside
+            // it a strict single-member loop accepts ONLY the two knobs
+            // (unknown key / wrong type loud, naming
+            // blockstore.durability.<key>).
+            if ( key == "durability" )
+            {
+                if ( !member->value.IsObject() )
+                {
+                    return outcome::failure(
+                        std::string( "crdt_config.json: 'blockstore.durability' must be an object" ) );
+                }
+                for ( auto sub = member->value.MemberBegin(); sub != member->value.MemberEnd(); ++sub )
+                {
+                    const std::string sub_key = sub->name.GetString();
+                    const bool is_uint_key =
+                        ( sub_key == "flush_min_interval_ms" || sub_key == "flush_max_interval_ms" );
+                    if ( !is_uint_key )
+                    {
+                        return outcome::failure(
+                            "crdt_config.json: unknown key 'blockstore.durability." + sub_key + "'" );
+                    }
+                    if ( !sub->value.IsUint() )
+                    {
+                        return outcome::failure( "crdt_config.json: 'blockstore.durability." + sub_key
+                                                 + "' must be a uint" );
+                    }
+                    if ( sub_key == "flush_min_interval_ms" )
+                    {
+                        durability.flush_min_interval_ms = sub->value.GetUint();
+                    }
+                    else
+                    {
+                        durability.flush_max_interval_ms = sub->value.GetUint();
+                    }
+                }
+                continue; // handled - never falls into the string/bool checks
+            }
+
+            const bool is_string_key = ( key == "endpoint" || key == "bucket" || key == "access_key"
+                                         || key == "secret_key" || key == "prefix"
+                                         || key == "admin_endpoint" );
             const bool is_bool_key = ( key == "path_style" || key == "tls" );
             if ( !is_string_key && !is_bool_key )
             {
@@ -239,6 +297,10 @@ namespace sgns::crdt
             else if ( key == "prefix" )
             {
                 file_prefix = member->value.GetString();
+            }
+            else if ( key == "admin_endpoint" )
+            {
+                file_admin_endpoint = member->value.GetString();
             }
             else if ( key == "path_style" )
             {
@@ -279,6 +341,28 @@ namespace sgns::crdt
                                      + std::to_string( backpressure.critical_pending ) + ")" );
         }
         options.backpressure = backpressure;
+
+        // (d3) D-11 durability normalization: 0 on either knob means its
+        // built-in default; then the min<=max rule, validated
+        // POST-normalization so mixed 0/explicit forms are judged on their
+        // EFFECTIVE values (mirrors the warn<critical discipline).
+        if ( durability.flush_min_interval_ms == 0 )
+        {
+            durability.flush_min_interval_ms = kDefaultFlushMinIntervalMs;
+        }
+        if ( durability.flush_max_interval_ms == 0 )
+        {
+            durability.flush_max_interval_ms = kDefaultFlushMaxIntervalMs;
+        }
+        if ( durability.flush_min_interval_ms > durability.flush_max_interval_ms )
+        {
+            return outcome::failure( "crdt_config.json: 'blockstore.durability' requires flush_min_interval_ms <= "
+                                     "flush_max_interval_ms (flush_min_interval_ms="
+                                     + std::to_string( durability.flush_min_interval_ms )
+                                     + ", flush_max_interval_ms="
+                                     + std::to_string( durability.flush_max_interval_ms ) + ")" );
+        }
+        options.durability = durability;
 
         // (e) D-08 file-intent gate: all four required fields blank in the
         // FILE => disabled REGARDLESS of env (env overrides values, never
@@ -326,14 +410,19 @@ namespace sgns::crdt
 
         // (g) enabled: populate with post-env values; optional defaults
         // (prefix empty, path_style true, tls false) unless explicitly set.
-        options.enabled   = true;
-        options.endpoint  = file_endpoint;
-        options.bucket    = file_bucket;
-        options.accessKey = resolved_access_key;
-        options.secretKey = resolved_secret_key;
-        options.prefix    = file_prefix;
-        options.pathStyle = path_style;
-        options.tls       = tls;
+        // The admin endpoint (file-only topology) and the admin password
+        // (env-only credential, D-06) ride along - neither can activate
+        // cold storage on its own.
+        options.enabled        = true;
+        options.endpoint      = file_endpoint;
+        options.bucket        = file_bucket;
+        options.accessKey     = resolved_access_key;
+        options.secretKey     = resolved_secret_key;
+        options.prefix        = file_prefix;
+        options.pathStyle     = path_style;
+        options.tls           = tls;
+        options.admin_endpoint = file_admin_endpoint;
+        options.adminPassword  = env_lookup.admin_password;
         return options;
     }
 
@@ -804,6 +893,20 @@ namespace sgns::crdt
             return ColdStorageStatus{};
         }
         return GetColdStorageManagerStatus( cold_manager_ );
+    }
+
+    ColdUploadState GlobalDB::GetColdUploadState( const CID &cid ) const
+    {
+        // The same active-accessor shape: NoRecord once shutdown has
+        // started; otherwise the null-safe ungated bridge over the
+        // manager's D-09 pass-through (never a library type here).
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return ColdUploadState::NoRecord;
+        }
+        // Explicit qualification: this member hides the free bridge name.
+        return sgns::crdt::GetColdUploadState( cold_manager_, cid );
     }
 
     void GlobalDB::StartColdStorageManager()

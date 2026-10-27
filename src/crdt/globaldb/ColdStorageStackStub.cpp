@@ -54,6 +54,16 @@ namespace sgns::crdt
         return ColdStorageStatus{};
     }
 
+    // D-09 (v1.1 Phase 10): the ODR twin of the gated bridge - OFF builds
+    // have no journal at all, so every query reads NoRecord.
+    ColdUploadState GetColdUploadState( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid )
+    {
+        (void)manager;
+        (void)cid;
+        return ColdUploadState::NoRecord;
+    }
+
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )
     {
         (void)manager; // no manager exists on OFF builds; null-safe no-op

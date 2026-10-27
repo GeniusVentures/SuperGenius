@@ -71,11 +71,27 @@ namespace sgns::crdt
         Stop(); // idempotent; joins before members die (Pitfall-5 ordering)
     }
 
+    void ColdStorageManager::SetAdminPasswordPresent( bool present )
+    {
+        admin_password_present_ = present;
+    }
+
     void ColdStorageManager::Start()
     {
         if ( thread_.joinable() )
         {
             return; // already running - idempotent
+        }
+        // Missing-admin-password posture (planner ruling 1, 10-RESEARCH
+        // §5.3): default-on flush + ONE loud startup WARN naming the env
+        // var - never silent (records would sit at UploadedAccepted with
+        // flush failing to authenticate), never a hard startup fail (that
+        // would couple flush activation to operator bookkeeping).
+        if ( admin_client_ != nullptr && !admin_password_present_ )
+        {
+            logger_->warn(
+                "cold-storage durability: SGNS_BLOCKSTORE_S3_ADMIN_PASSWORD not set - flush cannot "
+                "authenticate; records will stay UploadedAccepted until it is configured" );
         }
         stop_flag_.store( false );
         drain_requested_.store( false );
@@ -129,6 +145,70 @@ namespace sgns::crdt
             idle_cv_.wait_for( lock, kShutdownGraceWindow, [this] { return idle_; } );
             lock.unlock();
             thread_.join();
+        }
+
+        // D-04 (v1.1 Phase 10): ONE bounded final flush+observe+mark
+        // attempt AFTER the join (the last point where the stores
+        // provably live; the Phase-9 re-warm worker stops LATER in
+        // ShutdownNow, so the snapshot still takes cold_store_mutex_).
+        // final_flush_done_ makes the attempt exactly-once across the
+        // idempotent Stop()/destructor pair. ANY failure leaves records
+        // Accepted - they resume via the first-poll/first-flush-cycle
+        // paths at next startup (the single resume-code-path property).
+        if ( !final_flush_done_.exchange( true ) && admin_client_ != nullptr )
+        {
+            std::vector<sgns::blockstore::Cid> snapshot;
+            {
+                std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                auto accepted = local_block_store_->GetUploadsInState(
+                    sgns::blockstore::UploadState::UploadedAccepted );
+                if ( accepted.has_value() )
+                {
+                    snapshot = std::move( accepted.value() );
+                }
+            }
+            if ( !snapshot.empty() )
+            {
+                auto flushed = admin_client_->Flush( kFinalFlushBudgetMs );
+                if ( !flushed.has_value() )
+                {
+                    logger_->warn( "cold-storage final flush at shutdown failed ({} record(s) left "
+                                   "UploadedAccepted for next startup)",
+                                   snapshot.size() );
+                }
+                else
+                {
+                    auto stats = admin_client_->GetUploadStats();
+                    if ( !stats.has_value() || stats.value().pendingObjects != 0 )
+                    {
+                        logger_->info( "cold-storage final flush observed non-zero pending objects - "
+                                       "{} record(s) left UploadedAccepted for next startup",
+                                       snapshot.size() );
+                    }
+                    else
+                    {
+                        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                        auto transition = local_block_store_->MarkUploadedDurableMany(
+                            gsl::span<const sgns::blockstore::Cid>( snapshot.data(), snapshot.size() ) );
+                        if ( transition.has_value() )
+                        {
+                            durable_count_.fetch_add( snapshot.size(), std::memory_order_relaxed );
+                            accepted_count_.store( 0, std::memory_order_relaxed );
+                            last_flush_valid_.store( true, std::memory_order_relaxed );
+                            last_flush_ok_.store( true, std::memory_order_relaxed );
+                            last_flush_pending_objects_.store( 0, std::memory_order_relaxed );
+                            logger_->info( "cold-storage final flush advanced {} record(s) to UploadedDurable",
+                                           snapshot.size() );
+                        }
+                        else
+                        {
+                            logger_->warn( "cold-storage final flush mark failed ({} record(s) left "
+                                           "UploadedAccepted for next startup)",
+                                           snapshot.size() );
+                        }
+                    }
+                }
+            }
         }
     }
 

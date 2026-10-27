@@ -37,6 +37,7 @@ namespace sgns::crdt
     // ColdStorageStack.hpp (always compiled, zero library types).
     enum class ColdStorageWatermark;
     struct ColdStorageStatus;
+    enum class ColdUploadState;
 
     class GlobalDB
     {
@@ -74,6 +75,14 @@ namespace sgns::crdt
             std::string prefix;
             bool        pathStyle{ true };
             bool        tls{ false };
+            /// Optional s3d admin listener URL - connection topology, NOT a
+            /// secret and NOT a cadence knob; empty = documented s3d default
+            /// "http://127.0.0.1:8001" (D-06, v1.1 Phase 10).
+            std::string admin_endpoint;
+            /// Admin listener credential - never logged, never at rest in
+            /// config (env-only resolution via SGNS_BLOCKSTORE_S3_ADMIN_PASSWORD;
+            /// T-10-01).
+            std::string adminPassword;
 
             /**
              * @brief      Backpressure knobs for the cold-storage drainer
@@ -96,6 +105,29 @@ namespace sgns::crdt
                 uint32_t backoff_cap_ms{ 0 };     ///< exponential-backoff cap; 0 = default 60000
             };
             BackpressureOptions backpressure;
+
+            /**
+             * @brief      Flush-cadence knobs for the flush-gated
+             *             durability advancement (D-11/D-06, v1.1
+             *             Phase 10).
+             *
+             * Exactly two knobs live under the nested
+             * "blockstore.durability" sub-object; 0 means the built-in
+             * default (normalized post-parse): flush_min_interval_ms
+             * 30000, flush_max_interval_ms 300000. flush_min_interval_ms
+             * must stay <= flush_max_interval_ms (validated
+             * post-normalization on both EFFECTIVE values). A
+             * durability-only section never activates cold storage
+             * (Phase-7 (e) inheritance); the knobs are file-only (no env
+             * surface), and no knob can lower the eviction durability
+             * gate (compile-time UploadedDurable, D-10).
+             */
+            struct DurabilityOptions
+            {
+                uint32_t flush_min_interval_ms{ 0 }; ///< flush floor; 0 = default 30000
+                uint32_t flush_max_interval_ms{ 0 }; ///< flush backstop; 0 = default 300000
+            };
+            DurabilityOptions durability;
 
             /**
              * @brief      Sanitized one-line summary: endpoint, bucket,
@@ -122,6 +154,11 @@ namespace sgns::crdt
         {
             std::string access_key; ///< override for blockstore access_key; empty = none
             std::string secret_key; ///< override for blockstore secret_key; empty = none
+            /// Admin listener password (SGNS_BLOCKSTORE_S3_ADMIN_PASSWORD;
+            /// unset or empty = none - flush then cannot authenticate and
+            /// alarms through the D-07 discipline). Env-only: no config key
+            /// ever carries it (D-06).
+            std::string admin_password;
         };
 
         /**
@@ -386,6 +423,16 @@ namespace sgns::crdt
          * @return     live status, or defaults when disabled/shut down
          */
         ColdStorageStatus GetColdStorageStatus() const;
+
+        /**
+         * @brief      Per-CID cold-upload state through the ungated
+         *             bridge (D-09, v1.1 Phase 10): NoRecord / Pending /
+         *             Accepted / Durable. Rides the active-accessor
+         *             pattern: NoRecord once shutdown has started.
+         * @param[in]  cid the block whose journal record to read
+         * @return     the mapped state (never a library type)
+         */
+        ColdUploadState GetColdUploadState( const CID &cid ) const;
 
         /**
          * @brief Starts the GlobalDB instance.

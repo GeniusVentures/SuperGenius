@@ -19,6 +19,7 @@
 #include <filesystem>
 
 #include <sgns-blockstore/LocalBlockStore.hpp>
+#include <sgns-blockstore/S3AdminClient.hpp>
 #include <sgns-blockstore/S3BlockStore.hpp>
 #include <sgns-blockstore/S3Client.hpp>
 
@@ -42,6 +43,14 @@ namespace sgns::crdt
         constexpr uint32_t kDefaultBackoffCapMs    = 60000;
         constexpr uint32_t kDefaultWarnPending     = 10000;
         constexpr uint32_t kDefaultCriticalPending = 100000;
+
+        /// Stats read budget for the stack-constructed admin client
+        /// (compile-time; the flush budgets live on the manager as
+        /// kCadenceFlushReadTimeoutMs / kFinalFlushBudgetMs).
+        constexpr uint32_t kAdminStatsReadTimeoutMs = 5000;
+
+        /// Documented s3d default admin listener (D-06 - loopback).
+        constexpr const char *kDefaultAdminEndpoint = "http://127.0.0.1:8001";
     } // namespace
 
     ColdStorageStackResult OpenColdStorageStack( const GlobalDB::ColdStorageOptions &options,
@@ -150,8 +159,60 @@ namespace sgns::crdt
                                          + ", critical_pending=" + std::to_string( backpressure.critical_pending )
                                          + ")" );
             }
+
+            // Durability normalization defense (Phase 10, the backpressure
+            // defense shape): 0-means-default to the manager's public
+            // constants, then the min<=max rule loud on EFFECTIVE values.
+            ColdStorageManager::DurabilityOptions durability;
+            durability.flush_min_interval_ms = options.durability.flush_min_interval_ms;
+            durability.flush_max_interval_ms = options.durability.flush_max_interval_ms;
+            if ( durability.flush_min_interval_ms == 0 )
+            {
+                durability.flush_min_interval_ms =
+                    static_cast<uint32_t>( ColdStorageManager::kDefaultFlushMinIntervalMs.count() );
+            }
+            if ( durability.flush_max_interval_ms == 0 )
+            {
+                durability.flush_max_interval_ms =
+                    static_cast<uint32_t>( ColdStorageManager::kDefaultFlushMaxIntervalMs.count() );
+            }
+            if ( durability.flush_min_interval_ms > durability.flush_max_interval_ms )
+            {
+                return outcome::failure( "cold storage: durability requires flush_min_interval_ms <= "
+                                         "flush_max_interval_ms (flush_min_interval_ms="
+                                         + std::to_string( durability.flush_min_interval_ms )
+                                         + ", flush_max_interval_ms="
+                                         + std::to_string( durability.flush_max_interval_ms ) + ")" );
+            }
+
+            // s3d admin facade (D-05/D-06): constructed beside the S3 client
+            // INSIDE the same try/catch - eager validation, zero network
+            // I/O; a construction failure is an outcome failure, never a
+            // throw escape. Empty endpoint = the documented s3d default
+            // (loopback listener). The password is env-only and never
+            // logged (redaction by omission).
+            sgns::blockstore::S3AdminClientConfig admin_config;
+            admin_config.endpoint              = options.admin_endpoint.empty()
+                                                    ? kDefaultAdminEndpoint
+                                                    : options.admin_endpoint;
+            admin_config.adminPassword         = options.adminPassword;
+            admin_config.tlsVerify             = true;
+            admin_config.stats_read_timeout_ms = kAdminStatsReadTimeoutMs;
+            auto opened_admin                  = sgns::blockstore::OpenS3dAdminClient( admin_config );
+            if ( !opened_admin.has_value() )
+            {
+                return outcome::failure( "cold storage: admin client construction failed ("
+                                         + opened_admin.error().message + ")" );
+            }
+            auto admin_client = opened_admin.value();
+
             auto manager = std::make_shared<ColdStorageManager>(
-                local_store, remote_store, cold_store_mutex, remote_store_mutex, backpressure );
+                local_store, remote_store, cold_store_mutex, remote_store_mutex, backpressure, durability,
+                admin_client );
+            // Missing-password posture (planner ruling 1 / 10-RESEARCH
+            // §5.3): default-on flush - the manager emits ONE startup WARN
+            // naming the env var; never a hard fail, never silent.
+            manager->SetAdminPasswordPresent( !options.adminPassword.empty() );
 
             // READ-01 (v1.1 Phase 9): the cold-read chain service over the
             // SAME store handles and mutexes, rehydrating through the
@@ -196,6 +257,33 @@ namespace sgns::crdt
     ColdStorageStatus GetColdStorageManagerStatus( const std::shared_ptr<ColdStorageManager> &manager )
     {
         return manager ? manager->GetStatus() : ColdStorageStatus{};
+    }
+
+    ColdUploadState GetColdUploadState( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid )
+    {
+        if ( !manager )
+        {
+            return ColdUploadState::NoRecord;
+        }
+        // Gated TU: the library result type is legal HERE and maps to the
+        // ungated enum before it crosses back (Pitfall 5). sgns::CID and
+        // the library Cid alias the same libp2p type - direct pass.
+        const auto state = manager->GetUploadState( cid );
+        if ( !state.has_value() )
+        {
+            return ColdUploadState::NoRecord;
+        }
+        switch ( state.value() )
+        {
+            case sgns::blockstore::UploadState::PendingUpload:
+                return ColdUploadState::Pending;
+            case sgns::blockstore::UploadState::UploadedAccepted:
+                return ColdUploadState::Accepted;
+            case sgns::blockstore::UploadState::UploadedDurable:
+                return ColdUploadState::Durable;
+        }
+        return ColdUploadState::NoRecord; // unreachable - defensive
     }
 
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )

@@ -146,6 +146,20 @@ namespace sgns::crdt
         void RequestDrain();
 
         /**
+         * @brief      Tell the manager whether the admin credential was
+         *             configured (planner ruling 1 / 10-RESEARCH §5.3).
+         *
+         * The manager NEVER sees the password value - only its presence,
+         * so Start() can emit the one-time missing-credential WARN. The
+         * stack calls this right after construction; default is present
+         * (no WARN) for direct constructions that carry no admin client
+         * posture.
+         * @param[in]  present true when SGNS_BLOCKSTORE_S3_ADMIN_PASSWORD
+         *             resolved to a non-empty value
+         */
+        void SetAdminPasswordPresent( bool present );
+
+        /**
          * @brief      D-08 status read from atomics - no journal
          *             scan, no lock. Since Phase 10 the triple carries
          *             the flush-gated durability evidence (accepted /
@@ -266,6 +280,12 @@ namespace sgns::crdt
         std::chrono::steady_clock::time_point  last_advancement_{};
         uint32_t                               flush_failure_streak_{ 0 };
         std::chrono::milliseconds              flush_delay_{ 0 };
+        /// Whether the admin credential was configured (presence only -
+        /// NEVER the value; drives the one-time Start() WARN).
+        bool                                   admin_password_present_{ true };
+        /// D-04: Stop() is idempotent and the destructor calls it too -
+        /// the guard makes the final-flush attempt exactly-once.
+        std::atomic<bool>                      final_flush_done_{ false };
 
         // Status atomics (D-08): read lock-free by GetStatus.
         std::atomic<size_t>              pending_count_{ 0 };

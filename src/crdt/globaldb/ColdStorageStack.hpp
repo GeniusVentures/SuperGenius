@@ -42,6 +42,21 @@ namespace sgns::crdt
     };
 
     /**
+     * @brief      Per-CID cold-upload state, ungated mirror of the
+     *             library's journal triple + the no-record case (D-09,
+     *             v1.1 Phase 10 - the ColdStorageWatermark ungated-enum
+     *             precedent: no sgns-blockstore type crosses this
+     *             always-compiled header).
+     */
+    enum class ColdUploadState
+    {
+        NoRecord, ///< no journal record for the CID
+        Pending,  ///< local commit, remote upload not yet acknowledged
+        Accepted, ///< object store acknowledged receipt (durability unproven)
+        Durable,  ///< flush-gated evidence observed (pendingObjects == 0)
+    };
+
+    /**
      * @brief      Operator-visible cold-storage status triple (D-08
      *             minimum): journal depth, watermark state, drainer health.
      *
@@ -152,6 +167,17 @@ namespace sgns::crdt
      * @return     live status, or the default triple when null
      */
     ColdStorageStatus GetColdStorageManagerStatus( const std::shared_ptr<ColdStorageManager> &manager );
+
+    /**
+     * @brief      Null-safe per-CID upload-state bridge (D-09, v1.1
+     *             Phase 10): maps the gated manager's library-typed
+     *             pass-through onto the ungated ColdUploadState enum.
+     * @param[in]  manager the bundle's manager (may be null)
+     * @param[in]  cid the block whose journal state to read
+     * @return     the mapped state, or NoRecord when null / no record
+     */
+    ColdUploadState GetColdUploadState( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid );
 
     /**
      * @brief      Enqueue an ops-triggered drain (flag + notify only - the

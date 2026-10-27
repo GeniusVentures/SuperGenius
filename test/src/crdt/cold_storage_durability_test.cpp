@@ -422,6 +422,88 @@ TEST_F( ColdStorageDurabilityTest, backstop_flushes_under_sustained_activity )
 }
 
 /**
+ * @given journaled blocks drained to UploadedAccepted with the flush
+ *        floor set far beyond the test window (the cadence never fires)
+ * @when  Stop() runs
+ * @then  the D-04 bounded final flush makes exactly one attempt after
+ *        the join (flush_count 0 -> 1), observes the zero-pending
+ *        evidence, and every record is UploadedDurable when Stop
+ *        returns (D-04/SC3 shutdown leg).
+ */
+TEST_F( ColdStorageDurabilityTest, shutdown_final_flush_advances )
+{
+    constexpr size_t kBlocks = 3;
+    const auto       cids    = JournalBlocks( kBlocks );
+    auto             manager = MakeManager( FastOptions(), FastDurability( 10000, 20000 ) );
+    manager->Start();
+
+    // Drain reaches Accepted, but the cadence floor holds: no flush.
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().accepted_upload_count == kBlocks; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_EQ( fake_admin_->flush_count(), 0u );
+
+    manager->Stop();
+
+    // The final flush is the ONLY attempt, and it advanced everything.
+    EXPECT_EQ( fake_admin_->flush_count(), 1u );
+    EXPECT_EQ( manager->GetStatus().durable_upload_count, kBlocks );
+    for ( const auto &cid : cids )
+    {
+        auto state = shared_local_->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedDurable );
+    }
+}
+
+/**
+ * @given journaled blocks drained to Accepted, the admin scripted
+ *        FlushFails, and the flush floor beyond the test window
+ * @when  Stop() runs, the fault then clears and a FRESH manager opens
+ *        over the same store with a fast cadence
+ * @then  the failed final flush leaves every record UploadedAccepted
+ *        (the resume property - leftovers are next startup's work), and
+ *        the fresh manager's first flush cycle advances them (D-04).
+ */
+TEST_F( ColdStorageDurabilityTest, shutdown_final_flush_failure_leaves_accepted )
+{
+    constexpr size_t kBlocks = 3;
+    const auto       cids    = JournalBlocks( kBlocks );
+    fake_admin_->SetAdminFault( S3AdminFaultKind::FlushFails );
+    auto manager = MakeManager( FastOptions(), FastDurability( 10000, 20000 ) );
+    manager->Start();
+
+    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().accepted_upload_count == kBlocks; },
+                            std::chrono::milliseconds( 10000 ) ) );
+    manager->Stop();
+
+    // Failed final flush: records stay Accepted, nothing advanced.
+    EXPECT_EQ( manager->GetStatus().durable_upload_count, 0u );
+    for ( const auto &cid : cids )
+    {
+        auto state = shared_local_->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedAccepted );
+    }
+
+    // Resume: a fresh manager over the SAME store advances them on its
+    // first evidence-backed cycle once the fault clears.
+    fake_admin_->SetAdminFault( S3AdminFaultKind::None );
+    auto resumed = MakeManager( FastOptions(), FastDurability() );
+    resumed->Start();
+    ASSERT_TRUE( PollUntil( [&] {
+        auto state = resumed->GetUploadState( cids[0] );
+        return state.has_value() && state.value() == UploadState::UploadedDurable;
+    },
+                            std::chrono::milliseconds( 10000 ) ) );
+    for ( const auto &cid : cids )
+    {
+        auto state = shared_local_->GetUploadState( cid );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedDurable );
+    }
+}
+
+/**
  * @given the compile-time eviction durability gate and a journaled block
  * @when  the gate constant and the D-09 per-CID pass-through are read
  * @then  the gate is exactly UploadedDurable (D-10 - no config knob can
