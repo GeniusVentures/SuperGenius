@@ -51,7 +51,23 @@ namespace sgns::crdt
 
         /// Documented s3d default admin listener (D-06 - loopback).
         constexpr const char *kDefaultAdminEndpoint = "http://127.0.0.1:8001";
+
+        /// TEST-ONLY client overrides (v1.1 Phase 12 plan 12-01 Task 3 /
+        /// D-13): process-global, set by
+        /// SetColdStorageStackClientsForTesting; null in production.
+        std::mutex                                          g_test_clients_mutex;
+        std::shared_ptr<sgns::blockstore::S3Client>         g_test_s3_client;
+        std::shared_ptr<sgns::blockstore::S3AdminClient>    g_test_admin_client;
     } // namespace
+
+    void SetColdStorageStackClientsForTesting(
+        std::shared_ptr<sgns::blockstore::S3Client>     s3_client,
+        std::shared_ptr<sgns::blockstore::S3AdminClient> admin_client )
+    {
+        std::lock_guard<std::mutex> lock( g_test_clients_mutex );
+        g_test_s3_client  = std::move( s3_client );
+        g_test_admin_client = std::move( admin_client );
+    }
 
     ColdStorageStackResult OpenColdStorageStack( const GlobalDB::ColdStorageOptions &options,
                                                  const std::string                   &database_path_absolute,
@@ -92,23 +108,39 @@ namespace sgns::crdt
 
             // Production S3 client: construction is eagerly validating with
             // zero network I/O (Phase-6 D-06) - a non-listening endpoint
-            // cannot fail here.
-            sgns::blockstore::S3ClientConfig client_config;
-            client_config.endpoint  = options.endpoint;
-            client_config.bucket    = options.bucket;
-            client_config.accessKey = options.accessKey;
-            client_config.secretKey = options.secretKey;
-            client_config.pathStyle = options.pathStyle;
-            client_config.useTls    = options.tls;
-            auto opened_client      = sgns::blockstore::OpenMinioS3Client( client_config );
-            if ( !opened_client.has_value() )
+            // cannot fail here. The TEST-ONLY override (12-01 Task 3)
+            // replaces the client wholesale when installed - hermetic
+            // fakes then drive the FULL stack with zero network.
+            std::shared_ptr<sgns::blockstore::S3Client> s3_client_override;
             {
-                return outcome::failure( "cold storage: S3 client construction failed ("
-                                         + opened_client.error().message + ")" );
+                std::lock_guard<std::mutex> lock( g_test_clients_mutex );
+                s3_client_override = g_test_s3_client;
+            }
+            std::shared_ptr<sgns::blockstore::S3Client> client;
+            if ( s3_client_override != nullptr )
+            {
+                client = std::move( s3_client_override );
+            }
+            else
+            {
+                sgns::blockstore::S3ClientConfig client_config;
+                client_config.endpoint  = options.endpoint;
+                client_config.bucket    = options.bucket;
+                client_config.accessKey = options.accessKey;
+                client_config.secretKey = options.secretKey;
+                client_config.pathStyle = options.pathStyle;
+                client_config.useTls    = options.tls;
+                auto opened_client      = sgns::blockstore::OpenMinioS3Client( client_config );
+                if ( !opened_client.has_value() )
+                {
+                    return outcome::failure( "cold storage: S3 client construction failed ("
+                                             + opened_client.error().message + ")" );
+                }
+                client = std::move( opened_client.value() );
             }
 
             auto opened_remote = sgns::blockstore::S3BlockStore::Open(
-                opened_client.value(), sgns::blockstore::S3BlockStoreOptions{ "v1/blocks" } );
+                client, sgns::blockstore::S3BlockStoreOptions{ "v1/blocks" } );
             if ( !opened_remote.has_value() )
             {
                 return outcome::failure( "cold storage: S3BlockStore open failed ("
@@ -190,21 +222,35 @@ namespace sgns::crdt
             // I/O; a construction failure is an outcome failure, never a
             // throw escape. Empty endpoint = the documented s3d default
             // (loopback listener). The password is env-only and never
-            // logged (redaction by omission).
-            sgns::blockstore::S3AdminClientConfig admin_config;
-            admin_config.endpoint              = options.admin_endpoint.empty()
-                                                    ? kDefaultAdminEndpoint
-                                                    : options.admin_endpoint;
-            admin_config.adminPassword         = options.adminPassword;
-            admin_config.tlsVerify             = true;
-            admin_config.stats_read_timeout_ms = kAdminStatsReadTimeoutMs;
-            auto opened_admin                  = sgns::blockstore::OpenS3dAdminClient( admin_config );
-            if ( !opened_admin.has_value() )
+            // logged (redaction by omission). The TEST-ONLY override
+            // (12-01 Task 3) replaces the facade wholesale when installed.
+            std::shared_ptr<sgns::blockstore::S3AdminClient> admin_override;
             {
-                return outcome::failure( "cold storage: admin client construction failed ("
-                                         + opened_admin.error().message + ")" );
+                std::lock_guard<std::mutex> lock( g_test_clients_mutex );
+                admin_override = g_test_admin_client;
             }
-            auto admin_client = opened_admin.value();
+            std::shared_ptr<sgns::blockstore::S3AdminClient> admin_client;
+            if ( admin_override != nullptr )
+            {
+                admin_client = std::move( admin_override );
+            }
+            else
+            {
+                sgns::blockstore::S3AdminClientConfig admin_config;
+                admin_config.endpoint              = options.admin_endpoint.empty()
+                                                        ? kDefaultAdminEndpoint
+                                                        : options.admin_endpoint;
+                admin_config.adminPassword         = options.adminPassword;
+                admin_config.tlsVerify             = true;
+                admin_config.stats_read_timeout_ms = kAdminStatsReadTimeoutMs;
+                auto opened_admin                  = sgns::blockstore::OpenS3dAdminClient( admin_config );
+                if ( !opened_admin.has_value() )
+                {
+                    return outcome::failure( "cold storage: admin client construction failed ("
+                                             + opened_admin.error().message + ")" );
+                }
+                admin_client = opened_admin.value();
+            }
 
             // GC-01 (v1.1 Phase 11): retention posture conversion - the
             // parse layer already normalized the cadence knobs (and the

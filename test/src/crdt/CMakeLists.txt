@@ -246,3 +246,45 @@ target_include_directories(cold_storage_fault_race_test PRIVATE
 set_tests_properties(cold_storage_fault_race_test PROPERTIES LABELS "Tier1")
 endif()
 
+
+# Resurrection counter-tests (TEST-02 SC2, v1.1 Phase 12 plan 12-01):
+# pubsub re-delivery of a GC-evicted pre-delete delta must never
+# resurrect the value. Registered ONLY under SGNS_COLD_STORAGE. Links
+# the cold-storage set PLUS the pubsub/graphsync surface the full-wire
+# two-GlobalDB case needs (the pubsub_graphsync_test recipe:
+# genius_node_test whole-archive + p2p_logger + AsyncIOManager include).
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_resurrection_test
+    cold_storage_resurrection_test.cpp
+    crdt_mirror_broadcaster.cpp
+)
+
+target_include_directories(cold_storage_resurrection_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_storage_resurrection_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_storage_resurrection_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_storage_resurrection_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_storage_resurrection_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_storage_resurrection_test PROPERTIES LABELS "Tier1")
+endif()

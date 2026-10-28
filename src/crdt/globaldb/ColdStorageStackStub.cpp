@@ -14,6 +14,16 @@
 
 namespace sgns::crdt
 {
+    // TEST-ONLY override setter (12-01 Task 3): no stack exists on OFF
+    // builds, so there is nothing to override - the state lives in the
+    // gated TU. PRODUCTION CODE MUST NEVER CALL this.
+    void SetColdStorageStackClientsForTesting(
+        std::shared_ptr<sgns::blockstore::S3Client>     s3_client,
+        std::shared_ptr<sgns::blockstore::S3AdminClient> admin_client )
+    {
+        (void)s3_client;
+        (void)admin_client;
+    }
     ColdStorageStackResult OpenColdStorageStack( const GlobalDB::ColdStorageOptions &options,
                                                  const std::string                   &database_path_absolute,
                                                  std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore> inner )

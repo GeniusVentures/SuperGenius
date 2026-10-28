@@ -28,6 +28,15 @@
 
 #include "globaldb.hpp"
 
+namespace sgns::blockstore
+{
+    // Forward declarations ONLY - no sgns-blockstore type crosses this
+    // always-compiled header as a VALUE (Pitfall 5); the overrides live
+    // as file-scope statics inside the gated TU.
+    class S3Client;
+    class S3AdminClient;
+}
+
 namespace sgns::crdt
 {
     /**
@@ -261,6 +270,28 @@ namespace sgns::crdt
      * @param[in]  service the bundle's cold-read service (may be null)
      */
     void StopColdReadService( const std::shared_ptr<ColdReadService> &service );
+
+    /**
+     * @brief      TEST-ONLY client override for the cold-storage stack
+     *             (v1.1 Phase 12 plan 12-01 Task 3 / D-13 - the
+     *             SetGcMidPassHookForTesting seam class): when non-null,
+     *             OpenColdStorageStack builds the S3 data path over the
+     *             supplied client instead of OpenMinioS3Client and the
+     *             admin facade over the supplied admin client instead of
+     *             OpenS3dAdminClient, so hermetic tests
+     *             (InMemoryS3Client / InMemoryS3AdminClient fakes) can
+     *             run the FULL GlobalDB stack with zero network. The
+     *             override is process-global and test-binary-only.
+     *             PRODUCTION CODE MUST NEVER CALL
+     *             SetColdStorageStackClientsForTesting.
+     * @param[in]  s3_client the data-path client override (nullptr =
+     *             the production MinIO client)
+     * @param[in]  admin_client the admin-facade override (nullptr = the
+     *             production s3d admin client)
+     */
+    void SetColdStorageStackClientsForTesting(
+        std::shared_ptr<sgns::blockstore::S3Client>     s3_client,
+        std::shared_ptr<sgns::blockstore::S3AdminClient> admin_client );
 
 } // namespace sgns::crdt
 
