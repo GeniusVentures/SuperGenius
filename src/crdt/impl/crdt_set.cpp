@@ -415,8 +415,19 @@ namespace sgns::crdt
 
         if ( queryResult.value().empty() )
         {
-            CRDTSet()->debug( "InElemsNotTombstoned key '{}' found no elem entries, returning true", aKey );
-            return true;
+            // SC2 resurrection fix (TEST-02, v1.1 Phase 12 plan 12-01
+            // Task 3): presence REQUIRES an elems row (the go-ds-crdt
+            // semantics). The retention GC's hot cleanup deletes an
+            // evicted delta's OWN elems rows; when the key's last elem
+            // row belongs to that evicted history, an empty enumeration
+            // must read NOT-IN-SET - returning true here resurrected
+            // CRDT-deleted keys (the protected /k/ value row made the
+            // query list the old value while the surviving tombstone
+            // row was never consulted). The tombstone rows (/t/) are
+            // never purged, so a live key always keeps at least one
+            // elem row and is unaffected.
+            CRDTSet()->debug( "InElemsNotTombstoned key '{}' found no elem entries, returning false", aKey );
+            return false;
         }
 
         CRDTSet()->debug( "InElemsNotTombstoned key '{}' found {} elem entries",
