@@ -42,6 +42,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -89,6 +90,7 @@ namespace
     // IPFS resolves only inside namespace sgns - alias it for this TU
     // (the decorator's set()/get() surface is IpfsDatastore-typed).
     namespace ipfs_outcome = sgns::IPFS::outcome;
+    using MerkleDagServiceImpl = sgns::ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl;
     using IpfsDatastore      = sgns::ipfs_lite::ipfs::IpfsDatastore;
     using IpfsDatastoreError = sgns::ipfs_lite::ipfs::IpfsDatastoreError;
     using CID                = sgns::CID;
@@ -96,6 +98,7 @@ namespace
     using sgns::crdt::BlockStoreBackedIpfsDatastore;
     using sgns::crdt::Broadcaster;
     using sgns::crdt::ColdReadService;
+    using sgns::crdt::ColdServeDagService;
     using sgns::crdt::CrdtDatastore;
     using sgns::crdt::CrdtOptions;
     using sgns::crdt::GraphsyncDAGSyncer;
@@ -219,6 +222,15 @@ namespace
         std::error_code ec;
         std::filesystem::remove_all( dir, ec );
         return dir;
+    }
+
+    /// Unsigned env override with fallback (the jitter legs' repro
+    /// knobs SGNS_RACE_JITTER_SEED / SGNS_RACE_JITTER_ITERS).
+    uint64_t EnvOr( const char *name, uint64_t fallback )
+    {
+        const char *raw = std::getenv( name );
+        return raw == nullptr ? fallback
+                             : static_cast<uint64_t>( std::strtoull( raw, nullptr, 10 ) );
     }
 
     /**
@@ -752,6 +764,17 @@ namespace
                 CrdtOptions::DefaultOptions() );
             ASSERT_TRUE( crdt_ != nullptr );
             crdt_->Start();
+
+            // The re-warm executor is LIVE (the Phase-9 SC2 posture: the
+            // serve path never waits) - dormant until a responder miss
+            // enqueues work, so the non-responder legs stay unaffected.
+            cold_read_service_->Start();
+
+            // The serving wrapper over the REAL chain (the graphsync
+            // responder's serving path - StartSync's own composition).
+            dag_service_ = std::make_shared<MerkleDagServiceImpl>( decorator_ );
+            wrapper_     = std::make_shared<ColdServeDagService>( dag_service_,
+                                                             cold_read_service_.get() );
         }
 
         void TearDown() override
@@ -759,6 +782,10 @@ namespace
             if ( manager_ )
             {
                 manager_->Stop(); // joins drainer + GC threads first
+            }
+            if ( cold_read_service_ )
+            {
+                cold_read_service_->Stop(); // joins the re-warm worker
             }
             if ( crdt_ )
             {
@@ -853,6 +880,71 @@ namespace
             return std::vector<uint8_t>( content.data(), content.data() + content.size() );
         }
 
+        /// Publish a REAL delta (CIDv0/DAG_PB/sha256 - the 11-01 tracer
+        /// correction), snapshot its content oracle, detach the head
+        /// (unreachable => evictable), drop the LRU copy, and optionally
+        /// strip the hot bytes so serve paths must resolve through the
+        /// cold chain.
+        struct SeededBlock
+        {
+            CID                  cid_key;
+            std::vector<uint8_t> content;
+        };
+
+        SeededBlock SeedDetachedDelta( const std::string &key, const std::string &value,
+                                       bool strip_hot )
+        {
+            const CID head = PublishElement( key, value );
+            auto      node = dagsyncer_->GetNodeWithoutRequest( head );
+            EXPECT_TRUE( node.has_value() );
+            SeededBlock block;
+            block.cid_key = head;
+            if ( node.has_value() )
+            {
+                block.content = ContentBytes( node.value() );
+            }
+            EXPECT_TRUE( crdt_->RemoveHead( head, "topic" ).has_value() );
+            (void)dagsyncer_->DeleteCIDBlock( head ); // drop the LRU copy
+            if ( strip_hot )
+            {
+                EXPECT_TRUE( decorator_->remove( head ).has_value() ) << "hot-only delete";
+            }
+            return block;
+        }
+
+        /// Let an explicit tiny grace elapse without a fixed sleep (the
+        /// predicate flips true after 3 ms; sleeps live in PollUntil).
+        void GraceElapse()
+        {
+            const auto early = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3 );
+            ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= early; },
+                                    std::chrono::milliseconds( 1000 ) ) );
+        }
+
+        /// The BACK-07 object key for a DAG_PB fixture CID (S3BlockStore's
+        /// DeriveKey shape - the delta codec segment).
+        static std::string DagPbObjectKey( const CID &cid )
+        {
+            auto             cid_string = libp2p::multi::ContentIdentifierCodec::toString( cid );
+            static const char *kHex   = "0123456789abcdef";
+            const auto         digest = cid.content_address.getHash();
+            const uint8_t      first  = digest.empty() ? 0 : digest[0];
+            std::string        fanout{ kHex[first >> 4], kHex[first & 0x0F] };
+            return std::string( "v1/blocks" ) + "/dag-pb/" + fanout + "/" + cid_string.value();
+        }
+
+        /// The BACK-07 object key for a RAW fixture CID (the control-key
+        /// shape for key-scoped fault scripting).
+        static std::string DeriveTestKey( const Cid &cid )
+        {
+            auto             cid_string = libp2p::multi::ContentIdentifierCodec::toString( cid );
+            static const char *kHex   = "0123456789abcdef";
+            const auto         digest = cid.content_address.getHash();
+            const uint8_t      first  = digest.empty() ? 0 : digest[0];
+            std::string        fanout{ kHex[first >> 4], kHex[first & 0x0F] };
+            return std::string( "v1/blocks" ) + "/raw/" + fanout + "/" + cid_string.value();
+        }
+
         // Declaration order == reverse destruction order: manager_ dies
         // first (its threads join against still-live stores), then the
         // CRDT layer, then the DAG layer, then the stores.
@@ -875,6 +967,8 @@ namespace
         std::shared_ptr<NoopBroadcaster>        broadcaster_;
         std::shared_ptr<CrdtDatastore>          crdt_;
         std::shared_ptr<ColdStorageManager>     manager_;
+        std::shared_ptr<MerkleDagServiceImpl>   dag_service_;
+        std::shared_ptr<ColdServeDagService>    wrapper_;
     };
 } // namespace
 
@@ -974,7 +1068,6 @@ TEST_F( ColdStorageFaultRaceTest, EvictServe_HalfWindowS3Fetch_ResolvesCidVerifi
     // The serve thread: LRU miss + hot miss + local-cold miss (HALF1) =>
     // the S3 fetch, which the TimingS3Client hook holds in flight.
     // (decltype names the dagsyncer's own result envelope - the file-scope
-    // TU cannot name sgns::crdt's outcome alias directly.)
     std::optional<decltype( dagsyncer_->GetNodeWithoutRequest( head ) )> served;
     std::thread serve_thread( [&] { served = dagsyncer_->GetNodeWithoutRequest( head ); } );
 
@@ -1016,4 +1109,691 @@ TEST_F( ColdStorageFaultRaceTest, EvictServe_HalfWindowS3Fetch_ResolvesCidVerifi
     EXPECT_EQ( ContentBytes( second.value() ), oracle_bytes );
     EXPECT_EQ( counting_->get_calls(), gets_after_serve )
         << "the re-learned copy must serve the second read locally";
+}
+
+/**
+ * @given a detached Durable delta backdated past retention whose hot
+ *        bytes are still present, with the GC parked inside the D-16
+ *        between-halves window (HALF1 committed, HALF2 not started)
+ * @when  a reader resolves the CID mid-window, then again after HALF2
+ *        completes
+ * @then  the mid-window read hits the intact hot bytes (never a torn
+ *        subset), the post-HALF2 read falls to the cold chain and
+ *        resolves CID-verified from S3, and HasBlock never answers
+ *        true-with-no-bytes (the disposed term's copy is provably in
+ *        S3) - D-11 evict-x-serve crossing 2.
+ */
+TEST_F( ColdStorageFaultRaceTest, EvictServe_HotCleanupWindow_ReaderNeverTorn )
+{
+    const auto block = SeedDetachedDelta( "race/hot-cleanup-window", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+
+    WindowGate gc_window;
+    manager->SetGcBetweenHalvesHookForTesting( [&] { gc_window.Enter(); } );
+    std::thread gc_thread( [&] { (void)manager->GcPassOnce(); } );
+    const bool in_window = gc_window.WaitInside( std::chrono::milliseconds( 10000 ) );
+    EXPECT_TRUE( in_window ) << "GC never parked inside the between-halves window";
+
+    // Mid-window read: hot bytes are still present (HALF2 not started).
+    if ( in_window )
+    {
+        auto mid = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+        ASSERT_TRUE( mid.has_value() );
+        EXPECT_EQ( ContentBytes( mid.value() ), block.content );
+    }
+
+    gc_window.Release();
+    gc_thread.join();
+
+    // Post-HALF2 read: hot + LRU gone; the cold chain serves CID-verified
+    // from the S3 tier (never NotFound-shaped absence on a read).
+    const uint64_t gets_before = counting_->get_calls();
+    auto late = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( late.has_value() ) << "reader must fall to the cold chain after HALF2";
+    EXPECT_EQ( ContentBytes( late.value() ), block.content );
+    EXPECT_GT( counting_->get_calls(), gets_before );
+
+    // HasBlock honesty: never true-with-no-bytes (the marker term answers
+    // true with the S3 copy holding the bytes).
+    auto has = dagsyncer_->HasBlock( block.cid_key );
+    ASSERT_TRUE( has.has_value() && has.value() );
+}
+
+/**
+ * @given a fully-evicted delta re-attached through the responder's
+ *        re-warm executor (fresh Pending journal record + hot bytes +
+ *        surviving disposed marker)
+ * @when  the drainer's next Put is parked so the re-learned record stays
+ *        deterministically Pending, and a GC pass runs
+ * @then  the pass nominates NOTHING (kEvictionDurabilityGate ==
+ *        UploadedDurable, compile-time: a mid-drain re-learn is never
+ *        evicted), the marker coexists with the re-learned bytes, the
+ *        block never went missing, and after release the record
+ *        converges Durable - D-11 evict-x-serve crossing 3.
+ */
+TEST_F( ColdStorageFaultRaceTest, EvictServe_RewarmAttachVsMark_NoLostBlock )
+{
+    const auto block = SeedDetachedDelta( "race/rewarm-attach", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+    (void)manager->GcPassOnce(); // full eviction
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() && disposed.value() );
+    }
+
+    // The responder miss re-attaches the block: immediate don't-have,
+    // then the re-warm executor re-learns the bytes off the responder's
+    // path.
+    auto first = wrapper_->getNode( block.cid_key );
+    EXPECT_TRUE( first.has_error() ) << "responder cold miss answers don't-have immediately";
+    ASSERT_TRUE( PollUntil(
+        [&] { return dagsyncer_->GetNodeWithoutRequest( block.cid_key ).has_value(); },
+        std::chrono::milliseconds( 10000 ) ) )
+        << "the re-warm executor did not re-learn the block";
+    auto relearned = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( relearned.has_value() );
+    EXPECT_EQ( ContentBytes( relearned.value() ), block.content );
+
+    // Park the drainer's Put so the re-learned record stays Pending.
+    WindowGate put_hold;
+    timing_->SetOnOp( S3Op::Put, [&] { put_hold.Enter(); } );
+
+    // While the record is non-Durable (mid-drain), a GC pass must NOT
+    // nominate it - no config knob can lower the compile-time gate.
+    Backdate( cid, 60000 );
+    EXPECT_TRUE( manager->GcPassOnce().empty() )
+        << "a non-Durable re-learned record must never be an eviction candidate";
+
+    // The marker coexists with the re-learned bytes (Phase-11 proven) and
+    // the block never went missing.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() && disposed.value() );
+    }
+    auto still = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( still.has_value() );
+    EXPECT_EQ( ContentBytes( still.value() ), block.content );
+
+    // Release the drainer: the record converges (createOnly - no
+    // duplication).
+    put_hold.Release();
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( { cid }, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+}
+
+/**
+ * @given a detached delta whose drain cycle is parked at its FIRST
+ *        remote Put (the journal record sits deterministically Pending,
+ *        mid-advance) and is backdated past retention
+ * @when  a GC pass runs while the record is Pending, then again after
+ *        the advance completes to Durable
+ * @then  the Pending record is never evictable (the eligibility gate
+ *        reads EXACTLY kEvictionDurabilityGate == UploadedDurable), and
+ *        the same block becomes evictable once the evidence-backed
+ *        Durable mark lands - safe in BOTH directions - D-11
+ *        evict-x-drain crossing 1.
+ */
+TEST_F( ColdStorageFaultRaceTest, EvictDrain_EligibilityVsDurabilityAdvance_NeverEvictsNonDurable )
+{
+    const auto block = SeedDetachedDelta( "race/eligibility-vs-advance", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+
+    // Park the drain cycle's remote Put: the record sits Pending (the
+    // Accepted/Durable marks happen only after the Put phase).
+    WindowGate put_hold;
+    timing_->SetOnOp( S3Op::Put, [&] { put_hold.Enter(); } );
+
+    Backdate( cid, 60000 );
+    EXPECT_TRUE( manager->GcPassOnce().empty() )
+        << "a Pending CID mid-advance must never be an eviction candidate";
+    ASSERT_TRUE( manager->GetUploadState( cid ).has_value() );
+
+    // After the advance completes, the SAME block becomes evictable.
+    put_hold.Release();
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( { cid }, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+    (void)manager->GcPassOnce();
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() && disposed.value() );
+    }
+}
+
+/**
+ * @given a detached delta evicted to the between-halves window (HALF1
+ *        committed: journal record + cold bytes deleted atomically,
+ *        disposed marker written) while the drainer cycles at 100 ms
+ * @when  the drain snapshot runs inside the window, then a post-window
+ *        re-learn re-journals fresh
+ * @then  no drain work survives the HALF1 atomic batch (a snapshot can
+ *        never hold a bytes-evicted item), and the re-learned record
+ *        drains to Durable with no duplication - D-11 evict-x-drain
+ *        crossing 2.
+ */
+TEST_F( ColdStorageFaultRaceTest, EvictDrain_DrainSnapshotVsHalfOne_NoEvictedBytesInDrain )
+{
+    const auto block = SeedDetachedDelta( "race/drain-snapshot-vs-half1", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+
+    WindowGate gc_window;
+    manager->SetGcBetweenHalvesHookForTesting( [&] { gc_window.Enter(); } );
+    std::thread gc_thread( [&] { (void)manager->GcPassOnce(); } );
+    ASSERT_TRUE( gc_window.WaitInside( std::chrono::milliseconds( 10000 ) ) );
+
+    // HALF1 committed: the journal record is GONE atomically with the
+    // bytes - no drain work item may survive the batch.
+    EXPECT_EQ( manager->GetStatus().pending_upload_count, 0u )
+        << "no drain work may survive the HALF1 atomic batch";
+    EXPECT_FALSE( manager->GetUploadState( cid ).has_value() );
+
+    gc_window.Release();
+    gc_thread.join();
+
+    // A post-window re-learn re-journals FRESH: the drain converges on
+    // the createOnly remote (no duplication), and no drain item ever
+    // observes evicted bytes.
+    auto relearned = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( relearned.has_value() );
+    EXPECT_EQ( ContentBytes( relearned.value() ), block.content );
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( { cid }, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+    EXPECT_EQ( manager->GetStatus().pending_upload_count, 0u );
+}
+
+/**
+ * @given a fully-evicted CID whose only copy is the S3 fake, with 250 ms
+ *        per-op latency injected on BOTH remote ops (every op pays the
+ *        latency under remote_store_mutex_ - serialized per-op, never
+ *        parked; Pitfall 7)
+ * @when  the cold chain fetches the CID under that latency while the
+ *        drainer cycles, then the S3 tier is faulted Unavailable
+ * @then  the fetch completes CID-verified well inside the re-warm budget
+ *        (kRewarmBudget = 4 s), and the outage surfaces with the COLD
+ *        taxonomy - never a hang, never a peer attribution - D-11
+ *        serve-x-drain.
+ */
+TEST_F( ColdStorageFaultRaceTest, ServeDrain_RemoteLockLatency_ColdFetchWithinBudget )
+{
+    // TWO evicted blocks: A carries the latency leg, B (never read
+    // before its fault) carries the honest-decline leg - A's latency
+    // read re-learns A locally, so a fault on A could never fire.
+    const auto block_a = SeedDetachedDelta( "race/remote-lock-latency", "value", true );
+    const auto block_b = SeedDetachedDelta( "race/remote-lock-decline", "value", true );
+    const Cid  cid_a( block_a.cid_key );
+    const Cid  cid_b( block_b.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid_a, cid_b } );
+    Backdate( cid_a, 60000 );
+    Backdate( cid_b, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 2u );
+    GraceElapse();
+    (void)manager->GcPassOnce();
+
+    // Inject per-op S3 latency (latency, not outage - Pitfall 7).
+    timing_->SetLatencyMs( S3Op::Get, 250 );
+    timing_->SetLatencyMs( S3Op::Put, 250 );
+
+    const auto     fetch_start = std::chrono::steady_clock::now();
+    const uint64_t gets_before = counting_->get_calls();
+    auto resolved = dagsyncer_->GetNodeWithoutRequest( block_a.cid_key );
+    const int64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - fetch_start ).count();
+    ASSERT_TRUE( resolved.has_value() ) << "the cold fetch must complete under injected latency";
+    EXPECT_EQ( ContentBytes( resolved.value() ), block_a.content );
+    EXPECT_GT( counting_->get_calls(), gets_before );
+    EXPECT_LT( elapsed_ms, 4000 )
+        << "fetch must stay inside the re-warm budget (serialized, never deadlocked)";
+
+    // The honest-decline side (block B, never read before the fault): an
+    // S3 outage surfaces the COLD taxonomy - never a hang, never a peer
+    // attribution.
+    fake_->SetFaultForKey( DagPbObjectKey( block_b.cid_key ), S3Op::Get, S3FaultKind::Unavailable );
+    auto declined = dagsyncer_->GetNodeWithoutRequest( block_b.cid_key );
+    ASSERT_TRUE( declined.has_error() );
+    EXPECT_EQ( declined.error(), GraphsyncDAGSyncer::Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE )
+        << "storage faults classify cold - never PEER_BLACKLISTED";
+    fake_->ClearFaults();
+
+    // Recovery after the outage clears: the retry serves CID-verified.
+    auto recovered = dagsyncer_->GetNodeWithoutRequest( block_b.cid_key );
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_EQ( ContentBytes( recovered.value() ), block_b.content );
+    timing_->ClearTimings();
+}
+
+/**
+ * @given a due evicting mark on a detached Durable delta, with a serve
+ *        read in flight and a publish firing at the TOP of the mark's
+ *        processing (the pre-mark seam) making CURRENT heads differ from
+ *        the MARK'S OWN pass-1 snapshot (Pitfall 5: the comparison basis
+ *        is the mark's snapshot, never the current tick's)
+ * @when  the delete-time re-check runs
+ * @then  the mark CANCELS: bytes kept, no disposed marker, the journal
+ *        record intact, the concurrent serve resolved the original
+ *        bytes; with heads then stable the block returns to normal
+ *        evaluation and a later pass evicts - D-11 triple crossing 1.
+ */
+TEST_F( ColdStorageFaultRaceTest, Triple_GraceExpiryReachableAgain_CancelsKeepsBytes )
+{
+    const auto block = SeedDetachedDelta( "race/triple-reachable-again", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+
+    // The pre-mark seam fires BEFORE the re-check: the publish here
+    // mutates heads against the MARK'S pass-1 snapshot while a serve
+    // read runs concurrently.
+    manager->SetGcPreMarkProcessHookForTesting( [this] {
+        const CID rescue = PublishElement( "race/triple-rescue", "reach" );
+        (void)rescue;
+    } );
+
+    std::thread serve_thread( [&] {
+        auto served = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+        EXPECT_TRUE( served.has_value() );
+    } );
+
+    (void)manager->GcPassOnce();
+    serve_thread.join();
+    manager->SetGcPreMarkProcessHookForTesting( nullptr );
+
+    // CANCEL outcome: bytes kept, no marker, record intact.
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_FALSE( disposed.value() ) << "cancel keeps bytes - no disposed marker";
+    }
+    EXPECT_TRUE( manager->GetUploadState( cid ).has_value() ) << "journal record intact after cancel";
+    auto kept = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( kept.has_value() );
+    EXPECT_EQ( ContentBytes( kept.value() ), block.content );
+
+    // Normal evaluation resumes: with heads stable the block re-marks and
+    // a later pass evicts (under-eviction is bounded, never permanent).
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+    (void)manager->GcPassOnce();
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() && disposed.value() );
+    }
+    auto after = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( after.has_value() );
+    EXPECT_EQ( ContentBytes( after.value() ), block.content );
+}
+
+/**
+ * @given a GC thread parked between the D-16 halves (HALF1 atomic batch
+ *        committed) with the pubsub re-delivery probe and the drainer
+ *        tick both running inside the window
+ * @when  the same CID is re-delivered (the four-term HasBlock dedup
+ *        entry) and a drain snapshot runs
+ * @then  the disposed marker answers the probe TRUE with ZERO S3 Gets
+ *        (the message drops before any merge; Pitfall 3: point lookups
+ *        never block the delivery lane), nothing is pending, and the
+ *        post-window re-learn drains to Durable without duplication -
+ *        D-11 triple crossing 2.
+ */
+TEST_F( ColdStorageFaultRaceTest, Triple_DeleteBatchMidFlight_RedeliveryDedupDrainUnaffected )
+{
+    const auto block = SeedDetachedDelta( "race/triple-delete-midflight", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+
+    WindowGate gc_window;
+    manager->SetGcBetweenHalvesHookForTesting( [&] { gc_window.Enter(); } );
+    std::thread gc_thread( [&] { (void)manager->GcPassOnce(); } );
+    ASSERT_TRUE( gc_window.WaitInside( std::chrono::milliseconds( 10000 ) ) );
+
+    // Pubsub re-delivery mid-flight: the disposed marker (written
+    // atomically in HALF1) answers the dedup probe - the message drops
+    // BEFORE any merge and BEFORE any S3 traffic.
+    const uint64_t gets_before = counting_->get_calls();
+    auto has = dagsyncer_->HasBlock( block.cid_key );
+    ASSERT_TRUE( has.has_value() && has.value() )
+        << "the disposed marker answers the re-delivery dedup probe";
+    EXPECT_EQ( counting_->get_calls(), gets_before )
+        << "dedup drops the re-delivery with ZERO S3 Gets";
+
+    // The drainer tick inside the window: nothing pending.
+    EXPECT_EQ( manager->GetStatus().pending_upload_count, 0u );
+
+    gc_window.Release();
+    gc_thread.join();
+
+    // A post-window re-learn re-journals FRESH (exactly-once semantics).
+    auto relearned = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( relearned.has_value() );
+    EXPECT_EQ( ContentBytes( relearned.value() ), block.content );
+    ASSERT_TRUE( PollUntil( [&] { return AllInState( { cid }, UploadState::UploadedDurable ); },
+                            std::chrono::milliseconds( 10000 ) ) );
+}
+
+/**
+ * @given a due evicting mark whose delete-time re-check has PASSED, with
+ *        heads mutated in the re-check-to-HALF1 gap (the pre-half-one
+ *        seam - the mutation raced the check)
+ * @when  HALF1 + HALF2 proceed
+ * @then  the COMMIT side is legal (the check raced a last-moment
+ *        publish) and the outcome is WHOLE, never torn: journal record
+ *        gone + disposed marker present + remote copy CID-verifiable -
+ *        D-11 cancel-vs-commit knife edge.
+ */
+TEST_F( ColdStorageFaultRaceTest, Evict_CancelVsCommitKnifeEdge_HeadsMutationBetweenRecheckAndHalfOne )
+{
+    const auto block = SeedDetachedDelta( "race/knife-edge", "value", false );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+
+    // The knife edge: heads mutate AFTER the re-check passed, BEFORE
+    // HALF1 commits.
+    manager->SetGcPreHalfOneHookForTesting( [this] {
+        const CID mutation = PublishElement( "race/knife-mutation", "mut" );
+        (void)mutation;
+    } );
+    (void)manager->GcPassOnce();
+    manager->SetGcPreHalfOneHookForTesting( nullptr );
+
+    // COMMIT outcome (whole, never torn): record deleted in HALF1,
+    // marker present, remote copy resolvable CID-verified.
+    EXPECT_FALSE( manager->GetUploadState( cid ).has_value() )
+        << "committed: journal record deleted in HALF1";
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( cid );
+        ASSERT_TRUE( disposed.has_value() );
+        EXPECT_TRUE( disposed.value() ) << "committed: marker written in HALF1";
+    }
+    auto resolved = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( resolved.has_value() );
+    EXPECT_EQ( ContentBytes( resolved.value() ), block.content );
+}
+
+/**
+ * @given seeded jitter on both remote ops plus a randomized
+ *        key-scoped-away fault draw per iteration (D-10)
+ * @when  N seeded iterations each run a publish -> drain -> evict-or-
+ *        cancel -> read-back cycle under that jitter (seed via
+ *        SGNS_RACE_JITTER_SEED, count via SGNS_RACE_JITTER_ITERS;
+ *        defaults reproduce deterministically)
+ * @then  every iteration's CID stays resolvable with the ORIGINAL bytes
+ *        (local OR remote - never lost), and NO iteration ever observes
+ *        a Corrupt attributable to the race (the injected CorruptData is
+ *        key-scoped away from the iteration's CIDs).
+ */
+TEST_F( ColdStorageFaultRaceTest, Jitter_PairwiseSeededIterations_EndStateInvariants )
+{
+    const uint64_t seed  = EnvOr( "SGNS_RACE_JITTER_SEED", 20261028ULL );
+    const uint64_t iters = EnvOr( "SGNS_RACE_JITTER_ITERS", 200ULL );
+
+    // Fast cadence so the default 200 iterations stay Tier-1-friendly.
+    auto manager = MakeManager( FastOptions( 10, 10, 20 ), FastDurability( 10, 100 ),
+                                RetentionRace() );
+    manager->Start();
+
+    for ( uint64_t i = 0; i < iters; ++i )
+    {
+        std::mt19937_64 rng( seed + i );
+
+        // Seeded jitter on both remote ops (bounded, reproducible).
+        timing_->SetSeededJitter( S3Op::Get, static_cast<uint32_t>( rng() % 20 ), 5, seed + i );
+        timing_->SetSeededJitter( S3Op::Put, static_cast<uint32_t>( rng() % 20 ), 5, seed + i );
+
+        // Randomized failure kind on a SACRIFICIAL control key (None /
+        // Unavailable / CorruptData) - key-scoped AWAY from this
+        // iteration's CID: any Corrupt observed on the iteration's CID
+        // is race-attributable by construction.
+        const std::string control_payload = "jitter-control-" + std::to_string( i );
+        const Cid         control_cid     = MakeCid( control_payload );
+        const std::string control_key     = DeriveTestKey( control_cid );
+        const uint32_t    fault_draw      = static_cast<uint32_t>( rng() % 3 );
+        if ( fault_draw == 1 )
+        {
+            fake_->SetFaultForKey( control_key, S3Op::Get, S3FaultKind::Unavailable );
+        }
+        else if ( fault_draw == 2 )
+        {
+            fake_->SetFaultForKey( control_key, S3Op::Get, S3FaultKind::CorruptData );
+        }
+
+        // The pairwise crossing under jitter: publish (write through the
+        // decorator), drain under Put jitter, evict-or-cancel by a
+        // seeded draw, read back under Get jitter.
+        const auto block = SeedDetachedDelta( "race/jitter-" + std::to_string( i ), "v", false );
+        const Cid  cid( block.cid_key );
+        WaitAllDurable( { cid } );
+        Backdate( cid, 60000 );
+        (void)manager->GcPassOnce();
+        if ( ( rng() % 2 ) == 0 )
+        {
+            // Cancel draw: heads mutate against the mark's snapshot
+            // before the processing pass (the pre-mark shape, driven
+            // test-side before the pass - the same interleaving class).
+            const CID rescue = PublishElement( "race/jitter-rescue-" + std::to_string( i ), "r" );
+            (void)rescue;
+        }
+        GraceElapse();
+        (void)manager->GcPassOnce();
+
+        // Per-iteration invariants (D-10): resolvable with ORIGINAL bytes
+        // (never lost), and never Corrupt (the read would surface
+        // COLD_STORAGE_CORRUPT on verification failure).
+        auto resolved = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+        ASSERT_TRUE( resolved.has_value() )
+            << "iter " << i << ": block lost (neither local nor remote)";
+        EXPECT_EQ( ContentBytes( resolved.value() ), block.content ) << "iter " << i;
+
+        fake_->SetFaultForKey( control_key, S3Op::Get, S3FaultKind::None );
+    }
+    timing_->ClearTimings();
+}
+
+/**
+ * @given a scenario mix inside ONE fixture: a hot reachable block, a
+ *        cold-local block (journal Durable, hot bytes stripped), and a
+ *        disposed-with-remote-copy block (the S3-retrievable evidence
+ *        rides the same read)
+ * @when  the D-12 audit walk visits every published CID
+ * @then  each is EXACTLY one legal end state: hot (zero-S3-Get local
+ *        resolution + journal record), cold-local (zero-S3-Get journal
+ *        resolution), or disposed-with-remote-copy (marker + CID-
+ *        verified remote resolution) - never lost, never Corrupt.
+ */
+TEST_F( ColdStorageFaultRaceTest, SuiteEnd_AuditWalk_EveryCidInLegalState )
+{
+    // Huge retention keeps (a)/(b) un-evicted while (c) is backdated
+    // past its threshold (explicit tiny grace; zero normalizes -
+    // Pitfall 2).
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace( 60000, 1 ) );
+    manager->Start();
+
+    // (a) hot: reachable head, never a candidate.
+    const CID hot_head = PublishElement( "audit/hot", "v" );
+    auto hot_node = dagsyncer_->GetNodeWithoutRequest( hot_head );
+    ASSERT_TRUE( hot_node.has_value() );
+    SeededBlock hot_block{ hot_head, ContentBytes( hot_node.value() ) };
+
+    // (b) cold-local: detached, Durable, hot bytes stripped - resolves
+    // from the journal's local bytes with zero S3 traffic.
+    SeededBlock cold_block = SeedDetachedDelta( "audit/cold-local", "v", true );
+    WaitAllDurable( { Cid( cold_block.cid_key ) } );
+
+    // (c) disposed-with-remote-copy: detached, backdated past the 60 s
+    // threshold, evicted through two passes.
+    SeededBlock gone_block = SeedDetachedDelta( "audit/disposed", "v", false );
+    const Cid   gone_cid( gone_block.cid_key );
+    WaitAllDurable( { gone_cid } );
+    Backdate( gone_cid, 120000 );
+    ASSERT_EQ( manager->GcPassOnce().size(), 1u );
+    GraceElapse();
+    (void)manager->GcPassOnce();
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto disposed = shared_local_->IsDisposed( gone_cid );
+        ASSERT_TRUE( disposed.has_value() && disposed.value() );
+    }
+
+    // THE WALK (D-12): every published CID is EXACTLY one legal state.
+    const SeededBlock entries[] = { hot_block, cold_block, gone_block };
+    for ( const auto &entry : entries )
+    {
+        const Cid cid( entry.cid_key );
+        bool disposed = false;
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto probe = shared_local_->IsDisposed( cid );
+            ASSERT_TRUE( probe.has_value() );
+            disposed = probe.value();
+        }
+        if ( disposed )
+        {
+            // disposed-with-remote-copy: the S3 object serves CID-VERIFIED
+            // bytes (the library's Get verification runs inside the
+            // chain).
+            const uint64_t gets_before = counting_->get_calls();
+            auto resolved = dagsyncer_->GetNodeWithoutRequest( entry.cid_key );
+            ASSERT_TRUE( resolved.has_value() ) << "disposed CID must stay remote-retrievable";
+            EXPECT_EQ( ContentBytes( resolved.value() ), entry.content );
+            EXPECT_GT( counting_->get_calls(), gets_before )
+                << "the remote tier served the disposed CID";
+        }
+        else
+        {
+            // hot or cold-local: journal record present + resolvable with
+            // the ORIGINAL bytes and ZERO S3 traffic.
+            EXPECT_TRUE( manager->GetUploadState( cid ).has_value() )
+                << "non-disposed CID must still hold a journal record";
+            const uint64_t gets_before = counting_->get_calls();
+            auto resolved = dagsyncer_->GetNodeWithoutRequest( entry.cid_key );
+            ASSERT_TRUE( resolved.has_value() );
+            EXPECT_EQ( ContentBytes( resolved.value() ), entry.content );
+            EXPECT_EQ( counting_->get_calls(), gets_before )
+                << "hot/cold-local CIDs resolve with zero S3 traffic";
+        }
+    }
+}
+
+/**
+ * @given a fully-evicted CID read through the cold chain while the S3
+ *        tier is faulted Unavailable (op-wide)
+ * @when  the fetch fails, then the fault clears and the read retries
+ * @then  the outage surfaces with the honest COLD taxonomy (never
+ *        PEER_BLACKLISTED - storage faults must never attribute to
+ *        peers), and recovery serves CID-verified bytes. State-based
+ *        zero-blacklist evidence: the blacklist write sites
+ *        (graphsync_dagsyncer.cpp :421/:466/:523) are request-path-only
+ *        and this fixture has NO peers and NO graphsync object - no
+ *        scenario in this suite can reach them.
+ */
+TEST_F( ColdStorageFaultRaceTest, ZeroBlacklistWrites_AfterAllScenarios )
+{
+    const auto block = SeedDetachedDelta( "race/blacklist", "value", true );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    (void)manager->GcPassOnce();
+    GraceElapse();
+    (void)manager->GcPassOnce();
+
+    // The S3 outage classifies COLD - never a peer-shaped failure.
+    fake_->SetFault( S3Op::Get, S3FaultKind::Unavailable );
+    (void)dagsyncer_->DeleteCIDBlock( block.cid_key );
+    auto failed = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_EQ( failed.error(), GraphsyncDAGSyncer::Error::COLD_STORAGE_TEMPORARILY_UNAVAILABLE )
+        << "storage failures must never surface as PEER_BLACKLISTED";
+    fake_->ClearFaults();
+
+    // Recovery after the outage clears: CID-verified (no peer attribution
+    // ever happened).
+    auto recovered = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_EQ( ContentBytes( recovered.value() ), block.content );
+}
+
+/**
+ * @given a fully-evicted CID whose ONLY remaining copy (the S3 object)
+ *        is byte-flipped through the fake's flip-bytes fault kit
+ * @when  the cold chain reads it
+ * @then  the verification failure surfaces with the honest
+ *        COLD_STORAGE_CORRUPT taxonomy - never the flipped bytes, never
+ *        a NotFound-shaped success. This is the control proving the
+ *        suite's zero-Corrupt assertions have teeth.
+ */
+TEST_F( ColdStorageFaultRaceTest, CorruptAssertionHasTeeth_ByteFlipStillCorrupt )
+{
+    const auto block = SeedDetachedDelta( "race/byte-flip-teeth", "value", true );
+    const Cid  cid( block.cid_key );
+
+    auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
+    manager->Start();
+    WaitAllDurable( { cid } );
+    Backdate( cid, 60000 );
+    (void)manager->GcPassOnce();
+    GraceElapse();
+    (void)manager->GcPassOnce();
+
+    // Flip the only remaining copy - the zero-Corrupt assertions across
+    // this suite are honest ONLY if this still surfaces Corrupt.
+    fake_->SetFlipBytesForKey( DagPbObjectKey( block.cid_key ), true );
+    (void)dagsyncer_->DeleteCIDBlock( block.cid_key );
+    auto resolved = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
+    ASSERT_TRUE( resolved.has_error() ) << "flipped bytes must NEVER be served as good";
+    EXPECT_EQ( resolved.error(), GraphsyncDAGSyncer::Error::COLD_STORAGE_CORRUPT );
+    fake_->SetFlipBytesForKey( DagPbObjectKey( block.cid_key ), false );
 }

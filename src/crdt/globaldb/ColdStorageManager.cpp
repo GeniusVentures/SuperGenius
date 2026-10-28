@@ -711,6 +711,18 @@ namespace sgns::crdt
         gc_between_halves_hook_ = std::move( hook );
     }
 
+    void ColdStorageManager::SetGcPreMarkProcessHookForTesting( std::function<void()> hook )
+    {
+        std::lock_guard<std::mutex> lock( gc_hook_mutex_ );
+        gc_pre_mark_process_hook_ = std::move( hook );
+    }
+
+    void ColdStorageManager::SetGcPreHalfOneHookForTesting( std::function<void()> hook )
+    {
+        std::lock_guard<std::mutex> lock( gc_hook_mutex_ );
+        gc_pre_half_one_hook_ = std::move( hook );
+    }
+
     bool ColdStorageManager::HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
                                           const CrdtHeads::CRDTHeadList &rhs )
     {
@@ -1095,6 +1107,17 @@ namespace sgns::crdt
                 retained.push_back( std::move( mark ) );
                 continue;
             }
+            // D-16 pre-mark-process seam: the top of THIS mark's
+            // processing, BEFORE the delete-time re-check - the
+            // reachable-again-at-the-last-moment window (TEST-ONLY;
+            // invoked OUTSIDE cold_store_mutex_ so the hook may publish).
+            {
+                std::lock_guard<std::mutex> hook_lock( gc_hook_mutex_ );
+                if ( gc_pre_mark_process_hook_ )
+                {
+                    gc_pre_mark_process_hook_();
+                }
+            }
             // Delete-time exactness re-check (D-14): CURRENT heads vs the
             // snapshot THIS mark rests on. ANY difference (even one head)
             // cancels: clear the mark, keep the bytes, the CID returns to
@@ -1114,6 +1137,17 @@ namespace sgns::crdt
                 // posture is honest.
                 retained.push_back( std::move( mark ) );
                 continue;
+            }
+            // D-16 pre-half-one seam: the cancel-vs-commit knife edge -
+            // the re-check has PASSED, HALF 1 has not started. Heads
+            // mutated in this gap raced the check; the commit side is
+            // legal (TEST-ONLY; OUTSIDE cold_store_mutex_).
+            {
+                std::lock_guard<std::mutex> hook_lock( gc_hook_mutex_ );
+                if ( gc_pre_half_one_hook_ )
+                {
+                    gc_pre_half_one_hook_();
+                }
             }
             // D-16 HALF 1: the library batch (cold bytes + journal +
             // timestamp + disposed marker) under the shared mutex.

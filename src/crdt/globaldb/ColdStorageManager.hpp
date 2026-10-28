@@ -292,6 +292,35 @@ namespace sgns::crdt
         void SetGcBetweenHalvesHookForTesting( std::function<void()> hook );
 
         /**
+         * @brief      TEST-ONLY pre-mark-process hook (D-16, v1.1 Phase
+         *             12 plan 12-02 - the SetGcMidPassHookForTesting
+         *             shape): invoked inside ProcessDueMarks at the TOP
+         *             of each due mark's processing, BEFORE the
+         *             delete-time heads re-check - the seam the
+         *             reachable-again-at-the-last-moment race drives (a
+         *             publish here makes CURRENT heads differ from the
+         *             MARK'S OWN pass-start snapshot, so the re-check
+         *             cancels: bytes kept). PRODUCTION CODE MUST NEVER
+         *             CALL SetGcPreMarkProcessHookForTesting.
+         * @param[in]  hook the callback (null clears)
+         */
+        void SetGcPreMarkProcessHookForTesting( std::function<void()> hook );
+
+        /**
+         * @brief      TEST-ONLY pre-half-one hook (D-16, v1.1 Phase 12
+         *             plan 12-02 - the SetGcMidPassHookForTesting shape):
+         *             invoked inside ProcessDueMarks AFTER the
+         *             delete-time heads re-check passed and immediately
+         *             BEFORE the D-16 HALF 1 library batch - the
+         *             cancel-vs-commit knife edge (heads mutated in this
+         *             gap raced the check; the commit side is legal and
+         *             the assert is no-torn-state). PRODUCTION CODE MUST
+         *             NEVER CALL SetGcPreHalfOneHookForTesting.
+         * @param[in]  hook the callback (null clears)
+         */
+        void SetGcPreHalfOneHookForTesting( std::function<void()> hook );
+
+        /**
          * @brief      Attach the retention-GC dependencies (GC-01, v1.1
          *             Phase 11 - the §6.1 post-construction seam).
          *
@@ -577,6 +606,10 @@ namespace sgns::crdt
         std::function<void()>    gc_mid_pass_hook_;
         /// TEST-ONLY between-halves hook (null in production; D-16).
         std::function<void()>    gc_between_halves_hook_;
+        /// TEST-ONLY pre-mark-process hook (null in production; D-16).
+        std::function<void()>    gc_pre_mark_process_hook_;
+        /// TEST-ONLY pre-half-one hook (null in production; D-16).
+        std::function<void()>    gc_pre_half_one_hook_;
         /// Serializes gc_mid_pass_hook_ / gc_between_halves_hook_ swaps
         /// against a running pass.
         std::mutex               gc_hook_mutex_;
