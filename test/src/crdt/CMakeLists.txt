@@ -311,3 +311,25 @@ target_include_directories(cold_storage_soak_test PRIVATE
 
 set_tests_properties(cold_storage_soak_test PROPERTIES LABELS "Tier1")
 endif()
+# Dev-gated wall-clock soak (TEST-02 SC3 / D-07, plan 12-02 Task 3):
+# env-gated (SGNS_COLD_STORAGE_SOAK_ENABLE), Tier3 - NEVER Tier1, and
+# the registration line deliberately carries no Tier1 label. Carries
+# the D-09 true kill-9 resume mode (SGNS_COLD_STORAGE_SOAK_RESUME).
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_wallclock_soak
+    cold_storage_wallclock_soak.cpp
+)
+
+target_link_libraries(cold_storage_wallclock_soak
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+)
+
+target_include_directories(cold_storage_wallclock_soak PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_wallclock_soak PROPERTIES LABELS "Tier3")
+endif()
