@@ -288,3 +288,26 @@ endif()
 
 set_tests_properties(cold_storage_resurrection_test PROPERTIES LABELS "Tier1")
 endif()
+# s3d-unavailable soak: outage-then-recovery iteration soak + D-09
+# teardown legs + peer cold-fetch budget (TEST-02 SC3, v1.1 Phase 12
+# plan 12-02). Registered ONLY under SGNS_COLD_STORAGE: hermetic fakes
+# via the relative include dir. The wall-clock soak (Task 3) registers
+# separately as Tier3 - NEVER in this lane.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_soak_test
+    cold_storage_soak_test.cpp
+)
+
+target_link_libraries(cold_storage_soak_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+)
+
+target_include_directories(cold_storage_soak_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_soak_test PROPERTIES LABELS "Tier1")
+endif()
