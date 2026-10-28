@@ -77,6 +77,13 @@ on:
         description: "Run the CTest suite after building (same platform gating and exclusions as Release Build CI)"
         default: false
         type: boolean
+      # TEST-02 SC4 (v1.1 Phase 12 plan 12-03, D-02b): evidence-only
+      # dispatch posture - appends -DSGNS_COLD_STORAGE=ON to every
+      # configure and skips release upload/tag creation.
+      cold_storage:
+        description: "Configure with cold storage ON (TEST-02 milestone evidence; skips release upload)"
+        default: false
+        type: boolean
 permissions:
   contents: write
   packages: read
@@ -190,6 +197,10 @@ jobs:
       # Windows tests are Release-only there, Android/iOS builds have no
       # test binaries (their build dirs force TESTING OFF).
       RUN_TESTS: ${{ inputs.run_tests && (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.target == 'Windows' && matrix.build-type == 'Release')) }}
+      # TEST-02 SC4 (D-02b): the cold-storage-ON configure append (env-
+      # context expression only - never interpolated raw into run:).
+      COLD_STORAGE_ARGS: ${{ inputs.cold_storage && '-DSGNS_COLD_STORAGE=ON' || '' }}
+      COLD_STORAGE: ${{ inputs.cold_storage }}
     runs-on: ${{ fromJson(needs.resolve-runners.outputs[matrix.runner_key]) }}
     container:
       image: ${{matrix.container}}
@@ -443,6 +454,21 @@ jobs:
           gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
+          # TEST-02 SC4 (12-03 D-02b): the cold-storage test fakes are
+          # source-tree-only. The evidence dispatch overlays
+          # sgns-blockstore/src from the SAME DOWNLOAD_TAG whose tarball
+          # was just extracted (disjoint subpaths - fakes always match
+          # the built library).
+          if [ "${COLD_STORAGE}" = "true" ]; then
+            git clone --filter=blob:none --sparse --depth 1 --branch "${DOWNLOAD_TAG}" \
+              https://x-access-token:${GH_TOKEN}@github.com/GeniusVentures/thirdparty.git tp-sparse
+            cd tp-sparse
+            git sparse-checkout set sgns-blockstore/src
+            cp -r sgns-blockstore/src ../sgns-blockstore/
+            cd ..
+            rm -rf tp-sparse
+          fi
+
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
           if [ "${{ matrix.target }}" = "Windows" ]; then
             # Convert Unix path to Windows path for Windows builds
@@ -684,7 +710,7 @@ jobs:
       - name: Configure CMake for Mac
         if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=MAC_UNIVERSAL $COLD_STORAGE_ARGS -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Configure CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
@@ -701,12 +727,12 @@ jobs:
         # silently and CMake falls back to g++ 8.5, which cannot compile the
         # zkLLVM crypto3 constexpr code in ProofSystem (run 35377550250,
         # divide.hpp:347 "is not a constant expression" on all Linux jobs).
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) $COLD_STORAGE_ARGS -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}}  -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release $env:COLD_STORAGE_ARGS -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}}  -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
@@ -838,6 +864,9 @@ jobs:
           exit 0
 
       - name: Create or check release
+        # TEST-02 SC4 (D-02b): the cold-storage evidence dispatch never
+        # mutates published artifacts.
+        if: ${{ inputs.cold_storage != true }}
         shell: bash
         working-directory: ${{github.workspace}}/SuperGenius
         run: |
@@ -865,12 +894,14 @@ jobs:
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       - name: Compress build artifacts
+        if: ${{ inputs.cold_storage != true }}
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: |
           tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
       - name: Release file
+        if: ${{ inputs.cold_storage != true }}
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         shell: bash
         run: |
