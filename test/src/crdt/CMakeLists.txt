@@ -220,3 +220,29 @@ target_include_directories(cold_storage_gc_retrievability_test PRIVATE
 set_tests_properties(cold_storage_gc_retrievability_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Fault-race matrix: evict-x-serve-x-drain crossings under deterministic
+# barriers + seeded jitter + D-12 audit walk (TEST-02 SC1, v1.1 Phase 12
+# plan 12-01). Registered ONLY under SGNS_COLD_STORAGE: links
+# sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
+# InMemoryS3AdminClient fakes via the relative include dir (both fake
+# headers are deliberately not installed). Hermetic: no live s3d/MinIO
+# endpoints, no Docker - the TimingS3Client decorator drives all timing.
+if(SGNS_COLD_STORAGE)
+addtest(cold_storage_fault_race_test
+    cold_storage_fault_race_test.cpp
+)
+
+target_link_libraries(cold_storage_fault_race_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+)
+
+target_include_directories(cold_storage_fault_race_test PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+)
+
+set_tests_properties(cold_storage_fault_race_test PROPERTIES LABELS "Tier1")
+endif()
+

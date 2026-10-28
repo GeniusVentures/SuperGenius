@@ -705,6 +705,12 @@ namespace sgns::crdt
         gc_mid_pass_hook_ = std::move( hook );
     }
 
+    void ColdStorageManager::SetGcBetweenHalvesHookForTesting( std::function<void()> hook )
+    {
+        std::lock_guard<std::mutex> lock( gc_hook_mutex_ );
+        gc_between_halves_hook_ = std::move( hook );
+    }
+
     bool ColdStorageManager::HeadsDiffer( const CrdtHeads::CRDTHeadList &lhs,
                                           const CrdtHeads::CRDTHeadList &rhs )
     {
@@ -1127,6 +1133,21 @@ namespace sgns::crdt
                     logger_->warn( "gc: eviction batch failed - mark retained for a later pass" );
                     retained.push_back( std::move( mark ) );
                     continue;
+                }
+            }
+            // D-16 between-halves window: the library-atomic cold half is
+            // committed (bytes + journal + timestamp + disposed marker)
+            // and the hot cleanup half has NOT started. The evict-x-serve
+            // race tests park the GC thread here while a serve-side S3
+            // fetch is in flight over the same CID. TEST-ONLY seam - null
+            // in production, invoked OUTSIDE cold_store_mutex_ (the
+            // split-phase discipline stands; the window is driven, never
+            // locked - Pitfall 6).
+            {
+                std::lock_guard<std::mutex> hook_lock( gc_hook_mutex_ );
+                if ( gc_between_halves_hook_ )
+                {
+                    gc_between_halves_hook_();
                 }
             }
             // D-16 HALF 2: the idempotent hot cleanup + LRU invalidation.

@@ -273,6 +273,25 @@ namespace sgns::crdt
         void SetGcMidPassHookForTesting( std::function<void()> hook );
 
         /**
+         * @brief      TEST-ONLY between-halves hook (D-16, v1.1 Phase
+         *             12 plan 12-01 - the SetGcMidPassHookForTesting
+         *             shape): invoked inside ProcessDueMarks exactly
+         *             between the D-16 halves - AFTER the
+         *             library-atomic cold half (EvictLocalAndMarkDisposed:
+         *             cold bytes + journal record + spill timestamp +
+         *             disposed marker committed as one batch) and BEFORE
+         *             the hot-store cleanup half (RunHotCleanup: hot
+         *             batch deletes + DeleteCIDBlock LRU invalidation).
+         *             This is the crossing window the evict-x-serve
+         *             fault-race tests park the GC thread in while a
+         *             serve-side S3 fetch is in flight over the same
+         *             CID. PRODUCTION CODE MUST NEVER CALL
+         *             SetGcBetweenHalvesHookForTesting.
+         * @param[in]  hook the callback (null clears)
+         */
+        void SetGcBetweenHalvesHookForTesting( std::function<void()> hook );
+
+        /**
          * @brief      Attach the retention-GC dependencies (GC-01, v1.1
          *             Phase 11 - the §6.1 post-construction seam).
          *
@@ -556,7 +575,10 @@ namespace sgns::crdt
         std::condition_variable  gc_cv_;
         /// TEST-ONLY mid-pass hook (null in production; see the setter).
         std::function<void()>    gc_mid_pass_hook_;
-        /// Serializes gc_mid_pass_hook_ swaps against a running pass.
+        /// TEST-ONLY between-halves hook (null in production; D-16).
+        std::function<void()>    gc_between_halves_hook_;
+        /// Serializes gc_mid_pass_hook_ / gc_between_halves_hook_ swaps
+        /// against a running pass.
         std::mutex               gc_hook_mutex_;
         /// Rate-limit state for the inhibited/aborted gc: lines (atomic:
         /// GcPassOnce may run on the GC thread or a test thread).
