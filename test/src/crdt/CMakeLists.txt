@@ -52,6 +52,17 @@ endif()
 # convention transplanted from
 # thirdparty/sgns-blockstore/docs/testing-tiers.md (addtest() itself
 # has no LABELS support, so set_tests_properties is mandatory).
+# ---------------------------------------------------------------------------
+# TEST-02 SC4 (v1.1 Phase 12 plan 12-03 Task 1): the sgns-blockstore test
+# fakes (InMemoryS3Client / InMemoryS3AdminClient) are source-tree-only -
+# the thirdparty RELEASE TARBALL carries include/ and lib/ only, so the
+# cold suites' relative source-path include is unavailable in a fresh-clone
+# CI checkout. The path is hoisted into this overridable cache variable:
+# local trees and OFF builds keep the byte-identical default; the CI
+# cold-storage-ON legs point it at the sparse sgns-blockstore/src overlay
+# staged next to the extracted install tree.
+set(SGNS_BLOCKSTORE_TEST_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    CACHE PATH "sgns-blockstore test-fake source dir (CI ON legs point at the sparse overlay)")
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_link_proof_test
     cold_storage_link_proof_test.cpp
@@ -96,7 +107,7 @@ target_link_libraries(cold_storage_spill_test
 )
 
 target_include_directories(cold_storage_spill_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_spill_test PROPERTIES LABELS "Tier1")
@@ -119,7 +130,7 @@ target_link_libraries(cold_storage_fallback_test
 )
 
 target_include_directories(cold_storage_fallback_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_fallback_test PROPERTIES LABELS "Tier1")
@@ -141,7 +152,7 @@ target_link_libraries(cold_read_freeze_latency_test
 )
 
 target_include_directories(cold_read_freeze_latency_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_read_freeze_latency_test PROPERTIES LABELS "Tier1")
@@ -164,7 +175,7 @@ target_link_libraries(cold_storage_durability_test
 )
 
 target_include_directories(cold_storage_durability_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_durability_test PROPERTIES LABELS "Tier1")
@@ -189,7 +200,7 @@ target_link_libraries(cold_storage_gc_test
 )
 
 target_include_directories(cold_storage_gc_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_gc_test PROPERTIES LABELS "Tier1")
@@ -214,7 +225,7 @@ target_link_libraries(cold_storage_gc_retrievability_test
 )
 
 target_include_directories(cold_storage_gc_retrievability_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_gc_retrievability_test PROPERTIES LABELS "Tier1")
@@ -240,7 +251,7 @@ target_link_libraries(cold_storage_fault_race_test
 )
 
 target_include_directories(cold_storage_fault_race_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_fault_race_test PROPERTIES LABELS "Tier1")
@@ -260,7 +271,7 @@ addtest(cold_storage_resurrection_test
 )
 
 target_include_directories(cold_storage_resurrection_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
@@ -306,7 +317,7 @@ target_link_libraries(cold_storage_soak_test
 )
 
 target_include_directories(cold_storage_soak_test PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_soak_test PROPERTIES LABELS "Tier1")
@@ -328,7 +339,7 @@ target_link_libraries(cold_storage_wallclock_soak
 )
 
 target_include_directories(cold_storage_wallclock_soak PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
+    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
 )
 
 set_tests_properties(cold_storage_wallclock_soak PROPERTIES LABELS "Tier3")
