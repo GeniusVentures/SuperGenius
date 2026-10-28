@@ -112,6 +112,17 @@ namespace sgns::crdt
         /// Queue bound: bounds re-warm memory; overflow drops + counts and
         /// the next request re-enqueues (D-07 makes drops cheap).
         static constexpr size_t kMaxRewarmQueueDepth{ 64 };
+
+        /// TEST-ONLY observability (v1.1 Phase 12 plan 12-02 Task 3):
+        /// the re-warm worker's drop counters - expired-budget drops and
+        /// queue-overflow drops (D-07). PRODUCTION CODE MUST NEVER CALL
+        /// RewarmDropsForTesting.
+        /// @return { expired-budget drops, queue-overflow drops }
+        std::pair<size_t, size_t> RewarmDropsForTesting() const
+        {
+            return { rewarm_expired_drops_.load( std::memory_order_relaxed ),
+                     rewarm_overflow_drops_.load( std::memory_order_relaxed ) };
+        }
         /// Shutdown grace for an in-flight re-warm (Phase-8
         /// kShutdownGraceWindow parity; NOT a knob - D-12).
         static constexpr std::chrono::milliseconds kRewarmShutdownGraceWindow{ 5000 };

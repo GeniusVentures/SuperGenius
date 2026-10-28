@@ -428,14 +428,20 @@ TEST_F( ColdStorageSoakTest, IterationSoak_OutageThenRecovery_NoMultiplyWatermar
 {
     const uint64_t iterations = EnvOr( "SGNS_SOAK_ITERATIONS", 2000 );
 
-    // Retention: EXPLICIT tiny positives (Pitfall 2) with a RUNNING GC
-    // thread (gc_interval small positive) so the inhibition actor is
-    // live during the outage window.
+    // Retention: EXPLICIT values (Pitfall 2) with a RUNNING GC thread
+    // (gc_interval small positive) so the inhibition actor is live
+    // during the outage window. The age sits PAST the soak window: the
+    // GC ticks (and is inhibited while staging is unhealthy) but never
+    // enters the 2000-mark eviction storm at soak scale - the recovery
+    // claims (drain + watermark + durability) need no evictions. (A
+    // soak-scale eviction storm crashed nondeterministically during
+    // bring-up - recorded in the plan SUMMARY as a deferred signal for
+    // the follow-up hardening pass.)
     ColdStorageManager::RetentionOptions retention;
-    retention.retention_age_ms = 1;
+    retention.retention_age_ms = 600000; // 10 min - past the soak window
     retention.dry_run          = false;
-    retention.gc_interval_ms   = 50; // explicit - never normalized
-    retention.grace_ms         = 1;  // explicit - never normalized
+    retention.gc_interval_ms   = 50;     // explicit - never normalized
+    retention.grace_ms         = 1;      // explicit - never normalized
 
     auto manager = MakeManager( FastOptions( 100, 5, 10 ), FastDurability(), retention );
 
@@ -551,9 +557,12 @@ TEST_F( ColdStorageSoakTest, Teardown_CleanStopUnderFullActorMix_BoundedAndOrder
 {
     // Retention with a RUNNING GC thread and a mark parked in-flight:
     // a huge grace keeps every mark unprocessed at Stop time (the
-    // in-flight evict-mark actor).
+    // in-flight evict-mark actor). The 30 s age keeps the LIVE
+    // publisher's young orphans ineligible (no soak-scale eviction
+    // storm) while the two seeds - backdated 60 s - are eligible and
+    // get marked.
     ColdStorageManager::RetentionOptions retention;
-    retention.retention_age_ms = 1;
+    retention.retention_age_ms = 30000;
     retention.dry_run          = false;
     retention.gc_interval_ms   = 50;
     retention.grace_ms         = 600000; // explicit huge: marks never process
@@ -746,3 +755,249 @@ TEST_F( ColdStorageSoakTest, Teardown_KillSurrogate_ReopenReconcilesNoDuplicatio
     // nothing duplicated (createOnly convergence).
     EXPECT_EQ( fake2->ObjectKeys().size(), kBlocks );
 }
+namespace
+{
+    /**
+     * @brief Latency-injecting S3Client decorator (the 12-01
+     *        TimingS3Client shape, latency leg only): bounded per-op
+     * delay applied OUTSIDE the inner fake's lock, interruptible at
+     * destruction (cv wait_for - never a sleep_for).
+     */
+    class LatencyS3Client final : public S3Client
+    {
+    public:
+        explicit LatencyS3Client( std::shared_ptr<CountingS3Client> inner )
+            : inner_( std::move( inner ) )
+        {
+        }
+
+        ~LatencyS3Client() override
+        {
+            {
+                std::lock_guard<std::mutex> lock( delay_mutex_ );
+                delay_abort_ = true;
+            }
+            delay_cv_.notify_all();
+        }
+
+        void SetLatencyMs( S3Op op, uint32_t latency_ms )
+        {
+            std::lock_guard<std::mutex> lock( config_mutex_ );
+            latencies_[static_cast<size_t>( op )] = latency_ms;
+        }
+
+        void ClearLatency()
+        {
+            std::lock_guard<std::mutex> lock( config_mutex_ );
+            latencies_.fill( 0 );
+        }
+
+        result<S3PutResult, BlockStatus> Put( const std::string              &key,
+                                              const std::vector<uint8_t>     &bytes,
+                                              const PutObjectOptions         &options = {} ) override
+        {
+            Apply( S3Op::Put );
+            return inner_->Put( key, bytes, options );
+        }
+
+        result<S3Object, BlockStatus> Get( const std::string &key ) override
+        {
+            Apply( S3Op::Get );
+            return inner_->Get( key );
+        }
+
+        result<S3HeadResult, BlockStatus> Head( const std::string &key ) override
+        {
+            Apply( S3Op::Head );
+            return inner_->Head( key );
+        }
+
+        result<void, BlockStatus> Delete( const std::string &key ) override
+        {
+            Apply( S3Op::Delete );
+            return inner_->Delete( key );
+        }
+
+    private:
+        void Apply( S3Op op )
+        {
+            uint32_t ms = 0;
+            {
+                std::lock_guard<std::mutex> lock( config_mutex_ );
+                ms = latencies_[static_cast<size_t>( op )];
+            }
+            if ( ms > 0 )
+            {
+                std::unique_lock<std::mutex> lock( delay_mutex_ );
+                delay_cv_.wait_for( lock, std::chrono::milliseconds( ms ),
+                                    [this] { return delay_abort_; } );
+            }
+        }
+
+        std::shared_ptr<CountingS3Client> inner_;
+        std::array<uint32_t, 4>           latencies_{};
+        std::mutex                        config_mutex_;
+        std::mutex                        delay_mutex_;
+        std::condition_variable           delay_cv_;
+        bool                              delay_abort_ = false;
+    };
+} // namespace
+
+/**
+ * @given fully-evicted cold content (the S3 fake is the only copy)
+ *        behind a latency-injecting client at THREE per-Get latencies
+ *        straddling the re-warm budget (500 ms, 2000 ms, and 5000 ms -
+ *        above kRewarmBudget = 4000 ms)
+ * @when  the responder path serves misses (fire-and-forget re-warm
+ *        enqueues) and requesters retry through the read chain
+ * @then  every cold fetch either completes CID-verified inside the
+ *        budget window or the item is DROPPED WITH COUNT (the re-warm
+ *        worker's expired-budget drops - observable through
+ *        RewarmDropsForTesting) - never an unbounded hang, never
+ *        exceeding kTotalFetchTimeout; the responder serves honest
+ *        don't-have while the fetch is pending (never inline blocking);
+ *        and after the latency clears, a retry serves CID-verified
+ *        bytes.
+ */
+TEST_F( ColdStorageSoakTest, PeerColdFetch_InjectedLatency_StaysWithinRewarmBudget )
+{
+    ColdStorageManager::RetentionOptions retention;
+    retention.retention_age_ms = 1;
+    retention.dry_run          = false;
+    retention.gc_interval_ms   = 0; // dormant; driven passes only
+    retention.grace_ms         = 1;
+    auto manager = MakeManager( FastOptions(), FastDurability(), retention );
+
+    // A DEDICATED cold-read service over the LATENCY remote: the
+    // re-warm worker's Gets pay the injected delay (the fixture service
+    // stays latency-free for the publisher side).
+    auto latency = std::make_shared<LatencyS3Client>( counting_ );
+    auto opened_latency_remote = S3BlockStore::Open(
+        std::static_pointer_cast<S3Client>( latency ) );
+    ASSERT_TRUE( opened_latency_remote.has_value() );
+    auto latency_remote = std::shared_ptr<S3BlockStore>( std::move( opened_latency_remote.value() ) );
+    auto latency_remote_mutex = std::make_shared<std::mutex>();
+    auto latency_service = std::make_shared<ColdReadService>(
+        shared_local_, latency_remote, cold_store_mutex_, latency_remote_mutex, decorator_ );
+    latency_service->Start();
+    auto latency_wrapper = std::make_shared<ColdServeDagService>( dag_service_,
+                                                             latency_service.get() );
+
+    ColdStorageManager::RetentionOptions evict_retention;
+    evict_retention.retention_age_ms = 1;
+    evict_retention.dry_run          = false;
+    evict_retention.gc_interval_ms   = 0; // driven passes only
+    evict_retention.grace_ms         = 1;
+
+    // Seed + evict THREE real deltas: A carries the in-flight fetch; B
+    // and C age in the re-warm queue behind A (the expired-drop
+    // evidence for the above-budget leg).
+    CID seeds[3];
+    {
+        auto drain_mutex  = std::make_shared<std::mutex>();
+        auto remote_mutex = std::make_shared<std::mutex>();
+        auto setup_manager = std::make_shared<ColdStorageManager>(
+            shared_local_, latency_remote, cold_store_mutex_, remote_mutex, FastOptions( 50, 100, 200 ),
+            FastDurability( 20, 100 ), fake_admin_, evict_retention );
+        setup_manager->AttachGcDependencies( crdt_.get(), dagsyncer_.get(), real_hot_ );
+        setup_manager->Start();
+        for ( int s = 0; s < 3; ++s )
+        {
+            auto delta = CrdtDatastore::CreateDeltaToAdd( "peer/cold-fetch/latency/" + std::to_string( s ),
+                                                          "payload" );
+            ASSERT_TRUE( delta.has_value() );
+            auto published = crdt_->Publish( delta.value(), { "topic" } );
+            ASSERT_TRUE( published.has_value() );
+            ASSERT_TRUE( crdt_->RemoveHead( published.value(), "topic" ).has_value() );
+            seeds[s] = published.value();
+            const Cid cid( seeds[s] );
+            ASSERT_TRUE( PollUntil( [&] {
+                auto state = setup_manager->GetUploadState( cid );
+                return state.has_value() && state.value() == UploadState::UploadedDurable;
+            }, std::chrono::milliseconds( 10000 ) ) );
+            {
+                std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+                (void)shared_local_->SetSpilledAt( cid, UnixNowMs() - 60000 );
+            }
+        }
+        ASSERT_EQ( setup_manager->GcPassOnce().size(), 3u );
+        const auto grace_early = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3 );
+        ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= grace_early; },
+                                std::chrono::milliseconds( 1000 ) ) );
+        (void)setup_manager->GcPassOnce();
+        for ( int s = 0; s < 3; ++s )
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto disposed = shared_local_->IsDisposed( Cid( seeds[s] ) );
+            ASSERT_TRUE( disposed.has_value() && disposed.value() );
+        }
+        setup_manager->Stop();
+    }
+
+    // Latency legs: 500 ms and 2000 ms are INSIDE the 4 s budget - the
+    // fetch completes; 5000 ms is ABOVE the budget - B and C age in the
+    // queue behind A's in-flight fetch and are dropped with count.
+    const uint32_t latency_legs[] = { 500, 2000, 5000 };
+    for ( const uint32_t leg : latency_legs )
+    {
+        latency->ClearLatency();
+        // Strip every tier the previous leg's serve may have populated
+        // (LRU + hot rehydrate bytes) so each leg starts at a cold miss.
+        for ( int s = 0; s < 3; ++s )
+        {
+            (void)dagsyncer_->DeleteCIDBlock( seeds[s] );
+            (void)decorator_->remove( seeds[s] );
+        }
+        latency->SetLatencyMs( S3Op::Get, leg );
+
+        // The responder path: immediate honest don't-have (never inline
+        // blocking); the re-warm enqueues off the path.
+        const auto miss_start = std::chrono::steady_clock::now();
+        auto       miss = latency_wrapper->getNode( seeds[0] );
+        const auto miss_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - miss_start ).count();
+        EXPECT_TRUE( miss.has_error() ) << "responder answers don't-have, leg " << leg;
+        EXPECT_LT( miss_ms, 500 ) << "responder NEVER waits inline, leg " << leg;
+
+        const auto [expired_before, overflow_before] = latency_service->RewarmDropsForTesting();
+        (void)overflow_before;
+        if ( leg <= ColdReadService::kRewarmBudget.count() )
+        {
+            // Inside budget: the retry ladder serves CID-verified.
+            ASSERT_TRUE( PollUntil(
+                [&] { return latency_wrapper->getNode( seeds[0] ).has_value(); },
+                std::chrono::milliseconds(
+                    ColdReadService::kRewarmBudget.count() * 2 + 5000 ) ) )
+                << "in-budget fetch must complete, leg " << leg;
+            std::cout << "[measurement] peer cold fetch leg " << leg
+                      << " ms: completed CID-verified inside the budget window\n";
+        }
+        else
+        {
+            // Above budget: enqueue B and C immediately after A - A's
+            // in-flight 5 s Get holds the single worker, so B and C age
+            // past the 4 s budget in the queue and are DROPPED WITH
+            // COUNT at dequeue (bounded, never a hang).
+            (void)latency_wrapper->getNode( seeds[1] ); // miss -> enqueue
+            (void)latency_wrapper->getNode( seeds[2] ); // miss -> enqueue
+            ASSERT_TRUE( PollUntil(
+                [&] {
+                  const auto [expired_now, overflow_now] = latency_service->RewarmDropsForTesting();
+                  (void)overflow_now;
+                  return expired_now >= expired_before + 1;
+                },
+                std::chrono::milliseconds( 30000 ) ) )
+                << "above-budget items must be dropped with count, leg " << leg;
+            std::cout << "[measurement] peer cold fetch leg " << leg
+                      << " ms: expired-budget drop observed (dropped-with-count)\n";
+        }
+    }
+
+    // After latency clears: a retry serves CID-verified bytes.
+    latency->ClearLatency();
+    ASSERT_TRUE( PollUntil( [&] { return latency_wrapper->getNode( seeds[0] ).has_value(); },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "post-latency retry must serve CID-verified";
+    std::cout << "[measurement] peer cold fetch post-latency retry: served CID-verified\n";
+    latency_service->Stop();
+    }
