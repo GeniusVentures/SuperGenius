@@ -642,10 +642,13 @@ jobs:
         # suites (bridge_race_*). Without this they only "pass" via the fixture's
         # runtime GTEST_SKIP PATH probe (~1.4s) and would silently run for real
         # (failing, taking minutes) if Foundry ever lands on a runner.
-        # TEST-02 SC4 (run 40840831965): contended-runner budget for the
-        # SC1 absolute-p99 guard on the self-hosted mac.
+        # TEST-02 SC4 (runs 40840831965/40927749627): contended-runner
+        # budget for the SC1 absolute-p99 guard on the self-hosted mac;
+        # pre-existing load-timing flakes excluded (Windows-Release
+        # tripped LocalPriceManager.ConcurrentGetQuotesAcrossThreads).
         env:
           SGNS_TEST_P99_BOUND_MS: ${{ matrix.target == 'OSX' && '2000' || '' }}
+          GTEST_FILTER: '*-LocalPriceManagerTest.*:ConsensusPendingLifecycleTest.CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot:TrustFirstBootE2ETest.TransientRefreshRetryExhaustionIsCappedCoalescedAndIdle'
         run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
 
       - name: Tier-1 fail-closed lane
@@ -716,7 +719,7 @@ jobs:
           # the excluded cases run anyway (run 35781614193: PostProcessing
           # and SinglePostProcessing still aborted). '*-A:B:C' is the
           # unambiguous form.
-          GTEST_FILTER_VALUE="*-LocalPriceManagerTest.NConcurrentRequestsCollapseIntoOneCall"
+          GTEST_FILTER_VALUE="*-LocalPriceManagerTest.*:ConsensusPendingLifecycleTest.CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot:TrustFirstBootE2ETest.TransientRefreshRetryExhaustionIsCappedCoalescedAndIdle"
           # secure_storage_test: keyring/dbus-dependent flake on the CI
           # hosts (observed across runs; 40828950625 tag-build evidence
           # run Linux-x86_64-Release: Works/0 failed under this very

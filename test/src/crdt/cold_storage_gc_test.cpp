@@ -1658,8 +1658,13 @@ TEST_F( ColdStorageGcTest, TrimmedMarkerRelearnRejournalsOnRedelivery )
     {
         std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
         auto state = shared_local_->GetUploadState( orphan );
-        ASSERT_TRUE( state.has_value() );
-        EXPECT_EQ( state.value(), sgns::blockstore::UploadState::PendingUpload )
+        // Any VALID state proves the re-journal: the record exists again
+        // after EvictLocalAndMarkDisposed deleted it. Do NOT pin
+        // PendingUpload - the fixture's running drainer (100 ms cadence,
+        // flush 50/300 ms) can legitimately advance the fresh record to
+        // Accepted/Durable before this read on a loaded runner (run
+        // 40927749627 OSX-Debug observed Durable here).
+        ASSERT_TRUE( state.has_value() )
             << "re-journal: the re-delivered block re-enters the pipeline";
         auto stamp = shared_local_->GetSpilledAt( orphan );
         ASSERT_TRUE( stamp.has_value() );

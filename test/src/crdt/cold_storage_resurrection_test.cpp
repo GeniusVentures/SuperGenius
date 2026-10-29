@@ -790,16 +790,16 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
 
     // Propagation evidence on node 2: BOTH deltas journaled AND drained
     // to Durable there (its decorator journals every received block) -
-    // this proves the wire delivered the put AND the delete. 90 s: the
+    // this proves the wire delivered the put AND the delete. 180 s: the
     // full-wire leg boots two real libp2p hosts and this suite runs
-    // beside the FULL CI test load (-j) on shared runners (run
-    // 40840831965 Windows-Release: 30 s was not enough).
+    // beside the FULL CI test load (-j) on shared runners (runs
+    // 40840831965/40927749627: 90 s still tripped on the loaded mac).
     ASSERT_TRUE( PollUntil(
         [&] {
           auto status = gdb2->GetColdStorageStatus();
           return status.durable_upload_count >= 2;
         },
-        std::chrono::milliseconds( 90000 ) ) )
+        std::chrono::milliseconds( 180000 ) ) )
         << "node 2 never received+drained both deltas";
     {
         auto q1 = gdb1->QueryKeyValues( key );
@@ -816,15 +816,15 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
 
     // Real background GC eviction evidence: disposed markers for (at
     // least) both deltas, observed through the operator status surface.
-    // 90 s (CI-load deadline, run 40840831965: eviction needs propagation
-    // + drain + flush + 1 s retention age + GC cadence, all stretched by
-    // the full-suite -j load on shared runners).
+    // 180 s (CI-load deadline, runs 40840831965/40927749627: eviction
+    // needs propagation + drain + flush + 1 s retention age + GC cadence,
+    // all stretched by the full-suite -j load on shared runners).
     ASSERT_TRUE( PollUntil(
         [&] {
           auto status = gdb2->GetColdStorageStatus();
           return status.gc_enabled && status.gc_disposed_marker_count >= 2;
         },
-        std::chrono::milliseconds( 90000 ) ) )
+        std::chrono::milliseconds( 180000 ) ) )
         << "node 2's background GC never evicted the detached deltas";
 
     // THE RE-DELIVERY over the real gossip wire: node 1 re-broadcasts
