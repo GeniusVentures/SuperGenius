@@ -609,8 +609,11 @@ TEST_F( ColdStorageSoakTest, Teardown_CleanStopUnderFullActorMix_BoundedAndOrder
     // Stop time (the responder-actor leg): journal a second block,
     // evict it fully, then fire one wrapper miss (don't-have + enqueue).
     const Cid gone = PublishOrphan( 800002 );
+    // 30 s (run 40949986714 Linux-x86_64-Debug): the 3 s slow flush is
+    // armed by now - reaching Durable needs one full flush observation,
+    // and on a loaded Debug CI box 10 s was not enough.
     ASSERT_TRUE( PollUntil( [&] { return AllDurable( { gone } ); },
-                            std::chrono::milliseconds( 10000 ) ) );
+                            std::chrono::milliseconds( 30000 ) ) );
     {
         std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
         (void)shared_local_->SetSpilledAt( gone, UnixNowMs() - 60000 );

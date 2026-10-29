@@ -53,6 +53,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <sstream>
 #include <chrono>
 #include <filesystem>
 #include <functional>
@@ -825,7 +826,21 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
           return status.gc_enabled && status.gc_disposed_marker_count >= 2;
         },
         std::chrono::milliseconds( 180000 ) ) )
-        << "node 2's background GC never evicted the detached deltas";
+        << "node 2's background GC never evicted the detached deltas; final status: "
+        << [ & ] {
+             auto s = gdb2->GetColdStorageStatus();
+             std::ostringstream oss;
+             oss << "gc_enabled=" << s.gc_enabled
+                 << " gc_inhibited_staging=" << s.gc_inhibited_staging
+                 << " gc_evicting_count=" << s.gc_evicting_count
+                 << " gc_last_pass_candidates=" << s.gc_last_pass_candidates
+                 << " gc_last_pass_unix_ms=" << s.gc_last_pass_unix_ms
+                 << " gc_disposed_marker_count=" << s.gc_disposed_marker_count
+                 << " durable=" << s.durable_upload_count
+                 << " staging_healthy=" << s.staging_healthy
+                 << " flush_backoff=" << s.flush_backoff_active;
+             return oss.str();
+           }();
 
     // THE RE-DELIVERY over the real gossip wire: node 1 re-broadcasts
     // the ORIGINAL pre-delete CID announcement through its

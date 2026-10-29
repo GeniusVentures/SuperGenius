@@ -936,8 +936,12 @@ TEST_F( ColdStorageSpillTest, sc1_set_latency_independent_of_drainer_state )
               << "ms | running median=" << stats_b.median_ms << "ms p99=" << stats_b.p99_ms
               << "ms (injected remote latency 300ms)" << std::endl;
 
-    EXPECT_GE( stats_b.median_ms, 0.5 * stats_a.median_ms ) << "distribution match (lower bound)";
-    EXPECT_LE( stats_b.median_ms, 2.0 * stats_a.median_ms ) << "distribution match (upper bound)";
+    // Distribution-match band (run 40949986714 Win-Release: sub-ms
+    // medians 0.267/0.597 blew the old 0.5x-2x band on pure scheduler
+    // noise): the load-independent teeth is the ABSOLUTE bound below -
+    // both medians must stay ~3 orders under the 300 ms injected latency.
+    EXPECT_GE( stats_b.median_ms, 0.25 * stats_a.median_ms ) << "distribution match (lower bound)";
+    EXPECT_LE( stats_b.median_ms, 4.0 * stats_a.median_ms ) << "distribution match (upper bound)";
     // Absolute non-blocking guard (p99 far below the 300 ms injected
     // latency). Env-tunable for CONTENDED CI runners (run 40840831965
     // OSX-Release: p99 130/939 ms on the shared self-hosted mac under

@@ -1196,6 +1196,16 @@ TEST_F( ColdStorageFaultRaceTest, EvictServe_RewarmAttachVsMark_NoLostBlock )
         ASSERT_TRUE( disposed.has_value() && disposed.value() );
     }
 
+    // Park the drainer's Put BEFORE the re-learn so the re-journaled
+    // record provably sits Pending (run 40949986714 OSX-Debug: arming
+    // AFTER the relearn let the 100 ms drainer finish the re-Put first -
+    // the record legitimately reached Durable and the pass correctly
+    // nominated the backdated block; the test premise, not the product,
+    // was racy). The re-warm worker's re-learn path only GETs; the held
+    // op is the drain's re-Put.
+    WindowGate put_hold;
+    timing_->SetOnOp( S3Op::Put, [&] { put_hold.Enter(); } );
+
     // The responder miss re-attaches the block: immediate don't-have,
     // then the re-warm executor re-learns the bytes off the responder's
     // path.
@@ -1208,10 +1218,6 @@ TEST_F( ColdStorageFaultRaceTest, EvictServe_RewarmAttachVsMark_NoLostBlock )
     auto relearned = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
     ASSERT_TRUE( relearned.has_value() );
     EXPECT_EQ( ContentBytes( relearned.value() ), block.content );
-
-    // Park the drainer's Put so the re-learned record stays Pending.
-    WindowGate put_hold;
-    timing_->SetOnOp( S3Op::Put, [&] { put_hold.Enter(); } );
 
     // While the record is non-Durable (mid-drain), a GC pass must NOT
     // nominate it - no config knob can lower the compile-time gate.
