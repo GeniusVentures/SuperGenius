@@ -451,6 +451,16 @@ TEST_F( ColdStorageDurabilityTest, flush_failure_keeps_accepted_then_recovers )
     fake_admin_->SetAdminFault( S3AdminFaultKind::None );
     ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
                             std::chrono::milliseconds( 10000 ) ) );
+    // Convergence wait (CI-load skew, run 40828950625 OSX): the journal
+    // marks and the status atomics update in the same cycle but a poll
+    // can observe the marks first - wait for the COMPOUND status before
+    // the point-in-time asserts.
+    ASSERT_TRUE( PollUntil( [&] {
+                  const auto s = manager->GetStatus();
+                  return s.durable_upload_count == kBlocks && s.last_flush_valid && s.last_flush_ok;
+              },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "status must converge to durable after fault clear";
     const auto status = manager->GetStatus();
     EXPECT_EQ( status.durable_upload_count, kBlocks );
     EXPECT_TRUE( status.last_flush_valid );
@@ -793,6 +803,15 @@ TEST_F( ColdStorageDurabilityTest, garbage_stats_keeps_accepted_then_recovers )
     fake_admin_->SetAdminFault( S3AdminFaultKind::None );
     ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
                             std::chrono::milliseconds( 10000 ) ) );
+    // Convergence wait (CI-load skew, run 40828950625 OSX Debug): the
+    // flush-evidence flag lands in the same cycle as the marks - wait
+    // for the compound status before asserting.
+    ASSERT_TRUE( PollUntil( [&] {
+                  const auto s = manager->GetStatus();
+                  return s.durable_upload_count == cids.size() && s.last_flush_valid;
+              },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "status must converge after garbage-stats clear";
     EXPECT_TRUE( manager->GetStatus().last_flush_valid );
 }
 
@@ -1000,8 +1019,15 @@ TEST_F( ColdStorageDurabilityTest, staging_unhealthy_when_buffer_fraction_exceed
     fake_admin_->SetStats( StagingStats( 900, 1000, 0 ) ); // > 0.8 * 1000
     auto manager = MakeManager( FastOptions(), FastDurability() );
     manager->Start();
-    ASSERT_TRUE( PollUntil( [&] { return manager->GetStatus().staging_buffer_limit == 1000; },
-                            std::chrono::milliseconds( 10000 ) ) );
+    // Convergence wait (CI-load skew, run 40828950625 aarch64): the
+    // limit lands before the health recompute in the same tick under
+    // load - wait for the COMPOUND observation before asserting.
+    ASSERT_TRUE( PollUntil( [&] {
+                  const auto s = manager->GetStatus();
+                  return s.staging_buffer_limit == 1000 && !s.staging_healthy && s.last_flush_ok;
+              },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "staging health must reflect the fraction breach";
     const auto status = manager->GetStatus();
     EXPECT_FALSE( status.staging_healthy );
     EXPECT_TRUE( status.last_flush_ok ); // evidence fine - health is separate

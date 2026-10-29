@@ -415,19 +415,39 @@ namespace sgns::crdt
 
         if ( queryResult.value().empty() )
         {
-            // SC2 resurrection fix (TEST-02, v1.1 Phase 12 plan 12-01
-            // Task 3): presence REQUIRES an elems row (the go-ds-crdt
-            // semantics). The retention GC's hot cleanup deletes an
-            // evicted delta's OWN elems rows; when the key's last elem
-            // row belongs to that evicted history, an empty enumeration
-            // must read NOT-IN-SET - returning true here resurrected
-            // CRDT-deleted keys (the protected /k/ value row made the
-            // query list the old value while the surviving tombstone
-            // row was never consulted). The tombstone rows (/t/) are
-            // never purged, so a live key always keeps at least one
-            // elem row and is unaffected.
-            CRDTSet()->debug( "InElemsNotTombstoned key '{}' found no elem entries, returning false", aKey );
-            return false;
+            // SC2 resurrection fix, tomb-aware form (TEST-02, v1.1 Phase
+            // 12 plan 12-03): an empty elems enumeration is AMBIGUOUS and
+            // must be decided by the tombstone rows (which are never
+            // purged - the GC-02 guard):
+            //  - No elem rows AND tomb rows exist: the key's delta history
+            //    was GC-evicted after a CRDT delete - the tombstone
+            //    dominates, so NOT in set (returning true here
+            //    resurrected deleted keys through the protected /k/ value
+            //    row the QueryElements optimization lists).
+            //  - No elem rows AND no tomb rows: a local SetValue-only key
+            //    (SetValue writes the /k/ value+priority rows but no
+            //    elems rows - elems arrive only via delta merges), which
+            //    MUST read as in-set (CrdtSetTest.TestSetValue; the
+            //    round-1 empty->false fix broke this contract).
+            //  - Never-added keys never reach this branch: IsValueInSet
+            //    and QueryElements both short-circuit on the missing /k/
+            //    value row first.
+            auto strTombsPrefix = this->TombsPrefix( aKey ).GetKey();
+            Buffer tombsPrefixBuffer;
+            tombsPrefixBuffer.put( strTombsPrefix );
+            auto tombsResult = this->dataStore_->query( tombsPrefixBuffer );
+            if ( tombsResult.has_failure() )
+            {
+                CRDTSet()->error( "InElemsNotTombstoned tombs query failed for key '{}'", aKey );
+                return outcome::failure( tombsResult.error() );
+            }
+            if ( !tombsResult.value().empty() )
+            {
+                CRDTSet()->debug( "InElemsNotTombstoned key '{}' no elems + tombstones present - deleted, returning false", aKey );
+                return false;
+            }
+            CRDTSet()->debug( "InElemsNotTombstoned key '{}' no elems, no tombstones - local value, returning true", aKey );
+            return true;
         }
 
         CRDTSet()->debug( "InElemsNotTombstoned key '{}' found {} elem entries",
