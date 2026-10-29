@@ -41,6 +41,14 @@ on:
         description: "Build iOS Debug"
         default: true
         type: boolean
+      build_iOS-arm64-simulator_Release:
+        description: "Build iOS arm64 Simulator Release"
+        default: true
+        type: boolean
+      build_iOS-arm64-simulator_Debug:
+        description: "Build iOS arm64 Simulator Debug"
+        default: true
+        type: boolean
       build_OSX_Release:
         description: "Build OSX Release"
         default: true
@@ -245,6 +253,14 @@ jobs:
             build-type: "Debug"
           - target: iOS
             runner_key: mac
+          - target: iOS
+            runner_key: mac
+            abi: arm64-simulator
+            build-type: Release
+          - target: iOS
+            runner_key: mac
+            abi: arm64-simulator
+            build-type: Debug
         exclude:
           - target: Android
             abi: ""
@@ -689,7 +705,7 @@ jobs:
       - name: Configure CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DSGNS_NETWORK=release -DPLATFORM=${{ matrix.abi == 'arm64-simulator' && 'SIMULATORARM64' || 'OS64' }} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{env.THIRDPARTY_BUILD_DIR}} -DZKLLVM_DIR=${{env.ZKLLVM_BUILD_DIR}} -DZKLLVM_BUILD_DIR=${{env.ZKLLVM_BUILD_DIR}}
 
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
