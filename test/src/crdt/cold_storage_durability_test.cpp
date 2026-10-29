@@ -773,6 +773,15 @@ TEST_F( ColdStorageDurabilityTest, admin_outage_never_not_found_and_drain_unpois
     fake_admin_->SetAdminFault( S3AdminFaultKind::None );
     ASSERT_TRUE( PollUntil( [&] { return AllInState( cids, UploadState::UploadedDurable ); },
                             std::chrono::milliseconds( 10000 ) ) );
+    // Convergence wait (CI-load skew, run 40840831965 OSX-Debug): the
+    // backoff-reset flag and durable counter land in the same cycle as
+    // the marks but can be observed a poll apart under load.
+    ASSERT_TRUE( PollUntil( [&] {
+                  const auto s = manager->GetStatus();
+                  return s.durable_upload_count == kBlocks && !s.flush_backoff_active;
+              },
+                            std::chrono::milliseconds( 10000 ) ) )
+        << "status must converge after admin-outage clear";
     const auto recovered = manager->GetStatus();
     EXPECT_FALSE( recovered.flush_backoff_active );
     EXPECT_EQ( recovered.durable_upload_count, kBlocks );
