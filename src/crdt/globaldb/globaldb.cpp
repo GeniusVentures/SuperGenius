@@ -571,7 +571,11 @@ namespace sgns::crdt
         started_{ false },
         cid_sync_started_{ false },
         cid_receiving_started_{ false },
-        head_broadcasting_started_{ false }
+        head_broadcasting_started_{ false },
+        // Value-initialized out-of-class (clang-compatible NSDMI posture,
+        // SC4 v1.1 Phase 12 plan 12-03): the member carries no in-class
+        // brace initializer.
+        cold_storage_options_()
     {
     }
 

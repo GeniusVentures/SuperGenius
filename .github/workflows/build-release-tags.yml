@@ -199,8 +199,11 @@ jobs:
       RUN_TESTS: ${{ inputs.run_tests && (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.target == 'Windows' && matrix.build-type == 'Release')) }}
       # TEST-02 SC4 (D-02b): the cold-storage-ON configure append (env-
       # context expression only - never interpolated raw into run:).
-      COLD_STORAGE_ARGS: ${{ inputs.cold_storage && '-DSGNS_COLD_STORAGE=ON' || '' }}
-      COLD_STORAGE: ${{ inputs.cold_storage }}
+      # Desktop targets only, mirroring RUN_TESTS' platform gating: the
+      # mobile legs keep the Phase-7 OFF posture (their install trees
+      # carry no sgns-blockstore), so a cold_storage dispatch must not
+      # break them (run 40822523779: iOS/Android failed at configure).
+      COLD_STORAGE_ARGS: ${{ inputs.cold_storage && (matrix.target == 'Linux' || matrix.target == 'OSX' || matrix.target == 'Windows') && '-DSGNS_COLD_STORAGE=ON' || '' }}
     runs-on: ${{ fromJson(needs.resolve-runners.outputs[matrix.runner_key]) }}
     container:
       image: ${{matrix.container}}

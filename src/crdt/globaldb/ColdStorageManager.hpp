@@ -116,6 +116,19 @@ namespace sgns::crdt
         /// (public for test citation; the only v1.1 reason).
         static constexpr uint8_t kEvictionReasonRetention{ 1 };
 
+        /**
+         * @brief      Default-constructed durability/retention knobs for
+         *             the ctor's trailing defaulted parameters.
+         * @note       Out-of-line bodies by necessity: clang rejects
+         *             default arguments that value-initialize NSDMI
+         *             aggregates inside the enclosing class definition
+         *             (the SC4 CI failures, v1.1 Phase 12 plan 12-03);
+         *             the thunks defer construction to a complete-class
+         *             context.
+         */
+        static DurabilityOptions DefaultDurabilityOptions();
+        static RetentionOptions  DefaultRetentionOptions();
+
         /// @brief The eviction-safety durability gate (D-10): a local
         ///        block's bytes are evictable ONLY when its journal
         ///        record is UploadedDurable. Compile-time constant - no
@@ -174,9 +187,9 @@ namespace sgns::crdt
                             std::shared_ptr<std::mutex>                        cold_store_mutex,
                             std::shared_ptr<std::mutex>                        remote_store_mutex,
                             BackpressureOptions                                options,
-                            DurabilityOptions                                  durability_options = {},
+                            DurabilityOptions                                  durability_options = DefaultDurabilityOptions(),
                             std::shared_ptr<sgns::blockstore::S3AdminClient>    admin_client       = nullptr,
-                            RetentionOptions                                   retention_options = {} );
+                            RetentionOptions                                   retention_options = DefaultRetentionOptions() );
 
         ~ColdStorageManager();
 
@@ -642,6 +655,19 @@ namespace sgns::crdt
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "ColdStorageManager" );
     };
+
+    // Complete-class context (out-of-line): the NSDMI-dependent aggregate
+    // constructions moved out of ColdStorageManager's definition -
+    // clang-compatible (SC4, v1.1 Phase 12 plan 12-03).
+    inline ColdStorageManager::DurabilityOptions ColdStorageManager::DefaultDurabilityOptions()
+    {
+        return DurabilityOptions{};
+    }
+
+    inline ColdStorageManager::RetentionOptions ColdStorageManager::DefaultRetentionOptions()
+    {
+        return RetentionOptions{};
+    }
 
 } // namespace sgns::crdt
 

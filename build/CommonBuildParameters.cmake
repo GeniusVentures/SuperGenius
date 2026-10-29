@@ -436,6 +436,27 @@ if(SGNS_COLD_STORAGE)
     set(nlohmann_json_DIR   "${_THIRDPARTY_BUILD_DIR}/json/share/cmake/nlohmann_json")
     set(httplib_DIR         "${_THIRDPARTY_BUILD_DIR}/minio-cpp/lib/cmake/httplib")
     set(miniocpp_DIR        "${_THIRDPARTY_BUILD_DIR}/minio-cpp/lib/cmake/miniocpp")
+    # ZLIB (TEST-02 SC4, v1.1 Phase 12 plan 12-03): miniocpp's consumer
+    # config re-runs find_dependency(ZLIB) in THIS context - on Windows
+    # there is no system zlib and module-mode FindZLIB cannot see the
+    # artifact layout (run 40822523779: "Could NOT find ZLIB (missing:
+    # ZLIB_LIBRARY)"). The sgns-blockstore cmaketemplate pattern (its
+    # dedicated CI is green against this same artifact): pin CMP0167 to
+    # module mode (NEVER config - re-routing into ZLIBConfig.cmake
+    # corrupts the httplib config check, the superbuild trap above),
+    # point ZLIB_ROOT at the artifact, and import the artifact's ZLIB
+    # targets file directly (protobuf/miniocpp link interfaces reference
+    # ZLIB::ZLIBSTATIC). Must precede find_package(httplib)/miniocpp.
+    if(POLICY CMP0167)
+        cmake_policy(SET CMP0167 OLD)
+    endif()
+    set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
+    set(ZLIB_ROOT "${_THIRDPARTY_BUILD_DIR}/zlib")
+    if(EXISTS "${ZLIB_DIR}/ZLIB-static.cmake")
+        include("${ZLIB_DIR}/ZLIB-static.cmake")
+    endif()
+    set(ZLIB_SUPERBUILD_TARGETS_FILE "${ZLIB_DIR}/ZLIB-static.cmake" CACHE FILEPATH
+        "sgns-blockstore ZLIB targets file (consumer-side import)")
     find_package(httplib CONFIG REQUIRED)
     find_package(miniocpp CONFIG REQUIRED)
     set(sgns-blockstore_DIR "${_THIRDPARTY_BUILD_DIR}/sgns-blockstore/lib/cmake/sgns-blockstore")

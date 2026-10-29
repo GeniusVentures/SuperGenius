@@ -205,6 +205,21 @@ namespace sgns::crdt
         using ColdStorageParseResult = outcome::result<ColdStorageOptions, std::string>;
 
         /**
+         * @brief      Default-constructed cold-storage options (the
+         *             disabled posture) for GlobalDB::New's trailing
+         *             parameter.
+         * @note       Out-of-line body by necessity: clang rejects a
+         *             default argument that constructs an NSDMI
+         *             aggregate inside the enclosing class definition
+         *             ("default member initializer needed within
+         *             definition of enclosing class" - the SC4 CI
+         *             failures, v1.1 Phase 12 plan 12-03); the thunk
+         *             defers the construction to a complete-class
+         *             context. MSVC accepts both shapes.
+         */
+        static ColdStorageOptions DefaultColdStorageOptions();
+
+        /**
          * @brief      Parses the strict tri-state "blockstore" section of a
          *              crdt_config.json document (INTG-02, D-01..D-08).
          *
@@ -269,7 +284,7 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
             BackupOptions          backup_options      = BackupOptions{ false, 15, 12, true },
-            ColdStorageOptions     cold_storage_options = ColdStorageOptions{} );
+            ColdStorageOptions     cold_storage_options = DefaultColdStorageOptions() );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -558,7 +573,7 @@ namespace sgns::crdt
         bool                                              cid_receiving_started_;
         bool                                              head_broadcasting_started_;
         BackupOptions                                     backup_options_{};
-        ColdStorageOptions                                cold_storage_options_{};
+        ColdStorageOptions                                cold_storage_options_;
         /// Journal-spill decorator handed to the DAG syncer when cold
         /// storage is enabled (v1.1 Phase 8); null when disabled.
         std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore>   cold_data_store_;
@@ -624,6 +639,14 @@ namespace sgns::crdt
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };
+
+    // Complete-class context (out-of-line): the NSDMI-dependent aggregate
+    // construction moved out of GlobalDB's definition - clang-compatible
+    // (SC4, v1.1 Phase 12 plan 12-03).
+    inline GlobalDB::ColdStorageOptions GlobalDB::DefaultColdStorageOptions()
+    {
+        return ColdStorageOptions{};
+    }
 }
 
 /**
