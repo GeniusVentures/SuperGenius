@@ -129,7 +129,11 @@ namespace
         const auto now = std::chrono::system_clock::now();
         const auto tt  = std::chrono::system_clock::to_time_t( now );
         tm       parts{};
+#ifdef _WIN32
         localtime_s( &parts, &tt );
+#else
+        localtime_r( &tt, &parts );
+#endif
         char buf[32];
         strftime( buf, sizeof( buf ), "%H:%M:%S", &parts );
         return buf;

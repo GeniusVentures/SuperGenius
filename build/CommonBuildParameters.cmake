@@ -457,6 +457,16 @@ if(SGNS_COLD_STORAGE)
     endif()
     set(ZLIB_SUPERBUILD_TARGETS_FILE "${ZLIB_DIR}/ZLIB-static.cmake" CACHE FILEPATH
         "sgns-blockstore ZLIB targets file (consumer-side import)")
+    # The vendored FindZLIB shim (cmake/FindZLIB.cmake - the same module
+    # the sgns-blockstore cmaketemplate injects) makes every
+    # find_package(ZLIB) in this tree - including the one re-run inside
+    # miniocpp-deps.cmake, and the hash-guarded re-run inside
+    # httplibConfig.cmake - resolve ZLIB::ZLIBSTATIC from the artifact
+    # without ever executing ZLIBConfig.cmake (the httplib corruption
+    # trap) and without builtin FindZLIB's artifact-blind library search
+    # (run 40826387117 Windows configure failure). Prepend so it wins
+    # over the builtin module.
+    list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
     find_package(httplib CONFIG REQUIRED)
     find_package(miniocpp CONFIG REQUIRED)
     set(sgns-blockstore_DIR "${_THIRDPARTY_BUILD_DIR}/sgns-blockstore/lib/cmake/sgns-blockstore")
