@@ -364,20 +364,10 @@ jobs:
           fi
           gh release download "$tag" --repo GeniusVentures/thirdparty -p "$FILE_NAME"
           tar -zxf "$FILE_NAME"
-          # TEST-02 SC4 (12-03 D-02a): the cold-storage test fakes are
-          # source-tree-only - the release tarball carries include/ and
-          # lib/ only. The ON legs overlay sgns-blockstore/src from the
-          # SAME tag whose tarball was just extracted, so the fakes
-          # always match the built library (disjoint subpaths).
-          if [ "${{ matrix.cold_storage }}" = "ON" ]; then
-            git clone --filter=blob:none --sparse --depth 1 --branch "$tag" \
-              https://x-access-token:${GH_TOKEN}@github.com/GeniusVentures/thirdparty.git tp-sparse
-            cd tp-sparse
-            git sparse-checkout set sgns-blockstore/src
-            cp -r sgns-blockstore/src ../sgns-blockstore/
-            cd ..
-            rm -rf tp-sparse
-          fi
+          # TEST-02 SC4 note (12-03, header-install ruling 2026-10-28):
+          # the cold-storage test fakes (InMemoryS3Client /
+          # InMemoryS3AdminClient) are INSTALLED WITH the library
+          # (include/sgns-blockstore/) - no source-tree overlay needed.
           # CMake on Windows needs a native path, not the MSYS one.
           echo "THIRDPARTY_BUILD_DIR=$([ "${{ matrix.target }}" = Windows ] && pwd -W || pwd)/$BUILD_DIRECTORY" >> $GITHUB_ENV
 

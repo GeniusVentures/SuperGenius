@@ -74,7 +74,7 @@
 #include <sgns-blockstore/S3BlockStore.hpp>
 
 // Internal fake - relative-include-dir privilege (test-surface only).
-#include "InMemoryS3Client.hpp"
+#include <sgns-blockstore/InMemoryS3Client.hpp>
 
 #include "base/logger.hpp"
 #include "crdt/cold_read_fallback.hpp"

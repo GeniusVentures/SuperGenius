@@ -454,20 +454,9 @@ jobs:
           gh release download "${DOWNLOAD_TAG}" --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
 
-          # TEST-02 SC4 (12-03 D-02b): the cold-storage test fakes are
-          # source-tree-only. The evidence dispatch overlays
-          # sgns-blockstore/src from the SAME DOWNLOAD_TAG whose tarball
-          # was just extracted (disjoint subpaths - fakes always match
-          # the built library).
-          if [ "${COLD_STORAGE}" = "true" ]; then
-            git clone --filter=blob:none --sparse --depth 1 --branch "${DOWNLOAD_TAG}" \
-              https://x-access-token:${GH_TOKEN}@github.com/GeniusVentures/thirdparty.git tp-sparse
-            cd tp-sparse
-            git sparse-checkout set sgns-blockstore/src
-            cp -r sgns-blockstore/src ../sgns-blockstore/
-            cd ..
-            rm -rf tp-sparse
-          fi
+          # TEST-02 SC4 note (12-03, header-install ruling 2026-10-28):
+          # the cold-storage test fakes are INSTALLED WITH the library
+          # (include/sgns-blockstore/) - no source-tree overlay needed.
 
           # Set THIRDPARTY_BUILD_DIR to the actual location where files were extracted
           if [ "${{ matrix.target }}" = "Windows" ]; then

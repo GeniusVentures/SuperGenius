@@ -52,17 +52,6 @@ endif()
 # convention transplanted from
 # thirdparty/sgns-blockstore/docs/testing-tiers.md (addtest() itself
 # has no LABELS support, so set_tests_properties is mandatory).
-# ---------------------------------------------------------------------------
-# TEST-02 SC4 (v1.1 Phase 12 plan 12-03 Task 1): the sgns-blockstore test
-# fakes (InMemoryS3Client / InMemoryS3AdminClient) are source-tree-only -
-# the thirdparty RELEASE TARBALL carries include/ and lib/ only, so the
-# cold suites' relative source-path include is unavailable in a fresh-clone
-# CI checkout. The path is hoisted into this overridable cache variable:
-# local trees and OFF builds keep the byte-identical default; the CI
-# cold-storage-ON legs point it at the sparse sgns-blockstore/src overlay
-# staged next to the extracted install tree.
-set(SGNS_BLOCKSTORE_TEST_SRC_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../thirdparty/sgns-blockstore/src"
-    CACHE PATH "sgns-blockstore test-fake source dir (CI ON legs point at the sparse overlay)")
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_link_proof_test
     cold_storage_link_proof_test.cpp
@@ -93,8 +82,8 @@ set_tests_properties(cold_storage_config_gate_test PROPERTIES LABELS "Tier1")
 # Cold-storage spill journal tests (SPILL-01, v1.1 Phase 8 plan 08-01).
 # Registered ONLY under SGNS_COLD_STORAGE: the suite links
 # sgns-blockstore::sgns-blockstore (the decorator under test plus the
-# InMemoryS3Client fake, whose NOT-installed src/ header is reached via the
-# relative include dir below - 08-RESEARCH Pitfall 6). The Tier-1 lane
+# InMemoryS3Client fake - installed WITH the library since the 12-03
+# header-install ruling). The Tier-1 lane
 # stays non-empty on OFF builds via the unconditional config-gate test.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_spill_test
@@ -106,9 +95,6 @@ target_link_libraries(cold_storage_spill_test
     crdt_globaldb
 )
 
-target_include_directories(cold_storage_spill_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_spill_test PROPERTIES LABELS "Tier1")
 endif()
@@ -116,8 +102,8 @@ endif()
 # Cold-read fallback chain tests (READ-01, v1.1 Phase 9 plan 09-01).
 # Registered ONLY under SGNS_COLD_STORAGE: the suite links
 # sgns-blockstore::sgns-blockstore (the chain service under test plus the
-# InMemoryS3Client fake, whose NOT-installed src/ header is reached via the
-# relative include dir below - 08-RESEARCH Pitfall 6). The Tier-1 lane
+# InMemoryS3Client fake - installed WITH the library since the 12-03
+# header-install ruling). The Tier-1 lane
 # stays non-empty on OFF builds via the unconditional config-gate test.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_fallback_test
@@ -129,9 +115,6 @@ target_link_libraries(cold_storage_fallback_test
     crdt_globaldb
 )
 
-target_include_directories(cold_storage_fallback_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_fallback_test PROPERTIES LABELS "Tier1")
 endif()
@@ -139,7 +122,7 @@ endif()
 # Cold-read SC2 latency-budget benchmark + responder-freeze regression
 # (READ-02, v1.1 Phase 9 plan 09-02). Registered ONLY under
 # SGNS_COLD_STORAGE: links sgns-blockstore::sgns-blockstore plus the
-# InMemoryS3Client fake via the relative include dir. The Tier-1 lane
+# InMemoryS3Client fake (library-installed header). The Tier-1 lane
 # stays non-empty on OFF builds via the unconditional config-gate test.
 if(SGNS_COLD_STORAGE)
 addtest(cold_read_freeze_latency_test
@@ -151,9 +134,6 @@ target_link_libraries(cold_read_freeze_latency_test
     crdt_globaldb
 )
 
-target_include_directories(cold_read_freeze_latency_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_read_freeze_latency_test PROPERTIES LABELS "Tier1")
 endif()
@@ -161,8 +141,8 @@ endif()
 # Flush-gated durability advancement tests (DUR-01, v1.1 Phase 10 plan
 # 10-01). Registered ONLY under SGNS_COLD_STORAGE: links
 # sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
-# InMemoryS3AdminClient fakes via the relative include dir (both fake
-# headers are deliberately not installed). The Tier-1 lane stays
+# InMemoryS3AdminClient fakes (library-installed headers). The Tier-1
+# lane stays
 # non-empty on OFF builds via the unconditional config-gate test.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_durability_test
@@ -174,9 +154,6 @@ target_link_libraries(cold_storage_durability_test
     crdt_globaldb
 )
 
-target_include_directories(cold_storage_durability_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_durability_test PROPERTIES LABELS "Tier1")
 endif()
@@ -184,8 +161,8 @@ endif()
 # Retention-GC observe-only tests (GC-01 SC1/SC5, v1.1 Phase 11 plan
 # 11-01). Registered ONLY under SGNS_COLD_STORAGE: links
 # sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
-# InMemoryS3AdminClient fakes via the relative include dir (both fake
-# headers are deliberately not installed). The Tier-1 lane stays
+# InMemoryS3AdminClient fakes (library-installed headers). The Tier-1
+# lane stays
 # non-empty on OFF builds via the unconditional config-gate test.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_gc_test
@@ -199,9 +176,6 @@ target_link_libraries(cold_storage_gc_test
     rocksdb
 )
 
-target_include_directories(cold_storage_gc_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_gc_test PROPERTIES LABELS "Tier1")
 endif()
@@ -209,7 +183,7 @@ endif()
 # Retention-GC retrievability proofs (GC-03, v1.1 Phase 11 plan 11-03).
 # Registered ONLY under SGNS_COLD_STORAGE: links
 # sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
-# InMemoryS3AdminClient fakes via the relative include dir. Proves the
+# InMemoryS3AdminClient fakes (library-installed headers). Proves the
 # evicted-CID retrievability legs over the real chain (local read,
 # verification honesty, responder re-warm, request cold-before-peers).
 if(SGNS_COLD_STORAGE)
@@ -224,9 +198,6 @@ target_link_libraries(cold_storage_gc_retrievability_test
     rocksdb
 )
 
-target_include_directories(cold_storage_gc_retrievability_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_gc_retrievability_test PROPERTIES LABELS "Tier1")
 endif()
@@ -235,8 +206,8 @@ endif()
 # barriers + seeded jitter + D-12 audit walk (TEST-02 SC1, v1.1 Phase 12
 # plan 12-01). Registered ONLY under SGNS_COLD_STORAGE: links
 # sgns-blockstore::sgns-blockstore plus the InMemoryS3Client and
-# InMemoryS3AdminClient fakes via the relative include dir (both fake
-# headers are deliberately not installed). Hermetic: no live s3d/MinIO
+# InMemoryS3AdminClient fakes (library-installed headers). Hermetic:
+# no live s3d/MinIO
 # endpoints, no Docker - the TimingS3Client decorator drives all timing.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_fault_race_test
@@ -250,9 +221,6 @@ target_link_libraries(cold_storage_fault_race_test
     rocksdb
 )
 
-target_include_directories(cold_storage_fault_race_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_fault_race_test PROPERTIES LABELS "Tier1")
 endif()
@@ -271,7 +239,6 @@ addtest(cold_storage_resurrection_test
 )
 
 target_include_directories(cold_storage_resurrection_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
@@ -302,7 +269,7 @@ endif()
 # s3d-unavailable soak: outage-then-recovery iteration soak + D-09
 # teardown legs + peer cold-fetch budget (TEST-02 SC3, v1.1 Phase 12
 # plan 12-02). Registered ONLY under SGNS_COLD_STORAGE: hermetic fakes
-# via the relative include dir. The wall-clock soak (Task 3) registers
+# via the installed fake headers. The wall-clock soak (Task 3) registers
 # separately as Tier3 - NEVER in this lane.
 if(SGNS_COLD_STORAGE)
 addtest(cold_storage_soak_test
@@ -316,9 +283,6 @@ target_link_libraries(cold_storage_soak_test
     rocksdb
 )
 
-target_include_directories(cold_storage_soak_test PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_soak_test PROPERTIES LABELS "Tier1")
 endif()
@@ -338,9 +302,6 @@ target_link_libraries(cold_storage_wallclock_soak
     rocksdb
 )
 
-target_include_directories(cold_storage_wallclock_soak PRIVATE
-    ${SGNS_BLOCKSTORE_TEST_SRC_DIR}
-)
 
 set_tests_properties(cold_storage_wallclock_soak PROPERTIES LABELS "Tier3")
 endif()

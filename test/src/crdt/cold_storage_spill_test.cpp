@@ -46,7 +46,7 @@
 #include <sgns-blockstore/UploadDrainer.hpp>
 
 // Internal fake - relative-include-dir privilege (test-surface only).
-#include "InMemoryS3Client.hpp"
+#include <sgns-blockstore/InMemoryS3Client.hpp>
 
 #include "base/logger.hpp"
 #include "crdt/globaldb/BlockStoreBackedIpfsDatastore.hpp"
