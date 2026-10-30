@@ -908,6 +908,84 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    outcome::result<void> GlobalDB::CompactStorage( const std::atomic<bool> *canceled )
+    {
+        auto datastore = ActiveDataStore();
+        if ( !datastore )
+        {
+            m_logger->error( "{}: GlobalDB not started", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        // The ONE home of the whole-DB reclamation recipe (D-C1). The
+        // bottommost force flag is load-bearing: the engine default
+        // rewrites the bottommost level only when a compaction filter is
+        // installed, and none is -- without the force flag the rewrite
+        // never happens and deletes survive as un-reclaimed tombstones.
+        // Writers are never stalled (the call sleeps until load is low),
+        // and exclusive_manual_compaction stays false (the vendored engine
+        // warns it does not combine well with the canceled pointer).
+        ::ROCKSDB_NAMESPACE::CompactRangeOptions options;
+        options.bottommost_level_compaction = ::ROCKSDB_NAMESPACE::BottommostLevelCompaction::kForce;
+        options.allow_write_stall           = false;
+        // The vendored option is a non-const pointer while the public
+        // contract keeps the caller-owned atomic const (never written
+        // here); bridging the two is exactly this cast.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+        options.canceled = const_cast<std::atomic<bool> *>( canceled );
+
+        // Whole-DB overload: nullptr bounds compact the entire database.
+        const auto status = datastore->getDB()->CompactRange( options, nullptr, nullptr );
+        if ( status.ok() )
+        {
+            return outcome::success();
+        }
+        if ( status.IsManualCompactionPaused() )
+        {
+            // Pre-set cancellation: nothing was started -- the distinct
+            // clean-skip signal (callers log once, never as an error).
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        m_logger->warn( "{}: CompactRange failed: {}", __func__, status.ToString() );
+        return outcome::failure( Error::ROCKSDB_IO );
+    }
+
+    outcome::result<uint64_t> GlobalDB::GetApproximateDiskUsageBytes() const
+    {
+        auto datastore = ActiveDataStore();
+        if ( !datastore )
+        {
+            m_logger->error( "{}: GlobalDB not started", __func__ );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        // Unlike the compaction call, the sizes API has NO unbounded
+        // range: an empty-to-empty range is the EMPTY range, so an
+        // explicit sentinel high bound spans every real key class (binary
+        // CIDv1, '/', ':', and base58 keys all sort below 0xFF bytes).
+        // The sentinel string must OUTLIVE the range: Slice borrows the
+        // buffer, it does not copy it.
+        const std::string sentinel_high( 16, '\xFF' );
+        const auto        whole_db = ::ROCKSDB_NAMESPACE::Range( ::ROCKSDB_NAMESPACE::Slice(),
+                                                          ::ROCKSDB_NAMESPACE::Slice( sentinel_high ) );
+
+        // Files AND memtables are counted: a node under the 32MB write
+        // buffer keeps everything in the memtable, where a files-only
+        // read would report ~0. The sentinel and flags live ONLY here
+        // (DRY invariant).
+        const auto flags = ::ROCKSDB_NAMESPACE::DB::SizeApproximationFlags::INCLUDE_FILES |
+                           ::ROCKSDB_NAMESPACE::DB::SizeApproximationFlags::INCLUDE_MEMTABLES;
+
+        uint64_t   bytes  = 0;
+        const auto status = datastore->getDB()->GetApproximateSizes( &whole_db, 1, &bytes, flags );
+        if ( !status.ok() )
+        {
+            m_logger->warn( "{}: GetApproximateSizes failed: {}", __func__, status.ToString() );
+            return outcome::failure( Error::ROCKSDB_IO );
+        }
+        return bytes;
+    }
+
     std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const
     {
         auto crdt_datastore = ActiveCRDTDataStore();

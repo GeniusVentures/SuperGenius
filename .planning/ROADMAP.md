@@ -70,7 +70,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [ ] **Phase 17: Eligibility, Policy & Gating (Dry-Run)** - Evaluator + multi-element block-parse gate + own-frontier fix + Light-only fail-closed gate + config knobs; evaluates, never erases in production (PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06)
 - [x] **Phase 18: TxPruner Service & First Real Prune** - First real erasure: idempotent crash-consistent cycle, re-delivery guard + sweep re-prune, GeniusNode wiring, per-cycle observability (PRUNE-04, PRUNE-05, RECL-03, RECL-04) (completed 2026-10-23)
 - [x] **Phase 19: Pruned-Node Survival & Recovery Hardening** - Restart matrix, boot/checkpoint-rebuild safety, pruned-vs-not-found answers, fresh-node-through-pruned-mesh E2E (GATE-05, SURV-01, SURV-02, SURV-03) (completed 2026-10-24)
-- [ ] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02)
+- [x] **Phase 20: Reclamation Proof & E2E Hardening** - Scheduled CompactRange + measured-bytes CI gate, non-tx immutability + full/archive retention ctests, window-edge race faults (GATE-02, RECL-01, RECL-02) (completed 2026-10-24)
 
 *Parallel milestones:* v1.2 executes HERE; v1.3 (Phases 21-29) is planned on `develop` in parallel — both tracked in this planning root. The v1.3-side read-only snapshot of this roadmap: `.planning/milestones/v1.2-ROADMAP.md`.
 
@@ -89,148 +89,6 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [ ] **Phase 27: Network Topology** - Relay/hole-punch completed limits-first OR the relay-through-full-nodes topology published as an explicit supported contract, decided at a mid-phase gate on fork-divergence cost (TOPO-01)
 - [ ] **Phase 28: Worker Profile, Isolation & Mobile Readiness** - Minimal worker profile with measured duty-cycle controls; honestly-defined job privacy boundary with scoped controls; adaptive resource budgets and demonstrated lifecycle recovery (SDK-02, PRIV-01, MOB-01)
 - [ ] **Phase 29: Return-Leg Activation (SGNS→EVM)** - New bridge exporter module feeding GNUSBridgeAttestor; replay protection; activation checklist with deployed-contract verification — strictly last (RET-01)
-
-## Phase Details (v1.2 — ACTIVE on this branch)
-
-### Phase 16: Erasure Primitives & Bookkeeping Hardening
-
-**Goal**: The physical two-level erasure primitives exist behind owner-module APIs with the safety invariants baked into their shape — seal markers unaddressable, in-use CIDs guarded, one atomic WriteBatch — and the fresh-DB test-fixture rules established, with zero production behavior change.
-**Depends on**: Nothing within v1.2 (first phase of the milestone; numbering continues after v1.1's Phase 15)
-**Requirements**: PRUNE-02, GATE-03
-**Success Criteria** (what must be TRUE):
-
-  1. A primitive erase of one transaction on a fresh temp DB passes the three-part assertions — CRDT set entries (`/crdt/s|t/<key>/<cid>`, `/crdt/k/<key>/v|p`) absent, raw CID block absent from the block store, `<cid>sealed` marker still present — plus the negative control (an untouched sibling key remains byte-identical).
-  2. CRDT entries, raw block bytes, and the tx→CID map entry erase in one atomic RocksDB WriteBatch: a crash-injected interrupted batch leaves no partial state (never value-without-block, never block-without-map-entry).
-  3. The block-erase exposure refuses in-use CIDs — head CID, root-CID pending/active, and LRU-cached CIDs are all rejected by guards — and no code path can address a seal marker (`isResolved` asserted before and after erase).
-  4. No tombstone path exists in the new surface: erasure writes directly to the shared DB through the `CrdtSet`-owned local primitive, `DeleteKey`/`DeleteTransaction` appear nowhere in the pruner code (grep gate), and the tx→CID map gains a deletion lifecycle with tracked-map cleanup.
-  5. The default build and the full existing ctest suite pass green with the pruner unwired — `removeNode`'s first consumer is the test suite, so production behavior is unchanged.
-
-**Plans**: 4 plans
-Plans:
-**Wave 1**
-
-- [x] 16-01-PLAN.md — CrdtSet batch-erase staging primitive + CrdtDatastore guard exposure (PRUNE-02)
-- [x] 16-02-PLAN.md — Guarded DAGSyncer block staging + revert-free tracked-map erase + real-store erase fixture (PRUNE-02, GATE-03)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 16-03-PLAN.md — GlobalDB one-batch erase composition (guards, interruption seam, m_dagSyncer) + tx map deletion lifecycle (PRUNE-02, GATE-03)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 16-04-PLAN.md — Fresh-DB erase suites (atomicity, seal retention, guards, integration) + ctest source-scan gates + full-suite green (PRUNE-02, GATE-03)
-
-### Phase 17: Eligibility, Policy & Gating (Dry-Run)
-
-**Goal**: The pruning policy evaluator decides erasability correctly on live data in dry-run — never erasing in production — and the two correctness dependencies of the first real prune (multi-element block gate, own-frontier survival fix) are implemented and proven before any production erasure exists.
-**Depends on**: Phase 16
-**Requirements**: PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06
-**Success Criteria** (what must be TRUE):
-
-  1. The dry-run evaluator on a live light node reports exactly the truly-eligible set: every output genuinely consumed (`IsOutPointGenuinelyConsumed` — synthesized zero-amount tombstones excluded) AND depth beyond the configured finality window (priority vs `maxHeight`); unspent or in-window transactions are never reported eligible.
-  2. The block-parse gate reports a delta block erasable only when every element it carries is prune-eligible (parsed at evaluation time from the block itself, not from "what this node applied") — a multi-element block with any non-eligible sibling (e.g. another account's live element) is never eligible.
-  3. With the node's own frontier transaction deep inside the eligible window, outgoing `previous_hash` resolution still completes from cert-slot data (certificates are never pruned) and the cold-start nonce chain is correct — proven by test before any production erasure exists.
-  4. Gating fails closed: the evaluator runs only on `NodeType::Light` (full/archive refuse), erasure candidates are confined to the `/bc-<netid>/tx/` prefix allowlist (the verified `TRANSACTION_BASE_FORMAT` constant), and out-of-prefix keys are rejected and ctest-asserted.
-  5. Pruning knobs sit beside `node_type` in `sgns_config.json`, default off, with resolved values INFO-logged; a config without the new keys behaves exactly as today.
-
-**Plans**: 6 plans
-Plans:
-
-**Wave 1** *(parallel — no file overlap)*
-
-- [ ] 17-01-PLAN.md — Candidate B spend-recency carrier: `spent_by_txid` populated at ConsumeUTXOs + 4 call sites + read accessor + REQUIREMENTS amendment (PRUNE-01)
-- [ ] 17-02-PLAN.md — CRDT read exposures: GetPriority passthrough chain + GetLocalDeltaKeys sibling (elements AND tombstones) (PRUNE-01, PRUNE-03)
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [ ] 17-03-PLAN.md — Cert-slot previous_hash generalization (one-line rung relaxation) + SC-3 pruned-frontier proof family (GATE-04)
-- [ ] 17-04-PLAN.md — PruneEligibility evaluator: structured result, Light+allowlist gates, spend-recency window, PruningConfig, SC-1/SC-4 suites (PRUNE-01, GATE-01)
-
-**Wave 3** *(blocked on Wave 2)*
-
-- [ ] 17-05-PLAN.md — Multi-element block-parse gate (dry-run) + `/prune/` marker design contract + SC-2/marker suites (PRUNE-03, GATE-01)
-- [ ] 17-06-PLAN.md — `pruning.*` config knobs + config-gated dry-run timer + per-cycle INFO summary + SC-5 full-suite gate (GATE-06)
-
-### Phase 18: TxPruner Service & First Real Prune
-
-**Goal**: The `TxPruner` service performs the first real erasure on a light node — an idempotent, crash-consistent cycle that survives re-delivery and resurrection — wired into `GeniusNode` behind default-off config, with per-cycle observability and queryable status.
-**Depends on**: Phase 17
-**Requirements**: PRUNE-04, PRUNE-05, RECL-03, RECL-04
-**Success Criteria** (what must be TRUE):
-
-  1. A light node with spent history beyond the window physically erases eligible transactions through the ordered four-step flow (CRDT value → CID lookup → block-eligibility + delete → map entry, in that order) — both storage levels gone, unspent UTXO set untouched.
-  2. Crash consistency to a fixed point: killing and restarting the node at any step of the erase flow converges to the same fixed point — no partially-erased transaction survives (no CRDT value without block, no orphan map entry), and re-running the cycle on a clean node is a no-op.
-  3. Re-delivery is terminal: re-broadcasting a pruned root and restarting head exchange produce zero pruned-CID fetch attempts and zero re-created elements; the periodic sweep re-prunes resurrected entries (add-wins OR-Set re-merge from lagging peers) back to the fixed point — no re-fetch storm.
-  4. The tick loop activates only under Light ∧ `State::READY` ∧ empty `missing_tx_hashes_` ∧ settle-window elapsed; `GeniusNode` constructs/starts/stops the pruner per config, and default-off config erases nothing.
-  5. Each cycle emits the observability log (txs examined/erased, watermark advance — the bytes-reclaimed field completes with Phase 20 compaction) and prune status (watermark + last-cycle stats) is queryable.
-
-**Plans**: TBD
-
-### Phase 19: Pruned-Node Survival & Recovery Hardening
-
-**Goal**: A pruned light node is fully operational — every recovery path written under the "history never disappears" assumption is audited and hardened, and history queries answer "pruned" distinctly and cleanly to both local callers and peers.
-**Depends on**: Phase 18
-**Requirements**: GATE-05, SURV-01, SURV-02, SURV-03
-**Success Criteria** (what must be TRUE):
-
-  1. The restart matrix on a pruned node is green: prune → restart → READY with zero pruned-CID fetch attempts → new-tip sync → spend/receive → next outgoing tx `previous_hash`/nonce chain correct.
-  2. Boot-time UTXO assembly and the checkpoint-mismatch clear-and-rebuild path treat a missing pruned transaction as not relevant — boot completes without failure, and the rebuild never resurrects spent outputs from remaining history (no double-spend window).
-  3. Local history queries on pruned transactions return a distinct "history pruned" answer (never conflated with not-found); peers requesting pruned data get an immediate `RS_NOT_FOUND`/`CID_NOT_FOUND` refusal with prompt requester failover — both tested against a real pruned node.
-  4. A fresh light node bootstraps through a mesh whose light peers have pruned the history it needs, served by the full node — E2E green.
-  5. The recovery-path audit (root jobs, `RetryDueFailedRoots`, `RetryStalledDeltas`, work-journal recovery, `missing_tx_hashes_`) treats pruned/resolved CIDs as terminal, with targeted tests per consumer; `AccountMessenger` remains correct once map entries are deleted.
-
-**Plans**: 7 plans
-Plans:
-
-**Wave 1** *(parallel — no file overlap)*
-
-- [x] 19-01-PLAN.md — UTXOManager consumed-preserving clear (D-01 substrate) + KeepConsumed unit suites (GATE-05)
-- [x] 19-02-PLAN.md — D-02 send-wedge fix: typed pre-broadcast error + READY-preserving TickOnce branch + bounded SYNCING exit + lifecycle suites + folded todo closed (SURV-01)
-- [x] 19-03-PLAN.md — SC-5 recovery-audit guards: RetryDueFailedRoots isResolved guard + stalled-delta/cert/AccountMessenger verify tests (GATE-05, SURV-01)
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [x] 19-04-PLAN.md — D-01 checkpoint-rebuild guard: preserve-clear swap + PRUNED marker consult + own-replay recognition + gap-fill crosscheck + RebuildGuard suites (GATE-05)
-- [x] 19-07-PLAN.md — SURV-02 peer refusal/failover + SURV-03/D-04 three-node pruned-mesh E2E (SURV-02, SURV-03)
-
-**Wave 3** *(blocked on Wave 2)*
-
-- [x] 19-05-PLAN.md — D-03 tri-state lookup (found/not-found/pruned) + GeniusNode passthrough + `tx <hash>` CLI + TriState suite (SURV-02)
-- [x] 19-06-PLAN.md — SC-1 restart matrix: prune → real StartCore boot → READY, zero pruned-CID fetches → tip sync → spend/receive → nonce/previous_hash chain (SURV-01)
-
-### Phase 20: Reclamation Proof & E2E Hardening
-
-**Goal**: The milestone's headline claim is proven in measured bytes — deleted data physically leaves the disk via scheduled compaction, non-transaction data is provably untouched, and the window-edge races are fault-tested.
-**Depends on**: Phase 19
-**Requirements**: GATE-02, RECL-01, RECL-02
-**Success Criteria** (what must be TRUE):
-
-  1. A scheduled light-node-only `CompactRange` over the shared DB (`bottommost_level_compaction = kForce`, off the hot path) runs after prune cycles, and measured SST/`du` bytes drop before-vs-after on a node with known spent history.
-  2. The measured-bytes CI gate proves real reclamation — a prune + compaction cycle on a fixture with known block sizes must reclaim the expected byte delta (measured bytes, not key counts) or CI fails.
-  3. Non-transaction data is byte-identical across a prune run: certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers (ctest).
-  4. Full and archive nodes in the same mesh retain 100% of their transaction history across the light node's prune cycles (ctest).
-  5. Window-edge races are fault-tested: a spend arriving during an active prune cycle is never erased (spent-ness re-verified under lock immediately before each erase) and is picked up by the next cycle — verified under debug and release timing.
-
-**Plans**: 5 plans
-
-Plans:
-
-**Wave 1**
-
-- [ ] 20-01-PLAN.md — compaction substrate: GlobalDB CompactStorage + GetApproximateDiskUsageBytes (the one recipe home) + pruning.compact_threshold_mb knob + resolved-values INFO (RECL-01)
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [ ] 20-02-PLAN.md — TxPruner post-cycle compaction gate (D-01) + evaluation-carried erased-bytes estimate + PruneStatus.bytes_reclaimed stamped at compaction (D-02) + RECL-03 wording retirement + shutdown cancel wiring + canary (RECL-01)
-
-**Wave 3** *(parallel — no file overlap)*
-
-- [ ] 20-03-PLAN.md — dedicated measured-bytes gate target: 200×~10KB → prune → ONE compaction → ≥60% bounded assertion + anti-vacuous pin + du belt (RECL-02)
-- [ ] 20-04-PLAN.md — compaction-trigger conjunct matrix + bytes_reclaimed honesty + GATE-02 post-compaction byte-identity (D-C5) + SC-5 seam-held race both legs (RECL-01, GATE-02)
-
-**Wave 4** *(blocked on Wave 3)*
-
-- [ ] 20-05-PLAN.md — SC-4 mesh retention: full/archive GlobalDB peers byte-identical across the light's prune + compaction (GATE-02)
 
 ## Phase Details (v1.3 — ACTIVE)
 
@@ -363,7 +221,7 @@ Plans:
 | 17. Eligibility, Policy & Gating (Dry-Run) | v1.2 (this branch) | 0/6 | Planned (planning complete) | — |
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
-| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
+| 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | 5/5 | Complete    | 2026-10-24 |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
