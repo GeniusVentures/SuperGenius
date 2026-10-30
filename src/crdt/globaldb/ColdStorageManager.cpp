@@ -803,6 +803,16 @@ namespace sgns::crdt
 
     std::vector<sgns::blockstore::Cid> ColdStorageManager::GcPassOnce()
     {
+        // SC4 round 7: the whole pass is single-writer state
+        // (evicting_marks_, gc_tick_counter_, last_pass_snapshot_,
+        // pass_reclaimed_*). The background GC thread's immediate
+        // Start() pass previously could overlap an external caller's
+        // pass on slow runners - torn EvictingMark.cid copies produced
+        // null-multihash aborts and CID-encode throws on macOS CI.
+        // Serializing the pass makes the documented invariant real; the
+        // stop check inside the lock keeps Stop() join bounded.
+        std::lock_guard<std::mutex> pass_lock( gc_pass_mutex_ );
+
         // (0) stop check: a stopped manager never evaluates policy.
         if ( gc_stop_flag_.load() )
         {

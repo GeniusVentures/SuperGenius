@@ -615,6 +615,18 @@ namespace sgns::crdt
         std::atomic_bool         gc_stop_flag_{ false };
         std::mutex               gc_wait_mutex_;
         std::condition_variable  gc_cv_;
+        /// SC4 round 7: enforces the single-writer invariant the marks
+        /// below were documented to rely on ("GcPassOnce never overlaps
+        /// itself"). The background gc_thread_ fires one immediate pass
+        /// at Start() before settling into its cadence, and external
+        /// GcPassOnce callers (tests, admin) may run concurrently with
+        /// it - on slow/contended runners the two lanes overlapped and
+        /// tore evicting_marks_ (null-content_address CIDs aborted in
+        /// Multihash::data(); scrambled version/codec pairs threw
+        /// "Content type does not conform the version" from CID encode;
+        /// parked background passes hung Stop()). Lock order:
+        /// gc_pass_mutex_ -> gc_hook_mutex_ -> *cold_store_mutex_.
+        std::mutex               gc_pass_mutex_;
         /// TEST-ONLY mid-pass hook (null in production; see the setter).
         std::function<void()>    gc_mid_pass_hook_;
         /// TEST-ONLY between-halves hook (null in production; D-16).
