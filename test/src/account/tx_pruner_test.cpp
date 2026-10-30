@@ -396,10 +396,10 @@ public:
     //
 
     /// Transfer with @p output_count outputs owned by this account (empty for spenders).
-    /// @p dest_pad_bytes appends that many low-entropy bytes to every
-    /// destination address — sizes the serialized VALUE for the compaction
-    /// threshold without extra outputs (the CompactionGate canary).
-    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count, size_t dest_pad_bytes = 0 )
+    /// @p value_pad_bytes adds low-entropy signature bytes per output to size
+    /// the serialized VALUE for compaction without inflating logged owners.
+    /// These pruning fixtures do not validate transaction signatures.
+    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count, size_t value_pad_bytes = 0 )
     {
         SGTransaction::DAGStruct dag;
         dag.set_type( "transfer" );
@@ -409,13 +409,12 @@ public:
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() ) );
 
-        const std::string destination = dest_pad_bytes > 0 ? account_->GetAddress() + std::string( dest_pad_bytes, 'x' )
-                                                           : account_->GetAddress();
+        dag.set_signature( std::string( value_pad_bytes * output_count, 'x' ) );
         std::vector<OutputDestInfo> destinations;
         destinations.reserve( output_count );
         for ( size_t i = 0; i < output_count; ++i )
         {
-            destinations.push_back( { 100 + i, destination, kTestTokenId } );
+            destinations.push_back( { 100 + i, account_->GetAddress(), kTestTokenId } );
         }
         return std::make_shared<TransferTransaction>(
             TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
@@ -518,21 +517,14 @@ public:
     }
 
     /// Spends one output by @p spender; returns ConsumeUTXOs's verdict.
-    /// @p owner_address overrides the consuming owner (a padded destination
-    /// — ConsumeUTXOs matches the STORED owner, so a padded output must be
-    /// consumed under its own address).
-    bool ConsumeOutput( const GeniusTransaction &transaction,
-                        uint32_t                 output_idx,
-                        const GeniusTransaction &spender,
-                        const std::string       &owner_address = "" )
+    bool ConsumeOutput( const GeniusTransaction &transaction, uint32_t output_idx, const GeniusTransaction &spender )
     {
         auto txid = base::Hash256::fromReadableString( transaction.GetHash() );
         EXPECT_FALSE( txid.has_error() );
-        auto consumed = account_->GetUTXOManager().ConsumeUTXOs(
-            { { txid.value(), output_idx, {} } },
-            owner_address.empty() ? account_->GetAddress() : owner_address,
-            UTXOManager::UTXOType::UTXO_NORMAL,
-            SpenderHash( spender ) );
+        auto consumed = account_->GetUTXOManager().ConsumeUTXOs( { { txid.value(), output_idx, {} } },
+                                                                 account_->GetAddress(),
+                                                                 UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                 SpenderHash( spender ) );
         EXPECT_TRUE( consumed.has_value() );
         return consumed.has_value() && consumed.value();
     }
@@ -1636,10 +1628,6 @@ TEST_F( TxPrunerTest, RealPrune_PostCompactionEverythingElseStaysByteIdentical )
 {
     constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a non-vacuous rewrite
 
-    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
-    // consumed under their own (padded) address.
-    const std::string padded_owner = account_->GetAddress() + std::string( kCandidateValueBytes, 'x' );
-
     // RealPrune's seeding verbatim (sizes aside): ancient spender, driver,
     // two eligibles, the untouched sibling.
     auto spender    = MakeTransfer( 1, 0 );
@@ -1657,8 +1645,8 @@ TEST_F( TxPrunerTest, RealPrune_PostCompactionEverythingElseStaysByteIdentical )
     TrackOutputs( *eligible_a );
     TrackOutputs( *eligible_b );
     TrackOutputs( *unspent ); // deliberately never consumed
-    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
 
     // Non-tx data: a cert-shaped record and plain seed keys.
     const std::string cert_key    = "/cert/" + account_->GetAddress() + ":41";
@@ -2282,6 +2270,27 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
 // asserts only, never log capture)
 // ---------------------------------------------------------------------------
 
+/// Large fixture values retain their payload through serialization without
+/// copying that payload into output owners, UTXO keys, or address logs.
+TEST_F( TxPrunerTest, CompactionFixture_LargeValuesKeepOrdinaryOutputOwners )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+    const auto       candidate   = MakeTransfer( 1, 1, kValueBytes );
+    const auto       serialized  = candidate->SerializeByteVector();
+    ASSERT_GE( serialized.size(), kValueBytes );
+
+    const auto restored = TransferTransaction::DeSerializeByteVector( serialized );
+    ASSERT_NE( restored, nullptr );
+    EXPECT_TRUE( restored->CheckHash() );
+    EXPECT_TRUE( restored->SerializeByteVector() == serialized );
+
+    const auto outputs = restored->GetProducedUTXOs();
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs->size(), 1u );
+    EXPECT_EQ( outputs->front().GetOwnerAddress().size(), account_->GetAddress().size() );
+    EXPECT_TRUE( outputs->front().GetOwnerAddress() == account_->GetAddress() );
+}
+
 /**
  * The end-to-end mechanism proof: two spent-beyond-window transactions whose
  * evaluation-carried sizes (~1MB values each) cross a 1MB threshold inside
@@ -2293,10 +2302,6 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
 TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsReclaimedBytes )
 {
     constexpr size_t kCanaryValueBytes = 1u << 20; // ~1MB low-entropy value each
-
-    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
-    // consumed under their own (padded) address.
-    const std::string padded_owner = account_->GetAddress() + std::string( kCanaryValueBytes, 'x' );
 
     auto spender = MakeTransfer( 1, 0 );
     auto big_a   = MakeTransfer( 2, 1, kCanaryValueBytes );
@@ -2310,8 +2315,8 @@ TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsR
 
     TrackOutputs( *big_a );
     TrackOutputs( *big_b );
-    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
 
     // Pre-state: both values present, nothing reclaimed yet (honest nullopt).
     for ( const auto *tx : { big_a.get(), big_b.get() } )
@@ -2329,14 +2334,14 @@ TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsR
 
     EXPECT_EQ( stats.erased, 2u );
     EXPECT_TRUE( stats.compacted );
-    EXPECT_GT( stats.compaction_duration_ms, 0u );
 
     const auto status = pruner->GetPruneStatus();
     ASSERT_TRUE( status.bytes_reclaimed.has_value() );
     EXPECT_GT( status.bytes_reclaimed.value(), 0u );
     // WR-03 pin (re-review): last_cycle must report the compaction.
     EXPECT_TRUE( status.last_cycle.compacted );
-    EXPECT_GT( status.last_cycle.compaction_duration_ms, std::chrono::milliseconds::zero().count() );
+    // A successful sub-millisecond compaction legitimately records zero.
+    EXPECT_EQ( status.last_cycle.compaction_duration_ms, stats.compaction_duration_ms );
 
     // Non-vacuous: the erased values are gone (marker PRUNED, value absent).
     for ( const auto *tx : { big_a.get(), big_b.get() } )
@@ -2432,8 +2437,6 @@ TEST_F( TxPrunerTest, CompactionGate_CrossedThresholdCompactsOnceAndStampRetaine
 {
     constexpr size_t kValueBytes = 1u << 20; // ~1MB low-entropy value each
 
-    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
-
     auto spender = MakeTransfer( 1, 0 );
     auto big_a   = MakeTransfer( 2, 1, kValueBytes );
     auto big_b   = MakeTransfer( 3, 1, kValueBytes );
@@ -2446,8 +2449,8 @@ TEST_F( TxPrunerTest, CompactionGate_CrossedThresholdCompactsOnceAndStampRetaine
 
     TrackOutputs( *big_a );
     TrackOutputs( *big_b );
-    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
 
     auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
     ASSERT_NE( pruner, nullptr );
@@ -2457,11 +2460,11 @@ TEST_F( TxPrunerTest, CompactionGate_CrossedThresholdCompactsOnceAndStampRetaine
 
     ASSERT_EQ( stats.erased, 2u ); // ~2MB erased in ONE cycle: the crossing
     EXPECT_TRUE( stats.compacted );
-    EXPECT_GT( stats.compaction_duration_ms, 0u );
 
     const auto status = pruner->GetPruneStatus();
     ASSERT_TRUE( status.bytes_reclaimed.has_value() );
     EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+    EXPECT_EQ( status.last_cycle.compaction_duration_ms, stats.compaction_duration_ms );
     const uint64_t stamped = status.bytes_reclaimed.value();
 
     // Follow-up below-threshold cycle (fresh evaluation, nothing new
@@ -2500,8 +2503,6 @@ TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompa
 {
     constexpr size_t kValueBytes = 1u << 20;
 
-    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
-
     auto spender = MakeTransfer( 1, 0 );
     auto big_a   = MakeTransfer( 2, 1, kValueBytes );
     auto big_b   = MakeTransfer( 3, 1, kValueBytes );
@@ -2514,8 +2515,8 @@ TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompa
 
     TrackOutputs( *big_a );
     TrackOutputs( *big_b );
-    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
 
     auto canceled_pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
     ASSERT_NE( canceled_pruner, nullptr );
@@ -2534,7 +2535,7 @@ TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompa
     auto more = MakeTransfer( 4, 1, kValueBytes );
     SeedTransaction( more );
     TrackOutputs( *more );
-    ASSERT_TRUE( ConsumeOutput( *more, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *more, 0, *spender ) );
     PutSeedValue( "/seed/txpruner/cancel-driver-3", "d3" );
     auto still_canceled = RunCycle( *canceled_pruner );
     ASSERT_TRUE( still_canceled.has_value() );
@@ -2554,8 +2555,8 @@ TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompa
     SeedTransaction( big_d );
     TrackOutputs( *big_c );
     TrackOutputs( *big_d );
-    ASSERT_TRUE( ConsumeOutput( *big_c, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_d, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_c, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_d, 0, *spender ) );
     PutSeedValue( "/seed/txpruner/cancel-driver-4", "d4" );
 
     PruneCycleStats retry_stats;
@@ -2577,8 +2578,6 @@ TEST_F( TxPrunerTest, CompactionGate_FreshInstanceReportsNoStampUntilItCompacts 
 {
     constexpr size_t kValueBytes = 1u << 20;
 
-    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
-
     auto spender = MakeTransfer( 1, 0 );
     auto big_a   = MakeTransfer( 2, 1, kValueBytes );
     auto big_b   = MakeTransfer( 3, 1, kValueBytes );
@@ -2591,8 +2590,8 @@ TEST_F( TxPrunerTest, CompactionGate_FreshInstanceReportsNoStampUntilItCompacts 
 
     TrackOutputs( *big_a );
     TrackOutputs( *big_b );
-    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
 
     auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
     ASSERT_NE( pruner, nullptr );
@@ -2624,8 +2623,6 @@ TEST_F( TxPrunerTest, CompactionGate_ConcurrentReadDuringCompactingCycleIsCohere
 {
     constexpr size_t kValueBytes = 1u << 20;
 
-    const std::string padded_owner = account_->GetAddress() + std::string( kValueBytes, 'x' );
-
     auto spender = MakeTransfer( 1, 0 );
     auto big_a   = MakeTransfer( 2, 1, kValueBytes );
     auto big_b   = MakeTransfer( 3, 1, kValueBytes );
@@ -2637,8 +2634,8 @@ TEST_F( TxPrunerTest, CompactionGate_ConcurrentReadDuringCompactingCycleIsCohere
     PutSeedValue( "/seed/txpruner/cread-driver-2", "d2" ); // retire both bigs from headship
     TrackOutputs( *big_a );
     TrackOutputs( *big_b );
-    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
 
     auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
     ASSERT_NE( pruner, nullptr );
@@ -3404,10 +3401,6 @@ TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcros
 {
     constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a measurable later compaction on the light
 
-    // ConsumeUTXOs matches the STORED owner, so the padded outputs are
-    // consumed under their own (padded) address.
-    const std::string padded_owner = account_->GetAddress() + std::string( kCandidateValueBytes, 'x' );
-
     // The mesh FIRST: subscribed before dialing (the Case-2 lesson), so every
     // seeding publish below flows to a live topic mesh.
     AddMeshPeer( "mesh-full" );
@@ -3432,8 +3425,8 @@ TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcros
     TrackOutputs( *eligible_a );
     TrackOutputs( *eligible_b );
     TrackOutputs( *unspent ); // deliberately never consumed
-    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
 
     const std::string cert_key       = "/cert/" + account_->GetAddress() + ":41";
     const std::string cert_cid       = PutSeedValueReturningCid( cert_key, "certificate-record" );
@@ -3608,8 +3601,8 @@ TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcros
     const std::string r2d1_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-1", "r2d1" );
     TrackOutputs( *round2_a );
     TrackOutputs( *round2_b );
-    ASSERT_TRUE( ConsumeOutput( *round2_a, 0, *spender, padded_owner ) );
-    ASSERT_TRUE( ConsumeOutput( *round2_b, 0, *spender, padded_owner ) );
+    ASSERT_TRUE( ConsumeOutput( *round2_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *round2_b, 0, *spender ) );
     const std::string r2d2_cid          = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-2", "r2d2" );
     const std::string r2_final_head_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-3", "r2d3" );
 
