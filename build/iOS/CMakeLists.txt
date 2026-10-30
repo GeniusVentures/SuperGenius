@@ -36,3 +36,8 @@ set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/include")
 set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/lib/libMoltenVK.a")
 
 include(../CommonBuildParameters.cmake)
+
+# libMoltenVK.a embeds ObjC categories (MTLSamplerDescriptor+MoltenVK etc.) whose
+# category symbols are LOCAL — static-archive linking never pulls them, so without
+# -ObjC vkCreateSampler dies in doesNotRecognizeSelector: setBorderColorMVK:.
+set_property(TARGET Vulkan::Vulkan APPEND PROPERTY INTERFACE_LINK_OPTIONS "-Wl,-ObjC")
