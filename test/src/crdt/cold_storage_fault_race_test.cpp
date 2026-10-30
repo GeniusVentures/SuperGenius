@@ -245,6 +245,21 @@ namespace
     class WindowGate
     {
     public:
+        // SC4 round 8: leak-proofing. A gtest ASSERT between arming the
+        // hook (Enter parked on the actor thread) and the test's explicit
+        // Release() early-returns the test body with the actor still
+        // parked; the fixture teardown then joins that actor thread and
+        // deadlocks until ctest's 600 s kill (run 41024756227 OSX
+        // Debug+Release: EvictServe_RewarmAttachVsMark_NoLostBlock
+        // timeout). Releasing from the destructor guarantees the parked
+        // actor is freed at test-body exit, before teardown joins - a
+        // failed deadline now surfaces as the ASSERT failure it is,
+        // never a hang. Release() is idempotent for the normal path.
+        ~WindowGate()
+        {
+            Release();
+        }
+
         /// Actor side: mark inside + block until released.
         void Enter()
         {
@@ -1211,9 +1226,18 @@ TEST_F( ColdStorageFaultRaceTest, EvictServe_RewarmAttachVsMark_NoLostBlock )
     // path.
     auto first = wrapper_->getNode( block.cid_key );
     EXPECT_TRUE( first.has_error() ) << "responder cold miss answers don't-have immediately";
+    // SC4 round 8: 10 s -> 60 s (CI-load deadline discipline, rounds 4-6
+    // precedent): the re-warm re-learn rides one hermetic S3 Get through
+    // the loaded runner. Leading suspect for run 41024756227's 600 s
+    // timeout in THIS case: the 10 s budget tripping under the -j24
+    // full-suite load, whose ASSERT early-return then left the drainer
+    // parked in the put_hold hook (deadlock until the kill) - the
+    // truncated log buffer hid the failure text. ~WindowGate now
+    // leak-proofs that path so a recurrence surfaces as the ASSERT
+    // failure it is, never a hang.
     ASSERT_TRUE( PollUntil(
         [&] { return dagsyncer_->GetNodeWithoutRequest( block.cid_key ).has_value(); },
-        std::chrono::milliseconds( 10000 ) ) )
+        std::chrono::milliseconds( 60000 ) ) )
         << "the re-warm executor did not re-learn the block";
     auto relearned = dagsyncer_->GetNodeWithoutRequest( block.cid_key );
     ASSERT_TRUE( relearned.has_value() );

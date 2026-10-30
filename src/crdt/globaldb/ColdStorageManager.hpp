@@ -650,6 +650,23 @@ namespace sgns::crdt
         uint64_t                  gc_tick_counter_{ 0 };
         size_t                    pass_reclaimed_count_{ 0 };
         uint64_t                  pass_reclaimed_bytes_{ 0 };
+        /// SC4 round 8: per-gate eligibility skip counters for the pass
+        /// summary line (single-writer under gc_pass_mutex_ like the
+        /// marks). Run 41024756227 (OSX+Windows full-wire resurrection)
+        /// showed clean passes reporting "0 candidate(s)" forever with no
+        /// hint WHICH gate excluded the expected detached deltas - these
+        /// counters make the next occurrence self-explaining on CI.
+        uint32_t                  gc_elig_scanned_{ 0 };
+        uint32_t                  gc_elig_stamped_{ 0 };
+        uint32_t                  gc_elig_skew_{ 0 };
+        uint32_t                  gc_elig_age_{ 0 };
+        uint32_t                  gc_elig_reachable_{ 0 };
+        uint32_t                  gc_elig_state_{ 0 };
+        /// SC4 round 8: streak of passes that scanned durable records
+        /// yet nominated none (the full-wire failure signature) - gates
+        /// the eligibility-breakdown log line to the 1st + every 25th
+        /// pass of such a streak so a 200 ms cadence stays log-lean.
+        uint32_t                  gc_zero_cand_streak_{ 0 };
         /// The last completed evaluation's heads snapshot (the SC5
         /// watermark input; GC-thread-only like the marks).
         CrdtHeads::CRDTHeadList    last_pass_snapshot_;

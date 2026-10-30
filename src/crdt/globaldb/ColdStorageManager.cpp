@@ -878,6 +878,35 @@ namespace sgns::crdt
                        pass_reclaimed_count_,
                        retention_.retention_age_ms,
                        gc_dry_run_ );
+        // SC4 round 8: the eligibility breakdown answers "WHY zero
+        // candidates" directly from CI logs (run 41024756227: clean
+        // 0-candidate passes for 180 s with no hint which gate held the
+        // expected deltas back). Rate-limited to the 1st + every 25th
+        // pass of a scanned-records-but-zero-candidates streak so a
+        // 200 ms cadence stays log-lean. scanned = durable records
+        // enumerated; stamped = spill-time backfilled this pass; skew =
+        // future-dated stamps; age = not yet past retention; reachable =
+        // walk-pinned; state = not exactly kEvictionDurabilityGate.
+        if ( gc_elig_scanned_ > 0 && candidates.empty() )
+        {
+            const uint32_t streak = ++gc_zero_cand_streak_;
+            if ( streak == 1 || streak % 25 == 0 )
+            {
+                logger_->info(
+                    "gc: eligibility - scanned={} stamped={} skew={} age={} reachable={} state={} (zero-candidate streak {})",
+                    gc_elig_scanned_,
+                    gc_elig_stamped_,
+                    gc_elig_skew_,
+                    gc_elig_age_,
+                    gc_elig_reachable_,
+                    gc_elig_state_,
+                    streak );
+            }
+        }
+        else
+        {
+            gc_zero_cand_streak_ = 0;
+        }
         WriteEpochWatermark( last_pass_snapshot_ );
         return candidates;
     }
@@ -924,6 +953,14 @@ namespace sgns::crdt
         // cold-store mutex; local RocksDB point reads, microseconds.
         std::vector<sgns::blockstore::Cid> candidates;
         const uint64_t                     now_ms = UnixNowMs();
+        // SC4 round 8: reset the per-gate skip counters (single-writer
+        // under gc_pass_mutex_; logged in GcPassOnce's summary).
+        gc_elig_scanned_    = 0;
+        gc_elig_stamped_    = 0;
+        gc_elig_skew_       = 0;
+        gc_elig_age_        = 0;
+        gc_elig_reachable_  = 0;
+        gc_elig_state_      = 0;
         {
             std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
             auto durable = local_block_store_->GetDurableWithSpillTime();
@@ -944,11 +981,13 @@ namespace sgns::crdt
 
             for ( auto &entry : durable.value() )
             {
+                ++gc_elig_scanned_;
                 // D-01 backfill fairness: a record with NO spill timestamp
                 // (pre-Phase-11 store) gets one NOW and waits a full
                 // retention period - never an assumed age.
                 if ( entry.spilled_at_unix_ms == 0 )
                 {
+                    ++gc_elig_stamped_;
                     (void)local_block_store_->SetSpilledAt( entry.cid, now_ms );
                     continue;
                 }
@@ -956,18 +995,21 @@ namespace sgns::crdt
                 // never a wrapped huge age.
                 if ( entry.spilled_at_unix_ms > now_ms )
                 {
+                    ++gc_elig_skew_;
                     continue;
                 }
                 // Age gate: STRICTLY past the threshold - age == threshold
                 // is NOT eligible (ties break toward under-eviction).
                 if ( ( now_ms - entry.spilled_at_unix_ms ) <= retention_.retention_age_ms )
                 {
+                    ++gc_elig_age_;
                     continue;
                 }
                 // Reachability gate: heads are pinned by construction
                 // (walk roots); a reachable old block is never a candidate.
                 if ( reachable.count( CID( entry.cid ) ) > 0 )
                 {
+                    ++gc_elig_reachable_;
                     continue;
                 }
                 // Durability gate (MI-02): the journal state must be
@@ -977,6 +1019,7 @@ namespace sgns::crdt
                 auto state = local_block_store_->GetUploadState( entry.cid );
                 if ( !state.has_value() || state.value() != kEvictionDurabilityGate )
                 {
+                    ++gc_elig_state_;
                     continue;
                 }
                 // Pin rule (SC5): heads are pinned by construction (walk
