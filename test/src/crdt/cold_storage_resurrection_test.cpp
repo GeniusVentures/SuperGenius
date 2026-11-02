@@ -280,8 +280,27 @@ namespace
      */
     Buffer EncodeCidAnnouncement( const CID &cid )
     {
+        // macOS CI aborts traced here: the unchecked toString().value()
+        // terminated the binary (boost wrapexcept system_error "Content
+        // type does not conform the version") when the CID was corrupt.
+        // FAIL with a forensic dump instead - the field values identify
+        // whether the object was malformed at construction (bad publish)
+        // or stomped afterward (heap race under the parallel-suite load).
+        auto cid_string = cid.toString();
+        if ( !cid_string )
+        {
+            ADD_FAILURE() << "EncodeCidAnnouncement: CID unencodable (version="
+                          << static_cast<uint64_t>( cid.version )
+                          << ", content_type=" << static_cast<uint64_t>( cid.content_type )
+                          << ", hash_type=" << static_cast<uint64_t>( cid.content_address.getType() )
+                          << ", hash_len=" << cid.content_address.getHash().size()
+                          << ", this=" << &cid
+                          << "): " << cid_string.error().message();
+            Buffer empty;
+            return empty;
+        }
         sgns::crdt::pb::CRDTBroadcast msg;
-        msg.add_heads()->set_cid( cid.toString().value() );
+        msg.add_heads()->set_cid( cid_string.value() );
         Buffer out;
         out.put( msg.SerializeAsString() );
         return out;
@@ -873,4 +892,15 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
         EXPECT_TRUE( q1.value().empty() ) << "node 1: still deleted";
         EXPECT_TRUE( q2.value().empty() ) << "node 2: the re-delivery did NOT resurrect";
     }
+
+    // Deterministic listener release (pubsub_graphsync_test precedent):
+    // CRDT/graphsync teardown talks to the libp2p hosts, so drain the
+    // GlobalDBs BEFORE pubs1/pubs2 release them, then stop the pubsubs
+    // explicitly instead of relying on destructor ordering at binary
+    // exit - lingering hosts would hold their listeners and io contexts
+    // across test boundaries when the suite runs under -j load.
+    gdb1->ShutdownNow();
+    gdb2->ShutdownNow();
+    pubs1->Stop();
+    pubs2->Stop();
 }

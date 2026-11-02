@@ -45,6 +45,34 @@ namespace sgns::crdt
                     std::chrono::system_clock::now().time_since_epoch() )
                     .count() );
         }
+
+        /// GC robustness: an unencodable CID must NEVER abort the node.
+        /// macOS CI aborts (boost wrapexcept system_error "Content type
+        /// does not conform the version") traced to unchecked
+        /// toString().value() on the GC paths - log the offending CID
+        /// fields for forensics and let the caller skip the text-derived
+        /// keys (the binary-key cleanup still runs; absent-key removals
+        /// are idempotent no-ops).
+        bool TryCidToString( const CID                &cid,
+                             const sgns::base::Logger &logger,
+                             std::string              &out )
+        {
+            auto encoded = cid.toString();
+            if ( !encoded )
+            {
+                logger->warn( "gc: CID unencodable - skipping text-derived keys "
+                              "(version={}, content_type={}, hash_type={}, hash_len={}): {}",
+                              static_cast<uint64_t>( cid.version ),
+                              static_cast<uint64_t>( cid.content_type ),
+                              static_cast<uint64_t>( cid.content_address.getType() ),
+                              cid.content_address.getHash().size(),
+                              encoded.error().message() );
+                out.clear();
+                return false;
+            }
+            out = encoded.value();
+            return true;
+        }
     } // namespace
 
     ColdStorageManager::ColdStorageManager( std::shared_ptr<sgns::blockstore::LocalBlockStore> local_block_store,
@@ -786,10 +814,13 @@ namespace sgns::crdt
                 // tier (hot, LRU, cold dir, remote). Reachability below it
                 // is not computable - abort the pass toward under-eviction
                 // rather than guessing (the only safe direction).
+                auto current_str = current.toString();
                 logger_->warn(
                     "gc: pass-aborted-walk-gap - CID {} is head-reachable but missing from "
                     "every tier; reachability not computable (under-eviction)",
-                    current.toString().value() );
+                    current_str.has_value() ? current_str.value()
+                                            : std::string( "<unencodable CID: " )
+                                                  + current_str.error().message() + ">" );
                 return { {}, false };
             }
 
@@ -1111,17 +1142,20 @@ namespace sgns::crdt
                         if ( delta.ParseFromArray( content.data(),
                                                    static_cast<int>( content.size() ) ) )
                         {
-                            const auto cid_string = CID( cid ).toString().value();
-                            // The elems namespace is the SIBLING of the
-                            // k-namespace under the set root: keys prefix
-                            // "<set>/s/k" -> rows "<set>/s/s/<key>/<cid>"
-                            // (GetKeysPrefix carries NO trailing slash).
-                            const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
-                            const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
-                            for ( const auto &elem : delta.elements() )
+                            std::string cid_string;
+                            if ( TryCidToString( CID( cid ), logger_, cid_string ) )
                             {
-                                mark.hot_row_keys.push_back( elems_base + elem.key() + "/"
-                                                             + cid_string );
+                                // The elems namespace is the SIBLING of the
+                                // k-namespace under the set root: keys prefix
+                                // "<set>/s/k" -> rows "<set>/s/s/<key>/<cid>"
+                                // (GetKeysPrefix carries NO trailing slash).
+                                const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
+                                const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
+                                for ( const auto &elem : delta.elements() )
+                                {
+                                    mark.hot_row_keys.push_back( elems_base + elem.key() + "/"
+                                                                 + cid_string );
+                                }
                             }
                         }
                     }
@@ -1129,9 +1163,14 @@ namespace sgns::crdt
             }
             if ( gc_hot_store_ != nullptr )
             {
-                sgns::storage::Buffer seal_key;
-                seal_key.put( CID( cid ).toString().value() + "sealed" );
-                mark.was_sealed = gc_hot_store_->contains( seal_key );
+                std::string seal_text;
+                mark.was_sealed = false;
+                if ( TryCidToString( CID( cid ), logger_, seal_text ) )
+                {
+                    sgns::storage::Buffer seal_key;
+                    seal_key.put( seal_text + "sealed" );
+                    mark.was_sealed = gc_hot_store_->contains( seal_key );
+                }
             }
             evicting_marks_.push_back( std::move( mark ) );
         }
@@ -1268,9 +1307,13 @@ namespace sgns::crdt
             binary_key.put( encoded.value() );
             (void)batch->remove( binary_key );
         }
-        sgns::storage::Buffer seal_key;
-        seal_key.put( cid_key.toString().value() + "sealed" );
-        (void)batch->remove( seal_key );
+        std::string seal_text;
+        if ( TryCidToString( cid_key, logger_, seal_text ) )
+        {
+            sgns::storage::Buffer seal_key;
+            seal_key.put( seal_text + "sealed" );
+            (void)batch->remove( seal_key );
+        }
         for ( const auto &row : row_keys )
         {
             sgns::storage::Buffer row_key;
@@ -1335,14 +1378,17 @@ namespace sgns::crdt
                         if ( delta.ParseFromArray( content.data(),
                                                    static_cast<int>( content.size() ) ) )
                         {
-                            const auto cid_string = cid_key.toString().value();
-                            // The sibling-of-k derivation (see the mark
-                            // capture in EvaluatePass).
-                            const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
-                            const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
-                            for ( const auto &elem : delta.elements() )
+                            std::string cid_string;
+                            if ( TryCidToString( cid_key, logger_, cid_string ) )
                             {
-                                rows.push_back( elems_base + elem.key() + "/" + cid_string );
+                                // The sibling-of-k derivation (see the mark
+                                // capture in EvaluatePass).
+                                const auto keys_prefix = gc_crdt_datastore_->GetKeysPrefix();
+                                const auto elems_base  = keys_prefix.substr( 0, keys_prefix.size() - 1 ) + "s/";
+                                for ( const auto &elem : delta.elements() )
+                                {
+                                    rows.push_back( elems_base + elem.key() + "/" + cid_string );
+                                }
                             }
                         }
                     }
