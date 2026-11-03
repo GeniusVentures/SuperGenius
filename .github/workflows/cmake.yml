@@ -46,6 +46,14 @@ on:
         description: "Build iOS Debug"
         default: true
         type: boolean
+      build_iOS-arm64-simulator_Release:
+        description: "Build iOS arm64 Simulator Release"
+        default: true
+        type: boolean
+      build_iOS-arm64-simulator_Debug:
+        description: "Build iOS arm64 Simulator Debug"
+        default: true
+        type: boolean
       build_OSX_Release:
         description: "Build OSX Release"
         default: true
@@ -165,13 +173,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [iOS, OSX, Windows]
+        # iOS is listed per entry rather than in `target`: an include entry
+        # whose target and build-type match a generated combination merges
+        # into it, so the simulator entries would overwrite the device ones.
+        target: [OSX, Windows]
         build-type: [Debug, Release]
         include:
           - target: iOS
             id: iOS
+            build-type: Debug
             runner_key: mac
             cmake_args: -DPLATFORM=OS64
+          - target: iOS
+            id: iOS
+            build-type: Release
+            runner_key: mac
+            cmake_args: -DPLATFORM=OS64
+          - target: iOS
+            id: iOS-arm64-simulator
+            abi: arm64-simulator
+            build-type: Debug
+            runner_key: mac
+            cmake_args: -DPLATFORM=SIMULATORARM64
+          - target: iOS
+            id: iOS-arm64-simulator
+            abi: arm64-simulator
+            build-type: Release
+            runner_key: mac
+            cmake_args: -DPLATFORM=SIMULATORARM64
           - target: OSX
             id: OSX
             runner_key: mac
