@@ -1285,12 +1285,22 @@ TEST_F( ColdStorageFaultRaceTest, EvictDrain_EligibilityVsDurabilityAdvance_Neve
     const Cid  cid( block.cid_key );
 
     auto manager = MakeManager( FastOptions(), FastDurability(), RetentionRace() );
-    manager->Start();
 
     // Park the drain cycle's remote Put: the record sits Pending (the
-    // Accepted/Durable marks happen only after the Put phase).
+    // Accepted/Durable marks happen only after the Put phase). SC4
+    // round 13 (run 41764807297 OSX-Release): the hold must be armed
+    // BEFORE Start() and its park CONFIRMED. Arming after Start() left
+    // a window in which the drainer's first cycle Put completed UNHELD
+    // (Accepted), a later cycle's flush (not a Put - unholdable)
+    // advanced it to Durable, and the GC then CORRECTLY nominated a
+    // legitimately-Durable record - the product gate held, the premise
+    // did not. Arm-first + WaitInside makes "record is Pending
+    // mid-Put" proven, not assumed.
     WindowGate put_hold;
     timing_->SetOnOp( S3Op::Put, [&] { put_hold.Enter(); } );
+    manager->Start();
+    ASSERT_TRUE( put_hold.WaitInside( std::chrono::milliseconds( 10000 ) ) )
+        << "the drain never parked at its first remote Put";
 
     Backdate( cid, 60000 );
     EXPECT_TRUE( manager->GcPassOnce().empty() )

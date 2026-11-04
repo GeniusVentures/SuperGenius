@@ -959,8 +959,16 @@ TEST_F( ColdStorageSpillTest, sc1_set_latency_independent_of_drainer_state )
                   << std::endl;
     }
     // Absolute non-blocking guards: the running median and both p99s
-    // must stay ~an order under the 300 ms injected latency.
-    EXPECT_LT( stats_b.median_ms, 30.0 ) << "running median far below the injected latency";
+    // must stay ~an order under the 300 ms injected latency. The median
+    // bound SCALES with the paused baseline (run 41764807297: both OSX
+    // legs ran on a pathologically slow tart VM - PAUSED medians 54/65
+    // ms with the drainer never started, ~100x a healthy host; the
+    // distributions matched, only the flat 30 ms guard tripped). A REAL
+    // drainer-blocks-Set regression surfaces baseline+300 ms - which
+    // max(30, 2x baseline) always catches with margin - while a slow
+    // host's matched distributions pass.
+    const double median_bound_ms = std::max( 30.0, 2.0 * stats_a.median_ms );
+    EXPECT_LT( stats_b.median_ms, median_bound_ms ) << "running median far below the injected latency";
     // Absolute non-blocking guard (p99 far below the 300 ms injected
     // latency). Env-tunable for CONTENDED CI runners (run 40840831965
     // OSX-Release: p99 130/939 ms on the shared self-hosted mac under
