@@ -749,6 +749,17 @@ jobs:
         shell: powershell
         run: Add-Content -Path $env:GITHUB_ENV -Value "CTEST_JOBS=$([Math]::Max(8, [Environment]::ProcessorCount))"
 
+      # SC4 round 13: the tag-build lane never captured macOS crash
+      # reports (cmake.yml has this; run 41900284573 OSX-Debug
+      # network_config_private_network_test exit-time SegFault left no
+      # backtrace). Marker BEFORE tests bounds the .ips search window.
+      - name: Mark macOS diagnostic start
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'OSX' }}
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/macos-crash-reports"
+          touch "$RUNNER_TEMP/macos-tests-started"
+
       - name: Run tests
         if: ${{ env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
@@ -761,6 +772,49 @@ jobs:
           SGNS_TEST_P99_BOUND_MS: ${{ matrix.target == 'OSX' && '2000' || '' }}
           GTEST_FILTER: '*-LocalPriceManagerTest.*:ConsensusPendingLifecycleTest.CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot:TrustFirstBootE2ETest.TransientRefreshRetryExhaustionIsCappedCoalescedAndIdle'
         run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
+
+      # SC4 round 13: surface macOS crash reports (.ips) for any
+      # SEGFAULTed test binary - the exit-time teardown crash class
+      # (network_config_private_network_test, runs 41744226815/
+      # 41900284573) is invisible without the ReportCrash files.
+      - name: Collect macOS crash diagnostics
+        id: collect_macos_crash_diagnostics
+        if: ${{ failure() && matrix.target == 'OSX' }}
+        shell: bash
+        run: |
+          marker="$RUNNER_TEMP/macos-tests-started"
+          output_dir="$RUNNER_TEMP/macos-crash-reports"
+          report_list="$RUNNER_TEMP/macos-crash-report-list.txt"
+          echo "reports_found=false" >> "$GITHUB_OUTPUT"
+
+          [ -f "$marker" ] || exit 0
+
+          # ReportCrash/osanalyticshelper may write the file asynchronously.
+          for attempt in $(seq 1 30); do
+            find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports \
+              -type f -newer "$marker" \( -name '*.ips' -o -name '*.crash' \) \
+              > "$report_list" 2>/dev/null || true
+            [ -s "$report_list" ] && break
+            sleep 1
+          done
+
+          [ -s "$report_list" ] || exit 0
+          echo "reports_found=true" >> "$GITHUB_OUTPUT"
+
+          while IFS= read -r report; do
+            cp "$report" "$output_dir/"
+            echo "::group::macOS crash report: $(basename "$report")"
+            cat "$report"
+            echo "::endgroup::"
+          done < "$report_list"
+
+      - name: Upload macOS crash diagnostics
+        if: ${{ failure() && steps.collect_macos_crash_diagnostics.outputs.reports_found == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-${{ matrix.build-type }}-crash-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/macos-crash-reports/
+          retention-days: 14
 
       - name: Run tests (Linux)
         if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
