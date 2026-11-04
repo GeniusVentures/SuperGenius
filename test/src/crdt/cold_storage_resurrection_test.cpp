@@ -832,7 +832,37 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
     // The GC-01 detach on the receiver: the tombstone head leaves the
     // heads set, both delta blocks become unreachable - the retention
     // contract's evictable shape (tombstone ROWS keep the value dead).
-    ASSERT_TRUE( gdb2->GetCRDTDataStore()->RemoveHead( tombstone, topic ).has_value() );
+    // SC4 round 10: node 2 merges the tombstone through its async
+    // broadcast queue - the delta-apply (value dead, QueryKeyValues
+    // empty) and the head-set swap are separate steps, and a RemoveHead
+    // landing between them removes a head that is not there yet (a
+    // no-op success). The head then lands and pins BOTH deltas:
+    // run 41566866333 OSX-Debug eligibility diagnostics read
+    // reachable=2 for the whole 180 s window. Poll-verify the head is
+    // GONE from the actual head list, retrying the idempotent
+    // RemoveHead until it is (merge completion is the only waiter).
+    ASSERT_TRUE( PollUntil(
+        [&] {
+          (void)gdb2->GetCRDTDataStore()->RemoveHead( tombstone, topic );
+          auto heads = gdb2->GetCRDTDataStore()->GetHeadList();
+          if ( heads.has_error() )
+          {
+              return false;
+          }
+          const auto &list = heads.value().first;
+          for ( const auto &[head_topic, head_cids] : list )
+          {
+              (void)head_topic;
+              if ( head_cids.find( tombstone ) != head_cids.end() )
+              {
+                  return false; // still pinned under SOME topic - keep waiting
+              }
+          }
+          return true;
+        },
+        std::chrono::milliseconds( 30000 ) ) )
+        << "node 2's tombstone head never detached (merge queue never "
+           "completed the head swap)";
 
     // Real background GC eviction evidence: disposed markers for (at
     // least) both deltas, observed through the operator status surface.

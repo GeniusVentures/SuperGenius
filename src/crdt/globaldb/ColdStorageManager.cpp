@@ -266,9 +266,26 @@ namespace sgns::crdt
                 gc_thread_ = std::thread(
                     [this]()
                     {
+                        // SC4 round 10: WAIT BEFORE the first pass. The
+                        // old pass-first loop made every freshly-Started
+                        // manager fire one immediate background pass; on
+                        // the fast tart VM that pass could be scheduled
+                        // exactly between a test's driven marks-creating
+                        // pass and its deterministic-hook arming - the
+                        // eviction then sailed through the between-halves
+                        // point with no hook armed (run 41566866333 OSX
+                        // both legs: "GC never parked inside the
+                        // between-halves window", plus the RewarmAttach
+                        // 600 s hang the same run). Waiting one interval
+                        // first matches the gc_interval_ms=0 -> 10-min
+                        // default's "dormant" intent for driven-pass
+                        // tests, and costs production one interval of
+                        // startup latency (the retention GC needs no
+                        // t=0 pass). Stop() stays join-bounded: it sets
+                        // gc_stop_flag_ AND notifies gc_cv_, so the
+                        // predicate wakes the wait immediately.
                         while ( !gc_stop_flag_.load() )
                         {
-                            (void)GcPassOnce();
                             std::unique_lock<std::mutex> lock( gc_wait_mutex_ );
                             gc_cv_.wait_for(
                                 lock,
@@ -279,6 +296,7 @@ namespace sgns::crdt
                             {
                                 break; // between-pass stop check guarantees join termination
                             }
+                            (void)GcPassOnce();
                         }
                     } );
             }
@@ -415,10 +433,17 @@ namespace sgns::crdt
         status.last_flush_unix_ms       = last_flush_unix_ms_.load( std::memory_order_relaxed );
         status.last_flush_pending_objects = last_flush_pending_objects_.load( std::memory_order_relaxed );
         status.flush_backoff_active     = flush_backoff_active_.load( std::memory_order_relaxed );
-        status.staging_pending_objects  = staging_pending_objects_.load( std::memory_order_relaxed );
-        status.staging_buffer_used      = staging_buffer_used_.load( std::memory_order_relaxed );
-        status.staging_buffer_limit     = staging_buffer_limit_.load( std::memory_order_relaxed );
-        status.staging_failed_uploads   = staging_failed_uploads_.load( std::memory_order_relaxed );
+        status.staging_healthy          = staging_healthy_.load( std::memory_order_relaxed );
+        // SC4 round 10: one group-consistent snapshot read (see
+        // UpdateStagingHealth) - never per-field relaxed loads that can
+        // tear across two refreshes on weakly-ordered platforms.
+        {
+            std::lock_guard<std::mutex> snap_lock( staging_snapshot_mutex_ );
+            status.staging_pending_objects = staging_snapshot_.pending_objects;
+            status.staging_buffer_used     = staging_snapshot_.buffer_used;
+            status.staging_buffer_limit    = staging_snapshot_.buffer_limit;
+            status.staging_failed_uploads  = staging_snapshot_.failed_uploads;
+        }
         status.staging_healthy          = staging_healthy_.load( std::memory_order_relaxed );
         // GC-01 (v1.1 Phase 11): gc status fields - plain values from
         // atomics, never a journal scan (the D-08 discipline).
@@ -1528,10 +1553,21 @@ namespace sgns::crdt
             stats.failedUploads == previous_failed_uploads_.load( std::memory_order_relaxed );
         staging_healthy_.store( buffer_ok && failed_flat, std::memory_order_relaxed );
         previous_failed_uploads_.store( stats.failedUploads, std::memory_order_relaxed );
-        staging_pending_objects_.store( stats.pendingObjects, std::memory_order_relaxed );
-        staging_buffer_used_.store( stats.bufferUsed, std::memory_order_relaxed );
-        staging_buffer_limit_.store( stats.bufferLimit, std::memory_order_relaxed );
-        staging_failed_uploads_.store( stats.failedUploads, std::memory_order_relaxed );
+        // SC4 round 10: the staging counters publish as ONE group.
+        // Five separate relaxed stores let a weakly-ordered reader
+        // (aarch64) observe staging_healthy=true while
+        // staging_buffer_limit was still 0 - run 41566866333
+        // Linux-aarch64-Debug staging_healthy_on_clean_stats. The
+        // snapshot is written under its mutex so GetStatus observes
+        // one refresh's counters as a unit (single-writer: every
+        // refresh runs under admin_mutex_).
+        {
+            std::lock_guard<std::mutex> snap_lock( staging_snapshot_mutex_ );
+            staging_snapshot_.pending_objects = stats.pendingObjects;
+            staging_snapshot_.buffer_used    = stats.bufferUsed;
+            staging_snapshot_.buffer_limit    = stats.bufferLimit;
+            staging_snapshot_.failed_uploads  = stats.failedUploads;
+        }
     }
 
     void ColdStorageManager::RecordFlushFailedCycle( const std::string &context )

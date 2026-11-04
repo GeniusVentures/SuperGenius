@@ -564,11 +564,20 @@ namespace sgns::crdt
         std::atomic<bool>                      final_flush_done_{ false };
 
         // SC4 staging health (D-12/D-13): the predicate evaluates on the
-        // drainer tick and on demand; every status-read field is atomic.
-        std::atomic<uint64_t>                  staging_pending_objects_{ 0 };
-        std::atomic<uint64_t>                  staging_buffer_used_{ 0 };
-        std::atomic<uint64_t>                  staging_buffer_limit_{ 0 };
-        std::atomic<uint64_t>                  staging_failed_uploads_{ 0 };
+        // drainer tick and on demand; the healthy flag is atomic (the GC
+        // pass reads it lock-free). The four COUNTER fields publish as
+        // one group-consistent snapshot (SC4 round 10: five separate
+        // relaxed stores let weakly-ordered readers see healthy=true
+        // with limit still 0 - run 41566866333 aarch64-Debug).
+        struct StagingSnapshot
+        {
+            uint64_t pending_objects{ 0 };
+            uint64_t buffer_used{ 0 };
+            uint64_t buffer_limit{ 0 };
+            uint64_t failed_uploads{ 0 };
+        };
+        StagingSnapshot                        staging_snapshot_;
+        mutable std::mutex                     staging_snapshot_mutex_;
         std::atomic<bool>                      staging_healthy_{ false };
         /// Last-observed failedUploads (the flat-delta clause's
         /// baseline; atomic - refresh may run off the drainer thread).
