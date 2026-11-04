@@ -730,7 +730,14 @@ jobs:
           CTEST_EXCLUDE_REGEX="secure_storage_test"
           if [ "${{ matrix.abi }}" = "aarch64" ] && [ "${{ matrix.build-type }}" = "Debug" ]; then
             CTEST_EXCLUDE_REGEX="${CTEST_EXCLUDE_REGEX}|processing_datatypes_test|processing_conformance_cancellation_test|processing_conformance_hashing_test|processing_conformance_migration_test|processing_conformance_regression_test|processing_conformance_security_test"
-            GTEST_FILTER_VALUE="*-AccountManagement.SetPayoutAddress:ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
+            # APPEND the MNN-touching cases to the shared base filter - the
+            # old replace form dropped the base exclusions (price/consensus/
+            # trust flakes) from this leg only: run 41744226815 aarch64-Debug
+            # failed on TrustFirstBootE2ETest.TransientRefreshRetryExhaustion
+            # IsCappedCoalescedAndIdle, a flake every other leg excludes.
+            # '*-A:B:C' composes: the leading '*-' stays, each ':X' adds one
+            # more exclusion.
+            GTEST_FILTER_VALUE="${GTEST_FILTER_VALUE}:AccountManagement.SetPayoutAddress:ProcessingNodesTest.PostProcessing:ProcessingNodesModuleTest.SinglePostProcessing"
             echo "Skipping Vulkan-exposed cases on aarch64 Debug (see comment)"
           fi
           export CTEST_EXCLUDE_REGEX
