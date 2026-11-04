@@ -1387,9 +1387,27 @@ namespace sgns::crdt
                 continue; // hot already clean - nothing to finish
             }
             // Recompute the block's own rows from the remote copy.
+            // SC4 round 11 (run 41744226815 OSX-Release fault_race 600 s
+            // timeout): the drain loop holds remote_store_mutex_ ACROSS
+            // each remote Put (the Minio single-threaded-use contract),
+            // so a long/in-flight drain Put makes this blocking acquire
+            // wedge the whole GC pass (a test's parked Put held it
+            // indefinitely; production's slow Puts hold it for their
+            // full latency). try_lock + defer-to-next-pass instead: the
+            // orphan sweep is idempotent and retried every pass, and
+            // skipping is the safe under-reclaim direction - the GC
+            // pass must stay bounded no matter what the drain lane is
+            // doing with the remote store.
             std::vector<std::string> rows;
             {
-                std::lock_guard<std::mutex> remote_lock( *remote_store_mutex_ );
+                std::unique_lock<std::mutex> remote_lock( *remote_store_mutex_, std::defer_lock );
+                if ( !remote_lock.try_lock() )
+                {
+                    logger_->info(
+                        "gc: orphaned-hot recompute deferred - remote store busy (in-flight "
+                        "drain op); marker retried next pass" );
+                    continue;
+                }
                 auto block = remote_block_store_->Get( entry.first );
                 if ( block.has_value() )
                 {

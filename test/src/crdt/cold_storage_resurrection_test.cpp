@@ -834,35 +834,46 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
     // contract's evictable shape (tombstone ROWS keep the value dead).
     // SC4 round 10: node 2 merges the tombstone through its async
     // broadcast queue - the delta-apply (value dead, QueryKeyValues
-    // empty) and the head-set swap are separate steps, and a RemoveHead
-    // landing between them removes a head that is not there yet (a
-    // no-op success). The head then lands and pins BOTH deltas:
-    // run 41566866333 OSX-Debug eligibility diagnostics read
-    // reachable=2 for the whole 180 s window. Poll-verify the head is
-    // GONE from the actual head list, retrying the idempotent
-    // RemoveHead until it is (merge completion is the only waiter).
+    // empty) and the head-set swap are separate steps. SC4 round 11
+    // (run 41744226815 Windows-Release): a poll that treats
+    // "tombstone absent" as success can return TRUE PREMATURELY - the
+    // durable>=2 evidence and the empty QueryKeyValues only prove the
+    // BLOCKS arrived and the delta applied, NOT that the merge
+    // processor swapped the head in yet. Absent-because-not-yet-added
+    // let the head land right after the poll, pinning both deltas
+    // (eligibility reachable=2 for the whole 180 s window). The
+    // airtight shape: WAIT for the tombstone to APPEAR in the head
+    // list, RemoveHead it, and only then accept absence (latched
+    // seen-then-absent - one merge lands the head exactly once).
+    std::atomic<bool> tombstone_seen{ false };
     ASSERT_TRUE( PollUntil(
         [&] {
-          (void)gdb2->GetCRDTDataStore()->RemoveHead( tombstone, topic );
           auto heads = gdb2->GetCRDTDataStore()->GetHeadList();
           if ( heads.has_error() )
           {
               return false;
           }
-          const auto &list = heads.value().first;
-          for ( const auto &[head_topic, head_cids] : list )
+          bool present = false;
+          for ( const auto &[head_topic, head_cids] : heads.value().first )
           {
               (void)head_topic;
               if ( head_cids.find( tombstone ) != head_cids.end() )
               {
-                  return false; // still pinned under SOME topic - keep waiting
+                  present = true;
+                  break;
               }
           }
-          return true;
+          if ( present )
+          {
+              tombstone_seen.store( true );
+              (void)gdb2->GetCRDTDataStore()->RemoveHead( tombstone, topic );
+              return false; // removed THIS poll - absence verified next tick
+          }
+          return tombstone_seen.load(); // absent AND previously seen = detached
         },
         std::chrono::milliseconds( 30000 ) ) )
-        << "node 2's tombstone head never detached (merge queue never "
-           "completed the head swap)";
+        << "node 2's tombstone head never appeared+detached (merge queue "
+           "never completed the head swap)";
 
     // Real background GC eviction evidence: disposed markers for (at
     // least) both deltas, observed through the operator status surface.
