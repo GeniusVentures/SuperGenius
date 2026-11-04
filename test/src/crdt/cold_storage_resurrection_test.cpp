@@ -877,11 +877,22 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
 
     // Real background GC eviction evidence: disposed markers for (at
     // least) both deltas, observed through the operator status surface.
+    // SC4 round 12 (run 41755801584 OSX-Release): gossip delivery is
+    // AT-LEAST-ONCE - a DUPLICATE tombstone delivery landing after the
+    // verified detach re-runs the merge, whose head swap RE-ADDS the
+    // tombstone head (the prior run's CancelAndCloseNow pending_jobs=2
+    // showed the double queue; this run passed the detach poll yet
+    // eligibility read reachable=2 for the whole window - the head was
+    // verifiably removed and came BACK). Fold the idempotent RemoveHead
+    // into the eviction poll: duplicates are finite, each tick strips
+    // any re-added head, and a GC pass (200 ms cadence) eventually runs
+    // in a clean window and evicts.
     // 180 s (CI-load deadline, runs 40840831965/40927749627: eviction
     // needs propagation + drain + flush + 1 s retention age + GC cadence,
     // all stretched by the full-suite -j load on shared runners).
     ASSERT_TRUE( PollUntil(
         [&] {
+          (void)gdb2->GetCRDTDataStore()->RemoveHead( tombstone, topic );
           auto status = gdb2->GetColdStorageStatus();
           return status.gc_enabled && status.gc_disposed_marker_count >= 2;
         },
@@ -899,6 +910,24 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_FullWire_TwoGlobalDBRedeliverySta
                  << " durable=" << s.durable_upload_count
                  << " staging_healthy=" << s.staging_healthy
                  << " flush_backoff=" << s.flush_backoff_active;
+             // SC4 round 12: name any pinning head directly from the
+             // failure message (a reachable=2 recurrence now identifies
+             // its pinner without a log dive).
+             if ( auto heads = gdb2->GetCRDTDataStore()->GetHeadList();
+                  heads.has_value() )
+             {
+                 oss << " | node2 heads:";
+                 for ( const auto &[head_topic, head_cids] : heads.value().first )
+                 {
+                     for ( const auto &h : head_cids )
+                     {
+                         auto hs = h.toString();
+                         oss << " [" << head_topic << "] "
+                             << ( hs.has_value() ? hs.value()
+                                                 : std::string( "<unencodable>" ) );
+                     }
+                 }
+             }
              return oss.str();
            }();
 

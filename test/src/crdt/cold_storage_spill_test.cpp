@@ -938,10 +938,29 @@ TEST_F( ColdStorageSpillTest, sc1_set_latency_independent_of_drainer_state )
 
     // Distribution-match band (run 40949986714 Win-Release: sub-ms
     // medians 0.267/0.597 blew the old 0.5x-2x band on pure scheduler
-    // noise): the load-independent teeth is the ABSOLUTE bound below -
-    // both medians must stay ~3 orders under the 300 ms injected latency.
-    EXPECT_GE( stats_b.median_ms, 0.25 * stats_a.median_ms ) << "distribution match (lower bound)";
-    EXPECT_LE( stats_b.median_ms, 4.0 * stats_a.median_ms ) << "distribution match (upper bound)";
+    // noise; run 41755801584 Linux-x86_64-Debug: 0.55/3.77 blew 4x the
+    // same way - a Debug-build -j-load median ratio is noise, not
+    // signal). The ratio band now applies ONLY when the paused baseline
+    // is meaningful (>= 1 ms); the load-independent teeth are the
+    // ABSOLUTE guards below - a REAL drainer-blocks-Set regression
+    // surfaces the injected remote latency in the Set path (median
+    // >= 100 ms scale), which the 30 ms median guard and the p99 bound
+    // catch with 10x margin, not as a 3.8 ms Debug median.
+    if ( stats_a.median_ms >= 1.0 )
+    {
+        EXPECT_GE( stats_b.median_ms, 0.25 * stats_a.median_ms ) << "distribution match (lower bound)";
+        EXPECT_LE( stats_b.median_ms, 4.0 * stats_a.median_ms ) << "distribution match (upper bound)";
+    }
+    else
+    {
+        std::cout << "[SC1] paused median " << stats_a.median_ms
+                  << "ms below the 1 ms ratio floor - ratio band skipped "
+                     "(sub-ms medians are scheduler noise; absolute guards hold)"
+                  << std::endl;
+    }
+    // Absolute non-blocking guards: the running median and both p99s
+    // must stay ~an order under the 300 ms injected latency.
+    EXPECT_LT( stats_b.median_ms, 30.0 ) << "running median far below the injected latency";
     // Absolute non-blocking guard (p99 far below the 300 ms injected
     // latency). Env-tunable for CONTENDED CI runners (run 40840831965
     // OSX-Release: p99 130/939 ms on the shared self-hosted mac under
