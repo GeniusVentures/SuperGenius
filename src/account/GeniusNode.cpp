@@ -714,6 +714,18 @@ namespace sgns
             return;
         }
         std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        // Shutdown double-check: the gate above raced -- a body that passed it
+        // before shutdown_started_ was set must not build services the
+        // destructor may already have passed (tag-build run 41936126485: the
+        // detached migration thread ran InitDatabase() after ~GeniusNode had
+        // already read a null tx_globaldb_, leaking the GlobalDB and its CRDT
+        // rebroadcast worker; the worker outlived main and segfaulted at
+        // exit-time static destruction inside libp2p::log::createLogger).
+        if ( shutdown_started_.load() )
+        {
+            node_logger_->debug( "Ignoring transition to {}, shutdown in progress", next_state );
+            return;
+        }
         if ( transition_in_progress_.has_value() && transition_in_progress_.value() == next_state )
         {
             node_logger_->debug( "Suppressing re-entrant transition to state {}",
@@ -2523,6 +2535,22 @@ namespace sgns
         }
 
         node_logger_->info( "GeniusNode shutdown start" );
+
+        // Drain barrier: an in-flight StateTransition body (e.g. the detached
+        // migration thread's INITIALIZING_DATABASE -> InitDatabase) may have
+        // passed the shutdown gate before shutdown_started_ was set. Acquiring
+        // lifecycle_mutex_ here waits for that body to finish so every member
+        // read below -- tx_globaldb_ in particular -- observes final state, and
+        // the tx_globaldb_->ShutdownNow() below stops/joins the CRDT rebroadcast
+        // worker instead of leaking it to process exit (run 41936126485 exit-time
+        // SegFault). Pairs with the post-lock shutdown re-check in
+        // StateTransition: after this barrier no body is running and none can
+        // start. Recursive mutex: safe if teardown is ever reached from a body
+        // thread. Sits BEFORE io teardown so a blocked body can still complete;
+        // bounded by one state body.
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        }
 
         // Stop the catch-up watcher before tearing down account-bound services.
         // Only stop it here — destruction is implicit, in declaration order.
