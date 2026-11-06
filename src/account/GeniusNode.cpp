@@ -718,6 +718,11 @@ namespace sgns
         const auto previous_transition = transition_in_progress_;
         transition_in_progress_        = next_state;
         ++transition_epoch_;
+        if ( trust_bootstrap_sync_handle_ )
+        {
+            trust_bootstrap_sync_handle_->cancel();
+            trust_bootstrap_sync_handle_.reset();
+        }
         state_.store( next_state );
         node_logger_->debug( "Transitioning to state {}", next_state );
 
@@ -796,6 +801,11 @@ namespace sgns
                                             private_network_id_ );
                     }
                 }
+                // Processing and FullNode announcements can share a DAG head.
+                // Enroll trust history before any such head can be sealed while
+                // walking only the processing branch.
+                const std::string trust_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+                tx_globaldb_->AddTopicName( trust_topic );
                 tx_globaldb_->AddListenTopic( ScopedProcessingChannel() );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
@@ -1437,6 +1447,8 @@ namespace sgns
             }
             case NodeState::WAITING_FOR_TRUST_GENESIS:
             case NodeState::WAITING_FOR_BURN_GENESIS:
+                RequestTrustBootstrapHeads( transition_epoch_ );
+                break;
             case NodeState::FATAL_TRUST_MISMATCH:
                 break;
                     case NodeState::CREATING:
@@ -1451,6 +1463,58 @@ namespace sgns
             throw;
         }
         transition_in_progress_ = previous_transition;
+    }
+
+    void GeniusNode::RequestTrustBootstrapHeads( uint64_t transition_epoch )
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        const auto                            state = state_.load();
+        if ( shutdown_started_.load() || account_service_switching_ || transition_epoch_ != transition_epoch ||
+             ( state != NodeState::WAITING_FOR_TRUST_GENESIS && state != NodeState::WAITING_FOR_BURN_GENESIS ) )
+        {
+            return;
+        }
+
+        // TransactionManager's periodic sync is not running until trust and burn
+        // confirm. Request existing approvals here, including after peers join
+        // the request-topic mesh; subscribing alone does not replay old heads.
+        const std::string topic     = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+        auto              requested = account_->RequestHeads( { topic } );
+        if ( requested.has_error() )
+        {
+            node_logger_->debug( "Trust bootstrap: head request deferred state={} topic={}{} reason={}; retry in {}s",
+                                 state,
+                                 topic,
+                                 sgns::version::GetNetAndVersionAppendix(),
+                                 requested.error().message(),
+                                 trust_bootstrap_sync_interval_.count() );
+        }
+        else
+        {
+            node_logger_->debug( "Trust bootstrap: requested replicated heads state={} topic={}{}; retry in {}s",
+                                 state,
+                                 topic,
+                                 sgns::version::GetNetAndVersionAppendix(),
+                                 trust_bootstrap_sync_interval_.count() );
+        }
+        trust_bootstrap_sync_handle_.emplace( scheduler_->scheduleWithHandle(
+            [weak_self = weak_from_this(), transition_epoch]
+            {
+                if ( auto self = weak_self.lock() )
+                {
+                    // The scheduler runs on PubSub's context. Keep lifecycle
+                    // locking and signed requests on the node's worker context.
+                    boost::asio::post( *self->io_,
+                                       [weak_self, transition_epoch]
+                                       {
+                                           if ( auto node = weak_self.lock() )
+                                           {
+                                               node->RequestTrustBootstrapHeads( transition_epoch );
+                                           }
+                                       } );
+                }
+            },
+            trust_bootstrap_sync_interval_ ) );
     }
 
     bool GeniusNode::IsTrustEconomicallyReady() const
@@ -1837,6 +1901,17 @@ namespace sgns
         read_seconds( "bootstrap_health_check_disconnected_interval_sec",
                       reconnect_config_.health_check_disconnected_interval );
         read( "bootstrap_background_multiplier", reconnect_config_.background_multiplier );
+        auto trust_sync_interval = trust_bootstrap_sync_interval_;
+        read_seconds( "trust_bootstrap_sync_interval_sec", trust_sync_interval );
+        if ( trust_sync_interval > std::chrono::seconds::zero() )
+        {
+            trust_bootstrap_sync_interval_ = trust_sync_interval;
+        }
+        else
+        {
+            node_logger_->warn( "network_config.json: trust_bootstrap_sync_interval_sec must be positive, using {}s",
+                                trust_bootstrap_sync_interval_.count() );
+        }
 
         return settings;
     }
@@ -2529,6 +2604,15 @@ namespace sgns
         }
 
         node_logger_->info( "GeniusNode shutdown start" );
+
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( trust_bootstrap_sync_handle_ )
+            {
+                trust_bootstrap_sync_handle_->cancel();
+                trust_bootstrap_sync_handle_.reset();
+            }
+        }
 
         // Stop the catch-up watcher before tearing down account-bound services.
         // Only stop it here — destruction is implicit, in declaration order.

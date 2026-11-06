@@ -18,13 +18,18 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <random>
+#include <set>
 #include <string>
 #include <string_view>
 
 #include <boost/dll.hpp>
+#include <boost/json.hpp>
 
+#include "account/AccountMessenger.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "transaction/TransactionManager.hpp"
@@ -83,11 +88,12 @@ protected:
     // started synchronously in the constructor; callers wait for READY via a
     // wait-condition, so no fixed sleep is needed (a sleep would also obscure the
     // startup-timing measurements these tests make).
-    NodeFixture CreateNode( const std::string &self_address,
-                            const std::string &dev_addr,
-                            const std::string &tokenValue,
-                            TokenID            tokenId,
-                            bool               isFullNode = false )
+    NodeFixture CreateNode( const std::string                  &self_address,
+                            const std::string                  &dev_addr,
+                            const std::string                  &tokenValue,
+                            TokenID                             tokenId,
+                            bool                                isFullNode          = false,
+                            std::optional<std::chrono::seconds> trust_sync_interval = std::nullopt )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -112,6 +118,17 @@ protected:
                          } );
 
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+        if ( trust_sync_interval )
+        {
+            const auto        config_path = outPath + "network_config.json";
+            std::ifstream     input( config_path );
+            const std::string config_text( std::istreambuf_iterator<char>{ input }, {} );
+            auto              config = boost::json::parse( config_text ).as_object();
+            config.insert_or_assign( "trust_bootstrap_sync_interval_sec", trust_sync_interval->count() );
+            input.close();
+            std::ofstream output( config_path );
+            output << boost::json::serialize( config );
+        }
         auto authority = GeniusAccount::NewFromPrivateKey( tokenId, key.c_str(), outPath );
         EXPECT_TRUE( authority );
         if ( !authority )
@@ -129,7 +146,8 @@ protected:
                                 144 );
         return { GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } ),
                  std::move( authority ),
-                 outPath };
+                 outPath,
+                 {} };
     }
 
     void SubmitReviewedTrustAndAwaitReady( NodeFixture              &fixture,
@@ -203,6 +221,163 @@ protected:
         }
     }
 };
+
+// Processing gossip is live before blockchain genesis and the trust controller.
+// A shared head received then must already follow FullNode-only parent links;
+// otherwise the head is sealed with incomplete ancestry before trust subscribes.
+TEST_F( NodeStartupTest, ProcessingHeadFetchesFullNodeAncestryBeforeBlockchainGenesis )
+{
+    auto fixture = CreateNode( "early_full_node_ancestry", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return fixture.node->GetState() == GeniusNode::NodeState::INITIALIZING_BLOCKCHAIN; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "fresh light node did not wait for blockchain genesis" ) );
+    ASSERT_TRUE( fixture.node->GetTransactionManager().has_error() );
+
+    auto       node_db          = GeniusNodeTestAccess::TransactionDatabaseOf( fixture.node );
+    const auto processing_topic = GeniusNodeTestAccess::ProcessingTopicOf( fixture.node );
+    const auto full_topic       = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    ASSERT_TRUE( node_db );
+    ASSERT_FALSE( processing_topic.empty() );
+
+    const auto network_config = fixture.path / "early-history-network.json";
+    const auto database_path  = fixture.path / "early-history-globaldb";
+    std::filesystem::create_directories( database_path );
+    sgns::test::WriteGlobalDbNetworkConfig( network_config.string() );
+    sgns::crdt::GlobalDbNetworkComposition::Config source_config;
+    source_config.network_config_path = network_config.string();
+    source_config.database_path       = database_path.string();
+    source_config.listen_topic        = processing_topic;
+    // FullNode-only writes must not be announced on the processing topic.
+    source_config.broadcast_topic = full_topic;
+    auto source                   = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( source_config ) );
+    ASSERT_TRUE( source.has_value() ) << source.error().message();
+    fixture.composition = source.value();
+    ASSERT_TRUE( fixture.composition->Start().has_value() );
+    auto source_db = fixture.composition->db();
+    ASSERT_TRUE( source_db );
+    source_db->AddTopicName( full_topic );
+
+    const crdt::HierarchicalKey parent_key( "/startup/full-node-only-ancestor" );
+    const crdt::HierarchicalKey tip_key( "/startup/shared-processing-tip" );
+    base::Buffer                parent_value;
+    base::Buffer                tip_value;
+    parent_value.put( "full-node history before trust startup" );
+    tip_value.put( "shared processing and full-node head" );
+    const auto parent = source_db->Put( parent_key, parent_value, { full_topic } );
+    ASSERT_TRUE( parent.has_value() ) << parent.error().message();
+    const auto tip = source_db->Put( tip_key, tip_value, { processing_topic, full_topic } );
+    ASSERT_TRUE( tip.has_value() ) << tip.error().message();
+    const auto parent_cid = parent.value().toString();
+    ASSERT_TRUE( parent_cid.has_value() );
+
+    // Connect only after both writes: the node receives the shared tip and must
+    // discover its parent through the FullNode link, rather than a parent gossip.
+    fixture.node->AddPeer( fixture.composition->interface_address() );
+    constexpr auto kHeadRepeatInterval = std::chrono::milliseconds( 100 );
+    auto           last_broadcast      = std::chrono::steady_clock::now() - kHeadRepeatInterval;
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if ( now - last_broadcast >= kHeadRepeatInterval )
+            {
+                EXPECT_TRUE( source_db->RequestHeadBroadcast( { processing_topic } ).has_value() );
+                last_broadcast = now;
+            }
+            const auto replicated_tip    = node_db->Get( tip_key );
+            const auto replicated_parent = node_db->Get( parent_key );
+            return replicated_tip.has_value() && replicated_parent.has_value();
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "processing head arrived without fetching its FullNode-only ancestry before trust startup" ) );
+
+    const auto replicated_parent = node_db->Get( parent_key );
+    ASSERT_TRUE( replicated_parent.has_value() );
+    EXPECT_EQ( replicated_parent.value().toString(), parent_value.toString() );
+    const auto parent_present = node_db->HasLocalBlock( parent_cid.value() );
+    ASSERT_TRUE( parent_present.has_value() );
+    EXPECT_TRUE( parent_present.value() );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::INITIALIZING_BLOCKCHAIN );
+    EXPECT_TRUE( fixture.node->GetTransactionManager().has_error() );
+}
+
+// A node can enter the trust gate before it has any request-topic peers. Once
+// a peer arrives it must request existing trust heads repeatedly, although the
+// transaction manager (which normally performs head synchronization) is absent.
+TEST_F( NodeStartupTest, TrustBootstrapRequestsExistingHeadsAfterPeerArrives )
+{
+    constexpr auto kTrustSyncInterval = std::chrono::seconds( 1 );
+    auto           fixture            = CreateNode( "trust_bootstrap_late_peer",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               true,
+                               kTrustSyncInterval );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    Blockchain::SetAuthorizedFullNodeAddress( fixture.node->GetAddress() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return fixture.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "offline node did not reach the trust genesis gate" ) );
+    ASSERT_TRUE( fixture.node->GetTransactionManager().has_error() );
+
+    auto       observer_pubsub = std::make_shared<ipfs_pubsub::GossipPubSub>();
+    const auto start_error     = observer_pubsub->Start( 0, {}, "0.0.0.0", { "127.0.0.1" } ).get();
+    ASSERT_FALSE( start_error ) << start_error.message();
+
+    AccountMessenger::InterfaceMethods methods;
+    methods.get_local_nonce_ = []( const std::string & ) -> outcome::result<uint64_t> { return uint64_t{ 0 }; };
+    methods.sign_ =
+        [authority = fixture.authority]( std::vector<uint8_t> data ) -> outcome::result<std::vector<uint8_t>>
+    { return authority->Sign( data ); };
+    methods.verify_signature_ = []( const std::string   &address,
+                                    const std::string   &signature,
+                                    std::vector<uint8_t> data ) -> outcome::result<bool>
+    { return GeniusAccount::VerifySignature( address, std::string_view( signature ), data ); };
+    auto observer = AccountMessenger::New( fixture.authority->GetAddress(), observer_pubsub, std::move( methods ) );
+    ASSERT_TRUE( observer );
+
+    auto full_head_requests     = std::make_shared<std::atomic<unsigned>>( 0 );
+    auto last_full_head_request = std::make_shared<std::atomic<std::chrono::steady_clock::time_point>>(
+        std::chrono::steady_clock::now() );
+    observer->RegisterHeadRequestHandler(
+        [full_head_requests, last_full_head_request]( const std::set<std::string> &topics )
+        {
+            if ( topics.count( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) ) != 0 )
+            {
+                full_head_requests->fetch_add( 1 );
+                last_full_head_request->store( std::chrono::steady_clock::now() );
+            }
+        } );
+
+    // Dial only after WAITING, so the first request has no mesh to deliver it.
+    fixture.node->AddPeer( observer_pubsub->GetInterfaceAddress() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return full_head_requests->load() >= 2; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "trust genesis gate did not retry signed full-node head requests after a peer arrived" ) );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS );
+    EXPECT_TRUE( fixture.node->GetTransactionManager().has_error() );
+
+    ASSERT_NO_FATAL_FAILURE(
+        test::MakeNodeReadyWithLocalTrust( fixture.node, std::chrono::milliseconds( kReadyPollTimeoutMs ) ) );
+
+    // Allow an already published request to drain, then require a quiet window
+    // longer than the retry interval. TransactionManager's ordinary head sync
+    // begins at 30 seconds, beyond this bounded check.
+    last_full_head_request->store( std::chrono::steady_clock::now() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return std::chrono::steady_clock::now() - last_full_head_request->load() >= 2 * kTrustSyncInterval; },
+        5 * kTrustSyncInterval,
+        "trust bootstrap continued requesting heads after the node reached READY" ) );
+    GeniusNodeTestAccess::StopNode( fixture.node );
+    observer->Stop();
+    observer_pubsub->Stop();
+}
 
 // ---------------------------------------------------------------------------
 // 1. GENESIS NODE STARTUP

@@ -1518,6 +1518,12 @@ namespace sgns
         void StateTransition( NodeState next_state );
 
         /**
+         * @brief Requests replicated trust heads while economic startup is gated, then schedules a retry.
+         * @param[in] transition_epoch Lifecycle epoch that owns this bootstrap attempt.
+         */
+        void RequestTrustBootstrapHeads( uint64_t transition_epoch );
+
+        /**
          * @brief Runs versioned database migrations on a detached thread.
          * @param[in] callback Callback invoked with the migration result.
          */
@@ -1707,6 +1713,10 @@ namespace sgns
         BootstrapReconnectConfig                           reconnect_config_;
         std::optional<libp2p::event::Handle>               bootstrap_disconnect_subscription_;
         std::optional<libp2p::basic::Scheduler::Handle>    health_check_handle_;
+        /// Retry cadence for trust discovery before TransactionManager starts; configured in network_config.json.
+        std::chrono::seconds trust_bootstrap_sync_interval_{ 15 };
+        /// Pending trust discovery retry, protected by lifecycle_mutex_.
+        std::optional<libp2p::basic::Scheduler::Handle>    trust_bootstrap_sync_handle_;
         std::unordered_map<libp2p::peer::PeerId, unsigned> reconnect_attempts_;
         std::mutex                                         reconnect_mutex_;
 

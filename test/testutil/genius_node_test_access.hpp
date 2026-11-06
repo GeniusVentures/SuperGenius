@@ -78,6 +78,19 @@ namespace sgns
             return node && node->tx_globaldb_ ? node->tx_globaldb_->GetBroadcaster() : nullptr;
         }
 
+        /// Returns the transaction database before a TransactionManager exists, so
+        /// startup tests can verify replication while blockchain genesis is pending.
+        static std::shared_ptr<sgns::crdt::GlobalDB> TransactionDatabaseOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->tx_globaldb_ : nullptr;
+        }
+
+        /// Returns the configured processing topic, including any private-network scope.
+        static std::string ProcessingTopicOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->ScopedProcessingChannel() : std::string{};
+        }
+
         /// Drives the REAL destruction teardown route (ShutdownForDestruction is
         /// PRIVATE at GeniusNode.hpp, so friend access is the only route).
         /// ~GeniusNode calls it again; the shutdown_started_ compare_exchange makes

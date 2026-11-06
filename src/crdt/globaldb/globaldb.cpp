@@ -696,8 +696,10 @@ namespace sgns::crdt
         auto crdt_datastore = ActiveCRDTDataStore();
         if ( broadcaster && crdt_datastore )
         {
-            broadcaster->AddListenTopic( topicName );
-            crdt_datastore->AddTopicName( std::move(topicName) );
+            // Subscription callbacks can run immediately on the PubSub thread.
+            // Make ancestry eligible before the first head can arrive.
+            crdt_datastore->AddTopicName( topicName );
+            broadcaster->AddListenTopic( std::move( topicName ) );
         }
     }
 
