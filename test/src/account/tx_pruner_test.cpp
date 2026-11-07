@@ -28,10 +28,12 @@
  *             destructor so a hook armed by a failing case never leaks, and
  *             fresh DB paths back every case (double-run safe).
  *
- *             The RECL-03 bytes-reclaimed statement ("not measured until
- *             Phase 20") lives in the TxPruner INFO line; these suites pin
- *             its structural half — PruneStatus/PruneCycleStats carry NO
- *             bytes field at all, so no fabricated number can exist.
+ *             The RECL-03/RECL-04 honest-split contract: the erase-time
+ *             reporting stays counts-only, PruneStatus.bytes_reclaimed is
+ *             stamped ONLY at compaction success (nullopt under the default
+ *             threshold — these fixtures never cross it), and the
+ *             CompactionGate_ canary crosses a 1MB threshold end-to-end and
+ *             asserts the measured field.
  * @date       2026-10-21
  */
 
@@ -59,13 +61,16 @@
 #include "account/TransferTransaction.hpp"
 #include "account/UTXOManager.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "base/sgns_version.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "crdt/crdt_options.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/globaldb_node_shutdown.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 #include "transaction/PruneEligibility.hpp"
@@ -229,6 +234,18 @@ public:
         sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
         crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
 
+        // The SC-4 mesh peers (MeshRetention) come before the fixture's own
+        // teardown chain: each follows the committed EraseNodeCollection order
+        // through the shared pubsub-first helper (ShutdownNow drains the CRDT
+        // workers, pubsub Stop joins the networking thread, then the db is
+        // released under the reactor keepalive), so no in-flight peer fetch
+        // ever observes a dying light stack.
+        for ( auto &peer : mesh_peers_ )
+        {
+            sgns::test::stopGlobalDBNode( peer.db, peer.pubsub );
+        }
+        mesh_peers_.clear();
+
         /*
          * Teardown invariant (asio), copied verbatim from
          * PruneEligibilityTest/CertificateFallbackTest: stop the blockchain
@@ -275,6 +292,103 @@ public:
     std::shared_ptr<GeniusAccount>             nonce_responder_account_;
 
     //
+    // SC-4 mesh peers (MeshRetention): GlobalDB-only nodes subscribed to the
+    // seed topic beside this light. Retention is by construction — a peer
+    // never constructs a pruner (the Full/Archive factory refusal is already
+    // ctest-pinned by TickGate_NonLightRolesRefusedAtConstruction above; not
+    // duplicated here). Built with the 19-07 EraseNodeCollection recipe:
+    // loopback-advertised listeners (a wildcard-only listener silently drops
+    // every Broadcast) and ONE-direction dials.
+    //
+    struct MeshPeer
+    {
+        std::string                                basePath;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub;
+        std::shared_ptr<crdt::GlobalDB>            db;
+    };
+
+    std::vector<MeshPeer> mesh_peers_;
+
+    /// Spins one GlobalDB-only peer on a fresh path under the fixture's base,
+    /// subscribes it to the seed topic, then dials THIS fixture's host ONE
+    /// direction (the multi_node one-dial lesson: two dials inside one gossip
+    /// heartbeat collide on the shared source tuple) and waits for a
+    /// connected host pair plus a live topic mesh. The subscription happens
+    /// BEFORE the dial so it is announced at connect (the 19-07 Case-2
+    /// lesson). The peer is fixture-owned before any wait that can fail.
+    void AddMeshPeer( const std::string &name )
+    {
+        MeshPeer peer;
+        peer.basePath = ( base_path / name ).string();
+        boost::filesystem::create_directories( peer.basePath );
+
+        crdt::KeyPairFileStorage key_store( peer.basePath + "/key" );
+        auto                     key_pair = key_store.GetKeyPair();
+        ASSERT_TRUE( key_pair.has_value() );
+        if ( key_pair.has_error() )
+        {
+            return;
+        }
+
+        // Loopback-advertised listener (the makeNode wiring): a wildcard-only
+        // listener yields no addresses and every Broadcast would silently drop.
+        peer.pubsub            = std::make_shared<ipfs_pubsub::GossipPubSub>( key_pair.value() );
+        const auto start_error = peer.pubsub->Start( 0, {}, "0.0.0.0", { "127.0.0.1" } ).get();
+        ASSERT_FALSE( start_error ) << "could not start the mesh peer host: " << start_error.message();
+        if ( start_error )
+        {
+            return;
+        }
+
+        // GraphSync writes to libp2p streams from its scheduler thread, and
+        // libp2p is single-threaded per host, so the scheduler has to run on
+        // the host's io_context (the makeNode recipe verbatim).
+        auto io        = peer.pubsub->GetAsioContext();
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( peer.pubsub->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+        auto graphsync_network = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( peer.pubsub->GetHost(),
+                                                                                        scheduler );
+        auto generator         = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+        auto globaldb_ret = crdt::GlobalDB::New( io,
+                                                 peer.basePath + "/CommonKey",
+                                                 peer.pubsub,
+                                                 crdt::CrdtOptions::DefaultOptions(),
+                                                 graphsync_network,
+                                                 scheduler,
+                                                 generator );
+        ASSERT_TRUE( globaldb_ret.has_value() );
+        if ( globaldb_ret.has_error() )
+        {
+            return;
+        }
+        peer.db = std::move( globaldb_ret.value() );
+
+        peer.db->Start();
+        peer.db->AddListenTopic( kSeedTopic );
+        mesh_peers_.push_back( std::move( peer ) );
+
+        // ONE-direction dial (the dial itself), then the connected pair AND
+        // the topic mesh are both live before any seeding publish exists.
+        auto      &live       = mesh_peers_.back();
+        auto       peer_host  = live.pubsub->GetHost();
+        const auto light_info = pubs_->GetHost()->getPeerInfo();
+        live.pubsub->AddPeers( { pubs_->GetInterfaceAddress() } );
+        const std::string         full_topic = std::string( kSeedTopic ) + sgns::version::GetNetAndVersionAppendix();
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&] { return peer_host->connectedness( light_info ) == libp2p::Host::Connectedness::CONNECTED; },
+            std::chrono::seconds( 10 ),
+            "mesh peer dials the light host",
+            &waited );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return live.pubsub->getPeerCount( full_topic ) >= 1; },
+                                   std::chrono::seconds( 10 ),
+                                   "mesh peer and the light join the seed topic mesh",
+                                   &waited );
+    }
+
+    //
     // Seeding helpers — every transaction goes through the REAL topic Put so
     // its CRDT value, delta CID, head, and per-key priority all exist, then
     // gets a raw tx->CID map entry in the exact StoreTransactionCID shapes
@@ -282,7 +396,10 @@ public:
     //
 
     /// Transfer with @p output_count outputs owned by this account (empty for spenders).
-    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count )
+    /// @p value_pad_bytes adds low-entropy signature bytes per output to size
+    /// the serialized VALUE for compaction without inflating logged owners.
+    /// These pruning fixtures do not validate transaction signatures.
+    std::shared_ptr<TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count, size_t value_pad_bytes = 0 )
     {
         SGTransaction::DAGStruct dag;
         dag.set_type( "transfer" );
@@ -292,6 +409,7 @@ public:
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() ) );
 
+        dag.set_signature( std::string( value_pad_bytes * output_count, 'x' ) );
         std::vector<OutputDestInfo> destinations;
         destinations.reserve( output_count );
         for ( size_t i = 0; i < output_count; ++i )
@@ -632,6 +750,45 @@ public:
         ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
     }
 
+    /// Reverts ONE durable /utxo/ record to the unspent (READY) shape and
+    /// rebuilds the in-memory UTXO map from disk — the inverse of
+    /// ConsumeOutput on the same outpoint, fixture-side. The LoadUTXOs
+    /// reload is load-bearing: IsOutPointGenuinelyConsumed reads the
+    /// IN-MEMORY utxo_outpoints_ map, so a record-only write would leave
+    /// the map CONSUMED and the re-verify would not refuse. Assert-free by
+    /// design — the cycle thread invokes this inside the interrupt hook, so
+    /// failures report through the returned flag instead.
+    bool RevertUtxoRecordToUnspentByKey( const std::string &key )
+    {
+        const auto snapshot     = SnapshotPrefix( "/utxo" );
+        const auto record_bytes = snapshot.find( key );
+        if ( record_bytes == snapshot.end() )
+        {
+            return false;
+        }
+
+        SGTransaction::UTXOEntryRecord record;
+        if ( !record.ParseFromArray( record_bytes->second.data(), static_cast<int>( record_bytes->second.size() ) ) )
+        {
+            return false;
+        }
+        record.set_state( SGTransaction::UTXO_ENTRY_READY );
+        record.clear_has_spent_by_txid();
+        record.clear_spent_by_txid();
+        record.clear_has_spent_epoch();
+        record.clear_spent_epoch();
+
+        crdt::GlobalDB::Buffer key_buffer;
+        key_buffer.put( key );
+        crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        if ( !db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() )
+        {
+            return false;
+        }
+        return account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value();
+    }
+
     /// Arms the checkpoint mismatch by deleting the spender's change record
     /// (the corrupted/lost-record class): the durable READY set loses the
     /// change output while the input's CONSUMED evidence and the latest
@@ -681,7 +838,11 @@ public:
     //
 
     /// Constructs a Light TxPruner with the suite's window and dry_run=false.
-    std::shared_ptr<sgns::TxPruner> MakePruner( uint64_t k_budget, uint64_t settle_seconds )
+    /// @p compact_threshold_mb defaults to the PruningConfig default so no
+    /// existing call site changes (the CompactionGate canary passes 1).
+    std::shared_ptr<sgns::TxPruner> MakePruner( uint64_t k_budget,
+                                                uint64_t settle_seconds,
+                                                uint64_t compact_threshold_mb = PruningConfig{}.compact_threshold_mb )
     {
         PruningConfig config;
         config.enabled              = true;
@@ -689,6 +850,7 @@ public:
         config.finality_window      = kWindow;
         config.max_erases_per_cycle = k_budget;
         config.settle_seconds       = settle_seconds;
+        config.compact_threshold_mb = compact_threshold_mb;
         auto pruner                 = sgns::TxPruner::New( NodeType::Light, config );
         EXPECT_TRUE( pruner.has_value() );
         return pruner.has_value() ? pruner.value() : nullptr;
@@ -1451,6 +1613,137 @@ TEST_F( TxPrunerTest, RealPrune_ErasesEligibleAndLeavesEverythingElseByteIdentic
     EXPECT_EQ( status.watermark.value(), max_height );
 }
 
+/**
+ * GATE-02 / D-C5 — the rewrite proof. RealPrune's exact shape with ~256KB
+ * candidates (so a compaction observably rewrites files), plus the
+ * load-bearing difference: the production compaction surface runs INSIDE
+ * the test BETWEEN the before/after snapshot pairs. The mutation check
+ * (post-compaction size < pre-compaction size) proves the rewrite was
+ * real, so the byte-identity below is proven ACROSS a whole-DB rewrite,
+ * not a no-op: certificates, SecureCRDT seed-class values, the /utxo/
+ * prefix, the full head map, every seal marker, and the unspent sibling
+ * are all byte-identical after CompactStorage.
+ */
+TEST_F( TxPrunerTest, RealPrune_PostCompactionEverythingElseStaysByteIdentical )
+{
+    constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a non-vacuous rewrite
+
+    // RealPrune's seeding verbatim (sizes aside): ancient spender, driver,
+    // two eligibles, the untouched sibling.
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1, kCandidateValueBytes );
+    auto eligible_b = MakeTransfer( 3, 1, kCandidateValueBytes );
+    auto unspent    = MakeTransfer( 4, 2 ); // the untouched sibling
+
+    SeedTransaction( spender );
+    const std::string driver_cid_1 = PutSeedValueReturningCid( "/seed/txpruner/pc-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/pc-driver-2", "d2" ); // retire the eligibles from headship
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *unspent ); // deliberately never consumed
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+
+    // Non-tx data: a cert-shaped record and plain seed keys.
+    const std::string cert_key    = "/cert/" + account_->GetAddress() + ":41";
+    const std::string cert_cid    = PutSeedValueReturningCid( cert_key, "certificate-record" );
+    const std::string seed_cid    = PutSeedValueReturningCid( "/seed/txpruner/pc-data", "untouched" );
+    const std::string driver_cid2 = PutSeedValueReturningCid( "/seed/txpruner/pc-driver-3", "d3" );
+
+    // Block CIDs from the map entries (captured before any erase removes them).
+    const std::string cid_a = SnapshotMapEntry( TransactionManager::GetTransactionPath( *eligible_a ) );
+    const std::string cid_b = SnapshotMapEntry( TransactionManager::GetTransactionPath( *eligible_b ) );
+    const std::string cid_u = SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) );
+    const std::string cid_s = SnapshotMapEntry( TransactionManager::GetTransactionPath( *spender ) );
+    ASSERT_NE( cid_a, "absent" );
+    ASSERT_NE( cid_b, "absent" );
+
+    // Snapshots BEFORE: everything the cycle AND the compaction must not touch.
+    const RawSnapshot  utxo_before  = SnapshotPrefix( "/utxo/" );
+    const RawSnapshot  cert_before  = SnapshotCrdtEntriesContaining( cert_key );
+    const RawSnapshot  seed_before  = SnapshotCrdtEntriesContaining( "/seed/txpruner/pc-data" );
+    uint64_t           max_height   = 0;
+    const HeadSnapshot heads_before = SnapshotHeads( max_height );
+    const RawSnapshot  seals_before = SnapshotSeals(
+        { cid_a, cid_b, cid_u, cid_s, cert_cid, seed_cid, driver_cid_1, driver_cid2 } );
+    const RawSnapshot blocks_before = SnapshotBlocks( { cid_u, cid_s } );
+    const std::string sibling_value = BytesOf(
+        db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() );
+    const RawSnapshot sibling_crdt = SnapshotCrdtEntriesContaining(
+        TransactionManager::GetTransactionPath( *unspent ) );
+    ASSERT_FALSE( utxo_before.empty() ); // tracked outputs (spent + unspent) are on disk
+
+    // The prune: settled cycle under the DEFAULT 16MB threshold (the summed
+    // ~512KB estimate never crosses it — the auto-compaction is silent; the
+    // rewrite below is the test's own direct call through the same surface).
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );
+    EXPECT_FALSE( stats.compacted ); // auto-trigger silence at the default threshold
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The rewrite (D-C5): the production compaction surface, INSIDE the
+    // test, between the snapshot pairs.
+    auto pre_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    auto post_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction.has_value() );
+
+    // Mutation check (anti-vacuous): the compaction observably rewrote
+    // files, so the identity below is proven across a REAL rewrite.
+    EXPECT_LT( post_compaction.value(), pre_compaction.value() )
+        << "before=" << pre_compaction.value() << " after=" << post_compaction.value();
+
+    // Erased candidates: value gone, map entry gone, marker PRUNED — the
+    // compaction changed none of the three verdicts.
+    for ( const auto &tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_TRUE( SnapshotCrdtEntriesContaining( tx_path ).empty() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // The erased deltas' block bytes are still gone.
+    const RawSnapshot erased_blocks = SnapshotBlocks( { cid_a, cid_b } );
+    EXPECT_EQ( erased_blocks.at( cid_a ), "absent" );
+    EXPECT_EQ( erased_blocks.at( cid_b ), "absent" );
+
+    // Byte-identity of every untouched surface AFTER the whole-DB rewrite.
+    EXPECT_EQ( SnapshotPrefix( "/utxo/" ), utxo_before ) << "the unspent UTXO set changed across compaction";
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( cert_key ), cert_before ) << "cert record changed across compaction";
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( "/seed/txpruner/pc-data" ), seed_before )
+        << "non-tx data changed across compaction";
+    uint64_t           max_height_after = 0;
+    const HeadSnapshot heads_after      = SnapshotHeads( max_height_after );
+    EXPECT_EQ( heads_after, heads_before ) << "the DAG heads changed across compaction";
+    EXPECT_EQ( max_height_after, max_height );
+    EXPECT_EQ( SnapshotSeals( { cid_a, cid_b, cid_u, cid_s, cert_cid, seed_cid, driver_cid_1, driver_cid2 } ),
+               seals_before )
+        << "a seal marker changed across compaction (GATE-03)";
+
+    // Negative control: the unspent sibling byte-identical on every level.
+    EXPECT_EQ( BytesOf( db_->Get( { TransactionManager::GetTransactionPath( *unspent ) } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotMapEntry( TransactionManager::GetTransactionPath( *unspent ) ), cid_u );
+    EXPECT_EQ( SnapshotBlocks( { cid_u, cid_s } ), blocks_before );
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( TransactionManager::GetTransactionPath( *unspent ) ), sibling_crdt );
+    auto sibling_lookup = PruneEligibility::LookupPrunedEntry( *db_, unspent->GetHash() );
+    ASSERT_TRUE( sibling_lookup.has_value() );
+    EXPECT_EQ( sibling_lookup.value().first, PrunedLookup::NOT_FOUND );
+}
+
 // ---------------------------------------------------------------------------
 // Idempotent: a second cycle after a full drain is a no-op
 // ---------------------------------------------------------------------------
@@ -1904,10 +2197,10 @@ TEST_F( TxPrunerTest, TickGate_EmptyMissingSetAtAccessorLevel )
  * The per-cycle observability contract: every PruneCycleStats counter equals
  * the fixture's known actions, the generation tag travels onto the stats and
  * the queryable status, the watermark equals the maxHeight the completed
- * cycle observed, and status.last_cycle carries the same counters. There is
- * deliberately NO bytes-reclaimed field anywhere (the RECL-03 INFO line
- * states "not measured until Phase 20" — the status can never carry a
- * fabricated number).
+ * cycle observed, and status.last_cycle carries the same counters. The
+ * honest-split half (D-02): under the DEFAULT threshold this fixture never
+ * compacts — bytes_reclaimed stays nullopt and compacted stays false, so no
+ * fabricated reclamation number can exist at erase time.
  */
 TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
 {
@@ -1947,6 +2240,8 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     EXPECT_EQ( stats.errors, 0u );
     EXPECT_EQ( stats.generation, kTestGeneration );
     EXPECT_FALSE( stats.generation_superseded ); // caller-owned: ships false (D-C4)
+    EXPECT_FALSE( stats.compacted );             // default threshold: this fixture never compacts
+    EXPECT_EQ( stats.compaction_duration_ms, 0u );
 
     const auto status = pruner->GetPruneStatus();
     ASSERT_TRUE( status.watermark.has_value() );
@@ -1959,6 +2254,7 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     EXPECT_EQ( status.last_cycle.errors, stats.errors );
     EXPECT_EQ( status.last_cycle.generation, stats.generation );
     EXPECT_EQ( status.last_cycle.duration_ms, stats.duration_ms );
+    EXPECT_FALSE( status.bytes_reclaimed.has_value() ); // honest nullopt: no compaction ran
 
     // The generation tag travels on every invocation's stats (a
     // generation-superseded caller would see ITS tag here).
@@ -1966,6 +2262,452 @@ TEST_F( TxPrunerTest, Observability_StatsAndStatusMatchFixtureActions )
     ASSERT_TRUE( noop.has_value() );
     EXPECT_EQ( noop.value().generation, kTestGeneration + 2 );
     EXPECT_EQ( pruner->GetPruneStatus().last_cycle.generation, kTestGeneration + 2 );
+}
+
+// ---------------------------------------------------------------------------
+// Compaction gate: D-01 — the canary plus the full conjunct matrix and the
+// D-02 honesty contract (one TEST_F per conjunct; stats/status-driven
+// asserts only, never log capture)
+// ---------------------------------------------------------------------------
+
+/// Large fixture values retain their payload through serialization without
+/// copying that payload into output owners, UTXO keys, or address logs.
+TEST_F( TxPrunerTest, CompactionFixture_LargeValuesKeepOrdinaryOutputOwners )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+    const auto       candidate   = MakeTransfer( 1, 1, kValueBytes );
+    const auto       serialized  = candidate->SerializeByteVector();
+    ASSERT_GE( serialized.size(), kValueBytes );
+
+    const auto restored = TransferTransaction::DeSerializeByteVector( serialized );
+    ASSERT_NE( restored, nullptr );
+    EXPECT_TRUE( restored->CheckHash() );
+    EXPECT_TRUE( restored->SerializeByteVector() == serialized );
+
+    const auto outputs = restored->GetProducedUTXOs();
+    ASSERT_TRUE( outputs.has_value() );
+    ASSERT_EQ( outputs->size(), 1u );
+    EXPECT_EQ( outputs->front().GetOwnerAddress().size(), account_->GetAddress().size() );
+    EXPECT_TRUE( outputs->front().GetOwnerAddress() == account_->GetAddress() );
+}
+
+/**
+ * The end-to-end mechanism proof: two spent-beyond-window transactions whose
+ * evaluation-carried sizes (~1MB values each) cross a 1MB threshold inside
+ * ONE settled cycle trigger the post-cycle compaction through the real
+ * GlobalDB surface — the returned stats carry compacted=true with a recorded
+ * duration, the queryable status stamps the MEASURED bytes_reclaimed (never
+ * at erase time), and the erased values are genuinely gone (not vacuous).
+ */
+TEST_F( TxPrunerTest, CompactionGate_ThresholdCrossedCycleCompactsOnceAndStampsReclaimedBytes )
+{
+    constexpr size_t kCanaryValueBytes = 1u << 20; // ~1MB low-entropy value each
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kCanaryValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kCanaryValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/compact-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/compact-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
+
+    // Pre-state: both values present, nothing reclaimed yet (honest nullopt).
+    for ( const auto *tx : { big_a.get(), big_b.get() } )
+    {
+        ASSERT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *tx ) } ).has_value() );
+    }
+
+    // Threshold 1MB: the two ~1MB erased values cross it inside this cycle.
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, 1 );
+    ASSERT_NE( pruner, nullptr );
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    EXPECT_EQ( stats.erased, 2u );
+    EXPECT_TRUE( stats.compacted );
+
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+    // WR-03 pin (re-review): last_cycle must report the compaction.
+    EXPECT_TRUE( status.last_cycle.compacted );
+    // A successful sub-millisecond compaction legitimately records zero.
+    EXPECT_EQ( status.last_cycle.compaction_duration_ms, stats.compaction_duration_ms );
+
+    // Non-vacuous: the erased values are gone (marker PRUNED, value absent).
+    for ( const auto *tx : { big_a.get(), big_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+}
+
+/**
+ * D-01 conjunct — cumulative watermark < compact_threshold_mb: a REAL
+ * erasing cycle (erased >= 1) whose summed evaluation-carried bytes stay far
+ * under the configured threshold never pays for a compaction, and the
+ * status stays honestly nullopt (D-02: nothing was reclaimed because no
+ * rewrite ran).
+ */
+TEST_F( TxPrunerTest, CompactionGate_BelowThresholdErasingCycleNeverCompacts )
+{
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1 );
+    auto eligible_b = MakeTransfer( 3, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/below-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    PutSeedValue( "/seed/txpruner/below-driver-2", "d2" );
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds ); // default 16MB threshold
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );   // a real erasing cycle (the erased >= 1 conjunct holds)
+    EXPECT_FALSE( stats.compacted ); // ...but the summed bytes stay far under 16MB
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+}
+
+/**
+ * D-01 conjunct — erased == 0: a cycle over already-pruned state (fresh
+ * evaluation, nothing new erased) never compacts even at the LOWEST sane
+ * threshold — the erased conjunct, not just the threshold, gates the
+ * rewrite (compaction rewrites bytes; with nothing newly deleted there is
+ * nothing new to reclaim).
+ */
+TEST_F( TxPrunerTest, CompactionGate_ErasedZeroCycleNeverCompactsAtLowThreshold )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/zero-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/zero-driver-2", "d2" );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    // Drain: the settled cycle erases the one small candidate (its summed
+    // bytes stay far under even the 1MB threshold), leaving no eligible work.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 1u );
+    EXPECT_FALSE( stats.compacted );
+
+    // The erased==0 cycle over the drained state never compacts.
+    auto drained = RunCycle( *pruner );
+    ASSERT_TRUE( drained.has_value() );
+    EXPECT_EQ( drained.value().erased, 0u );
+    EXPECT_FALSE( drained.value().compacted );
+    EXPECT_FALSE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+}
+
+/**
+ * D-01 conjunct — cumulative watermark >= threshold: a cycle whose erasures
+ * cross the threshold fires exactly ONE compaction; D-02 honesty: the
+ * bytes_reclaimed stamp is written at compaction only and RETAINED by later
+ * non-compacting cycles (both the erased==0 form and the strongest
+ * erasing-but-sub-threshold form — the stamp is never reset or refreshed).
+ */
+TEST_F( TxPrunerTest, CompactionGate_CrossedThresholdCompactsOnceAndStampRetained )
+{
+    constexpr size_t kValueBytes = 1u << 20; // ~1MB low-entropy value each
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cross-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cross-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u ); // ~2MB erased in ONE cycle: the crossing
+    EXPECT_TRUE( stats.compacted );
+
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
+    EXPECT_EQ( status.last_cycle.compaction_duration_ms, stats.compaction_duration_ms );
+    const uint64_t stamped = status.bytes_reclaimed.value();
+
+    // Follow-up below-threshold cycle (fresh evaluation, nothing new
+    // erased): no second compaction, stamp RETAINED.
+    auto follow_up = RunCycle( *pruner );
+    ASSERT_TRUE( follow_up.has_value() );
+    EXPECT_EQ( follow_up.value().erased, 0u );
+    EXPECT_FALSE( follow_up.value().compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+    EXPECT_EQ( pruner->GetPruneStatus().bytes_reclaimed.value(), stamped );
+
+    // Strongest retention form: a later ERASING but sub-threshold cycle
+    // still neither compacts nor disturbs the stamp.
+    auto small = MakeTransfer( 4, 1 );
+    SeedTransaction( small );
+    TrackOutputs( *small );
+    ASSERT_TRUE( ConsumeOutput( *small, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/cross-driver-3", "d3" );
+    auto small_cycle = RunCycle( *pruner );
+    ASSERT_TRUE( small_cycle.has_value() );
+    ASSERT_EQ( small_cycle.value().erased, 1u );
+    EXPECT_FALSE( small_cycle.value().compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+    EXPECT_EQ( pruner->GetPruneStatus().bytes_reclaimed.value(), stamped );
+}
+
+/**
+ * D-01 conjunct — !canceled: a cancel requested BEFORE the cycle keeps the
+ * threshold-crossing erasure un-compacted (compacted=false, the stamp never
+ * written), and the cancel persists for the instance's lifetime. The
+ * kept-watermark retry (a skipped compaction keeps the watermark so the
+ * still-crossed threshold retries) is proven on a fresh, never-canceled
+ * instance whose own crossing cycle compacts.
+ */
+TEST_F( TxPrunerTest, CompactionGate_CanceledBeforeStartSkipsThenFreshRetryCompacts )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cancel-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cancel-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
+
+    auto canceled_pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( canceled_pruner, nullptr );
+    canceled_pruner->RequestCompactionCancel(); // BEFORE any cycle runs
+
+    PruneCycleStats stats;
+    RunSettledCycle( *canceled_pruner, stats );
+
+    ASSERT_EQ( stats.erased, 2u );   // the erases happened...
+    EXPECT_FALSE( stats.compacted ); // ...the compaction never started
+    EXPECT_FALSE( canceled_pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The cancel persists for the instance's lifetime (the shutdown
+    // promptness contract): a later crossing on the SAME instance still
+    // never compacts and still never stamps.
+    auto more = MakeTransfer( 4, 1, kValueBytes );
+    SeedTransaction( more );
+    TrackOutputs( *more );
+    ASSERT_TRUE( ConsumeOutput( *more, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/cancel-driver-3", "d3" );
+    auto still_canceled = RunCycle( *canceled_pruner );
+    ASSERT_TRUE( still_canceled.has_value() );
+    ASSERT_EQ( still_canceled.value().erased, 1u );
+    EXPECT_FALSE( still_canceled.value().compacted );
+    EXPECT_FALSE( canceled_pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The kept-watermark retry: a fresh, never-canceled instance whose
+    // cycle re-crosses the threshold compacts (the crossing erasure alone
+    // is sufficient — only the cancel suppressed the first one).
+    auto retry_pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( retry_pruner, nullptr );
+
+    auto big_c = MakeTransfer( 5, 1, kValueBytes );
+    auto big_d = MakeTransfer( 6, 1, kValueBytes );
+    SeedTransaction( big_c );
+    SeedTransaction( big_d );
+    TrackOutputs( *big_c );
+    TrackOutputs( *big_d );
+    ASSERT_TRUE( ConsumeOutput( *big_c, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_d, 0, *spender ) );
+    PutSeedValue( "/seed/txpruner/cancel-driver-4", "d4" );
+
+    PruneCycleStats retry_stats;
+    RunSettledCycle( *retry_pruner, retry_stats );
+    ASSERT_EQ( retry_stats.erased, 2u );
+    EXPECT_TRUE( retry_stats.compacted );
+    const auto retry_status = retry_pruner->GetPruneStatus();
+    ASSERT_TRUE( retry_status.bytes_reclaimed.has_value() );
+    EXPECT_GT( retry_status.bytes_reclaimed.value(), 0u );
+}
+
+/**
+ * D-01 / Pitfall 10 — the compaction bookkeeping is IN-MEMORY ONLY: a fresh
+ * TxPruner instance over the same fixture reports bytes_reclaimed ==
+ * nullopt (and no watermark) — the stamp never survives across instances
+ * and must never be asserted to.
+ */
+TEST_F( TxPrunerTest, CompactionGate_FreshInstanceReportsNoStampUntilItCompacts )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/fresh-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/fresh-driver-2", "d2" );
+
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 2u );
+    ASSERT_TRUE( stats.compacted );
+    ASSERT_TRUE( pruner->GetPruneStatus().bytes_reclaimed.has_value() );
+
+    // The restart-honesty pin: a fresh instance on the SAME fixture starts
+    // from zero — no stamp, no watermark (in-memory state, D-01).
+    auto fresh = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( fresh, nullptr );
+    const auto fresh_status = fresh->GetPruneStatus();
+    EXPECT_FALSE( fresh_status.bytes_reclaimed.has_value() );
+    EXPECT_FALSE( fresh_status.watermark.has_value() );
+}
+
+/**
+ * D-02 — concurrent-read coherence during a COMPACTING cycle: a reader
+ * thread spins on GetPruneStatus while a threshold-crossing cycle runs
+ * seam-held and then completes its erases plus the tail compaction; every
+ * snapshot is a coherent full copy (bytes_reclaimed absent-or-stamped,
+ * never torn), the stamp becomes visible mid-polling, and neither side
+ * deadlocks. The :2044 pattern carried onto the compaction path.
+ */
+TEST_F( TxPrunerTest, CompactionGate_ConcurrentReadDuringCompactingCycleIsCoherent )
+{
+    constexpr size_t kValueBytes = 1u << 20;
+
+    auto spender = MakeTransfer( 1, 0 );
+    auto big_a   = MakeTransfer( 2, 1, kValueBytes );
+    auto big_b   = MakeTransfer( 3, 1, kValueBytes );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/cread-driver-1", "d1" );
+    SeedTransaction( big_a );
+    SeedTransaction( big_b );
+    PutSeedValue( "/seed/txpruner/cread-driver-2", "d2" ); // retire both bigs from headship
+    TrackOutputs( *big_a );
+    TrackOutputs( *big_b );
+    ASSERT_TRUE( ConsumeOutput( *big_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *big_b, 0, *spender ) );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds, /*compact_threshold_mb=*/1 );
+    ASSERT_NE( pruner, nullptr );
+
+    std::atomic<bool>   hook_entered{ false };
+    std::atomic<bool>   release_cycle{ false };
+    std::atomic<bool>   stop_reader{ false };
+    std::atomic<size_t> reads{ 0 };
+    std::atomic<bool>   stamp_seen{ false };
+
+    // Reader: spin on GetPruneStatus the whole time (through the erases and
+    // the tail compaction); after enough concurrent reads INSIDE the held
+    // window, release the cycle thread.
+    std::thread reader(
+        [&]
+        {
+            while ( !stop_reader.load() )
+            {
+                const auto snapshot = pruner->GetPruneStatus(); // full copy under the status mutex
+                ++reads;
+                if ( snapshot.bytes_reclaimed.has_value() )
+                {
+                    stamp_seen.store( true );
+                }
+                if ( hook_entered.load() && reads.load() > 200 )
+                {
+                    release_cycle.store( true );
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+            release_cycle.store( true ); // never leave the cycle held on exit
+        } );
+
+    sgns::TxPruner::SetCycleInterruptHookForTest(
+        [&]( int step )
+        {
+            if ( step == sgns::TxPruner::kInterruptAfterEvaluation )
+            {
+                hook_entered.store( true );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+                while ( !release_cycle.load() && std::chrono::steady_clock::now() < deadline )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+                return false; // continue the cycle (the hold was the point)
+            }
+            return false;
+        } );
+
+    // The raced cycle: settles, holds after evaluation, then (released by
+    // the reader) erases both candidates and runs the tail compaction while
+    // the reader keeps polling.
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+
+    {
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return stamp_seen.load(); },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "the reader observes the stamped bytes_reclaimed",
+                                   &waited );
+    }
+    stop_reader.store( true );
+    reader.join();
+
+    ASSERT_EQ( stats.erased, 2u );
+    EXPECT_TRUE( stats.compacted );
+    EXPECT_GT( reads.load(), 200u ); // the concurrent reads really happened
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.bytes_reclaimed.has_value() );
+    EXPECT_GT( status.bytes_reclaimed.value(), 0u );
 }
 
 // ---------------------------------------------------------------------------
@@ -2314,6 +3056,674 @@ TEST_F( TxPrunerTest, ComposeLock_HeadGuardRefusesAtEraseTimeNeverTorn )
     auto pruned = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
     ASSERT_TRUE( pruned.has_value() );
     EXPECT_EQ( pruned.value().first, PrunedLookup::PRUNED );
+}
+
+// ---------------------------------------------------------------------------
+// SpendRace: SC-5 — the seam-held window-edge race (D-04, both legs)
+// ---------------------------------------------------------------------------
+
+/**
+ * The window-edge fault test. The cycle is seam-held between evaluation
+ * and the per-tx erase (the kInterruptAfterEvaluation seam — the landed
+ * RunCycle order runs the per-candidate re-verify BEFORE the same
+ * candidate's kInterruptBeforeErase seam, so holding THERE could never
+ * influence that candidate's own re-verify; the post-evaluation seam is
+ * the entry of the exact evaluation-to-erase window this race protects).
+ * While held, the target candidate's spend state is reverted fixture-side
+ * by the TWO-STEP revert: (1) the durable /utxo/ record rewritten to
+ * READY, then (2) LoadUTXOs — the reload clears and rebuilds the IN-MEMORY
+ * utxo_outpoints_ map the re-verify reads, so the revert is observable
+ * (a record-only write leaves the map CONSUMED and leg (a) fails).
+ *
+ * Leg (a) — skip THIS cycle: released, the cycle continues into the
+ * under-lock re-verify, which REFUSES the erase (erased==0, skipped==1,
+ * value present, marker NOT_FOUND, stats still recorded). Leg (b) — next
+ * cycle picks it up: a genuine consumed record lands on the outpoint again
+ * (the exact ConsumeOutput write) and the NEXT cycle erases (erased==1,
+ * marker PRUNED, value gone). Deterministic by construction: the hold is
+ * the blocking hook with the 5s deadline (it FAILS rather than hangs), and
+ * the deadline-bounded spin is the ONLY wait in the interleaving path.
+ */
+TEST_F( TxPrunerTest, SpendRace_RevertedSpendSkipsThisCycleAndNextCyclePicksItUp )
+{
+    auto spender  = MakeTransfer( 1, 0 );
+    auto eligible = MakeTransfer( 2, 1 );
+
+    SeedTransaction( spender );
+    PutSeedValue( "/seed/txpruner/race-driver-1", "d1" );
+    SeedTransaction( eligible );
+    TrackOutputs( *eligible );
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) ); // genuinely consumed at evaluation time
+    PutSeedValue( "/seed/txpruner/race-driver-2", "d2" );
+
+    const std::string tx_path = TransactionManager::GetTransactionPath( *eligible );
+
+    // The revert target's durable record key (captured on the test thread;
+    // the key never changes), sanity-checked CONSUMED before the race.
+    auto txid = base::Hash256::fromReadableString( eligible->GetHash() );
+    ASSERT_FALSE( txid.has_error() );
+    auto utxo_record = FindUtxoRecord( txid.value(), 0 );
+    ASSERT_TRUE( utxo_record.has_value() );
+    const std::string utxo_key = utxo_record->first;
+    ASSERT_EQ( utxo_record->second.state(), SGTransaction::UTXO_ENTRY_CONSUMED );
+
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+
+    // The tick gate's READY precondition (the RunSettledCycle recipe; the
+    // plain RunCycle helper never drives it).
+    ForceManagerReady();
+
+    std::atomic<bool> hook_entered{ false };
+    std::atomic<bool> release_cycle{ false };
+    std::atomic<bool> revert_ok{ false };
+
+    sgns::TxPruner::SetCycleInterruptHookForTest(
+        [this, utxo_key, &hook_entered, &release_cycle, &revert_ok]( int step )
+        {
+            if ( step == sgns::TxPruner::kInterruptAfterEvaluation )
+            {
+                // The spend reverts WHILE the cycle is held: durable record
+                // to READY, then the LoadUTXOs reload (the in-memory map
+                // drives the re-verify — checker B3's two steps).
+                revert_ok.store( RevertUtxoRecordToUnspentByKey( utxo_key ) );
+                hook_entered.store( true );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+                while ( !release_cycle.load() && std::chrono::steady_clock::now() < deadline )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+                return false; // continue the cycle (the hold was the point)
+            }
+            return false;
+        } );
+
+    // Leg (a): the cycle runs OFF-THREAD (the hold releases only from this
+    // thread); the bounded poll settles the tick gate, then the held cycle
+    // runs to the seam.
+    std::optional<outcome::result<PruneCycleStats>> raced;
+    std::thread                                     cycle_thread(
+        [&]
+        {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                auto result = RunCycle( *pruner );
+                if ( result.has_error() || result.value().examined > 0 )
+                {
+                    raced = result;
+                    return;
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+            }
+        } );
+
+    {
+        std::chrono::milliseconds waited( 0 );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return hook_entered.load(); },
+                                   std::chrono::milliseconds( 10000 ),
+                                   "the cycle reaches the post-evaluation hold",
+                                   &waited );
+    }
+
+    // Mid-hold: nothing erased yet — value present, marker NOT_FOUND (the
+    // ComposeLock never-torn state shape).
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    {
+        auto mid_hold = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( mid_hold.has_value() );
+        EXPECT_EQ( mid_hold.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    release_cycle.store( true );
+    cycle_thread.join();
+    sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+
+    ASSERT_TRUE( raced.has_value() );
+    ASSERT_TRUE( raced.value().has_value() );
+    EXPECT_TRUE( revert_ok.load() ) << "the two-step revert failed inside the hook";
+
+    // The under-lock re-verify refused: this cycle erased NOTHING, skipped
+    // the candidate, and touched neither value nor marker.
+    EXPECT_EQ( raced.value().value().erased, 0u );
+    EXPECT_EQ( raced.value().value().skipped, 1u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    {
+        auto refused = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( refused.has_value() );
+        EXPECT_EQ( refused.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    // A skipped-only completed cycle still records its stats (watermark set,
+    // last_cycle carries the skip).
+    const auto status = pruner->GetPruneStatus();
+    ASSERT_TRUE( status.watermark.has_value() );
+    EXPECT_EQ( status.last_cycle.skipped, 1u );
+    EXPECT_EQ( status.last_cycle.erased, 0u );
+
+    // Leg (b): the spend lands again (the exact ConsumeOutput write) and
+    // the NEXT cycle picks the candidate up — D-04/A4's both-legs
+    // resolution: never erased by the raced cycle, erased by the next.
+    ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+    auto next = RunCycle( *pruner );
+    ASSERT_TRUE( next.has_value() );
+    EXPECT_EQ( next.value().erased, 1u );
+    EXPECT_EQ( next.value().skipped, 0u );
+    EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+    {
+        auto picked_up = PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+        ASSERT_TRUE( picked_up.has_value() );
+        EXPECT_EQ( picked_up.value().first, PrunedLookup::PRUNED );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MeshRetention: SC-4 — full/archive GlobalDB peers in the SAME real-pubsub
+// mesh as the pruning light retain 100% of the transaction history
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Everything one mesh peer provably holds of the seeded history, read
+    /// through the peer's own public surface only (never its internals).
+    struct PeerHistory
+    {
+        RawSnapshot  values;       ///< resolved key -> value bytes (txs + non-tx puts)
+        RawSnapshot  crdt_entries; ///< merged /crdt/ element entries of every baselined tx
+        RawSnapshot  blocks;       ///< delta CID -> raw block bytes
+        HeadSnapshot heads;        ///< topic -> head CID set
+    };
+
+    /// Present-and-applied predicate for one key on a peer (the entryApplied
+    /// shape: the public Get path must return the exact seeded bytes).
+    bool PeerValueApplied( crdt::GlobalDB &peer, const std::string &key, const std::string &expected )
+    {
+        auto value = peer.Get( crdt::HierarchicalKey( key ) );
+        return value.has_value() && BytesOf( value.value() ) == expected;
+    }
+
+    /// Raw block-bytes presence for one delta CID (the block-key format has
+    /// one home: Buffer(cid.toBytes()), the vendored RocksdbDatastore encode).
+    bool PeerBlockPresent( crdt::GlobalDB &peer, const std::string &cid )
+    {
+        auto parsed = CID::fromString( cid );
+        if ( parsed.has_error() )
+        {
+            return false;
+        }
+        auto bytes = parsed.value().toBytes();
+        return bytes.has_value() && peer.GetRaw( crdt::GlobalDB::Buffer( bytes.value() ) ).has_value();
+    }
+
+    /// The peer's head map contains @p cid (the converged live head).
+    bool PeerHeadContains( crdt::GlobalDB &peer, const std::string &cid )
+    {
+        auto heads = peer.GetCRDTHeadList();
+        if ( heads.has_error() )
+        {
+            return false;
+        }
+        for ( const auto &topic_and_heads : heads.value().first )
+        {
+            for ( const auto &head : topic_and_heads.second )
+            {
+                if ( head.toString().value() == cid )
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// Bounded-wait predicate: the peer holds EVERY expected value, EVERY
+    /// expected block, and the converged head — per-instance observables of
+    /// the peer's own public surface, never delivery timing.
+    bool PeerHoldsSeededHistory( crdt::GlobalDB                                         &peer,
+                                 const std::vector<std::pair<std::string, std::string>> &values,
+                                 const std::vector<std::string>                         &cids,
+                                 const std::string                                      &final_head_cid )
+    {
+        for ( const auto &key_and_expected : values )
+        {
+            if ( !PeerValueApplied( peer, key_and_expected.first, key_and_expected.second ) )
+            {
+                return false;
+            }
+        }
+        for ( const auto &cid : cids )
+        {
+            if ( !PeerBlockPresent( peer, cid ) )
+            {
+                return false;
+            }
+        }
+        return PeerHeadContains( peer, final_head_cid );
+    }
+
+    /// The full peer baseline: values at @p keys, the /crdt/ element entries
+    /// of @p tx_paths (the transient /crdt/work/ broadcaster-queue family
+    /// excluded — pending-publish plumbing whose presence depends on drain
+    /// timing, not on any prune action), the raw blocks of @p cids, and the
+    /// whole head map.
+    PeerHistory SnapshotPeerHistory( crdt::GlobalDB                 &peer,
+                                     const std::vector<std::string> &keys,
+                                     const std::vector<std::string> &tx_paths,
+                                     const std::vector<std::string> &cids )
+    {
+        PeerHistory history;
+        for ( const auto &key : keys )
+        {
+            auto value          = peer.Get( crdt::HierarchicalKey( key ) );
+            history.values[key] = value.has_value() ? BytesOf( value.value() ) : std::string( "absent" );
+        }
+        auto entries = peer.QueryRaw( crdt::GlobalDB::Buffer{}.put( std::string( "/crdt/" ) ) );
+        if ( entries.has_value() )
+        {
+            static const std::string kTransientWorkFamily = "/crdt/work/";
+            for ( const auto &key_and_value : entries.value() )
+            {
+                const std::string key_str = BytesOf( key_and_value.first );
+                if ( key_str.rfind( kTransientWorkFamily, 0 ) == 0 )
+                {
+                    continue;
+                }
+                for ( const auto &needle : tx_paths )
+                {
+                    if ( key_str.find( needle ) != std::string::npos )
+                    {
+                        history.crdt_entries[key_str] = BytesOf( key_and_value.second );
+                        break;
+                    }
+                }
+            }
+        }
+        for ( const auto &cid : cids )
+        {
+            auto parsed = CID::fromString( cid );
+            if ( parsed.has_error() )
+            {
+                history.blocks[cid] = "unparseable";
+                continue;
+            }
+            auto bytes = parsed.value().toBytes();
+            auto block = peer.GetRaw(
+                crdt::GlobalDB::Buffer( bytes.has_value() ? std::move( bytes.value() ) : std::vector<uint8_t>{} ) );
+            history.blocks[cid] = block.has_value() ? BytesOf( block.value() ) : std::string( "absent" );
+        }
+        auto heads = peer.GetCRDTHeadList();
+        if ( heads.has_value() )
+        {
+            for ( const auto &topic_and_heads : heads.value().first )
+            {
+                for ( const auto &head : topic_and_heads.second )
+                {
+                    history.heads[topic_and_heads.first].insert( head.toString().value() );
+                }
+            }
+        }
+        return history;
+    }
+
+    /// Byte-identity of every peer surface against its baseline — the
+    /// retention checkpoint core: a single changed byte on the peer fails.
+    void ExpectPeerHistoryIdentical( const PeerHistory &actual, const PeerHistory &baseline, const std::string &label )
+    {
+        EXPECT_EQ( actual.values, baseline.values ) << label << ": a value changed";
+        EXPECT_EQ( actual.crdt_entries, baseline.crdt_entries ) << label << ": a tx CRDT entry changed";
+        EXPECT_EQ( actual.blocks, baseline.blocks ) << label << ": a block changed";
+        EXPECT_EQ( actual.heads, baseline.heads ) << label << ": the head map changed";
+    }
+} // namespace
+
+/**
+ * SC-4, the mesh half of the phase's retention proof. A light node with the
+ * full TxPruner stack seeds spent-beyond-window history through the REAL
+ * publish path while two GlobalDB-only peers (nominally full and archive —
+ * retention by construction, neither constructs a pruner; the role gate is
+ * TickGate_NonLightRolesRefusedAtConstruction, not duplicated here) hold the
+ * identical history in the same real-pubsub mesh. The peers are PROVEN to
+ * hold 100% of the seeded history BEFORE any prune exists (bounded per-peer
+ * polls of values, blocks, and the converged head — never delivery-timing
+ * EXPECTs), so the retention baseline is real and the byte-identity below is
+ * not vacuous (T-20-0501).
+ *
+ * CHECKPOINT 1 (this suite's erase half): the light's settled prune cycle
+ * erases its candidates locally (values gone, map entries gone, markers
+ * PRUNED — the mutation check proving the test is not vacuous) while BOTH
+ * peers stay byte-identical to their baselines on every surface: values,
+ * per-tx /crdt/ element entries, CID blocks, and the head map. The locked
+ * decision "pruning is a local RocksDB operation, never the CRDT tombstone
+ * path" gets its network-side proof — the light's reclamation erases so much
+ * as a byte on no peer.
+ */
+TEST_F( TxPrunerTest, MeshRetention_FullAndArchivePeersHoldIdenticalHistoryAcrossPruneAndCompactionCycles )
+{
+    constexpr size_t kCandidateValueBytes = 256u * 1024u; // ~256KB each: a measurable later compaction on the light
+
+    // The mesh FIRST: subscribed before dialing (the Case-2 lesson), so every
+    // seeding publish below flows to a live topic mesh.
+    AddMeshPeer( "mesh-full" );
+    AddMeshPeer( "mesh-archive" );
+    ASSERT_FALSE( HasFatalFailure() );
+    ASSERT_EQ( mesh_peers_.size(), 2u );
+
+    // RealPrune's seeding shape (sizes aside): ancient spender, driver, two
+    // eligibles, the untouched sibling, the retiring driver, non-tx data.
+    auto spender    = MakeTransfer( 1, 0 );
+    auto eligible_a = MakeTransfer( 2, 1, kCandidateValueBytes );
+    auto eligible_b = MakeTransfer( 3, 1, kCandidateValueBytes );
+    auto unspent    = MakeTransfer( 4, 2 );
+
+    SeedTransaction( spender );
+    const std::string driver_cid_1 = PutSeedValueReturningCid( "/seed/txpruner/mesh-driver-1", "d1" );
+    SeedTransaction( eligible_a );
+    SeedTransaction( eligible_b );
+    SeedTransaction( unspent );
+    PutSeedValue( "/seed/txpruner/mesh-driver-2", "d2" ); // retire the eligibles from headship
+
+    TrackOutputs( *eligible_a );
+    TrackOutputs( *eligible_b );
+    TrackOutputs( *unspent ); // deliberately never consumed
+    ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
+
+    const std::string cert_key       = "/cert/" + account_->GetAddress() + ":41";
+    const std::string cert_cid       = PutSeedValueReturningCid( cert_key, "certificate-record" );
+    const std::string seed_cid       = PutSeedValueReturningCid( "/seed/txpruner/mesh-data", "untouched" );
+    const std::string final_head_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-driver-3", "d3" );
+
+    const std::string tx_path_a = TransactionManager::GetTransactionPath( *eligible_a );
+    const std::string tx_path_b = TransactionManager::GetTransactionPath( *eligible_b );
+    const std::string tx_path_u = TransactionManager::GetTransactionPath( *unspent );
+    const std::string tx_path_s = TransactionManager::GetTransactionPath( *spender );
+    const std::string cid_a     = SnapshotMapEntry( tx_path_a );
+    const std::string cid_b     = SnapshotMapEntry( tx_path_b );
+    const std::string cid_u     = SnapshotMapEntry( tx_path_u );
+    const std::string cid_s     = SnapshotMapEntry( tx_path_s );
+    ASSERT_NE( cid_a, "absent" );
+    ASSERT_NE( cid_b, "absent" );
+    ASSERT_NE( cid_u, "absent" );
+    ASSERT_NE( cid_s, "absent" );
+
+    // The exact bytes the deltas carried (read through the light's own public
+    // surface) — what every peer must provably end up holding.
+    const std::vector<std::pair<std::string, std::string>> expected_values = {
+        { tx_path_a, BytesOf( db_->Get( { tx_path_a } ).value() ) },
+        { tx_path_b, BytesOf( db_->Get( { tx_path_b } ).value() ) },
+        { tx_path_u, BytesOf( db_->Get( { tx_path_u } ).value() ) },
+        { tx_path_s, BytesOf( db_->Get( { tx_path_s } ).value() ) },
+        { "/seed/txpruner/mesh-driver-1", "d1" },
+        { "/seed/txpruner/mesh-driver-2", "d2" },
+        { cert_key, "certificate-record" },
+        { "/seed/txpruner/mesh-data", "untouched" },
+        { "/seed/txpruner/mesh-driver-3", "d3" },
+    };
+    const std::vector<std::string> baselined_tx_paths = { tx_path_a, tx_path_b, tx_path_u, tx_path_s };
+    const std::vector<std::string> baselined_cids =
+        { cid_a, cid_b, cid_u, cid_s, driver_cid_1, cert_cid, seed_cid, final_head_cid };
+    std::vector<std::string> baselined_keys;
+    for ( const auto &key_and_expected : expected_values )
+    {
+        baselined_keys.push_back( key_and_expected.first );
+    }
+
+    // BOUNDED: BOTH peers provably hold 100% of the seeded history BEFORE any
+    // prune exists — the per-instance observables of each peer's own public
+    // surface, never a sleep and never delivery-timing EXPECTs (T-20-0502).
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return PeerHoldsSeededHistory( *mesh_peers_[0].db, expected_values, baselined_cids, final_head_cid ) &&
+                   PeerHoldsSeededHistory( *mesh_peers_[1].db, expected_values, baselined_cids, final_head_cid );
+        },
+        std::chrono::seconds( 25 ),
+        "both mesh peers received and applied every seeded element",
+        nullptr );
+
+    // The peer baselines, each captured through the peer's own public surface,
+    // with non-vacuity pins on the baselines themselves: every value, every
+    // block, and the tx CRDT families really are there.
+    const PeerHistory baseline_full    = SnapshotPeerHistory( *mesh_peers_[0].db,
+                                                           baselined_keys,
+                                                           baselined_tx_paths,
+                                                           baselined_cids );
+    const PeerHistory baseline_archive = SnapshotPeerHistory( *mesh_peers_[1].db,
+                                                              baselined_keys,
+                                                              baselined_tx_paths,
+                                                              baselined_cids );
+    ASSERT_EQ( baseline_full.values.size(), baselined_keys.size() );
+    ASSERT_EQ( baseline_archive.values.size(), baselined_keys.size() );
+    for ( const auto &cid : baselined_cids )
+    {
+        ASSERT_NE( baseline_full.blocks.at( cid ), "absent" );
+        ASSERT_NE( baseline_archive.blocks.at( cid ), "absent" );
+    }
+    ASSERT_FALSE( baseline_full.crdt_entries.empty() );
+    ASSERT_FALSE( baseline_archive.crdt_entries.empty() );
+
+    // The light's own pre-prune state: both eligibles present, no markers yet.
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        ASSERT_TRUE( db_->Get( { TransactionManager::GetTransactionPath( *tx ) } ).has_value() );
+        auto pre = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( pre.has_value() );
+        ASSERT_EQ( pre.value().first, PrunedLookup::NOT_FOUND );
+    }
+
+    // The light-side pre-prune captures its local correctness is later proven
+    // against (across the prune AND the compaction together): the sibling on
+    // every level, and every seal marker (GATE-03 — seals survive everything).
+    const std::string sibling_value         = BytesOf( db_->Get( { tx_path_u } ).value() );
+    const RawSnapshot sibling_crdt          = SnapshotCrdtEntriesContaining( tx_path_u );
+    const RawSnapshot sibling_blocks_before = SnapshotBlocks( { cid_u, cid_s } );
+    const RawSnapshot light_seals_before    = SnapshotSeals( baselined_cids );
+
+    // The light's settled prune cycle — the erase the peers must not see.
+    auto pruner = MakePruner( 10, kSmallSettleSeconds );
+    ASSERT_NE( pruner, nullptr );
+    PruneCycleStats stats;
+    RunSettledCycle( *pruner, stats );
+    ASSERT_EQ( stats.erased, 2u );
+
+    // CHECKPOINT 1: both peers byte-identical to their baselines on every
+    // surface (100% retention across the light's erase) while the light's own
+    // store provably lacks the erased keys (the mutation check).
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[0].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_full,
+        "full peer across the light's erase" );
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[1].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_archive,
+        "archive peer across the light's erase" );
+
+    for ( const auto *tx : { eligible_a.get(), eligible_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_TRUE( SnapshotCrdtEntriesContaining( tx_path ).empty() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+    const RawSnapshot erased_blocks = SnapshotBlocks( { cid_a, cid_b } );
+    EXPECT_EQ( erased_blocks.at( cid_a ), "absent" );
+    EXPECT_EQ( erased_blocks.at( cid_b ), "absent" );
+
+    // CHECKPOINT 2 (the compaction half): ONE whole-DB compaction on the LIGHT
+    // only, through the production surface. The light's measured size must
+    // drop (the rewrite was real — the peer identity below is proven ACROSS a
+    // rewrite, not a no-op), and both peers stay byte-identical to the SAME
+    // baselines: the compaction, like the erase, is invisible on the wire —
+    // nothing propagates (T-20-0503).
+    const auto pre_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    const auto post_compaction = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction.has_value() );
+    EXPECT_LT( post_compaction.value(), pre_compaction.value() )
+        << "before=" << pre_compaction.value() << " after=" << post_compaction.value();
+
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[0].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_full,
+        "full peer across the light's compaction" );
+    ExpectPeerHistoryIdentical(
+        SnapshotPeerHistory( *mesh_peers_[1].db, baselined_keys, baselined_tx_paths, baselined_cids ),
+        baseline_archive,
+        "archive peer across the light's compaction" );
+
+    // The light's own local correctness across prune+compact: erased markers
+    // stay PRUNED (already asserted above and unchanged by the rewrite), the
+    // erased blocks stay gone, every seal marker survives (GATE-03), and the
+    // unspent sibling is byte-identical on every level.
+    EXPECT_EQ( SnapshotBlocks( { cid_a, cid_b } ), erased_blocks );
+    EXPECT_EQ( SnapshotSeals( baselined_cids ), light_seals_before )
+        << "a seal marker changed across the light's compaction";
+    EXPECT_EQ( BytesOf( db_->Get( { tx_path_u } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotMapEntry( tx_path_u ), cid_u );
+    EXPECT_EQ( SnapshotBlocks( { cid_u, cid_s } ), sibling_blocks_before );
+    EXPECT_EQ( SnapshotCrdtEntriesContaining( tx_path_u ), sibling_crdt );
+    auto sibling_lookup = PruneEligibility::LookupPrunedEntry( *db_, unspent->GetHash() );
+    ASSERT_TRUE( sibling_lookup.has_value() );
+    EXPECT_EQ( sibling_lookup.value().first, PrunedLookup::NOT_FOUND );
+
+    // ROUND 2 — the criterion's "cycles" plural, evidenced: a second
+    // seed/prune/compact sequence on the SAME mesh. A second round costs
+    // seconds on this fixture (the peers are already up), so it runs rather
+    // than being argued away.
+    auto round2_a = MakeTransfer( 5, 1, kCandidateValueBytes );
+    auto round2_b = MakeTransfer( 6, 1, kCandidateValueBytes );
+    SeedTransaction( round2_a );
+    SeedTransaction( round2_b );
+    const std::string r2d1_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-1", "r2d1" );
+    TrackOutputs( *round2_a );
+    TrackOutputs( *round2_b );
+    ASSERT_TRUE( ConsumeOutput( *round2_a, 0, *spender ) );
+    ASSERT_TRUE( ConsumeOutput( *round2_b, 0, *spender ) );
+    const std::string r2d2_cid          = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-2", "r2d2" );
+    const std::string r2_final_head_cid = PutSeedValueReturningCid( "/seed/txpruner/mesh-r2-driver-3", "r2d3" );
+
+    const std::string tx_path_2a = TransactionManager::GetTransactionPath( *round2_a );
+    const std::string tx_path_2b = TransactionManager::GetTransactionPath( *round2_b );
+    const std::string cid_2a     = SnapshotMapEntry( tx_path_2a );
+    const std::string cid_2b     = SnapshotMapEntry( tx_path_2b );
+    ASSERT_NE( cid_2a, "absent" );
+    ASSERT_NE( cid_2b, "absent" );
+
+    const std::vector<std::pair<std::string, std::string>> round2_expected = {
+        { tx_path_2a, BytesOf( db_->Get( { tx_path_2a } ).value() ) },
+        { tx_path_2b, BytesOf( db_->Get( { tx_path_2b } ).value() ) },
+        { "/seed/txpruner/mesh-r2-driver-1", "r2d1" },
+        { "/seed/txpruner/mesh-r2-driver-2", "r2d2" },
+        { "/seed/txpruner/mesh-r2-driver-3", "r2d3" },
+    };
+    const std::vector<std::string> round2_cids = { cid_2a, cid_2b, r2d1_cid, r2d2_cid, r2_final_head_cid };
+
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return PeerHoldsSeededHistory( *mesh_peers_[0].db, round2_expected, round2_cids, r2_final_head_cid ) &&
+                   PeerHoldsSeededHistory( *mesh_peers_[1].db, round2_expected, round2_cids, r2_final_head_cid );
+        },
+        std::chrono::seconds( 25 ),
+        "both mesh peers received and applied every round-2 element",
+        nullptr );
+
+    // The round-2 baselines carry the UNION: every round-1 key, tx path, and
+    // CID plus the round-2 ones — so the round-2 checkpoints prove CUMULATIVE
+    // retention (round-1 history still byte-identical after a second
+    // erase+compaction pair), not just round-2 isolation.
+    std::vector<std::string> all_keys     = baselined_keys;
+    std::vector<std::string> all_tx_paths = baselined_tx_paths;
+    std::vector<std::string> all_cids     = baselined_cids;
+    for ( const auto &key_and_expected : round2_expected )
+    {
+        all_keys.push_back( key_and_expected.first );
+    }
+    all_tx_paths.push_back( tx_path_2a );
+    all_tx_paths.push_back( tx_path_2b );
+    all_cids.insert( all_cids.end(), round2_cids.begin(), round2_cids.end() );
+
+    const PeerHistory round2_baseline_full    = SnapshotPeerHistory( *mesh_peers_[0].db,
+                                                                  all_keys,
+                                                                  all_tx_paths,
+                                                                  all_cids );
+    const PeerHistory round2_baseline_archive = SnapshotPeerHistory( *mesh_peers_[1].db,
+                                                                     all_keys,
+                                                                     all_tx_paths,
+                                                                     all_cids );
+
+    // Cumulative-retention pin: every round-1 baseline entry is still present,
+    // byte-identical, inside the round-2 baseline (grown, never mutated).
+    for ( const auto &key_and_value : baseline_full.values )
+    {
+        ASSERT_EQ( round2_baseline_full.values.at( key_and_value.first ), key_and_value.second );
+        ASSERT_EQ( round2_baseline_archive.values.at( key_and_value.first ),
+                   baseline_archive.values.at( key_and_value.first ) );
+    }
+    for ( const auto &cid_and_block : baseline_full.blocks )
+    {
+        ASSERT_EQ( round2_baseline_full.blocks.at( cid_and_block.first ), cid_and_block.second );
+        ASSERT_EQ( round2_baseline_archive.blocks.at( cid_and_block.first ),
+                   baseline_archive.blocks.at( cid_and_block.first ) );
+    }
+
+    // The light's round-2 prune (the tick gate and settle window are long
+    // settled on this pruner — a plain cycle).
+    const auto round2_stats = RunCycle( *pruner );
+    ASSERT_TRUE( round2_stats.has_value() );
+    ASSERT_EQ( round2_stats.value().erased, 2u );
+
+    // Round-2 CHECKPOINT 1: peers byte-identical to the round-2 baselines
+    // across the light's second erase; the light lacks the round-2 keys.
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[0].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_full,
+                                "full peer across the light's round-2 erase" );
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[1].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_archive,
+                                "archive peer across the light's round-2 erase" );
+    for ( const auto *tx : { round2_a.get(), round2_b.get() } )
+    {
+        const std::string tx_path = TransactionManager::GetTransactionPath( *tx );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        EXPECT_EQ( SnapshotMapEntry( tx_path ), "absent" );
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx->GetHash() );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+
+    // Round-2 CHECKPOINT 2: the second whole-DB compaction drops the light's
+    // size again (the round-2 reclamation was real) and the peers remain
+    // byte-identical — 100% retention proven across BOTH the erase and the
+    // compaction of BOTH cycles.
+    const auto pre_compaction_2 = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( pre_compaction_2.has_value() );
+    ASSERT_TRUE( db_->CompactStorage( nullptr ).has_value() );
+    const auto post_compaction_2 = db_->GetApproximateDiskUsageBytes();
+    ASSERT_TRUE( post_compaction_2.has_value() );
+    EXPECT_LT( post_compaction_2.value(), pre_compaction_2.value() )
+        << "before=" << pre_compaction_2.value() << " after=" << post_compaction_2.value();
+
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[0].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_full,
+                                "full peer across the light's round-2 compaction" );
+    ExpectPeerHistoryIdentical( SnapshotPeerHistory( *mesh_peers_[1].db, all_keys, all_tx_paths, all_cids ),
+                                round2_baseline_archive,
+                                "archive peer across the light's round-2 compaction" );
+
+    // The light's local correctness across BOTH cycles: round-1 erased markers
+    // survived the second compaction PRUNED, and the sibling is still itself.
+    for ( const auto &tx_hash : { eligible_a->GetHash(), eligible_b->GetHash() } )
+    {
+        auto lookup = PruneEligibility::LookupPrunedEntry( *db_, tx_hash );
+        ASSERT_TRUE( lookup.has_value() );
+        EXPECT_EQ( lookup.value().first, PrunedLookup::PRUNED );
+    }
+    EXPECT_EQ( BytesOf( db_->Get( { tx_path_u } ).value() ), sibling_value );
+    EXPECT_EQ( SnapshotSeals( baselined_cids ), light_seals_before );
 }
 
 // ---------------------------------------------------------------------------

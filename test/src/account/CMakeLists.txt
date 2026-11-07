@@ -469,6 +469,30 @@ else()
     )
 endif()
 
+# Phase 20 (20-03): RECL-02 dedicated measured-bytes gate (D-03) — same link
+# set as tx_pruner_test (the fixture family it copies).
+addtest(reclamation_gate_test
+    reclamation_gate_test.cpp
+)
+
+target_link_libraries(reclamation_gate_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(reclamation_gate_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(reclamation_gate_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(reclamation_gate_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 # Several suites in this directory boot multiple full nodes; running them
 # concurrently starves CPU on smaller CI runners (observed: a genesis creator
 # starved for 30s while eight test binaries ran), stalling startup past any
