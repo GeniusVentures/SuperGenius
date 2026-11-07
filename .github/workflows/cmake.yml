@@ -91,7 +91,12 @@ permissions:
   packages: read
 jobs:
   resolve-runners:
-    runs-on: ubuntu-latest
+    # TEMPORARY (2026-11-06): resolve on the self-hosted Ubuntu runner, and
+    # the fallbacks in the pick block below are pinned to self-hosted labels
+    # too, so the build matrix lands on our own runners regardless of what
+    # the availability probe reports. Restore 'runs-on: ubuntu-latest' and
+    # the GitHub-hosted fallback strings to re-enable automatic fallback.
+    runs-on: ["self-hosted", "sg-ubuntu-linux"]
     env:
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
       CCACHE_MAXSIZE: "50"
@@ -125,8 +130,12 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
           # Returns ["self-hosted","<label>"] if at least one matching runner is
-          # online and not busy, otherwise the GitHub-hosted fallback ($2).
-          # Matches either runner name or label text, case-insensitively.
+          # online and not busy, otherwise the fallback ($2). Matches either
+          # runner name or label text, case-insensitively.
+          # TEMPORARY: the fallbacks are ALSO self-hosted labels right now, so
+          # the outcome is self-hosted either way - the online/busy check only
+          # affects the step-summary diagnostics (and queues instead of
+          # falling back when a runner is down).
           pick() {
             if echo "$data" | jq -e --arg L "$1" \
               '.runners[]
@@ -137,16 +146,16 @@ jobs:
               echo "- $1: self-hosted" >> "$GITHUB_STEP_SUMMARY"
               echo "[\"self-hosted\",\"$1\"]"
             else
-              echo "- $1: fallback" >> "$GITHUB_STEP_SUMMARY"
+              echo "- $1: not online/busy - using fallback (self-hosted)" >> "$GITHUB_STEP_SUMMARY"
               echo "$2"
             fi
           }
 
           {
-            echo "linux_x64=$(pick sg-ubuntu-linux '["ubuntu-latest"]')"
-            echo "linux_arm=$(pick sg-arm-linux    '["ubuntu-24.04-arm"]')"
-            echo "windows=$(pick   SG-WIN11        '["windows-2022"]')"
-            echo "mac=$(pick       gv-OSX-Large    '["macos-latest"]')"
+            echo "linux_x64=$(pick sg-ubuntu-linux '["self-hosted","sg-ubuntu-linux"]')"
+            echo "linux_arm=$(pick sg-arm-linux    '["self-hosted","sg-arm-linux"]')"
+            echo "windows=$(pick   SG-WIN11        '["self-hosted","SG-WIN11"]')"
+            echo "mac=$(pick       gv-OSX-Large    '["self-hosted","gv-OSX-Large"]')"
           } >> "$GITHUB_OUTPUT"
 
   build:
