@@ -25,6 +25,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <boost/dll.hpp>
 #include <boost/json.hpp>
@@ -32,10 +33,15 @@
 #include "account/AccountMessenger.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/MintTransactionV2.hpp"
+#include "base/hexutil.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "transaction/TransactionManager.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
+#include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
@@ -60,6 +66,55 @@ namespace
 
     // Size of the hex digit alphabet (0..15) used for deterministic key generation.
     constexpr int kHexAlphabetSize = 16;
+
+    /// @brief Signs a bootstrap certificate against the real node's validator registry snapshot.
+    outcome::result<ConsensusManager::Certificate> MakeStartupCertificate(
+        const std::shared_ptr<GeniusAccount> &authority,
+        const ConsensusManager::Subject      &subject,
+        const std::string                    &registry_cid,
+        const ValidatorRegistry::Registry    &registry )
+    {
+        const auto now_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+        ConsensusManager::Proposal proposal;
+        *proposal.mutable_subject() = subject;
+        proposal.set_proposer_id( authority->GetAddress() );
+        proposal.set_registry_cid( registry_cid );
+        proposal.set_registry_epoch( registry.epoch() );
+        proposal.set_timestamp( now_ms );
+        // Proposal IDs hash the signing bytes with the ID cleared, before signing
+        // the completed proposal through the same public API as consensus.
+        auto id_copy = proposal;
+        id_copy.clear_proposal_id();
+        BOOST_OUTCOME_TRY( auto id_signing, ConsensusManager::ProposalSigningBytes( id_copy ) );
+        const auto id_hash = crypto::sha2_256( id_signing.data(), id_signing.size() );
+        proposal.set_proposal_id( base::hex_lower( gsl::span<const uint8_t>( id_hash.data(), id_hash.size() ) ) );
+        BOOST_OUTCOME_TRY( auto proposal_signing, ConsensusManager::ProposalSigningBytes( proposal ) );
+        const auto proposal_signature = authority->Sign( proposal_signing );
+        proposal.set_signature( proposal_signature.data(), proposal_signature.size() );
+
+        ConsensusManager::Vote vote;
+        vote.set_proposal_id( proposal.proposal_id() );
+        vote.set_voter_id( authority->GetAddress() );
+        vote.set_approve( true );
+        vote.set_timestamp( now_ms );
+        BOOST_OUTCOME_TRY( auto vote_signing, ConsensusManager::VoteSigningBytes( vote ) );
+        const auto vote_signature = authority->Sign( vote_signing );
+        vote.set_signature( vote_signature.data(), vote_signature.size() );
+
+        ConsensusManager::Certificate certificate;
+        certificate.set_proposal_id( proposal.proposal_id() );
+        certificate.set_registry_cid( registry_cid );
+        certificate.set_registry_epoch( registry.epoch() );
+        const auto total_weight = ValidatorRegistry::TotalWeight( registry );
+        certificate.set_total_weight( total_weight );
+        certificate.set_approved_weight( total_weight );
+        certificate.set_timestamp( now_ms );
+        *certificate.add_votes()        = vote;
+        *certificate.mutable_proposal() = proposal;
+        return certificate;
+    }
 } // namespace
 
 class NodeStartupTest : public ::testing::Test
@@ -221,6 +276,175 @@ protected:
         }
     }
 };
+
+// Replicated certificates are filtered while the trust gate still prevents the
+// transaction manager from being constructed. Their canonical keys must already
+// decode correctly, and invalid bindings or signatures must still be rejected.
+TEST_F( NodeStartupTest, CanonicalCertificatesAcceptedBeforeTransactionManager )
+{
+    // Other tests may have left this process-wide handler installed. Only the
+    // real node startup path may restore it for this fresh-boot regression.
+    ConsensusManager::UnregisterSlotKeyHandler( NONCE_SUBJECT_TYPE );
+    auto fixture = CreateNode( "early_certificate_slots", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), true );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    Blockchain::SetAuthorizedFullNodeAddress( fixture.node->GetAddress() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return fixture.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "fresh full node did not reach the trust genesis gate" ) );
+    ASSERT_TRUE( fixture.node->GetTransactionManager().has_error() );
+
+    auto registry = GeniusNodeTestAccess::GetValidatorRegistry( fixture.node );
+    auto node_db  = GeniusNodeTestAccess::TransactionDatabaseOf( fixture.node );
+    ASSERT_TRUE( registry );
+    ASSERT_TRUE( node_db );
+    const auto snapshot = registry->LoadCurrentRegistry();
+    ASSERT_TRUE( snapshot.has_value() ) << snapshot.error().message();
+    const auto registry_cid = registry->GetRegistryCid();
+    ASSERT_FALSE( registry_cid.empty() );
+
+    const auto network_config = fixture.path / "certificate-source-network.json";
+    const auto database_path  = fixture.path / "certificate-source-globaldb";
+    std::filesystem::create_directories( database_path );
+    test::WriteGlobalDbNetworkConfig( network_config.string() );
+    const std::string                        full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    crdt::GlobalDbNetworkComposition::Config source_config;
+    source_config.network_config_path = network_config.string();
+    source_config.database_path       = database_path.string();
+    source_config.listen_topic        = full_topic;
+    source_config.broadcast_topic     = full_topic;
+    auto source                       = crdt::GlobalDbNetworkComposition::Create( std::move( source_config ) );
+    ASSERT_TRUE( source.has_value() ) << source.error().message();
+    fixture.composition = source.value();
+    ASSERT_TRUE( fixture.composition->Start().has_value() );
+    auto source_db = fixture.composition->db();
+    ASSERT_TRUE( source_db );
+
+    constexpr uint64_t kNonce        = 11;
+    const auto         nonce_subject = ConsensusManager::CreateNonceSubject( fixture.authority->GetAddress(),
+                                                                     kNonce,
+                                                                     std::string( 64, '1' ),
+                                                                     EmbeddedTransaction{},
+                                                                     std::nullopt,
+                                                                     std::nullopt );
+    ASSERT_TRUE( nonce_subject.has_value() );
+    auto nonce_certificate = MakeStartupCertificate( fixture.authority,
+                                                     nonce_subject.value(),
+                                                     registry_cid,
+                                                     snapshot.value() );
+    ASSERT_TRUE( nonce_certificate.has_value() );
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "mint-v2" );
+    dag.set_source_addr( fixture.authority->GetAddress() );
+    dag.set_nonce( 2 );
+    dag.set_timestamp( static_cast<int64_t>( nonce_certificate.value().timestamp() ) );
+    const auto burn_hash = base::Hash256::fromReadableString( std::string( 64, 'b' ) );
+    ASSERT_TRUE( burn_hash.has_value() );
+    const auto mint         = MintTransactionV2::New( 42,
+                                              "source-chain",
+                                              TokenID::FromBytes( { 0x00 } ),
+                                              std::move( dag ),
+                                                      { { burn_hash.value(), 0, {} } },
+                                              fixture.authority->GetAddress() );
+    const auto mint_subject = ConsensusManager::CreateNonceSubject( fixture.authority->GetAddress(),
+                                                                    mint.GetNonce(),
+                                                                    mint.GetHash(),
+                                                                    mint.SerializeToEmbeddedTransaction(),
+                                                                    std::nullopt,
+                                                                    std::nullopt );
+    ASSERT_TRUE( mint_subject.has_value() );
+    auto mint_certificate = MakeStartupCertificate( fixture.authority,
+                                                    mint_subject.value(),
+                                                    registry_cid,
+                                                    snapshot.value() );
+    ASSERT_TRUE( mint_certificate.has_value() );
+
+    const auto write_certificate =
+        [&source_db, &full_topic]( const ConsensusManager::Certificate &certificate, const std::string &key )
+    {
+        SCOPED_TRACE( key );
+        const auto   serialized = certificate.SerializeAsString();
+        base::Buffer value;
+        value.put( serialized );
+        ASSERT_TRUE( source_db->PutConvergentImmutable( { key }, value, { full_topic } ).has_value() );
+    };
+    const std::string nonce_key = "/cert/" + fixture.authority->GetAddress() + ":11";
+    const std::string mint_key  = "/cert/" + mint.GetSlotID();
+    write_certificate( nonce_certificate.value(), nonce_key );
+    write_certificate( mint_certificate.value(), mint_key );
+
+    const auto invalid_subject = ConsensusManager::CreateNonceSubject( fixture.authority->GetAddress(),
+                                                                       kNonce + 1,
+                                                                       std::string( 64, '2' ),
+                                                                       EmbeddedTransaction{},
+                                                                       std::nullopt,
+                                                                       std::nullopt );
+    ASSERT_TRUE( invalid_subject.has_value() );
+    auto invalid_certificate = MakeStartupCertificate( fixture.authority,
+                                                       invalid_subject.value(),
+                                                       registry_cid,
+                                                       snapshot.value() );
+    ASSERT_TRUE( invalid_certificate.has_value() );
+    auto *invalid_vote      = invalid_certificate.value().mutable_votes( 0 );
+    auto  invalid_signature = invalid_vote->signature();
+    ASSERT_FALSE( invalid_signature.empty() );
+    invalid_signature.front() = static_cast<char>( invalid_signature.front() ^ 1 );
+    invalid_vote->set_signature( invalid_signature );
+    const std::string invalid_key = "/cert/" + fixture.authority->GetAddress() + ":12";
+
+    // Local writes bypass ingress filters. Replicate an external DAG instead,
+    // with the negative cases and a marker in one delta. The marker proves the
+    // node filtered both rejected entries, even if parents merge out of order.
+    const crdt::HierarchicalKey tip_key( "/startup/certificate-filter-tip" );
+    base::Buffer                tip_value;
+    tip_value.put( "external certificate history complete" );
+    base::Buffer wrong_slot_value;
+    wrong_slot_value.put( nonce_certificate.value().SerializeAsString() );
+    base::Buffer invalid_value;
+    invalid_value.put( invalid_certificate.value().SerializeAsString() );
+    ASSERT_TRUE( source_db
+                     ->Put( std::vector<crdt::GlobalDB::DataPair>{ { { "/cert/wrong-slot" }, wrong_slot_value },
+                                                                   { { invalid_key }, invalid_value },
+                                                                   { tip_key, tip_value } },
+                            { full_topic } )
+                     .has_value() );
+    fixture.node->AddPeer( fixture.composition->interface_address() );
+    constexpr auto kHeadRepeatInterval = std::chrono::milliseconds( 100 );
+    auto           last_broadcast      = std::chrono::steady_clock::now() - kHeadRepeatInterval;
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if ( now - last_broadcast >= kHeadRepeatInterval )
+            {
+                EXPECT_TRUE( source_db->RequestHeadBroadcast( { full_topic } ).has_value() );
+                last_broadcast = now;
+            }
+            return node_db->Get( tip_key ).has_value() && node_db->Get( { nonce_key } ).has_value() &&
+                   node_db->Get( { mint_key } ).has_value();
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "external certificate history did not replicate before the transaction manager exists" ) );
+    const auto assert_certificate_stored =
+        [&node_db]( const std::string &key, const ConsensusManager::Certificate &certificate )
+    {
+        const auto stored = node_db->Get( { key } );
+        ASSERT_TRUE( stored.has_value() ) << "valid certificate rejected at " << key;
+        EXPECT_EQ( stored.value().toString(), certificate.SerializeAsString() );
+    };
+    assert_certificate_stored( nonce_key, nonce_certificate.value() );
+    assert_certificate_stored( mint_key, mint_certificate.value() );
+    const auto wrong_slot = node_db->Get( { "/cert/wrong-slot" } );
+    ASSERT_TRUE( wrong_slot.has_error() );
+    EXPECT_EQ( wrong_slot.error(), storage::DatabaseError::NOT_FOUND );
+    const auto invalid_slot = node_db->Get( { invalid_key } );
+    ASSERT_TRUE( invalid_slot.has_error() );
+    EXPECT_EQ( invalid_slot.error(), storage::DatabaseError::NOT_FOUND );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS );
+    EXPECT_TRUE( fixture.node->GetTransactionManager().has_error() );
+}
 
 // Processing gossip is live before blockchain genesis and the trust controller.
 // A shared head received then must already follow FullNode-only parent links;

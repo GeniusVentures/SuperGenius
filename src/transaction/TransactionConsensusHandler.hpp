@@ -60,6 +60,14 @@ namespace sgns
         }
 
         /**
+         * @brief Registers canonical transaction certificate slot decoding before consensus starts.
+         * @note Independent of a TransactionManager instance, so bootstrap and recovery can
+         *       validate replicated certificate keys while transaction initialization is gated.
+         *       Repeated calls restore the same handler, including after test unregistration.
+         */
+        static void RegisterSlotKeyHandler();
+
+        /**
          * @brief Finalizes a transaction once consensus produced a certificate for it,
          *        reconstructing the transaction from the certificate when it is not tracked locally.
          */

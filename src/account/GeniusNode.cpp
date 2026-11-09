@@ -60,6 +60,7 @@
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
@@ -814,6 +815,9 @@ namespace sgns
             {
                 if ( !blockchain_ )
                 {
+                    // Consensus recovery and certificate ingress precede the trust
+                    // gate; canonical transaction slot decoding must already exist.
+                    TransactionConsensusHandler::RegisterSlotKeyHandler();
                     auto weak_self = weak_from_this();
                     blockchain_    = Blockchain::New(
                         tx_globaldb_,

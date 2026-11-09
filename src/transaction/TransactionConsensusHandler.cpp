@@ -31,6 +31,26 @@ namespace sgns
         using utxo_merkle::SerializeUTXOLeafPayload;
     }
 
+    void TransactionConsensusHandler::RegisterSlotKeyHandler()
+    {
+        ConsensusManager::RegisterSlotKeyHandler(
+            NONCE_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto nonce = ConsensusManager::DecodeNonceSubject( subject );
+                if ( nonce.has_value() &&
+                     nonce.value().transaction().transaction_case() != EmbeddedTransaction::TRANSACTION_NOT_SET )
+                {
+                    auto tx = TransactionManager::DeSerializeEmbeddedTransaction( nonce.value().transaction() );
+                    if ( tx.has_value() )
+                    {
+                        return tx.value()->GetSlotID();
+                    }
+                }
+                return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
+            } );
+    }
+
     void TransactionConsensusHandler::OnProposalTimeoutCleanup( const std::string &tx_hash )
     {
         auto tx = owner_.GetTransactionByHash( tx_hash );
