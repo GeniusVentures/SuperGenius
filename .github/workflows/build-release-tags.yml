@@ -89,7 +89,14 @@ permissions:
   packages: read
 jobs:
   resolve-runners:
-    runs-on: ubuntu-latest
+    # TEMPORARY (2026-11-06, develop 669cb821b applied to cmake.yml;
+    # hand-applied here 2026-11-10): resolve on the self-hosted Ubuntu
+    # runner and pin the FB_* fallbacks below to self-hosted labels too, so
+    # the tag-build matrix lands on our own runners regardless of what the
+    # availability probe reports - GitHub-hosted runners are currently
+    # disabled. Restore 'runs-on: ubuntu-latest' and the GitHub-hosted
+    # FB_* strings to re-enable automatic fallback.
+    runs-on: ["self-hosted", "sg-ubuntu-linux"]
     env:
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
     outputs:
@@ -156,14 +163,19 @@ jobs:
           SH_LINUX_ARM='["self-hosted","sg-arm-linux"]'
           SH_WINDOWS='["self-hosted","SG-WIN11"]'
           SH_MAC='["self-hosted","gv-OSX-Large"]'
-          FB_LINUX='["ubuntu-latest"]'
-          FB_LINUX_ARM='["ubuntu-24.04-arm"]'
-          FB_WINDOWS='["windows-2022"]'
-          FB_MAC='["macos-latest"]'
+          # TEMPORARY: fallbacks pinned to the SAME self-hosted labels while
+          # GitHub-hosted runners are disabled - the online/busy probe now
+          # only affects the step-summary diagnostics, and an unavailable
+          # runner queues its label instead of falling back to hosted.
+          FB_LINUX='["self-hosted","sg-ubuntu-linux"]'
+          FB_LINUX_ARM='["self-hosted","sg-arm-linux"]'
+          FB_WINDOWS='["self-hosted","SG-WIN11"]'
+          FB_MAC='["self-hosted","gv-OSX-Large"]'
 
           # Returns the self-hosted label array if at least one matching runner
-          # is online and not busy, otherwise returns the GitHub-hosted fallback.
-          # Match either runner name or label/tag text, case-insensitively.
+          # is online and not busy, otherwise returns the fallback (currently
+          # the same self-hosted label - see TEMPORARY note above). Match either
+          # runner name or label/tag text, case-insensitively.
           pick_runner() {
             local label="$1" self_hosted="$2" fallback="$3"
             if echo "$data" | jq -e --arg L "$label" \
