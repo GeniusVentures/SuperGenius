@@ -15,7 +15,9 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <thread>
+#include <vector>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -211,6 +213,21 @@ namespace sgns
         static void SetFailNextPutUTXOStore( UTXOManager &utxo_manager, bool fail )
         {
             utxo_manager.SetFailNextPutUTXOStoreForTest( fail );
+        }
+
+        static std::string UTXORecordPrefix( const std::string &owner )
+        {
+            return std::string( UTXOManager::DB_PREFIX ) + "/" + owner + "/";
+        }
+
+        static bool HasUTXOStorage( const UTXOManager &utxo_manager )
+        {
+            return utxo_manager.AcquireStorage() != nullptr;
+        }
+
+        static std::vector<uint16_t> GetMonitoredNetworkIDs()
+        {
+            return TransactionManager::GetMonitoredNetworkIDs();
         }
 
         static void SetPutUTXOBeforeStoreHook( UTXOManager &utxo_manager, std::function<void()> hook )
@@ -1151,6 +1168,259 @@ TEST_F( CertificateFallbackTest, CertificateCallbackMarkerWriteFailureStallsThen
     CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
     EXPECT_EQ( account_->GetUTXOManager().GetUTXOs( account_->GetAddress() ).size(), 1u );
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
+}
+
+/**
+ * Registering a certificate consumer synchronously replays durable work. Its
+ * UTXO storage must already be available even before StartCore is called.
+ */
+TEST_F( CertificateFallbackTest, NewLoadsUtxosBeforeReplayingPendingCertificates )
+{
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    CertificateFallbackTestAccess::ParkRoundTimer( manager );
+
+    const auto winner = MakeCompetingMintV2( account_->GetAddress(), 123 );
+    winner->MakeSignature( *account_ );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto certificate_key = "/cert/" + winner->GetSlotID();
+
+    // Reproduce node startup: consensus receives a certificate before its
+    // transaction consumer exists, and no UTXO storage has been loaded yet.
+    tm_->Stop();
+    tm_.reset();
+    account_->GetUTXOManager().ReleaseStorage();
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+    crdt::GlobalDB::Buffer callback_value;
+    callback_value.put( certificate.value().SerializeAsString() );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager,
+        crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( callback_value ) } );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    ASSERT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState( manager,
+                                                                         certificate_key,
+                                                                         crdt::CRDTWorkJournal::State::Stalled ) );
+
+    tm_ = TransactionManager::New( db_,
+                                   io_,
+                                   account_,
+                                   blockchain_,
+                                   NodeType::Light,
+                                   0,
+                                   std::chrono::milliseconds( 300000 ),
+                                   std::chrono::milliseconds( 600000 ) );
+    ASSERT_TRUE( tm_ );
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::CREATING );
+
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    if ( !tracked.has_value() )
+    {
+        ADD_FAILURE() << "Pending certificate replay did not track the Mint transaction";
+        return;
+    }
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    auto &utxo_manager = account_->GetUTXOManager();
+    EXPECT_EQ( utxo_manager.GetBalance(), winner->GetAmount() );
+    const auto outputs = utxo_manager.GetUTXOs( account_->GetAddress() );
+    ASSERT_EQ( outputs.size(), 1U );
+    EXPECT_EQ( outputs.front().GetAmount(), winner->GetAmount() );
+    const auto checkpoint = utxo_manager.LoadLatestCheckpoint();
+    ASSERT_TRUE( checkpoint.has_value() );
+    if ( !checkpoint.value().has_value() )
+    {
+        ADD_FAILURE() << "Pending certificate replay did not persist a UTXO checkpoint";
+        return;
+    }
+    EXPECT_EQ( checkpoint.value()->last_finalized_tx.toReadableString(), winner->GetHash() );
+    EXPECT_EQ( checkpoint.value()->utxo_merkle_root, utxo_manager.ComputeUTXOMerkleRoot( account_->GetAddress() ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
+
+    // Starting the core must preserve reservations established after replay;
+    // loading UTXOs a second time would discard this transient ownership.
+    ASSERT_EQ( utxo_manager.TryReserveOutpoint( outputs.front().GetTxID(),
+                                                outputs.front().GetOutputIdx(),
+                                                "startup-replay-reservation" ),
+               UTXOManager::OutpointClaim::kClaimed );
+    tm_->StartCore();
+    EXPECT_TRUE( utxo_manager.IsOutPointReserved( outputs.front().GetTxID(), outputs.front().GetOutputIdx() ) );
+}
+
+/**
+ * A non-null storage handle does not establish successful initialization:
+ * malformed durable UTXOs must fail construction and release callback ownership
+ * so a repaired database can create a fully wired replacement consumer.
+ */
+TEST_F( CertificateFallbackTest, NewRejectsMalformedUtxosAndReleasesRegistrationCallbacksForRetry )
+{
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    CertificateFallbackTestAccess::ParkRoundTimer( manager );
+    const auto mint = MakeCompetingMintV2( account_->GetAddress(), 126 );
+    mint->MakeSignature( *account_ );
+    const auto certificate = BuildSignedCertificate( mint );
+    ASSERT_TRUE( certificate.has_value() );
+    const auto confirmed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                  mint->GetHash(),
+                                                                                  certificate.value() );
+    ASSERT_TRUE( confirmed.has_value() );
+    ASSERT_EQ( confirmed.value(), ConsensusManager::Check::Approve );
+
+    auto &utxo_manager = account_->GetUTXOManager();
+    ASSERT_EQ( utxo_manager.GetBalance(), mint->GetAmount() );
+    const auto root_before = utxo_manager.ComputeUTXOMerkleRoot( account_->GetAddress() );
+    const auto storage     = db_->GetDataStore();
+    const auto outputs     = utxo_manager.GetUTXOs( account_->GetAddress() );
+    ASSERT_EQ( outputs.size(), 1U );
+    base::Buffer record_key;
+    record_key.put( CertificateFallbackTestAccess::UTXORecordPrefix( account_->GetAddress() ) +
+                    outputs.front().GetTxID().toReadableString() + ":" +
+                    std::to_string( outputs.front().GetOutputIdx() ) );
+    const auto stored_record = storage->get( record_key );
+    ASSERT_TRUE( stored_record.has_value() );
+    const auto record_value = stored_record.value();
+
+    tm_->Stop();
+    tm_.reset();
+    base::Buffer malformed;
+    malformed.put( "not-a-utxo-record" );
+    ASSERT_TRUE( storage->put( record_key, malformed ).has_value() );
+    utxo_manager.ReleaseStorage();
+    tm_ = TransactionManager::New( db_,
+                                   io_,
+                                   account_,
+                                   blockchain_,
+                                   NodeType::Light,
+                                   0,
+                                   std::chrono::milliseconds( 300000 ),
+                                   std::chrono::milliseconds( 600000 ) );
+    EXPECT_FALSE( tm_ );
+    const auto malformed_load = utxo_manager.LoadUTXOs( storage );
+    ASSERT_TRUE( malformed_load.has_error() );
+    EXPECT_EQ( malformed_load.error(), std::make_error_code( std::errc::bad_message ) );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasUTXOStorage( utxo_manager ) );
+
+    for ( const auto network_id : CertificateFallbackTestAccess::GetMonitoredNetworkIDs() )
+    {
+        const auto reg_pattern = "^/?" + TransactionManager::GetBlockChainBase( network_id ) + "reg/[^/]+";
+        EXPECT_TRUE( db_->RegisterNewElementCallback(
+            reg_pattern,
+            []( const crdt::CRDTCallbackManager::NewDataPair &, const std::string & ) {} ) );
+        db_->UnregisterNewElementCallback( reg_pattern );
+    }
+
+    ASSERT_TRUE( storage->put( record_key, record_value ).has_value() );
+    tm_ = TransactionManager::New( db_,
+                                   io_,
+                                   account_,
+                                   blockchain_,
+                                   NodeType::Light,
+                                   0,
+                                   std::chrono::milliseconds( 300000 ),
+                                   std::chrono::milliseconds( 600000 ) );
+    ASSERT_TRUE( tm_ );
+    EXPECT_EQ( tm_->GetState(), TransactionManager::State::CREATING );
+    EXPECT_EQ( utxo_manager.GetBalance(), mint->GetAmount() );
+    EXPECT_EQ( utxo_manager.GetUTXOs( account_->GetAddress() ).size(), 1U );
+    EXPECT_EQ( utxo_manager.ComputeUTXOMerkleRoot( account_->GetAddress() ), root_before );
+}
+
+/**
+ * Transaction effects can succeed before checkpoint persistence fails. Keep
+ * certificate work retryable until the checkpoint is durable, without
+ * repeating the already-confirmed transaction's account or UTXO effects.
+ */
+TEST_F( CertificateFallbackTest, CertificateCheckpointFailureStallsThenRecoversExactlyOnce )
+{
+    const auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    ASSERT_TRUE( manager );
+    CertificateFallbackTestAccess::ParkRoundTimer( manager );
+
+    const auto mint = MakeCompetingMintV2( account_->GetAddress(), 124 );
+    mint->MakeSignature( *account_ );
+    const auto mint_certificate = BuildSignedCertificate( mint );
+    ASSERT_TRUE( mint_certificate.has_value() );
+    const auto mint_result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                    mint->GetHash(),
+                                                                                    mint_certificate.value() );
+    ASSERT_TRUE( mint_result.has_value() );
+    ASSERT_EQ( mint_result.value(), ConsensusManager::Check::Approve );
+    auto &utxo_manager = account_->GetUTXOManager();
+    ASSERT_EQ( utxo_manager.GetBalance(), mint->GetAmount() );
+    const auto root_before = utxo_manager.ComputeUTXOMerkleRoot( account_->GetAddress() );
+
+    // Registration parsing has no UTXO effects, so releasing storage fails
+    // precisely the checkpoint after the transaction becomes CONFIRMED.
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( mint->GetNonce() + 1 );
+    dag.set_timestamp( mint->dag_st.timestamp() );
+    const auto registration = std::make_shared<RegistrationTransaction>(
+        RegistrationTransaction::New( account_->GetAddress(),
+                                      1,
+                                      SGTransaction::RegistrationMetadata{},
+                                      std::move( dag ) ) );
+    registration->MakeSignature( *account_ );
+    const auto certificate = BuildSignedCertificate( registration );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( registration->GetSlotID(), certificate.value() );
+    const auto certificate_key = "/cert/" + registration->GetSlotID();
+
+    utxo_manager.ReleaseStorage();
+    crdt::GlobalDB::Buffer callback_value;
+    callback_value.put( certificate.value().SerializeAsString() );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager,
+        crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( callback_value ) } );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, registration->GetHash() );
+    if ( !tracked.has_value() )
+    {
+        ADD_FAILURE() << "Checkpoint failure did not leave the registration transaction tracked";
+        return;
+    }
+    EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasCertificateWorkState( manager,
+                                                                         certificate_key,
+                                                                         crdt::CRDTWorkJournal::State::Stalled ) );
+
+    ASSERT_TRUE( utxo_manager.LoadUTXOs( db_->GetDataStore() ).has_value() );
+    const auto previous_checkpoint = utxo_manager.LoadLatestCheckpoint();
+    ASSERT_TRUE( previous_checkpoint.has_value() );
+    if ( !previous_checkpoint.value().has_value() )
+    {
+        ADD_FAILURE() << "Checkpoint failure lost the previous Mint checkpoint";
+        return;
+    }
+    EXPECT_EQ( previous_checkpoint.value()->last_finalized_tx.toReadableString(), mint->GetHash() );
+
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    const auto checkpoint = utxo_manager.LoadLatestCheckpoint();
+    ASSERT_TRUE( checkpoint.has_value() );
+    if ( !checkpoint.value().has_value() )
+    {
+        ADD_FAILURE() << "Certificate recovery did not persist a UTXO checkpoint";
+        return;
+    }
+    EXPECT_EQ( checkpoint.value()->last_finalized_tx.toReadableString(), registration->GetHash() );
+    EXPECT_EQ( checkpoint.value()->utxo_merkle_root, root_before );
+    EXPECT_EQ( checkpoint.value()->utxo_count, 1U );
+    EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
+
+    crdt::GlobalDB::Buffer duplicate_value;
+    duplicate_value.put( certificate.value().SerializeAsString() );
+    CertificateFallbackTestAccess::CertificateReceived(
+        manager,
+        crdt::CRDTCallbackManager::NewDataPair{ certificate_key, std::move( duplicate_value ) } );
+    CertificateFallbackTestAccess::RecoverPendingCertificateWork( manager );
+    EXPECT_EQ( utxo_manager.GetBalance(), mint->GetAmount() );
+    EXPECT_EQ( utxo_manager.GetUTXOs( account_->GetAddress() ).size(), 1U );
+    EXPECT_EQ( utxo_manager.ComputeUTXOMerkleRoot( account_->GetAddress() ), root_before );
+    const auto nonce = account_->GetLocalConfirmedNonce();
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value(), registration->GetNonce() );
     EXPECT_TRUE( CertificateFallbackTestAccess::HasNoCertificateWork( manager, certificate_key ) );
 }
 

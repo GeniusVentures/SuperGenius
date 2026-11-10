@@ -98,7 +98,7 @@ namespace sgns
 
         static void RunInitializeUTXOs( TransactionManager &manager )
         {
-            manager.InitializeUTXOs();
+            ASSERT_TRUE( manager.InitializeUTXOs().has_value() );
         }
 
         static size_t RunCrosscheckRebuiltUtxos( TransactionManager &manager )
@@ -600,7 +600,7 @@ public:
                 gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( record.utxo().hash().data() ) ),
                            record.utxo().hash().size() ) );
             if ( recorded_txid.has_error() || recorded_txid.value() != txid ||
-                 record.utxo().output_idx() != static_cast<int>( output_idx ) )
+                 record.utxo().output_idx() != output_idx )
             {
                 continue;
             }

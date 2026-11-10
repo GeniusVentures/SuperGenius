@@ -324,6 +324,7 @@ namespace sgns
                              tx_hash,
                              registry_epoch,
                              checkpoint_res.error().message() );
+            return outcome::failure( checkpoint_res.error() );
         }
         logger_->debug( "{}: Transaction approved: {:.8}", __func__, tx_hash );
         return ConsensusManager::Check::Approve;

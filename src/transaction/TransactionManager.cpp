@@ -149,36 +149,13 @@ namespace sgns
                                                                                      initial_burn_basis_points,
                                                                                      std::move( confirmed_burn_provider ) ) );
 
-        instance->blockchain_->RegisterCertificateHandler(
-            NONCE_SUBJECT_TYPE,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const std::string          &subject_hash,
-                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    auto process_result = strong->consensus_m_->OnConsensusCertificate( subject_hash, certificate );
-                    if ( process_result.has_error() )
-                    {
-                        strong->m_logger->error( "Failed to process certificate proposal_id={} error={}",
-                                                 certificate.proposal_id(),
-                                                 process_result.error().message() );
-                    }
-                    return process_result;
-                }
-                return outcome::failure( std::errc::owner_dead );
-            } );
+        // Rebuilding UTXOs can resume durable proposals. Keep their subjects
+        // pending until loading and reconciliation finish, rather than validating
+        // against an incomplete UTXO set or dropping an unhandled proposal.
         instance->blockchain_->RegisterSubjectHandler(
             NONCE_SUBJECT_TYPE,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->consensus_m_->HandleNonceConsensusSubject( subject );
-                }
-                return outcome::failure( std::errc::owner_dead );
-            } );
+            []( const ConsensusManager::Subject & ) -> outcome::result<ConsensusManager::ValidationResult>
+            { return ConsensusManager::ValidationResult::Pending(); } );
         instance->blockchain_->RegisterProposalCleanupHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string &tx_hash )
@@ -293,6 +270,47 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
 
+        if ( auto init_result = instance->InitializeUTXOs(); init_result.has_error() )
+        {
+            instance->m_logger->error( "Failed to initialize transaction UTXOs: {}", init_result.error().message() );
+            instance->Stop();
+            return nullptr;
+        }
+
+        instance->blockchain_->RegisterSubjectHandler(
+            NONCE_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->consensus_m_->HandleNonceConsensusSubject( subject );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
+        // Registration immediately replays pending certificates, so enable the
+        // consumer only after the full UTXO initialization has completed.
+        instance->blockchain_->RegisterCertificateHandler(
+            NONCE_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::string          &subject_hash,
+                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto process_result = strong->consensus_m_->OnConsensusCertificate( subject_hash, certificate );
+                    if ( process_result.has_error() )
+                    {
+                        strong->m_logger->error( "Failed to process certificate proposal_id={} error={}",
+                                                 certificate.proposal_id(),
+                                                 process_result.error().message() );
+                    }
+                    return process_result;
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         return instance;
     }
 
@@ -376,11 +394,14 @@ namespace sgns
                 const std::string blockchain_base = GetBlockChainBase( network_id );
                 const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
                 const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
+                const std::string reg_pattern     = "^/?" + blockchain_base + "reg/[^/]+";
 
                 globaldb_m->UnregisterNewElementCallback( tx_pattern );
+                globaldb_m->UnregisterNewElementCallback( reg_pattern );
                 globaldb_m->UnregisterDeletedElementCallback( tx_pattern );
                 globaldb_m->UnregisterElementFilter( tx_pattern );
                 globaldb_m->UnregisterElementFilter( proof_pattern );
+                globaldb_m->UnregisterElementFilter( reg_pattern );
             }
         }
 
@@ -463,8 +484,6 @@ namespace sgns
         {
             return;
         }
-
-        InitializeUTXOs();
 
         // First kick. Capture weakly, like the recurring post in TickOnce(): a strong
         // self-capture lets the manager outlive GeniusNode's reset during an account
@@ -3314,7 +3333,7 @@ namespace sgns
         return std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
     }
 
-    void TransactionManager::InitializeUTXOs()
+    outcome::result<void> TransactionManager::InitializeUTXOs()
     {
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
@@ -3326,10 +3345,11 @@ namespace sgns
         auto utxo_result = account_m->GetUTXOManager().LoadUTXOs( globaldb_m->GetDataStore() );
         if ( utxo_result.has_error() )
         {
-            m_logger->error( "Failed to load UTXOs from storage" );
+            m_logger->error( "Failed to load UTXOs from storage: {}", utxo_result.error().message() );
+            return outcome::failure( utxo_result.error() );
         }
 
-        bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
+        bool has_local_utxos    = utxo_result.value();
         auto monitored_networks = GetMonitoredNetworkIDs();
 
         // Set when the checkpoint-mismatch clear below ran: only that path
@@ -3384,7 +3404,7 @@ namespace sgns
                 // spendable-ready before boot continues.
                 (void) CrosscheckRebuiltUtxos();
             }
-            return;
+            return outcome::success();
         }
 
         auto utxo_map = account_m->GetUTXOManager().GetAllUTXOs();
@@ -3469,6 +3489,7 @@ namespace sgns
                 }
             }
         }
+        return outcome::success();
     }
 
     size_t TransactionManager::CrosscheckRebuiltUtxos()

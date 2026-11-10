@@ -290,6 +290,11 @@ namespace sgns
                                                                 account_,
                                                                 blockchain_,
                                                                 node_type_ );
+                if ( !transaction_manager_ )
+                {
+                    logger_->error( "{}: Failed to initialize Transaction Manager", __func__ );
+                    return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+                }
             }
 
             logger_->debug( "{}: Registering transaction topic names for migration flow", __func__ );
