@@ -778,6 +778,16 @@ namespace sgns
         return signer_.GetAddress();
     }
 
+    outcome::result<std::string> GeniusAccount::GetPayoutAddress() const
+    {
+        BOOST_OUTCOME_TRY( auto stored, LoadFromSecureStorage( "payout_address" ) );
+        if ( stored.has_value() )
+        {
+            return outcome::success( stored.value() );
+        }
+        return outcome::success( signer_.GetAddress() );
+    }
+
     TokenID GeniusAccount::GetToken() const
     {
         return token;
