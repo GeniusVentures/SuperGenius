@@ -185,6 +185,25 @@ namespace sgns::crdt
                         routes.size() );
     }
 
+    void GraphsyncDAGSyncer::InheritRoutes( const CID &parent, const CID &child )
+    {
+        std::lock_guard lock( routing_mutex_ );
+        const auto      parent_routes = routing_.find( parent );
+        if ( parent_routes == routing_.end() || parent_routes->second.empty() )
+        {
+            return;
+        }
+
+        auto &child_routes = routing_[child];
+        for ( const auto peer_key : parent_routes->second )
+        {
+            if ( std::find( child_routes.begin(), child_routes.end(), peer_key ) == child_routes.end() )
+            {
+                child_routes.push_back( peer_key );
+            }
+        }
+    }
+
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
         std::lock_guard lock( dagMutex_ );
@@ -537,6 +556,17 @@ namespace sgns::crdt
         auto getCachedNodeResult = GrabCIDBlock( cid );
 
         return getNodeResult.has_value() || getCachedNodeResult.has_value();
+    }
+
+    outcome::result<bool> GraphsyncDAGSyncer::HasStoredBlock( const CID &cid ) const
+    {
+        return HasRawBlockBytes( cid );
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetStoredNode(
+        const CID &cid ) const
+    {
+        return GetNodeFromMerkleDAG( cid );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeWithoutRequest(

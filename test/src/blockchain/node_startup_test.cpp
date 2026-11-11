@@ -13,12 +13,14 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <random>
@@ -56,7 +58,7 @@ namespace
     constexpr const char *kNodeDirPrefix = "node_startup_";
 
     // Number of working directories swept clean in SetUp.
-    constexpr int kNodeDirCleanupCount = 10;
+    constexpr int kNodeDirCleanupCount = 32;
 
     // Upper bound on how long a READY poll may wait before failing the test.
     constexpr int kReadyPollTimeoutMs = 30000;
@@ -147,8 +149,10 @@ protected:
                             const std::string                  &dev_addr,
                             const std::string                  &tokenValue,
                             TokenID                             tokenId,
-                            bool                                isFullNode          = false,
-                            std::optional<std::chrono::seconds> trust_sync_interval = std::nullopt )
+                            bool                                isFullNode           = false,
+                            std::optional<std::chrono::seconds> trust_sync_interval  = std::nullopt,
+                            bool                                force_bootstrap_walk = false,
+                            boost::json::object                 settings_overrides   = {} )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -191,14 +195,32 @@ protected:
             return {};
         }
         sgns::test::WriteTrustedSgnsConfig( outPath,
-                                isFullNode ? "Full" : "Light",
-                                /*is_processor=*/false,
-                                /*rpc_catchup=*/false,
-                                { authority->GetAddress() },
-                                authority->GetAddress(),
-                                1,
-                                1,
-                                144 );
+                                            isFullNode ? "Full" : "Light",
+                                            /*is_processor=*/false,
+                                            /*rpc_catchup=*/false,
+                                            { authority->GetAddress() },
+                                            authority->GetAddress(),
+                                            1,
+                                            1,
+                                            144 );
+        if ( force_bootstrap_walk )
+        {
+            settings_overrides.insert_or_assign( "force_bootstrap_walk", true );
+        }
+        if ( !settings_overrides.empty() )
+        {
+            const auto        config_path = outPath + "sgns_config.json";
+            std::ifstream     input( config_path );
+            const std::string config_text( std::istreambuf_iterator<char>{ input }, {} );
+            auto              config = boost::json::parse( config_text ).as_object();
+            for ( const auto &setting : settings_overrides )
+            {
+                config.insert_or_assign( setting.key(), setting.value() );
+            }
+            input.close();
+            std::ofstream output( config_path );
+            output << boost::json::serialize( config );
+        }
         return { GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } ),
                  std::move( authority ),
                  outPath,
@@ -276,6 +298,78 @@ protected:
         }
     }
 };
+
+TEST_F( NodeStartupTest, BootstrapRecoverySettingsAreLoadedStrictlyFromSgnsConfig )
+{
+    struct ConfigCase
+    {
+        std::string         name;
+        boost::json::object settings;
+        bool                enabled{ false };
+        std::size_t         max_blocks{ 10000 };
+        std::size_t         max_retries{ 8 };
+    };
+
+    const auto                    largest_size = std::numeric_limits<std::size_t>::max();
+    const auto                    largest_json = static_cast<uint64_t>( largest_size );
+    const std::vector<ConfigCase> cases{
+        { "missing", {} },
+        { "explicit_false", { { "force_bootstrap_walk", false } } },
+        { "explicit_true", { { "force_bootstrap_walk", true } }, true },
+        { "wrong_flag_type", { { "force_bootstrap_walk", "true" } } },
+        { "positive_limits",
+          { { "bootstrap_walk_max_blocks", 17 }, { "bootstrap_walk_max_retries", 3 } },
+          false,
+          17U,
+          3U },
+        { "largest_limits",
+          { { "bootstrap_walk_max_blocks", largest_json }, { "bootstrap_walk_max_retries", largest_json } },
+          false,
+          largest_size,
+          largest_size },
+        { "zero_blocks",
+          { { "bootstrap_walk_max_blocks", 0 }, { "bootstrap_walk_max_retries", 4 } },
+          false,
+          10000U,
+          4U },
+        { "zero_retries",
+          { { "bootstrap_walk_max_blocks", 12 }, { "bootstrap_walk_max_retries", 0 } },
+          false,
+          12U,
+          8U },
+        { "negative_blocks",
+          { { "bootstrap_walk_max_blocks", -1 }, { "bootstrap_walk_max_retries", 5 } },
+          false,
+          10000U,
+          5U },
+        { "negative_retries",
+          { { "bootstrap_walk_max_blocks", 12 }, { "bootstrap_walk_max_retries", -1 } },
+          false,
+          12U,
+          8U },
+        { "string_limits", { { "bootstrap_walk_max_blocks", "20" }, { "bootstrap_walk_max_retries", "2" } } },
+        { "fractional_limits", { { "bootstrap_walk_max_blocks", 1.5 }, { "bootstrap_walk_max_retries", 0.5 } } },
+        { "overflow_limits", { { "bootstrap_walk_max_blocks", 1.0e100 }, { "bootstrap_walk_max_retries", 1.0e100 } } },
+    };
+    for ( const auto &config_case : cases )
+    {
+        SCOPED_TRACE( config_case.name );
+        auto fixture = CreateNode( "bootstrap_config_" + config_case.name,
+                                   "0xcafe",
+                                   "1.0",
+                                   TokenID::FromBytes( { 0x00 } ),
+                                   false,
+                                   std::nullopt,
+                                   false,
+                                   config_case.settings );
+        ASSERT_TRUE( fixture.node );
+        NodeTeardownGuard teardown{ fixture.node };
+        const auto        settings = GeniusNodeTestAccess::BootstrapWalkSettingsOf( fixture.node );
+        EXPECT_EQ( settings.enabled, config_case.enabled );
+        EXPECT_EQ( settings.max_blocks, config_case.max_blocks );
+        EXPECT_EQ( settings.max_retries, config_case.max_retries );
+    }
+}
 
 // Replicated certificates are filtered while the trust gate still prevents the
 // transaction manager from being constructed. Their canonical keys must already
@@ -446,6 +540,112 @@ TEST_F( NodeStartupTest, CanonicalCertificatesAcceptedBeforeTransactionManager )
     EXPECT_TRUE( fixture.node->GetTransactionManager().has_error() );
 }
 
+TEST_F( NodeStartupTest, ForcedBootstrapWalkRunsBeforeBlockchainIsReady )
+{
+    auto fixture = CreateNode( "forced_bootstrap_walk",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               false,
+                               std::nullopt,
+                               true );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto db = GeniusNodeTestAccess::TransactionDatabaseOf( fixture.node );
+            return db && db->GetForcedWalkStatus().state == crdt::CrdtDatastore::ForcedWalkState::Completed;
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "opt-in forced walkthrough was not requested before genesis became available" ) );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::INITIALIZING_BLOCKCHAIN );
+    EXPECT_TRUE( fixture.node->GetTransactionManager().has_error() );
+}
+
+TEST_F( NodeStartupTest, ForcedBootstrapWalkRetriesLateValidatorAfterReady )
+{
+    auto fixture = CreateNode( "forced_bootstrap_after_ready",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               true,
+                               std::chrono::seconds( 1 ),
+                               true );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    Blockchain::SetAuthorizedFullNodeAddress( fixture.node->GetAddress() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return fixture.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "full node did not reach its reviewed trust checkpoint" ) );
+    ASSERT_NO_FATAL_FAILURE( SubmitReviewedTrustAndAwaitReady( fixture ) );
+    ASSERT_EQ( fixture.node->GetState(), GeniusNode::NodeState::READY );
+    auto node_db = GeniusNodeTestAccess::TransactionDatabaseOf( fixture.node );
+    ASSERT_TRUE( node_db );
+    ASSERT_TRUE( fixture.composition );
+    const std::string           pattern = "^/?startup/late-recovery$";
+    const crdt::HierarchicalKey key( "/startup/late-recovery" );
+    ASSERT_TRUE( node_db->RegisterElementFilter( pattern,
+                                                 []( const crdt::CrdtDatastore::Element & )
+                                                 { return crdt::CRDTDataFilter::ElementFilterResult::Reject(); } ) );
+    base::Buffer value;
+    value.put( "validated after READY" );
+    const auto published = fixture.composition->db()->Put(
+        key,
+        value,
+        { std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) } );
+    ASSERT_TRUE( published.has_value() ) << published.error().message();
+    const auto cid_string = published.value().toString();
+    ASSERT_TRUE( cid_string.has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto retained = node_db->HasLocalBlock( cid_string.value() );
+            const auto seal     = node_db->GetRaw( base::Buffer{}.put( cid_string.value() + "sealed" ) );
+            return retained.has_value() && retained.value() && seal.has_value() && node_db->Get( key ).has_error() &&
+                   !node_db->GetCRDTDataStore()->IsRootCIDPendingOrActive( published.value() );
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "rejected remote element did not leave a retained sealed delta" ) );
+    node_db->UnregisterElementFilter( pattern );
+    ASSERT_TRUE( node_db
+                     ->RequestForcedWalk(
+                         { std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) },
+                         []( const crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+                         1000U )
+                     .has_value() );
+    const auto is_deferred = [&]
+    {
+        const auto status = node_db->GetForcedWalkStatus();
+        return status.state == crdt::CrdtDatastore::ForcedWalkState::Incomplete && status.deferred > 0 &&
+               !status.limit_reached && node_db->Get( key ).has_error();
+    };
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( is_deferred,
+                                                           std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                                           "missing validator falsely completed recovery" ) );
+    GeniusNodeTestAccess::RequestBootstrapWalk( fixture.node );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition( is_deferred,
+                                                           std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                                           "production continuation skipped deferral" ) );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::READY );
+    ASSERT_TRUE( node_db->RegisterElementFilter( pattern,
+                                                 []( const crdt::CrdtDatastore::Element & )
+                                                 { return crdt::CRDTDataFilter::ElementFilterResult::Accept(); } ) );
+    bool left_ready = false;
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            left_ready           = left_ready || fixture.node->GetState() != GeniusNode::NodeState::READY;
+            const auto recovered = node_db->Get( key );
+            return recovered.has_value() && recovered.value() == value;
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "bootstrap recovery did not retry the late validator after READY" ) );
+    EXPECT_FALSE( left_ready );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::READY );
+}
+
 // Processing gossip is live before blockchain genesis and the trust controller.
 // A shared head received then must already follow FullNode-only parent links;
 // otherwise the head is sealed with incomplete ancestry before trust subscribes.
@@ -465,6 +665,7 @@ TEST_F( NodeStartupTest, ProcessingHeadFetchesFullNodeAncestryBeforeBlockchainGe
     const auto full_topic       = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
     ASSERT_TRUE( node_db );
     ASSERT_FALSE( processing_topic.empty() );
+    EXPECT_EQ( node_db->GetForcedWalkStatus().state, crdt::CrdtDatastore::ForcedWalkState::Idle );
 
     const auto network_config = fixture.path / "early-history-network.json";
     const auto database_path  = fixture.path / "early-history-globaldb";

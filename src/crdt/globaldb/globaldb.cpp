@@ -682,6 +682,30 @@ namespace sgns::crdt
         return broadcaster->AddBroadcastTopic( topicName );
     }
 
+    outcome::result<void> GlobalDB::RequestForcedWalk( const std::set<std::string>        &topics,
+                                                       CrdtDatastore::RecoveryElementGuard guard,
+                                                       size_t                              max_blocks )
+    {
+        auto datastore = ActiveCRDTDataStore();
+        if ( !datastore )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        return datastore->RequestForcedWalk( topics, std::move( guard ), max_blocks, true );
+    }
+
+    CrdtDatastore::ForcedWalkStatus GlobalDB::GetForcedWalkStatus() const
+    {
+        auto datastore = ActiveCRDTDataStore();
+        if ( datastore )
+        {
+            return datastore->GetForcedWalkStatus();
+        }
+        CrdtDatastore::ForcedWalkStatus status;
+        status.state = CrdtDatastore::ForcedWalkState::Cancelled;
+        return status;
+    }
+
     void GlobalDB::AddTopicName( std::string topicName )
     {
         if ( auto crdt_datastore = ActiveCRDTDataStore() )
