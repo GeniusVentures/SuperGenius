@@ -3156,6 +3156,18 @@ namespace sgns
         return DeleteAccount( previous_address );
     }
 
+    outcome::result<std::string> GeniusNode::GetPayoutAddress() const
+    {
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        BOOST_OUTCOME_TRY( auto stored, snapshot.account->GetPayoutAddress() );
+        if ( !stored.empty() )
+        {
+            return outcome::success( stored );
+        }
+        return outcome::success( snapshot.account->GetAddress() );
+    }
+
     outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
     {
         if ( !GeniusAccount::IsValidPublicKey( payout_address ) )

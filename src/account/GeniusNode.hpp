@@ -367,6 +367,13 @@ namespace sgns
         outcome::result<void> SetPayoutAddress( std::string_view payout_address );
 
         /**
+         * @brief       Retrieves the processing payout destination: the stored payout
+         *              address when one is saved, otherwise the node account's own address.
+         * @return      The payout address, or an error when the account is not ready.
+         */
+        outcome::result<std::string> GetPayoutAddress() const;
+
+        /**
          * @brief Submits an image-processing request described by JSON input.
          * @param[in] jsondata Processing request JSON.
          * @return Escrow transaction hash on success, or a validation, balance, or database error.
