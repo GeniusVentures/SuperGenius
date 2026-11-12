@@ -31,6 +31,7 @@
 #include <chrono>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include <rapidjson/document.h>
@@ -1091,6 +1092,61 @@ TEST_F( PruneEligibilityTest, PruneMarker_EmptyPayloadIsError )
 
     auto lookup = PruneEligibility::LookupPrunedEntry( *db_, hash );
     ASSERT_TRUE( lookup.has_error() );
+}
+
+TEST_F( PruneEligibilityTest, CanRestoreElementAllowsUnknownTransactionsAndOrdinaryKeys )
+{
+    const auto transaction_key = TransactionManager::GetTransactionPath( std::string( 64, 'a' ) );
+    for ( const auto &key : { transaction_key, std::string( "/trust/genesis" ), std::string( "/cert/account:11" ) } )
+    {
+        SCOPED_TRACE( key );
+        const auto allowed = PruneEligibility::CanRestoreElement( *db_, key );
+        ASSERT_TRUE( allowed.has_value() ) << allowed.error().message();
+        EXPECT_TRUE( allowed.value() );
+    }
+}
+
+TEST_F( PruneEligibilityTest, CanRestoreElementPreservesTransactionErasedWithPruneMarker )
+{
+    const auto spender = MakeTransfer( 8, 0 );
+    SeedTransaction( spender );
+    const auto transaction = MakeTransfer( 9, 1 );
+    TrackOutputs( *transaction );
+    SeedTransaction( transaction );
+    ASSERT_TRUE( ConsumeOutput( *transaction, 0, *spender ) );
+    PutSeedValue( "/seed/prune/restore-guard-head", "advance" );
+
+    ASSERT_TRUE( tm_->EraseTransactionEntryPruned( transaction->GetHash() ).has_value() );
+    const auto evidence = PruneEligibility::LookupPrunedEntry( *db_, transaction->GetHash() );
+    ASSERT_TRUE( evidence.has_value() );
+    ASSERT_EQ( evidence.value().first, PrunedLookup::PRUNED );
+    const auto allowed = PruneEligibility::CanRestoreElement( *db_,
+                                                              TransactionManager::GetTransactionPath( *transaction ) );
+    ASSERT_TRUE( allowed.has_value() ) << allowed.error().message();
+    EXPECT_FALSE( allowed.value() );
+}
+
+TEST_F( PruneEligibilityTest, CanRestoreElementFailsClosedForMalformedPruneMarker )
+{
+    const std::string hash( 64, 'b' );
+    ASSERT_TRUE(
+        PruneEligibility::WritePrunedEntryForTest( *db_, hash, SGTransaction::PrunedTransactionRecord{} ).has_value() );
+    const auto allowed = PruneEligibility::CanRestoreElement( *db_, TransactionManager::GetTransactionPath( hash ) );
+    EXPECT_TRUE( allowed.has_error() );
+}
+
+TEST_F( PruneEligibilityTest, CanRestoreElementFailsClosedWhenValueAndPruneMarkerBothExist )
+{
+    const auto transaction = MakeTransfer( 1, 1 );
+    SeedTransaction( transaction );
+    SGTransaction::PrunedTransactionRecord record;
+    record.set_tx_path( TransactionManager::GetTransactionPath( *transaction ) );
+    ASSERT_TRUE( PruneEligibility::WritePrunedEntryForTest( *db_, transaction->GetHash(), record ).has_value() );
+
+    const auto allowed = PruneEligibility::CanRestoreElement( *db_,
+                                                              TransactionManager::GetTransactionPath( *transaction ) );
+    ASSERT_TRUE( allowed.has_error() );
+    EXPECT_EQ( allowed.error(), std::make_error_code( std::errc::bad_message ) );
 }
 
 /**

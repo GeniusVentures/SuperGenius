@@ -331,7 +331,15 @@ namespace sgns
          * @param[in]   key Candidate storage key.
          * @return      true when the key is inside the allowlisted prefix.
          */
-        bool IsAllowlistedTxKey( const std::string &key ) const;
+        static bool IsAllowlistedTxKey( const std::string &key );
+
+        /**
+         * @brief Allows recovery of an absent element unless its transaction was pruned locally.
+         * @param[in] db Database containing the node-local pruning evidence.
+         * @param[in] key Element key being considered for validated recovery.
+         * @return false for pruned transactions, true for other keys, or an evidence lookup error.
+         */
+        static outcome::result<bool> CanRestoreElement( crdt::GlobalDB &db, const std::string &key );
 
         /**
          * @brief       Enumerates and evaluates every candidate (read-only).

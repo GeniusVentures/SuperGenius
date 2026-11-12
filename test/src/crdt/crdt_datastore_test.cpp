@@ -19,6 +19,8 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <system_error>
+#include <vector>
 #include "crdt/proto/bcast.pb.h"
 #include "crdt_mirror_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
@@ -168,6 +170,57 @@ namespace sgns::crdt
             element->set_value( value );
             delta->set_priority( priority );
             return delta;
+        }
+
+        outcome::result<std::vector<CID>> SeedIncompleteTopicAncestry( const std::shared_ptr<Delta> &parent_delta )
+        {
+            crdtDatastore_->AddTopicName( "repair-processing" );
+            auto producer = CreateLoopBackCRDTInstance( databasePath + "forced-walk-source", ipfsDataStore_ );
+            BOOST_OUTCOME_TRY( auto parent, producer.datastore->Publish( parent_delta, { "repair-trust" } ) );
+            BOOST_OUTCOME_TRY( auto middle,
+                               producer.datastore->Publish( CreateTestDelta( "RepairTip0", "retained-middle" ),
+                                                            { "repair-processing", "repair-trust" } ) );
+            BOOST_OUTCOME_TRY( auto root,
+                               producer.datastore->Publish( CreateTestDelta( "RepairTip1", "retained-root" ),
+                                                            { "repair-processing", "repair-trust" } ) );
+            producer.datastore->Close();
+            producer.broadcaster->SetMirrorCounterPart( broadcaster_ );
+            // Announcing each tip separately makes both retained blocks sealed
+            // while their trust-only ancestor remains excluded from traversal.
+            for ( const auto &tip : { middle, root } )
+            {
+                BOOST_OUTCOME_TRY( auto tip_string, tip.toString() );
+                pb::CRDTBroadcast announcement;
+                announcement.add_heads()->set_cid( tip_string );
+                Buffer encoded;
+                encoded.put( announcement.SerializeAsString() );
+                BOOST_OUTCOME_TRY( producer.broadcaster->Broadcast( encoded, "repair-processing" ) );
+                if ( !waitForCondition(
+                         [&]
+                         {
+                             auto status = crdtDatastore_->GetJobStatus( tip );
+                             return status.has_value() && status.value() == CrdtDatastore::JobStatus::COMPLETED &&
+                                    !crdtDatastore_->IsRootCIDPendingOrActive( tip );
+                         },
+                         std::chrono::seconds( 5 ) ) )
+                {
+                    return outcome::failure( std::errc::timed_out );
+                }
+            }
+            return std::vector<CID>{ parent, middle, root };
+        }
+
+        bool WaitForForcedWalk()
+        {
+            return waitForCondition(
+                [&]
+                {
+                    const auto state = crdtDatastore_->GetForcedWalkStatus().state;
+                    return state == CrdtDatastore::ForcedWalkState::Completed ||
+                           state == CrdtDatastore::ForcedWalkState::Incomplete ||
+                           state == CrdtDatastore::ForcedWalkState::Cancelled;
+                },
+                std::chrono::seconds( 5 ) );
         }
 
         std::shared_ptr<rocksdb>               db_;
@@ -734,6 +787,213 @@ namespace sgns::crdt
         EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( { "Key2" } ), false );
         EXPECT_OUTCOME_EQ( receiver.datastore->HasKey( { "Key3" } ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
+    }
+
+    TEST_F( CrdtDatastoreTest, ForcedWalkRecoversAncestryBehindRetainedSealsWithoutRepeatingCompletedWork )
+    {
+        std::atomic<int>     tip_filter_calls{ 0 };
+        std::atomic<int>     parent_callbacks{ 0 };
+        LoopBackCRDTInstance stop_before_capture_destruction{ crdtDatastore_, broadcaster_ };
+        ASSERT_TRUE( crdtDatastore_->RegisterElementFilter( "RepairTip.*",
+                                                            [&]( const Element & )
+                                                            {
+                                                                ++tip_filter_calls;
+                                                                return CRDTDataFilter::ElementFilterResult::Accept();
+                                                            } ) );
+        ASSERT_TRUE( crdtDatastore_->RegisterNewElementCallback(
+            "RepairParent",
+            [&]( const CRDTCallbackManager::NewDataPair &, const std::string & ) { ++parent_callbacks; } ) );
+        ASSERT_OUTCOME_SUCCESS( cids, SeedIncompleteTopicAncestry( CreateTestDelta( "RepairParent", "recovered" ) ) );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 1 ) ), true );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 2 ) ), true );
+        EXPECT_OUTCOME_EQ( dagSyncer_->HasBlock( cids.at( 0 ) ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairParent" } ), false );
+        ASSERT_OUTCOME_SUCCESS( heads_before, crdtDatastore_->GetHeadList() );
+        const auto journal = crdtDatastore_->GetWorkJournal();
+        ASSERT_TRUE( journal->GetEntry( "RepairTip0" ).has_value() );
+        ASSERT_TRUE( journal->GetEntry( "RepairTip1" ).has_value() );
+        ASSERT_TRUE( journal->MarkDone( "RepairTip0" ) );
+        ASSERT_TRUE( journal->MarkDone( "RepairTip1" ) );
+        const auto initial_filter_calls = tip_filter_calls.load();
+        crdtDatastore_->AddTopicName( "repair-trust" );
+
+        for ( int attempt = 0; attempt < 2; ++attempt )
+        {
+            ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk(
+                { "repair-trust" },
+                []( const Element & ) -> outcome::result<bool> { return true; },
+                32U ) );
+            ASSERT_TRUE( WaitForForcedWalk() );
+            EXPECT_EQ( crdtDatastore_->GetForcedWalkStatus().state, CrdtDatastore::ForcedWalkState::Completed );
+            ASSERT_OUTCOME_SUCCESS( recovered, crdtDatastore_->GetKey( { "RepairParent" } ) );
+            EXPECT_EQ( recovered.toString(), "recovered" );
+            EXPECT_OUTCOME_EQ( dagSyncer_->HasBlock( cids.at( 0 ) ), true );
+            EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 1 ) ), true );
+            EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 2 ) ), true );
+            ASSERT_OUTCOME_SUCCESS( heads_after, crdtDatastore_->GetHeadList() );
+            EXPECT_EQ( heads_after, heads_before );
+            EXPECT_EQ( tip_filter_calls.load(), initial_filter_calls );
+            EXPECT_EQ( parent_callbacks.load(), 1U );
+            EXPECT_FALSE( journal->GetEntry( "RepairTip0" ).has_value() );
+            EXPECT_FALSE( journal->GetEntry( "RepairTip1" ).has_value() );
+        }
+    }
+
+    TEST_F( CrdtDatastoreTest, ForcedWalkPreservesElementGuardsAndValidationDependencies )
+    {
+        std::atomic<bool>    dependency_ready{ false };
+        std::atomic<int>     stalled_callbacks{ 0 };
+        LoopBackCRDTInstance stop_before_capture_destruction{ crdtDatastore_, broadcaster_ };
+        ASSERT_TRUE( crdtDatastore_->RegisterElementFilter(
+            "Repair.*",
+            [&]( const Element &element )
+            {
+                if ( element.key() == "RepairRejected" )
+                {
+                    return CRDTDataFilter::ElementFilterResult::Reject( {} );
+                }
+                if ( element.key() == "RepairStalled" && !dependency_ready.load() )
+                {
+                    return CRDTDataFilter::ElementFilterResult::Stall();
+                }
+                return CRDTDataFilter::ElementFilterResult::Accept();
+            } ) );
+        ASSERT_TRUE( crdtDatastore_->RegisterNewElementCallback(
+            "RepairStalled",
+            [&]( const CRDTCallbackManager::NewDataPair &, const std::string & ) { ++stalled_callbacks; } ) );
+        auto parent = CreateTestDelta( "RepairAccepted", "accepted" );
+        for ( const auto &key : { "RepairRejected", "RepairStalled", "RepairPruned" } )
+        {
+            auto *element = parent->add_elements();
+            element->set_key( key );
+            element->set_value( key );
+        }
+        ASSERT_OUTCOME_SUCCESS( cids, SeedIncompleteTopicAncestry( parent ) );
+        ASSERT_OUTCOME_SUCCESS( heads_before, crdtDatastore_->GetHeadList() );
+        crdtDatastore_->AddTopicName( "repair-trust" );
+        const auto guard = []( const Element &element ) -> outcome::result<bool>
+        { return element.key() != "RepairPruned"; };
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, guard, 3U ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        const auto stalled = crdtDatastore_->GetForcedWalkStatus();
+        EXPECT_EQ( stalled.state, CrdtDatastore::ForcedWalkState::Incomplete );
+        EXPECT_GT( stalled.deferred, 0U );
+        EXPECT_FALSE( stalled.limit_reached );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairAccepted" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairRejected" } ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairStalled" } ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairPruned" } ), false );
+        EXPECT_EQ( crdtDatastore_->GetStalledDeltaRetryCountForTest(), 0U );
+
+        dependency_ready.store( true );
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, guard, 3U ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        EXPECT_EQ( crdtDatastore_->GetForcedWalkStatus().state, CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairAccepted" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairRejected" } ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairStalled" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairPruned" } ), false );
+        EXPECT_EQ( stalled_callbacks.load(), 1U );
+        ASSERT_OUTCOME_SUCCESS( heads_after, crdtDatastore_->GetHeadList() );
+        EXPECT_EQ( heads_after, heads_before );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 2 ) ), true );
+    }
+
+    TEST_F( CrdtDatastoreTest, ForcedWalkDefersUnregisteredValidatorsWhileRestoringReadySibling )
+    {
+        ASSERT_TRUE( crdtDatastore_->RegisterElementFilter(
+            "RepairGenesis",
+            []( const Element & ) { return CRDTDataFilter::ElementFilterResult::Accept(); } ) );
+        auto  parent           = CreateTestDelta( "RepairGenesis", "valid-genesis" );
+        auto *invalid_approval = parent->add_elements();
+        invalid_approval->set_key( "RepairApprovalInvalid" );
+        invalid_approval->set_value( "invalid-approval" );
+        auto *valid_approval = parent->add_elements();
+        valid_approval->set_key( "RepairApprovalValid" );
+        valid_approval->set_value( "valid-approval" );
+        ASSERT_OUTCOME_SUCCESS( cids, SeedIncompleteTopicAncestry( parent ) );
+        ASSERT_OUTCOME_SUCCESS( heads_before, crdtDatastore_->GetHeadList() );
+        crdtDatastore_->AddTopicName( "repair-trust" );
+        const auto guard = []( const Element & ) -> outcome::result<bool> { return true; };
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, guard, 3U, true ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        const auto deferred = crdtDatastore_->GetForcedWalkStatus();
+        EXPECT_EQ( deferred.state, CrdtDatastore::ForcedWalkState::Incomplete );
+        EXPECT_EQ( deferred.visited, 3U );
+        EXPECT_GT( deferred.deferred, 0U );
+        EXPECT_EQ( deferred.errors, 0U );
+        EXPECT_FALSE( deferred.limit_reached );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairGenesis" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairApprovalInvalid" } ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairApprovalValid" } ), false );
+
+        ASSERT_TRUE( crdtDatastore_->RegisterElementFilter(
+            "RepairApproval.*",
+            []( const Element &element )
+            {
+                return element.value() == "valid-approval" ? CRDTDataFilter::ElementFilterResult::Accept()
+                                                           : CRDTDataFilter::ElementFilterResult::Reject();
+            } ) );
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, guard, 3U, true ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        const auto completed = crdtDatastore_->GetForcedWalkStatus();
+        EXPECT_EQ( completed.state, CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_FALSE( completed.limit_reached );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairGenesis" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairApprovalInvalid" } ), false );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairApprovalValid" } ), true );
+        ASSERT_OUTCOME_SUCCESS( heads_after, crdtDatastore_->GetHeadList() );
+        EXPECT_EQ( heads_after, heads_before );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 2 ) ), true );
+    }
+
+    TEST_F( CrdtDatastoreTest, ForcedWalkSkipsMissingSealedBlocksAndRejectsInvalidRequests )
+    {
+        ASSERT_OUTCOME_SUCCESS( cids, SeedIncompleteTopicAncestry( CreateTestDelta( "RepairPruned", "pruned" ) ) );
+        // A seal with missing local bytes is the pruning terminal state. The
+        // remote store still serves the block, making accidental resurrection visible.
+        ASSERT_OUTCOME_SUCCESS_TRY( dagSyncer_->markResolved( cids.at( 0 ) ) );
+        EXPECT_OUTCOME_EQ( dagSyncer_->HasBlock( cids.at( 0 ) ), false );
+        ASSERT_OUTCOME_SUCCESS( heads_before, crdtDatastore_->GetHeadList() );
+        crdtDatastore_->AddTopicName( "repair-trust" );
+        const auto allow = []( const Element & ) -> outcome::result<bool> { return true; };
+        EXPECT_TRUE( crdtDatastore_->RequestForcedWalk( { "unregistered-topic" }, allow, 32U ).has_error() );
+        EXPECT_TRUE( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, {}, 32U ).has_error() );
+        EXPECT_TRUE( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, allow, 0U ).has_error() );
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, allow, 32U ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        const auto completed = crdtDatastore_->GetForcedWalkStatus();
+        EXPECT_EQ( completed.state, CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_GT( completed.skipped_pruned, 0U );
+        EXPECT_OUTCOME_EQ( dagSyncer_->HasBlock( cids.at( 0 ) ), false );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 0 ) ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairPruned" } ), false );
+        ASSERT_OUTCOME_SUCCESS( heads_after, crdtDatastore_->GetHeadList() );
+        EXPECT_EQ( heads_after, heads_before );
+
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, allow, 32U ) );
+        const auto close_started = std::chrono::steady_clock::now();
+        crdtDatastore_->Close();
+        EXPECT_LT( std::chrono::steady_clock::now() - close_started, std::chrono::seconds( 2 ) );
+        const auto closed_state = crdtDatastore_->GetForcedWalkStatus().state;
+        EXPECT_TRUE( closed_state == CrdtDatastore::ForcedWalkState::Cancelled ||
+                     closed_state == CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_TRUE( crdtDatastore_->RequestForcedWalk( { "repair-trust" }, allow, 32U ).has_error() );
+    }
+
+    TEST_F( CrdtDatastoreTest, ForcedWalkReportsIncompleteWhenBlockBudgetIsExhausted )
+    {
+        ASSERT_OUTCOME_SUCCESS( cids, SeedIncompleteTopicAncestry( CreateTestDelta( "RepairParent", "not-yet" ) ) );
+        crdtDatastore_->AddTopicName( "repair-trust" );
+        ASSERT_OUTCOME_SUCCESS_TRY( crdtDatastore_->RequestForcedWalk(
+            { "repair-trust" },
+            []( const Element & ) -> outcome::result<bool> { return true; },
+            1U ) );
+        ASSERT_TRUE( WaitForForcedWalk() );
+        EXPECT_EQ( crdtDatastore_->GetForcedWalkStatus().state, CrdtDatastore::ForcedWalkState::Incomplete );
+        EXPECT_TRUE( crdtDatastore_->GetForcedWalkStatus().limit_reached );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "RepairParent" } ), false );
+        EXPECT_OUTCOME_EQ( dagSyncer_->isResolved( cids.at( 2 ) ), true );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackDependencyStallRetriesUntilAccepted )

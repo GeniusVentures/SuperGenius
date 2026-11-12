@@ -26,11 +26,34 @@ namespace sgns::crdt
         */
         virtual outcome::result<bool> HasBlock( const CID &cid ) const = 0;
 
+        /// Persistent block presence, excluding transient fetch caches. In-memory
+        /// syncers may use their ordinary local block collection as storage.
+        virtual outcome::result<bool> HasStoredBlock( const CID &cid ) const
+        {
+            return HasBlock( cid );
+        }
+
         virtual outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const                                                                       = 0;
+
+        /// Reads stored bytes without a cache or network fetch. Syncers without
+        /// a separate persistent store may use their ordinary local lookup.
+        virtual outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetStoredNode( const CID &cid ) const
+        {
+            return GetNodeWithoutRequest( cid );
+        }
+
         virtual std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks( ipfs_lite::ipld::IPLDNode &node,
                                                                        std::string                link_name,
                                                                        LinkInfoSet visited_links ) const = 0;
+
+        /**
+         * @brief Makes a retained parent's source peers available when fetching a child.
+         * @note Syncers without network routing need no additional preparation.
+         */
+        virtual void InheritRoutes( const CID &, const CID & )
+        {
+        }
 
         virtual void                        InitCIDBlock( const CID &cid )       = 0;
         virtual bool                        IsCIDInCache( const CID &cid ) const = 0;
