@@ -1582,7 +1582,6 @@ namespace sgns
          * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
          * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
          */
-        void ReleaseRuntimeMembersAfterIoStopped();
 
         /**
          * @brief Stops account-bound runtime services in dependency order.

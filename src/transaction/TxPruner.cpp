@@ -144,12 +144,20 @@ namespace sgns
         // whole group (erasing a tx value whose block survives a
         // non-eligible sibling would strand the sibling's history). Group
         // order is the evaluation's first-appearance order (deterministic).
-        std::set<std::string> erasable_cids;
+        std::set<std::string>           erasable_cids;
+        std::map<std::string, uint64_t> block_share_by_cid;
         for ( const auto &report : result.block_reports )
         {
             if ( report.erasable )
             {
                 erasable_cids.insert( report.cid );
+                // Per-tx block share of the threshold estimate (the
+                // evaluator-carried sizes): integer division — a fully
+                // erased group's shares cover the block's carried-key
+                // bytes, a deferred group contributes nothing.
+                block_share_by_cid[report.cid] = report.sharing_tx_count > 0
+                                                     ? report.block_bytes / report.sharing_tx_count
+                                                     : 0;
             }
         }
 
@@ -214,6 +222,11 @@ namespace sgns
                 }
                 ++stats.erased;
                 --remaining_k;
+                // D-01 watermark accumulation: the evaluation-carried
+                // ESTIMATE only (never a measured number). Skipped, held,
+                // and errored candidates contribute nothing — their bytes
+                // are still on disk.
+                cumulative_erased_bytes_ += candidate->value_bytes + block_share_by_cid.at( cid );
             }
             if ( interrupted )
             {
@@ -237,6 +250,7 @@ namespace sgns
         }
 
         RecordCompletedCycle( globaldb, stats, cycle_start );
+        MaybeCompactAfterCycle( globaldb, stats );
         return stats;
     }
 
@@ -279,12 +293,12 @@ namespace sgns
             return; // status IS updated; only the INFO line is skipped
         }
 
-        // (6) ONE per-cycle INFO summary (RECL-03). bytes reclaimed is NOT
-        // measured until Phase 20 (deletes alone reclaim nothing — no
-        // CompactRange has run) — stated explicitly, never fabricated.
+        // (6) ONE per-cycle INFO summary (RECL-03): counts only. Reclaimed
+        // bytes are measured at COMPACTION time and reported by the
+        // compaction's own INFO line (D-02 — deletes alone reclaim nothing,
+        // so an erase-time byte number would be a fabrication).
         logger_->info( "Prune cycle [generation {}]: examined={}, eligible={}, erased={}, held_blocks={}, "
-                       "skipped={}, errors={}, duration_ms={}, watermark={} — bytes reclaimed: not measured "
-                       "until Phase 20",
+                       "skipped={}, errors={}, duration_ms={}, watermark={}",
                        stats.generation,
                        stats.examined,
                        stats.eligible,
@@ -294,6 +308,115 @@ namespace sgns
                        stats.errors,
                        stats.duration_ms,
                        DescribeWatermark( watermark_before, watermark_after ) );
+    }
+
+    void TxPruner::MaybeCompactAfterCycle( crdt::GlobalDB &globaldb, PruneCycleStats &stats )
+    {
+        // D-01 gate conjuncts, in order; each false returns with the stats
+        // untouched (a no-op cycle, a shutting-down node, or a sub-threshold
+        // watermark never pays for a compaction).
+        if ( stats.erased < 1 )
+        {
+            return;
+        }
+        if ( compaction_canceled_.load() )
+        {
+            return;
+        }
+        // MB is the single config representation; the byte comparison
+        // derives HERE (the one threshold-derivation site).
+        const uint64_t threshold_bytes = config_m.compact_threshold_mb << 20;
+        if ( cumulative_erased_bytes_ < threshold_bytes )
+        {
+            return;
+        }
+
+        // Baseline-at-last-compaction, lazily initialized BEFORE any
+        // compaction of this span has run — the eventual delta measures the
+        // full accumulated span since the last compaction, never a per-cycle
+        // under-count. A failed read stores nothing and skips compaction
+        // this cycle (the still-crossed watermark retries next cycle).
+        if ( !compaction_baseline_bytes_.has_value() )
+        {
+            auto baseline = globaldb.GetApproximateDiskUsageBytes();
+            if ( baseline.has_error() )
+            {
+                logger_->warn( "Prune compaction skipped: the baseline size could not be read: {} — retrying next "
+                               "cycle",
+                               baseline.error().message() );
+                return;
+            }
+            compaction_baseline_bytes_ = baseline.value();
+        }
+        const uint64_t before_bytes = compaction_baseline_bytes_.value();
+
+        const auto compaction_start  = std::chrono::steady_clock::now();
+        const auto compacted         = globaldb.CompactStorage( &compaction_canceled_ );
+        stats.compaction_duration_ms = ElapsedMs( compaction_start );
+        if ( compacted.has_error() )
+        {
+            if ( compacted.error() == std::errc::operation_canceled )
+            {
+                // The clean cancel-skip: nothing was started.
+                logger_->info( "Prune compaction skipped: canceled (generation {})", stats.generation );
+            }
+            else
+            {
+                // Real failure: a completed cycle NEVER fails because of
+                // compaction — the watermark is kept, so the still-crossed
+                // threshold is the natural retry trigger next cycle.
+                logger_->warn( "Prune compaction failed: {} — watermark kept, retrying next cycle (generation {})",
+                               compacted.error().message(),
+                               stats.generation );
+            }
+            return;
+        }
+
+        auto after = globaldb.GetApproximateDiskUsageBytes();
+        if ( after.has_error() )
+        {
+            // The compaction ran but went unmeasured: keep the baseline so
+            // the NEXT compaction measures the full span, stamp nothing
+            // (never fabricate a delta), and still reset the watermark —
+            // this span's erases were processed. Stated plainly.
+            logger_->warn( "Prune compaction completed but the size could not be re-read: {} — bytes_reclaimed not "
+                           "stamped this cycle (generation {})",
+                           after.error().message(),
+                           stats.generation );
+            stats.compacted          = true;
+            cumulative_erased_bytes_ = 0;
+            {
+                // WR-01 (re-review): mirror the success path's re-copy so
+                // last_cycle reports this cycle's compacted/duration even
+                // when the measured delta could not be stamped.
+                const std::scoped_lock lock( status_mutex_ );
+                status_m.last_cycle = stats;
+            }
+            return;
+        }
+
+        // Success: stamp the MEASURED delta under the status mutex (D-02),
+        // reset the in-memory watermark + baseline (D-01), and report the
+        // measured numbers once.
+        const uint64_t reclaimed = before_bytes > after.value() ? before_bytes - after.value() : 0;
+        stats.compacted          = true;
+        {
+            const std::scoped_lock lock( status_mutex_ );
+            status_m.bytes_reclaimed = reclaimed;
+            // WR-01 (review): re-copy so last_cycle reports compacted/
+            // compaction_duration_ms -- RecordCompletedCycle copied the stats
+            // before this stamping ran, leaving the fields stale in status.
+            status_m.last_cycle = stats;
+        }
+        cumulative_erased_bytes_   = 0;
+        compaction_baseline_bytes_ = after.value();
+        logger_->info( "Prune compaction [generation {}]: before_bytes={}, after_bytes={}, reclaimed={}, "
+                       "duration_ms={}",
+                       stats.generation,
+                       before_bytes,
+                       after.value(),
+                       reclaimed,
+                       stats.compaction_duration_ms );
     }
 
     bool TxPruner::TickGateSettled( TransactionManager &transaction_manager, std::chrono::steady_clock::time_point now )
@@ -375,6 +498,14 @@ namespace sgns
         // operation_not_permitted (a non-Light role at either factory) are
         // broken policy states no retry can fix — stop, never spin.
         return error == std::errc::invalid_argument || error == std::errc::operation_not_permitted;
+    }
+
+    void TxPruner::RequestCompactionCancel()
+    {
+        // The shutdown promptness path (the wiring calls this beside the
+        // prune-timer cancel). Never reset: a released pruner never
+        // compacts again.
+        compaction_canceled_.store( true );
     }
 
     void TxPruner::SetCycleInterruptHookForTest( std::function<bool( int step )> hook )

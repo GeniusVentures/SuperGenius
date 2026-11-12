@@ -12,6 +12,7 @@
 #include "transaction/PruneEligibility.hpp"
 
 #include <set>
+#include <limits>
 
 #include "account/UTXOManager.hpp"
 #include "crdt/globaldb/globaldb.hpp"
@@ -106,6 +107,25 @@ namespace sgns
              pruning_object["settle_seconds"].GetUint64() > 0 )
         {
             config.settle_seconds = pruning_object["settle_seconds"].GetUint64();
+        }
+
+        // Compaction threshold knob (D-01): a degenerate 0 would compact
+        // after every cycle (write-amp denial of service on self, V5);
+        // rejected at read time, default retained.
+        if ( pruning_object.HasMember( "compact_threshold_mb" ) && pruning_object["compact_threshold_mb"].IsUint64() &&
+             pruning_object["compact_threshold_mb"].GetUint64() > 0 )
+        {
+            const uint64_t threshold_mb = pruning_object["compact_threshold_mb"].GetUint64();
+            // WR-02 (review): the consumer derives bytes via threshold_mb << 20,
+            // which wraps mod 2^64 for values >= 2^44 -- a wrapped 0 would
+            // compact after every erasing cycle (the write-amp DoS the knob's
+            // zero-rejection exists to prevent). Reject the wrapping range.
+            constexpr uint64_t kMaxCompactThresholdMb = std::numeric_limits<uint64_t>::max() >> 20;
+            if ( threshold_mb <= kMaxCompactThresholdMb )
+            {
+                config.compact_threshold_mb = threshold_mb;
+            }
+            // Out-of-range values are ignored: the 16MB default applies.
         }
 
         if ( config.enabled && !config.finality_window.has_value() )
@@ -373,6 +393,14 @@ namespace sgns
         BlockGateResult report;
         report.cid = cid_string;
 
+        // Sharing count (the block-share divisor): derived from the same
+        // report the gate already received -- no store reads.
+        report.sharing_tx_count = static_cast<uint64_t>( std::count_if(
+            eligible.candidates.begin(),
+            eligible.candidates.end(),
+            [&cid_string]( const PruneCandidateResult &candidate )
+            { return candidate.eligible && candidate.cid.has_value() && *candidate.cid == cid_string; } ) );
+
         // The block is the source of truth (D-C3): parse it NOW, keys only,
         // elements AND tombstones — "what this node applied" is forbidden as
         // an oracle (light nodes store elements they never applied).
@@ -396,12 +424,7 @@ namespace sgns
                 // idempotent no-op on the absent key). It fires ONLY when
                 // this CID is named by an otherwise-ELIGIBLE candidate: the
                 // evidence completes an erase the caller already justified.
-                const bool completes_eligible = std::any_of(
-                    eligible.candidates.begin(),
-                    eligible.candidates.end(),
-                    [&cid_string]( const PruneCandidateResult &candidate )
-                    { return candidate.eligible && candidate.cid.has_value() && *candidate.cid == cid_string; } );
-                if ( completes_eligible )
+                if ( report.sharing_tx_count > 0 )
                 {
                     RecordReason( report, PruneReason::BLOCK_ALREADY_ERASED );
                     report.erasable = true;
@@ -420,6 +443,9 @@ namespace sgns
 
         for ( const auto &key : keys.value() )
         {
+            // Threshold-estimate carry (research A5): the parse above is the
+            // only read -- the carried-key byte total rides this same loop.
+            report.block_bytes += static_cast<uint64_t>( key.size() );
             if ( !IsAllowlistedTxKey( key ) )
             {
                 RecordReason( report, PruneReason::OUT_OF_PREFIX );
@@ -446,7 +472,8 @@ namespace sgns
                                                               uint64_t            window ) const
     {
         PruneCandidateResult candidate;
-        candidate.tx_path = key;
+        candidate.tx_path     = key;
+        candidate.value_bytes = static_cast<uint64_t>( value.size() );
 
         // Defensive allowlist (belt-and-braces): out-of-prefix keys are
         // reported with a reason, never silently dropped.

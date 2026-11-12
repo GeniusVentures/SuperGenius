@@ -1274,3 +1274,51 @@ TEST_F( GlobalDBErasePrunedMeshTest, FreshNodeBootstrapsPrunedHistoryServedByFul
     }
     EXPECT_TRUE( entryApplied( fresh_db, entry_a ) );
 }
+
+/// Phase 20 (20-01): the direct surface smoke for the compaction
+/// substrate -- CompactStorage + GetApproximateDiskUsageBytes mechanics
+/// only (the measured-bytes reclamation proof is 20-03's gate). Compaction
+/// rewrites files and never value bytes: the seeded value and its raw
+/// block read back byte-identical, and the whole-DB call is idempotent.
+class CompactStorageSmokeTest : public GlobalDBEraseTest
+{
+};
+
+TEST_F( CompactStorageSmokeTest, CompactsWholeDbAndPreservesValueBytes )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addNode( "globaldb_compact_smoke" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+    auto &db = *testNodes->getNodes().front().db;
+    ASSERT_FALSE( db.AddBroadcastTopic( kTopic ).has_error() );
+    db.AddListenTopic( kTopic );
+
+    // Seed through the public CRDT path on a REAL topic (an empty-topics
+    // put creates no destinations -- the 16-02 lesson), so heads, seals,
+    // CRDT entries, and raw block bytes all exist before any measurement.
+    const auto entry = SeedEntry( db, "/compact/smoke", "COMPACT_SMOKE_VALUE" );
+    ASSERT_TRUE( headListContains( db, entry.cid ) );
+    const std::string block_hex_before = db.GetRaw( blockKeyOf( entry.cid ) ).value().toHex();
+
+    // The whole-DB size is measurable and nonzero with data resident (the
+    // memtable-inclusive measurement is part of the surface's one home).
+    auto size_before = db.GetApproximateDiskUsageBytes();
+    ASSERT_FALSE( size_before.has_error() );
+    EXPECT_GT( size_before.value(), 0u );
+
+    // ONE compaction through the production surface, then a second to pin
+    // idempotence.
+    EXPECT_OUTCOME_TRUE_1( db.CompactStorage( nullptr ) );
+    EXPECT_OUTCOME_TRUE_1( db.CompactStorage( nullptr ) );
+
+    auto size_after = db.GetApproximateDiskUsageBytes();
+    ASSERT_FALSE( size_after.has_error() );
+    // Rewrite may drop overhead but never the live bytes of the value.
+    EXPECT_GE( size_after.value(), entry.value.size() );
+
+    // Byte-identity across the rewrite: CRDT value and raw block bytes.
+    EXPECT_EQ( db.Get( sgns::crdt::HierarchicalKey( entry.tx_path ) ).value().toString(), entry.value );
+    EXPECT_EQ( db.GetRaw( blockKeyOf( entry.cid ) ).value().toHex(), block_hex_before );
+    EXPECT_TRUE( rawSealKeyPresent( db, entry.cid ) );
+    EXPECT_TRUE( headListContains( db, entry.cid ) );
+}
