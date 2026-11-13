@@ -1186,15 +1186,17 @@ namespace sgns::crdt
                     }
                 }
             }
-            if ( gc_hot_store_ != nullptr )
+            // Resolution state through the SANCTIONED path (develop's
+            // GATE-03: the seal-key literal lives only in the vendored
+            // RocksdbDatastore; markResolved/isResolved are its
+            // merkle-dag aliases). Never hand-construct the key here.
+            mark.was_sealed = false;
+            if ( gc_dag_syncer_ != nullptr )
             {
-                std::string seal_text;
-                mark.was_sealed = false;
-                if ( TryCidToString( CID( cid ), logger_, seal_text ) )
+                auto resolved = gc_dag_syncer_->isResolved( CID( cid ) );
+                if ( resolved.has_value() )
                 {
-                    sgns::storage::Buffer seal_key;
-                    seal_key.put( seal_text + "sealed" );
-                    mark.was_sealed = gc_hot_store_->contains( seal_key );
+                    mark.was_sealed = resolved.value();
                 }
             }
             evicting_marks_.push_back( std::move( mark ) );
@@ -1320,10 +1322,15 @@ namespace sgns::crdt
             return;
         }
         const CID cid_key( cid );
-        // ONE hot-store batch: the binary CID key, the text <cid>sealed
-        // key, and EXACTLY the block's own membership rows (computed from
-        // the delta content at mark/recovery time - never enumerated).
-        // Deleting absent keys succeeds (idempotent post-state).
+        // ONE hot-store batch: the binary CID key and EXACTLY the block's
+        // own membership rows (computed from the delta content at
+        // mark/recovery time - never enumerated). Deleting absent keys
+        // succeeds (idempotent post-state). The seal/resolved marker is
+        // DELIBERATELY RETAINED (develop's GATE-03 invariant: evicting
+        // or erasing a block never erases its seal - the traversal
+        // terminator that prevents re-fetch storms; the block stays
+        // recoverable through the cold chain, so its already-processed
+        // record stays true).
         auto batch = gc_hot_store_->batch();
         auto encoded = cid_key.toBytes();
         if ( encoded.has_value() )
@@ -1331,13 +1338,6 @@ namespace sgns::crdt
             sgns::storage::Buffer binary_key;
             binary_key.put( encoded.value() );
             (void)batch->remove( binary_key );
-        }
-        std::string seal_text;
-        if ( TryCidToString( cid_key, logger_, seal_text ) )
-        {
-            sgns::storage::Buffer seal_key;
-            seal_key.put( seal_text + "sealed" );
-            (void)batch->remove( seal_key );
         }
         for ( const auto &row : row_keys )
         {

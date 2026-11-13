@@ -1262,8 +1262,9 @@ std::string ElemRowKeyOf( const std::string &keys_prefix,
  *        removes cold bytes + journal + timestamp and writes the disposed
  *        marker in ONE library batch (IsDisposed true, GetUploadState
  *        absent, GetColdUploadState NoRecord); HALF 2 removes the hot
- *        binary key, the seal text key, and EXACTLY the block's own
- *        s-row via one hot batch + LRU invalidation; the t/k/h keyspaces
+ *        binary key and EXACTLY the block's own s-row via one hot batch
+ *        (the seal/resolved marker is RETAINED - develop's GATE-03) +
+ *        LRU invalidation; the t/k/h keyspaces
  *        and every OTHER s-row see ZERO operations (spy); HasBlock stays
  *        TRUE across the whole eviction moment (hot bytes before, the
  *        disposed-marker term after - D-11); and a DIRECT read still
@@ -1336,10 +1337,13 @@ TEST_F( ColdStorageGcTest, EvictionEndToEndTwoHalvesUnitAtomic )
         EXPECT_GT( marker.value()[0].second.original_size, 0u );
     }
 
-    // HALF 2 post-state: binary key, seal key, and EXACTLY the own s-row
-    // gone; the marker answers HasBlock (D-11 fourth term).
+    // HALF 2 post-state: binary key and EXACTLY the own s-row gone;
+    // the seal/resolved marker is RETAINED (GATE-03 - the traversal
+    // terminator outlives the hot bytes); the marker answers HasBlock
+    // (D-11 fourth term).
     EXPECT_FALSE( real_hot_->contains( HotKeyOf( d1 ) ) );
-    EXPECT_FALSE( real_hot_->contains( SealKeyOf( d1 ) ) );
+    EXPECT_TRUE( real_hot_->contains( SealKeyOf( d1 ) ) )
+        << "seal marker retained across eviction (GATE-03)";
     {
         sgns::storage::Buffer row_buf;
         row_buf.put( row_key );
@@ -1456,8 +1460,8 @@ TEST_F( ColdStorageGcTest, CrashMidGraceDeletesNothingAndReMarks )
  *        window: the library batch committed, the hot cleanup never ran)
  * @when  a fresh manager runs one pass
  * @then  FinishOrphanedHotCleanups completes HALF 2 exactly (hot binary
- *        key, seal key, and own s-rows gone; marker intact), with NO
- *        re-spill (no new journal record).
+ *        key and own s-rows gone; the seal stays - GATE-03; marker
+ *        intact), with NO re-spill (no new journal record).
  */
 TEST_F( ColdStorageGcTest, CrashBetweenHalvesOrphanRescanCompletesHotCleanup )
 {
@@ -1491,7 +1495,8 @@ TEST_F( ColdStorageGcTest, CrashBetweenHalvesOrphanRescanCompletesHotCleanup )
     // One pass: the orphan re-scan completes HALF 2.
     (void)manager->GcPassOnce();
     EXPECT_FALSE( real_hot_->contains( HotKeyOf( d1 ) ) );
-    EXPECT_FALSE( real_hot_->contains( SealKeyOf( d1 ) ) );
+    EXPECT_TRUE( real_hot_->contains( SealKeyOf( d1 ) ) )
+        << "seal marker retained across eviction (GATE-03)";
     {
         sgns::storage::Buffer row_buf;
         row_buf.put( row_key );
